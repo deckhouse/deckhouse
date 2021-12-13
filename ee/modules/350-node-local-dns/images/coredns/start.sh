@@ -1,8 +1,5 @@
 #!/bin/bash
 
-lockfile-remove /tmp/lock
-rm -f /tmp/shutting_down
-
 # Setup interface
 dev_name="nodelocaldns"
 if ! ip link show "$dev_name" >/dev/null 2>&1 ; then
@@ -23,7 +20,7 @@ if ! iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p udp -m udp --s
   iptables -w 600 -t raw -A OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p udp -m udp --sport 53 -j NOTRACK
 fi
 if iptables -w 600 -t raw -C PREROUTING -d ${KUBE_DNS_SVC_IP}/32 -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
-  # Remove. Will be added later, in liveness probe
+  # Remove. Will be added later.
   iptables -w 600 -t raw -D PREROUTING -d ${KUBE_DNS_SVC_IP}/32 -m socket --nowildcard -j NOTRACK >/dev/null 2>&1
 fi
 

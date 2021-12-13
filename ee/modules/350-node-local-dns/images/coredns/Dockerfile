@@ -6,8 +6,7 @@ ARG BASE_ALPINE
 FROM $BASE_ALPINE
 COPY --from=artifact /coredns  /coredns
 COPY start.sh /
-COPY liveness.sh /
-COPY stop.sh /
-RUN apk add --no-cache bind-tools bash curl iptables iproute2 jq grep lockfile-progs
+COPY readiness.sh /
+RUN apk add --no-cache bind-tools bash curl iptables iproute2 jq grep
 RUN mkdir /etc/coredns
 ENTRYPOINT ["/coredns"]

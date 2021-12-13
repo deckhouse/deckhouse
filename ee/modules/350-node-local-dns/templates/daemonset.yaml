@@ -65,26 +65,33 @@ spec:
         - containerPort: 53
           name: dns-tcp
           protocol: TCP
-        livenessProbe:
+        readinessProbe:
           exec:
             command:
-            - /liveness.sh
+            - /readiness.sh
           periodSeconds: 1
-          timeoutSeconds: 9
-        lifecycle:
-          preStop:
-            exec:
-              command:
-              - /bin/bash
-              - -l
-              - -c
-              - /stop.sh
+          timeoutSeconds: 7
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
         - name: coredns-config
           mountPath: /etc/coredns
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+      - name: iptables-loop
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_BIND_SERVICE" "NET_ADMIN" "NET_RAW")) | indent 8 }}
+        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nodeLocalDns.iptablesLoop }}
+        env:
+        - name: KUBE_DNS_SVC_IP
+          value: {{ .Values.global.discovery.clusterDNSAddress | quote }}
+        volumeMounts:
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+          readOnly: false
         - name: tmp
           mountPath: /tmp
         resources:
