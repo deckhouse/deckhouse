@@ -85,14 +85,16 @@ images_tags_json:
 {!{- end -}!}
 
 
-# Only useful with pull_request_target
+# Only useful with pull_request_target.
+#
+# Checks out merge commit, checks for dangerous changes, and if none found, returns the ref.
 {!{ define "pull_request_info" }!}
 # <template: pull_request_info>
 pull_request_info:
   name: Get pull request reference
   runs-on: ubuntu-latest
   outputs:
-    ref: ${{ steps.ref.output.ref }}
+    ref: ${{ steps.ref.outputs.ref }}
   steps:
     # Checkhout the merge commit
     - name: Checkout PR merge commit
@@ -129,6 +131,6 @@ pull_request_info:
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
-            core.setOutput('ref', `refs/pull/${ github.event.number }/merge`)
+          core.setOutput('ref', `refs/pull/${ github.event.number }/merge`)
 # </template: pull_request_info>
 {!{- end -}!}
