@@ -3,12 +3,9 @@ name: Build and test for dev branches
 on:
   pull_request_target:
      types:
-      - assigned
       - opened
       - synchronize
       - reopened
-      - labeled
-      - unlabeled
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
