@@ -20,11 +20,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+{!{ tmpl.Exec "pull_request_info" . | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
+      - pull_request_info
       - git_info
 {!{ tmpl.Exec "build_modules_images_template" . | strings.Indent 4 }!}
 
@@ -32,12 +34,14 @@ jobs:
     name: Go Generate
     needs:
       - git_info
+      - pull_request_info
 {!{ tmpl.Exec "go_generate_template" . | strings.Indent 4 }!}
 
   build_fe:
     name: Build FE
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - go_generate
 {!{ tmpl.Exec "build_template" . | strings.Indent 4 }!}
@@ -47,6 +51,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
 {!{ tmpl.Exec "doc_web_build_template" . | strings.Indent 4 }!}
 
@@ -55,6 +60,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
 {!{ tmpl.Exec "main_web_build_template" . | strings.Indent 4 }!}
 
