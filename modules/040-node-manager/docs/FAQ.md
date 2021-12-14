@@ -166,6 +166,8 @@ Refer to the description of the [NodeGroup](cr.html#nodegroup) custom resource f
 
 Changing the `instancePrefix` parameter in the Deckhouse configuration won't result in a `RollingUpdate`. Deckhouse will create new `MachineDeployment`s and delete the old ones.
 
+During the disruption update, an evict of the pods from the node is performed. If any pod failed to evict, the evict is repeated every 20 seconds until a global timeout of 5 minutes is reached. After that, the pods that failed to evict are removed.
+
 ## How do I redeploy ephemeral machines in the cloud with a new configuration?
 
 If the Deckhouse configuration is changed (both in the node-manager module and in any of the cloud providers), the VMs will not be redeployed. The redeployment is performed only in response to changing `InstanceClass` or `NodeGroup` objects.
