@@ -16,6 +16,8 @@
 {{- else if eq $crd.spec.inlet "HostWithFailover" }}
   {{- $defaultGracePeriod = 0 }}
 {{- end }}
+{{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
+{{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 
 ---
 apiVersion: policy/v1beta1
@@ -193,6 +195,9 @@ spec:
         - --validating-webhook=:8443
         - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
         - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
+        {{- end }}
+        {{- if $defaultSSLCertificateSecretRef.name }}
+        - --default-ssl-certificate={{ printf "%s/%s" $defaultSSLCertificateSecretRef.namespace $defaultSSLCertificateSecretRef.name }}
         {{- end }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}

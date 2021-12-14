@@ -255,3 +255,13 @@ properties:
                   type: integer
                 maxReplicas:
                   type: integer
+                defaultSSLCertificate:
+                  type: object
+                  properties:
+                    secretRef:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string

@@ -143,6 +143,10 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
         memory:
           max: 200Mi
         mode: Auto
+    defaultSSLCertificate:
+      secretRef:
+        name: custom-secret
+        namespace: default
 `)
 			hec.HelmRender()
 		})
@@ -156,6 +160,7 @@ cpu: 100m
 ephemeral-storage: 150Mi
 memory: 200Mi`))
 			Expect(testD.Field("spec.template.spec.containers.0.env").Array()).ToNot(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"120"}`)))
+			Expect(testD.Field("spec.template.spec.containers.0.args").AsStringSlice()).NotTo(ContainElement(ContainSubstring("--default-ssl-certificate=")))
 
 			cm := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config")
 			Expect(cm.Exists()).To(BeTrue())
@@ -243,11 +248,12 @@ memory: 500Mi`))
 			Expect(mainDS.Field("spec.template.spec.hostNetwork").String()).To(Equal("true"))
 			Expect(mainDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(mainDS.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"0"}`)))
+			Expect(mainDS.Field("spec.template.spec.containers.0.args").AsStringSlice()).To(ContainElement("--default-ssl-certificate=default/custom-secret"))
 
-			vpaSolid := hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-solid")
-			Expect(vpaSolid.Exists()).To(BeTrue())
-			Expect(vpaSolid.Field("spec.updatePolicy.updateMode").String()).To(Equal("Auto"))
-			Expect(vpaSolid.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
+			manVPA := hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-solid")
+			Expect(manVPA.Exists()).To(BeTrue())
+			Expect(manVPA.Field("spec.updatePolicy.updateMode").String()).To(Equal("Auto"))
+			Expect(manVPA.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
 - containerName: controller
   minAllowed:
     cpu: 10m

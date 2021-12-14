@@ -31,33 +31,41 @@ kubernetesValidating:
 EOF
 }
 
+function forbid() {
+  jq -nc --arg message "$1" '
+    {
+      "allowed": false,
+      "message": $message
+    }
+    ' > $VALIDATING_RESPONSE_PATH
+}
+
 function __main__() {
   # Inlet on-flight change prohibited
   if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
     oldInlet=$(context::jq -r '.review.request.oldObject.spec.inlet')
     if context::jq -e -r --arg oldInlet "$oldInlet" '.review.request.object.spec.inlet != $oldInlet' >/dev/null 2>&1; then
-      cat <<EOF > $VALIDATING_RESPONSE_PATH
-{"allowed":false, "message":".spec.inlet change prohibited"}
-EOF
-      exit 0;
+      forbid ".spec.inlet field is immutable"
+      exit 0
     fi
   fi
-
 
   if context::jq -e -r '.review.request.name | endswith("-failover")' >/dev/null 2>&1; then
     # -failover suffix is reserved for HostWithFailover inlet
     # To avoid collisions, we should forbid saving controllers with such name.
-    cat <<EOF > $VALIDATING_RESPONSE_PATH
-{"allowed":false, "message":"it is forbidden to create IngressNginxController with '-failover' suffix"}
-EOF
-    exit 0;
+    forbid ".metadata.name ends with reserved suffix \"-failover\""
+    exit 0
   fi
 
+  if defaultSSLSecret=( $(context::jq -re '.review.request.object.spec.defaultSSLCertificate.secretRef // empty | .namespace, .name') ); then
+    if ! kubectl get secret -n ${defaultSSLSecret[0]} ${defaultSSLSecret[1]} >/dev/null 2>&1; then
+      forbid ".spec.defaultSSLCertificate field contains reference to non existent Secret \"${defaultSSLSecret[0]}/${defaultSSLSecret[1]}\""
+      exit 0
+    fi
+  fi
 
-  # allowed response
-  cat <<EOF > $VALIDATING_RESPONSE_PATH
-{"allowed":true}
-EOF
+  # Allowed response.
+  jq -nc '{"allowed": true}' > $VALIDATING_RESPONSE_PATH
 }
 
 hook::run $@
