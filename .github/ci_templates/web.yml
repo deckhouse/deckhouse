@@ -2,9 +2,9 @@
 # <template: doc_web_build_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
 
   - name: Run doc web build
     uses: {!{ index (ds "actions") "werf/actions/build" }!}
@@ -21,9 +21,9 @@ steps:
 # <template: main_web_build_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
 
   - name: Run main web build
     uses: {!{ index (ds "actions") "werf/actions/build" }!}
@@ -40,10 +40,10 @@ steps:
 # <template: web_links_test_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
 
   - name: Prepare site structure
     run: |

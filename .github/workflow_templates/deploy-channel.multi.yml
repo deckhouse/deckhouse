@@ -1,8 +1,8 @@
 {!{- range $channel := slice "alpha" "beta" "early-access" "stable" "rock-solid" -}!}
-{!{- $ctx := dict "channel" $channel }!}
-{!{- $outFile := printf "deploy-%s.yml" $channel }!}
-{!{- $outPath := filepath.Join (getenv "OUTDIR") (toLower $outFile) }!}
-{!{- tmpl.Exec "deploy_channel_workflow_template" $ctx | file.Write $outPath }!}
+{!{-   $ctx := dict "channel" $channel }!}
+{!{-   $outFile := printf "deploy-%s.yml" $channel }!}
+{!{-   $outPath := filepath.Join (getenv "OUTDIR") (toLower $outFile) }!}
+{!{-   tmpl.Exec "deploy_channel_workflow_template" $ctx | file.Write $outPath }!}
 {!{- end -}!}
 
 {!{- define "deploy_channel_workflow_template" -}!}

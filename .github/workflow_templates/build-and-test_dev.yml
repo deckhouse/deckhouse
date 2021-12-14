@@ -29,8 +29,8 @@ jobs:
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
-      - pull_request_info
       - git_info
+      - pull_request_info
 {!{ tmpl.Exec "build_modules_images_template" $ctx | strings.Indent 4 }!}
 
   go_generate:
@@ -71,55 +71,62 @@ jobs:
     name: Tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" "unit" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" $ctx "unit" | strings.Indent 4 }!}
 
   matrix_tests:
     name: Matrix tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" "matrix" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" $ctx "matrix" | strings.Indent 4 }!}
 
   dhctl_tests:
     name: Dhctl Tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" "dhctl" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" $ctx "dhctl" | strings.Indent 4 }!}
 
   golangci_lint:
     name: GolangCI Lint
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" "golangci_lint" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" $ctx "golangci_lint" | strings.Indent 4 }!}
 
   openapi_test_cases:
     name: OpenAPI Test Cases
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" "openapi_test_cases" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" $ctx "openapi_test_cases" | strings.Indent 4 }!}
 
   web_links_test:
     name: Web links test
     needs:
       - git_info
+      - pull_request_info
       - doc_web_build
       - main_web_build
     continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
 
   validators:
     name: Validators
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" "validators" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" $ctx "validators" | strings.Indent 4 }!}

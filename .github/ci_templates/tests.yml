@@ -45,25 +45,26 @@ docker_options: '-w /deckhouse'
 
 {!{ define "tests_template" }!}
 # <template: tests_template>
-  {!{- $args_name := . }!}
-  {!{- $args_tmpl := printf "%s_run_args" $args_name }!}
-  {!{- $default := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
-  {!{- $ctx := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
+{!{-   $ctx := index . 0 }!}
+{!{-   $args_name := index . 1 }!}
+{!{-   $args_tmpl := printf "%s_run_args" $args_name }!}
+{!{-   $default := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
+{!{-   $run := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "restore_images_tags_json_step" . | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"            $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_dev_registry_step"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_readonly_registry_step"  $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "restore_images_tags_json_step" $ctx | strings.Indent 2 }!}
   - name: Run tests
     uses: {!{ index (ds "actions") "werf/actions/run" }!}
     with:
       channel: ${{env.WERF_CHANNEL}}
-      image: {!{ $ctx.image }!}
-      args: {!{ $ctx.args | squote }!}
+      image: {!{ $run.image }!}
+      args: {!{ $run.args | squote }!}
     env:
       WERF_SKIP_BUILD: "true"
-      WERF_DOCKER_OPTIONS: {!{ $ctx.docker_options | squote }!}
+      WERF_DOCKER_OPTIONS: {!{ $run.docker_options | squote }!}
       WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
       CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
       CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
