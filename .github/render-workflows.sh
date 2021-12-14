@@ -14,18 +14,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -Eeo pipefail
+
+# Check if actionlint is in PATH (https://github.com/rhysd/actionlint)
+ACTIONLINT_RUN=no
+if which actionlint 2>&1 >/dev/null ; then
+  ACTIONLINT_RUN=yes
+fi
+
+if [[ $ACTIONLINT == "noop" ]] ; then
+  ACTIONLINT_RUN=noop
+fi
+
 # Use gomplate to render files in .github/workflows
 # from main template .github-ci.yaml and
 # partials in .github/ci_includes, .github/ci_templates
 
+dockerExit=0
 cat <<'SCRIPT_END' | docker run -i --rm \
+  -e ACTIONLINT_RUN=$ACTIONLINT_RUN \
   -v $(pwd)/../.gitlab/ci_includes:/in/gitlab_ci_includes \
   -v $(pwd)/ci_includes:/in/ci_includes \
   -v $(pwd)/ci_templates:/in/ci_templates \
   -v $(pwd)/workflow_templates:/in/workflow_templates \
   -v $(pwd)/workflows:/out/workflows \
   --entrypoint=ash \
-  hairyhenderson/gomplate:v3.9.0-alpine -
+  hairyhenderson/gomplate:v3.10.0-alpine - || dockerExit=1
 
 # Render each file in workflow_templates
 # directory and copy to /out/workflows
@@ -113,17 +127,39 @@ done
 
 if [[ $hasChanges == 1 ]] ; then
   mv /out/tmp/*.yml /out/workflows/
-  echo "Render success!"
+  echo "Render success. Workflows changed."
 else
-  echo "No changes."
+  echo "Render success. No changes."
 fi
 
-for file in /out/workflows/* ; do
-  # Ignore md files. '== *.md' is not working in ash.
-  [[ $file != ${file%.md} ]] && continue
-  gomplate -i "$file"'{{ $_ := file.Read "'"$file"'" | yaml }} OK' || true
-done
+# Check yamls for correctness if actionlint is not available.
+if [[ $ACTIONLINT_RUN != "yes" ]] ; then
+  for file in /out/workflows/* ; do
+    # Ignore md files. '== *.md' is not working in ash.
+    [[ $file != ${file%.md} ]] && continue
+    gomplate -i "$file"'{{ $_ := file.Read "'"$file"'" | yaml }} OK{{ "\n" }}' || true
+  done
+fi
 
 exit $hasChanges
 
 SCRIPT_END
+
+# Run linter for Github Actions workflows or ask to install.
+if [[ $ACTIONLINT_RUN == "no" ]] ; then
+  echo
+  echo 'Note: install https://github.com/rhysd/actionlint for thorough checking. ACTIONLINT=noop to mute this message.'
+fi
+
+if [[ $ACTIONLINT_RUN == "yes" ]] ; then
+  echo "Run actionlint..."
+  if ! actionlint ; then
+    exit 1
+  fi
+fi
+
+# Note: This script mimics behavior of diff utility to exit with 1
+# if workflows files are changed.
+# It seems a good idea in terms of automatic checking if
+# render-workflows was run and properly generated workflows are committed.
+exit $dockerExit
