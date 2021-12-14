@@ -2,45 +2,11 @@
 # <template: checkout_step>
 - name: Checkout sources
   uses: {!{ index (ds "actions") "actions/checkout" }!}
+  {!{ if coll.Has . "pullRequestRefField" -}!}
+  with:
+    ref: ${{ {!{ .pullRequestRefField }!} }}
+  {!{- end }!}
 # </template: checkout_step>
-{!{- end -}!}
-
-
-# - Works with trigger 'pull_request_target', checks out the incoming branch.
-# - Lets external PRs run checks but forbids to change some locations outside of our repo.
-{!{ define "checkout_pr_merge_commit_step" }!}
-# <template: checkout_pr_merge_commit_step>
-
-# Checkhout the merge commit
-- name: Checkout PR merge commit
-  uses: {!{ index (ds "actions") "actions/checkout" }!}
-  with:
-    ref: "refs/pull/${{ github.event.number }}/merge"
-
-# Detect forbidden changes in external PR
-- name: Check for forbidden changes
-  if: needs.git_info.outputs.is_external_pr
-  uses: {!{ index (ds "actions") "technote-space/get-diff-action" }!}
-  with:
-    PATTERNS: |
-      ./.github/**
-      ./.gitlab/**
-      ./tools/**
-      ./testing/**
-      ./docs/**/js/**
-      ./docs/**/css/**
-      ./docs/**/images/**
-      ./docs/**/assets/**
-
-# Stop workflow is external PR contains forbidden changes
-- name: Verfy allowed changes in external PR
-  if: needs.git_info.outputs.is_external_pr && env.GIT_DIFF_FILTERED
-  uses: {!{ index (ds "actions") "actions/github-script" }!}
-  with:
-    script: |
-        core.setFailed('External PR contains forbidden changes.')
-
-# </template: checkout_pr_merge_commit_step>
 {!{- end -}!}
 
 {!{ define "checkout_full_step" }!}
@@ -49,6 +15,9 @@
   uses: {!{ index (ds "actions") "actions/checkout" }!}
   with:
     fetch-depth: 0
+  {!{- if coll.Has . "pullRequestRefField" }!}
+    ref: ${{ {!{ .pullRequestRefField }!} }}
+  {!{- end }!}
 # </template: checkout_full_step>
 {!{- end -}!}
 
@@ -60,7 +29,7 @@
     ref: ${{ github.event.ref }}
     fetch-depth: 0
 # </template: checkout_from_event_ref_step>
-{!{- end -}!}
+{!{- end }!}
 
 {!{ define "login_dev_registry_step" }!}
 # <template: login_dev_registry_step>

@@ -7,12 +7,9 @@ name: Build and test for dev branches
 on:
   pull_request_target:
      types:
-      - assigned
       - opened
       - synchronize
       - reopened
-      - labeled
-      - unlabeled
 
 env:
 
@@ -82,6 +79,51 @@ concurrency:
 
 jobs:
 
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
+    steps:
+      # Checkhout the merge commit
+      - name: Checkout PR merge commit
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: "refs/pull/${{ github.event.number }}/merge"
+
+      # Detect forbidden changes in external PR
+      - name: Check for forbidden changes
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        uses: technote-space/get-diff-action@v4.0.1
+        with:
+          PATTERNS: |
+            ./.github/**
+            ./.gitlab/**
+            ./tools/**
+            ./testing/**
+            ./docs/**/js/**
+            ./docs/**/css/**
+            ./docs/**/images/**
+            ./docs/**/assets/**
+
+      # Stop workflow if external PR contains forbidden changes
+      - name: Verfy allowed changes in external PR
+        if: github.event.pull_request.head.repo.full_name != github.repository && env.GIT_DIFF_FILTERED
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+              core.setFailed('External PR contains forbidden changes.')
+
+      # Set output
+      - name: Return PR merge commit ref
+        id: ref
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            core.setOutput('ref', `refs/pull/${ github.event.number }/merge`)
+  # </template: pull_request_info>
+
   # <template: git_info_job>
   git_info:
     name: Get git info
@@ -143,6 +185,7 @@ jobs:
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
+      - pull_request_info
       - git_info
 
     # <template: build_modules_images_template>
@@ -154,6 +197,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -236,6 +280,7 @@ jobs:
     name: Go Generate
     needs:
       - git_info
+      - pull_request_info
 
     # <template: go_generate_template>
     runs-on: ubuntu-latest
@@ -244,6 +289,8 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
 
       # <template: login_readonly_registry_step>
@@ -271,6 +318,7 @@ jobs:
     name: Build FE
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - go_generate
 
@@ -283,6 +331,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -419,6 +468,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
     # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
@@ -429,6 +479,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_readonly_registry_step>
@@ -466,6 +517,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
     # <template: main_web_build_template>
     runs-on: [self-hosted, regular]
@@ -476,6 +528,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_readonly_registry_step>

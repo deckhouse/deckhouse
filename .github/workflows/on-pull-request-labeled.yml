@@ -11,13 +11,14 @@ on:
   pull_request_target:
     types: [labeled, unlabeled]
 jobs:
-  rerun_workflow_for_pull_request:
-    name: Rerun workflow for pull request
+
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
     runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
     steps:
-
-      # <template: checkout_pr_merge_commit_step>
-
       # Checkhout the merge commit
       - name: Checkout PR merge commit
         uses: actions/checkout@v2.4.0
@@ -26,7 +27,7 @@ jobs:
 
       # Detect forbidden changes in external PR
       - name: Check for forbidden changes
-        if: needs.git_info.outputs.is_external_pr
+        if: github.event.pull_request.head.repo.full_name != github.repository
         uses: technote-space/get-diff-action@v4.0.1
         with:
           PATTERNS: |
@@ -39,19 +40,33 @@ jobs:
             ./docs/**/images/**
             ./docs/**/assets/**
 
-      # Stop workflow is external PR contains forbidden changes
+      # Stop workflow if external PR contains forbidden changes
       - name: Verfy allowed changes in external PR
-        if: needs.git_info.outputs.is_external_pr && env.GIT_DIFF_FILTERED
+        if: github.event.pull_request.head.repo.full_name != github.repository && env.GIT_DIFF_FILTERED
         uses: actions/github-script@v5.0.0
         with:
           script: |
               core.setFailed('External PR contains forbidden changes.')
 
-      # </template: checkout_pr_merge_commit_step>
+      # Set output
+      - name: Return PR merge commit ref
+        id: ref
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            core.setOutput('ref', `refs/pull/${ github.event.number }/merge`)
+  # </template: pull_request_info>
+  rerun_workflow_for_pull_request:
+    name: Rerun workflow for pull request
+    runs-on: ubuntu-latest
+    needs:
+      - pull_request_info
+    steps:
       - name: Rerun workflow
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.runWorkflowForPullRequest({ github, context, core });
+            const ref = "${{ needs.pull_request_info.outputs.ref }}"
+            return await ci.runWorkflowForPullRequest({ github, context, core, ref });

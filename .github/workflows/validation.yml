@@ -55,15 +55,16 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
       - id: on_push
         name: Check labels on push
         uses: actions/github-script@v5.0.0
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.checkValidationLabels({github, context, core});
+            return await ci.checkValidationLabels({ github, context, core });
 
   no_cyrillic_validation:
     name: No Cyrillic Validation
@@ -80,6 +81,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
 
       - name: Run check
@@ -101,6 +103,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
 
       - name: Run check
@@ -122,6 +125,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
 
       - name: Run check

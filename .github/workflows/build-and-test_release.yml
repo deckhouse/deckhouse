@@ -153,6 +153,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
       # <template: update_comment_on_start>
       - name: Update comment on start
@@ -531,6 +532,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
 
       # <template: login_readonly_registry_step>
@@ -2039,6 +2041,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
       # <template: update_comment_on_finish>
       - name: Update comment on finish

@@ -155,6 +155,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
       - id: check_label
         name: Check labels on push

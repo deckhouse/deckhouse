@@ -1,3 +1,6 @@
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . -}!}
+
 # on every push to dev branches
 name: Build and test for dev branches
 on:
@@ -20,22 +23,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-{!{ tmpl.Exec "pull_request_info" . | strings.Indent 2 }!}
-{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+{!{ tmpl.Exec "pull_request_info" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
       - pull_request_info
       - git_info
-{!{ tmpl.Exec "build_modules_images_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_modules_images_template" $ctx | strings.Indent 4 }!}
 
   go_generate:
     name: Go Generate
     needs:
       - git_info
       - pull_request_info
-{!{ tmpl.Exec "go_generate_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 
   build_fe:
     name: Build FE
@@ -44,7 +47,7 @@ jobs:
       - pull_request_info
       - build_modules_images_fe
       - go_generate
-{!{ tmpl.Exec "build_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" $ctx | strings.Indent 4 }!}
 
   doc_web_build:
     name: Doc web build
@@ -53,7 +56,7 @@ jobs:
       - git_info
       - pull_request_info
       - build_modules_images_fe
-{!{ tmpl.Exec "doc_web_build_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
 
   main_web_build:
     name: Main web build
@@ -62,7 +65,7 @@ jobs:
       - git_info
       - pull_request_info
       - build_modules_images_fe
-{!{ tmpl.Exec "main_web_build_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
 
   tests:
     name: Tests

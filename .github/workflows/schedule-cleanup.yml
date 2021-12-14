@@ -285,6 +285,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
 
       # <template: login_dev_registry_step>

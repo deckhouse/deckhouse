@@ -16,6 +16,7 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
       # </template: checkout_step>
       - name: Create issue
         uses: actions/github-script@v5.0.0

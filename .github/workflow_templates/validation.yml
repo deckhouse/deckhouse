@@ -52,10 +52,10 @@ jobs:
         name: Check labels on push
         uses: {!{ index (ds "actions") "actions/github-script" }!}
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.checkValidationLabels({github, context, core});
+            return await ci.checkValidationLabels({ github, context, core });
 
   no_cyrillic_validation:
     name: No Cyrillic Validation

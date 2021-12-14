@@ -605,6 +605,7 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
 module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }) => {
   const event = context.payload;
   const label = event.label.name;
+
   console.log(`Event label name: '${label}'`);
   console.log(`Known labels: ${JSON.stringify(knownLabels, null, '  ')}`);
   console.log(`Git ref: '${ref}'`);
