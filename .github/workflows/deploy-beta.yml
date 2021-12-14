@@ -126,7 +126,7 @@ jobs:
       - check_label
       - git_info
     if: needs.check_label.outputs.should_run == 'true'
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources

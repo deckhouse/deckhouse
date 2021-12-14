@@ -24,7 +24,7 @@ jobs:
     name: Cleanup registry
     needs:
       - git_info
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
@@ -46,7 +46,7 @@ jobs:
     name: Cleanup modules registry
     needs:
       - git_info
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
@@ -68,7 +68,7 @@ jobs:
 
   cleanup_modules_images:
     name: Cleanup modules images
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
