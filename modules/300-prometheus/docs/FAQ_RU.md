@@ -257,15 +257,22 @@ metadata:
   name: prometheus-lens-proxy-conf
   namespace: lens-proxy
 data:
-  prometheus.conf.template: |
+  "40-prometheus-proxy-conf.sh": |
+    #!/bin/sh
+    prometheus_service="$(getent hosts prometheus.d8-monitoring | awk '{print $2}')"
+    nameserver="$(awk '/nameserver/{print $2}' < /etc/resolv.conf)"
+    cat > /etc/nginx/conf.d/prometheus.conf <<EOF
     server {
       listen 80 default_server;
+      resolver ${nameserver} valid=30s;
+      set \$upstream ${prometheus_service};
       location / {
         proxy_http_version 1.1;
         proxy_set_header Authorization "Bearer ${BEARER_TOKEN}";
-        proxy_pass https://prometheus.d8-monitoring:9090/;
+        proxy_pass https://\$upstream:9090$request_uri;
       }
     }
+    EOF
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -294,17 +301,15 @@ spec:
         ports:
         - containerPort: 80
         volumeMounts:
-        - mountPath: /etc/nginx/templates
-          readOnly: true
+        - mountPath: /docker-entrypoint.d/40-prometheus-proxy-conf.sh
+          subPath: "40-prometheus-proxy-conf.sh"
           name: prometheus-lens-proxy-conf
       serviceAccountName: prometheus-lens-proxy
       volumes:
       - name: prometheus-lens-proxy-conf
         configMap:
           name: prometheus-lens-proxy-conf
-          items:
-            - key: prometheus.conf.template
-              path: prometheus.conf.template
+          defaultMode: 0755
 ---
 apiVersion: v1
 kind: Service
@@ -322,4 +327,4 @@ spec:
 {% endofftopic %}
 
 После деплоя ресурсов, метрики Prometheus будут доступны по адресу `lens-proxy/prometheus-lens-proxy:8080`.
-
+Тип Prometheus в Lens - `Prometheus Operator`.
