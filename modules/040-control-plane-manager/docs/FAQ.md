@@ -70,7 +70,7 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
 ## What if the etcd cluster fails?
 
 1. Stop (delete the `/etc/kubernetes/manifests/etcd.yaml` file) etcd on all nodes except one. This last node will serve as a starting point for the new multi-master cluster;
-2. On the last node, specify the following command line parameter: `--force-new-cluster`;
+2. On the last node, edit etcd manifest `/etc/kubernetes/manifests/etcd.yaml` and add the parameter `--force-new-cluster` to `spec.containers.command`;
 3. After the new cluster is ready, remove the `--force-new-cluster` parameter.
 
 **Caution!** This operation is unsafe and breaks the guarantees given by the consensus protocol. Note that it brings the cluster to the state that was saved on the node. Any pending entries will be lost.
