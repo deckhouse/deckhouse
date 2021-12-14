@@ -9,6 +9,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/450-network-gateway/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-openvpn/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/fe/modules/600-namespace-configurator/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/600-secret-copier/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks"

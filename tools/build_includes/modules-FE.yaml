@@ -13,6 +13,8 @@
   to: /deckhouse/modules/500-okmeter
 - add: /ee/fe/modules/500-openvpn
   to: /deckhouse/modules/500-openvpn
+- add: /ee/fe/modules/600-namespace-configurator
+  to: /deckhouse/modules/600-namespace-configurator
 - add: /ee/fe/modules/600-secret-copier
   to: /deckhouse/modules/600-secret-copier
 - add: /ee/modules/030-cloud-provider-openstack
