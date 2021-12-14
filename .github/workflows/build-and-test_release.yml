@@ -3,7 +3,6 @@
 #
 
 # on push to default branch or on tags
-
 name: Build and test for release
 
 on:

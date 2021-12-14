@@ -45,11 +45,11 @@ docker_options: '-w /deckhouse'
 
 {!{ define "tests_template" }!}
 # <template: tests_template>
-{!{-   $ctx := index . 0 }!}
-{!{-   $args_name := index . 1 }!}
-{!{-   $args_tmpl := printf "%s_run_args" $args_name }!}
-{!{-   $default := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
-{!{-   $run := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
+{!{- $ctx       := index . 0 }!}
+{!{- $args_name := index . 1 }!}
+{!{- $args_tmpl := printf "%s_run_args" $args_name }!}
+{!{- $default   := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
+{!{- $run       := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
 runs-on: [self-hosted, regular]
 steps:
 {!{ tmpl.Exec "checkout_full_step"            $ctx | strings.Indent 2 }!}

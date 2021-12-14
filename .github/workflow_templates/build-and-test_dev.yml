@@ -74,7 +74,7 @@ jobs:
       - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" $ctx "unit" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "unit") | strings.Indent 4 }!}
 
   matrix_tests:
     name: Matrix tests
@@ -83,7 +83,7 @@ jobs:
       - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" $ctx "matrix" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 
   dhctl_tests:
     name: Dhctl Tests
@@ -92,7 +92,7 @@ jobs:
       - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" $ctx "dhctl" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl") | strings.Indent 4 }!}
 
   golangci_lint:
     name: GolangCI Lint
@@ -101,7 +101,7 @@ jobs:
       - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" $ctx "golangci_lint" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint") | strings.Indent 4 }!}
 
   openapi_test_cases:
     name: OpenAPI Test Cases
@@ -110,7 +110,7 @@ jobs:
       - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" $ctx "openapi_test_cases" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases") | strings.Indent 4 }!}
 
   web_links_test:
     name: Web links test
@@ -129,4 +129,4 @@ jobs:
       - pull_request_info
       - build_modules_images_fe
       - build_fe
-{!{ tmpl.Exec "tests_template" $ctx "validators" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators") | strings.Indent 4 }!}

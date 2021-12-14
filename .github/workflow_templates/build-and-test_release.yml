@@ -136,7 +136,7 @@ jobs:
       - build_modules_images_fe
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" $ctx "unit" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "unit") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Tests") | strings.Indent 6 }!}
 
   matrix_tests:
@@ -146,7 +146,7 @@ jobs:
       - build_modules_images_fe
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" $ctx "matrix" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Matrix tests") | strings.Indent 6 }!}
 
   dhctl_tests:
@@ -156,7 +156,7 @@ jobs:
       - build_modules_images_fe
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" $ctx "dhctl" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Dhctl Tests") | strings.Indent 6 }!}
 
   golangci_lint:
@@ -166,7 +166,7 @@ jobs:
       - build_modules_images_fe
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" $ctx "golangci_lint" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "GolangCI Lint") | strings.Indent 6 }!}
 
   openapi_test_cases:
@@ -176,7 +176,7 @@ jobs:
       - build_modules_images_fe
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" $ctx "openapi_test_cases" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "OpenAPI Test Cases") | strings.Indent 6 }!}
 
   web_links_test:
@@ -196,7 +196,7 @@ jobs:
       - build_modules_images_fe
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" $ctx "validators" | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Validators") | strings.Indent 6 }!}
 
   {!{/* Autodeploy site and docs to production env on push to main branch. */}!}

@@ -183,8 +183,8 @@ jobs:
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
-      - pull_request_info
       - git_info
+      - pull_request_info
 
     # <template: build_modules_images_template>
     runs-on: [self-hosted, regular]
@@ -563,6 +563,7 @@ jobs:
     name: Tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
@@ -575,6 +576,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -623,6 +625,7 @@ jobs:
     name: Matrix tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
@@ -635,6 +638,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -683,6 +687,7 @@ jobs:
     name: Dhctl Tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
@@ -695,6 +700,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -743,6 +749,7 @@ jobs:
     name: GolangCI Lint
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
@@ -755,6 +762,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -803,6 +811,7 @@ jobs:
     name: OpenAPI Test Cases
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
@@ -815,6 +824,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -863,6 +873,7 @@ jobs:
     name: Web links test
     needs:
       - git_info
+      - pull_request_info
       - doc_web_build
       - main_web_build
     continue-on-error: true
@@ -875,6 +886,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_readonly_registry_step>
@@ -976,6 +988,7 @@ jobs:
     name: Validators
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
@@ -988,6 +1001,7 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
