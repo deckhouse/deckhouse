@@ -599,13 +599,15 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {string} inputs.ref - A reference to the desired commit for workflows.
  * @returns {Promise<void>}
  */
-module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => {
+module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }) => {
   const event = context.payload;
   const label = event.label.name;
   console.log(`Event label name: '${label}'`);
   console.log(`Known labels: ${JSON.stringify(knownLabels, null, '  ')}`);
+  console.log(`Git ref: '${ref}'`);
 
   let workflow_id = '';
 
@@ -643,7 +645,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => 
     owner: context.repo.owner,
     repo: context.repo.repo,
     workflow_id: workflow_id,
-    branch: context.payload.pull_request.head.ref,
+    branch: ref,
     event: 'push'
   });
 
