@@ -117,6 +117,6 @@ pull_request_info:
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
-          core.setOutput('ref', `refs/pull/${ github.event.number }/merge`)
+          core.setOutput('ref', `refs/pull/${ context.issue.number }/merge`)
 # </template: pull_request_info>
 {!{- end -}!}
