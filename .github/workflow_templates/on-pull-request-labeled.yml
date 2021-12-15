@@ -8,10 +8,12 @@ on:
     types: [labeled, unlabeled]
 jobs:
 {!{ tmpl.Exec "pull_request_info" . | strings.Indent 2 }!}
+{!{ tmpl.Exec "git_info" .          | strings.Indent 2 }!}
   rerun_workflow_for_pull_request:
     name: Rerun workflow for pull request
     runs-on: ubuntu-latest
     needs:
+      - git_info
       - pull_request_info
     steps:
       - name: Rerun workflow
@@ -21,4 +23,5 @@ jobs:
           script: |
             const ci = require('./.github/scripts/js/ci');
             const ref = "${{ needs.pull_request_info.outputs.ref }}"
-            return await ci.runWorkflowForPullRequest({ github, context, core, ref });
+            const ci_commit_ref_name = "${{ needs.git_info.outputs.ci_commit_ref_name }}"
+            return await ci.runWorkflowForPullRequest({ github, context, core, ref, ci_commit_ref_name });

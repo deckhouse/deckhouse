@@ -602,7 +602,9 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
  * @param {string} inputs.ref - A reference to the desired commit for workflows.
  * @returns {Promise<void>}
  */
-module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }) => {
+module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref, ci_commit_ref_name }) => {
+  // FIXME utilize ci_commit_ref_name
+
   const event = context.payload;
   const label = event.label.name;
 
