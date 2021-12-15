@@ -91,16 +91,16 @@ simpleWithInternalNetwork:
 # [<en>] cloud access parameters
 # [<ru>] параметры доступа к облаку
 provider:
-  authURL: *!CHANGE_MYACCESSKEY*
+  authURL: *!CHANGE_API_URL*
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   domainName: users
-  password: *!CHANGE_MYACCESSKEY*
+  password: *!CHANGE_PASSWORD*
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   region: RegionOne
   tenantID: *!CHANGE_TENANT_ID*
-  username: *!CHANGE_TENANT_ID*
+  username: *!CHANGE_USERNAME*
 masterNodeGroup:
   # [<en>] number of replicas
   # [<en>] if more than 1 master node exists, control-plane will be automatically deployed on all master nodes
@@ -110,6 +110,10 @@ masterNodeGroup:
   # [<en>] disk type
   # [<ru>] тип используемого диска
   volumeTypeMap:
+    # [<en>] <availability zone>: <volume type>
+    # [<ru>] <availability zone>: <volume type>
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
     DP1: dp1-high-iops
   # [<en>] Parameters of the VM image
   # [<ru>] параметры инстанса
