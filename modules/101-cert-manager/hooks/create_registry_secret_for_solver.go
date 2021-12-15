@@ -36,6 +36,7 @@ const (
 
 	challengesSnapshot = "challenges"
 	secretsSnapshot    = "registry_secrets_namespaces"
+	saSnapshot         = "sa_namespaces"
 	d8RegistrySnapshot = "d8_registry_secret"
 
 	solverSecretName         = "acme-solver-deckhouse-regestry"
@@ -70,6 +71,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyRegistrySecretFilter,
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{solverSecretName},
+			},
+		},
+		{
+			Name:       saSnapshot,
+			Kind:       "ServiceAccount",
+			ApiVersion: "v1",
+			FilterFunc: applyServiceAccountFilter,
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{solverServiceAccountName},
 			},
 		},
 		{
@@ -111,6 +121,16 @@ func applyRegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 		Namespace: ns,
 		Config:    string(conf),
 	}, nil
+}
+
+func applyServiceAccountFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var s corev1.ServiceAccount
+	err := sdk.FromUnstructured(obj, &s)
+	if err != nil {
+		return "", err
+	}
+
+	return s.GetNamespace(), nil
 }
 
 func prepareSolverRegistrySecret(namespace, dockerCfg string) *corev1.Secret {
@@ -181,8 +201,10 @@ func handleChallenge(input *go_hook.HookInput) error {
 	registryCfg := d8RegistrySnap[0].(registrySecret).Config
 
 	challengesNss := set.NewFromSnapshot(input.Snapshots[challengesSnapshot])
-	legacyChallengesNss := set.NewFromSnapshot(input.Snapshots[challengesLegacySnapshot]).Slice()
-	challengesNss.Add(legacyChallengesNss...)
+	legacyChallengesNss := set.NewFromSnapshot(input.Snapshots[challengesLegacySnapshot])
+	challengesNss.AddSet(legacyChallengesNss)
+
+	serviceAccountsNss := set.NewFromSnapshot(input.Snapshots[saSnapshot])
 
 	// namespace -> .dockerconfigjson content
 	secretsByNs := map[string]string{}
@@ -194,17 +216,17 @@ func handleChallenge(input *go_hook.HookInput) error {
 
 	// create secrets
 	for ns := range challengesNss {
-		secretContent, ok := secretsByNs[ns]
+		secretContent, secretExists := secretsByNs[ns]
 		// secret already exists in namespace. do not create or patch
-		if ok && secretContent == registryCfg {
-			continue
+		if !secretExists || secretContent != registryCfg {
+			secret := prepareSolverRegistrySecret(ns, registryCfg)
+			input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
 		}
 
-		secret := prepareSolverRegistrySecret(ns, registryCfg)
-		sa := prepareSolverRegistryServiceAccount(ns)
-
-		input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
-		input.PatchCollector.Create(sa, object_patch.UpdateIfExists())
+		if _, saExists := serviceAccountsNss[ns]; !saExists {
+			sa := prepareSolverRegistryServiceAccount(ns)
+			input.PatchCollector.Create(sa, object_patch.UpdateIfExists())
+		}
 	}
 
 	// gc secrets
@@ -215,6 +237,15 @@ func handleChallenge(input *go_hook.HookInput) error {
 		}
 
 		input.PatchCollector.Delete("v1", "Secret", ns, solverSecretName)
+	}
+
+	// gc SA's
+	for ns := range serviceAccountsNss {
+		if challengesNss.Has(ns) {
+			// a service account exists in namespace and one more challenge exists, do not delete secret
+			continue
+		}
+
 		input.PatchCollector.Delete("v1", "ServiceAccount", ns, solverServiceAccountName)
 	}
 
