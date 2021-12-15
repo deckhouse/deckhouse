@@ -10,7 +10,7 @@ metadata:
     module: 'cert-manager'
     app.kubernetes.io/name: 'cert-manager'
     app.kubernetes.io/instance: 'cert-manager'
-    app.kubernetes.io/version: "v1.5.4"
+    app.kubernetes.io/version: "v1.6.1"
 spec:
   group: cert-manager.io
   names:
@@ -210,7 +210,7 @@ spec:
                   description: FailureTime stores the time that this CertificateRequest failed. This is used to influence garbage collection and back-off.
                   type: string
                   format: date-time
-      served: true
+      served: false
       storage: false
     - name: v1alpha3
       subresources:
@@ -379,7 +379,7 @@ spec:
                   description: FailureTime stores the time that this CertificateRequest failed. This is used to influence garbage collection and back-off.
                   type: string
                   format: date-time
-      served: true
+      served: false
       storage: false
     - name: v1beta1
       subresources:
@@ -550,7 +550,7 @@ spec:
                   description: FailureTime stores the time that this CertificateRequest failed. This is used to influence garbage collection and back-off.
                   type: string
                   format: date-time
-      served: true
+      served: false
       storage: false
     - name: v1
       subresources:
