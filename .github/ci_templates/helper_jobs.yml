@@ -74,7 +74,7 @@ images_tags_json:
 # Only useful with pull_request_target.
 #
 # Checks out merge commit, checks for dangerous changes, and if none found, returns the ref.
-{!{ define "pull_request_info" }!}
+{!{ define "pull_request_info_job" }!}
 # <template: pull_request_info>
 pull_request_info:
   name: Get pull request reference

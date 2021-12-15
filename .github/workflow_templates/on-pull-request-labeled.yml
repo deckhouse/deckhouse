@@ -7,8 +7,8 @@ on:
   pull_request_target:
     types: [labeled, unlabeled]
 jobs:
-{!{ tmpl.Exec "pull_request_info" . | strings.Indent 2 }!}
-{!{ tmpl.Exec "git_info" .          | strings.Indent 2 }!}
+{!{ tmpl.Exec "pull_request_info_job" . | strings.Indent 2 }!}
+{!{ tmpl.Exec "git_info_job" .      | strings.Indent 2 }!}
   rerun_workflow_for_pull_request:
     name: Rerun workflow for pull request
     runs-on: ubuntu-latest

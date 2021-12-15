@@ -56,10 +56,56 @@ jobs:
           script: |
             core.setOutput('ref', `refs/pull/${ github.event.number }/merge`)
   # </template: pull_request_info>
+
+  # <template: git_info_job>
+  git_info:
+    name: Get git info
+    runs-on: ubuntu-latest
+    outputs:
+      ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
+      ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
+      ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
+      ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
+      github_sha: ${{ steps.git_info.outputs.github_sha }}
+    steps:
+      - id: git_info
+        name: Get tag name and SHA
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            // Refer to:
+            //   - https://docs.github.com/en/actions/learn-github-actions/environment-variables
+            //   - https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
+
+            core.setOutput(`ci_commit_tag`,    GITHUB_REF_TYPE == "tag"    ? GITHUB_REF_NAME : "")
+            core.setOutput(`ci_commit_branch`, GITHUB_REF_TYPE == "branch" ? GITHUB_REF_NAME : "")
+
+            // TODO delete `ci_pipeline_created_at` everywhere in CI since it is useless.
+            // 2021-12-15T11:10:45.138Z   (not 2021-12-15T11:10:45+00:00)
+            core.setOutput('ci_pipeline_created_at', new Date().toISOString())
+
+            if (context.eventName === "workflow_dispatch") {
+              core.setOutput('ci_commit_ref_name', context.payload.inputs.ci_commit_ref_name)
+            } else {
+              // Fox PRs from forks, we assign images with `prXXX` tags to avoid clashes with inner branches.
+
+              const sourceRepo = context.payload.pull_request.head.repo.full_name
+              const ourRepo = context.payload.repository.full_name
+              const refName = (sourceRepo === ourRepo) ? GITHUB_REF_NAME : `pr${context.issue.number}`
+
+              core.setOutput('ci_commit_ref_name', refName)
+            }
+
+            core.setOutput('github_sha', context.payload.sha)
+
+  # </template: git_info_job>
   rerun_workflow_for_pull_request:
     name: Rerun workflow for pull request
     runs-on: ubuntu-latest
     needs:
+      - git_info
       - pull_request_info
     steps:
       - name: Rerun workflow
@@ -69,4 +115,5 @@ jobs:
           script: |
             const ci = require('./.github/scripts/js/ci');
             const ref = "${{ needs.pull_request_info.outputs.ref }}"
-            return await ci.runWorkflowForPullRequest({ github, context, core, ref });
+            const ci_commit_ref_name = "${{ needs.git_info.outputs.ci_commit_ref_name }}"
+            return await ci.runWorkflowForPullRequest({ github, context, core, ref, ci_commit_ref_name });
