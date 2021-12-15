@@ -17,51 +17,12 @@ limitations under the License.
 package scheduler
 
 import (
-	"errors"
 	"fmt"
 	"time"
-
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
-
-var (
-	// ErrSkip is the legal abortion of scheduling
-	ErrSkip = fmt.Errorf("scheduling skipped")
-
-	// errNext lets one step in pipeline to pass the control to the next step
-	errNext = fmt.Errorf("next step")
-)
-
-func NewStatefulSetSelector(nodes []snapshot.Node, storageClass string, pods []snapshot.Pod, disruptionAllowed bool) IndexSelectorPipe {
-	xSel := IndexSelectorPipe{
-		&selectByNode{nodes: nodes},
-		&selectByStorageClass{storageClass: storageClass},
-		&selectByPod{pods: pods, disruptionAllowed: disruptionAllowed},
-	}
-	return xSel
-}
-
-type IndexSelector interface {
-	Select(State) (string, error)
-}
-
-// IndexSelectorPipe is the sequential wrapper for other sts selectors. The result is returned from the
-// first successful selection or abortion error. Selection is ignored on next error.
-type IndexSelectorPipe []IndexSelector
-
-func (s IndexSelectorPipe) Select(state State) (string, error) {
-	for _, s := range s {
-		x, err := s.Select(state)
-		if errors.Is(err, errNext) {
-			continue
-		}
-		return x, err
-	}
-	return "", ErrSkip
-}
 
 type selectByPod struct {
 	pods              []snapshot.Pod
@@ -86,9 +47,8 @@ func (s *selectByPod) Select(state State) (string, error) {
 	// upgrade). It can lead to infinitely pending pod.
 	pendingThreshold := time.Now().Add(-time.Minute)
 	for _, pod := range s.pods {
-		notRunning := pod.Phase != v1.PodRunning
 		tooLong := pod.Created.Before(pendingThreshold)
-		if notRunning && tooLong {
+		if !pod.Ready && tooLong {
 			return pod.Index, nil
 		}
 	}
@@ -113,57 +73,4 @@ func (s *selectByPod) Select(state State) (string, error) {
 		}
 	}
 	return x, err
-}
-
-type selectByStorageClass struct {
-	storageClass string
-}
-
-func (s *selectByStorageClass) Select(state State) (string, error) {
-	// Find sts with outdated storage class
-	for x, sts := range state {
-		if sts.StorageClass != s.storageClass {
-			return x, nil
-		}
-	}
-	return "", errNext
-}
-
-type selectByNode struct {
-	nodes []snapshot.Node
-}
-
-func (s *selectByNode) Select(state State) (string, error) {
-	// Not deployed sts
-	for x, sts := range state {
-		if sts.Node == "" {
-			return x, nil
-		}
-	}
-
-	// Collect nodes
-	allNodes := set.New()
-	unschedNodes := set.New()
-	for _, node := range s.nodes {
-		allNodes.Add(node.Name)
-		if !node.Schedulable {
-			unschedNodes.Add(node.Name)
-		}
-	}
-
-	// Find sts placed on non-existent node
-	for x, sts := range state {
-		if !allNodes.Has(sts.Node) {
-			return x, nil
-		}
-	}
-
-	// Find sts placed on unavailable node
-	for x, sts := range state {
-		if unschedNodes.Has(sts.Node) {
-			return x, nil
-		}
-	}
-
-	return "", errNext
 }

@@ -100,6 +100,16 @@ var _ = sdk.RegisterFunc(
 				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 				WaitForSynchronization:       pointer.BoolPtr(false),
 			},
+			{
+				Name:              "pvc",
+				ApiVersion:        "v1",
+				Kind:              "PersistentVolumeClaim",
+				NamespaceSelector: namespaceSelector,
+				LabelSelector:     labelSelector,
+				FilterFunc:        snapshot.NewPvcTermination,
+
+				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			},
 		},
 	},
 	reschedule,
@@ -110,6 +120,7 @@ func reschedule(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	logger := input.LogEntry
 	const statePath = "upmeter.internal.smokeMini.sts"
 
 	// Parse the state from values
@@ -118,33 +129,31 @@ func reschedule(input *go_hook.HookInput) error {
 	if err != nil {
 		return err
 	}
-	if state.Empty() {
-		// Take care of the initial state. The values are the source of truth after they are
-		// filled for the fist time.
-		state.Populate(statefulSets)
-		input.Values.Set(statePath, state)
+
+	if state.Empty() && len(statefulSets) > 0 {
+		logger.Info(`Smoke-mini state is empty while statefulsets exist. Skipping until values are filled by "scrape_state.go" hook.`)
+		return nil
 	}
 
-	// Parse inputs
 	var (
+		// Parse inputs
 		storageClass = getSmokeMiniStorageClass(input.Values, input.Snapshots["default_sc"])
 		image        = getSmokeMiniImage(input.Values)
 
 		nodes             = snapshot.ParseNodeSlice(input.Snapshots["nodes"])
 		pods              = snapshot.ParsePodSlice(input.Snapshots["pods"])
+		pvcs              = snapshot.ParsePvcTerminationSlice(input.Snapshots["pvc"])
 		disruptionAllowed = parseAllowedDisruption(input.Snapshots["pdb"])
 
-		logger = input.LogEntry
+		// Construct
+		stsSelector  = scheduler.NewStatefulSetSelector(nodes, storageClass, pvcs, pods, disruptionAllowed)
+		nodeSelector = scheduler.NewNodeSelector(state)
+		kubeCleaner  = scheduler.NewCleaner(input.PatchCollector, logger, pods)
+		sched        = scheduler.New(stsSelector, nodeSelector, kubeCleaner, image, storageClass)
 	)
 
-	// Construct
-	stsSelector := scheduler.NewStatefulSetSelector(nodes, storageClass, pods, disruptionAllowed)
-	nodeSelector := scheduler.NewNodeSelector(state)
-	kubeCleaner := scheduler.NewCleaner(input.PatchCollector, logger, pods)
-	s := scheduler.New(stsSelector, nodeSelector, kubeCleaner, image, storageClass)
-
 	// Do the job
-	x, newSts, err := s.Schedule(state, nodes)
+	x, newSts, err := sched.Schedule(state, nodes)
 	if err != nil {
 		if errors.Is(err, scheduler.ErrSkip) {
 			logger.Info(err)
@@ -223,4 +232,11 @@ func firstNonEmpty(xs ...string) string {
 		}
 	}
 	return ""
+}
+
+// smokeMiniEnabled returns true if smoke-mini is not disabled. This function is to avoid reversed
+// boolean naming.
+func smokeMiniEnabled(v *go_hook.PatchableValues) bool {
+	disabled := v.Get("upmeter.smokeMiniDisabled").Bool()
+	return !disabled
 }

@@ -31,20 +31,6 @@ type Deleter interface {
 	Delete(string)
 }
 
-func NewPodDeleter(patcher *object_patch.PatchCollector, logger *logrus.Entry) Deleter {
-	deleter := &objDeleter{
-		patcher:    patcher,
-		apiVersion: "v1",
-		kind:       "Pod",
-		namespace:  Namespace,
-	}
-	message := func(podName string) string {
-		return fmt.Sprintf("Pod %q marked for deletion", podName)
-	}
-
-	return newLoggingDeleter(deleter, logger, message)
-}
-
 func newPersistentVolumeClaimDeleter(patcher *object_patch.PatchCollector, logger *logrus.Entry) Deleter {
 	deleter := &objDeleter{
 		patcher:    patcher,
