@@ -54,7 +54,9 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            core.setOutput('ref', `refs/pull/${ github.event.number }/merge`)
+            const ref = `refs/pull/${ context.issue.number }/merge`
+            core.info(`ref: '${ref}'`)
+            core.setOutput('ref', ref)
   # </template: pull_request_info>
   rerun_workflow_for_pull_request:
     name: Rerun workflow for pull request

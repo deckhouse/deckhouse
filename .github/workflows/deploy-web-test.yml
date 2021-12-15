@@ -110,15 +110,26 @@ jobs:
 
             const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
 
-            core.setOutput(`ci_commit_tag`,    GITHUB_REF_TYPE == "tag"    ? GITHUB_REF_NAME : "")
-            core.setOutput(`ci_commit_branch`, GITHUB_REF_TYPE == "branch" ? GITHUB_REF_NAME : "")
+            const ci_commit_tag    = GITHUB_REF_TYPE == "tag"    ? GITHUB_REF_NAME : ""
+            const ci_commit_branch = GITHUB_REF_TYPE == "branch" ? GITHUB_REF_NAME : ""
+
+            core.info(`ci_commit_tag:    '${ci_commit_tag}'`)
+            core.info(`ci_commit_branch: '${ci_commit_branch}'`)
+
+            core.setOutput(`ci_commit_tag`, ci_commit_tag)
+            core.setOutput(`ci_commit_branch`, ci_commit_branch)
+
 
             // TODO delete `ci_pipeline_created_at` everywhere in CI since it is useless.
             // 2021-12-15T11:10:45.138Z   (not 2021-12-15T11:10:45+00:00)
+            core.info(`ci_pipeline_created_at: '${ci_pipeline_created_at}'`)
             core.setOutput('ci_pipeline_created_at', new Date().toISOString())
 
             if (context.eventName === "workflow_dispatch") {
-              core.setOutput('ci_commit_ref_name', context.payload.inputs.ci_commit_ref_name)
+              const refName = context.payload.inputs.ci_commit_ref_name
+
+              core.info(`ci_commit_ref_name (from workflow_dispatch): '${refName}'`)
+              core.setOutput('ci_commit_ref_name', refName)
             } else {
               // If PRs from forks, we assign images with `prXXX` tags to avoid clashes with inner branches.
 
@@ -126,6 +137,7 @@ jobs:
               const ourRepo = context.payload.repository.full_name
               const refName = (sourceRepo === ourRepo) ? GITHUB_REF_NAME : `pr${context.issue.number}`
 
+              core.info(`ci_commit_ref_name (from pull_request): '${refName}'`)
               core.setOutput('ci_commit_ref_name', refName)
             }
 
