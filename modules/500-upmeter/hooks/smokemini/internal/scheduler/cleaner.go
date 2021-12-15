@@ -19,17 +19,15 @@ package scheduler
 import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
 
 func NewCleaner(patcher *object_patch.PatchCollector, logger *logrus.Entry, pods []snapshot.Pod) Cleaner {
 	return &kubeCleaner{
-		pods:       pods,
-		podDeleter: NewPodDeleter(patcher, logger),
-		pvcDeleter: newPersistentVolumeClaimDeleter(patcher, logger),
-		stsDeleter: newStatefulSetDeleter(patcher, logger),
+		pods:                          pods,
+		persistenceVolumeClaimDeleter: newPersistentVolumeClaimDeleter(patcher, logger),
+		statefulSetDeleter:            newStatefulSetDeleter(patcher, logger),
 	}
 }
 
@@ -40,9 +38,8 @@ type Cleaner interface {
 type kubeCleaner struct {
 	pods []snapshot.Pod
 
-	podDeleter Deleter
-	pvcDeleter Deleter
-	stsDeleter Deleter
+	persistenceVolumeClaimDeleter Deleter
+	statefulSetDeleter            Deleter
 }
 
 // Clean deletes kubernetes resources that prevent further progress
@@ -67,27 +64,25 @@ func (c *kubeCleaner) Clean(x string, curSts, newSts *XState) {
 		zoneChanged         = curSts.Zone != newSts.Zone
 		storageClassChanged = curSts.StorageClass != newSts.StorageClass
 
-		deletePVC = storageClassChanged || zoneChanged
-
-		// We have to re-create the StatefulSet because `volumeClaimTemplates` field is read-only and
-		// kube-apiserver will not accept the update
-		deleteSTS = storageClassChanged
-
-		// - If nothing changed for the StatefulSet and PVC, we should not tolerate failing pod.
-		// - If something changed while the pod is not running, we should take care of the pod specifically.
-		//   See https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#forced-rollback
-		deletePod = deleteSTS || deletePVC || (podExists && pod.Phase != v1.PodRunning)
+		// We have to re-create the StatefulSet because
+		//  - `volumeClaimTemplates` field is read-only and kube-apiserver will not accept the update;
+		//  - if nothing changed for the StatefulSet and PVC, we should not tolerate failing pod [1];
+		//  - if something changed while the pod is not running, we should take care of the pod specifically [1],
+		//    see https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#forced-rollback
+		//
+		//  [1] We cannot just delete the pod. If we do, kube controller manager can re-create it before statefulset
+		//      will be updated by Helm. So we avoid the race by re-creating the StatefulSet comlletely.
+		shouldClean = storageClassChanged || zoneChanged || (podExists && !pod.Ready)
 	)
 
-	if deleteSTS {
-		c.stsDeleter.Delete(snapshot.Index(x).StatefulSetName())
+	if !shouldClean {
+		return
 	}
 
-	if deletePVC {
-		c.pvcDeleter.Delete(snapshot.Index(x).PersistenceVolumeClaimName())
+	if curSts.StorageClass != snapshot.DefaultStorageClass {
+		// If we use emptyDir, we don't have PVC
+		c.persistenceVolumeClaimDeleter.Delete(snapshot.Index(x).PersistenceVolumeClaimName())
 	}
 
-	if deletePod {
-		c.podDeleter.Delete(snapshot.Index(x).PodName())
-	}
+	c.statefulSetDeleter.Delete(snapshot.Index(x).StatefulSetName())
 }

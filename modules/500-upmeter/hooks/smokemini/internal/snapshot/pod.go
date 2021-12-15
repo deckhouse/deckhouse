@@ -29,7 +29,7 @@ import (
 type Pod struct {
 	Index   string
 	Node    string
-	Phase   v1.PodPhase
+	Ready   bool
 	Created time.Time
 }
 
@@ -40,10 +40,19 @@ func NewPod(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, fmt.Errorf("cannot deserialize Pod %q: %w", obj.GetName(), err)
 	}
 
+	var ready bool
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type != v1.PodReady {
+			continue
+		}
+		ready = cond.Status == v1.ConditionTrue
+		break
+	}
+
 	sp := Pod{
 		Index:   IndexFromPodName(pod.GetName()).String(),
 		Node:    pod.Spec.NodeName, // node name and hostname are equal
-		Phase:   pod.Status.Phase,
+		Ready:   ready,
 		Created: pod.CreationTimestamp.Time,
 	}
 

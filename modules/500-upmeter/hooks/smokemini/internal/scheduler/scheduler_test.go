@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	snapshot "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
@@ -74,7 +73,7 @@ func Test_scheduler_cleaning(t *testing.T) {
 			asserter: deletedResourceAssertion{},
 		},
 		{
-			name: "deletes pvc, sts, and pod if storage class changed",
+			name: "deletes pvc and sts if storage class changed",
 			fields: fields{
 				indexSelector: &fakeIndexSelector{"a"},
 				nodeFilter:    &noopNodeFilter{},
@@ -86,10 +85,10 @@ func Test_scheduler_cleaning(t *testing.T) {
 				state: fakeStateInSingleZone(zone),
 				nodes: nodesInOneZone,
 			},
-			asserter: deletedResourceAssertion{x: "a", pod: true, sts: true, pvc: true},
+			asserter: deletedResourceAssertion{x: "a", sts: true, pvc: true},
 		},
 		{
-			name: "deletes pvc and pod if zone changed",
+			name: "deletes pvc and sts if zone changed",
 			fields: fields{
 				indexSelector: &fakeIndexSelector{"c"},
 				nodeFilter: &mockNodeFilter{nodes: []snapshot.Node{
@@ -107,17 +106,17 @@ func Test_scheduler_cleaning(t *testing.T) {
 					fakeNode(4), fakeNode(5),
 				},
 			},
-			asserter: deletedResourceAssertion{x: "c", pod: true, pvc: true},
+			asserter: deletedResourceAssertion{x: "c", sts: true, pvc: true},
 		},
 		{
-			name: "deletes pod if it is not running",
+			name: "deletes pvc and sts if it the pod is not running",
 			fields: fields{
 				indexSelector: &fakeIndexSelector{"e"},
 				nodeFilter:    &noopNodeFilter{},
 				pods: append(fakePods(4), snapshot.Pod{
 					Index:   "e",
 					Node:    named("node", 5),
-					Phase:   v1.PodPending,
+					Ready:   false,
 					Created: time.Now(),
 				}),
 				image:        image,
@@ -127,16 +126,35 @@ func Test_scheduler_cleaning(t *testing.T) {
 				state: fakeStateInSingleZone(zone),
 				nodes: nodesInOneZone,
 			},
-			asserter: deletedResourceAssertion{x: "e", pod: true},
+			asserter: deletedResourceAssertion{x: "e", sts: true, pvc: true},
+		},
+		{
+			name: `does not delete pvc if smoke-mini storage class is "false"`,
+			fields: fields{
+				indexSelector: &fakeIndexSelector{"e"},
+				nodeFilter:    &noopNodeFilter{},
+				pods: append(fakePods(4), snapshot.Pod{
+					Index:   "e",
+					Node:    named("node", 5),
+					Ready:   false,
+					Created: time.Now(),
+				}),
+				image:        image,
+				storageClass: "false",
+			},
+			args: args{
+				state: withDefaultStorageClass(fakeStateInSingleZone(zone)),
+				nodes: nodesInOneZone,
+			},
+			asserter: deletedResourceAssertion{x: "e", sts: true, pvc: false},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			kleaner := &kubeCleaner{
-				pods:       tt.fields.pods,
-				podDeleter: &fakeDeleter{},
-				pvcDeleter: &fakeDeleter{},
-				stsDeleter: &fakeDeleter{},
+				pods:                          tt.fields.pods,
+				persistenceVolumeClaimDeleter: &fakeDeleter{},
+				statefulSetDeleter:            &fakeDeleter{},
 			}
 			s := &Scheduler{
 				indexSelector: tt.fields.indexSelector,
@@ -152,22 +170,16 @@ func Test_scheduler_cleaning(t *testing.T) {
 }
 
 type deletedResourceAssertion struct {
-	x             string
-	pod, sts, pvc bool
+	x   string
+	sts bool
+	pvc bool
 }
 
 func (a deletedResourceAssertion) Assert(t *testing.T, cc *kubeCleaner) {
-	pvcs := cc.pvcDeleter.(*fakeDeleter).names
-	pods := cc.podDeleter.(*fakeDeleter).names
-	sts := cc.stsDeleter.(*fakeDeleter).names
+	pvcs := cc.persistenceVolumeClaimDeleter.(*fakeDeleter).names
+	sts := cc.statefulSetDeleter.(*fakeDeleter).names
 
 	x := snapshot.Index(a.x)
-
-	if a.pod {
-		assert.True(t, pods.Has(x.PodName()), "Pod should be deleted")
-	} else {
-		assert.False(t, pods.Has(x.PodName()), "Pod should not be deleted")
-	}
 
 	if a.pvc {
 		assert.True(t, pvcs.Has(x.PersistenceVolumeClaimName()), "PVC should be deleted")
@@ -199,14 +211,6 @@ type fakeIndexSelector struct {
 
 func (s *fakeIndexSelector) Select(_ State) (string, error) {
 	return s.index, nil
-}
-
-type fakeIndexErrorSelector struct {
-	err error
-}
-
-func (s *fakeIndexErrorSelector) Select(_ State) (string, error) {
-	return "", s.err
 }
 
 type noopNodeFilter struct{}
