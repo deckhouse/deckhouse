@@ -21,6 +21,7 @@ on:
 
 env:
 
+  # <template: werf_envs>
   # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
@@ -35,6 +36,7 @@ env:
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # </template: werf_envs>
 
 
   # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
@@ -85,6 +87,7 @@ concurrency:
 
 jobs:
 
+  # <template: git_info_job>
   git_info:
     name: Get git info
     runs-on: ubuntu-latest
@@ -140,14 +143,18 @@ jobs:
           echo "github_sha='${githubSha}'"
 
           echo "is_external_pr='${{ github.event.pull_request.head.repo.full_name != github.repository }}'"
+  # </template: git_info_job>
 
   comment_on_start:
     name: Add comment on start
     runs-on: ubuntu-latest
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
+      # <template: update_comment_on_start>
       - name: Update comment on start
         if: github.event_name == 'workflow_dispatch'
         uses: actions/github-script@v5.0.0
@@ -159,20 +166,26 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
 
+      # </template: update_comment_on_start>
+
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
       - git_info
       - comment_on_start
 
+    # <template: build_modules_images_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -180,7 +193,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -188,7 +203,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -196,11 +213,14 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
       - name: Build and push modules images
         env:
@@ -223,18 +243,24 @@ jobs:
       #    fi
 
 
+      # <template: save_images_tags_json_step>
       - name: Save images_tags file
         uses: actions/upload-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules/images_tags_${{env.WERF_ENV}}.json
+      # </template: save_images_tags_json_step>
 
+      # <template: save_images_tags_json_to_cache_step>
       - name: Save images_tags file
         uses: actions/cache@v2.1.7
         with:
           path: modules/images_tags_${{env.WERF_ENV}}.json
           key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+      # </template: save_images_tags_json_to_cache_step>
+    # </template: build_modules_images_template>
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -255,6 +281,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   build_modules_images_ee:
     name: Build Modules Images EE
@@ -265,14 +292,18 @@ jobs:
     env:
       WERF_ENV: "EE"
 
+    # <template: build_modules_images_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -280,7 +311,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -288,7 +321,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -296,11 +331,14 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
       - name: Build and push modules images
         env:
@@ -323,18 +361,24 @@ jobs:
       #    fi
 
 
+      # <template: save_images_tags_json_step>
       - name: Save images_tags file
         uses: actions/upload-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules/images_tags_${{env.WERF_ENV}}.json
+      # </template: save_images_tags_json_step>
 
+      # <template: save_images_tags_json_to_cache_step>
       - name: Save images_tags file
         uses: actions/cache@v2.1.7
         with:
           path: modules/images_tags_${{env.WERF_ENV}}.json
           key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+      # </template: save_images_tags_json_to_cache_step>
+    # </template: build_modules_images_template>
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -355,6 +399,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   build_modules_images_ce:
     name: Build Modules Images CE
@@ -365,14 +410,18 @@ jobs:
     env:
       WERF_ENV: "CE"
 
+    # <template: build_modules_images_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -380,7 +429,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -388,7 +439,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -396,11 +449,14 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
       - name: Build and push modules images
         env:
@@ -423,18 +479,24 @@ jobs:
       #    fi
 
 
+      # <template: save_images_tags_json_step>
       - name: Save images_tags file
         uses: actions/upload-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules/images_tags_${{env.WERF_ENV}}.json
+      # </template: save_images_tags_json_step>
 
+      # <template: save_images_tags_json_to_cache_step>
       - name: Save images_tags file
         uses: actions/cache@v2.1.7
         with:
           path: modules/images_tags_${{env.WERF_ENV}}.json
           key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+      # </template: save_images_tags_json_to_cache_step>
+    # </template: build_modules_images_template>
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -455,18 +517,23 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   go_generate:
     name: Go Generate
     needs:
       - git_info
 
+    # <template: go_generate_template>
     runs-on: ubuntu-latest
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -474,6 +541,7 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
       - name: Run go generate
         run: |
@@ -483,7 +551,9 @@ jobs:
       - name: Check generated code
         run: |
           git diff --exit-code
+    # </template: go_generate_template>
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -504,6 +574,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   build_fe:
     name: Build FE
@@ -514,14 +585,18 @@ jobs:
     env:
       WERF_ENV: "FE"
 
+    # <template: build_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -529,7 +604,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -537,7 +614,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -545,7 +624,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -553,17 +634,22 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
 
       - name: Build and push deckhouse images
         env:
@@ -636,7 +722,9 @@ jobs:
             docker image rmi ${DESTINATION_IMAGE} || true;
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
           fi
+    # </template: build_template>
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -657,6 +745,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   build_ee:
     name: Build EE
@@ -668,14 +757,18 @@ jobs:
     env:
       WERF_ENV: "EE"
 
+    # <template: build_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -683,7 +776,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -691,7 +786,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -699,7 +796,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -707,17 +806,22 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
 
       - name: Build and push deckhouse images
         env:
@@ -790,7 +894,9 @@ jobs:
             docker image rmi ${DESTINATION_IMAGE} || true;
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
           fi
+    # </template: build_template>
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -811,6 +917,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   build_ce:
     name: Build CE
@@ -822,14 +929,18 @@ jobs:
     env:
       WERF_ENV: "CE"
 
+    # <template: build_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -837,7 +948,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -845,7 +958,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -853,7 +968,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -861,17 +978,22 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
 
       - name: Build and push deckhouse images
         env:
@@ -944,7 +1066,9 @@ jobs:
             docker image rmi ${DESTINATION_IMAGE} || true;
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
           fi
+    # </template: build_template>
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -965,6 +1089,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   doc_web_build:
     name: Doc web build
@@ -972,14 +1097,18 @@ jobs:
     needs:
       - git_info
       - build_modules_images_fe
+    # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -987,7 +1116,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -995,6 +1126,7 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
       - name: Run doc web build
         uses: werf/actions/build@v1.2
@@ -1004,6 +1136,8 @@ jobs:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
           WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+    # </template: doc_web_build_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1024,6 +1158,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   main_web_build:
     name: Main web build
@@ -1031,14 +1166,18 @@ jobs:
     needs:
       - git_info
       - build_modules_images_fe
+    # <template: main_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1046,7 +1185,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1054,6 +1195,7 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
       - name: Run main web build
         uses: werf/actions/build@v1.2
@@ -1063,6 +1205,8 @@ jobs:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
           WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+    # </template: main_web_build_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1083,6 +1227,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   tests:
     name: Tests
@@ -1092,14 +1237,18 @@ jobs:
       - build_fe
     continue-on-error: true
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1107,7 +1256,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1115,12 +1266,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1134,6 +1288,8 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1154,6 +1310,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   matrix_tests:
     name: Matrix tests
@@ -1163,14 +1320,18 @@ jobs:
       - build_fe
     continue-on-error: true
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1178,7 +1339,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1186,12 +1349,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1205,6 +1371,8 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1225,6 +1393,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   dhctl_tests:
     name: Dhctl Tests
@@ -1234,14 +1403,18 @@ jobs:
       - build_fe
     continue-on-error: true
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1249,7 +1422,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1257,12 +1432,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1276,6 +1454,8 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1296,6 +1476,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   golangci_lint:
     name: GolangCI Lint
@@ -1305,14 +1486,18 @@ jobs:
       - build_fe
     continue-on-error: true
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1320,7 +1505,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1328,12 +1515,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1347,6 +1537,8 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1367,6 +1559,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   openapi_test_cases:
     name: OpenAPI Test Cases
@@ -1376,14 +1569,18 @@ jobs:
       - build_fe
     continue-on-error: true
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1391,7 +1588,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1399,12 +1598,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1418,6 +1620,8 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1438,6 +1642,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   web_links_test:
     name: Web links test
@@ -1446,14 +1651,18 @@ jobs:
       - doc_web_build
       - main_web_build
     continue-on-error: true
+    # <template: web_links_test_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1461,7 +1670,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1469,11 +1680,14 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
       - name: Prepare site structure
         run: |
@@ -1541,6 +1755,8 @@ jobs:
           if [[ -n $_TMPDIR ]] ; then
             rm -rf $_TMPDIR
           fi
+    # </template: web_links_test_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1561,6 +1777,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   validators:
     name: Validators
@@ -1570,14 +1787,18 @@ jobs:
       - build_fe
     continue-on-error: true
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1585,7 +1806,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -1593,12 +1816,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1612,6 +1838,8 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1632,6 +1860,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
 
   deploy_latest_web:
@@ -1645,11 +1874,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: doc_version_template>
       - name: Set documentation version
         env:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
         run: |
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
+      # </template: doc_version_template>
+      # <template: deploy_doc_template>
       - name: Deploy documentation to production
         uses: werf/actions/converge@v1.2
         with:
@@ -1664,6 +1896,8 @@ jobs:
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_WEB_ENV: "web.env=web-production"
+      # </template: deploy_doc_template>
+      # <template: deploy_site_template>
       - name: Deploy site to production
         uses: werf/actions/converge@v1.2
         with:
@@ -1679,6 +1913,8 @@ jobs:
           WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_WEB_ENV: "web.env=web-production"
+      # </template: deploy_site_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1699,6 +1935,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
 
   deploy_tagged_doc:
@@ -1711,11 +1948,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: doc_version_template>
       - name: Set documentation version
         env:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
         run: |
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
+      # </template: doc_version_template>
+      # <template: deploy_doc_template>
       - name: Deploy documentation to stage
         uses: werf/actions/converge@v1.2
         with:
@@ -1730,6 +1970,8 @@ jobs:
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-stage"
+      # </template: deploy_doc_template>
+      # <template: deploy_doc_template>
       - name: Deploy documentation to production
         uses: werf/actions/converge@v1.2
         with:
@@ -1744,6 +1986,8 @@ jobs:
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_WEB_ENV: "web.env=web-production"
+      # </template: deploy_doc_template>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1764,6 +2008,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 
   last_comment:
     name: Update comment on finish
@@ -1791,8 +2036,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -1813,3 +2061,4 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>

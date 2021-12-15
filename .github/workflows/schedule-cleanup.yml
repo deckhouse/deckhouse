@@ -10,6 +10,7 @@ on:
 
 env:
 
+  # <template: werf_envs>
   # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
@@ -24,6 +25,7 @@ env:
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # </template: werf_envs>
 
 
   # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
@@ -75,6 +77,7 @@ concurrency:
 jobs:
 # Note: git_info is needed for werf.yaml
 
+  # <template: git_info_job>
   git_info:
     name: Get git info
     runs-on: ubuntu-latest
@@ -130,6 +133,7 @@ jobs:
           echo "github_sha='${githubSha}'"
 
           echo "is_external_pr='${{ github.event.pull_request.head.repo.full_name != github.repository }}'"
+  # </template: git_info_job>
 
   cleanup_registry:
     name: Cleanup registry
@@ -138,11 +142,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -150,7 +157,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -158,7 +167,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -166,7 +177,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -174,11 +187,14 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
       - name: Cleanup
         env:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
@@ -196,11 +212,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -208,7 +227,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -216,7 +237,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -224,7 +247,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -232,11 +257,14 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
       - name: Cleanup
         env:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
@@ -254,9 +282,12 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -264,7 +295,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -272,7 +305,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -280,7 +315,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -288,6 +325,7 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
       - name: Cleanup
         run: |
           docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v

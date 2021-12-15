@@ -16,18 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      # PR from external repo
+      # <template: checkout_pr_merge_commit_step>
+
+      # Checkhout the merge commit
       - name: Checkout PR merge commit
-        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/checkout@v2.4.0
         with:
           ref: "refs/pull/${{ github.event.number }}/merge"
 
-      # PR from the target repo
-      - name: Checkout sources
-        if: ${{ !needs.git_info.outputs.is_external_pr }}
-        uses: actions/checkout@v2.4.0
-
+      # Detect forbidden changes in external PR
       - name: Check for forbidden changes
         if: needs.git_info.outputs.is_external_pr
         uses: technote-space/get-diff-action@v4.0.1
@@ -41,16 +38,20 @@ jobs:
             ./docs/**/css/**
             ./docs/**/images/**
             ./docs/**/assets/**
-      - name: Stop if changes are forbidden
+
+      # Stop workflow is external PR contains forbidden changes
+      - name: Verfy allowed changes in external PR
         if: needs.git_info.outputs.is_external_pr && env.GIT_DIFF_FILTERED
         uses: actions/github-script@v5.0.0
         with:
           script: |
               core.setFailed('External PR contains forbidden changes.')
+
+      # </template: checkout_pr_merge_commit_step>
       - name: Rerun workflow
         uses: actions/github-script@v5.0.0
         with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           script: |
             const ci = require('./.github/scripts/js/ci');
             return await ci.runWorkflowForPullRequest({ github, context, core });

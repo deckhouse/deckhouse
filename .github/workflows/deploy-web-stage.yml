@@ -19,6 +19,7 @@ on:
 
 env:
 
+  # <template: werf_envs>
   # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
@@ -33,6 +34,7 @@ env:
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # </template: werf_envs>
 
 
   # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
@@ -83,6 +85,7 @@ concurrency:
 
 jobs:
 
+  # <template: git_info_job>
   git_info:
     name: Get git info
     runs-on: ubuntu-latest
@@ -138,7 +141,9 @@ jobs:
           echo "github_sha='${githubSha}'"
 
           echo "is_external_pr='${{ github.event.pull_request.head.repo.full_name != github.repository }}'"
+  # </template: git_info_job>
 
+  # <template: check_label_job>
   check_label:
     name: Check label
     runs-on: ubuntu-latest
@@ -147,8 +152,10 @@ jobs:
       labels: ${{ steps.check_label.outputs.labels }}
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
       - id: check_label
         name: Check labels on push
         uses: actions/github-script@v5.0.0
@@ -159,6 +166,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkLabel({github, context, core, labelType, labelSubject});
+  # </template: check_label_job>
 
   run_web_deploy:
     needs:
@@ -169,11 +177,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_from_event_ref_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           ref: ${{ github.event.ref }}
           fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
       - name: Update comment on start
         if: github.event_name == 'workflow_dispatch'
         uses: actions/github-script@v5.0.0
@@ -185,6 +196,9 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
 
+      # </template: update_comment_on_start>
+
+      # <template: restore_images_tags_json_from_cache_or_fail>
       - name: Restore images_tags_json from cache
         id: images-tags-json
         uses: actions/cache@v2.1.7
@@ -196,7 +210,9 @@ jobs:
         run: |
           echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
           exit 1
+      # </template: restore_images_tags_json_from_cache_or_fail>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -204,7 +220,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -212,7 +230,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -220,7 +240,9 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: deploy_site_template>
       - name: Deploy site to stage
         uses: werf/actions/converge@v1.2
         with:
@@ -236,12 +258,16 @@ jobs:
           WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
           WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-stage"
+      # </template: deploy_site_template>
 
+      # <template: doc_version_template>
       - name: Set documentation version
         env:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
         run: |
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
+      # </template: doc_version_template>
+      # <template: deploy_doc_template>
       - name: Deploy documentation to stage
         uses: werf/actions/converge@v1.2
         with:
@@ -256,7 +282,9 @@ jobs:
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-stage"
+      # </template: deploy_doc_template>
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
@@ -277,4 +305,5 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 

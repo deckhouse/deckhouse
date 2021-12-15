@@ -52,8 +52,10 @@ jobs:
 
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
       - id: on_push
         name: Check labels on push
         uses: actions/github-script@v5.0.0
@@ -75,8 +77,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
 
       - name: Run check
         env:
@@ -94,8 +98,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
 
       - name: Run check
         env:
@@ -113,8 +119,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+      # </template: checkout_step>
 
       - name: Run check
         env:

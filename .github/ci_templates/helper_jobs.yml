@@ -1,4 +1,5 @@
 {!{ define "git_info_job" }!}
+# <template: git_info_job>
 git_info:
   name: Get git info
   runs-on: ubuntu-latest
@@ -54,11 +55,13 @@ git_info:
         echo "github_sha='${githubSha}'"
 
         echo "is_external_pr='${{ github.event.pull_request.head.repo.full_name != github.repository }}'"
+# </template: git_info_job>
 
 {!{- end -}!}
 
 
 {!{ define "restore_images_tags_json_template" }!}
+# <template: restore_images_tags_json_template>
 images_tags_json:
   name: Put images_tags_json into artifact
   runs-on: ubuntu-latest
@@ -78,4 +81,5 @@ images_tags_json:
         exit 1
 
 {!{ tmpl.Exec "save_images_tags_json_step" . | strings.Indent 4 }!}
+# </template: restore_images_tags_json_template>
 {!{- end -}!}
