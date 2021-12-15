@@ -33,7 +33,6 @@ git_info:
 
           // TODO delete `ci_pipeline_created_at` everywhere in CI since it is useless.
           // 2021-12-15T11:10:45.138Z   (not 2021-12-15T11:10:45+00:00)
-          core.info(`ci_pipeline_created_at: '${ci_pipeline_created_at}'`)
           core.setOutput('ci_pipeline_created_at', new Date().toISOString())
 
           if (context.eventName === "workflow_dispatch") {
