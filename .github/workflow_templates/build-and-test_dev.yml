@@ -19,7 +19,7 @@ env:
 # Note: Concurrency is currently in beta and subject to change.
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  group: ${{ github.ref }}-dev
+  group: ${{ github.event.number }}-dev
   cancel-in-progress: true
 
 jobs:
