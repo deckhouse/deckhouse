@@ -108,7 +108,7 @@ jobs:
             ./docs/**/assets/**
 
       # Stop workflow if external PR contains forbidden changes
-      - name: Verfy allowed changes in external PR
+      - name: Verify allowed changes in external PR
         if: github.event.pull_request.head.repo.full_name != github.repository && env.GIT_DIFF_FILTERED
         uses: actions/github-script@v5.0.0
         with:
