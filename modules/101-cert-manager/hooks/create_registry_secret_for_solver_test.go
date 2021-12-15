@@ -98,15 +98,33 @@ spec:
 }
 
 func genD8RegistrySecret(secretContent string) string {
+	return genRegistrySecret(secretContent, "d8-system", "deckhouse-registry")
+}
+
+func genRegistrySecret(secretContent, ns, name string) string {
 	return fmt.Sprintf(`
 apiVersion: v1
 data:
   .dockerconfigjson: %s
 kind: Secret
 metadata:
-  name: deckhouse-registry
-  namespace: d8-system
-type: kubernetes.io/dockerconfigjson`, secretContent)
+  name: %s
+  namespace: %s
+type: kubernetes.io/dockerconfigjson`, secretContent, name, ns)
+}
+
+func genServiceAccount(ns string) string {
+	return fmt.Sprintf(`
+apiVersion: v1
+imagePullSecrets:
+- name: %s
+kind: ServiceAccount
+metadata:
+  labels:
+    cert-manager.deckhouse.io/solver-sa: "true"
+    heritage: deckhouse
+  name: %s
+  namespace: %s`, solverSecretName, solverServiceAccountName, ns)
 }
 
 func setState(f *HookExecutionConfig, ch ...string) {
@@ -114,7 +132,7 @@ func setState(f *HookExecutionConfig, ch ...string) {
 	f.BindingContexts.Set(f.KubeStateSet(rs))
 }
 
-func assertRegistrySecretExists(f *HookExecutionConfig, dockerCfgContent string, nss ...string) {
+func assertRegistrySecretAndSAExists(f *HookExecutionConfig, dockerCfgContent string, nss ...string) {
 	for _, ns := range nss {
 		secret := f.KubernetesResource("Secret", ns, solverSecretName)
 		Expect(secret).To(Not(BeEmpty()))
@@ -127,7 +145,7 @@ func assertRegistrySecretExists(f *HookExecutionConfig, dockerCfgContent string,
 	}
 }
 
-func assertRegistrySecretNotExists(f *HookExecutionConfig, nss ...string) {
+func assertRegistrySecretAndSANotExists(f *HookExecutionConfig, nss ...string) {
 	for _, ns := range nss {
 		secret := f.KubernetesResource("Secret", ns, solverSecretName)
 		Expect(secret).To(BeEmpty())
@@ -140,7 +158,7 @@ func assertRegistrySecretNotExists(f *HookExecutionConfig, nss ...string) {
 var _ = Describe("Cert Manager hooks :: generate registry secret for http challenge solver ::", func() {
 	f := HookExecutionConfigInit(`{"global":{}}`, "")
 	f.RegisterCRD("acme.cert-manager.io", "v1", "Challenge", true)
-	// todo remofe with legacy cert-manager
+	// todo remove with legacy cert-manager
 	f.RegisterCRD("certmanager.k8s.io", "v1alpha1", "Challenge", true)
 
 	const ns1 = "ns1"
@@ -217,7 +235,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 						})
 
 						It("changes secret content for all solvers secrets", func() {
-							assertRegistrySecretExists(f, newContent, ns1, ns2, ns3)
+							assertRegistrySecretAndSAExists(f, newContent, ns1, ns2, ns3)
 						})
 					})
 				})
@@ -236,8 +254,8 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 				Context("one challenge in one namespace", func() {
 					It("creates registry secret", func() {
-						assertRegistrySecretExists(f, testDockerCfgEncoded, ns1)
-						assertRegistrySecretNotExists(f, ns2, ns3)
+						assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1)
+						assertRegistrySecretAndSANotExists(f, ns2, ns3)
 					})
 				})
 
@@ -254,8 +272,8 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 					})
 
 					It("contains one registry secret", func() {
-						assertRegistrySecretExists(f, testDockerCfgEncoded, ns1)
-						assertRegistrySecretNotExists(f, ns2, ns3)
+						assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1)
+						assertRegistrySecretAndSANotExists(f, ns2, ns3)
 					})
 				})
 
@@ -273,7 +291,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 					})
 
 					It("creates one secret in each namespace", func() {
-						assertRegistrySecretExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
+						assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
 					})
 				})
 			})
@@ -306,11 +324,11 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 					})
 
 					It("deletes registry secret in challenge namespace", func() {
-						assertRegistrySecretNotExists(f, ns1)
+						assertRegistrySecretAndSANotExists(f, ns1)
 					})
 
 					It("keeps registry secret in another namespaces", func() {
-						assertRegistrySecretExists(f, testDockerCfgEncoded, ns2, ns3)
+						assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns2, ns3)
 					})
 				})
 
@@ -328,16 +346,92 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 					})
 
 					It("keeps registry secret", func() {
-						assertRegistrySecretExists(f, testDockerCfgEncoded, ns3)
+						assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns3)
 					})
 
 					It("keeps registry secret in another namespaces", func() {
-						assertRegistrySecretExists(f, testDockerCfgEncoded, ns1, ns2)
+						assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2)
 					})
 				})
 			})
 		})
 	}
+
+	Context("Registry secret created without service account", func() {
+		BeforeEach(func() {
+			setState(f,
+				genD8RegistrySecret(testDockerCfgEncoded),
+
+				genTestChallengeManifest(chName, ns1),
+				genRegistrySecret(testDockerCfgEncoded, ns1, solverSecretName),
+			)
+
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Should create service account", func() {
+			assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1)
+		})
+	})
+
+	Context("Service account created without registry secret", func() {
+		BeforeEach(func() {
+			setState(f,
+				genD8RegistrySecret(testDockerCfgEncoded),
+
+				genTestChallengeManifest(chName, ns1),
+				genServiceAccount(ns1),
+			)
+
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Should create registry secret", func() {
+			assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1)
+		})
+	})
+
+	Context("Challenge deleted", func() {
+		Context("Service account was deleted but secret was not", func() {
+			BeforeEach(func() {
+				setState(f,
+					genD8RegistrySecret(testDockerCfgEncoded),
+
+					genRegistrySecret(testDockerCfgEncoded, ns1, solverSecretName),
+				)
+
+				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Should delete secret", func() {
+				assertRegistrySecretAndSANotExists(f, ns1)
+			})
+		})
+
+		Context("Secret was deleted but service account was not", func() {
+			BeforeEach(func() {
+				setState(f,
+					genD8RegistrySecret(testDockerCfgEncoded),
+
+					genServiceAccount(ns1),
+				)
+
+				f.RunHook()
+
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("Should delete service account", func() {
+				assertRegistrySecretAndSANotExists(f, ns1)
+			})
+		})
+	})
 
 	// todo remove with legacy cert-manager
 	Context("Legacy cert-manager manifests and new cert manager manifests both", func() {
@@ -361,7 +455,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 			})
 
 			It("create registry secret in all namespaces", func() {
-				assertRegistrySecretExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
+				assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
 			})
 
 			Context("remove legacy challenge in one namespace", func() {
@@ -383,7 +477,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 				})
 
 				It("keeps registry secret in all namespaces", func() {
-					assertRegistrySecretExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
+					assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
 				})
 
 				Context("remove new challenge in one namespace", func() {
@@ -404,8 +498,8 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 					})
 
 					It("removes registry secret from namespace", func() {
-						assertRegistrySecretExists(f, testDockerCfgEncoded, ns1, ns2)
-						assertRegistrySecretNotExists(f, ns3)
+						assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2)
+						assertRegistrySecretAndSANotExists(f, ns3)
 					})
 				})
 			})
@@ -426,7 +520,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 				})
 
 				It("keeps registry secret in all namespaces", func() {
-					assertRegistrySecretExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
+					assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
 				})
 			})
 
@@ -446,7 +540,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 				})
 
 				It("keeps registry secret in all namespaces", func() {
-					assertRegistrySecretExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
+					assertRegistrySecretAndSAExists(f, testDockerCfgEncoded, ns1, ns2, ns3)
 				})
 			})
 
@@ -462,7 +556,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 				})
 
 				It("removes secrets in all namespaces", func() {
-					assertRegistrySecretNotExists(f, ns1, ns2, ns3)
+					assertRegistrySecretAndSANotExists(f, ns1, ns2, ns3)
 				})
 			})
 		})
