@@ -51,6 +51,7 @@ git_info:
             core.setOutput('ci_commit_ref_name', refName)
           }
 
+          core.info(`github_sha: '${context.payload.sha}'`)
           core.setOutput('github_sha', context.payload.sha)
 
 # </template: git_info_job>
