@@ -19,10 +19,11 @@ git_info:
           //   - https://docs.github.com/en/actions/learn-github-actions/environment-variables
           //   - https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
 
-          const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
+          const { GITHUB_REF_TYPE } = process.env
 
-          const ci_commit_tag    = GITHUB_REF_TYPE == "tag"    ? GITHUB_REF_NAME : ""
-          const ci_commit_branch = GITHUB_REF_TYPE == "branch" ? GITHUB_REF_NAME : ""
+          const githubRefName = context.pull_request.payload.head.ref
+          const ci_commit_tag    = GITHUB_REF_TYPE == "tag"    ? refName : ""
+          const ci_commit_branch = GITHUB_REF_TYPE == "branch" ? refName : ""
 
           core.info(`ci_commit_tag:    '${ci_commit_tag}'`)
           core.info(`ci_commit_branch: '${ci_commit_branch}'`)
@@ -45,7 +46,7 @@ git_info:
 
             const sourceRepo = context.payload.pull_request.head.repo.full_name
             const ourRepo = context.payload.repository.full_name
-            const refName = (sourceRepo === ourRepo) ? GITHUB_REF_NAME : `pr${context.issue.number}`
+            const refName = (sourceRepo === ourRepo) ? githubRefName : `pr${context.issue.number}`
 
             core.info(`ci_commit_ref_name (from pull_request): '${refName}'`)
             core.setOutput('ci_commit_ref_name', refName)
