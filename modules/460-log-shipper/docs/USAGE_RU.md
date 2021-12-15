@@ -176,3 +176,24 @@ spec:
   type: loki
   url: http://loki.loki:3100
 ```
+
+
+## Поддержка elasticsearch <= 6.X
+
+Для Elasticsearch < 7.0 нужно включить поддержку doc_type индексов. Сделать это можно добавив `docTypeSupport: true` в конфигурацию:
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://192.168.1.1:9200
+    docTypeSupport: true
+    auth:
+      strategy: Basic
+      user: elastic
+      password: c2VjcmV0IC1uCg==
+```

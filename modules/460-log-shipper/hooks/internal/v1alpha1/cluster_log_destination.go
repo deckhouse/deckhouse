@@ -111,8 +111,11 @@ type ElasticsearchSpec struct {
 
 	Index    string `json:"index,omitempty"`
 	Pipeline string `json:"pipeline,omitempty"`
+	Type     string `json:"type,omitempty"`
 
-	Auth ElasticsearchAuthSpec `json:"auth,omitempty"`
+	Auth              ElasticsearchAuthSpec `json:"auth,omitempty"`
+	DataStreamEnabled bool                  `json:"dataStreamEnabled"`
+	DocTypeSupport    bool                  `json:"docTypeSupport"`
 
 	TLS CommonTLSSpec `json:"tls,omitempty"`
 }
@@ -121,4 +124,9 @@ type LogstashSpec struct {
 	Endpoint string `json:"endpoint,omitempty"`
 
 	TLS LogstashTLSSpec `json:"tls,omitempty"`
+}
+
+type ElasticsearchIndexSettingsSpec struct {
+	Type    string `json:"type,omitempty"`
+	DocType string `json:"docType,omitempty"`
 }

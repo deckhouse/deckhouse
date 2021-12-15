@@ -88,6 +88,8 @@ func GetAllHooks() ([]Hook, error) {
 				return nil
 			case strings.HasSuffix(path, ".yaml"): // ignore openapi schemas
 				return nil
+			case strings.HasSuffix(path, ".json"): // ignore json files (golden tests for example)
+				return nil
 			case strings.HasSuffix(path, ".txt"): // ignore txt files
 				return nil
 			case strings.HasSuffix(path, ".md"): // ignore Markdown files
