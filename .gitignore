@@ -42,3 +42,6 @@ testing/cloud_layouts/**/bootstrap.log
 testing/cloud_layouts/**/configuration.yaml
 testing/cloud_layouts/**/sshkey*
 layouts-tests-tmp/
+
+# ignore generated files
+/modules/040-node-manager/images/bashible-apiserver/pkg/template/test_data/**/generated/**

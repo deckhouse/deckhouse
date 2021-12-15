@@ -1,0 +1,93 @@
+---
+clusterDomain: cluster.local
+clusterDNSAddress: 10.222.0.10
+cloudProvider:
+  instanceClassKind: OpenStackInstanceClass
+  machineClassKind: OpenStackMachineClass
+  openstack:
+    connection:
+      authURL: https://cloud.test.com/v3/
+      domainName: Default
+      password: test
+      region: HetznerFinland
+      tenantName: test
+      username: test
+    externalNetworkNames:
+      - public
+    instances:
+      imageName: ubuntu-18-04-cloud-amd64
+      mainNetwork: dev
+      securityGroups:
+        - dev
+      sshKeyPairName: dev
+    internalNetworkNames:
+      - dev
+    podNetworkMode: DirectRoutingWithPortSecurityEnabled
+  type: openstack
+  zones:
+    - nova
+apiserverEndpoints:
+  - 192.168.199.155:6443
+kubernetesCA: |
+  -----BEGIN CERTIFICATE-----
+  MIIB6zCCAZWgAwIBAgIUDFR8Byq1CExaGYOeLXIG0EzWPjwwDQYJKoZIhvcNAQEL
+  BQAwIjETMBEGA1UEAwwKa3ViZXJuZXRlczELMAkGA1UEBhMCUlUwIBcNMjExMjEw
+  MDg1NDM5WhgPMzAyMTA0MTIwODU0MzlaMCIxEzARBgNVBAMMCmt1YmVybmV0ZXMx
+  CzAJBgNVBAYTAlJVMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAOSqVJwmt9KaQsqz
+  l8KDAth/nCrjNcuZuKXTnZQd/CaWDNZjHcJkInUXppIMXr8ntf1vNEfmAUB5jhB6
+  IZvGXzcCAwEAAaOBoDCBnTAdBgNVHQ4EFgQUwSFpNDTU4njzuf203NdPGKSY8jow
+  HwYDVR0jBBgwFoAUwSFpNDTU4njzuf203NdPGKSY8jowDgYDVR0PAQH/BAQDAgWg
+  MCAGA1UdJQEB/wQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjApBgNVHREEIjAgggpr
+  dWJlcm5ldGVzghJrdWJlcm5ldGVzLmRlZmF1bHQwDQYJKoZIhvcNAQELBQADQQAl
+  rOmrUClda9hU1/SUb6PSes+4S9G7OOH11UPQfut7Nxed2pqwi8BSn/8qrEAwdXDz
+  7vklEdhiDcQiLLuZGDiI
+  -----END CERTIFICATE-----
+
+allowedBundles:
+  - ubuntu-lts
+  - centos-7
+allowedKubernetesVersions:
+  - "1.16"
+  - "1.17"
+  - "1.18"
+  - "1.19"
+  - "1.20"
+  - "1.21"
+nodeGroups:
+  - cri:
+      type: Containerd
+    disruptions:
+      approvalMode: Manual
+    kubernetesVersion: "1.21"
+    manualRolloutID: ""
+    name: master
+    nodeTemplate:
+      labels:
+        node-role.kubernetes.io/master: ""
+      taints:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+    nodeType: CloudPermanent
+    updateEpoch: "1639084869"
+  - cloudInstances:
+      classReference:
+        kind: OpenStackInstanceClass
+        name: worker
+      maxPerZone: 3
+      minPerZone: 1
+      zones:
+        - nova
+    cri:
+      type: Containerd
+    disruptions:
+      approvalMode: Automatic
+    instanceClass:
+      flavorName: m1.large
+      imageName: ubuntu-18-04-cloud-amd64
+      mainNetwork: dev
+    kubernetesVersion: "1.21"
+    manualRolloutID: ""
+    name: worker
+    nodeType: CloudEphemeral
+    updateEpoch: "1639088093"
+nodeStatusUpdateFrequency: 10
