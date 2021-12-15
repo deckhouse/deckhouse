@@ -603,7 +603,6 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
  * @returns {Promise<void>}
  */
 module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }) => {
-
   const event = context.payload;
   const label = event.label.name;
 
@@ -682,8 +681,14 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
   if (action === 'workflow_dispatch') {
     console.log(`Label '${label}' was set on PR#${context.payload.pull_request.number}. Will start workflow '${workflow_id}'.`);
 
-    // workflow_dispatch requires a ref.
-    const ref = context.payload.pull_request.head.ref;
+    // workflow_dispatch requires a ref. In PRs from forks, we assign images with `prXXX` tags to
+    // avoid clashes with inner branches.
+    const sourceRepo = context.payload.pull_request.head.repo.full_name;
+    const ourRepo = context.payload.repository.full_name;
+    const isExternal = sourceRepo !== ourRepo;
+    const refName = context.payload.pull_request.head.ref.replace('/refs/heads/', '');
+    const ci_commit_ref_name = isExternal ? `pr${context.issue.number}` : refName;
+
     console.log(`Use ref=${ref}`);
 
     // Add comment to pull request.
@@ -708,7 +713,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       repo: context.repo.repo,
       workflow_id: workflow_id,
       ref: ref,
-      inputs: { issue_id, issue_number, comment_id }
+      inputs: { issue_id, issue_number, comment_id, ci_commit_ref_name }
     });
 
     if (response.status > 200 && response.status < 300) {

@@ -118,7 +118,7 @@ jobs:
             if (context.eventName === "workflow_dispatch") {
               core.setOutput('ci_commit_ref_name', context.payload.inputs.ci_commit_ref_name)
             } else {
-              // Fox PRs from forks, we assign images with `prXXX` tags to avoid clashes with inner branches.
+              // If PRs from forks, we assign images with `prXXX` tags to avoid clashes with inner branches.
 
               const sourceRepo = context.payload.pull_request.head.repo.full_name
               const ourRepo = context.payload.repository.full_name

@@ -21,6 +21,9 @@ on:
       comment_id:
         description: 'ID of comment in issue where to put workflow run status'
         required: true
+      ci_commit_ref_name:
+        description: 'Git ref being tested'
+        required: true
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
