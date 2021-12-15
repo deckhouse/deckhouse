@@ -5,17 +5,17 @@
 name: 'Deploy web to test'
 
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'release-*'
-      - 'alpha'
-      - 'beta'
-      - 'early-access'
-      - 'stable'
-      - 'rock-solid'
-      - 'changelog/*'
-
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'ID of issue where label was set'
+        required: true
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: true
+      comment_id:
+        description: 'ID of comment in issue where to put workflow run status'
+        required: true
 
 env:
 
