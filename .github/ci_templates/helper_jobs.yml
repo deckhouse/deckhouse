@@ -122,7 +122,7 @@ pull_request_info:
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
-            core.setFailed('External PR contains forbidden changes.')
+          core.setFailed('External PR contains forbidden changes.')
 
     # Set output
     - name: Return PR merge commit ref
