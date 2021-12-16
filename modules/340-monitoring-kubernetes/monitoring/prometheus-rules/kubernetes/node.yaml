@@ -7,8 +7,8 @@
     expr: (min by (node) (node_ntp_sanity)) == 0
     for: 2h
     labels:
-      impact: marginal
-      likelihood: certain
+      severity_level: "5"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -35,8 +35,8 @@
     expr: max by (node) (abs(node_time_seconds - timestamp(node_time_seconds)) > 10)
     for: 5m
     labels:
-      impact: critical
-      likelihood: certain
+      severity_level: "5"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -48,8 +48,8 @@
     expr: max by (node) (irate(node_cpu_seconds_total{mode="steal"}[30m]) * 100) > 10
     for: 30m
     labels:
-      impact: marginal
-      likelihood: certain
+      severity_level: "4"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       description: |-
@@ -62,8 +62,8 @@
     expr: sum by (node) (kubernetes_build_info{job="kubelet"}) unless (sum by (node) (up{node=~".+", job="kubelet"}) and sum by (node) (up{node=~".+", job="node-exporter"}))
     for: 5m
     labels:
-      impact: marginal
-      likelihood: certain
+      severity_level: "4"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -79,8 +79,8 @@
     expr: max by (node) ( node_nf_conntrack_entries / node_nf_conntrack_entries_limit * 100 > 70 )
     for: 5m
     labels:
-      impact: catastrophic
-      likelihood: unlikely
+      severity_level: "4"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -96,8 +96,8 @@
     expr: max by (node) ( node_nf_conntrack_entries / node_nf_conntrack_entries_limit * 100 > 95 )
     for: 1m
     labels:
-      impact: catastrophic
-      likelihood: certain
+      severity_level: "3"
+      tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
