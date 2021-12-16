@@ -10,9 +10,7 @@
 # If PR is not created, 'compare' field is used to get diff between base branch and dev branch.
 #
 # See also scripts/validation_run.sh.
-#
-
-name: Validations
+#name: Validations
 on:
   pull_request_target:
      types:
@@ -28,10 +26,59 @@ concurrency:
 
 jobs:
 
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
+    steps:
+      # Checkhout the merge commit
+      - name: Checkout PR merge commit
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: "refs/pull/${{ github.event.number }}/merge"
+
+      # Detect forbidden changes in external PR
+      - name: Check for forbidden changes
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        uses: technote-space/get-diff-action@v4.0.1
+        with:
+          PATTERNS: |
+            ./.github/**
+            ./.gitlab/**
+            ./tools/**
+            ./testing/**
+            ./docs/**/js/**
+            ./docs/**/css/**
+            ./docs/**/images/**
+            ./docs/**/assets/**
+
+      # Stop workflow if external PR contains forbidden changes
+      - name: Verify allowed changes in external PR
+        if: github.event.pull_request.head.repo.full_name != github.repository && env.GIT_DIFF_FILTERED
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            core.setFailed('External PR contains forbidden changes.')
+
+      # Set output
+      - name: Return PR merge commit ref
+        id: ref
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            const ref = `refs/pull/${ context.issue.number }/merge`
+            core.info(`ref: '${ref}'`)
+            core.setOutput('ref', ref)
+  # </template: pull_request_info>
+
   # Get pull request info for validation scripts.
   # Push event has no pull request information, so retrieve it with Rest API.
   discover:
     name: Prepare input for validation scripts
+    needs:
+      - pull_request_info
     runs-on: ubuntu-latest
     outputs:
       run_no_cyrillic: ${{ steps.on_push.outputs.run_no_cyrillic }}
@@ -49,7 +96,8 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
-
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
       - id: on_push
         name: Check labels on push
@@ -68,6 +116,7 @@ jobs:
 
     needs:
       - discover
+      - pull_request_info
     if: needs.discover.outputs.run_no_cyrillic == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -75,7 +124,8 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
-
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
 
       - name: Run check
@@ -90,6 +140,7 @@ jobs:
 
     needs:
       - discover
+      - pull_request_info
     if: needs.discover.outputs.run_doc_changes == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -97,7 +148,8 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
-
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
 
       - name: Run check
@@ -112,6 +164,7 @@ jobs:
 
     needs:
       - discover
+      - pull_request_info
     if: needs.discover.outputs.run_copyright == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -119,7 +172,8 @@ jobs:
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
-
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
 
       - name: Run check
