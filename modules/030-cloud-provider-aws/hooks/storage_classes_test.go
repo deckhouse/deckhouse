@@ -30,13 +30,13 @@ cloudProviderAws:
   internal: {}
   storageClass:
     provision:
-    - iopsPerGB: 5
+    - iopsPerGB: "5"
       name: iops-foo
       type: io1
     - name: gp3
       type: gp3
-      iops: 6000
-      throughput: 300
+      iops: "6000"
+      throughput: "300"
     exclude:
     - sc\d+
     - bar
@@ -49,13 +49,27 @@ cloudProviderAws:
     exclude:
     - ".*"
 `
+
+		storageClass = `
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  labels:
+    heritage: deckhouse
+parameters:
+  type: gp3
+  iops: "6000"
+  throughput: "300"
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, `{}`)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext(), f.KubeStateSet(storageClass))
 			f.RunHook()
 		})
 
@@ -70,11 +84,11 @@ cloudProviderAws:
   {
 	"name": "gp3",
 	"type": "gp3",
-	"iops": 6000,
-	"throughput": 300
+	"iops": "6000",
+	"throughput": "300"
   },
   {
-	"iopsPerGB": 5,
+	"iopsPerGB": "5",
 	"name": "iops-foo",
 	"type": "io1"
   },
