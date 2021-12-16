@@ -7,3 +7,4 @@ template_tests
 public_deploy
 values_public.yaml
 README.md
+openapi

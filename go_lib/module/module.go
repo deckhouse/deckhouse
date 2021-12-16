@@ -17,8 +17,38 @@ limitations under the License.
 package module
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/tidwall/gjson"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
+
+func getFirstDefined(values *go_hook.PatchableValues, keys ...string) (gjson.Result, bool) {
+	var (
+		v  gjson.Result
+		ok bool
+	)
+
+	for i := range keys {
+		v, ok = values.GetOk(keys[i])
+		if ok {
+			return v, ok
+		}
+	}
+
+	return v, ok
+}
+
+func GetValuesFirstDefined(input *go_hook.HookInput, keys ...string) (v gjson.Result, ok bool) {
+	return getFirstDefined(input.Values, keys...)
+}
+
+func GetConfigValuesFirstDefined(input *go_hook.HookInput, keys ...string) (v gjson.Result, ok bool) {
+	return getFirstDefined(input.ConfigValues, keys...)
+}
 
 func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
 	var (
@@ -26,12 +56,8 @@ func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
 		globalPath = "global.modules.https.mode"
 	)
 
-	v, ok := input.Values.GetOk(modulePath)
-	if ok {
-		return v.String()
-	}
+	v, ok := GetValuesFirstDefined(input, globalPath, modulePath)
 
-	v, ok = input.Values.GetOk(globalPath)
 	if ok {
 		return v.String()
 	}
@@ -40,13 +66,63 @@ func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
 }
 
 func IsEnabled(moduleName string, input *go_hook.HookInput) bool {
-	modules := input.Values.Get("global.enabledModules").Array()
+	return set.NewFromValues(input.Values, "global.enabledModules").Has(moduleName)
+}
 
-	for _, m := range modules {
-		if m.String() == moduleName {
-			return true
-		}
+func GetPublicDomain(moduleName string, input *go_hook.HookInput) string {
+	template := input.ConfigValues.Get("global.modules.publicDomainTemplate").String()
+
+	if len(strings.Split(template, "%s")) == 2 {
+		return fmt.Sprintf(template, moduleName)
+	}
+	panic("ERROR: global.modules.publicDomainTemplate must contain '%s'.")
+}
+
+func GetIngressClass(moduleName string, input *go_hook.HookInput) string {
+	var (
+		modulePath = moduleName + ".ingressClass"
+		globalPath = "global.modules.ingressClass"
+	)
+
+	v, ok := GetValuesFirstDefined(input, globalPath, modulePath)
+
+	if ok {
+		return v.String()
 	}
 
-	return false
+	panic("ingress class is not defined")
+}
+
+func GetHTTPSSecretName(prefix string, moduleName string, input *go_hook.HookInput) string {
+	var (
+		modulePath = moduleName + ".https.mode"
+		globalPath = "global.modules.https.mode"
+	)
+	httpsMode, _ := GetValuesFirstDefined(input, globalPath, modulePath)
+	switch httpsMode.String() {
+	case "CustomCertificate":
+		return fmt.Sprintf("%s-customcertificate", prefix)
+	case "CertManager":
+		return prefix
+	case "OnlyInURI":
+		return ""
+	default:
+		input.LogEntry.Warnf("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning %s", prefix)
+		return prefix
+	}
+}
+
+func GetCertificateIssuerName(moduleName string, input *go_hook.HookInput) string {
+	var (
+		modulePath = moduleName + ".https.certManager.clusterIssuerName"
+		globalPath = "global.modules.https.certManager.clusterIssuerName"
+	)
+
+	v, ok := GetValuesFirstDefined(input, globalPath, modulePath)
+
+	if ok {
+		return v.String()
+	}
+
+	panic("certmanager clusterIssuerName is not defined")
 }

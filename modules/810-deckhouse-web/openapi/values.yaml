@@ -1,0 +1,30 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      deckhouseReleaseChannel:
+        type: string
+        default: "unknown"
+      deckhouseEdition:
+        type: string
+        default: "unknown"
+      deckhouseVersion:
+        type: string
+        default: "unknown"
+      deployDexAuthenticator:
+        type: boolean
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+            x-examples:
+              - plainstring
+          tls.key:
+            type: string
+            x-examples:
+              - plainstring

@@ -52,7 +52,7 @@ func applyCustomCertificateFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	return cs, nil
 }
 
-func RegisterCopyCustomCertificateHook(moduleName string) bool {
+func RegisterHook(moduleName string) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 		Kubernetes: []go_hook.KubernetesConfig{
@@ -96,12 +96,8 @@ func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookIn
 			return nil
 		}
 
-		var secretName string
-		if input.Values.Exists(fmt.Sprintf("%s.https.customCertificate.secretName", moduleName)) {
-			secretName = input.Values.Get(fmt.Sprintf("%s.https.customCertificate.secretName", moduleName)).String()
-		} else if input.Values.Exists("global.modules.https.customCertificate.secretName") {
-			httpsMode = input.Values.Get("global.modules.https.customCertificate.secretName").String()
-		}
+		rawsecretName, _ := module.GetValuesFirstDefined(input, fmt.Sprintf("%s.https.customCertificate.secretName", moduleName), "global.modules.https.customCertificate.secretName")
+		secretName := rawsecretName.String()
 
 		if secretName == "" {
 			return nil
