@@ -8,6 +8,9 @@
 # See also scripts/validation_run.sh.
 #
 
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . -}!}
+
 name: Validations
 on:
   pull_request_target:
@@ -41,7 +44,7 @@ jobs:
       diff_url: ${{ steps.on_push.outputs.diff_url }}
 
     steps:
-{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
       - id: on_push
         name: Check labels on push
         uses: {!{ index (ds "actions") "actions/github-script" }!}
@@ -74,7 +77,7 @@ needs:
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
 runs-on: ubuntu-latest
 steps:
-  {!{ tmpl.Exec "checkout_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
   - name: Run check
     env:
