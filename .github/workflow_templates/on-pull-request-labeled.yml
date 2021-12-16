@@ -14,6 +14,7 @@ jobs:
     needs:
       - pull_request_info
     steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Rerun workflow
         uses: {!{ index (ds "actions") "actions/github-script" }!}
         with:

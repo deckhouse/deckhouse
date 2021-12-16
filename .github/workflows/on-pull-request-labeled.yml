@@ -64,6 +64,12 @@ jobs:
     needs:
       - pull_request_info
     steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+
+      # </template: checkout_step>
       - name: Rerun workflow
         uses: actions/github-script@v5.0.0
         with:
