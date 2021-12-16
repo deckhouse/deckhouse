@@ -322,3 +322,23 @@
         Deckhouse does not work as expected.
 
         You can find out the exact problem in the relevant alerts.
+
+  - alert: D8DeckhouseConfigInvalid
+    expr: increase(deckhouse_config_values_errors_total[30s]) > 0
+    for: 1m
+    labels:
+      severity_level: "5"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse"
+      description: |
+        Deckhouse config contains errors.
+
+        Please check Deckhouse logs by running `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Edit Deckhouse config by running: `kubectl -n d8-system edit cm deckhouse`.
+      summary: |
+        Deckhouse config is invalid.
