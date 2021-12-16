@@ -10,22 +10,16 @@
 
 name: Validations
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'release-*'
-      - 'alpha'
-      - 'beta'
-      - 'early-access'
-      - 'stable'
-      - 'rock-solid'
-      - 'changelog/*'
+  pull_request_target:
+     types:
+      - opened
+      - synchronize
 
 # Analog of Gitlab's "interruptible: true" behaviour.
 # Note: Concurrency is currently in beta and subject to change.
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  group: ${{ github.ref }}-validation
+  group: ${{ github.event.number }}-validation
   cancel-in-progress: true
 
 jobs:
