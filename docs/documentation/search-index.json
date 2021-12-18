@@ -4,13 +4,15 @@ layout: none
 searchable: false
 sitemap_include: false
 ---
+
 [
 {%- assign searchedpages = site.pages | where: "searchable", true %}
 {%- for page in searchedpages %}
 {%- unless page.searchable == false %}
 {
+{%- capture removed_prefix %}/{{ page.lang }}/{%- endcapture -%}
 "title": "{{ page.title | escape }}",
-"url": "{{ site.url }}/{{ page.url | remove_first: "/"}}",
+"url": "{{ site.url }}/{{ page.lang}}{{ site.canonical_url_prefix }}/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
 "keywords": "{{ page.search | strip }}",
 "summary": "{% if page.summary %}{{ page.summary | strip }}{% else %}{{ page.description | strip }}{% endif %}",
 "content": {{ page.content | strip_html | strip | regex_replace: "\n", ' ' | regex_replace: '\s\s+', ' ' | jsonify }}

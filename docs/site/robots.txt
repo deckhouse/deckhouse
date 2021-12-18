@@ -1,7 +1,6 @@
 ---
 layout: none
 permalink: /robots.txt
-search: exclude
 searchable: false
 sitemap_include: false
 ---
