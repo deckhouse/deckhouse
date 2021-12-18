@@ -1,13 +1,14 @@
 ---
 layout: none
 permalink: /robots.txt
-search: exclude
+searchable: false
 sitemap_include: false
 ---
 
 User-agent: *
 Disallow: *.js
 Disallow: *?*
+Disallow: search*.json
 Disallow: */compare/*
 Allow: /
 

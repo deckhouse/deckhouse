@@ -75,7 +75,7 @@ defaults:
       type: "pages"
     values:
       mode: "ssi"
-      search: exclude
+      searchable: false
       sitemap_include: false
       layout: none
   - scope:

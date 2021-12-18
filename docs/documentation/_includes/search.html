@@ -9,11 +9,11 @@ var documents=[
 {%- for page in searchedpages %}
 {%- unless page.searchable == false %}
 {
-{%- capture search_content %}{{ page.content |  newline_to_br | strip_html | lstrip | rstrip | jsonify }}{%- endcapture -%}
 {%- capture removed_prefix %}/{{ page.lang }}/{%- endcapture -%}
 "title": "{{ page.title | escape }}",
 "url": "{{ page.url | remove_first: removed_prefix }}",
-"content": {% compact_string %}{{ search_content }}{% endcompact_string %} }
+"content": {{ page.content | strip_html | strip | regex_replace: "\n", ' ' | regex_replace: '\s\s+', ' ' | jsonify }}
+}
 {%- unless forloop.last %},{% endunless %}
 {%- endunless %}
 {%- endfor -%}
