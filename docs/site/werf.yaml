@@ -1,6 +1,3 @@
-{{ $BASE_GOLANG_16_ALPINE := "golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061" }}
-{{ $BASE_ALPINE:= "alpine:3.12.1@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a" }}
-
 project: deckhouse-web
 configVersion: 1
 cleanup:
@@ -20,7 +17,7 @@ gitWorktree:
 
 ---
 artifact: web-static
-from: jekyll/builder:3.8
+from: {{ env "BASE_JEKYLL" }}
 fromCacheVersion: 20210702
 ansible:
   install:
@@ -59,7 +56,7 @@ git:
     beforeSetup: '**/*'
 ---
 artifact: web-backend-srv
-from: {{ $BASE_GOLANG_16_ALPINE }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
 fromCacheVersion: 20210701
 ansible:
   install:
@@ -88,7 +85,7 @@ git:
 image: web-backend
 docker:
   WORKDIR: /app
-from: {{ $BASE_ALPINE }}
+from: {{ env "BASE_ALPINE" }}
 ansible:
   install:
     - shell: apk add curl jq
