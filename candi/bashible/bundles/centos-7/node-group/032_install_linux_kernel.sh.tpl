@@ -20,13 +20,6 @@
 {{- end }}
 
 {{- if $manage_kernel }}
-  {{- if ne .runType "ImageBuilding" }}
-bb-event-on 'bb-package-installed' 'post-install'
-post-install() {
-  bb-log-info "Setting reboot flag due to kernel was updated"
-  bb-flag-set reboot
-}
-  {{- end }}
 
 desired_version={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "desiredVersion" | quote }}
 allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "allowedPattern" | quote }}
@@ -49,19 +42,29 @@ fi
 
 if [[ "$should_install_kernel" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
-  bb-yum-install "kernel-${desired_version}"
-  packages_to_remove="$(rpm -q kernel | grep -Ev "^kernel-${desired_version}$" || true)"
-else
-  packages_to_remove="$(rpm -q kernel | grep -Ev "$allowed_versions_pattern | ^kernel-${version_in_use}$" || true)"
+  kernel_tag="{{- index .images.registrypackages (printf "kernelCentos7%s" ($desired_version | replace "." "_" | replace "-" "_" | camelcase )) }}"
+  bb-rp-install "kernel:${kernel_tag}"
+  {{- if ne .runType "ImageBuilding" }}
+  bb-log-info "Setting reboot flag due to kernel was updated"
+  bb-flag-set reboot
+  {{- end }}
 fi
 
-if [ -n "$packages_to_remove" ]; then
-  bb-yum-remove $packages_to_remove
-fi
+should_run_grub=false
 
 # Workaround for bug https://github.com/docker/for-linux/issues/841 - cannot allocate memory in /sys/fs/cgroup
 if ! grep -q "cgroup.memory=nokmem" /etc/default/grub; then
   sed -i "s/GRUB_CMDLINE_LINUX=\"\(.*\)\"/GRUB_CMDLINE_LINUX=\"\1 cgroup.memory=nokmem\"/" /etc/default/grub
+  should_run_grub=true
+fi
+
+# Set newer kernel as default
+if ! grep -q "GRUB_DEFAULT=0" /etc/default/grub; then
+  sed -i "s/^GRUB_DEFAULT=.\+$/GRUB_DEFAULT=0/" /etc/default/grub
+  should_run_grub=true
+fi
+
+if [[ "$should_run_grub" == true ]]; then
   grub2-mkconfig -o /boot/grub2/grub.cfg
   bb-log-info "Setting reboot flag due to grub cmdline for kernel was updated"
   bb-flag-set reboot

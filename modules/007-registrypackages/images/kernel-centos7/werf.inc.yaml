@@ -1,0 +1,27 @@
+{{- $version := index .bashible "centos" "7" "kernel "generic" "desired_version | toString }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - kernel.x86_64.rpm
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - RPM_PACKAGE="https://mirror.yandex.ru/elrepo/kernel/el7/x86_64/RPMS/kernel-lt-{{ $version }}.rpm"
+  - curl -sL ${RPM_PACKAGE} --output kernel.x86_64.rpm
