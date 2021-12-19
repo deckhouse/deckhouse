@@ -8,7 +8,7 @@
 {{- end }}
 {{- range $value := $kernel_versions | uniq }}
   {{- $version := $value | toString }}
-  {{- $image_version := $version | replace "." "-" }}
+  {{- $image_version := $version | replace "." "-" | replace "_" "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: spotify/scratch
