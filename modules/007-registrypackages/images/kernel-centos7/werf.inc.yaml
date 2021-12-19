@@ -1,4 +1,4 @@
-{{- $version := index .CandiVersionMap.bashible "centos" "7" "kernel "generic" "desired_version | toString }}
+{{- $version := index .CandiVersionMap "bashible" "centos" "7" "kernel" "generic" "desired_version" | toString }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
