@@ -1,5 +1,14 @@
-{{- $version := index .CandiVersionMap "bashible" "centos" "7" "kernel" "generic" "desired_version" | toString }}
-{{- $image_version := $version | replace "." "-" }}
+{{- $kernel_versions := list }}
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- range $key, $versions := $value.bashible.centos }}
+    {{- if $versions.kernel.generic.desiredVersion }}
+      {{- $kernel_versions = $versions.kernel.generic.desiredVersion | toString | append $kernel_versions }}
+    {{- end}}
+  {{- end }}
+{{- end }}
+{{- range $value := $kernel_versions | uniq }}
+  {{- $version := $value | toString }}
+  {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: spotify/scratch
@@ -25,3 +34,4 @@ shell:
   setup:
   - RPM_PACKAGE="https://mirror.yandex.ru/elrepo/kernel/el7/x86_64/RPMS/kernel-lt-{{ $version }}.rpm"
   - curl -sL ${RPM_PACKAGE} --output kernel.x86_64.rpm
+{{- end }}
