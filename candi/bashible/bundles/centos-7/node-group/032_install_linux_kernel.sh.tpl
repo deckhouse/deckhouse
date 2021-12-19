@@ -20,9 +20,10 @@
 {{- end }}
 
 {{- if $manage_kernel }}
-
-desired_version={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "desiredVersion" | quote }}
-allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "allowedPattern" | quote }}
+  {{- $desired_version := index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "desiredVersion" }}
+  {{- $allowed_versions_pattern := index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "allowedPattern" }}
+desired_version={{ $desired_version | quote }}
+allowed_versions_pattern={{ $allowed_versions_pattern | quote }}
 
 if [[ -z $desired_version ]]; then
   bb-log-error "Desired version must be set"
