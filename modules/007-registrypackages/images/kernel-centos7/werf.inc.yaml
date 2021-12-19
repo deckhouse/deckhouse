@@ -18,6 +18,8 @@ import:
   to: /
   includePaths:
   - kernel.x86_64.rpm
+  - install
+  - uninstall
   before: setup
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
