@@ -890,7 +890,7 @@
           "refId": "A"
         },
         {
-          "expr": "100 * count by (namespace) (\n  sum by (namespace, verticalpodautoscaler) (avg_over_time(vpa_target_recommendation{namespace=~\"$namespace\", container!=\"POD\"}[$__range]))\n) \n/ count by (namespace) (sum by (namespace, controller) (avg_over_time(kube_controller_pod{namespace=~\"$namespace\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
+          "expr": "100 * count by (namespace) (\n  sum by (namespace, verticalpodautoscaler) (  \n    count by (namespace, controller_name, verticalpodautoscaler) (avg_over_time(vpa_target_recommendation{namespace=~\"$namespace\", container!=\"POD\"}[$__range]))\n    / on (controller_name, namespace) group_left\n    count by (namespace, controller_name) (avg_over_time(kube_controller_pod{namespace=~\"$namespace\"}[$__range]))\n  )\n) \n/ count by (namespace) (sum by (namespace, controller) (avg_over_time(kube_controller_pod{namespace=~\"$namespace\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
           "format": "table",
           "hide": false,
           "instant": true,
