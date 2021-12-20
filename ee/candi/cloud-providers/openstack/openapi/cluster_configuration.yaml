@@ -25,6 +25,16 @@ apiVersions:
 
           You have to re-create all the machines to add new tags if tags were modified in the running cluster.
         x-doc-required: false
+      bindVolumesToZone:
+        type: boolean
+        default: false
+        x-doc-required: false
+        description: |
+          Specifies whether volumes must be bound to availability zones.
+          Should be enabled if you use a volume type that can't be migrated between availability zones, but this volume type is the same across all availability zones.
+          If enabled, volume is bound to a distinct availability zone instead of automatically selected by the cloud provider.
+
+          There is [topologyEnabled](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/configuration.html#storage) parameter that instructs OpenStack CSI driver to use topology constraints during volume provisioning.
       zones:
         type: array
         items:

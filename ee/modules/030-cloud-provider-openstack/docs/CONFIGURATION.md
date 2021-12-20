@@ -111,6 +111,7 @@ The module automatically creates StorageClasses that are available in OpenStack.
     * the first StorageClass created by the module (in accordance with the order in OpenStack).
 * `topologyEnabled` - this feature enables driver to consider the topology constraints while creating the volume. It is used only during volume provisioning, existing PersistentVolumes are not affected;
   * **Attention!** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
+  * OpenStackClusterConfiguration has parameter [bindVolumesToZone](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration), that configures volume bindings to availability zone when you use dhctl.
   * Format — bool. An optional parameter;
   * Set to `true` by default.
 

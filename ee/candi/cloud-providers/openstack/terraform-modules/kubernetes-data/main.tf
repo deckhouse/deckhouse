@@ -6,6 +6,7 @@ resource "openstack_blockstorage_volume_v2" "kubernetes_data" {
   description = "volume for etcd and kubernetes certs"
   size = 10
   volume_type = var.volume_type
+  availability_zone = var.volume_zone
   metadata = var.tags
   lifecycle {
     ignore_changes = [

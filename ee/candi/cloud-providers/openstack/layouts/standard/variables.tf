@@ -36,4 +36,5 @@ locals {
   network_security      = lookup(var.providerClusterConfiguration.standard, "internalNetworkSecurity", true)
   image_name            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
   tags                  = lookup(var.providerClusterConfiguration, "tags", {})
+  bind_volumes_to_zone  = lookup(var.providerClusterConfiguration, "bindVolumesToZone", false)
 }

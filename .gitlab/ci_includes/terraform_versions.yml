@@ -12,7 +12,7 @@ variables:
   TF_GCP_VERSION: 3.48.0
   TF_OPENSTACK_NAMESPACE: terraform-provider-openstack
   TF_OPENSTACK_TYPE: openstack
-  TF_OPENSTACK_VERSION: 1.32.0
+  TF_OPENSTACK_VERSION: 1.45.0
   TF_YANDEX_NAMESPACE: yandex-cloud
   TF_YANDEX_TYPE: yandex
   TF_YANDEX_VERSION: 0.45.1

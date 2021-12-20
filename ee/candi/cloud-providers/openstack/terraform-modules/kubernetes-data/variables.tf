@@ -17,6 +17,10 @@ variable "volume_type" {
   type = string
 }
 
+variable "volume_zone" {
+  type = string
+}
+
 variable "tags" {
   type = map(string)
 }

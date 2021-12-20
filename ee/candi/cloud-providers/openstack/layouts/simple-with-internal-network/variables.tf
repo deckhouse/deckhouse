@@ -10,12 +10,12 @@ variable "providerClusterConfiguration" {
 }
 
 variable "nodeIndex" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -24,11 +24,12 @@ variable "clusterUUID" {
 }
 
 locals {
-  prefix = var.clusterConfiguration.cloud.prefix
-  pod_subnet_cidr = var.clusterConfiguration.podSubnetCIDR
-  internal_subnet_name = var.providerClusterConfiguration.simpleWithInternalNetwork.internalSubnetName
+  prefix                = var.clusterConfiguration.cloud.prefix
+  pod_subnet_cidr       = var.clusterConfiguration.podSubnetCIDR
+  internal_subnet_name  = var.providerClusterConfiguration.simpleWithInternalNetwork.internalSubnetName
   external_network_name = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "externalNetworkName", "")
-  pod_network_mode = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "podNetworkMode", "DirectRoutingWithPortSecurityEnabled")
-  image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
-  tags = lookup(var.providerClusterConfiguration, "tags", {})
+  pod_network_mode      = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "podNetworkMode", "DirectRoutingWithPortSecurityEnabled")
+  image_name            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
+  tags                  = lookup(var.providerClusterConfiguration, "tags", {})
+  bind_volumes_to_zone  = lookup(var.providerClusterConfiguration, "bindVolumesToZone", false)
 }

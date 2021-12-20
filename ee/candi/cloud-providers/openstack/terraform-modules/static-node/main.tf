@@ -3,11 +3,11 @@
 
 locals {
   actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
-  zones = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
+  zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
 }
 
 module "security_groups" {
-  source = "/deckhouse/candi/cloud-providers/openstack/terraform-modules/security-groups"
+  source               = "/deckhouse/candi/cloud-providers/openstack/terraform-modules/security-groups"
   security_group_names = local.security_group_names
 }
 
@@ -19,14 +19,14 @@ data "openstack_images_image_v2" "image" {
 
 data "openstack_networking_network_v2" "network" {
   count = length(local.networks)
-  name = local.networks[count.index]
+  name  = local.networks[count.index]
 }
 
 resource "openstack_networking_port_v2" "port" {
-  count = length(local.networks)
-  name = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
-  network_id = data.openstack_networking_network_v2.network[count.index].id
-  admin_state_up = "true"
+  count              = length(local.networks)
+  name               = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+  network_id         = data.openstack_networking_network_v2.network[count.index].id
+  admin_state_up     = "true"
   security_group_ids = try(index(local.networks_with_security_disabled, data.openstack_networking_network_v2.network[count.index].name), -1) == -1 ? module.security_groups.security_group_ids : []
 
   dynamic "allowed_address_pairs" {
@@ -39,11 +39,12 @@ resource "openstack_networking_port_v2" "port" {
 }
 
 resource "openstack_blockstorage_volume_v2" "volume" {
-  count = local.root_disk_size == "" ? 0 : 1
-  name = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
-  size = local.root_disk_size
-  image_id = data.openstack_images_image_v2.image.id
-  metadata = local.metadata_tags
+  count             = local.root_disk_size == "" ? 0 : 1
+  name              = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+  size              = local.root_disk_size
+  image_id          = data.openstack_images_image_v2.image.id
+  metadata          = local.metadata_tags
+  availability_zone = local.bind_volumes_to_zone ? null : element(local.zones, var.nodeIndex)
   lifecycle {
     ignore_changes = [
       metadata,
@@ -52,12 +53,12 @@ resource "openstack_blockstorage_volume_v2" "volume" {
 }
 
 resource "openstack_compute_instance_v2" "node" {
-  name = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
-  image_name = data.openstack_images_image_v2.image.name
-  flavor_name = local.flavor_name
-  key_pair = local.prefix
-  config_drive = local.config_drive
-  user_data = var.cloudConfig == "" ? "" : base64decode(var.cloudConfig)
+  name              = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+  image_name        = data.openstack_images_image_v2.image.name
+  flavor_name       = local.flavor_name
+  key_pair          = local.prefix
+  config_drive      = local.config_drive
+  user_data         = var.cloudConfig == "" ? "" : base64decode(var.cloudConfig)
   availability_zone = element(local.zones, var.nodeIndex)
 
   dynamic "network" {
@@ -71,10 +72,10 @@ resource "openstack_compute_instance_v2" "node" {
   dynamic "block_device" {
     for_each = local.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v2.volume[0])
     content {
-      uuid = block_device.value["id"]
-      boot_index = 0
-      source_type = "volume"
-      destination_type = "volume"
+      uuid                  = block_device.value["id"]
+      boot_index            = 0
+      source_type           = "volume"
+      destination_type      = "volume"
       delete_on_termination = true
     }
   }
@@ -90,12 +91,19 @@ resource "openstack_compute_instance_v2" "node" {
 
 resource "openstack_compute_floatingip_v2" "floating_ip" {
   count = length(local.floating_ip_pools)
-  pool = local.floating_ip_pools[count.index]
+  pool  = local.floating_ip_pools[count.index]
 }
 
 resource "openstack_compute_floatingip_associate_v2" "node" {
-  count = length(local.floating_ip_pools)
-  floating_ip = openstack_compute_floatingip_v2.floating_ip[count.index].address
-  instance_id = openstack_compute_instance_v2.node.id
+  count                 = length(local.floating_ip_pools)
+  floating_ip           = openstack_compute_floatingip_v2.floating_ip[count.index].address
+  instance_id           = openstack_compute_instance_v2.node.id
+  wait_until_associated = true
+
+  lifecycle {
+    ignore_changes = [
+      wait_until_associated,
+    ]
+  }
 }
 

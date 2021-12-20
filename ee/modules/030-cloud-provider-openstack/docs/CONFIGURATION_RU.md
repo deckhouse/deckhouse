@@ -111,8 +111,9 @@ title: "Cloud provider — OpenStack: настройки"
     * Первый StorageClass из создаваемых модулем (в порядке из OpenStack).
 * `topologyEnabled` - этот параметр управляет функционалом драйвера, который определяет необходимость учитывать ограничения топологии облака при заказе дисков. Это учитывается только при создании дисков, существующие PersistentVolumes не будут изменены;
   * **Внимание!** Если установлено значение `false` то все новые PersistentVolumes создаются без учёта ограничений топологии.
+  * У OpenStackClusterConfiguration есть параметр [bindVolumesToZone](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration), которая привязывает диски к зоне доступности при использовании dhctl.
   * Формат — bool. Опциональный параметр;
-  *  По умолчанию `true`.
+  * По умолчанию `true`.
 
 ```yaml
 cloudProviderOpenstack: |

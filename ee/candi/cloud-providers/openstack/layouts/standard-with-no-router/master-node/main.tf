@@ -7,6 +7,7 @@ locals {
   actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
   zone = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
   volume_type = local.volume_type_map[local.zone]
+  volume_zone = local.bind_volumes_to_zone ? local.zone : null
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
   root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
   additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
@@ -33,6 +34,7 @@ module "master" {
   tags = local.tags
   zone = local.zone
   volume_type = local.volume_type
+  volume_zone = local.volume_zone
 }
 
 module "kubernetes_data" {
@@ -41,6 +43,7 @@ module "kubernetes_data" {
   node_index = var.nodeIndex
   master_id = module.master.id
   volume_type = local.volume_type
+  volume_zone = local.volume_zone
   tags = local.tags
 }
 
