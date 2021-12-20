@@ -21,7 +21,7 @@ require (
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/gophercloud/gophercloud v0.20.0
 	github.com/gophercloud/utils v0.0.0-20210823151123-bfd010397530
 	github.com/hashicorp/go-multierror v1.1.1
@@ -39,7 +39,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.9.1
 	github.com/tidwall/sjson v1.2.2
-	github.com/vmware/govmomi v0.24.1
+	github.com/vmware/govmomi v0.27.2
 	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
 	google.golang.org/grpc v1.32.0
