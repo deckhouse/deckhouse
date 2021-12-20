@@ -43,6 +43,8 @@ spec:
       app: node-exporter
   template:
     metadata:
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/node-exporter: localhost/node-exporter
       labels:
         app: node-exporter
       name: node-exporter
