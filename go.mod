@@ -40,19 +40,19 @@ require (
 	github.com/tidwall/gjson v1.9.1
 	github.com/tidwall/sjson v1.2.2
 	github.com/vmware/govmomi v0.24.1
-	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
-	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
-	google.golang.org/grpc v1.32.0
+	go.etcd.io/etcd/api/v3 v3.5.0
+	go.etcd.io/etcd/client/v3 v3.5.0
+	google.golang.org/grpc v1.40.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	helm.sh/helm/v3 v3.5.1
-	k8s.io/api v0.21.4
+	k8s.io/api v0.23.1
 	k8s.io/apiextensions-apiserver v0.20.5
-	k8s.io/apimachinery v0.21.4
-	k8s.io/apiserver v0.20.5
-	k8s.io/client-go v0.21.4
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	k8s.io/apimachinery v0.23.1
+	k8s.io/apiserver v0.23.1
+	k8s.io/client-go v0.23.1
+	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	sigs.k8s.io/yaml v1.2.0
 )
 
