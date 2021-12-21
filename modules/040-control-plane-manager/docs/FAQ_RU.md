@@ -113,21 +113,55 @@ title: "Управление control plane: FAQ"
 
 **Внимание!** Операция деструктивна, полностью уничтожает консенсус и запускает etcd кластер с состояния, которое сохранилось на узле. Любые pending записи пропадут.
 
-## Как включить аудит событий?
+## Как настроить дополнительные политики аудита?
 
-Если вам требуется вести учёт операций в кластере или отдебажить неожиданное поведение - для всего этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/), настраиваемый через указание соответствующих [Audit Policy](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy).
+1. Включить [флаг](configuration.html#parameters-apiserver-auditpolicyenabled) в `ConfigMap` `d8-system/deckhouse`:
+   ```yaml
+    controlPlaneManager: |
+      apiserver:
+        auditPolicyEnabled: true
+    ```
+2. Создать `Secret` `kube-system/audit-policy` с файлом политик, закодированным в `base64`:
+    ```yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: audit-policy
+      namespace: kube-system
+    data:
+      audit-policy.yaml: <base64>
+    ```
+ 
+    Минимальный рабочий пример `audit-policy.yaml` выглядит так:
+    ```yaml
+    apiVersion: audit.k8s.io/v1
+    kind: Policy
+    rules:
+    - level: Metadata
+      omitStages:
+      - RequestReceived
+    ```
 
-На данный момент используются фиксированные параметры ротации логов:
-```bash
---audit-log-maxage=7
---audit-log-maxbackup=10
---audit-log-maxsize=100
-```
-Предполагается наличие на master-узлах `скрейпера логов` *(filebeat, promtail)*, который будет следить за директорией с логами:
+    Подробную информацию по настройке содержимого `audit-policy.yaml` можно получить по следующим ссылкам:
+     - [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy);
+     - [В нашей статье на Habr](https://habr.com/ru/company/flant/blog/468679/);
+     - [Опираясь на код скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
+  
+    Создать `Secret` вручную из файла можно командой:
+    ```bash
+    kubectl -n kube-system create secret generic audit-policy --from-file=./audit-policy.yaml
+    ```
+
+### Как работать с журналом аудита?
+Предполагается наличие на master-узлах `скрейпера логов` *([log-shipper](../460-log-shipper/cr.html#clusterloggingconfig), promtail, filebeat)*, который будет следить за файлом с логами:
 ```bash
 /var/log/kube-audit/audit.log
 ```
-В зависимости от настроек `Policy` и количества запросов к **apiserver** - логов может быть очень много, соответственно глубина хранения может быть менее 30 минут. Максимальное занимаемое место на диске ограничено `1000 Мб`. Логи старше `7 дней` также будут удалены.
+Параметры ротации файла журнала предустановлены и их изменение не предусмотрено:
+- Максимальное занимаемое место на диске `1000 Мб`. 
+- Максимальная глубина записи `7 дней`.
+ 
+В зависимости от настроек `Policy` и количества запросов к **apiserver** — логов может быть очень много, соответственно глубина хранения может быть менее 30 минут.
 
 ### Предостережение
 > ⚠️ Текущая реализация функционала не является безопасной, с точки зрения, возможности временно сломать **control-plane**.
@@ -137,47 +171,10 @@ title: "Управление control plane: FAQ"
 В случае возникновения проблем с запуском **apiserver** потребуется вручную отключить параметры `--audit-log-*` в манифесте `/etc/kubernetes/manifests/kube-apiserver.yaml` и перезапустить **apiserver** следующей командой:
 ```bash
 docker stop $(docker ps | grep kube-apiserver- | awk '{print $1}')
+# или (в зависимости используемого вами CRI)
+crictl stopp $(crictl pods --name=kube-apiserver -q)
 ```
-После перезапуска у вас будет достаточно времени исправить `Secret` или [удалить его](#полезные-команды).
-
-### Включение и настройка
-За включение отвечает параметр в `ConfigMap` `d8-system/deckhouse`
-```yaml
-  controlPlaneManager: |
-    apiserver:
-      auditPolicyEnabled: true
-```
-Конфигурация параметров осуществляется через `Secret` `kube-system/audit-policy`, внутрь которого потребуется положить `yaml` файл, закодированный `base64`:
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: audit-policy
-  namespace: kube-system
-data:
-  audit-policy.yaml: <base64>
-```
-### Пример
-Минимальный рабочий пример `audit-policy.yaml` выглядит так:
-```yaml
-apiVersion: audit.k8s.io/v1
-kind: Policy
-rules:
-- level: Metadata
-  omitStages:
-  - RequestReceived
-```
-Подробную информацию по настройке содержимого `audit-policy.yaml` можно получить по следующим ссылкам:
-- [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy)
-- [В нашей статье на Habr](https://habr.com/ru/company/flant/blog/468679/)
-- [Опираясь на код скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862)
-
-### Полезные команды
-Создать `Secret` из файла можно командой:
-```bash
-kubectl -n kube-system create secret generic audit-policy --from-file=./audit-policy.yaml
-```
-Удалить `Secret` из кластера:
+После перезапуска у вас будет достаточно времени исправить `Secret` или удалить его:
 ```bash
 kubectl -n kube-system delete secret audit-policy
 ```
@@ -186,7 +183,7 @@ kubectl -n kube-system delete secret audit-policy
 
 По умолчанию, если узел за 40 секунд не сообщает своё состояние — он помечается как недоступный. И еще через 5 минут Pod'ы узла начнут перезапускаться на других узлах. Итоговое время недоступности приложений ~ 6 минут.
 
-В специфических случаях, когда приложение не может быть запущено в нескольких экземплярах  — есть способ сократить период их недоступности:  
+В специфических случаях, когда приложение не может быть запущено в нескольких экземплярах — есть способ сократить период их недоступности:  
 
 1. Уменьшить время перехода узла в состояние `Unreachable` при потере с ним связи, настройкой параметра `nodeMonitorGracePeriodSeconds`.
 1. Установить меньший таймаут удаления Pod'ов с недоступного узла, в параметре `failedNodePodEvictionTimeoutSeconds`.

@@ -112,21 +112,56 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
 
 **Caution!** This operation is unsafe and breaks the guarantees given by the consensus protocol. Note that it brings the cluster to the state that was saved on the node. Any pending entries will be lost.
 
-## How do I enable event auditing?
+## How do I configure additional audit policies?
 
-Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/) can help you if you need to keep track of operations or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy).
+1. Enable [the following flag](configuration.html#parameters-apiserver-auditpolicyenabled) in the `d8-system/deckhouse` `ConfigMap`:
+   ```yaml
+    controlPlaneManager: |
+      apiserver:
+        auditPolicyEnabled: true
+    ```
+2. Create the `kube-system/audit-policy` `Secret` containing a `base64`-encoded `yaml` file:
+    ```yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: audit-policy
+      namespace: kube-system
+    data:
+      audit-policy.yaml: <base64>
+    ```
 
-Currently, the following fixed parameters of log rotation are in use:
-```bash
---audit-log-maxage=7
---audit-log-maxbackup=10
---audit-log-maxsize=100
-```
-There must be some `log scraper` on master nodes  *(filebeat, promtail)* that will monitor the log directory:
+    The minimum viable example of the `audit-policy.yaml` file looks as follows:
+    ```yaml
+    apiVersion: audit.k8s.io/v1
+    kind: Policy
+    rules:
+    - level: Metadata
+      omitStages:
+      - RequestReceived
+    ```
+
+    You can find the detailed information about configuring the `audit-policy.yaml` file at the following links:
+     - [The official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy);
+     - [Our Habr article](https://habr.com/ru/company/flant/blog/468679/);
+     - [The code of the generator script used in GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
+
+    Create a `Secret` from the file:
+    ```bash
+    kubectl -n kube-system create secret generic audit-policy --from-file=./audit-policy.yaml
+    ```
+
+### How to deal with the audit log?
+There must be some `log scraper` on master nodes  *([log-shipper](../460-log-shipper/cr.html#clusterloggingconfig), promtail, filebeat)* that will monitor the log file:
 ```bash
 /var/log/kube-audit/audit.log
 ```
-Depending on the `Policy` settings and the number of requests to the **apiserver**, the amount of logs collected may be high. Thus, in some cases, logs can only be kept for less than 30 minutes. The maximum disk space for logs is limited to `1000 MB`.  Logs older than `7 days` will also be deleted.
+
+The following fixed parameters of log rotation are in use:
+- The maximum disk space is limited to `1000 Mb`;
+- Logs older than `7 days` will be deleted.
+
+Depending on the `Policy` settings and the number of requests to the **apiserver**, the amount of logs collected may be high. Thus, in some cases, logs can only be kept for less than 30 minutes. 
 
 ### Cautionary note
 > ⚠️ Note that the current implementation of this feature isn't safe and may lead to a temporary failure of the **control-plane**.
@@ -136,47 +171,10 @@ Depending on the `Policy` settings and the number of requests to the **apiserver
 If **apiserver** is unable to start, you have to manually disable the `--audit-log-*` parameters in the `/etc/kubernetes/manifests/kube-apiserver.yaml` manifest and restart **apiserver** using the following command:
 ```bash
 docker stop $(docker ps | grep kube-apiserver- | awk '{print $1}')
+# or (depending on your CRI)
+crictl stopp $(crictl pods --name=kube-apiserver -q)
 ```
-After the restart, you will be able to fix the `Secret` or [delete it](#useful-commands).
-
-### Enabling and configuring
-The following parameter in the `d8-system/deckhouse` `ConfigMap` enables the audit:
-```yaml
-  controlPlaneManager: |
-    apiserver:
-      auditPolicyEnabled: true
-```
-The parameters are configured via the `kube-system/audit-policy` `Secret`. You need to put in it a `base64`-encoded `yaml` file:
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: audit-policy
-  namespace: kube-system
-data:
-  audit-policy.yaml: <base64>
-```
-### An example
-The minimum viable example of the `audit-policy.yaml` file looks as follows:
-```yaml
-apiVersion: audit.k8s.io/v1
-kind: Policy
-rules:
-- level: Metadata
-  omitStages:
-  - RequestReceived
-```
-You can find the detailed information about configuring the `audit-policy.yaml` file at the following links:
-- [The official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy);
-- [Our Habr article](https://habr.com/ru/company/flant/blog/468679/);
-- [The code of the generator script used in GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
-
-### Useful commands
-Create a `Secret` from the file:
-```bash
-kubectl -n kube-system create secret generic audit-policy --from-file=./audit-policy.yaml
-```
-Delete a `Secret` from the cluster:
+After the restart, you will be able to fix the `Secret` or delete it:
 ```bash
 kubectl -n kube-system delete secret audit-policy
 ```
