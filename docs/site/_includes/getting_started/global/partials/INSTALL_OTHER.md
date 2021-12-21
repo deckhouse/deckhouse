@@ -6,7 +6,7 @@ Use a Docker image to install the **Deckhouse Platform**. It is necessary to tra
 {% snippetcut selector="docker-login" %}
 ```text
  echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
-docker run -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
 ```
@@ -14,7 +14,7 @@ docker run -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% else %}
 {% snippetcut %}
 ```shell
-docker run -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
