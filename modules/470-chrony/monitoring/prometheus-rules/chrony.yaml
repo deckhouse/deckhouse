@@ -1,0 +1,38 @@
+- name: kubernetes.node.chrony
+  rules:
+  - record: node_ntp_offset_seconds:abs
+    expr: abs(node_ntp_offset_seconds)
+
+  - alert: NTPDaemonOnNodeDoesNotSynchronizeTime
+    expr: (min by (node) (node_ntp_sanity)) == 0
+    for: 2h
+    labels:
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      description: |
+        1. check if Chrony pod is running on the node by executing the following command:
+           * 'kubectl -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods'
+        2. check the Chrony daemon's status by executing the following command:
+           * 'kubectl -n d8-chrony exec <POD_NAME> -- /usr/bin/chronyc sources'
+        3. Correct the time synchronization problems:
+           * correct network problems:
+             - provide availability to upstream time synchronization servers defined in [CM Deckhouse](https://deckhouse.io/en/documentation/v1/modules/470-chrony/configuration.html);
+             - eliminate large packet loss and excessive latency to upstream time synchronization servers.
+           * Modify NTP servers list defined in [CM Deckhouse](https://deckhouse.io/en/documentation/v1/modules/470-chrony/configuration.html).
+      summary: NTP daemon on node {{$labels.node}} have not synchronized time for too long.
+
+  - alert: NodeTimeOutOfSync
+    expr: max by (node) (abs(node_time_seconds - timestamp(node_time_seconds)) > 10)
+    for: 5m
+    labels:
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      description: |
+        Node's {{$labels.node}} time is out of sync from Prometheus Node by {{ $value }} seconds.
+      summary: Node's {{$labels.node}} clock is drifting.
