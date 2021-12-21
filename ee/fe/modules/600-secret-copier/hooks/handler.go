@@ -17,22 +17,30 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
+const (
+	secretCopierEnableKey            = "secret-copier.deckhouse.io/enabled"
+	secretCopierNamespaceSelectorKey = "secret-copier.deckhouse.io/target-namespace-selector"
+)
+
 type Secret struct {
-	Name      string
-	Namespace string
-	Labels    map[string]string
-	Type      v1.SecretType     `json:"type,omitempty"`
-	Data      map[string][]byte `json:"data,omitempty"`
+	Name        string
+	Namespace   string
+	Annotations map[string]string
+	Labels      map[string]string
+	Type        v1.SecretType     `json:"type,omitempty"`
+	Data        map[string][]byte `json:"data,omitempty"`
 }
 
 type Namespace struct {
 	Name          string `json:"name,omitempty"`
-	IsTerminating bool   `json:"is_terminating,omitempty"`
+	Labels        map[string]string
+	IsTerminating bool `json:"is_terminating,omitempty"`
 }
 
 func SecretPath(s *Secret) string {
@@ -47,11 +55,12 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	}
 
 	s := &Secret{
-		Name:      secret.Name,
-		Namespace: secret.Namespace,
-		Labels:    secret.Labels,
-		Type:      secret.Type,
-		Data:      secret.Data,
+		Name:        secret.Name,
+		Namespace:   secret.Namespace,
+		Annotations: secret.Annotations,
+		Labels:      secret.Labels,
+		Type:        secret.Type,
+		Data:        secret.Data,
 	}
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
 	delete(s.Labels, "certmanager.k8s.io/certificate-name")
@@ -68,6 +77,7 @@ func ApplyCopierNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 
 	n := &Namespace{
 		Name:          namespace.ObjectMeta.Name,
+		Labels:        namespace.Labels,
 		IsTerminating: namespace.Status.Phase == v1.NamespaceTerminating,
 	}
 
@@ -86,8 +96,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"secret-copier.deckhouse.io/enabled": "",
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      secretCopierEnableKey,
+						Operator: metav1.LabelSelectorOpExists,
+					},
 				},
 			},
 			FilterFunc:             ApplyCopierSecretFilter,
@@ -141,10 +154,16 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 			secretsExists[path] = secret
 			continue
 		}
-		// Secrets in namespace `default` should be propagated to all other active namespaces.
+		namespaceLabelSelector := namespaceSelector(secret)
+
+		// Secrets in namespace `default` should be propagated to all other namespaces matching the selector.
 		for _, n := range namespaces {
 			namespace := n.(*Namespace)
 			if namespace.IsTerminating || namespace.Name == v1.NamespaceDefault {
+				continue
+			}
+			namespaceLabels := labels.Set(namespace.Labels)
+			if !namespaceLabelSelector.Matches(namespaceLabels) {
 				continue
 			}
 			secretDesired := &Secret{
@@ -171,7 +190,7 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 		if !reflect.DeepEqual(secretDesired, secretExist) {
 			// Secret changed - update it.
-			err = updateSecret(k8, secretDesired)
+			err = createOrUpdateSecret(k8, secretDesired)
 			if err != nil {
 				return err
 			}
@@ -183,13 +202,25 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 			continue
 		}
 		// Secret not exists, create it.
-		err := createSecret(k8, secretDesired)
+		err := createOrUpdateSecret(k8, secretDesired)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// todo(31337Ghost) consider switching to separate create/update functions after a bug is fixed in shell-operator that causes missing Secrets in snapshots
+func createOrUpdateSecret(k8 k8s.Client, secret *Secret) error {
+	_, err := k8.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		return createSecret(k8, secret)
+	} else if err != nil {
+		return err
+	}
+
+	return updateSecret(k8, secret)
 }
 
 func createSecret(k8 k8s.Client, secret *Secret) error {
@@ -258,4 +289,15 @@ func updateSecret(k8 k8s.Client, secret *Secret) error {
 
 func formatSecretOperationError(secret *Secret, err error, op string) error {
 	return fmt.Errorf("can't %s secret object `%s/%s`: %v", op, secret.Namespace, secret.Name, err)
+}
+
+func namespaceSelector(secret *Secret) labels.Selector {
+	v, found := secret.Annotations[secretCopierNamespaceSelectorKey]
+	if !found {
+		return labels.Everything()
+	}
+	if s, err := labels.Parse(v); err == nil {
+		return s
+	}
+	return labels.Nothing()
 }

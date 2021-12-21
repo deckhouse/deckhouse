@@ -20,3 +20,7 @@ title: "Модуль secret-copier"
 ### Что нужно настроить?
 
 Для того, чтобы заработало, достаточно создать в "default" namespace секрет с лейблом `secret-copier.deckhouse.io/enabled: ""`.
+
+### Как ограничить список namespaces в которые будет производиться копирование?
+
+Задайте label–селектор в значении аннотации `secret-copier.deckhouse.io/target-namespace-selector`. Например: `secret-copier.deckhouse.io/target-namespace-selector: "app=custom"`. Модуль создаст копию этого секрета во всех пространствах имен, соответствующих заданному label–селектору. 

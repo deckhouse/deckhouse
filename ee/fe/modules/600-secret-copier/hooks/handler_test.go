@@ -37,6 +37,9 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: ns2
+  labels:
+    app: custom
+    foo: bar
 `
 		stateNSYAML4 = `
 apiVersion: v1
@@ -102,6 +105,34 @@ metadata:
 data:
   supersecret: czNkYXRh
 `
+		stateSecretOriginalYAML4 = `
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: s4
+  namespace: default
+  labels:
+    secret-copier.deckhouse.io/enabled: ""
+  annotations:
+    secret-copier.deckhouse.io/target-namespace-selector: "app=custom,foo=bar"
+data:
+  supersecret: czRkYXRh
+`
+		stateSecretOriginalYAML5 = `
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: s5
+  namespace: default
+  labels:
+    secret-copier.deckhouse.io/enabled: ""
+  annotations:
+    secret-copier.deckhouse.io/target-namespace-selector: "app=malformed label selector value"
+data:
+  supersecret: czVkYXRh
+`
 		stateSecretExtraYAML1 = `
 apiVersion: v1
 kind: Secret
@@ -126,6 +157,7 @@ metadata:
 data:
   supersecret: ZXMyZGF0YQ==
 `
+		// Label is missed here on purpose. The hook should reconcile resources without errors.
 		stateSecretUpToDateYAML = `
 apiVersion: v1
 kind: Secret
@@ -133,8 +165,6 @@ type: Opaque
 metadata:
   name: s1
   namespace: ns1
-  labels:
-    secret-copier.deckhouse.io/enabled: ""
 data:
   supersecret: czFkYXRh
 `
@@ -162,6 +192,8 @@ data:
 		secretOriginal1 *corev1.Secret
 		secretOriginal2 *corev1.Secret
 		secretOriginal3 *corev1.Secret
+		secretOriginal4 *corev1.Secret
+		secretOriginal5 *corev1.Secret
 		secretExtra1    *corev1.Secret
 		secretExtra2    *corev1.Secret
 		secretUpToDate  *corev1.Secret
@@ -180,6 +212,8 @@ data:
 		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML1), &secretOriginal1)
 		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML2), &secretOriginal2)
 		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML3), &secretOriginal3)
+		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML4), &secretOriginal4)
+		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML5), &secretOriginal5)
 		_ = yaml.Unmarshal([]byte(stateSecretExtraYAML1), &secretExtra1)
 		_ = yaml.Unmarshal([]byte(stateSecretExtraYAML2), &secretExtra2)
 		_ = yaml.Unmarshal([]byte(stateSecretUpToDateYAML), &secretUpToDate)
@@ -193,6 +227,8 @@ data:
 		secretOriginalYAML1, _ := yaml.Marshal(&secretOriginal1)
 		secretOriginalYAML2, _ := yaml.Marshal(&secretOriginal2)
 		secretOriginalYAML3, _ := yaml.Marshal(&secretOriginal3)
+		secretOriginalYAML4, _ := yaml.Marshal(&secretOriginal4)
+		secretOriginalYAML5, _ := yaml.Marshal(&secretOriginal5)
 		secretNeutralYAML, _ := yaml.Marshal(&secretNeutral)
 		secretExtraYAML1, _ := yaml.Marshal(&secretExtra1)
 		secretExtraYAML2, _ := yaml.Marshal(&secretExtra2)
@@ -208,6 +244,8 @@ data:
 			string(secretOriginalYAML1),
 			string(secretOriginalYAML2),
 			string(secretOriginalYAML3),
+			string(secretOriginalYAML4),
+			string(secretOriginalYAML5),
 			string(secretNeutralYAML),
 			string(secretExtraYAML1),
 			string(secretExtraYAML2),
@@ -307,6 +345,39 @@ data:
 			_, err = f.KubeClient().CoreV1().Secrets("ns4u").Get(context.TODO(), "s3", metav1.GetOptions{})
 			Expect(err).ToNot(BeNil())
 
+		})
+
+		It("Custom Secret #4 must be copied only in namespace having app=custom label", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			_, err := f.KubeClient().CoreV1().Secrets("ns1").Get(context.TODO(), "s4", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			s, err := f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s4", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s4data"))
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns3t").Get(context.TODO(), "s4", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns4u").Get(context.TODO(), "s4", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+		})
+
+		It("Custom Secret #5 must not be copied to any namespace because of malformed namespace selector value", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			_, err := f.KubeClient().CoreV1().Secrets("ns1").Get(context.TODO(), "s5", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s5", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns3t").Get(context.TODO(), "s5", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns4u").Get(context.TODO(), "s5", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
 		})
 	})
 })
