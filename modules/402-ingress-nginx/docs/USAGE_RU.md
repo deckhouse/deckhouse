@@ -41,8 +41,8 @@ kind: IngressNginxController
 metadata:
  name: main
 spec:
-  ingressClass: "nginx"
-  inlet: "LoadBalancer"
+  ingressClass: nginx
+  inlet: LoadBalancer
   loadBalancer:
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
@@ -55,8 +55,8 @@ kind: IngressNginxController
 metadata:
  name: main
 spec:
-  ingressClass: "nginx"
-  inlet: "LoadBalancer"
+  ingressClass: nginx
+  inlet: LoadBalancer
 ```
 
 ## Пример для OpenStack
@@ -74,7 +74,7 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
-## Пример для Bare metal
+## Пример для Bare metal (Host Ports)
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -91,4 +91,38 @@ spec:
     key: dedicated.deckhouse.io
     value: frontend
 ```
+
+## Пример для Bare metal (MetalLB Load Balancer)
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    value: frontend
+```
+В случае использования MetalLB, его speaker поды должны быть запущены на тех–же нодах, что и поды ingress–контроллера.
+
+Контроллер должен получать реальные IP адреса клиентов — поэтому его Service создаётся с параметром `externalTrafficPolicy: Local` (запрещая меж–нодовый SNAT), и для удовлетворения данного параметра MetalLB speaker анонсирует этот Service только с тех нод, где запущены целевые поды.
+
+Таким образом для данного примера [конфигурация модуля metallb](../380-metallb/configuration.html) должна быть такой:
+```yaml
+metallb:
+ speaker: 
+   nodeSelector: 
+     node-role.deckhouse.io/frontend: ""
+   tolerations: 
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: frontend
+```
+
 {% endraw %}
