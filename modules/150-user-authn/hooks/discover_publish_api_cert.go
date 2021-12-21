@@ -43,6 +43,12 @@ func applyPublishAPICertFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	return PublishAPICert{Name: obj.GetName(), Data: s.Data["ca.crt"]}, nil
 }
 
+var possiblePublishAPISecretNames = []string{
+	"kubernetes-tls",
+	"kubernetes-tls-selfsigned",
+	"kubernetes-tls-customcertificate",
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -56,11 +62,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{
-					"kubernetes-tls",
-					"kubernetes-tls-selfsigned",
-					"kubernetes-tls-customcertificate",
-				},
+				MatchNames: possiblePublishAPISecretNames,
 			},
 			FilterFunc: applyPublishAPICertFilter,
 		},
@@ -79,19 +81,30 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 		caCertificates[publishCert.Name] = publishCert.Data
 	}
 
-	var cert []byte
+	var secretKey string
 
 	switch input.Values.Get(modePath).String() {
 	case "Global":
 		switch module.GetHTTPSMode("userAuthn", input) {
 		case "CertManager":
-			cert = caCertificates["kubernetes-tls"]
+			secretKey = "kubernetes-tls"
 		case "CustomCertificate":
-			cert = caCertificates["kubernetes-tls-customcertificate"]
+			secretKey = "kubernetes-tls-customcertificate"
 		case "OnlyInURI", "Disabled":
 		}
 	case "SelfSigned":
-		cert = caCertificates["kubernetes-tls-selfsigned"]
+		secretKey = "kubernetes-tls-selfsigned"
+	}
+
+	var cert []byte
+
+	for _, name := range possiblePublishAPISecretNames {
+		if name == secretKey {
+			cert = caCertificates[name]
+			continue
+		}
+
+		input.PatchCollector.Delete("v1", "Secret", "d8-user-authn", name)
 	}
 
 	if len(cert) > 0 {
