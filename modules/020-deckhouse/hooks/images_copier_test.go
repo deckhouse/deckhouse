@@ -146,8 +146,8 @@ status: {}
 		Expect(secret.Exists()).To(BeTrue())
 
 		// annotation same as in secret
-		secretAnnotations := secret.Field(`metadata.annotations`).Map()
-		jobsAnnotations := job.Field(`metadata.annotations`).Map()
+		secretAnnotations := secret.Field(`metadata.annotations`).Value()
+		jobsAnnotations := job.Field(`metadata.annotations`).Value()
 		Expect(secretAnnotations).To(Equal(jobsAnnotations))
 
 		// set correct container image
