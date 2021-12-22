@@ -158,4 +158,19 @@ data:
 			"",
 		),
 	)
+
+	Context("With all secrets in cluster", func() {
+		BeforeEach(func() {
+			f.ValuesSet("userAuthn.publishAPI.https.mode", "SelfSigned")
+			f.ValuesSet("userAuthn.https.mode", "CertManager")
+			f.BindingContexts.Set(f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret))
+			f.RunHook()
+		})
+
+		It("Should delete not matching secrets", func() {
+			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-selfsigned").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
 })
