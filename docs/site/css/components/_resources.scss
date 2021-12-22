@@ -1,41 +1,73 @@
 @import "components/common/_variables.scss";
 
 .resources {
-    ul li {
-      margin: 1rem 0;
-      padding-left: 2rem;
-      position: relative;
-    }
-    ul p, ol p, li p {
+  ul li {
+    margin: rem(14px) 0;
+    padding-left: rem(28px);
+    position: relative;
+  }
+
+  ul, ol, li {
+    & p:not(.resources__attrs) {
         font-size: 14px;
         margin: 0;
-        line-height: 1.25rem;
+        line-height: rem(20px);
         padding-top: 0;
     }
-    &__prop_description {
-    }
-    &__prop_name {
-      color: #000000;
-      font-weight: bolder;
-      background: none;
-      font-size: revert;
+  }
+
+  &__prop {
+    &_name {
+      display: block;
+      color: $color-main;
+      font-weight: $font-weight-bold;
       padding: 0;
     }
-    &__prop_type {
-      margin-left: 1rem;
-      color: #999999;
+
+    &_type {
+      color: $color-muted;
       font-style: normal;
       text-transform: uppercase;
-      font-size: 0.7rem;
+      font-size: rem(11px);
+
+      & + p.resources__attrs.required {
+        display: inline-flex;
+        text-transform: uppercase;
+        margin-left: rem(10px);
+        margin-top: 0;
+      }
     }
-    &__attrs_name {
-      font-weight: 400 !important;
+
+    &_description {
+      margin-top: rem(7px);
+
+      & ul {
+        padding: rem(5px);
+
+        & li {
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  &__attrs {
+    margin-top: rem(7px);
+    margin-bottom: 0;
+
+    &_name {
+      font-weight: $font-weight-regular;
       font-style: italic;
-      color: #08a;
+      color: $color-muted;
+      &.required {
+        font-style: normal;
+        color: #ff7a7a;
+      }
     }
-    &__attrs_content {
-      margin: 0.3rem 0 0 0;
+    
+    &_content {
       line-height: 1.2rem;
       font-size: 0.9rem;
     }
+  }
 }

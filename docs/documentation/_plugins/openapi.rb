@@ -80,12 +80,12 @@ module Jekyll
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
         if parent.has_key?('required') && parent['required'].include?(name)
-            result.push(%Q(<p class="resources__attrs"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
+            result.push(%Q(<p class="resources__attrs required"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
         elsif attributes.has_key?('x-doc-required')
             if attributes['x-doc-required']
-                result.push(%Q(<p class="resources__attrs"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
+                result.push(%Q(<p class="resources__attrs required"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
             else
-                result.push(%Q(<p class="resources__attrs"><span class="resources__attrs_name not_required">#{get_i18n_term('not_required_value_sentence')}</span></p>))
+                result.push(%Q(<p class="resources__attrs required"><span class="resources__attrs_name not_required">#{get_i18n_term('not_required_value_sentence')}</span></p>))
             end
         else
             # Not sure if there will always be an optional value here...
