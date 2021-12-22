@@ -1,5 +1,5 @@
 ARG BASE_ALPINE
-FROM directxman12/k8s-prometheus-adapter-amd64:v0.5.0@sha256:acf4c4dc6aaa51e3004eebdc410b509db45d1a6ebd255457c5745f0b4671678f as artifact
+FROM k8s.gcr.io/prometheus-adapter/prometheus-adapter:v0.9.1@sha256:d025d1a109234c28b4a97f5d35d759943124be8885a5bce22a91363025304e9d as artifact
 
 FROM $BASE_ALPINE
 COPY --from=artifact /adapter /adapter

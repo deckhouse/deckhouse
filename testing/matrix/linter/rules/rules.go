@@ -294,7 +294,7 @@ func objectAPIVersion(object storage.StoreObject) errors.LintRuleError {
 	case "Deployment", "DaemonSet", "StatefulSet":
 		return newAPIVersionError("apps/v1", version, object.Identity())
 	case "Ingress":
-		return newAPIVersionError("networking.k8s.io/v1beta1", version, object.Identity())
+		return newAPIVersionError("networking.k8s.io/v1", version, object.Identity())
 	case "PriorityClass":
 		return newAPIVersionError("scheduling.k8s.io/v1", version, object.Identity())
 	case "PodSecurityPolicy":

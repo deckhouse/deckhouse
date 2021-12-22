@@ -18,7 +18,11 @@ docker:
   ENTRYPOINT: ["/bin/vsphere-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare "<1.22" $version }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
+    {{- else }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
+    {{- end }}
 git:
   - add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
@@ -27,11 +31,7 @@ shell:
   - apk add --no-cache make bash git mercurial patch rsync
   install:
   - mkdir /src
-    {{- if semverCompare "=1.16" $version }}
-  - wget https://github.com/flant/cloud-provider-vsphere/archive/{{ $value.ccm.vsphere }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-    {{- else }}
   - wget https://github.com/kubernetes/cloud-provider-vsphere/archive/{{ $value.ccm.vsphere }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-    {{- end }}
   - cd /src
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile} ; done
   - make build

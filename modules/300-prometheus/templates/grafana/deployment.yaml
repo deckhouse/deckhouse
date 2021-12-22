@@ -152,6 +152,7 @@ spec:
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           value: "0.0.0.0"
@@ -184,8 +185,10 @@ spec:
         - containerPort: 8443
           name: https
         livenessProbe:
-          tcpSocket:
+          httpGet:
+            path: /livez
             port: 8443
+            scheme: HTTPS
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}

@@ -56,7 +56,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                         "ingress",
-			ApiVersion:                   "networking.k8s.io/v1beta1",
+			ApiVersion:                   "networking.k8s.io/v1",
 			Kind:                         "Ingress",
 			LabelSelector:                nonDeckhouseHeritageLabelSelector,
 			ExecuteHookOnSynchronization: pointer.BoolPtr(true),

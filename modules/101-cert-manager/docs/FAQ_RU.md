@@ -63,7 +63,7 @@ default            example-com                     13m
 **Важно!** Если перешли с аннотации на Certificate, то нужно удалить Certificate который был создан по аннотации, иначе, по обоим Certificate будет обновляться один Secret (это может привести к попаданию на лимиты Let’s Encrypt).
 
 ```yaml
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -77,23 +77,32 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: site
-          servicePort: 80
+          service:
+            name: site
+            port:
+              number: 80
         path: /
+        pathType: ImplementationSpecific
   - host: www.example.com                    # дополнительный домен
     http:
       paths:
       - backend:
-          serviceName: site
-          servicePort: 80
+          service:
+            name: site
+            port:
+              number: 80
         path: /
+        pathType: ImplementationSpecific
   - host: admin.example.com                  # еще один дополнительный домен
     http:
       paths:
       - backend:
-          serviceName: site-admin
-          servicePort: 80
+          service:
+            name: site
+            port:
+              number: 80
         path: /
+        pathType: ImplementationSpecific
   tls:
   - hosts:
     - example.com

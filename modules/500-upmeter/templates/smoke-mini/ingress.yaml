@@ -1,7 +1,7 @@
 {{- if not .Values.upmeter.smokeMiniDisabled }}
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: smoke-mini
@@ -26,9 +26,12 @@ spec:
     http:
       paths:
       - path: /
+        pathType: ImplementationSpecific
         backend:
-          serviceName: smoke-mini
-          servicePort: http
+          service:
+            name: smoke-mini
+            port:
+              name: http
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1

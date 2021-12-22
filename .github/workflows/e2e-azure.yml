@@ -47,7 +47,7 @@ env:
   # https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
   BASE_ALPINE: "registry.deckhouse.io/base_images/alpine:3.12.1@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a"
   BASE_DEBIAN: "registry.deckhouse.io/base_images/debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"
-  BASE_ETCD: "k8s.gcr.io/etcd:3.4.13-0@sha256:4ad90a11b55313b182afc186b9876c8e891531b8db4c9bf1541953021618d0e2"
+  BASE_ETCD: "k8s.gcr.io/etcd:3.5.1-0@sha256:64b9ea357325d5db9f8a723dcf503b5a449177b17ac87d69481e126bb724c263"
   BASE_GOLANG_16_ALPINE: "registry.deckhouse.io/base_images/golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
   BASE_GOLANG_16_BUSTER: "registry.deckhouse.io/base_images/golang:1.16.3-buster@sha256:9d64369fd3c633df71d7465d67d43f63bb31192193e671742fa1c26ebc3a6210"
   BASE_GOLANG_17_ALPINE: "registry.deckhouse.io/base_images/golang:1.17.3-alpine3.14@sha256:78a88e6a712e60f9d942450e02508f3c0d8aa931853f02793a4c3aa30063eae0"
@@ -152,9 +152,11 @@ jobs:
       run_docker_1_19: ${{ steps.check.outputs.run_docker_1_19 }}
       run_docker_1_20: ${{ steps.check.outputs.run_docker_1_20 }}
       run_docker_1_21: ${{ steps.check.outputs.run_docker_1_21 }}
+      run_docker_1_22: ${{ steps.check.outputs.run_docker_1_22 }}
       run_containerd_1_19: ${{ steps.check.outputs.run_containerd_1_19 }}
       run_containerd_1_20: ${{ steps.check.outputs.run_containerd_1_20 }}
       run_containerd_1_21: ${{ steps.check.outputs.run_containerd_1_21 }}
+      run_containerd_1_22: ${{ steps.check.outputs.run_containerd_1_22 }}
     steps:
 
       - name: Checkout sources
@@ -167,7 +169,7 @@ jobs:
             const provider = 'azure';
             const defaults = {"criName":"Containerd","kubernetesVersion":"1.21"};
             const criNames = ["Docker","Containerd"];
-            const kubernetesVersions = ["1.19","1.20","1.21"];
+            const kubernetesVersions = ["1.19","1.20","1.21","1.22"];
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, defaults, criNames, kubernetesVersions});
@@ -1130,6 +1132,325 @@ jobs:
             -d "${alertData}"
 
 
+  run_docker_1_22:
+    name: "Docker, k8s 1.22"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_docker_1_22 == 'true'
+    env:
+      PROVIDER: Azure
+      CRI: Docker
+      LAYOUT: Standard
+      KUBERNETES_VERSION: 1.22
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+      - name: Setup
+        id: setup
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.ref }}
+          fetch-depth: 0
+      - name: Update comment on start
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'e2e: Azure, Docker, k8s 1.22';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      - name: Restore images_tags_json from cache
+        id: images-tags-json
+        uses: actions/cache@v2.1.7
+        with:
+          path: modules/images_tags_${{env.WERF_ENV}}.json
+          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+      - name: Fail if not found
+        if: steps.images-tags-json.outputs.cache-hit != 'true'
+        run: |
+          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
+          exit 1
+
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+
+      - name: Login to readonly registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+
+      - name: "Run e2e test: Azure/Docker/1.22"
+        env:
+          PROVIDER: Azure
+          CRI: Docker
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.22"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+          PREFIX: ${{ steps.setup.outputs.prefix}}
+          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+          LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
+          LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
+          LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+        run: |
+          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+
+          werfRunProg=$(cat <<'END_WERF_RUN'
+
+          # WERF_REPO should be set by caller.
+          type werf && source $(werf ci-env github --verbose --as-file)
+
+          echo "Execute 'script.sh run-test' via 'werf run' ...
+          Use environment:
+            PREFIX=${PREFIX}
+            TMPPATH=${TMPPATH}
+            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
+            JOB_STATUS=${JOB_STATUS}
+          "
+
+          git status
+
+          werf run dev/install --dev \
+          --docker-options=" \
+            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
+            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
+            -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMPPATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse" -- \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          END_WERF_RUN
+          )
+          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
+          bash <<<"$werfRunProg"
+
+      - name: Cleanup bootstrapped cluster
+        if: ${{ always() }}
+        env:
+          JOB_STATUS: ${{ job.status }}
+          PROVIDER: Azure
+          CRI: Docker
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.22"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+          PREFIX: ${{ steps.setup.outputs.prefix}}
+          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+          LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
+          LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
+          LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+        run: |
+          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+
+          werfRunProg=$(cat <<'END_WERF_RUN'
+
+          # WERF_REPO should be set by caller.
+          type werf && source $(werf ci-env github --verbose --as-file)
+
+          echo "Execute 'script.sh cleanup' via 'werf run' ...
+          Use environment:
+            PREFIX=${PREFIX}
+            TMPPATH=${TMPPATH}
+            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
+            JOB_STATUS=${JOB_STATUS}
+          "
+
+          git status
+
+          werf run dev/install --dev \
+          --docker-options=" \
+            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
+            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
+            -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMPPATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse" -- \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          END_WERF_RUN
+          )
+          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
+          bash <<<"$werfRunProg"
+
+      - name: Save test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output
+          path: |
+            modules/images_tags_${{env.WERF_ENV}}.json
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      - name: Update comment on finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        continue-on-error: true
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusSource = 'job';
+            const name = 'e2e: Azure, Kubernetes 1.22';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+
+            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
+            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+
+      - name: Alert on fail in default branch
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: Azure
+          CRI: Docker
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.22"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+
+
   run_containerd_1_19:
     name: "Containerd, k8s 1.19"
     needs:
@@ -2055,6 +2376,325 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.21"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+
+
+  run_containerd_1_22:
+    name: "Containerd, k8s 1.22"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_containerd_1_22 == 'true'
+    env:
+      PROVIDER: Azure
+      CRI: Containerd
+      LAYOUT: Standard
+      KUBERNETES_VERSION: 1.22
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+      - name: Setup
+        id: setup
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.ref }}
+          fetch-depth: 0
+      - name: Update comment on start
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'e2e: Azure, Containerd, k8s 1.22';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      - name: Restore images_tags_json from cache
+        id: images-tags-json
+        uses: actions/cache@v2.1.7
+        with:
+          path: modules/images_tags_${{env.WERF_ENV}}.json
+          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+      - name: Fail if not found
+        if: steps.images-tags-json.outputs.cache-hit != 'true'
+        run: |
+          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
+          exit 1
+
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+
+      - name: Login to readonly registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+
+      - name: "Run e2e test: Azure/Containerd/1.22"
+        env:
+          PROVIDER: Azure
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.22"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+          PREFIX: ${{ steps.setup.outputs.prefix}}
+          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+          LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
+          LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
+          LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+        run: |
+          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+
+          werfRunProg=$(cat <<'END_WERF_RUN'
+
+          # WERF_REPO should be set by caller.
+          type werf && source $(werf ci-env github --verbose --as-file)
+
+          echo "Execute 'script.sh run-test' via 'werf run' ...
+          Use environment:
+            PREFIX=${PREFIX}
+            TMPPATH=${TMPPATH}
+            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
+            JOB_STATUS=${JOB_STATUS}
+          "
+
+          git status
+
+          werf run dev/install --dev \
+          --docker-options=" \
+            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
+            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
+            -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMPPATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse" -- \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          END_WERF_RUN
+          )
+          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
+          bash <<<"$werfRunProg"
+
+      - name: Cleanup bootstrapped cluster
+        if: ${{ always() }}
+        env:
+          JOB_STATUS: ${{ job.status }}
+          PROVIDER: Azure
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.22"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+          PREFIX: ${{ steps.setup.outputs.prefix}}
+          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+          LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
+          LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
+          LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+        run: |
+          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+
+          werfRunProg=$(cat <<'END_WERF_RUN'
+
+          # WERF_REPO should be set by caller.
+          type werf && source $(werf ci-env github --verbose --as-file)
+
+          echo "Execute 'script.sh cleanup' via 'werf run' ...
+          Use environment:
+            PREFIX=${PREFIX}
+            TMPPATH=${TMPPATH}
+            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
+            JOB_STATUS=${JOB_STATUS}
+          "
+
+          git status
+
+          werf run dev/install --dev \
+          --docker-options=" \
+            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
+            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
+            -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMPPATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse" -- \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          END_WERF_RUN
+          )
+          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
+          bash <<<"$werfRunProg"
+
+      - name: Save test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output
+          path: |
+            modules/images_tags_${{env.WERF_ENV}}.json
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      - name: Update comment on finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        continue-on-error: true
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusSource = 'job';
+            const name = 'e2e: Azure, Kubernetes 1.22';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+
+            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
+            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+
+      - name: Alert on fail in default branch
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: Azure
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.22"
         run: |
           WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
           echo $WORKFLOW_URL

@@ -1,6 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: grafana
@@ -52,16 +52,22 @@ spec:
     http:
       paths:
       - path: /
+        pathType: ImplementationSpecific
         backend:
-          serviceName: grafana
-          servicePort: https
+          service:
+            name: grafana
+            port:
+              name: https
   - host: {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
     http:
       paths:
         - path: /
+          pathType: ImplementationSpecific
           backend:
-            serviceName: grafana
-            servicePort: https
+            service:
+              name: grafana
+              port:
+                name: https
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1

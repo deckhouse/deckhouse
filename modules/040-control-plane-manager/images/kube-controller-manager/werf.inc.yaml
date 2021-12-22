@@ -10,12 +10,10 @@ import:
     add: /pause
     to: /pause
     before: setup
-  {{- if semverCompare ">=1.19" $version }}
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/_output/bin/kube-controller-manager
     to: /usr/bin/kube-controller-manager
     before: setup
-  {{- end }}
 shell:
   beforeInstall:
   - apt-get update
@@ -25,10 +23,6 @@ shell:
   - apt-get update
   - apt-get install -y ceph-common
   - touch /etc/ceph/ceph.conf /etc/ceph/ceph.keyring
-  {{- if semverCompare "<1.19" $version }}
-  - curl -L https://storage.googleapis.com/kubernetes-release/release/v{{ printf "%s.%s" $version $patch }}/bin/linux/amd64/kube-controller-manager -o /usr/bin/kube-controller-manager
-  - chmod +x /usr/bin/kube-controller-manager
-  {{- end }}
   - apt-get purge -y --auto-remove curl apt-transport-https gnupg gnupg2 gnupg1
   - rm -rf /var/lib/apt/lists/*
 docker:
@@ -36,7 +30,6 @@ docker:
     DEBIAN_FRONTEND: noninteractive
     container: docker
   ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
-  {{- if semverCompare ">=1.19" $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   {{- if semverCompare "<1.21" $version }}
@@ -65,5 +58,4 @@ shell:
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - make all WHAT=cmd/kube-controller-manager
-  {{- end }}
 {{- end }}

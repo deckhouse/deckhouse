@@ -65,7 +65,7 @@ Each `ingress-nginx-controller` has certificates that can be used to connect to 
 > Names for Ingress `my-prometheus-api` and Secret `my-basic-auth-secret` are there for example. Change them to the most suitable names for your case.
 
 ```yaml
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: my-prometheus-api
@@ -86,9 +86,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: trickster
-          servicePort: https
+          service:
+            name: trickster
+            port:
+              name: https
         path: /trickster/main
+        pathType: ImplementationSpecific
   tls:
   - hosts:
     - prometheus-api.example.com

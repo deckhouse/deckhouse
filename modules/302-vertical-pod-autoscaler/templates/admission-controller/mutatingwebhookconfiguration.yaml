@@ -1,9 +1,5 @@
 ---
-{{- if semverCompare ">=1.16" .Values.global.discovery.kubernetesVersion }}
 apiVersion: admissionregistration.k8s.io/v1
-{{- else }}
-apiVersion: admissionregistration.k8s.io/v1beta1
-{{- end }}
 kind: MutatingWebhookConfiguration
 metadata:
   name: vpa-webhook-config
@@ -19,7 +15,6 @@ webhooks:
   failurePolicy: Ignore
   name: vpa.k8s.io
   namespaceSelector: {}
-{{- if semverCompare ">=1.16" .Values.global.discovery.kubernetesVersion }}
   objectSelector:
     matchExpressions:
     - key: app
@@ -28,7 +23,6 @@ webhooks:
       - vpa-admission-controller
       - vpa-recommender
       - vpa-updater
-{{- end }}
   rules:
   - apiGroups:
     - ""

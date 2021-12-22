@@ -1,6 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: admin
@@ -37,9 +37,12 @@ spec:
     http:
       paths:
       - path: /
+        pathType: ImplementationSpecific
         backend:
-          serviceName: {{ .Chart.Name }}
-          servicePort: https
+          service:
+            name: {{ .Chart.Name }}
+            port:
+              name: https
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1

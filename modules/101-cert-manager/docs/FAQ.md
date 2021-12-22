@@ -63,7 +63,7 @@ Yes, it works! The dedicated component (`cert-manager-ingress-shim`) automatical
 **Caution!** If you switched to the Certificate instead of annotation, then you need to delete the annotation-based Certificate. Otherwise, the same Secret will be updated for both Certificates (this may lead to exceeding the Let's Encrypt limits).
 
 ```yaml
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -77,23 +77,32 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: site
-          servicePort: 80
+          service:
+            name: site
+            port:
+              number: 80
         path: /
+        pathType: ImplementationSpecific
   - host: www.example.com                    # the additional domain
     http:
       paths:
       - backend:
-          serviceName: site
-          servicePort: 80
+          service:
+            name: site
+            port:
+              number: 80
         path: /
+        pathType: ImplementationSpecific
   - host: admin.example.com                  # another additional domain
     http:
       paths:
       - backend:
-          serviceName: site-admin
-          servicePort: 80
+          service:
+            name: site
+            port:
+              number: 80
         path: /
+        pathType: ImplementationSpecific
   tls:
   - hosts:
     - example.com

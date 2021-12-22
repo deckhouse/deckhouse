@@ -74,21 +74,21 @@ spec: {}
 `
 		stateCSINode1 = `
 ---
-apiVersion: storage.k8s.io/v1beta1
+apiVersion: storage.k8s.io/v1
 kind: CSINode
 metadata:
   name: node-1
 `
 		stateCSINode2 = `
 ---
-apiVersion: storage.k8s.io/v1beta1
+apiVersion: storage.k8s.io/v1
 kind: CSINode
 metadata:
   name: node-2
 `
 		stateCSINode4 = `
 ---
-apiVersion: storage.k8s.io/v1beta1
+apiVersion: storage.k8s.io/v1
 kind: CSINode
 metadata:
   name: node-4

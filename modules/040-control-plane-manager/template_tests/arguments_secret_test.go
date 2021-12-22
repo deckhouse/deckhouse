@@ -27,7 +27,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 	const globalValues = `
   clusterConfiguration:
-    kubernetesVersion: 1.16.15
+    kubernetesVersion: 1.19.15
     clusterType: Cloud
   modules:
     placement: {}
@@ -56,7 +56,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 `
 	const moduleValues = `
   internal:
-    effectiveKubernetesVersion: "1.16"
+    effectiveKubernetesVersion: "1.19"
     etcdServers:
       - https://192.168.199.186:2379
     pkiChecksum: checksum

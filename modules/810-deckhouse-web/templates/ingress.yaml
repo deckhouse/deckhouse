@@ -1,6 +1,6 @@
 {{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: deckhouse-web
@@ -33,9 +33,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: deckhouse-web
-          servicePort: http
+          service:
+            name: deckhouse-web
+            port:
+              name: http
         path: /
+        pathType: ImplementationSpecific
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:

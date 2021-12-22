@@ -70,12 +70,10 @@ allowedBundles:
   - "ubuntu-lts"
   - "centos-7"
 allowedKubernetesVersions:
-  - "1.16"
-  - "1.17"
-  - "1.18"
   - "1.19"
   - "1.20"
   - "1.21"
+  - "1.22"
 mcmEmergencyBrake: false
 `
 

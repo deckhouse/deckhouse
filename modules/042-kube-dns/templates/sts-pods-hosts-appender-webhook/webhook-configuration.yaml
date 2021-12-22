@@ -1,6 +1,6 @@
 {{- if .Values.kubeDns.clusterDomainAliases }}
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: d8-kube-dns-sts-pods-hosts-appender-webhook
@@ -8,18 +8,18 @@ metadata:
 webhooks:
 - name: sts-pods-hosts-appender-conversion.flant.com
   failurePolicy: Fail
-  {{- if semverCompare ">=1.15" .Values.global.discovery.kubernetesVersion }}
   matchPolicy: Equivalent
-  {{- end }}
+  sideEffects: None
   timeoutSeconds: 3
+  admissionReviewVersions:
+    - v1
+    - v1beta1
   clientConfig:
     service:
       name: d8-kube-dns-sts-pods-hosts-appender-webhook
       namespace: kube-system
       path: "/mutate"
-      {{- if semverCompare ">=1.15" .Values.global.discovery.kubernetesVersion }}
       port: 443
-      {{- end }}
     caBundle: {{ .Values.kubeDns.internal.stsPodsHostsAppenderWebhook.ca | b64enc }}
   objectSelector:
     matchExpressions:

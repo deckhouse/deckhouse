@@ -32,7 +32,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                   "csinodes",
 			WaitForSynchronization: pointer.BoolPtr(false),
-			ApiVersion:             "storage.k8s.io/v1beta1",
+			ApiVersion:             "storage.k8s.io/v1",
 			Kind:                   "CSINode",
 			FilterFunc:             csiFilterCSINode, //  jqFilter: '{"name": .metadata.name}'
 		},

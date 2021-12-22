@@ -1,6 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: status
@@ -34,11 +34,14 @@ spec:
     http:
       paths:
       - path: /
+        pathType: ImplementationSpecific
         backend:
-          serviceName: status
-          servicePort: http
+          service:
+            name: status
+            port:
+              name: http
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: upmeter-api-status
@@ -79,9 +82,12 @@ spec:
     http:
       paths:
       - path: /public/api
+        pathType: ImplementationSpecific
         backend:
-          serviceName: upmeter
-          servicePort: https
+          service:
+            name: upmeter
+            port:
+              name: https
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1

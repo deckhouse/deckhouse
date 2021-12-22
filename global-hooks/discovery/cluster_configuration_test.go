@@ -63,7 +63,7 @@ cloud:
 podSubnetCIDR: 10.122.0.0/16
 podSubnetNodeCIDRPrefix: "26"
 serviceSubnetCIDR: 10.213.0.0/16
-kubernetesVersion: "1.16"
+kubernetesVersion: "1.19"
 clusterDomain: "test.local"
 `
 		stateB = `
@@ -118,7 +118,7 @@ data:
 				Expect(f.ValuesGet("global.clusterConfiguration.podSubnetCIDR").String()).To(Equal("10.122.0.0/16"))
 				Expect(f.ValuesGet("global.clusterConfiguration.podSubnetNodeCIDRPrefix").String()).To(Equal("26"))
 				Expect(f.ValuesGet("global.clusterConfiguration.serviceSubnetCIDR").String()).To(Equal("10.213.0.0/16"))
-				Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.16"))
+				Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.19"))
 
 				Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("10.122.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))

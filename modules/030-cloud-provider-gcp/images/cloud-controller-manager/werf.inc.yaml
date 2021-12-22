@@ -1,26 +1,6 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.ccm.gcp }}
-    {{- if semverCompare "=1.16" $version }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ env "BASE_ALPINE" }}
-import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /usr/local/bin/cloud-controller-manager
-    to: /usr/local/bin/cloud-controller-manager
-    before: setup
-shell:
-  beforeInstall:
-    - apk add --no-cache ca-certificates
-docker:
-  ENV:
-    container: docker
-  ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: gcr.io/google-containers/cloud-controller-manager:{{ $value.ccm.gcp }}
-    {{- else }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_ALPINE" }}
@@ -38,7 +18,11 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare "<=1.22" $version }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
+    {{- else }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
+    {{- end }}
 shell:
   beforeInstall:
     - apk add --no-cache make bash git mercurial patch rsync
@@ -48,9 +32,10 @@ shell:
     - cd /src
       {{- if semverCompare "<1.20" $version }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/controller-manager.go
-      {{- else }}
+      {{- else if semverCompare "<=1.22" $version }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go
+      {{- else }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go cmd/cloud-controller-manager/nodeipamcontroller.go
       {{- end }}
-    {{- end }}
   {{- end }}
 {{- end }}

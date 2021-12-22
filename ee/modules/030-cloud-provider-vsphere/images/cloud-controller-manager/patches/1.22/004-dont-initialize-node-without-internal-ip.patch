@@ -1,0 +1,26 @@
+Index: pkg/cloudprovider/vsphere/nodemanager.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vsphere/nodemanager.go
+--- a/pkg/cloudprovider/vsphere/nodemanager.go	(revision af6bb22f1c299bc8b96d51d798fa4828a66eb4c1)
++++ b/pkg/cloudprovider/vsphere/nodemanager.go	(revision 2461f899209081458fe3a0a7a109dad80f6ad02d)
+@@ -326,6 +326,17 @@
+ 		}
+ 	}
+
++	var internalAddressExists bool
++	for _, addr := range addrs {
++		if addr.Type == v1.NodeInternalIP {
++			internalAddressExists = true
++			break
++		}
++	}
++	if !internalAddressExists {
++		return fmt.Errorf("no Internal IP found in the node %s addresses:\n%+v", nodeID, addrs)
++	}
++
+ 	klog.V(2).Infof("Found node %s as vm=%+v in vc=%s and datacenter=%s",
+ 		nodeID, vmDI.VM, vmDI.VcServer, vmDI.DataCenter.Name())
+ 	klog.V(2).Info("Hostname: ", oVM.Guest.HostName, " UUID: ", vmDI.UUID)

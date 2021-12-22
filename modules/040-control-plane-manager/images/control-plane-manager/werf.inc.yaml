@@ -44,13 +44,11 @@ shell:
  {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
-  {{- if semverCompare ">=1.16" $version }}
   - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz -C /
   - cd /kubernetes-{{ printf "%s.%s" $version $patch }}
   - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - make all WHAT=cmd/kubeadm
   - mv _output/bin/kubeadm /usr/local/bin/kubeadm-{{ $version }}
-  {{- end }}
 {{- end }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-etcd-artifact
