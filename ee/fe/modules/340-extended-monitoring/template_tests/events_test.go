@@ -41,6 +41,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: events ", fun
 			hec.ValuesSet("extendedMonitoring.events.exporterEnabled", true)
 			hec.ValuesSet("extendedMonitoring.events.severityLevel", "OnlyWarnings")
 			hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability", `{}`)
+			hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 			hec.HelmRender()
 		})
 		It("Should add desired objects", func() {
@@ -53,6 +54,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: events ", fun
 			hec.ValuesSet("extendedMonitoring.events.exporterEnabled", false)
 			hec.ValuesSet("extendedMonitoring.events.severityLevel", "OnlyWarnings")
 			hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability", `{}`)
+			hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 			hec.HelmRender()
 		})
 		It("Should not deploy desired objects", func() {

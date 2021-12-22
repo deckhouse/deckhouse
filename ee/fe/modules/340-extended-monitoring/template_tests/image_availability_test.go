@@ -41,6 +41,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: image availab
 	Context("With imageAvailability.exporterEnabled", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+			hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 			hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 			hec.HelmRender()
 		})
@@ -52,6 +53,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: image availab
 	Context("Without imageAvailability.exporterEnabled", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", false)
+			hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 			hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 			hec.HelmRender()
 		})
@@ -65,6 +67,8 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: image availab
 		Context("Empty", func() {
 			BeforeEach(func() {
 				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSet("extendedMonitoring.certificates.exporterEnabled", false)
+				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 				hec.HelmRender()
 			})
@@ -81,6 +85,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: image availab
 		Context("Filled", func() {
 			BeforeEach(func() {
 				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
 				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 				hec.ValuesSet("extendedMonitoring.imageAvailability.ignoredImages", []string{
 					"a.b.com/zzz:9.7.1",

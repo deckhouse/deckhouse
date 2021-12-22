@@ -52,6 +52,12 @@ properties:
         default: false
         description: |
           Enables certExporter.
+      namespaces:
+        type: array
+        description: |
+          Whether to monitor only certain namespaces
+        items:
+          type: string
   nodeSelector:
     type: object
     additionalProperties:

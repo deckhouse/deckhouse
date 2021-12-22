@@ -31,6 +31,9 @@ properties:
         default: false
         description: |
           Включен ли certExporter.
+      namespaces:
+        description: |
+          Отслеживать сертификаты только в определённых неймспейсах.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
