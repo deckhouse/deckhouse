@@ -66,11 +66,4 @@ The upgrade of a **minor version** of any control plane component is performed i
   - When downgrading, the component version can only be one version behind the highest ever used minor version of the control plane components.
     - Suppose, `maxUsedControlPlaneVersion = 1.20`. In this case, the lowest possible version of the control plane components is `1.19`.
 
-### Supported Kubernetes versions
-
-| Kubernetes version | Starting point |  Ending point
-|---|---|---|
-| 1.19 | Yes | Yes |
-| 1.20 | Yes | Yes |
-| 1.21 | Yes | Yes |
-| 1.22 | No | Yes |
+[List of supported Kubernetes versions...](../../supported_versions.html#kubernetes)
