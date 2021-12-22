@@ -431,7 +431,7 @@
           "refId": "A"
         }
       ],
-      "title": "Kubernetes Server Version",
+      "title": "Kubernetes Version",
       "transformations": [],
       "transparent": true,
       "type": "stat"
@@ -496,13 +496,12 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "auto",
+        "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "max"
-          ],
+          "calcs": [],
           "fields": "",
-          "values": false
+          "limit": 1,
+          "values": true
         },
         "text": {},
         "textMode": "name"
@@ -555,13 +554,12 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "auto",
+        "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "max"
-          ],
+          "calcs": [],
           "fields": "",
-          "values": false
+          "limit": 1,
+          "values": true
         },
         "text": {},
         "textMode": "name"
@@ -571,6 +569,8 @@
         {
           "exemplar": true,
           "expr": "sum by (os_image) (kube_node_info)",
+          "format": "time_series",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{ git_version }}",
           "refId": "A"
@@ -629,9 +629,10 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "prometheus_build_info{service=\"prometheus\"}",
+          "expr": "max by (version, namespace) (prometheus_build_info{service=\"prometheus\", namespace=\"d8-monitoring\"})",
+          "instant": true,
           "interval": "",
-          "legendFormat": "{{ version }} {{ edition }}",
+          "legendFormat": "{{ version }}",
           "refId": "A"
         }
       ],
@@ -688,7 +689,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (version) (grafana_build_info{job=\"grafana\"})",
+          "expr": "max by (version, namespace) (grafana_build_info{service=\"grafana\", namespace=\"d8-monitoring\"})",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{ version }} {{ edition }}",
           "refId": "A"
