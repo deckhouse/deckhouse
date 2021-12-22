@@ -79,26 +79,39 @@ module Jekyll
         exampleObject = nil
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
+        if parent.has_key?('required') && parent['required'].include?(name)
+            result.push(%Q(<p class="resources__attrs"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
+        elsif attributes.has_key?('x-doc-required')
+            if attributes['x-doc-required']
+                result.push(%Q(<p class="resources__attrs"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
+            else
+                result.push(%Q(<p class="resources__attrs"><span class="resources__attrs_name not_required">#{get_i18n_term('not_required_value_sentence')}</span></p>))
+            end
+        else
+            # Not sure if there will always be an optional value here...
+            # result.push(converter.convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
+        end
+
         result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),converter.convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))) if attributes['description']
 
         if attributes.has_key?('x-doc-default')
             if attributes['x-doc-default'].is_a?(Array)
-                result.push(sprintf(%q(<p><span class="resources__attr_name">%s:</span> <span class="resources__attr_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default'].to_json))
+                result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default'].to_json))
             else
                 if attributes['type'] == 'string'
-                    result.push(sprintf(%q(<p><span class="resources__attr_name">%s:</span> <span class="resources__attr_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
                 else
-                    result.push(sprintf(%q(<p><span class="resources__attr_name">%s:</span> <span class="resources__attr_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
                 end
             end
         elsif attributes.has_key?('default')
             if attributes['default'].is_a?(Array)
-                result.push(sprintf(%q(<p><span class="resources__attr_name">%s:</span> <span class="resources__attr_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default'].to_json))
+                result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default'].to_json))
             else
                 if attributes['type'] == 'string'
-                    result.push(sprintf(%q(<p><span class="resources__attr_name">%s:</span> <span class="resources__attr_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
                 else
-                    result.push(sprintf(%q(<p><span class="resources__attr_name">%s:</span> <span class="resources__attr_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
                 end
             end
         end
@@ -113,8 +126,8 @@ module Jekyll
         end
 
         if attributes['minimum'] || attributes['maximum']
-            valuesRange = '<p><span class="resources__attr_name">' + get_i18n_term("allowed_values").capitalize + ':</span> '
-            valuesRange += '<span class="resources__attr_content"><code>'
+            valuesRange = '<p class="resources__attrs"><span class="resources__attrs_name">' + get_i18n_term("allowed_values").capitalize + ':</span> '
+            valuesRange += '<span class="resources__attrs_content"><code>'
             if attributes['minimum']
               comparator = attributes['exclusiveMinimum'] ? '<' : '<='
               valuesRange += "#{attributes['minimum'].to_json} #{comparator} "
@@ -129,19 +142,19 @@ module Jekyll
         end
 
         if attributes['enum']
-            enum_result = '<p><span class="resources__attr_name">' + get_i18n_term("allowed_values").capitalize
+            enum_result = '<p class="resources__attrs"><span class="resources__attrs_name">' + get_i18n_term("allowed_values").capitalize
             if name == "" and parent['type'] == 'array'
                 enum_result += ' ' + get_i18n_term("allowed_values_of_array")
             end
-            result.push(enum_result + ':</span> <span class="resources__attr_content">'+ [*attributes['enum']].map { |e| "<code>#{e}</code>" }.join(', ') + '</span></p>')
+            result.push(enum_result + ':</span> <span class="resources__attrs_content">'+ [*attributes['enum']].map { |e| "<code>#{e}</code>" }.join(', ') + '</span></p>')
         end
 
         if attributes['pattern']
-            result.push(sprintf(%q(<p><span class="resources__attr_name">%s:</span> <code class="resources__attr_content">%s</code></p>),get_i18n_term("pattern").capitalize, attributes['pattern']))
+            result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <code class="resources__attrs_content">%s</code></p>),get_i18n_term("pattern").capitalize, attributes['pattern']))
         end
 
         if attributes['minLength'] || attributes['maxLength']
-            description = %Q(<p><span class="resources__attr_name">#{get_i18n_term('length').capitalize}</span>: <span class="resources__attr_content"><code>)
+            description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term('length').capitalize}</span>: <span class="resources__attrs_content"><code>)
             if attributes['minLength']
               description += "#{attributes['minLength'].to_json}"
             end
@@ -167,7 +180,7 @@ module Jekyll
             exampleObject = attributes['x-examples']
         end
         if exampleObject != nil
-            example =  %Q(<p><span class="resources__attr_name">#{get_i18n_term('example').capitalize}:</span> <span class="resources__attr_content">) +
+            example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term('example').capitalize}:</span> <span class="resources__attrs_content">) +
                         if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
                             exampleObject['oneOf'].map { |e| "<code>#{e.to_json}</code>" }.join(' ' + get_i18n_term('or') + ' ')
                         elsif exampleObject.is_a?(Array) || exampleObject.is_a?(Hash)
@@ -187,18 +200,6 @@ module Jekyll
             result.push(converter.convert(example.to_s))
         end
 
-        if parent.has_key?('required') && parent['required'].include?(name)
-            result.push(%Q(<p><span class="resources__attr_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
-        elsif attributes.has_key?('x-doc-required')
-            if attributes['x-doc-required']
-                result.push(%Q(<p><span class="resources__attr_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
-            else
-                result.push(%Q(<p><span class="resources__attr_name not_required">#{get_i18n_term('not_required_value_sentence')}</span></p>))
-            end
-        else
-            # Not sure if there will always be an optional value here...
-            # result.push(converter.convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
-        end
         result
     end
 
