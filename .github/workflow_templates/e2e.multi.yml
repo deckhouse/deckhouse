@@ -42,13 +42,17 @@ on:
     inputs:
       issue_id:
         description: 'ID of issue where label was set'
-        required: true
+        required: false
       issue_number:
         description: 'Number of issue where label was set'
-        required: true
+        required: false
       comment_id:
         description: 'ID of comment in issue where to put workflow run status'
-        required: true
+        required: false
+      cri:
+        required: false
+      ver:
+        required: false
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 {!{ tmpl.Exec "image_versions_envs" | strings.Indent 2 }!}

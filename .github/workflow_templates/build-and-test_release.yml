@@ -7,13 +7,13 @@ on:
     inputs:
       issue_id:
         description: 'Id of issue where label was set'
-        required: true
+        required: false
       issue_number:
         description: 'Number of issue where label was set'
-        required: true
+        required: false
       comment_id:
         description: 'Id of comment in issue where to put workflow run status'
-        required: true
+        required: false
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
@@ -50,7 +50,7 @@ jobs:
     needs:
       - git_info
       - comment_on_start
-    if: ${{ github.ref != 'refs/heads/main' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "EE"
 {!{ tmpl.Exec "build_modules_images_template" . | strings.Indent 4 }!}
@@ -61,7 +61,7 @@ jobs:
     needs:
       - git_info
       - comment_on_start
-    if: ${{ github.ref != 'refs/heads/main' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "CE"
 {!{ tmpl.Exec "build_modules_images_template" . | strings.Indent 4 }!}
@@ -91,7 +91,7 @@ jobs:
       - git_info
       - build_modules_images_ee
       - go_generate
-    if: ${{ github.ref != 'refs/heads/main' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "EE"
 {!{ tmpl.Exec "build_template" . | strings.Indent 4 }!}
@@ -103,7 +103,7 @@ jobs:
       - git_info
       - build_modules_images_ce
       - go_generate
-    if: ${{ github.ref != 'refs/heads/main' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "CE"
 {!{ tmpl.Exec "build_template" . | strings.Indent 4 }!}
@@ -250,7 +250,7 @@ jobs:
       - openapi_test_cases
       - web_links_test
       - validators
-    if: always()
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}

@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'release-*'
     tags:
       - 'v*'
 
@@ -28,4 +29,4 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.startBuildAndTestWorkflow({github, context, core});
+            return await ci.runWorkflowForReleasePush({ github, context, core })

@@ -1,5 +1,6 @@
 //@ts-check
 const { knownLabels, labelsSrv, knownProviders, knownChannels } = require('./constants');
+const { dumpError } = require('./error');
 
 /**
  * Update a comment in "release" issue when workflow is started.
@@ -191,6 +192,11 @@ module.exports.updateCommentOnFinish = async ({ github, context, core, statusSou
  * @returns {Promise<void|*>}
  */
 const checkLabel = async ({ github, context, core, labelType, labelSubject, onSuccess }) => {
+  if (context.eventName === 'workflow_dispatch' && !context.payload.inputs.issue_number) {
+    core.setOutput('should_run', 'true');
+    return console.log(`workflow_dispatch without issue number. Allow to proceed.`);
+  }
+
   const shouldRunLabel = labelsSrv.findLabel({ labelType, labelSubject });
   if (shouldRunLabel === '') {
     core.setOutput('should_run', 'false');
@@ -307,6 +313,19 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider, defaul
   let issueLabels = [];
   let shouldRun = false;
 
+  if (context.eventName === 'workflow_dispatch' && !context.payload.inputs.issue_number) {
+    let cri = defaults.criName.toLowerCase();
+    let ver = defaults.kubernetesVersion.replace(/\./g, '_');
+    let source = 'default parameters'
+    if (!!context.payload.inputs.cri && !!context.payload.inputs.ver ) {
+      cri = context.payload.inputs.cri.toLowerCase();
+      ver = context.payload.inputs.ver.replace(/\./g, '_');
+      source = 'parameters from inputs';
+    }
+    core.setOutput(`run_${cri}_${ver}`, 'true');
+    return console.log(`workflow_dispatch without issue number. Will run e2e with ${source} cri=${cri} and version=${ver}.`);
+  }
+
   await checkLabel({
     github,
     context,
@@ -336,7 +355,7 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider, defaul
 
   if (useLabels.length === 0) {
     const cri = defaults.criName.toLowerCase();
-    const ver = defaults.kubernetesVersion.replace(/\./g, '_'); // replaceAll is undefined in node js
+    const ver = defaults.kubernetesVersion.replace(/\./g, '_');
     core.setOutput(`run_${cri}_${ver}`, 'true');
     return console.log(`No additional 'e2e/use/' labels found. Will run e2e with default cri=${cri} and version=${ver}.`);
   }
@@ -561,7 +580,7 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
     }
     console.log(JSON.stringify(response));
   } catch (error) {
-    console.log(`get tag error: ${JSON.stringify(error)}`);
+    console.log(`get tag error: ${dumpError(error)}`);
   }
 
   console.log(`Use ref=${ref}`);
@@ -678,8 +697,8 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => 
     } else {
       console.log(`Error calling RetryWorkflow. Response: ${JSON.stringify(response)}`);
     }
-  } catch (e) {
-    console.log(`Ignore error: ${JSON.stringify(e)}`);
+  } catch (error) {
+    console.log(`Ignore error: ${dumpError(error)}`);
   }
 };
 
@@ -725,8 +744,11 @@ module.exports.createReleaseIssueForMilestone = async ({ github, context, core }
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @returns {Promise<void>}
  */
-module.exports.startBuildAndTestWorkflow = async ({ github, context, core }) => {
+const startBuildAndTestWorkflow = async ({ github, context, core }) => {
   const github_ref = context.ref;
+
+  // TODO Temporarily no comment for release-* branches.
+
 
   // Find 10 recently created milestones.
   const query = `
@@ -757,7 +779,7 @@ module.exports.startBuildAndTestWorkflow = async ({ github, context, core }) => 
       return core.setFailed(error.message);
     } else {
       // handle non-GraphQL error
-      return core.setFailed(`List milestones failed: ${JSON.stringify(error)}`);
+      return core.setFailed(`List milestones failed: ${dumpError(error)}`);
     }
   }
 
@@ -788,7 +810,7 @@ module.exports.startBuildAndTestWorkflow = async ({ github, context, core }) => 
   }
   if (!milestone) {
     return core.setFailed(
-      'No appropriate milestone found. Create one and push or restart build with label. ${JSON.stringify(result)}'
+      `No appropriate milestone found. Create one and push or restart build with label. ${JSON.stringify(result)}`
     );
   }
   console.log(`The milestone is '${milestone.title}' with number ${milestone.number}`);
@@ -848,4 +870,77 @@ module.exports.startBuildAndTestWorkflow = async ({ github, context, core }) => 
   if (response.status < 200 || response.status >= 300) {
     return core.setFailed(`Error calling dispatch. Response: ${JSON.stringify(response)}`);
   }
+};
+
+/**
+ * Start build-and-test_release workflow.
+ *
+ * @param {object} inputs
+ * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
+ * @param {object} inputs.context - An object containing the context of the workflow run.
+ * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @returns {Promise<void>}
+ */
+const startBuildAndTestWorkflowNoComment = async ({ github, context, core }) => {
+  const github_ref = context.ref;
+
+  // Start 'release-build-and-test' workflow.
+  console.log('Start workflow.');
+  response = await github.rest.actions.createWorkflowDispatch({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    workflow_id: 'build-and-test_release.yml',
+    ref: github_ref,
+    inputs: {}
+  });
+  if (response.status < 200 || response.status >= 300) {
+    return core.setFailed(`Error calling dispatch. Response: ${JSON.stringify(response)}`);
+  }
+};
+
+/**
+ * Start build-and-test_release workflow depending on context.ref.
+ *
+ * @param {object} inputs
+ * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
+ * @param {object} inputs.context - An object containing the context of the workflow run.
+ * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @returns {Promise<void>}
+ */
+module.exports.runWorkflowForReleasePush = async ({ github, context, core }) => {
+  const isReleaseBranch = context.ref.startsWith('refs/heads/release-');
+  const isMain = context.ref === 'refs/heads/main';
+  const isTag = context.ref.startsWith('refs/tags/');
+  let tagName = '';
+  let tagSuffix = '';
+  let tagType = 'release';
+  if (isTag) {
+    const found = context.ref.match(/(v[0-9]+\.[0-9]+\.[0-9]+)([\-+][A-Za-z0-9\-+._])?/);
+    if (found) {
+      tagName = found[1];
+      if (found[2]) {
+        tagSuffix = found[2];
+        tagType = 'pre-release'
+      }
+    }
+  }
+
+  let description = '';
+  if (isReleaseBranch) {
+    description = 'release branch'
+  } else if (isMain) {
+    description = 'default branch'
+  } else if (isTag) {
+    description = `${tagType} tag`
+  }
+  console.log(`Start build-and-test for ${description} '${context.ref}'...`);
+
+  if (isReleaseBranch || (isTag && tagType === 'pre-release')) {
+    return await startBuildAndTestWorkflowNoComment({github, context, core});
+  }
+  if (isMain || (isTag && tagType === 'release')) {
+    return await startBuildAndTestWorkflow({github, context, core});
+  }
+
+  core.setFailed(`Cannot recognize ref '${context.ref}'. No workflow to start further.`);
 };
