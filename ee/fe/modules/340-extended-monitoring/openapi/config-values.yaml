@@ -41,6 +41,17 @@ properties:
           Whether to expose only crutial events.
         enum: ["All", "OnlyWarnings"]
         default: "OnlyWarnings"
+  certificates:
+    type: object
+    default: {}
+    description: |
+      Settings for monitoring the certificates in the Kubernetes cluster.
+    properties:
+      exporterEnabled:
+        type: boolean
+        default: false
+        description: |
+          Enables certExporter.
   nodeSelector:
     type: object
     additionalProperties:

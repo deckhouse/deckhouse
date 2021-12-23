@@ -22,6 +22,15 @@ properties:
       severityLevel:
         description: |
           Enables eventsExporter.
+  certificates:
+    description: |
+      Настройки для мониторинга сертификатов в кластере Kubernetes.
+    properties:
+      exporterEnabled:
+        type: boolean
+        default: false
+        description: |
+          Включен ли certExporter.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
