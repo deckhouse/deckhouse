@@ -210,10 +210,10 @@ spec:
         - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
       {{- end }}
     {{- end }}
-    {{- if semverCompare ">=1.0.4" $controllerVersion }}
-        # Starting from v1.0.4 we dropped `pod-ip.patch` in favor of the existing argument.
+    {{- if semverCompare ">=1.0" $controllerVersion }}
+        # Starting from v1.0 we dropped `pod-ip.patch` in favor of the existing argument.
         - --healthz-host=127.0.0.1
-        # Starting from v1.0.4 we need explicitly define the ConfigMap name for leader election.
+        # Starting from v1.0 we need explicitly define the ConfigMap name for leader election.
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
     {{- end }}
   {{- end }}
