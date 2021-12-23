@@ -4,7 +4,7 @@ title: "Модуль namespace-configurator: примеры конфигурац
 
 ## Пример:
 
-Этот пример добавит аннотацию `extended-monitoring.flant.com/enabled=true` и лейбл `foo=bar` к каждому неймспейсу начинающемуся с `prod-` или `infra-` за исключением `infra-test`.
+Этот пример добавит аннотацию `extended-monitoring.flant.com/enabled=true` и label `foo=bar` к каждому Namespace, начинающемуся с `prod-` или `infra-`, за исключением `infra-test`.
 
 ```yaml
 namespaceConfiguratorEnabled: "true"

@@ -841,6 +841,21 @@ entries:
                 ru: Настройки
                 en: Configuration
               url: /modules/470-chrony/configuration.html
+        - title: namespace-configurator
+          versionType: experimental
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/600-namespace-configurator/
+            - title:
+                ru: Настройки
+                en: Configuration
+              url: /modules/600-namespace-configurator/configuration.html
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/600-namespace-configurator/usage.html
         - title: secret-copier
           versionType: experimental
           folders:
