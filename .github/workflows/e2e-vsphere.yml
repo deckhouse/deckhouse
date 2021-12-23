@@ -18,13 +18,17 @@ on:
     inputs:
       issue_id:
         description: 'ID of issue where label was set'
-        required: true
+        required: false
       issue_number:
         description: 'Number of issue where label was set'
-        required: true
+        required: false
       comment_id:
         description: 'ID of comment in issue where to put workflow run status'
-        required: true
+        required: false
+      cri:
+        required: false
+      ver:
+        required: false
 env:
 
   # Don't forget to update .gitlab-ci-simple.yml if necessary
@@ -219,7 +223,7 @@ jobs:
           ref: ${{ github.event.ref }}
           fetch-depth: 0
       - name: Update comment on start
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -425,7 +429,7 @@ jobs:
           fi
 
       - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
@@ -530,7 +534,7 @@ jobs:
           ref: ${{ github.event.ref }}
           fetch-depth: 0
       - name: Update comment on start
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -736,7 +740,7 @@ jobs:
           fi
 
       - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
@@ -841,7 +845,7 @@ jobs:
           ref: ${{ github.event.ref }}
           fetch-depth: 0
       - name: Update comment on start
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -1047,7 +1051,7 @@ jobs:
           fi
 
       - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
@@ -1152,7 +1156,7 @@ jobs:
           ref: ${{ github.event.ref }}
           fetch-depth: 0
       - name: Update comment on start
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -1358,7 +1362,7 @@ jobs:
           fi
 
       - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
@@ -1463,7 +1467,7 @@ jobs:
           ref: ${{ github.event.ref }}
           fetch-depth: 0
       - name: Update comment on start
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -1669,7 +1673,7 @@ jobs:
           fi
 
       - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
@@ -1774,7 +1778,7 @@ jobs:
           ref: ${{ github.event.ref }}
           fetch-depth: 0
       - name: Update comment on start
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -1980,7 +1984,7 @@ jobs:
           fi
 
       - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
         continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
