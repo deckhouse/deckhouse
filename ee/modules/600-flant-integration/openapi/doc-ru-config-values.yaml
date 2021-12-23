@@ -5,9 +5,6 @@ properties:
   doNotChargeForRockSolid:
     description: |
       Входит ли канал обновлений RockSolid в стоимость, или надо за него чаржить отдельно.
-  plan:
-    description: |
-      **Не используется.** Тарифный план.
   planIsBoughtAsBundle:
     description: |
       Куплен ли "пакет".

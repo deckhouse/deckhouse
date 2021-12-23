@@ -10,13 +10,6 @@ properties:
     default: false
     description: |
       Is the RockSolid release channel included in the price, or should we charge for it separately.
-  plan:
-    type: string
-    enum: ["Standard", "Silver", "Gold", "Platinum"]
-    default: Standard
-    x-examples: ["Standard"]
-    description: |
-      **Unused.** Tariff plan.
   planIsBoughtAsBundle:
     type: boolean
     default: false
