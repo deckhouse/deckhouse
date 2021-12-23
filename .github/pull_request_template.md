@@ -6,7 +6,7 @@
   (restarts of ingress-controllers, control-plane, Prometheus, etc).
 -->
 
-## Why we need it and what problem does it solve?
+## Why do we need it, and what problem does it solve?
 <!---
   This is the most important paragraph.
   You have to describe the main goal of your feature.
