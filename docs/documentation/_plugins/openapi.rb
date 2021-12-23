@@ -180,24 +180,25 @@ module Jekyll
             exampleObject = attributes['x-examples']
         end
         if exampleObject != nil
-            example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term('example').capitalize}:</span> <span class="resources__attrs_content">) +
+            example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term('example').capitalize}:</span>)
+            exampleContent =  converter.convert(
                         if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
-                            exampleObject['oneOf'].map { |e| "<code>#{e.to_json}</code>" }.join(' ' + get_i18n_term('or') + ' ')
+                            exampleObject['oneOf'].map { |e| "`#{e.to_json}`" }.join(' ' + get_i18n_term('or') + ' ')
                         elsif exampleObject.is_a?(Array) || exampleObject.is_a?(Hash)
-                            exampleObject.map { |e| "<code>#{e.to_json}</code>" }.join(', ')
+                            '`' + exampleObject.map { |e| "`#{e.to_json}`" }.join('`, `') + '`'
                         else
                             if exampleObject =~ /\`\`\`|\n/
                                 "\n\n#{exampleObject}"
                             else
                               if attributes['type'] == 'string'
-                                "<code>\"#{exampleObject}\"</code>"
+                                 "`\"#{exampleObject}\"`"
                               else
-                                "<code>#{exampleObject}</code>"
+                                "`#{exampleObject}`"
                               end
                             end
-                        end
-            example += '</span></p>'
-            result.push(converter.convert(example.to_s))
+                        end)
+#             result.push(example+converter.convert(example.to_s)+"-->")
+            result.push(example + exampleContent + "</p>")
         end
 
         result
@@ -209,13 +210,12 @@ module Jekyll
     # 3 - parent item data (hash)
     # 4 - object with primary language data
     # 5 - object with language data which use if there is no data in primary language
-    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, parentID = "")
+    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [])
         result = Array.new()
 
-        linkAnchor = name.downcase
-        if parentID.length > 0
-           linkAnchor = sprintf(%q(%s-%s), parentID, linkAnchor)
-        end
+        fullPath = ancestors + [name]
+        linkAnchor = fullPath.join("-").downcase
+        pathString = fullPath.slice(1,fullPath.length-1).join(" / ")
 
         if name != ""
             name_text = ''
@@ -230,9 +230,9 @@ module Jekyll
             end
 
             if attributes['x-doc-deprecated']
-                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored deprecated">%s</span>), linkAnchor, linkAnchor, name)
+                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored deprecated" title="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
             else
-                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored">%s</span>), linkAnchor, linkAnchor, name)
+                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" title="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
             end
 
             if attributes_type != ''
@@ -246,13 +246,12 @@ module Jekyll
             result.push(name_text)
         end
 
-#         result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
         result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
 
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')
             attributes["properties"].sort.to_h.each do |key, value|
-                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), linkAnchor))
+                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), fullPath))
             end
             result.push('</ul>')
         elsif attributes.is_a?(Hash) and  attributes.has_key?('items')
@@ -260,11 +259,11 @@ module Jekyll
                 # object items
                 result.push('<ul>')
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
-                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), linkAnchor))
+                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath))
                 end
                 result.push('</ul>')
             else
-                result.push(format_schema("", attributes['items'], attributes, get_hash_value(primaryLanguage,'items'), get_hash_value(fallbackLanguage,'items'), linkAnchor ))
+                result.push(format_schema("", attributes['items'], attributes, get_hash_value(primaryLanguage,'items'), get_hash_value(fallbackLanguage,'items'), fullPath))
             end
         else
             # result.push("no properties for #{name}")
@@ -299,7 +298,7 @@ module Jekyll
 
             if get_hash_value(input,'spec','validation','openAPIV3Schema') then
                 # v1beta1 CRD
-                linkAnchor=sprintf(%q(v1beta1-%s), input["spec"]["names"]["kind"].downcase)
+                fullPath=[sprintf(%q(v1beta1-%s), input["spec"]["names"]["kind"])]
                 result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
                 result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                 if input["spec"].has_key?("version") then
@@ -328,7 +327,7 @@ module Jekyll
                     if   input['i18n'][fallbackLanguageName] then
                         _fallbackLanguage = get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","properties",key)
                     end
-                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, linkAnchor ))
+                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath))
                     end
                     result.push('</ul>')
                 end
@@ -415,9 +414,10 @@ module Jekyll
                             _fallbackLanguage = get_hash_value(_fallbackLanguage,'schema','openAPIV3Schema','properties',key)
                         end
 
+                        fullPath=[sprintf(%q(%s-%s), input["spec"]["names"]["kind"], item['name'])]
                         linkAnchor=sprintf(%q(%s-%s), input["spec"]["names"]["kind"].downcase, item['name'].downcase)
 
-                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, linkAnchor))
+                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath))
                         end
                         if header == '' then
                             result.push('</ul>')
@@ -467,7 +467,7 @@ module Jekyll
                     _fallbackLanguage = input['i18n'][fallbackLanguageName]["properties"][key]
                 end
 
-                result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage, "parameters" ))
+                result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage, ["parameters"] ))
             end
             result.push('</ul>')
         end
