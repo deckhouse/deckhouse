@@ -81,6 +81,9 @@ type CRI struct {
 
 	// Docker settings for nodes.
 	Docker *Docker `json:"docker,omitempty"`
+
+	// NotManaged settings for nodes.
+	NotManaged *NotManaged `json:"notManaged,omitempty"`
 }
 
 func (c CRI) IsEmpty() bool {
@@ -98,6 +101,11 @@ type Docker struct {
 
 	// Enable docker maintenance from bashible.
 	Manage *bool `json:"manage,omitempty"`
+}
+
+type NotManaged struct {
+	// Set custom path to CRI socket
+	CriSocketPath *string `json:"criSocketPath,omitempty"`
 }
 
 // CloudInstances is an extra parameters for NodeGroup with type Cloud.

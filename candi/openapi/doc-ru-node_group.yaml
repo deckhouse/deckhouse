@@ -306,6 +306,13 @@ spec:
                         manage:
                           description: |
                             Автоматическое управление версией и параметрами Docker.
+                    notManaged: &notManaged
+                      type: object
+                      description: Настройки для cri установленных на нодах вручную.
+                      properties:
+                        criSocketPath:
+                          type: string
+                          description: Путь к сокету cri.
                 cloudInstances: *cloudInstances
                 nodeTemplate: *nodeTemplate
                 chaos: *chaos
@@ -355,6 +362,7 @@ spec:
                           description: Максимальное количество потоков одновременного скачивания Docker-образов.
                         manage:
                           description: Автоматическое управление версией и параметрами Docker.
+                    notManaged: *notManaged
                 cloudInstances: *cloudInstances
                 nodeTemplate: *nodeTemplate
                 chaos: *chaos

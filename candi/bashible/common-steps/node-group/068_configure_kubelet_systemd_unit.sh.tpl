@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Миграция!!!!! Удалить после выката
-rm -f /etc/systemd/system/kubelet.service.d/cim.conf
-rm -rf /var/lib/kubelet/manifests
-
 # In case we adopting node bootstrapped by kubeadm
 rm -f /etc/systemd/system/kubelet.service.d/10-kubeadm.conf     # for ubuntu
 rm -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf # for centos
@@ -23,6 +19,34 @@ rm -f /var/lib/kubelet/kubeadm-flags.env
 
 # Read previously discovered IP
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+
+cri_config=""
+
+{{- if eq .cri "Containerd" }}
+cri_config="--container-runtime=remote --container-runtime-endpoint=unix:/var/run/containerd/containerd.sock"
+{{- else if eq .cri "NotManaged" }}
+  {{- if .nodeGroup.cri.notManaged.criSocketPath }}
+cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
+  {{- else }}
+for socket_path in /var/run/docker.sock /run/containerd/containerd.sock; do
+  if [[ -S "${socket_path}" ]]; then
+    cri_socket_path="${socket_path}"
+    break
+  fi
+done
+  {{- end }}
+
+if [[ -z "${cri_socket_path}" ]]; then
+  bb-log-error 'CRI socket is not found, need to manually set "nodeGroup.cri.notManaged.criSocketPath"'
+  exit 1
+fi
+
+if grep -q "docker" <<< "${cri_socket_path}"; then
+  cri_config="--container-runtime=docker --docker-endpoint=unix://${cri_socket_path}"
+else
+  cri_config="--container-runtime=remote --container-runtime-endpoint=unix:${cri_socket_path}"
+fi
+{{- end }}
 
 bb-event-on 'bb-sync-file-changed' '_enable_kubelet_service'
 function _enable_kubelet_service() {
@@ -65,9 +89,6 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
 {{- if hasKey .nodeGroup "kubelet" }}
     --root-dir={{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }} \\
 {{- end }}
-{{- if eq .cri "Containerd" }}
-    --container-runtime=remote \\
-    --container-runtime-endpoint=unix:/var/run/containerd/containerd.sock \\
-{{- end }}
+    ${cri_config} \\
     --v=2
 EOF
