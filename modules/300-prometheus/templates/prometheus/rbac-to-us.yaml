@@ -28,3 +28,6 @@ subjects:
   name: ingress-nginx:auth
 - kind: Group
   name: prometheus:auth
+- kind: ServiceAccount
+  name: upmeter-agent
+  namespace: d8-upmeter

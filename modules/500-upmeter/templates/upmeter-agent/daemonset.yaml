@@ -100,9 +100,11 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
           - name: UPMETER_DISABLED_PROBES
-            value: {{ .Values.upmeter.internal.disabledProbes | join "," | quote }}
+            value: '{{ .Values.upmeter.internal.disabledProbes | join "," }}'
           - name: UPMETER_CLUSTER_DOMAIN
             value: {{ .Values.global.discovery.clusterDomain | quote }}
+          - name: LOG_TYPE
+            value: "json"
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}

@@ -95,6 +95,8 @@ spec:
             value: "8091"
           - name: LOG_LEVEL
             value: "info"
+          - name: LOG_TYPE
+            value: "json"
         volumeMounts:
           - mountPath: /db
             name: data
