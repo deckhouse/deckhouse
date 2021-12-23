@@ -20,24 +20,15 @@ There are three types of metrics in terms of an HPA:
 * If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that HPA must scale **down** the target, it happens smoothly. During 5 minutes (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300), HPA collects suggestions about scaling and finally chooses the largest value. There aren't scale-down speed limitations.
 
 If you have metric flapping problems which lead to unwanted scales, there are options:
-* If your metric is based on a PromQL query, you can use an aggregation function like `avg_over_time()` to smooth out the fluctuations. Example [below](#example-of-using-unstable-custom-metric).
-* You can increase `spec.behavior.scaleUp.stabilizationWindowSeconds` in `HorisontalPodAutoscaler` resource. In this case, HPA collects scale suggestions during the period and finally chooses the minimal value. In other words, this solution is identical using the `min_over_time(<stabilizationWindowSeconds>)` aggregating function only when the metric is growing up, and HPA decides to scale **up**. For scaling **down**, it is usually enough standard Stabilisation Window settings. Example [below](#classic-resource-consumption-based-scaling).
-* You can also tighten the scale-up speed with `spec.behavior.scaleUp.policies` settings.
-
-**Caution!** During scale, HPA uses different approaches [by default](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior):
-* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that HPA must scale **up** the target, it happens immediately (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). The only limitation — scale speed. During 15 seconds, the Pods can either double their number or if there are less than 4 Pods now, maximum four new Pods will be added.
-* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that HPA must scale **down** the target, it happens smoothly. During 5 minutes (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300), HPA collects suggestions about scaling and finally chooses the largest value. There aren't scale-down speed limitations.
-
-If you have metric flapping problems which lead to unwanted scales, there are options:
-* If your metric is based on a PromQL query, you can use an aggregation function like `avg_over_time()` to smooth out the fluctuations. Example [below](#example-of-using-unstable-custom-metric).
-* You can increase `spec.behavior.scaleUp.stabilizationWindowSeconds` in `HorisontalPodAutoscaler` resource. In this case, HPA collects scale suggestions during the period and finally chooses the minimal value. In other words, this solution is identical using the `min_over_time(<stabilizationWindowSeconds>)` aggregating function only when the metric is growing up, and HPA decides to scale **up**. For scaling **down**, it is usually enough standard Stabilisation Window settings. Example [below](#classic-resource-consumption-based-scaling).
+* If your metric is based on a PromQL query, you can use an aggregation function like `avg_over_time()` to smooth out the fluctuations. [Example...](#example-of-using-unstable-custom-metric)
+* You can increase `spec.behavior.scaleUp.stabilizationWindowSeconds` in `HorisontalPodAutoscaler` resource. In this case, HPA collects scale suggestions during the period and finally chooses the minimal value. In other words, this solution is identical using the `min_over_time(<stabilizationWindowSeconds>)` aggregating function only when the metric is growing up, and HPA decides to scale **up**. For scaling **down**, it is usually enough standard Stabilisation Window settings. [Example...](#classic-resource-consumption-based-scaling)
 * You can also tighten the scale-up speed with `spec.behavior.scaleUp.policies` settings.
 
 ## What scaling type should I prefer?
 
 1. The typical use-cases of a [classic](#classic-resource-consumption-based-scaling) type are pretty obvious.
 1. Suppose you have a single application, the source of metrics is located inside the Namespace, and it is associated with one of the objects. In this case, we recommend using the [custom](#custom-metrics-based-scaling) Namespace-scoped metrics.
-1. Use [custom](#custom-metrics-based-scaling) Cluster-wide metrics if multiple applications use the same metric associated with one of the objects, and the metric's source belongs to the Application Namespace. Such metrics can help you combine common infrastructure components into a separate ("infra") deployment.
+1. Use [custom](#custom-metrics-based-scaling) Cluster-wide metrics if multiple applications use the same metric associated with one of the objects, and the metric's source belongs to the Application Namespace. Such metrics can help you combine common infrastructure components into a separate ("infra") Deployment.
 1. Use [external](#using-external-metrics-with-hpa) metrics if the source of the metric does not belong to the App Namespace. These can be, for example, cloud provider or SaaS-related metrics.
 
 **Caution!** We strongly recommend using either 1. [classic](#classic-resource-consumption-based-scaling) metrics or 2. [custom](#custom-metrics-based-scaling) metrics defined in the Namespace. In this case, you can define the entire configuration of the application (including the autoscaling logic) in the repository of the application. Options 3 and 4 should only be considered if you have a large collection of identical microservices.
@@ -141,11 +132,11 @@ spec:
 ```
 {% endraw %}
 
-In the case of the `Pods` metric type, the process is more complex. First, metrics with the appropriate labels (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...) will be collected for all the Pods of the resource to scale. Next, HPA will calculate the average value based on these metrics and will use it for scaling. See the example [below](#examples-of-using-custom-metrics-of-the-pods-type).
+In the case of the `Pods` metric type, the process is more complex. First, metrics with the appropriate labels (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...) will be collected for all the Pods of the resource to scale. Next, HPA will calculate the average value based on these metrics and will use it for scaling. [Example...](#examples-of-using-custom-metrics-of-the-pods-type)
 
 #### Example of using RabbitMQ queue size-based custom metrics
 
-Suppose there is a "send_forum_message" queue in RabbitMQ, and this message broker is exposed as an "rmq" service. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue.
+Suppose there is a `send_forum_message` queue in RabbitMQ, and this message broker is exposed as an `rmq` service. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue.
 
 {% raw %}
 ```yaml
@@ -186,7 +177,9 @@ spec:
 
 #### Example of using unstable custom metric
 
-Improvement for example above. Suppose there is a "send_forum_message" queue in RabbitMQ, and this message broker is exposed as an "rmq" service. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue. At the same time, we do not want to react to short-term spikes, for this we use MQL-function `avg_over_time()`.
+Improvement for example above.
+
+Suppose there is a `send_forum_message` queue in RabbitMQ, and this message broker is exposed as an `rmq` service. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue. At the same time, we do not want to react to short-term spikes, for this we use MQL-function `avg_over_time()`.
 
 {% raw %}
 ```yaml
@@ -227,7 +220,7 @@ spec:
 
 #### Examples of using custom metrics of the `Pods` type
 
-Suppose we want the average number of php-fpm workers in the "mybackend" deployment to be no more than 5.
+Suppose we want the average number of php-fpm workers in the `mybackend` Deployment to be no more than 5.
 
 {% raw %}
 ```yaml
@@ -261,7 +254,7 @@ spec:
 ```
 {% endraw %}
 
-The deployment is scaled based on the percentage of active php-fpm workers.
+The Deployment is scaled based on the percentage of active php-fpm workers.
 
 {% raw %}
 ```yaml
@@ -297,7 +290,9 @@ spec:
 
 ### Registering external metrics with the Kubernetes API
 
-Prometheus-metrics-adapter supports the `externalRules` mechanism. Using it, you can create custom PromQL requests and register them as metrics. In our installations, we have implemented a universal rule that allows you to create your metrics without using prometheus-metrics-adapter — "any Prometheus metric called `kube_adapter_metric_<name>` will be registered in the API under the `<name>`". In other words, all you need is to either write an exporter (to export the metric) or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
+The `prometheus-metrics-adapter` module supports the `externalRules` mechanism. Using it, you can create custom PromQL requests and register them as metrics.
+
+In our installations, we have implemented a universal rule that allows you to create your metrics without using prometheus-metrics-adapter — "any Prometheus metric called `kube_adapter_metric_<name>` will be registered in the API under the `<name>`". In other words, all you need is to either write an exporter (to export the metric) or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
 
 An example of CustomPrometheusRules:
 
@@ -351,9 +346,9 @@ spec:
 
 ### Example of scaling based on the Amazon SQS queue size
 
-**Caution!** Note that an exporter is required to integrate with SQS. For this, create a separate "service" git repository (or you can use an "infrastructure" repository) and put the installation of this exporter as well as the script to create the necessary CustomPrometheusRules into this repository. If you need to configure autoscaling for a single application (especially if it runs in a single namespace), we recommend putting the exporter together with the application and using NamespaceMetrics.
+> Note that an exporter is required to integrate with SQS. For this, create a separate "service" git repository (or you can use an "infrastructure" repository) and put the installation of this exporter as well as the script to create the necessary `CustomPrometheusRules` into this repository. If you need to configure autoscaling for a single application (especially if it runs in a single namespace), we recommend putting the exporter together with the application and using `NamespaceMetrics`.
 
-Suppose there is a "send_forum_message" queue in Amazon SQS. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue. Also, you will need an exporter to collect Amazon SQS metrics (say, [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)).
+Suppose there is a `send_forum_message` queue in Amazon SQS. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue. Also, you will need an exporter to collect Amazon SQS metrics (say, [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)).
 
 {% raw %}
 ```yaml
