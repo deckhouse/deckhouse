@@ -76,6 +76,17 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/fe/modules/600-namespace-configurator
+  to: /deckhouse/modules/600-namespace-configurator
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/fe/modules/600-secret-copier
   to: /deckhouse/modules/600-secret-copier
   excludePaths:

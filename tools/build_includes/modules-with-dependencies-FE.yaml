@@ -34,6 +34,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/fe/modules/600-namespace-configurator
+  to: /deckhouse/modules/600-namespace-configurator
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/fe/modules/600-secret-copier
   to: /deckhouse/modules/600-secret-copier
   stageDependencies:
