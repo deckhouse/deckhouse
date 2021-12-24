@@ -324,7 +324,7 @@
         You can find out the exact problem in the relevant alerts.
 
   - alert: D8DeckhouseConfigInvalid
-    expr: increase(deckhouse_config_values_errors_total[30s]) > 0
+    expr: increase(deckhouse_config_values_errors_total[__SCRAPE_INTERVAL_X_2__]) > 0
     for: 1m
     labels:
       severity_level: "5"
