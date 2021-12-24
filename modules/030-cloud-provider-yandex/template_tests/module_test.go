@@ -42,12 +42,23 @@ func Test(t *testing.T) {
 const globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex"]
   clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: Yandex
+    clusterDomain: cluster.local
     clusterType: Cloud
+    defaultCRI: Docker
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.19"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
   modules:
     placement: {}
   modulesImages:
     registry: registry.deckhouse.io
-    registryDockercfg: cfg
+    registryDockercfg: Y2ZnCg==
     tags:
       common:
         csiExternalProvisioner116: imagehash

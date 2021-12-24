@@ -33,7 +33,7 @@ func discoverDeckhouseEdition(input *go_hook.HookInput) error {
 		editionFile = os.Getenv("D8_EDITION_TMP_FILE")
 	}
 
-	edition := "unknown"
+	edition := "Unknown"
 	content, err := ioutil.ReadFile(editionFile)
 	if err != nil {
 		input.LogEntry.Warnf("cannot get deckhouse edition: %v", err)

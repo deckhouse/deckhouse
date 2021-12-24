@@ -71,7 +71,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Generate module configuration schemas"
+    - name: "Generate configuration schemas"
       shell: |
         export MODULES_DIR=modules_en
         bash ./modules_generate_configuration.sh

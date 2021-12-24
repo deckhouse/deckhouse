@@ -17,9 +17,7 @@ var _ = Describe("Flant integration :: hooks :: madison backends discovery ::", 
 	const (
 		initValuesString = `
 {
-  "global": {
-    "project": "test-me"
-  },
+  "global": {},
   "flantIntegration": {
     "internal": {"madison": {"backends":["1.2.3.4"]}, "licenseKey": "abc"},
     "madisonAuthKey": "abc"

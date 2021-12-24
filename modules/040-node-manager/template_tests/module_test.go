@@ -41,7 +41,7 @@ modules:
   placement: {}
 modulesImages:
   registry: registry.deckhouse.io/deckhouse/ce
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   registryAddress: registry.deckhouse.io
   registryPath: /deckhouse/ce
   registryScheme: https
@@ -60,11 +60,22 @@ discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   kubernetesVersion: 1.19.8
 clusterConfiguration:
-  clusterType: Hybrid
+  apiVersion: deckhouse.io/v1
+  cloud:
+    prefix: sandbox
+    provider: vSphere
+  clusterDomain: cluster.local
+  clusterType: Cloud
+  defaultCRI: Docker
+  kind: ClusterConfiguration
+  kubernetesVersion: "1.19"
+  podSubnetCIDR: 10.111.0.0/16
+  podSubnetNodeCIDRPrefix: "24"
+  serviceSubnetCIDR: 10.222.0.0/16
   packagesProxy:
-    url: "http://aaa.bbb:80"
-    username: "test"
-    password: "test"
+    uri: https://example.com
+    username: user
+    password: passwd
 `
 
 // Defaults from openapi/config-values.yaml.

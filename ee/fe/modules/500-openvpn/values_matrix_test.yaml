@@ -22,7 +22,7 @@ global:
             secretName: plainstring
   modulesImages:
     registry: registry.deckhouse.io
-    registryDockercfg: registry.example.com
+    registryDockercfg: Y2ZnCg==
     tags:
       common:
         kubeRbacProxy: hashstring

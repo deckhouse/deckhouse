@@ -2,7 +2,7 @@ global:
   enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
   modulesImages:
     registry: registry.deckhouse.io
-    registryDockercfg: cfg
+    registryDockercfg: Y2ZnCg==
     tags:
       networkGateway:
         dnsmasq: tagstring
@@ -15,6 +15,5 @@ global:
   modules:
     placement:
       __ConstantChoices__:
-      - {}
-      - tolerations:
-          - operator: Exists
+        - {}
+        - customTolerationKeys: ["key-key"]

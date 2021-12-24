@@ -41,7 +41,7 @@ var _ = Describe("Module :: prometheus :: helm template :: render data sources",
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeCaAuthProxy: tagstring

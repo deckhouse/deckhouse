@@ -34,7 +34,7 @@ const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: tagstring
@@ -56,7 +56,7 @@ const globalValuesHa = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: tagstring
@@ -79,7 +79,7 @@ const globalValuesManaged = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: tagstring
@@ -101,7 +101,7 @@ highAvailability: true
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: tagstring

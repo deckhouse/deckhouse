@@ -137,19 +137,19 @@ func updateVpaResources(input *go_hook.HookInput) error {
 		totalRequestsEveryNodeMemory    float64
 	)
 
-	configEveryNodeMilliCPU, err := getPathFloat64(input, "global.modules.resourcesRequests.internal.milliCpuEveryNode")
+	configEveryNodeMilliCPU, err := getPathFloat64(input, "global.internal.modules.resourcesRequests.milliCpuEveryNode")
 	if err != nil {
 		return err
 	}
-	configEveryNodeMemory, err = getPathFloat64(input, "global.modules.resourcesRequests.internal.memoryEveryNode")
+	configEveryNodeMemory, err = getPathFloat64(input, "global.internal.modules.resourcesRequests.memoryEveryNode")
 	if err != nil {
 		return err
 	}
-	configMasterNodeMilliCPU, err = getPathFloat64(input, "global.modules.resourcesRequests.internal.milliCpuMaster")
+	configMasterNodeMilliCPU, err = getPathFloat64(input, "global.internal.modules.resourcesRequests.milliCpuMaster")
 	if err != nil {
 		return err
 	}
-	configMasterNodeMemory, err = getPathFloat64(input, "global.modules.resourcesRequests.internal.memoryMaster")
+	configMasterNodeMemory, err = getPathFloat64(input, "global.internal.modules.resourcesRequests.memoryMaster")
 	if err != nil {
 		return err
 	}

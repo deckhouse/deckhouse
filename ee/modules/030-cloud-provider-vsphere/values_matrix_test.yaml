@@ -2,7 +2,7 @@ global:
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modulesImages:
     registry: registry.deckhouse.io
-    registryDockercfg: cfg
+    registryDockercfg: Y2ZnCg==
     tags:
       common:
         csiExternalProvisioner116: imagehash

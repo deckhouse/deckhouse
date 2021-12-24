@@ -35,7 +35,7 @@ modules:
     mode: CertManager
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: mydockercfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: hashstring
@@ -54,7 +54,7 @@ discovery:
   clusterControlPlaneIsHighlyAvailable: true
   d8SpecificNodeCountByRole:
     system: 3
-  kubernetesVersion: "1.19"
+  kubernetesVersion: "1.19.0"
   clusterDomain: my.domain
   clusterUUID: aa-bb-cc
 `

@@ -1,15 +1,23 @@
 global:
   clusterConfiguration:
-    cloud:
-      prefix: prefix
+    apiVersion: deckhouse.io/v1
+    kind: ClusterConfiguration
+    podSubnetNodeCIDRPrefix: "24"
+    podSubnetCIDR: 10.244.0.0/16
+    serviceSubnetCIDR: 192.168.0.0/16
+    kubernetesVersion: "1.19"
+    clusterDomain: test
     clusterType: "Cloud"
+    cloud:
+      prefix: test
+      provider: Azure
   enabledModules:
     __ConstantChoices__:
       - ["vertical-pod-autoscaler-crd"]
       - ["priority-class"]
   modulesImages:
     registry: registry.deckhouse.io
-    registryDockercfg: cfg
+    registryDockercfg: Y2ZnCg==
     tags:
       common:
         csiExternalProvisioner116: imagehash

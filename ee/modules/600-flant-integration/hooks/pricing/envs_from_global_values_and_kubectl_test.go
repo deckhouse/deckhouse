@@ -21,7 +21,15 @@ var _ = Describe("Flant integration :: hooks :: envs_from_global_values_and_kube
 global:
   enabledModules: ["deckhouse", "cloud-provider-openstack", "terraform-manager"]
   clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    clusterDomain: cluster.local
     clusterType: Static
+    defaultCRI: Docker
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.19"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
 flantIntegration:
   internal:
     nodeStats:
@@ -31,7 +39,15 @@ flantIntegration:
 global:
   enabledModules: ["deckhouse"]
   clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    clusterDomain: cluster.local
     clusterType: Static
+    defaultCRI: Docker
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.19"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
 flantIntegration:
   internal:
     nodeStats:
@@ -41,7 +57,18 @@ flantIntegration:
 global:
   enabledModules: ["deckhouse", "cloud-provider-openstack", "terraform-manager"]
   clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: vSphere
+    clusterDomain: cluster.local
     clusterType: Cloud
+    defaultCRI: Docker
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.19"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
 flantIntegration:
   internal:
     nodeStats:
@@ -51,7 +78,18 @@ flantIntegration:
 global:
   enabledModules: ["deckhouse", "cloud-provider-openstack", "terraform-manager"]
   clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: OpenStack
+    clusterDomain: cluster.local
     clusterType: Cloud
+    defaultCRI: Docker
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.19"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
 flantIntegration:
   internal: {}
 `

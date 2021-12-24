@@ -27,8 +27,18 @@ var _ = Describe("Modules :: node-manager :: hooks :: set_instance_prefix ::", f
 	f := HookExecutionConfigInit(`
 global:
   clusterConfiguration:
-    spec:
-      cloud: {}
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: OpenStack
+    clusterDomain: cluster.local
+    clusterType: Cloud
+    defaultCRI: Docker
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.21"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
 nodeManager:
   internal: {}
 `, `{}`)

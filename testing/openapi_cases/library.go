@@ -64,8 +64,7 @@ func GetAllOpenAPIDirs() ([]string, error) {
 		openAPIDirs = append(openAPIDirs, globDirs...)
 	}
 
-	// TODO - Global scheme currently not supported
-	// openAPIDirs = append(openAPIDirs, "/deckhouse/global-hooks/openapi")
+	openAPIDirs = append(openAPIDirs, "/deckhouse/global-hooks/openapi")
 	for _, openAPIDir := range openAPIDirs {
 		info, err := os.Stat(openAPIDir)
 		if err != nil {
