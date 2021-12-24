@@ -51,6 +51,7 @@ modulesImages:
       machineControllerManager: imagehash
     common:
       kubeRbacProxy: imagehash
+      alpine: tagstring
 discovery:
   d8SpecificNodeCountByRole:
     master: 3
