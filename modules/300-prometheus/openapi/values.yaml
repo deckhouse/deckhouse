@@ -82,6 +82,60 @@ properties:
         type: object
         default: {}
         properties:
+          alertsChannelsConfig:
+            type: object
+            default: {}
+            properties:
+              notifiers:
+                default: []
+                type: array
+                items:
+                  type: object
+                  required:
+                  - name
+                  - type
+                  - uid
+                  - org_id
+                  - is_default
+                  - disable_resolve_message
+                  - settings
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      enum: ["prometheus-alertmanager"]
+                    uid:
+                      type: string
+                    org_id:
+                      type: number
+                      enum: [1]
+                    is_default:
+                      type: boolean
+                      default: false
+                    send_reminder:
+                      type: boolean
+                      default: false
+                    frequency:
+                      type: string
+                    disable_resolve_message:
+                      type: boolean
+                      default: false
+                    settings:
+                      type: object
+                      required:
+                      - url
+                      properties:
+                        url:
+                          type: string
+                        basicAuthUser:
+                          type: string
+                    secure_settings:
+                      type: object
+                      default: {}
+                      properties:
+                        basicAuthPassword:
+                          type: string
           additionalDatasources:
             type: array
             items:
@@ -135,6 +189,20 @@ properties:
                 jsonData:
                   anything: 1
                   nothing: special
+            alertsChannelsConfig:
+              notifiers:
+                - org_id: 1
+                  type: prometheus-alertmanager
+                  name: "test"
+                  uid: "test"
+                  is_default: false
+                  disable_resolve_message: false
+                  send_reminder: false
+                  settings:
+                    basicAuthUser: user
+                    url: "http://test-alert-manager-url"
+                  secure_settings:
+                    basicAuthPassword: "password"
       remoteWrite:
         type: array
         items:

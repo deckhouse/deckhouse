@@ -17,18 +17,11 @@ limitations under the License.
 package template_tests
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]

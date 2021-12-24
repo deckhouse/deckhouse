@@ -94,6 +94,10 @@ var (
 			// ignore internal values
 			"properties.internal.properties.specificNodeType",
 		},
+		"modules/300-prometheus/openapi/values.yaml": {
+			// grafana constant in internal values
+			"properties.internal.properties.grafana.properties.alertsChannelsConfig.properties.notifiers.items.properties.type",
+		},
 		"modules/402-ingress-nginx/crds/ingress-nginx.yaml": {
 			// GeoIP base constants: GeoIP2-ISP, GeoIP2-ASN, ...
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.geoIP2.properties.maxmindEditionIDs.items",
