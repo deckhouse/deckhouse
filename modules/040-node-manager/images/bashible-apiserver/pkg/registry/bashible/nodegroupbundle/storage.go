@@ -1,3 +1,19 @@
+/*
+Copyright 2021 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package nodegroupbundle
 
 import (
@@ -13,9 +29,9 @@ import (
 )
 
 // NewStorage returns a RESTStorage object that will work against API services.
-func NewStorage(rootDir string, bashibleContext template.Context) (*StorageWithK8sBundles, error) {
-	ngRenderer := template.NewStepsRenderer(bashibleContext, rootDir, "node-group", template.GetNodegroupContextKey)
-	k8sRenderer := template.NewStepsRenderer(bashibleContext, rootDir, "all", template.GetVersionContextKey)
+func NewStorage(rootDir string, stepsStorage *template.StepsStorage, bashibleContext template.Context) (*StorageWithK8sBundles, error) {
+	ngRenderer := template.NewStepsRenderer(stepsStorage, bashibleContext, rootDir, "node-group", template.GetNodegroupContextKey)
+	k8sRenderer := template.NewStepsRenderer(stepsStorage, bashibleContext, rootDir, "all", template.GetVersionContextKey)
 
 	return &StorageWithK8sBundles{
 		ngRenderer:      ngRenderer,
@@ -33,7 +49,12 @@ type StorageWithK8sBundles struct {
 // Render renders single script content by name which is expected to be of form {bundle}.{node-group-name}
 // with hyphens as delimiters, e.g. `ubuntu-lts.master`.
 func (s StorageWithK8sBundles) Render(name string) (runtime.Object, error) {
-	ngBundleData, err := s.ngRenderer.Render(name)
+	_, ng, err := template.ParseName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	ngBundleData, err := s.ngRenderer.Render(name, ng)
 	if err != nil {
 		return nil, err
 	}

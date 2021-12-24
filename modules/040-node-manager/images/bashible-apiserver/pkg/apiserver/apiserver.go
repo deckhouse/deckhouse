@@ -18,10 +18,10 @@ package apiserver
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
+	"github.com/flant/kube-client/client"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,9 +30,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/version"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 
@@ -134,29 +134,32 @@ func (c completedConfig) New() (*BashibleServer, error) {
 		resyncTimeout    = 30 * time.Minute
 	)
 
-	clientset, err := initializeClientset()
+	kubeClient, err := initializeClientset()
 	if err != nil {
 		return nil, err
 	}
 
 	// Bashible context and its dynamic update
-	factory, err := newBashibleInformerFactory(clientset, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
+	factory, err := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
 	if err != nil {
 		panic("cannot create informer " + err.Error())
 	}
 
-	registryFactory, err := newBashibleInformerFactory(clientset, resyncTimeout, "d8-system", "app=registry")
+	registryFactory, err := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=registry")
 	if err != nil {
-		panic("cannot create informer " + err.Error())
+		panic("cannot create informer: " + err.Error())
 	}
+
+	ngConfigFactory := newNodeGroupConfigurationInformerFactory(kubeClient, resyncTimeout)
+	stepsStorage := template.NewStepsStorage(ctx, templatesRootDir, ngConfigFactory)
 
 	cachesManager := bashibleregistry.NewCachesManager()
-	secretUpdater := checksumSecretUpdater{clientset: clientset}
-	bashibleContext := template.NewContext(ctx, factory, registryFactory, secretUpdater, cachesManager)
+	secretUpdater := checksumSecretUpdater{client: kubeClient}
+	bashibleContext := template.NewContext(ctx, stepsStorage, factory, registryFactory, secretUpdater, cachesManager)
 
 	// Template-based REST API
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(bashible.GroupName, Scheme, metav1.ParameterCodec, Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = bashibleregistry.GetStorage(templatesRootDir, bashibleContext, cachesManager)
+	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = bashibleregistry.GetStorage(templatesRootDir, bashibleContext, stepsStorage, cachesManager)
 
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
 		return nil, err
@@ -167,9 +170,9 @@ func (c completedConfig) New() (*BashibleServer, error) {
 
 // newBashibleInformerFactory creates informer factory for particular namespace and label selector.
 // Bashible apiserver is expected to use single namespace and only related resources.
-func newBashibleInformerFactory(clientset *kubernetes.Clientset, resync time.Duration, namespace, labelSelector string) (informers.SharedInformerFactory, error) {
+func newBashibleInformerFactory(kubeClient kubernetes.Interface, resync time.Duration, namespace, labelSelector string) (informers.SharedInformerFactory, error) {
 	factory := informers.NewSharedInformerFactoryWithOptions(
-		clientset,
+		kubeClient,
 		resync,
 		informers.WithNamespace(namespace),
 		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
@@ -180,17 +183,19 @@ func newBashibleInformerFactory(clientset *kubernetes.Clientset, resync time.Dur
 	return factory, nil
 }
 
-func initializeClientset() (*kubernetes.Clientset, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, fmt.Errorf("cannot get in-cluster config: %v", err)
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create kubernetes client: %v", err)
-	}
+func newNodeGroupConfigurationInformerFactory(kubeClient client.Client, resync time.Duration) dynamicinformer.DynamicSharedInformerFactory {
+	factory := dynamicinformer.NewDynamicSharedInformerFactory(
+		kubeClient.Dynamic(),
+		resync,
+	)
 
-	return clientset, nil
+	return factory
+}
+func initializeClientset() (client.Client, error) {
+	kcli := client.New()
+	err := kcli.Init()
+
+	return kcli, err
 }
 
 const (
@@ -199,7 +204,7 @@ const (
 )
 
 type checksumSecretUpdater struct {
-	clientset *kubernetes.Clientset
+	client client.Client
 }
 
 func (cs checksumSecretUpdater) OnChecksumUpdate(ngmap map[string][]byte) {
@@ -220,10 +225,10 @@ func (cs checksumSecretUpdater) OnChecksumUpdate(ngmap map[string][]byte) {
 	}
 
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		_, err := cs.clientset.CoreV1().Secrets(configurationsSecretNamespace).Get(context.Background(), configurationsSecretName, metav1.GetOptions{})
+		_, err := cs.client.CoreV1().Secrets(configurationsSecretNamespace).Get(context.Background(), configurationsSecretName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				_, err := cs.clientset.CoreV1().Secrets(configurationsSecretNamespace).Create(context.Background(), &secretStruct, metav1.CreateOptions{})
+				_, err := cs.client.CoreV1().Secrets(configurationsSecretNamespace).Create(context.Background(), &secretStruct, metav1.CreateOptions{})
 				if err != nil {
 					log.Printf("create '%s' secret failed: %s", configurationsSecretName, err)
 					return err
@@ -234,7 +239,7 @@ func (cs checksumSecretUpdater) OnChecksumUpdate(ngmap map[string][]byte) {
 			return err
 		}
 
-		_, err = cs.clientset.CoreV1().Secrets(configurationsSecretNamespace).Update(context.Background(), &secretStruct, metav1.UpdateOptions{})
+		_, err = cs.client.CoreV1().Secrets(configurationsSecretNamespace).Update(context.Background(), &secretStruct, metav1.UpdateOptions{})
 		if err != nil {
 			log.Printf("update '%s' secret failed: %s", configurationsSecretName, err)
 			return err

@@ -1,0 +1,33 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodegroupconfigurations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: nodegroupconfigurations
+    singular: nodegroupconfiguration
+    kind: NodeGroupConfiguration
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                content:
+                  description: Содержимое шага конфигурации, может быть или шаблоном go temaplate или bash скриптом.
+                weight:
+                  description: Очередность выполнения шага конфигурации.
+                nodeGroups:
+                  description: Список NodeGroup к которым применять шаг конфигурации. Чтобы выбрать все NodeGroups нужно указать '*'.
+                bundles:
+                  description: Выполнять скрипт только для указанных bundles, например centos-7 / ubuntu-lts. Для всех bundles можно указать '*'.
+

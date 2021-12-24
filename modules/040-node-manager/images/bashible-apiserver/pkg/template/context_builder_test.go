@@ -33,7 +33,17 @@ import (
 )
 
 func TestGenerateContext(t *testing.T) {
-	b := NewContextBuilder(context.Background(), "/deckhouse/candi/")
+	err := os.Symlink("/deckhouse/ee/modules/040-node-manager/cloud-providers/vsphere", "/deckhouse/candi/cloud-providers/vsphere")
+	require.NoError(t, err)
+	defer os.Remove("/deckhouse/candi/cloud-providers/vsphere")
+
+	err = os.Symlink("/deckhouse/ee/modules/040-node-manager/cloud-providers/openstack", "/deckhouse/candi/cloud-providers/openstack")
+	require.NoError(t, err)
+	defer os.Remove("/deckhouse/candi/cloud-providers/openstack")
+
+	stepsStorage := NewStepsStorage(context.TODO(), "/deckhouse/candi/", nil)
+
+	b := NewContextBuilder(context.Background(), stepsStorage)
 
 	reg := registryInputData{
 		Address:      "registry.deckhouse.io",

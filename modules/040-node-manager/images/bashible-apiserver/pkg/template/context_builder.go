@@ -31,9 +31,7 @@ import (
 type ContextBuilder struct {
 	ctx context.Context
 
-	stepsDir       string
-	stepsStorage   *StepsStorage
-	ngStepsStorage *StepsStorage
+	stepsStorage *StepsStorage
 
 	registryData     registry
 	clusterInputData inputData
@@ -44,10 +42,10 @@ type ContextBuilder struct {
 	emitStepsOutput func(string, string, map[string]string)
 }
 
-func NewContextBuilder(ctx context.Context, stepsTemplatesRootDir string) *ContextBuilder {
+func NewContextBuilder(ctx context.Context, stepsStorage *StepsStorage) *ContextBuilder {
 	cb := &ContextBuilder{
-		ctx:      ctx,
-		stepsDir: stepsTemplatesRootDir,
+		ctx:          ctx,
+		stepsStorage: stepsStorage,
 	}
 
 	return cb
@@ -135,12 +133,9 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 	errorsMap := make(map[string]error)
 	hashMap := make(map[string]hash.Hash, len(cb.clusterInputData.NodeGroups))
 
-	cb.stepsStorage = NewStepsStorage(cb.stepsDir, cb.getCloudProvider(), "all")
-	cb.ngStepsStorage = NewStepsStorage(cb.stepsDir, cb.getCloudProvider(), "node-group")
 	commonContext := &tplContextCommon{
 		versionMapWrapper: versionMapFromMap(cb.versionMap),
 		RunType:           "Normal",
-		// Template:          cb.clusterInputData.Template,
 		Normal: normal{
 			BootstrapTokenPath: "/var/lib/bashible/bootstrap-token",
 			ClusterDomain:      cb.clusterInputData.ClusterDomain,
@@ -206,8 +201,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		Bundle:            bundle,
 		Normal:            map[string][]string{"apiserverEndpoints": clusterMasterAddresses},
 		NodeGroup:         ng,
-		// Template:          template,
-		RunType: "Normal",
+		RunType:           "Normal",
 
 		Images:   cb.imagesTags,
 		Registry: &cb.registryData,
@@ -241,8 +235,18 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 		res[k] = v
 	}
 
+	cloudProvider, ok := bundleNgContext.CloudProvider.(map[string]interface{})
+	if !ok {
+		// absent cloud provider means static nodes
+		return errors.New("cloud provider has wrong type")
+	}
+	providerType, ok := cloudProvider["type"].(string)
+	if !ok {
+		return fmt.Errorf("cloudProvider.type is not a string")
+	}
+
 	// render steps
-	steps, err := cb.stepsStorage.Render(res)
+	steps, err := cb.stepsStorage.Render("all", bc.Bundle, providerType, res)
 	if err != nil {
 		return errors.Wrap(err, "steps render failed")
 	}
@@ -271,7 +275,7 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	}
 
 	// render ng steps
-	ngSteps, err := cb.ngStepsStorage.Render(bundleRes)
+	ngSteps, err := cb.stepsStorage.Render("node-group", bc.Bundle, providerType, bundleRes, bc.NodeGroup.Name())
 	if err != nil {
 		return errors.Wrap(err, "NG steps render failed")
 	}
@@ -396,8 +400,7 @@ type bashibleContext struct {
 	Bundle                string      `json:"bundle" yaml:"bundle"`
 	Normal                interface{} `json:"normal" yaml:"normal"`
 	NodeGroup             nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
-	// Template              interface{} `json:"Template" yaml:"Template"`
-	RunType string `json:"runType" yaml:"runType"` // Normal
+	RunType               string      `json:"runType" yaml:"runType"` // Normal
 
 	// Enrich with images and registry
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
@@ -414,8 +417,7 @@ type tplContextCommon struct {
 	versionMapWrapper
 
 	RunType string `json:"runType" yaml:"runType"`
-	// Template interface{} `json:"Template" yaml:"Template"`
-	Normal normal `json:"normal" yaml:"normal"`
+	Normal  normal `json:"normal" yaml:"normal"`
 
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry registry                     `json:"registry" yaml:"registry"`
@@ -478,13 +480,12 @@ type dockerCfg struct {
 }
 
 type inputData struct {
-	ClusterDomain      string      `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress  string      `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider      interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	PackagesProxy      interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints []string    `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA       string      `json:"kubernetesCA" yaml:"kubernetesCA"`
-	// Template                  interface{} `json:"Template" yaml:"Template"`
+	ClusterDomain             string      `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress         string      `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	CloudProvider             interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	PackagesProxy             interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints        []string    `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	KubernetesCA              string      `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles            []string    `json:"allowedBundles" yaml:"allowedBundles"`
 	AllowedKubernetesVersions []string    `json:"allowedKubernetesVersions" yaml:"allowedKubernetesVersions"`
 	NodeGroups                []nodeGroup `json:"nodeGroups" yaml:"nodeGroups"`
