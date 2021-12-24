@@ -63,8 +63,8 @@ common:
     en: length
     ru: длина
   required_value_sentence:
-    en: Required value.
-    ru: Обязательный параметр.
+    en: Required value
+    ru: Обязательный параметр
   not_required_value_sentence:
     en: Not required value.
     ru: Необязательный параметр.

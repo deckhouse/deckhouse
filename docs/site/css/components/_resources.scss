@@ -23,7 +23,7 @@
     }
 
     &_type {
-      color: #999999;
+      color: $color-muted;
       font-style: normal;
       text-transform: uppercase;
       font-size: rem(11px);
@@ -36,7 +36,7 @@
     }
 
     &_description {
-      margin: rem(7px) 0;
+      margin-top: rem(7px) 0;
 
       & ul li {
         margin: rem(7px) 0;
@@ -45,12 +45,15 @@
   }
 
   &__attrs {
+    margin-top: rem(7px);
     &_name {
       font-weight: $font-weight-regular;
       font-style: italic;
       color: $color-muted;
       &.required {
+        font-style: normal;
         color: #ff7a7a;
+        margin-top: 0;
       }
     }
     
