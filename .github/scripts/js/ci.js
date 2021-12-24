@@ -515,6 +515,17 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
     }
   }
 
+  // suspend release in a channel
+  if (knownLabels.suspend.includes(label)) {
+    for (const channel of knownChannels) {
+      if (lowerLabel.includes(channel)) {
+        workflow_id = `suspend-${channel}.yml`;
+        isDeployChannel = true;
+        break;
+      }
+    }
+  }
+
   if (knownLabels['skip-validation'].includes(label)) {
     workflow_id = 'validation.yml';
   }

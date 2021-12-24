@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -41,20 +42,28 @@ import (
 
 var _ = Describe("Modules :: deckhouse :: hooks :: check deckhouse release ::", func() {
 	f := HookExecutionConfigInit(`{
+"global": {
+  "discovery": {
+    "clusterUUID": "21da7734-77a7-45ad-a795-ea0b629ee930"
+  }
+},
 "deckhouse":{
   "releaseChannel": "Stable",
   "internal":{
-	"currentReleaseImageName":"dev-registry.deckhouse.io/sys/deckhouse-oss/dev:test"}
+	"releaseVersionImageHash":"zxczxczxc"}
   }
 }`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "DeckhouseRelease", false)
 
 	dependency.TestDC.CRClient = cr.NewClientMock(GinkgoT())
-	Context("No new deckhouse image", func() {
+	Context("Have new deckhouse image", func() {
 		BeforeEach(func() {
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.3"}`}}, nil
-			}}, nil)
+			},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b777")
+				}}, nil)
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
@@ -63,6 +72,118 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check deckhouse release ::", 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-3").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-3").Field("spec.version").String()).To(BeEquivalentTo("v1.25.3"))
+		})
+	})
+
+	Context("Have canary release", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "6m"}}}`}}, nil
+			},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+				}}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created without ApplyAfter (wave 0)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("spec.version").String()).To(BeEquivalentTo("v1.25.0"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("spec.applyAfter").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Have canary release", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.5", "canary": {"stable": {"enabled": true, "waves": 5, "interval": "15m"}}}`}}, nil
+			},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b666")
+				}}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with ApplyAfter (wave 4)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-5").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-5").Field("spec.applyAfter").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-5").Field("spec.applyAfter").Time()).To(BeTemporally("~", time.Now().UTC().Add(60*time.Minute), time.Minute))
+		})
+	})
+
+	Context("Existed release suspended", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0", "suspend": true}`}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+				},
+			}, nil)
+			f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-0
+spec:
+  version: "v1.25.0"
+status:
+  phase: Pending
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be marked with annotation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").String()).To(Equal("true"))
+		})
+	})
+
+	Context("New release suspended", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0", "suspend": true}`}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+				},
+			}, nil)
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be marked with annotation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").String()).To(Equal("true"))
+		})
+	})
+
+	Context("Image hash not changed", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0"}`}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857")
+				},
+			}, nil)
+			f.ValuesSet("deckhouse.internal.releaseVersionImageHash", "sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857")
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should not be created", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeFalse())
 		})
 	})
 })

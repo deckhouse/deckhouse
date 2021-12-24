@@ -25,6 +25,13 @@ const labels = {
     'deploy/deckhouse/stable',
     'deploy/deckhouse/rock-solid'
   ],
+  suspend: [
+    'suspend/deckhouse/alpha',
+    'suspend/deckhouse/beta',
+    'suspend/deckhouse/early-access',
+    'suspend/deckhouse/stable',
+    'suspend/deckhouse/rock-solid'
+  ],
   // prettier-ignore
   'deploy-web': [
     'deploy/web/test',

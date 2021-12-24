@@ -741,5 +741,6 @@ shell:
   install:
   - |
     version="{{ env "CI_COMMIT_REF_NAME" }}"
-    createdDate="{{ env "CI_PIPELINE_CREATED_AT" }}"
-    echo '{"version": "'${version}'", "release_date": "'${createdDate}'"}' > /version.json
+    canary='{{ .Files.Get "canary.json" | fromJson | toJson }}'
+    json="{\"version\": \"${version}\", \"canary\": ${canary}}"
+    echo "$json" > /version.json

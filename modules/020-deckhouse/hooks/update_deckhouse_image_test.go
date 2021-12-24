@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -256,6 +258,63 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.1"))
 		})
 	})
+
+	Context("Postponed release", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deckhousePodYaml + postponedRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should keep deckhouse deployment", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0")
+			r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1")
+			Expect(r1250.Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(r1251.Field("status.phase").String()).To(Equal("Pending"))
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
+		})
+
+		Context("Release applyAfter time passed", func() {
+			BeforeEach(func() {
+				f.KubeStateSet(deckhousePodYaml + strings.Replace(postponedRelease, "2222-11-11T23:23:23Z", "2001-11-11T23:23:23Z", 1))
+
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+				f.RunHook()
+			})
+
+			It("Should upgrade deckhouse deployment", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0")
+				r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1")
+				Expect(r1250.Field("status.phase").String()).To(Equal("Outdated"))
+				Expect(r1251.Field("status.phase").String()).To(Equal("Deployed"))
+				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.1"))
+			})
+		})
+	})
+
+	Context("Suspend release", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deckhousePodYaml + withSuspendedRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should update deckhouse deployment", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			r1250 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0")
+			r1251 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1")
+			r1252 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-2")
+			Expect(r1250.Field("status.phase").String()).To(Equal("Outdated"))
+			Expect(r1251.Field("status.phase").String()).To(Equal("Suspended"))
+			Expect(r1252.Field("status.phase").String()).To(Equal("Deployed"))
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.2"))
+		})
+	})
 })
 
 var (
@@ -415,5 +474,59 @@ spec:
       containers:
         - name: deckhouse
           image: my.registry.com/deckhouse:v1.26.2
+`
+
+	withSuspendedRelease = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-0
+spec:
+  version: "v1.25.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-1
+  annotations:
+    release.deckhouse.io/suspended: "true"
+spec:
+  version: "v1.25.1"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-2
+spec:
+  version: "v1.25.2"
+status:
+  phase: Pending
+`
+
+	postponedRelease = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-0
+spec:
+  version: "v1.25.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-1
+spec:
+  version: "v1.25.1"
+  applyAfter: "2222-11-11T23:23:23Z"
+status:
+  phase: Pending
 `
 )

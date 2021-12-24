@@ -28,9 +28,10 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 const (
-	PhasePending  = "Pending"
-	PhaseDeployed = "Deployed"
-	PhaseOutdated = "Outdated"
+	PhasePending   = "Pending"
+	PhaseDeployed  = "Deployed"
+	PhaseOutdated  = "Outdated"
+	PhaseSuspended = "Suspended"
 )
 
 // DeckhouseRelease is a deckhouse release object.
@@ -49,7 +50,8 @@ type DeckhouseRelease struct {
 }
 
 type DeckhouseReleaseSpec struct {
-	Version string `json:"version,omitempty"`
+	Version    string     `json:"version,omitempty"`
+	ApplyAfter *time.Time `json:"applyAfter,omitempty"`
 }
 
 type DeckhouseReleaseStatus struct {
