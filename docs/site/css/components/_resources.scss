@@ -7,11 +7,13 @@
     position: relative;
   }
 
-  ul p, ol p, li p {
-      font-size: 14px;
-      margin: 0;
-      line-height: rem(20px);
-      padding-top: 0;
+  ul, ol, li {
+    & p:not(.resources__attrs) {
+        font-size: 14px;
+        margin: 0;
+        line-height: rem(20px);
+        padding-top: 0;
+    }
   }
 
   &__prop {
@@ -32,20 +34,27 @@
         display: inline-flex;
         text-transform: uppercase;
         margin-left: rem(10px);
+        margin-top: 0;
       }
     }
 
     &_description {
-      margin-top: rem(7px) 0;
+      margin-top: rem(7px);
 
-      & ul li {
-        margin: rem(7px) 0;
+      & ul {
+        padding: rem(5px);
+
+        & li {
+          margin: 0;
+        }
       }
     }
   }
 
   &__attrs {
     margin-top: rem(7px);
+    margin-bottom: 0;
+
     &_name {
       font-weight: $font-weight-regular;
       font-style: italic;
@@ -53,7 +62,6 @@
       &.required {
         font-style: normal;
         color: #ff7a7a;
-        margin-top: 0;
       }
     }
     
