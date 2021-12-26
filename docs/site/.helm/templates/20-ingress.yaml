@@ -46,7 +46,7 @@ spec:
           serviceName: backend
           servicePort: http
 ---
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: {{ .Chart.Name }}-cert
@@ -64,15 +64,6 @@ spec:
   - {{ $host }}
 {{- if eq .Values.web.env "web-production" }}
   - www.{{ $host }}
-{{- end }}
-  acme:
-    config:
-    - http01:
-        ingressClass: nginx
-      domains:
-      - {{ $host }}
-{{- if eq .Values.web.env "web-production" }}
-      - www.{{ $host }}
 {{- end }}
 {{- if eq .Values.web.env "web-stage" }}
 ---
