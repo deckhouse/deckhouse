@@ -26,6 +26,7 @@ on:
       - 'test-*'
       - 'dev-*'
       - 'pr-*'
+      - 'tc-dev*'
 
 jobs:
   start_release_build_workflow:

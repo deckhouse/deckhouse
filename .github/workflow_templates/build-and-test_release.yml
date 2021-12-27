@@ -47,7 +47,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_start" "Build and test for release" | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "go_generate" "Go Generate") }!}
   go_generate:
