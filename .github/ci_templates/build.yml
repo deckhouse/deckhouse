@@ -1,4 +1,5 @@
 {!{ define "go_generate_template" }!}
+# <template: go_generate_template>
 runs-on: ubuntu-latest
 steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 2 }!}
@@ -12,9 +13,11 @@ steps:
   - name: Check generated code
     run: |
       git diff --exit-code
+# </template: go_generate_template>
 {!{ end }!}
 
 {!{ define "build_modules_images_template" }!}
+# <template: build_modules_images_template>
 runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
@@ -45,9 +48,11 @@ steps:
 
   {!{ tmpl.Exec "save_images_tags_json_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "save_images_tags_json_to_cache_step" . | strings.Indent 2 }!}
+# </template: build_modules_images_template>
 {!{ end }!}
 
 {!{ define "build_template" }!}
+# <template: build_template>
 runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
@@ -129,4 +134,5 @@ steps:
         docker image rmi ${DESTINATION_IMAGE} || true;
         docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
       fi
+# </template: build_template>
 {!{ end }!}

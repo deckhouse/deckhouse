@@ -28,16 +28,6 @@ Jobs are enabled according to outputs from check labels job.
 {!{- $workflowName := printf "e2e: %s" $ctx.providerName -}!}
 name: '{!{ $workflowName }!}'
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'release-*'
-      - 'alpha'
-      - 'beta'
-      - 'early-access'
-      - 'stable'
-      - 'rock-solid'
-      - 'changelog/*'
   workflow_dispatch:
     inputs:
       issue_id:
@@ -48,6 +38,15 @@ on:
         required: false
       comment_id:
         description: 'ID of comment in issue where to put workflow run status'
+        required: false
+      ci_commit_ref_name:
+        description: 'Git ref name for image tags'
+        required: false
+      pull_request_ref:
+        description: 'Git ref for checkout PR sources'
+        required: false
+      pull_request_sha:
+        description: 'Git SHA for restoring artifacts from cache'
         required: false
       cri:
         required: false
@@ -62,7 +61,7 @@ env:
 # Note: Concurrency is currently in beta and subject to change.
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  group: ${{ github.ref }}-e2e-{!{ $ctx.provider }!}
+  group: ${{ github.ref }}-${{ github.event.inputs.pull_request_ref }}-e2e-{!{ $ctx.provider }!}
   cancel-in-progress: true
 
 jobs:

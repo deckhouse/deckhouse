@@ -19,6 +19,7 @@ on:
 
 env:
 
+  # <template: werf_envs>
   # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
@@ -33,6 +34,7 @@ env:
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # </template: werf_envs>
   DEPLOY_CHANNEL: rock-solid
 
 # Analog of Gitlab's "interruptible: true" behaviour.
@@ -43,6 +45,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  # <template: git_info_job>
 
   git_info:
     name: Get git info
@@ -56,47 +60,57 @@ jobs:
     steps:
       - id: git_info
         name: Get tag name and SHA
-        run: |
-          # Detect git tag for release.
-          gitTag=${GITHUB_REF#refs/tags/}
-          if [[ ${GITHUB_REF} == $gitTag ]] ; then
-            gitTag=
-          fi
-          echo "::set-output name=ci_commit_tag::${gitTag}"
-          echo "ci_commit_tag='${gitTag}'"
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            core.setOutput('ci_pipeline_created_at', new Date().toISOString())
 
-          # Detect git branch.
-          gitBranch=${GITHUB_REF#refs/heads/}
-          if [[ ${GITHUB_REF} == $gitBranch ]] ; then
-            gitBranch=
-          fi
-          echo "::set-output name=ci_commit_branch::${gitBranch}"
-          echo "ci_commit_branch='${gitBranch}'"
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
 
-          # CI_COMMIT_REF_NAME for main werf.yaml
-          commitRefName=
-          [[ -n $gitBranch ]] && commitRefName=$gitBranch
-          [[ -n $gitTag ]] && commitRefName=$gitTag
-          echo "::set-output name=ci_commit_ref_name::${commitRefName}"
-          echo "ci_commit_ref_name='${commitRefName}'"
+            let githubBranch = '';
+            let githubTag = '';
+            let githubSHA = '';
+            let refName = '';
+            if (context.eventName === "workflow_dispatch") {
+              // workflow_dispatch run for pull request should have input 'pull_request_ref'.
+              // Note: value in inputs.pull_request_ref is for pull_request_info job.
+              if (context.payload.inputs.pull_request_ref) {
+                refName       = context.payload.inputs.ci_commit_ref_name
+                githubBranch  = refName
+                githubSHA     = context.payload.inputs.pull_request_sha
+                core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+              } else {
+                refName       = GITHUB_REF_NAME
+                githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+                githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+                githubSHA     = context.sha
+                core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
+              }
+            } else {
+              // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
+              const targetRepo = context.payload.repository.full_name;
+              const prRepo = context.payload.pull_request.head.repo.full_name
+              const prRef = context.payload.pull_request.head.ref
 
-          # CI_PIPELINE_CREATED_AT for main werf.yaml
-          pipelineCreatedAt=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
-          echo "::set-output name=ci_pipeline_created_at::${pipelineCreatedAt}"
-          echo "ci_pipeline_created_at='${pipelineCreatedAt}'"
+              refName = (prRepo === targetRepo) ? prRef : `pr${context.issue.number}`
+              githubBranch = refName
+              githubSHA = context.payload.pull_request.head.sha
+              core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+            }
 
-          # Determine sha of commit.
-          # push event
-          githubSha=${GITHUB_SHA}
-          echo "github_sha for push '${githubSha}'"
-          # workflow_dispatch event
-          if [[ -z $githubSha ]] ; then
-            githubSha = $(jq '.head_commit.id' "${GITHUB_EVENT_PATH}")
-            echo "github_sha for workflow_dispatch '${githubSha}'"
-          fi
-          echo "::set-output name=github_sha::$githubSha"
-          echo "github_sha='${githubSha}'"
+            core.info(`output.ci_commit_ref_name: '${refName}'`)
+            core.info(`output.ci_commit_tag:      '${githubTag}'`)
+            core.info(`output.ci_commit_branch:   '${githubBranch}'`)
+            core.info(`output.github_sha:         '${githubSHA}'`)
 
+            core.setOutput('ci_commit_ref_name', refName)
+            core.setOutput(`ci_commit_tag`, githubTag)
+            core.setOutput(`ci_commit_branch`, githubBranch)
+            core.setOutput('github_sha', githubSHA)
+
+  # </template: git_info_job>
+
+  # <template: check_label_job>
   check_label:
     name: Check label
     runs-on: ubuntu-latest
@@ -105,8 +119,11 @@ jobs:
       labels: ${{ steps.check_label.outputs.labels }}
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
+      # </template: checkout_step>
       - id: check_label
         name: Check labels on push
         uses: actions/github-script@v5.0.0
@@ -117,6 +134,7 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkLabel({github, context, core, labelType, labelSubject});
+  # </template: check_label_job>
 
   run_suspend:
     name: Suspend deckhouse release on rock-solid channel
@@ -129,13 +147,16 @@ jobs:
     runs-on: self-hosted
     steps:
 
+      # <template: checkout_from_event_ref_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
-          ref: ${{ github.event.ref }}
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
       - name: Update comment on start
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -145,6 +166,9 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
 
+      # </template: update_comment_on_start>
+
+      # <template: restore_images_tags_json_from_cache_or_fail>
       - name: Restore images_tags_json from cache
         id: images-tags-json
         uses: actions/cache@v2.1.7
@@ -156,7 +180,9 @@ jobs:
         run: |
           echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
           exit 1
+      # </template: restore_images_tags_json_from_cache_or_fail>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -164,7 +190,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -172,7 +200,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -180,6 +210,7 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
 
 
@@ -316,8 +347,9 @@ jobs:
 
           echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
 
+      # <template: update_comment_on_finish>
       - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
         continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
@@ -336,4 +368,5 @@ jobs:
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+      # </template: update_comment_on_finish>
 

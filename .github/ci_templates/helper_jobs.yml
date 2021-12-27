@@ -1,4 +1,20 @@
 {!{ define "git_info_job" }!}
+# <template: git_info_job>
+{!{/*
+Outputs:
+  ci_commit_tag - used as CI_COMMIT_TAG variable to publish release images.
+  ci_commit_branch - used as CI_COMMIT_BRANCH to publish images for main branch and dev images.
+  ci_commit_ref_name - used as image tag to run e2e and deploy-web, and for release-channel-version image.
+  github_sha - used as a key for caching images_tags_*.json file.
+  ci_pipeline_created_at - used for release-channel-version image (deprecated).
+
+TODO delete `ci_pipeline_created_at` everywhere in CI since it is useless.
+
+See:
+- https://docs.github.com/en/actions/learn-github-actions/environment-variables
+- https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+
+*/}!}
 git_info:
   name: Get git info
   runs-on: ubuntu-latest
@@ -11,69 +27,164 @@ git_info:
   steps:
     - id: git_info
       name: Get tag name and SHA
-      run: |
-        # Detect git tag for release.
-        gitTag=${GITHUB_REF#refs/tags/}
-        if [[ ${GITHUB_REF} == $gitTag ]] ; then
-          gitTag=
-        fi
-        echo "::set-output name=ci_commit_tag::${gitTag}"
-        echo "ci_commit_tag='${gitTag}'"
-
-        # Detect git branch.
-        gitBranch=${GITHUB_REF#refs/heads/}
-        if [[ ${GITHUB_REF} == $gitBranch ]] ; then
-          gitBranch=
-        fi
-        echo "::set-output name=ci_commit_branch::${gitBranch}"
-        echo "ci_commit_branch='${gitBranch}'"
-
-        # CI_COMMIT_REF_NAME for main werf.yaml
-        commitRefName=
-        [[ -n $gitBranch ]] && commitRefName=$gitBranch
-        [[ -n $gitTag ]] && commitRefName=$gitTag
-        echo "::set-output name=ci_commit_ref_name::${commitRefName}"
-        echo "ci_commit_ref_name='${commitRefName}'"
-
-        # CI_PIPELINE_CREATED_AT for main werf.yaml
-        pipelineCreatedAt=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
-        echo "::set-output name=ci_pipeline_created_at::${pipelineCreatedAt}"
-        echo "ci_pipeline_created_at='${pipelineCreatedAt}'"
-
-        # Determine sha of commit.
-        # push event
-        githubSha=${GITHUB_SHA}
-        echo "github_sha for push '${githubSha}'"
-        # workflow_dispatch event
-        if [[ -z $githubSha ]] ; then
-          githubSha = $(jq '.head_commit.id' "${GITHUB_EVENT_PATH}")
-          echo "github_sha for workflow_dispatch '${githubSha}'"
-        fi
-        echo "::set-output name=github_sha::$githubSha"
-        echo "github_sha='${githubSha}'"
-
-{!{- end -}!}
-
-
-{!{ define "restore_images_tags_json_template" }!}
-images_tags_json:
-  name: Put images_tags_json into artifact
-  runs-on: ubuntu-latest
-
-  steps:
-    - name: Restore from cache
-      id: images-tags-json
-      uses: actions/cache@v2
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
-        path: modules/images_tags_${{env.WERF_ENV}}.json
-        key: ${{ github.sha }}-images-tags
+        script: |
+          core.setOutput('ci_pipeline_created_at', new Date().toISOString())
 
-    - name: Fail if not found
-      if: steps.cache-primes.outputs.cache-hit != 'true'
-      run: |
-        echo images_tags json file not found in cache: restart build modules job.
-        exit 1
+          const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
 
-{!{ tmpl.Exec "save_images_tags_json_step" . | strings.Indent 4 }!}
+          let githubBranch = '';
+          let githubTag = '';
+          let githubSHA = '';
+          let refName = '';
+          if (context.eventName === "workflow_dispatch") {
+            // workflow_dispatch run for pull request should have input 'pull_request_ref'.
+            // Note: value in inputs.pull_request_ref is for pull_request_info job.
+            if (context.payload.inputs.pull_request_ref) {
+              refName       = context.payload.inputs.ci_commit_ref_name
+              githubBranch  = refName
+              githubSHA     = context.payload.inputs.pull_request_sha
+              core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+            } else {
+              refName       = GITHUB_REF_NAME
+              githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+              githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+              githubSHA     = context.sha
+              core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
+            }
+          } else {
+            // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
+            const targetRepo = context.payload.repository.full_name;
+            const prRepo = context.payload.pull_request.head.repo.full_name
+            const prRef = context.payload.pull_request.head.ref
+
+            refName = (prRepo === targetRepo) ? prRef : `pr${context.issue.number}`
+            githubBranch = refName
+            githubSHA = context.payload.pull_request.head.sha
+            core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+          }
+
+          core.info(`output.ci_commit_ref_name: '${refName}'`)
+          core.info(`output.ci_commit_tag:      '${githubTag}'`)
+          core.info(`output.ci_commit_branch:   '${githubBranch}'`)
+          core.info(`output.github_sha:         '${githubSHA}'`)
+
+          core.setOutput('ci_commit_ref_name', refName)
+          core.setOutput(`ci_commit_tag`, githubTag)
+          core.setOutput(`ci_commit_branch`, githubBranch)
+          core.setOutput('github_sha', githubSHA)
+
+# </template: git_info_job>
 {!{- end -}!}
 
+
+# Only useful with pull_request_target.
+#
+# Checks out merge commit, checks for dangerous changes, and if none found, returns the ref.
+{!{ define "pull_request_info_job" }!}
+# <template: pull_request_info>
+pull_request_info:
+  name: Get pull request reference
+  runs-on: ubuntu-latest
+  outputs:
+    ref: ${{ steps.ref.outputs.ref }}
+  steps:
+    - name: Check if allow to run tests
+      id: check
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          // Assume workflow_dispatch is safe to run.
+          // TODO add owner, repo, sha to inputs to check them here.
+          if (context.eventName === 'workflow_dispatch') {
+            core.info(`workflow_dispatch detected, set should_run to 'true'`);
+            return core.setOutput('should_run', 'true');
+          }
+
+          if (!context.payload.pull_request) {
+            return core.setFailed(`Unknown event, no pull request context. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+          }
+
+          // Fetch fresh pull request state using sha.
+          // Why? Workflow rerun of 'opened' pull request contains outdated labels.
+          const owner = context.payload.pull_request.head.repo.owner.login
+          const repo = context.payload.pull_request.head.repo.name
+          const commit_sha = context.payload.pull_request.head.sha
+          core.info(`List pull request inputs: ${JSON.stringify({ owner, repo, commit_sha })}`);
+          const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha });
+          if (response.status != 200) {
+            return core.setFailed(`Cannot list PRs for commit ${commit_sha}: ${JSON.stringify(response)}`);
+          }
+
+          // No PR found, do not run next jobs.
+          if (!response.data || response.data.length === 0) {
+            return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+          }
+
+          const prRepo = context.payload.pull_request.head.repo.full_name;
+          const targetRepo = context.payload.repository.full_name;
+          const isInternal = prRepo === targetRepo;
+          const isDependabot = (context.actor === 'dependabot[bot]');
+          const isChangelog = context.payload.pull_request.head.ref.startsWith('changelog/v');
+          const okToTest = response.data[0].labels.some((l) => l.name === 'ok-to-test');
+          core.info(`PR internal?          ${isInternal}`)
+          core.info(`PR from dependabot?   ${isDependabot}`)
+          core.info(`PR changelog?         ${isChangelog}`)
+          core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+
+          if (isInternal && !isDependabot) {
+            // Ignore changelog pull requests.
+            if (isChangelog) {
+              return core.setFailed(`PR#${context.payload.pull_request.number} for changelog is ignored.`);
+            }
+          } else {
+            // External and dependabot pull requests should be labeled with 'ok-to-test'.
+            if (!okToTest) {
+              return core.setFailed(`PR#${context.payload.pull_request.number} without label 'ok-to-test' is ignored.`);
+            }
+          }
+
+    # Checkhout the merge commit
+    - name: Checkout PR merge commit
+      uses: {!{ index (ds "actions") "actions/checkout" }!}
+      with:
+        ref: "refs/pull/${{ github.event.number }}/merge"
+
+    # Detect dangerous changes in external PR.
+    - name: Check for dangerous changes
+      uses: {!{ index (ds "actions") "dorny/paths-filter" }!}
+      if: github.event.pull_request.head.repo.full_name != github.repository
+      id: changes
+      with:
+        token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+        filters: |
+          dangerous:
+            - './.github/**'
+            - './.gitlab/**'
+            - './tools/**'
+            - './testing/**'
+            - './docs/**/js/**'
+            - './docs/**/css/**'
+            - './docs/**/images/**'
+            - './docs/**/assets/**'
+
+    # Stop workflow if external PR contains dangerous changes.
+    - name: Fail workflow on dangerous changes
+      if: steps.changes.outputs.dangerous == 'true'
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          core.setFailed('External PR contains dangerous changes.')
+
+    # Set output.
+    - name: Return PR merge commit ref
+      id: ref
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          const ref = `refs/pull/${ context.issue.number }/merge`
+          core.info(`ref: '${ref}'`)
+          core.setOutput('ref', ref)
+# </template: pull_request_info>
+{!{- end -}!}

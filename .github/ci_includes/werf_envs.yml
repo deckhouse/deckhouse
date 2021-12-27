@@ -1,4 +1,5 @@
 {!{ define "werf_envs" }!}
+# <template: werf_envs>
 # Don't forget to update .gitlab-ci-simple.yml if necessary
 WERF_CHANNEL: "ea"
 WERF_ENV: "FE"
@@ -13,4 +14,5 @@ DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss
 BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
 
 FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+# </template: werf_envs>
 {!{- end -}!}

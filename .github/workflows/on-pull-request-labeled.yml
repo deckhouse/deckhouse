@@ -8,21 +8,131 @@
 name: Rerun workflows for pull request
 
 on:
-  pull_request:
-    types: [labeled,unlabeled]
-
+  pull_request_target:
+    types: [labeled, unlabeled]
 jobs:
+
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
+    steps:
+      - name: Check if allow to run tests
+        id: check
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            // Assume workflow_dispatch is safe to run.
+            // TODO add owner, repo, sha to inputs to check them here.
+            if (context.eventName === 'workflow_dispatch') {
+              core.info(`workflow_dispatch detected, set should_run to 'true'`);
+              return core.setOutput('should_run', 'true');
+            }
+
+            if (!context.payload.pull_request) {
+              return core.setFailed(`Unknown event, no pull request context. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+            }
+
+            // Fetch fresh pull request state using sha.
+            // Why? Workflow rerun of 'opened' pull request contains outdated labels.
+            const owner = context.payload.pull_request.head.repo.owner.login
+            const repo = context.payload.pull_request.head.repo.name
+            const commit_sha = context.payload.pull_request.head.sha
+            core.info(`List pull request inputs: ${JSON.stringify({ owner, repo, commit_sha })}`);
+            const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha });
+            if (response.status != 200) {
+              return core.setFailed(`Cannot list PRs for commit ${commit_sha}: ${JSON.stringify(response)}`);
+            }
+
+            // No PR found, do not run next jobs.
+            if (!response.data || response.data.length === 0) {
+              return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+            }
+
+            const prRepo = context.payload.pull_request.head.repo.full_name;
+            const targetRepo = context.payload.repository.full_name;
+            const isInternal = prRepo === targetRepo;
+            const isDependabot = (context.actor === 'dependabot[bot]');
+            const isChangelog = context.payload.pull_request.head.ref.startsWith('changelog/v');
+            const okToTest = response.data[0].labels.some((l) => l.name === 'ok-to-test');
+            core.info(`PR internal?          ${isInternal}`)
+            core.info(`PR from dependabot?   ${isDependabot}`)
+            core.info(`PR changelog?         ${isChangelog}`)
+            core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+
+            if (isInternal && !isDependabot) {
+              // Ignore changelog pull requests.
+              if (isChangelog) {
+                return core.setFailed(`PR#${context.payload.pull_request.number} for changelog is ignored.`);
+              }
+            } else {
+              // External and dependabot pull requests should be labeled with 'ok-to-test'.
+              if (!okToTest) {
+                return core.setFailed(`PR#${context.payload.pull_request.number} without label 'ok-to-test' is ignored.`);
+              }
+            }
+
+      # Checkhout the merge commit
+      - name: Checkout PR merge commit
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: "refs/pull/${{ github.event.number }}/merge"
+
+      # Detect dangerous changes in external PR.
+      - name: Check for dangerous changes
+        uses: dorny/paths-filter@v2
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        id: changes
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          filters: |
+            dangerous:
+              - './.github/**'
+              - './.gitlab/**'
+              - './tools/**'
+              - './testing/**'
+              - './docs/**/js/**'
+              - './docs/**/css/**'
+              - './docs/**/images/**'
+              - './docs/**/assets/**'
+
+      # Stop workflow if external PR contains dangerous changes.
+      - name: Fail workflow on dangerous changes
+        if: steps.changes.outputs.dangerous == 'true'
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            core.setFailed('External PR contains dangerous changes.')
+
+      # Set output.
+      - name: Return PR merge commit ref
+        id: ref
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            const ref = `refs/pull/${ context.issue.number }/merge`
+            core.info(`ref: '${ref}'`)
+            core.setOutput('ref', ref)
+  # </template: pull_request_info>
   rerun_workflow_for_pull_request:
     name: Rerun workflow for pull request
     runs-on: ubuntu-latest
+    needs:
+      - pull_request_info
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+
+      # </template: checkout_step>
       - name: Rerun workflow
         uses: actions/github-script@v5.0.0
         with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.runWorkflowForPullRequest({github, context, core});
+            const ref = "${{ needs.pull_request_info.outputs.ref }}"
+            return await ci.runWorkflowForPullRequest({ github, context, core, ref });

@@ -1,9 +1,10 @@
 {!{- define "doc_web_build_template" -}!}
+# <template: doc_web_build_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
 
   - name: Run doc web build
     uses: {!{ index (ds "actions") "werf/actions/build" }!}
@@ -13,14 +14,16 @@ steps:
       WERF_DIR: "docs/documentation"
       WERF_LOG_VERBOSE: "on"
       WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+# </template: doc_web_build_template>
 {!{- end -}!}
 
 {!{- define "main_web_build_template" -}!}
+# <template: main_web_build_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
 
   - name: Run main web build
     uses: {!{ index (ds "actions") "werf/actions/build" }!}
@@ -30,15 +33,17 @@ steps:
       WERF_DIR: "docs/site"
       WERF_LOG_VERBOSE: "on"
       WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+# </template: main_web_build_template>
 {!{- end -}!}
 
 {!{- define "web_links_test_template" -}!}
+# <template: web_links_test_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
 
   - name: Prepare site structure
     run: |
@@ -106,16 +111,19 @@ steps:
       if [[ -n $_TMPDIR ]] ; then
         rm -rf $_TMPDIR
       fi
+# </template: web_links_test_template>
 {!{- end -}!}
 
 {!{/* doc version is a tag name or 'latest' for main branch or a branch name for dev branches */}!}
 {!{/* ci_commit_ref_name is a tagname or branch name */}!}
 {!{ define "doc_version_template" }!}
+# <template: doc_version_template>
 - name: Set documentation version
   env:
     CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
   run: |
     echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
+# </template: doc_version_template>
 {!{- end -}!}
 
 {!{ define "deploy_doc_template" }!}
@@ -128,6 +136,8 @@ steps:
   {!{- $url = "deckhouse.io" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
 {!{- end -}!}
+
+# <template: deploy_doc_template>
 - name: Deploy documentation to {!{ $env }!}
   uses: {!{ index (ds "actions") "werf/actions/converge" }!}
   with:
@@ -142,6 +152,7 @@ steps:
     WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
     WERF_SET_URL: "global.url={!{ $url }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
+# </template: deploy_doc_template>
 {!{- end -}!}
 
 {!{ define "deploy_site_template" }!}
@@ -154,6 +165,8 @@ steps:
   {!{- $url = "deckhouse.io" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
 {!{- end -}!}
+
+# <template: deploy_site_template>
 - name: Deploy site to {!{ $env }!}
   uses: {!{ index (ds "actions") "werf/actions/converge" }!}
   with:
@@ -169,5 +182,5 @@ steps:
     WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
     WERF_SET_URL: "global.url={!{ $url }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
+# </template: deploy_site_template>
 {!{- end -}!}
-

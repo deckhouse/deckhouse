@@ -1,4 +1,5 @@
 {!{ define "e2e_run_template" }!}
+# <template: e2e_run_template>
 {!{- $provider := index . 0 -}!}
 {!{- $script_arg := index . 1 -}!}
 {!{- $script := "script.sh" -}!}
@@ -89,6 +90,7 @@ run: |
   )
   # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
   bash <<<"$werfRunProg"
+# </template: e2e_run_template>
 {!{- end -}!}
 
 
@@ -100,6 +102,7 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 */}!}
 {!{ define "check_e2e_labels_job" }!}
 {!{- $ctx := . -}!}
+# <template: check_e2e_labels_job>
 check_e2e_labels:
   name: Check e2e labels
   runs-on: ubuntu-latest
@@ -125,5 +128,5 @@ check_e2e_labels:
 
           const ci = require('./.github/scripts/js/ci');
           return await ci.checkE2ELabels({github, context, core, provider, defaults, criNames, kubernetesVersions});
-
+# </template: check_e2e_labels_job>
 {!{- end -}!}

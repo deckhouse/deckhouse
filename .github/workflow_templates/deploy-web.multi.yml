@@ -10,17 +10,26 @@
 name: '{!{ $workflowName }!}'
 
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'release-*'
-      - 'alpha'
-      - 'beta'
-      - 'early-access'
-      - 'stable'
-      - 'rock-solid'
-      - 'changelog/*'
-
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'ID of issue where label was set'
+        required: true
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: true
+      comment_id:
+        description: 'ID of comment in issue where to put workflow run status'
+        required: true
+      ci_commit_ref_name:
+        description: 'Git ref name for image tags'
+        required: false
+      pull_request_ref:
+        description: 'Git ref for checkout PR sources'
+        required: false
+      pull_request_sha:
+        description: 'Git SHA for restoring artifacts from cache'
+        required: false
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
