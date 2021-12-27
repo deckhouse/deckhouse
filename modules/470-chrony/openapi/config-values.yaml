@@ -5,7 +5,7 @@ properties:
     x-examples:
       - {updateMode: "Initial", maxCPU: "30m", maxMemory: "30Mi"}
       - {updateMode: "Off", maxCPU: "10m", maxMemory: "10Mi"}
-    default: {updateMode: "Initial",maxCPU: "10m", maxMemory: "10Mi"}
+    default: {updateMode: "Auto",maxCPU: "10m", maxMemory: "10Mi"}
     properties:
       maxCPU:
         oneOf:
