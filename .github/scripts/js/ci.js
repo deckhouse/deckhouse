@@ -1,5 +1,6 @@
 //@ts-check
 const { knownLabels, labelsSrv, knownProviders, knownChannels } = require('./constants');
+const { dumpError } = require('./error');
 
 /**
  * Update a comment in "release" issue when workflow is started.
@@ -561,7 +562,7 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
     }
     console.log(JSON.stringify(response));
   } catch (error) {
-    console.log(`get tag error: ${JSON.stringify(error)}`);
+    console.log(`get tag error: ${dumpError(error)}`);
   }
 
   console.log(`Use ref=${ref}`);
@@ -678,8 +679,8 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => 
     } else {
       console.log(`Error calling RetryWorkflow. Response: ${JSON.stringify(response)}`);
     }
-  } catch (e) {
-    console.log(`Ignore error: ${JSON.stringify(e)}`);
+  } catch (error) {
+    console.log(`Ignore error: ${dumpError(error)}`);
   }
 };
 
@@ -757,7 +758,7 @@ module.exports.startBuildAndTestWorkflow = async ({ github, context, core }) => 
       return core.setFailed(error.message);
     } else {
       // handle non-GraphQL error
-      return core.setFailed(`List milestones failed: ${JSON.stringify(error)}`);
+      return core.setFailed(`List milestones failed: ${dumpError(error)}`);
     }
   }
 
@@ -788,7 +789,7 @@ module.exports.startBuildAndTestWorkflow = async ({ github, context, core }) => 
   }
   if (!milestone) {
     return core.setFailed(
-      'No appropriate milestone found. Create one and push or restart build with label. ${JSON.stringify(result)}'
+      `No appropriate milestone found. Create one and push or restart build with label. ${JSON.stringify(result)}`
     );
   }
   console.log(`The milestone is '${milestone.title}' with number ${milestone.number}`);

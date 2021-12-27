@@ -24,7 +24,8 @@ set -Eeo pipefail
 # Create tmp dir and set traps to clean it after execution.
 TMPDIR=$(mktemp -d ./tmp.curl.XXXXXX)
 cleanup() {
-  rm -rf $TMPDIR
+  echo "Cleanup TMPDIR=${TMPDIR}"
+  rm -rfv $TMPDIR
 }
 trap '(exit 130)' INT
 trap '(exit 143)' TERM
@@ -32,7 +33,20 @@ trap 'rc=$?; cleanup; exit $rc' EXIT
 
 # Helper to download diff.
 function download_diff() {
-  curl --silent -L -f "${DIFF_URL}"
+  CURL_RESPONSE=$TMPDIR/resp
+  curlHeaders=$TMPDIR/headers
+  curlError=$TMPDIR/error
+  CURL_STATUS=$(curl -sS -w %{http_code} \
+    -o $CURL_RESPONSE \
+    -D $curlHeaders \
+    --request GET \
+    -L "${DIFF_URL}" 2>$curlError
+  )
+  CURL_EXIT=$?
+
+  IS_DIFF=$(grep 'diff --git' $CURL_RESPONSE >/dev/null 2>&1 && echo 'yes' || echo 'no')
+  CURL_HEADERS=$(sed 's/\r// ; /^$/d' $curlHeaders 2>/dev/null | grep -v -i 'set-cookie\|x-github-request-id\|etag\|content-security-policy')  # remove \r and empty lines, remove cookies
+  CURL_ERROR=$(cat $curlError 2>/dev/null)
 }
 
 # Check prerequisites: validation script, DIFF_URL
@@ -56,7 +70,18 @@ fi
 echo "Fetch changes ..."
 diffFile="$TMPDIR/validate.this.diff"
 if ! download_diff > "${diffFile}" ; then
-  echo "Error downloading diff from '${DIFF_URL}'. Exit code $?."
+  echo "download_diff error: exit $?."
+fi
+
+if [[ $IS_DIFF == "no" ]] ; then
+  echo "Error downloading diff from '${DIFF_URL}'."
+  echo "Curl exit code: ${CURL_EXIT}"
+  echo "Curl stderr: ${CURL_ERROR}"
+  echo "HTTP response:"
+  echo "  Last status: ${CURL_STATUS}"
+  echo "  Headers: ${CURL_HEADERS}"
+  echo "  Body: "
+  cat ${CURL_RESPONSE} 2>/dev/null
   exit 1
 fi
 
