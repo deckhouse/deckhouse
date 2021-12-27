@@ -16,9 +16,6 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces", "secrets"]
   verbs: ["get", "list"]
-- apiGroups: ["cert-manager.io"]
-  resources: ["certificates", "clusterissuers", "issuers"]
-  verbs: ["list"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

@@ -49,7 +49,7 @@ spec:
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.extendedMonitoring.certExporter }}
         args:
         - --monitor-secrets=true
-        - --monitor-certificates=true
+        - --monitor-certificates=false
         - --monitor-files=false
         - --address=127.0.0.1:9000
         {{- with .Values.extendedMonitoring.certificates.namespaces }}
