@@ -1,0 +1,29 @@
+- name: kubernetes.certmanager.certificate
+  rules:
+  - alert: CertificateSecretExpiredSoon
+    expr: |
+      max by (name, namespace) (
+        cert_exporter_secret_not_after{job="cert-exporter", secretkey!="ca.crt"} - time() < 1209600
+      )
+    for: 1h
+    labels:
+      severity: warning
+    annotations:
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      description: The certificate in secret {{$labels.namespace}}/{{$labels.name}} will expire in less than 2 weeks
+      summary: Certificate will expire soon
+
+  - alert: CertificateSecretExpired
+    expr: |
+      max by (name, namespace) (
+        cert_exporter_secret_not_after{job="cert-exporter", secretkey!="ca.crt"} - time() < 0
+      )
+    for: 1h
+    labels:
+      severity: warning
+    annotations:
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      description: Certificate in secret {{$labels.namespace}}/{{$labels.name}} expired
+      summary: Certificate expired
