@@ -18,7 +18,7 @@ const labels = {
     'e2e/run/static'
   ],
   'issue-release': 'issue/release',
-  'ok-to-test': 'ok-to-test',
+  'ok-to-test': 'status/ok-to-test',
   deploy: [
     'deploy/deckhouse/alpha',
     'deploy/deckhouse/beta',
