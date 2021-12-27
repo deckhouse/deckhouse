@@ -221,23 +221,23 @@ func (fl fakeLayer) Size() (int64, error) {
 }
 
 func TestSort(t *testing.T) {
-	s1 := deckhouseReleaseUpdate{
+	s1 := deckhouseRelease{
 		Version: semver.MustParse("v1.24.0"),
 	}
-	s2 := deckhouseReleaseUpdate{
+	s2 := deckhouseRelease{
 		Version: semver.MustParse("v1.24.1"),
 	}
-	s3 := deckhouseReleaseUpdate{
+	s3 := deckhouseRelease{
 		Version: semver.MustParse("v1.24.2"),
 	}
-	s4 := deckhouseReleaseUpdate{
+	s4 := deckhouseRelease{
 		Version: semver.MustParse("v1.24.3"),
 	}
-	s5 := deckhouseReleaseUpdate{
+	s5 := deckhouseRelease{
 		Version: semver.MustParse("v1.24.4"),
 	}
 
-	releases := []deckhouseReleaseUpdate{s3, s4, s1, s5, s2}
+	releases := []deckhouseRelease{s3, s4, s1, s5, s2}
 	sort.Sort(sort.Reverse(byVersion(releases)))
 
 	for i, rl := range releases {

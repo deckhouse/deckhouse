@@ -115,9 +115,9 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	input.Values.Set("deckhouse.internal.releaseVersionImageHash", newImageHash)
 
 	snap := input.Snapshots["releases"]
-	releases := make([]deckhouseReleaseUpdate, 0, len(snap))
+	releases := make([]deckhouseRelease, 0, len(snap))
 	for _, rl := range snap {
-		releases = append(releases, rl.(deckhouseReleaseUpdate))
+		releases = append(releases, rl.(deckhouseRelease))
 	}
 
 	sort.Sort(sort.Reverse(byVersion(releases)))
