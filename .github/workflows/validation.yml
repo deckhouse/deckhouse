@@ -168,6 +168,19 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkValidationLabels({ github, context, core });
 
+      - name: Download diff for pull request
+        env:
+          DIFF_URL: ${{ steps.on_push.outputs.diff_url }}
+        run: |
+          ./.github/scripts/validation_run.sh --download-only ./pr.diff
+
+      - name: Upload diff as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: pr_diff
+          path: pr.diff
+
+
   no_cyrillic_validation:
     name: No Cyrillic Validation
     env:
@@ -188,9 +201,14 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
 
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
       - name: Run check
         env:
-          DIFF_URL: ${{ needs.discover.outputs.diff_url }}
+          DIFF_PATH: ./pr.diff
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_no_cyrillic }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_no_cyrillic.sh
@@ -212,9 +230,14 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
 
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
       - name: Run check
         env:
-          DIFF_URL: ${{ needs.discover.outputs.diff_url }}
+          DIFF_PATH: ./pr.diff
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_doc_changes }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
@@ -236,9 +259,14 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
 
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
       - name: Run check
         env:
-          DIFF_URL: ${{ needs.discover.outputs.diff_url }}
+          DIFF_PATH: ./pr.diff
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_copyright }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_copyright.sh

@@ -50,40 +50,70 @@ function download_diff() {
 }
 
 # Check prerequisites: validation script, DIFF_URL
+ARG1=$1
 
-VALIDATION_SCRIPT=$1
-if [[ ! -f $VALIDATION_SCRIPT ]]; then
-  echo "Validation script '${VALIDATION_SCRIPT}' is not found."
-  exit 1
-fi
-if [[ ! -x $VALIDATION_SCRIPT ]]; then
-  echo "Validation script '${VALIDATION_SCRIPT}' is not executable."
-  exit 1
+if [[ $ARG1 == "--download-only" ]] ; then
+  echo "Download only."
+  if [[ -z ${DIFF_URL} ]]; then
+    echo "No diff url provided: set DIFF_URL."
+    exit 1
+  fi
+  DIFF_PATH=$2
+  DOWNLOAD_ONLY=yes
+else
+  VALIDATION_SCRIPT=$ARG1
+  if [[ ! -f $VALIDATION_SCRIPT ]]; then
+    echo "Validation script '${VALIDATION_SCRIPT}' is not found."
+    exit 1
+  fi
+  if [[ ! -x $VALIDATION_SCRIPT ]]; then
+    echo "Validation script '${VALIDATION_SCRIPT}' is not executable."
+    exit 1
+  fi
+
+  if [[ "${DIFF_URL}${DIFF_PATH}" == "" ]]; then
+    echo "No diff download url or diff path provided: set DIFF_URL or DIFF_PATH."
+    exit 1
+  fi
+
+  DOWNLOAD_ONLY=no
 fi
 
-if [[ -z $DIFF_URL ]]; then
-  echo "No diff download url provided: DIFF_URL env is empty."
-  exit 1
+if [[ -n $DIFF_URL ]] ; then
+  # Download diff.
+  echo "Fetch changes ..."
+
+  if ! download_diff ; then
+    echo "download_diff error: exit $?."
+  fi
+
+  if [[ $IS_DIFF == "no" ]] ; then
+    echo "Error downloading diff from '${DIFF_URL}'."
+    echo "Curl exit code: ${CURL_EXIT}"
+    echo "Curl stderr: ${CURL_ERROR}"
+    echo "HTTP response:"
+    echo "  Last status: ${CURL_STATUS}"
+    echo "  Headers: ${CURL_HEADERS}"
+    echo "  Body: "
+    cat ${CURL_RESPONSE} 2>/dev/null
+    exit 1
+  fi
+
+  diffFile=${CURL_RESPONSE}
+else
+  if ! grep 'diff --git' ${DIFF_PATH} >/dev/null 2>&1 ; then
+    echo "DIFF_PATH file ${DIFF_PATH} is not diff"
+    exit 1
+  fi
+  diffFile=$DIFF_PATH
 fi
 
-# Download diff to validate.
-echo "Fetch changes ..."
-diffFile="$TMPDIR/validate.this.diff"
-if ! download_diff > "${diffFile}" ; then
-  echo "download_diff error: exit $?."
+if [[ $DOWNLOAD_ONLY == "yes" ]] ; then
+  echo "Copy diff to $DIFF_PATH"
+  cp $diffFile $DIFF_PATH
+  exit
 fi
 
-if [[ $IS_DIFF == "no" ]] ; then
-  echo "Error downloading diff from '${DIFF_URL}'."
-  echo "Curl exit code: ${CURL_EXIT}"
-  echo "Curl stderr: ${CURL_ERROR}"
-  echo "HTTP response:"
-  echo "  Last status: ${CURL_STATUS}"
-  echo "  Headers: ${CURL_HEADERS}"
-  echo "  Body: "
-  cat ${CURL_RESPONSE} 2>/dev/null
-  exit 1
-fi
 
 affected=$(grep -c '^diff --git a' "${diffFile}" || true)
 removed=$(grep -v '^--- a/' "${diffFile}" | grep -c '^-' || true)
