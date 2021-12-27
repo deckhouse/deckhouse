@@ -24,6 +24,54 @@ fi
 # This folder doesn't have time to create before we stop freshly, unconfigured kubelet during bootstrap (step 034_install_kubelet_and_his_friends.sh).
 mkdir -p /var/lib/kubelet
 
+# Check CRI type and set appropriated parameters.
+# cgroup default is `systemd`, only for docker cri we use `cgroupfs`.
+cgroup_driver="systemd"
+
+{{- if eq .cri "NotManaged" }}
+  {{- if .nodeGroup.cri.notManaged.criSocketPath }}
+cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
+  {{- else }}
+for socket_path in /var/run/docker.sock /run/containerd/containerd.sock; do
+  if [[ -S "${socket_path}" ]]; then
+    cri_socket_path="${socket_path}"
+    break
+  fi
+done
+  {{- end }}
+
+if [[ -z "${cri_socket_path}" ]]; then
+  bb-log-error 'CRI socket is not found, need to manually set "nodeGroup.cri.notManaged.criSocketPath"'
+  exit 1
+fi
+
+if grep -q "docker" <<< "${cri_socket_path}"; then
+  cri_type="NotManagedDocker"
+else
+  cri_type="NotManagedContainerd"
+fi
+{{- else if eq .cri "Docker" }}
+cri_type="Docker"
+{{- else }}
+cri_type="Containerd"
+{{- end }}
+
+if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
+  cgroup_driver="cgroupfs"
+  criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
+  if [ -d "${criDir}/overlay2" ]; then
+    criDir="${criDir}/overlay2"
+  else
+    if [ -d "${criDir}/aufs" ]; then
+      criDir="${criDir}/aufs"
+    fi
+  fi
+fi
+
+if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
+  criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
+fi
+
 # Calculate eviction thresholds.
 
 # We don't need more free space on partition.
@@ -65,20 +113,6 @@ if [ "$(($nodefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdNodefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-{{- if or (eq .cri "Docker") (eq .cri "Containerd")}}
-{{- if eq .cri "Docker" }}
-criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
-if [ -d "${criDir}/overlay2" ]; then
-  criDir="${criDir}/overlay2"
-else
-  if [ -d "${criDir}/aufs" ]; then
-    criDir="${criDir}/aufs"
-  fi
-fi
-{{- else }}
-criDir=$(/usr/local/bin/crictl info -o json | jq -r '.config.containerdRootDir')
-{{- end }}
-
 imagefsSize=$(df --output=size $criDir | tail -n1)
 imagefsSizeGFivePercent=$((imagefsSize/(1000*1000)*5/100))
 if [ "$imagefsSizeGFivePercent" -gt "$maxAvailableReservedSpace" ]; then
@@ -87,7 +121,6 @@ fi
 if [ "$(($imagefsSizeGFivePercent*2))" -gt "$(($maxAvailableReservedSpace*2))" ]; then
   evictionSoftThresholdImagefsAvailable="$(($maxAvailableReservedSpace*2))G"
 fi
-{{- end }}
 
 imagefsInodes=$(df --output=itotal $criDir | tail -n1)
 imagefsInodesKFivePercent=$((imagefsInodes/1000*5/100))
@@ -97,7 +130,6 @@ fi
 if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
-
 
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
@@ -117,11 +149,7 @@ authorization:
     cacheUnauthorizedTTL: 30s
 cgroupRoot: "/"
 cgroupsPerQOS: true
-{{- if eq .cri "Containerd" }}
-cgroupDriver: systemd
-{{- else }}
-cgroupDriver: cgroupfs
-{{- end }}
+cgroupDriver: ${cgroup_driver}
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
 clusterDNS:

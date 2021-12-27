@@ -546,6 +546,13 @@ spec:
                           type: boolean
                           x-doc-default: true
                           description: Enable Docker maintenance from bashible.
+                    notManaged: &notManaged
+                      type: object
+                      description: Settings for not managed cri for nodes.
+                      properties:
+                        criSocketPath:
+                          type: string
+                          description: Path to cri socket.
                   oneOf:
                     - properties:
                         type:
@@ -621,6 +628,7 @@ spec:
                           type: boolean
                           x-doc-default: true
                           description: Enable Docker maintenance from bashible.
+                    notManaged: *notManaged
                   oneOf:
                     - properties:
                         type:
