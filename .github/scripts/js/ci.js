@@ -566,11 +566,6 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
 
   console.log(`Use ref=${ref}`);
 
-  // Return if workflow is deploy-channel but no tag is pushed.
-  if (!ref.startsWith('refs/tags/') && isDeployChannel) {
-    return core.setFailed(`Workflow for label ${label} requires a tag. ${event.issue.milestone.title} is not found.`);
-  }
-
   // Add issue comment.
   console.log('Add issue comment.');
   let response = await github.rest.issues.createComment({
