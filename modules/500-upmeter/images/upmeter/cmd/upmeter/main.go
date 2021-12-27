@@ -122,19 +122,6 @@ func main() {
 	})
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
-
-	// switch kingpin.Parse() {
-	// case serverCommand.FullCommand():
-	//
-	// 	parseKubeArgs(serverCommand, kubeConf)
-	// 	parseServerArgs(serverCommand, serverConf)
-	// 	parseLoggerArgs(serverCommand, loggerConf)
-	//
-	// case agentCommand.FullCommand():
-	// 	parseAgentArgs(agentCommand, agentConf)
-	// default:
-	// 	kingpin.Usage()
-	// }
 }
 
 // shutdown waits for SIGINT or SIGTERM and runs a callback function.

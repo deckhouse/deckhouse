@@ -212,7 +212,7 @@ func (c *setInitedValueChecker) update(obj *unstructured.Unstructured, value str
 
 	opts := metav1.UpdateOptions{FieldManager: c.fieldManager}
 	if _, err := c.dynamicClient.Update(obj, opts); err != nil {
-		return check.ErrFail("cannot patch UpmeterHookProbe object %q with new inited value: %v", c.name, err)
+		return check.ErrFail("cannot update UpmeterHookProbe object %q with new inited value: %v", c.name, err)
 	}
 
 	return nil

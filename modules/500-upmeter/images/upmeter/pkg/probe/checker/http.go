@@ -88,13 +88,15 @@ func doRequest(client *http.Client, req *http.Request) ([]byte, check.Error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, check.ErrFail("got HTTP status %q", resp.Status)
-	}
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, check.ErrFail("cannot read response body: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, check.ErrFail(
+			"HTTP: %s %s returned status %d: %q",
+			req.Method, req.URL.String(), resp.StatusCode, body)
 	}
 
 	return body, nil
