@@ -404,7 +404,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 }
 
 // NodeGroupConfig returns values for terraform to order master node or static node
-func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string, baseOutput []byte) []byte {
+func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
 	result := map[string]interface{}{
 		"clusterConfiguration":         m.ClusterConfig,
 		"providerClusterConfiguration": m.ProviderClusterConfig,
