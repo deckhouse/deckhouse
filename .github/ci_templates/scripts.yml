@@ -1,7 +1,7 @@
 {!{ define "update_comment_on_start" }!}
 {!{- $workflowName := . -}!}
 - name: Update comment on start
-  if: github.event_name == 'workflow_dispatch'
+  if: ${{ github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
   uses: {!{ index (ds "actions") "actions/github-script" }!}
   with:
     github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -17,7 +17,7 @@
 {!{- $name := index . 1 -}!}
 
 - name: Update comment on finish
-  if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
   continue-on-error: true
   env:
     NEEDS_CONTEXT: ${{ toJSON(needs) }}
