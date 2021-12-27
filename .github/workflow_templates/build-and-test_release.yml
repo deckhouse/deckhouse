@@ -37,7 +37,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_start" "Build and test for release" | strings.Indent 6 }!}
 
   build_modules_images_fe:
     name: Build Modules Images FE

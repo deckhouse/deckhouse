@@ -577,11 +577,6 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
 
   console.log(`Use ref=${ref}`);
 
-  // Return if workflow is deploy-channel but no tag is pushed.
-  if (!ref.startsWith('refs/tags/') && isDeployChannel) {
-    return core.setFailed(`Workflow for label ${label} requires a tag. ${event.issue.milestone.title} is not found.`);
-  }
-
   // Add issue comment.
   console.log('Add issue comment.');
   let response = await github.rest.issues.createComment({
@@ -813,120 +808,12 @@ module.exports.createReleaseIssueForMilestone = async ({ github, context, core }
 const startBuildAndTestWorkflow = async ({ github, context, core }) => {
   const github_ref = context.ref;
 
-  // TODO Temporarily no comment for release-* branches.
-
-
-  // Find 10 recently created milestones.
-  const query = `
-    query($owner:String!, $name:String!) {
-      repository(owner:$owner, name:$name){
-        milestones(first:10, orderBy:{field:CREATED_AT, direction:DESC}, states:[OPEN]) {
-          edges {
-            node {
-              title
-              number
-            }
-          }
-        }
-      }
-    }`;
-
-  const variables = {
-    owner: context.repo.owner,
-    name: context.repo.repo
-  };
-
-  let result;
-  try {
-    result = await github.graphql(query, variables);
-  } catch (error) {
-    if (error.name === 'GraphqlResponseError') {
-      console.log('Request:', error.request);
-      return core.setFailed(error.message);
-    } else {
-      // handle non-GraphQL error
-      return core.setFailed(`List milestones failed: ${dumpError(error)}`);
-    }
-  }
-
-  // Find milestone with tag in title.
-  const milestones = result.repository.milestones.edges;
-  let milestone = null;
-  let tagName = '';
-  let branchName = '';
-  if (context.ref.startsWith('refs/heads/')) {
-    branchName = context.ref.replace('refs/heads/', '');
-    // Get first milestone with appropriate title.
-    for (const m of milestones) {
-      if (/^v\d+\.\d+\.\d+/.test(m.node.title)) {
-        milestone = m.node;
-        break;
-      }
-    }
-  }
-  if (context.ref.startsWith('refs/tags/')) {
-    // Get milestone with title equal to tag.
-    tagName = context.ref.replace('refs/tags/', '');
-    for (const m of milestones) {
-      if (` ${m.node.title} `.includes(` ${tagName} `)) {
-        milestone = m.node;
-        break;
-      }
-    }
-  }
-  if (!milestone) {
-    return core.setFailed(
-      `No appropriate milestone found. Create one and push or restart build with label. ${JSON.stringify(result)}`
-    );
-  }
-  console.log(`The milestone is '${milestone.title}' with number ${milestone.number}`);
-
-  // Milestone should has issue to comment. Find it by the specific label.
-  let response = await github.rest.issues.listForRepo({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    milestone: milestone.number,
-    state: 'open',
-    labels: [knownLabels['issue-release']]
-  });
-  if (response.status != 200 || response.data.length < 1) {
-    return core.setFailed(`List milestone issues failed: ${JSON.stringify(response)}`);
-  }
-
-  const issue = response.data[0];
-
-  // Add issue comment.
-  let comment_body = '';
-  if (tagName !== '') {
-    comment_body = `New tag '${tagName}' is created.`;
-  }
-  if (branchName !== '') {
-    const commitMiniSHA = context.payload.head_commit.id.slice(0, 6);
-    const commitUrl = context.payload.head_commit.url;
-    const header = `New commit [${commitMiniSHA}](${commitUrl}) in branch '${branchName}':`;
-    // Format commit message.
-    const mdCodeMarker = '```';
-    const commitMsg = `${mdCodeMarker}\n${context.payload.head_commit.message}\n${mdCodeMarker}`;
-    comment_body = `${header}\n${commitMsg}\n`;
-  }
-  console.log('Add issue comment.');
-  response = await github.rest.issues.createComment({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    issue_number: issue.number,
-    body: comment_body
-  });
-
-  if (response.status != 201) {
-    return core.setFailed(`Create issue comment failed: ${JSON.stringify(response)}`);
-  }
-
   // Start 'release-build-and-test' workflow.
   console.log('Start workflow.');
-  const issue_id = '' + issue.id;
-  const issue_number = '' + issue.number;
-  const comment_id = '' + response.data.id;
-  response = await github.rest.actions.createWorkflowDispatch({
+  const issue_id = "fake";
+  const issue_number = "fake";
+  const comment_id = "fake";
+  let response = await github.rest.actions.createWorkflowDispatch({
     owner: context.repo.owner,
     repo: context.repo.repo,
     workflow_id: 'build-and-test_release.yml',
