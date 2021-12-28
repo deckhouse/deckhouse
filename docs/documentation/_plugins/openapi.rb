@@ -196,9 +196,12 @@ module Jekyll
                                 "`#{exampleObject}`"
                               end
                             end
-                        end)
-#             result.push(example+converter.convert(example.to_s)+"-->")
-            result.push(example + exampleContent + "</p>")
+                        end).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
+            if exampleContent.match?(/^<div/)
+                result.push(%Q(#{example}</p>#{exampleContent}))
+            else
+                result.push(%Q(#{example} #{exampleContent}</p>))
+            end
         end
 
         result
@@ -215,7 +218,7 @@ module Jekyll
 
         fullPath = ancestors + [name]
         linkAnchor = fullPath.join("-").downcase
-        pathString = fullPath.slice(1,fullPath.length-1).join(" / ")
+        pathString = fullPath.slice(1,fullPath.length-1).join(".")
 
         if name != ""
             name_text = ''
@@ -230,9 +233,9 @@ module Jekyll
             end
 
             if attributes['x-doc-deprecated']
-                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored deprecated" title="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
+                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored deprecated" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
             else
-                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" title="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
+                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
             end
 
             if attributes_type != ''

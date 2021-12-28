@@ -25,6 +25,9 @@
   </div>
   <!--#include virtual="/{{ page.lang }}/includes/footer.html" -->
 </body>
+{%- if page.name == 'CR.md' or page.name == 'CR_RU.md' %}
+{% include openapi-tippy.html %}
+{%- endif %}
 {% if site.google_analytics %}
 {% include google_analytics.html %}
 {% endif %}
