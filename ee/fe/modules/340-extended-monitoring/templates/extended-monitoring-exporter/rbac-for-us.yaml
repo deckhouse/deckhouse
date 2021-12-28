@@ -4,13 +4,13 @@ kind: ServiceAccount
 metadata:
   name: extended-monitoring-exporter
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:extended-monitoring:extended-monitoring-exporter
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -54,7 +54,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:extended-monitoring:extended-monitoring-exporter
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: extended-monitoring-exporter
@@ -68,7 +68,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:extended-monitoring:extended-monitoring-exporter:rbac-proxy
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
