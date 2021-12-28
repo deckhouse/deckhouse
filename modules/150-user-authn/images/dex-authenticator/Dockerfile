@@ -1,24 +1,20 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_ALPINE
-FROM $BASE_GOLANG_ALPINE as artifact
-WORKDIR /go/src/github.com/pusher/oauth2_proxy
+ARG BASE_GOLANG_16_ALPINE
+FROM $BASE_GOLANG_16_ALPINE as artifact
+WORKDIR /go/src/github.com/oauth2-proxy/oauth2_proxy
 
 # Download tools
-RUN wget -O - https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.17.1
-
 RUN apk --update add make git build-base curl bash ca-certificates wget \
  && update-ca-certificates
-RUN git clone https://github.com/pusher/oauth2_proxy.git . \
- && git checkout v5.0.0
-ADD cookie-refresh.patch /
+RUN git clone https://github.com/oauth2-proxy/oauth2-proxy.git . \
+ && git checkout v7.2.0
+ADD patches/cookie-refresh.patch /
 RUN patch -p1 < /cookie-refresh.patch \
-  && GO111MODULE=on go mod download \
-  && ./configure \
   && make build
 
 FROM $BASE_ALPINE
 RUN apk --update add curl bash  ca-certificates && update-ca-certificates
-COPY --from=artifact /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
+COPY --from=artifact /go/src/github.com/oauth2-proxy/oauth2_proxy/oauth2-proxy /bin/oauth2_proxy
 
 EXPOSE 8080 4180
 ENTRYPOINT [ "/bin/oauth2_proxy" ]

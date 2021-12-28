@@ -55,6 +55,7 @@ COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tpl.patch /
+COPY patches/auth-cookie-always.patch /
 COPY rootfs /
 
 RUN apk update \
@@ -106,7 +107,8 @@ RUN apk update \
   && apk del libcap \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
-  && patch -p1 < /nginx-tpl.patch
+  && patch -p1 < /nginx-tpl.patch \
+  && patch -p1 < /auth-cookie-always.patch
 
 WORKDIR /
 USER www-data
