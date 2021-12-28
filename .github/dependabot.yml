@@ -9,6 +9,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    open-pull-requests-limit: 1
 
   - package-ecosystem: "gomod"
     directory: "/dhctl"
@@ -18,6 +19,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    open-pull-requests-limit: 1
 
   - package-ecosystem: "github-actions"
     directory: "/"
