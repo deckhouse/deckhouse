@@ -4,11 +4,9 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            CustomResource для настройки хранилища log-pipeline.
+            Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
 
-            Каждый CR `ClusterLogDestination` описывает одно хранилище логов, к которому можно подключить бесконечное количество источников.
-
-            `metadata.name` — задаёт имя upstream, который вы будете использовать в CR `ClusterLoggingConfig`.
+            `metadata.name` — задаёт имя upstream, который будет использоваться в CR [ClusterLoggingConfig](https://deckhouse.io/ru/documentation/modules/460-log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               properties:

@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            CustomResource для описания источника логов в log-pipeline.
+            Описывает источник логов в log-pipeline.
 
             Каждый CustomResource `ClusterLoggingConfig` описывает правила сбора логов из кластера.
           properties:
