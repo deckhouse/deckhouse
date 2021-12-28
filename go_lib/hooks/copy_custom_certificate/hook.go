@@ -113,6 +113,9 @@ func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookIn
 		if err != nil {
 			return err
 		}
+		if len(storeData["ca.crt"]) == 0 {
+			delete(storeData, "ca.crt")
+		}
 		input.Values.Set(fmt.Sprintf("%s.internal.customCertificateData", moduleName), storeData)
 		return nil
 	}
