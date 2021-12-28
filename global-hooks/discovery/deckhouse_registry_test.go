@@ -59,6 +59,29 @@ type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: eHl6Cg==
 `
+		stateDeployAndSecretWithSHA = `
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deckhouse
+  namespace: d8-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: deckhouse
+        image: registry.example.com/developers/deckhouse/dev:dashboard-spare-domain-fix@sha256:abcdefg
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-system
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eHl6Cg==
+`
 		stateDeployOnly = `
 ---
 apiVersion: apps/v1
@@ -199,6 +222,23 @@ data:
 			Expect(f.ValuesGet("global.modulesImages.registryPath").String()).To(Equal("/developers/deckhouse"))
 		})
 
+	})
+
+	Context("Deployment with sha256 and Secret are in cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeployAndSecretWithSHA))
+			f.RunHook()
+		})
+
+		It("Values must be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry").String()).To(Equal("registry.example.com/developers/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registryDockercfg").String()).To(Equal("eHl6Cg=="))
+			Expect(f.ValuesGet("global.modulesImages.registryCA").String()).To(BeEmpty())
+			Expect(f.ValuesGet("global.modulesImages.registryScheme").String()).To(Equal("https"))
+			Expect(f.ValuesGet("global.modulesImages.registryAddress").String()).To(Equal("registry.example.com"))
+			Expect(f.ValuesGet("global.modulesImages.registryPath").String()).To(Equal("/developers/deckhouse"))
+		})
 	})
 
 	Context("Deployment and Secret with CA and scheme set are in cluster", func() {
