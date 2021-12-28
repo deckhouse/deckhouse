@@ -724,9 +724,9 @@ module.exports.startBuildAndTestWorkflow = async ({ github, context, core }) => 
   const github_ref = context.ref;
   // Start 'release-build-and-test' workflow.
   console.log('Start workflow.');
-  const issue_id = 201;
-  const issue_number = 201;
-  const comment_id = 201;
+  const issue_id = "fake";
+  const issue_number = "fake";
+  const comment_id = "fake";
   let response = await github.rest.actions.createWorkflowDispatch({
     owner: context.repo.owner,
     repo: context.repo.repo,
