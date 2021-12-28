@@ -115,17 +115,31 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
-			Name:  "Cluster scoped. Bad request - group and version are empty",
+			Name:  "Cluster scoped. Group and version are empty, search in the v1 apiVersion. Allowed.",
 			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "",
 				Version:   "",
-				Resource:  "object1",
+				Resource:  "namespaces",
+				Namespace: "",
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Cluster scoped. Group and version are empty, search in the v1 apiVersion. Denied.",
+			Group: []string{"normal"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "",
+				Version:   "",
+				Resource:  "services",
 				Namespace: "",
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "webhook: bad request, group and groupVersion are empty",
+				Reason: "making cluster scoped requests for namespaced resources are not allowed",
 			},
 		},
 		{
@@ -240,6 +254,10 @@ func TestAuthorizeRequest(t *testing.T) {
 						"test/v1": {
 							"object1": true,
 							"object2": false,
+						},
+						"v1": {
+							"namespaces": false,
+							"services":   true,
 						},
 					},
 					preferredVersions: map[string]string{
