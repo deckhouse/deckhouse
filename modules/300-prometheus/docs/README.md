@@ -54,7 +54,7 @@ Deckhouse also provides the advanced monitoring mode that implements custom metr
 Deckhouse allows you to flexibly configure alerting for each namespace and assign criticality depending on the threshold value. You can set thresholds in various namespaces for parameters such as:
 - empty space and inodes on a disk;
 - CPU usage for a node and a container;
-- number of 5xx errors on `nginx-ingress`;
+- percent of 5xx errors on `nginx-ingress`;
 - number of unavailable Pods in a `Deployment`, `StatefulSet`, `DaemonSet`.
 
 ## Alerts
