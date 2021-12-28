@@ -145,16 +145,6 @@ jobs:
 
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
-      - name: Update comment on start
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'Build and test for release';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
 
   build_modules_images_fe:
     name: Build Modules Images FE
