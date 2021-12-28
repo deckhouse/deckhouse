@@ -122,7 +122,7 @@ function main() {
   export REGISTRY_ADDRESS="{{ .registry.address }}"
   export SCHEME="{{ .registry.scheme }}"
   export REGISTRY_PATH="{{ .registry.path }}"
-  export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth }}")"
+  export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
 {{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then

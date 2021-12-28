@@ -135,7 +135,7 @@ oom_score = 0
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
-          auth = "{{ .registry.auth }}"
+          auth = "{{ .registry.auth | default "" }}"
   {{- if eq .registry.scheme "http" }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           insecure_skip_verify = true
