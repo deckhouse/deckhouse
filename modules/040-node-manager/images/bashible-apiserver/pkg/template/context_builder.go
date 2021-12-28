@@ -459,7 +459,7 @@ type registry struct {
 	Scheme    string `json:"scheme" yaml:"scheme"`
 	CA        string `json:"ca,omitempty" yaml:"ca,omitempty"`
 	DockerCFG []byte `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth      string `json:"auth,omitempty" yaml:"auth,omitempty"`
+	Auth      string `json:"auth" yaml:"auth"`
 }
 
 // input from secret
