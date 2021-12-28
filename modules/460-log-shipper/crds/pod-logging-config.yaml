@@ -84,6 +84,7 @@ spec:
                   type: array
                   description: |
                     List of filter for logs.
+
                     Only matched lines would be stored to log destination.
                   example: |
                     ```yaml
@@ -121,12 +122,12 @@ spec:
                         type: string
                         description: |
                           Operator for log field comparations:
-                          * `In` operator find substring in string
-                          * `NotIn` operator is negative version of `In` operator
-                          * `Regex` operator is trying to match regexp over field, only log events with matching fields will pass
-                          * `NotRegex` operator is negative version of `Regex` operator, log events without fields or with not matched fields will pass
-                          * `Exists` operator drop log event if it contains some fields
-                          * `DoesNotExist` operator drop log event if it does not contain some fields
+                          * `In` — finds a substring in string
+                          * `NotIn` — is a negative version of the `In` operator
+                          * `Regex` — is trying to match regexp over field, only log events with matching fields will pass
+                          * `NotRegex` — is a negative version of the `Regex` operator, log events without fields or with not matched fields will pass
+                          * `Exists` — drops log event if it contains some fields
+                          * `DoesNotExist` — drops log event if it does not contain some fields
                         enum:
                           - In
                           - NotIn
@@ -138,7 +139,8 @@ spec:
                         type: array
                         description: |
                           Array of `ClusterLogDestination` CustomResource names which this source will output with.
-                          Fields with float or boolean values will be converted to strings during comparation.
+
+                          Fields a with float or boolean values will be converted to strings during comparison.
                         items:
                           x-kubernetes-int-or-string: true
                           anyOf:
@@ -157,7 +159,7 @@ spec:
                             minItems: 1
                 multilineParser:
                   type: object
-                  description: Multiline parser for different patterns
+                  description: Multiline parser for different patterns.
                   required:
                     - type
                   properties:
@@ -165,11 +167,11 @@ spec:
                       type: string
                       description: |
                         Parser types:
-                        * None - Do not parse logs.
-                        * General - Try to match general multiline logs with space or tabulation on extra lines.
-                        * Backslash - Try to match bash style logs with backslash on all lines except last event line.
-                        * LogWithTime - Try to detect events by timestamps.
-                        * MultilineJSON - Try to match json logs by `{` as a first symbol.
+                        * `None` - do not parse logs
+                        * `General` - tries to match general multiline logs with space or tabulation on extra lines
+                        * `Backslash` - tries to match bash style logs with backslash on all lines except the last event line
+                        * `LogWithTime` - tries to detect events by timestamp
+                        * `MultilineJSON` - tries to match JSON logs, assuming the event starts with the `{` symbol
                       enum:
                         - None
                         - General
