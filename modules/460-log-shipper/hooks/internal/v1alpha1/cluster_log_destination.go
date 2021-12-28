@@ -115,7 +115,7 @@ type ElasticsearchSpec struct {
 
 	Auth              ElasticsearchAuthSpec `json:"auth,omitempty"`
 	DataStreamEnabled bool                  `json:"dataStreamEnabled"`
-	DocTypeSupport    bool                  `json:"docTypeSupport"`
+	DocType           string                `json:"docType"`
 
 	TLS CommonTLSSpec `json:"tls,omitempty"`
 }
@@ -124,9 +124,4 @@ type LogstashSpec struct {
 	Endpoint string `json:"endpoint,omitempty"`
 
 	TLS LogstashTLSSpec `json:"tls,omitempty"`
-}
-
-type ElasticsearchIndexSettingsSpec struct {
-	Type    string `json:"type,omitempty"`
-	DocType string `json:"docType,omitempty"`
 }

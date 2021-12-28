@@ -178,9 +178,10 @@ spec:
 ```
 
 
-## Поддержка elasticsearch <= 6.X
+## Поддержка elasticsearch < 6.X
 
-Для Elasticsearch < 7.0 нужно включить поддержку doc_type индексов. Сделать это можно добавив `docTypeSupport: true` в конфигурацию:
+Для Elasticsearch < 6.0 нужно включить поддержку doc_type индексов.
+Сделать это можно следующим образом:
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -191,7 +192,7 @@ spec:
   type: Elasticsearch
   elasticsearch:
     endpoint: http://192.168.1.1:9200
-    docTypeSupport: true
+    docType: "vector" # Укажите значение здесь. Оно не должно начинаться с '_'
     auth:
       strategy: Basic
       user: elastic
