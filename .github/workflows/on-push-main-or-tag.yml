@@ -10,6 +10,7 @@ on:
       - 'main'
     tags:
       - 'v*'
+      - 'tc-dev*'
 
 jobs:
   # Find latest milestone, find issue with 'issue/release' label.
