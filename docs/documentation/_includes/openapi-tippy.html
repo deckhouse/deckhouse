@@ -1,0 +1,14 @@
+<!-- Tippy.js - library to tooltip-->
+{% asset popper.min.js %}
+{% asset tippy-bundle.umd.min.js %}
+<script type="text/javascript">
+$(document).ready(function () {
+    tippy('[data-tippy-content]', {
+        interactive: true,
+        interactiveDebounce: 75,
+        theme: 'custom',
+        allowHTML: true,
+        arrow: false,
+      });
+});
+</script>
