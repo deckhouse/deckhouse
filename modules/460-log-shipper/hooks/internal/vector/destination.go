@@ -258,11 +258,6 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		BulkAction = "create"
 	}
 
-	var docType string
-	if spec.DocTypeSupport {
-		docType = "_doc"
-	}
-
 	return &elasticsearchDestination{
 		commonDestinationSettings: common,
 		Auth:                      EsAuth,
@@ -275,7 +270,7 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		Index:                     spec.Index,
 		Pipeline:                  spec.Pipeline,
 		BulkAction:                BulkAction,
-		DocType:                   docType,
+		DocType:                   spec.DocType,
 		// We do not neet this field for vector 0.14
 		//Mode:                      "normal",
 	}
