@@ -21,12 +21,12 @@ require (
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.2.0
 	github.com/gophercloud/gophercloud v0.20.0
 	github.com/gophercloud/utils v0.0.0-20210823151123-bfd010397530
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
-	github.com/imdario/mergo v0.3.11
+	github.com/imdario/mergo v0.3.12
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.4
@@ -40,19 +40,19 @@ require (
 	github.com/tidwall/gjson v1.12.1
 	github.com/tidwall/sjson v1.2.3
 	github.com/vmware/govmomi v0.24.1
-	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
-	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
-	google.golang.org/grpc v1.32.0
+	go.etcd.io/etcd/api/v3 v3.5.0
+	go.etcd.io/etcd/client/v3 v3.5.0
+	google.golang.org/grpc v1.38.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	helm.sh/helm/v3 v3.5.1
-	k8s.io/api v0.21.4
-	k8s.io/apiextensions-apiserver v0.20.5
-	k8s.io/apimachinery v0.21.4
-	k8s.io/apiserver v0.20.5
-	k8s.io/client-go v0.21.4
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	helm.sh/helm/v3 v3.7.2
+	k8s.io/api v0.22.4
+	k8s.io/apiextensions-apiserver v0.22.4
+	k8s.io/apimachinery v0.22.4
+	k8s.io/apiserver v0.22.4
+	k8s.io/client-go v0.22.4
+	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
 	sigs.k8s.io/yaml v1.3.0
 )
 
