@@ -25,7 +25,6 @@ const (
 	noNamespaceAccessReason      = "user has no access to the namespace"
 	namespaceLimitedAccessReason = "making cluster scoped requests for namespaced resources are not allowed"
 	internalErrorReason          = "webhook: kubernetes api request error"
-	badRequestReason             = "webhook: bad request, group and groupVersion are empty"
 )
 
 var _ http.Handler = (*Handler)(nil)
@@ -139,16 +138,16 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 	group := request.Spec.ResourceAttributes.Group
 
 	if apiGroup == "" {
-		if group == "" {
-			// could not check whether resource is namespaced or not (from cache) - deny access
-			return h.fillDenyRequest(request, badRequestReason, "")
-		}
-
-		var err error
-		apiGroup, err = h.cache.GetPreferredVersion(group)
-		if err != nil {
-			// could not check whether resource is namespaced or not (from cache) - deny access
-			return h.fillDenyRequest(request, internalErrorReason, err.Error())
+		if group != "" {
+			var err error
+			apiGroup, err = h.cache.GetPreferredVersion(group)
+			if err != nil {
+				// could not check whether resource is namespaced or not (from cache) - deny access
+				return h.fillDenyRequest(request, internalErrorReason, err.Error())
+			}
+		} else {
+			// apiGroup and group versions both empty, which means that this is a core Kubernetes resource
+			apiGroup = "v1"
 		}
 	}
 
