@@ -57,6 +57,19 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkValidationLabels({ github, context, core });
 
+      - name: Download diff for pull request
+        env:
+          DIFF_URL: ${{ steps.on_push.outputs.diff_url }}
+        run: |
+          ./.github/scripts/validation_run.sh --download-only ./pr.diff
+
+      - name: Upload diff as artifact
+        uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+        with:
+          name: pr_diff
+          path: pr.diff
+
+
   no_cyrillic_validation:
     name: No Cyrillic Validation
     env:
@@ -84,9 +97,14 @@ runs-on: ubuntu-latest
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
+  - name: Restore diff artifact
+    uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+    with:
+      name: pr_diff
+
   - name: Run check
     env:
-      DIFF_URL: ${{ needs.discover.outputs.diff_url }}
+      DIFF_PATH: ./pr.diff
       SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_{!{ $type }!} }}
     run: |
       ./.github/scripts/validation_run.sh ./testing/validate_{!{ $type }!}.sh
