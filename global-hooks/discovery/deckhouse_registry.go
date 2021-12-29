@@ -17,6 +17,9 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
+	"net/url"
+	"path"
+	"regexp"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -82,9 +85,11 @@ func applyD8ImageFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	// get werf stages repo
 	// get it from deckhouse image
-	image := deployment.Spec.Template.Spec.Containers[0].Image
-	// remove branch or channel
-	image = image[:strings.LastIndex(image, ":")]
+	image, err := parseImage(deployment.Spec.Template.Spec.Containers[0].Image)
+	if err != nil {
+		return nil, err
+	}
+
 	// dev-deckhouse image is 'dev' name . remove it
 	// because stages is in repo
 	image = strings.TrimSuffix(image, "/dev")
@@ -161,4 +166,21 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	input.Values.Set("global.modulesImages.registryAddress", registrySecretRaw.Address)
 	input.Values.Set("global.modulesImages.registryPath", registrySecretRaw.Path)
 	return nil
+}
+
+var splitRe = regexp.MustCompile(`[:@]`)
+
+func parseImage(s string) (string, error) {
+	u, err := url.Parse("dummy://" + s)
+	if err != nil {
+		return "", err
+	}
+
+	if idx := splitRe.FindStringIndex(u.Path); idx != nil {
+		// This allows us to retain the @ to signify digests or shortened digests in
+		// the object.
+		u.Path = u.Path[:idx[0]]
+	}
+
+	return path.Join(u.Host, u.Path), nil
 }
