@@ -71,8 +71,6 @@ new_auth=$(echo -n "$usr:$pass" | base64 -w 0)
 new_registry="{\"auths\":{\"$new_registry\":{\"auth\":\"$new_auth\"}}}"
 
 patch_auth="{\"data\":{\".dockerconfigjson\":\"$(echo -n "$new_registry" | base64 -w 0)\"}}"
-patch_secret_cmd="kubectl -n d8-system patch secret deckhouse-registry --patch '$patch_auth'"
-patch_deployment_cmd="kubectl -n d8-system patch deploy/deckhouse -p '{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"deckhouse\",\"image\":\"$image\"}]}}}}'"
 
 echo -e " Use 'kubectl create -f' with next secret for run image copier in cluster
 ---
@@ -84,11 +82,5 @@ metadata:
 data:
   dest-repo.json: $encoded
 ---
-
-After completed repush use next two command for switch repository:
-
-$patch_secret_cmd
-
-$patch_deployment_cmd
 "
 

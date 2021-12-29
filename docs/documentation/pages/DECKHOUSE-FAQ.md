@@ -118,7 +118,7 @@ The following parameters must be set if the [Nexus](https://github.com/sonatype/
   * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/fe`).
   * If necessary, change `scheme` to `http` (if the third-party registry uses HTTP scheme).
   * If necessary, change or add the `ca` field with the root CA certificate that validates the third-party registry's https certificate (if the third-party registry uses self-signed certificates).
-* Restart the Deckhouse Pod.
+* Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry.
 * Wait for the Deckhouse Pod to become Ready.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
-* Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry.
+* Remove `releaseChannel` setting from configmap `d8-system/deckhouse`

@@ -120,7 +120,7 @@ deckhouse: |
   * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/fe`).
   * При необходимости, изменить `scheme` на `http` (если используется HTTP registry).
   * Если registry использует самоподписные сертификаты, то изменить или добавить поле `ca` куда внести корневой сертификат соответствующего сертификата registry.
-* Выполнить рестарт Pod'а Deckhouse'а.
+* Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry.
 * Дождаться перехода Pod'а Deckhouse в статус Ready.
 * Дождаться применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
-* Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry.
+* Удалить releaseChannel из конфигмапы `d8-system/deckhouse` 
