@@ -5,7 +5,7 @@ kind: Role
 metadata:
   name: access-to-extended-monitoring-events-exporter-metrics
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups: ["apps"]
   resources: ["deployments/prometheus-metrics"]
@@ -17,7 +17,7 @@ kind: RoleBinding
 metadata:
   name: access-to-extended-monitoring-events-exporter-metrics
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

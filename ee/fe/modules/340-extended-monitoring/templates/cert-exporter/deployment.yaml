@@ -1,17 +1,17 @@
-{{- if .Values.extendedMonitoring.events.exporterEnabled }}
+{{- if .Values.extendedMonitoring.certificates.exporterEnabled }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: events-exporter
+  name: cert-exporter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "events-exporter")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-exporter")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: events-exporter
+    name: cert-exporter
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
@@ -19,9 +19,9 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: events-exporter
+  name: cert-exporter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "events-exporter")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-exporter")) | nindent 2 }}
 spec:
   replicas: 1
   strategy:
@@ -29,12 +29,12 @@ spec:
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}
-      app: events-exporter
+      app: cert-exporter
   template:
     metadata:
       labels:
         module: {{ $.Chart.Name }}
-        app: events-exporter
+        app: cert-exporter
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
@@ -42,33 +42,23 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
-      serviceAccountName: events-exporter
+      serviceAccountName: cert-exporter
       containers:
-      - name: events-exporter
+      - name: cert-exporter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.extendedMonitoring.eventsExporter }}
+        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.extendedMonitoring.certExporter }}
         args:
-        - "-server.exporter-address=127.0.0.1:9000"
-        {{- if eq .Values.extendedMonitoring.events.severityLevel "OnlyWarnings" }}
-        - "-kube.field-selector=type!=Normal"
-        {{- end }}
+        - --monitor-secrets=true
+        - --monitor-certificates=false
+        - --monitor-files=false
+        - --address=127.0.0.1:9000
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            cpu: "100m"
-            memory: "64Mi"
+            cpu: "50m"
+            memory: "50Mi"
             {{- end }}
-        readinessProbe:
-          httpGet:
-            path: /healthz
-            scheme: HTTPS
-            port: 9001
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            scheme: HTTPS
-            port: 9001
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
@@ -100,7 +90,7 @@ spec:
                   apiVersion: v1
                   resource: deployments
                   subresource: prometheus-metrics
-                  name: events-exporter
+                  name: cert-exporter
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

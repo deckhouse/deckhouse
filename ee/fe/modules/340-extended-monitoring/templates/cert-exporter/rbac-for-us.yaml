@@ -1,73 +1,40 @@
+{{- if .Values.extendedMonitoring.certificates.exporterEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: extended-monitoring-exporter
+  name: cert-exporter
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: d8:extended-monitoring:extended-monitoring-exporter
+  name: d8:extended-monitoring:cert-exporter
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups: [""]
-  resources:
-  - namespaces
-  - pods
-  - nodes
-  verbs:
-  - list
-  - watch
-  - get
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - ingresses
-  verbs:
-  - list
-  - watch
-  - get
-- apiGroups:
-  - extensions
-  - apps
-  resources:
-  - deployments
-  - daemonsets
-  - statefulsets
-  verbs:
-  - list
-  - watch
-  - get
-- apiGroups:
-  - batch
-  resources:
-  - cronjobs
-  - jobs
-  verbs:
-  - list
-  - watch
-  - get
+  resources: ["namespaces", "secrets"]
+  verbs: ["get", "list"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: d8:extended-monitoring:extended-monitoring-exporter
+  name: d8:extended-monitoring:cert-exporter
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
-  name: extended-monitoring-exporter
+  name: cert-exporter
   namespace: d8-monitoring
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:extended-monitoring:extended-monitoring-exporter
+  name: d8:extended-monitoring:cert-exporter
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:extended-monitoring:extended-monitoring-exporter:rbac-proxy
+  name: d8:extended-monitoring:cert-exporter:rbac-proxy
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -75,5 +42,6 @@ roleRef:
   name: d8:rbac-proxy
 subjects:
 - kind: ServiceAccount
-  name: extended-monitoring-exporter
+  name: cert-exporter
   namespace: d8-monitoring
+{{- end }}
