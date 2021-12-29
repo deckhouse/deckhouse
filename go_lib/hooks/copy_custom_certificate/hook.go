@@ -108,12 +108,20 @@ func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookIn
 			return fmt.Errorf("custom certificate secret name is configured, but secret with this name doesn't exist")
 		}
 
-		storeData := make(map[string][]byte)
-		err := yaml.Unmarshal(secretData, &storeData)
+		var c cert
+		err := yaml.Unmarshal(secretData, &c)
 		if err != nil {
 			return err
 		}
-		input.Values.Set(fmt.Sprintf("%s.internal.customCertificateData", moduleName), storeData)
+
+		path := fmt.Sprintf("%s.internal.customCertificateData", moduleName)
+		input.Values.Set(path, c)
 		return nil
 	}
+}
+
+type cert struct {
+	CA      string `json:"ca.crt,omitempty"`
+	TLSKey  string `json:"tls.key,omitempty"`
+	TLSCert string `json:"tls.crt,omitempty"`
 }
