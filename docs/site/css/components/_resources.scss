@@ -1,0 +1,74 @@
+@import "components/common/_variables.scss";
+
+.resources {
+  ul li {
+    margin: rem(14px) 0;
+    padding-left: rem(28px);
+    position: relative;
+  }
+
+  ul, ol, li {
+    & p:not(.resources__attrs) {
+        font-size: 14px;
+        margin: 0;
+        line-height: rem(20px);
+        padding-top: 0;
+    }
+  }
+
+  &__prop {
+    &_name {
+      display: block;
+      color: $color-main;
+      width: fit-content;
+      font-weight: $font-weight-bold;
+      padding: 0;
+    }
+
+    &_type {
+      color: $color-muted;
+      font-style: normal;
+      text-transform: uppercase;
+      font-size: rem(11px);
+
+      & + p.resources__attrs.required {
+        display: inline-flex;
+        text-transform: uppercase;
+        margin-left: rem(10px);
+        margin-top: 0;
+      }
+    }
+
+    &_description {
+      margin-top: rem(7px);
+
+      & ul {
+        padding: rem(5px);
+
+        & li {
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  &__attrs {
+    margin-top: rem(7px);
+    margin-bottom: 0;
+
+    &_name {
+      font-weight: $font-weight-regular;
+      font-style: italic;
+      color: $color-muted;
+      &.required {
+        font-style: normal;
+        color: #ff7a7a;
+      }
+    }
+    
+    &_content {
+      line-height: 1.2rem;
+      font-size: 0.9rem;
+    }
+  }
+}
