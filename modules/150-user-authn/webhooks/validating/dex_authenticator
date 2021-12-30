@@ -57,6 +57,13 @@ function __main__() {
     newAuthNamespace=$(context::jq -r '.review.request.object.metadata.namespace')
     newAuthName=$(context::jq -r '.review.request.object.metadata.name')
     existingAuth=$(echo "$result" | jq -r '.namespace + "/" + .name')
+    # Update previously existing DexAuthenticator with the same name allowed
+    if [[ "$existingAuth" == "$newAuthNamespace/$newAuthName" ]]; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+      return 0;
+    fi
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"Desired DexAuthenticator '$newAuthNamespace/$newAuthName' conflicts with the existing DexAuthenticator '$existingAuth'" }
 EOF
