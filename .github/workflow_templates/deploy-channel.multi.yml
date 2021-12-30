@@ -22,6 +22,9 @@ on:
       comment_id:
         description: 'Id of comment in issue where to put workflow run status'
         required: false
+      editions:
+        description: 'Comma separated editions to deploy. Example: ee,fe,ce'
+        required: false
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
@@ -56,6 +59,30 @@ jobs:
 {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
 
+      - name: Filter editions
+        id: filter_editions
+        env:
+          EDITIONS: ${{ github.event.inputs.editions }}
+        run: |
+          echo "Input allowed editions: '${EDITIONS}'"
+
+          RESTRICTED=no
+
+          for edition in CE EE FE ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable deploy of ${edition} edition."
+              echo "::set-output name=DEPLOY_${edition}::yes"
+              RESTRICTED=yes
+            fi
+          done
+
+          if [[ $RESTRICTED == "no" ]] ; then
+            echo "No restrictions. Enable deploy to all editions."
+            for edition in CE EE FE ; do
+              echo "::set-output name=DEPLOY_${edition}::yes"
+            done
+          fi
+
 {!{/*
 Pull deckhouse images from cache, tag with channel name and push to dev and prod registries.
 Images:
@@ -68,12 +95,17 @@ Destination registries:
 */}!}
 {!{ range $werfEnv := slice "CE" "EE" "FE" }!}
       - name: Publish release images for {!{ $werfEnv }!}
+        if: ${{ steps.filter_editions.outputs.DEPLOY_{!{ $werfEnv }!} == 'yes' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           WERF_ENV: {!{ $werfEnv }!}
         run: |
           ## Source: .gitlab/ci_templates/deploy.yml
+
+          echo Publish {!{ $werfEnv }!} edition.
+
+          exit 0
 
           # Some precautions.
           if [[ -z $DEV_REGISTRY_PATH ]] ; then

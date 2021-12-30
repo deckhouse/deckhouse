@@ -16,6 +16,9 @@ on:
       comment_id:
         description: 'Id of comment in issue where to put workflow run status'
         required: false
+      editions:
+        description: 'Comma separated editions to deploy. Example: ee,fe,ce'
+        required: false
 
 env:
 
@@ -212,15 +215,44 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
+      - name: Filter editions
+        id: filter_editions
+        env:
+          EDITIONS: ${{ github.event.inputs.editions }}
+        run: |
+          echo "Input allowed editions: '${EDITIONS}'"
+
+          RESTRICTED=no
+
+          for edition in CE EE FE ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable deploy of ${edition} edition."
+              echo "::set-output name=DEPLOY_${edition}::yes"
+              RESTRICTED=yes
+            fi
+          done
+
+          if [[ $RESTRICTED == "no" ]] ; then
+            echo "No restrictions. Enable deploy to all editions."
+            for edition in CE EE FE ; do
+              echo "::set-output name=DEPLOY_${edition}::yes"
+            done
+          fi
+
 
 
       - name: Publish release images for CE
+        if: ${{ steps.filter_editions.outputs.DEPLOY_CE == 'yes' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           WERF_ENV: CE
         run: |
           ## Source: .gitlab/ci_templates/deploy.yml
+
+          echo Publish CE edition.
+
+          exit 0
 
           # Some precautions.
           if [[ -z $DEV_REGISTRY_PATH ]] ; then
@@ -322,12 +354,17 @@ jobs:
           echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
           echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
       - name: Publish release images for EE
+        if: ${{ steps.filter_editions.outputs.DEPLOY_EE == 'yes' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           WERF_ENV: EE
         run: |
           ## Source: .gitlab/ci_templates/deploy.yml
+
+          echo Publish EE edition.
+
+          exit 0
 
           # Some precautions.
           if [[ -z $DEV_REGISTRY_PATH ]] ; then
@@ -429,12 +466,17 @@ jobs:
           echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
           echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
       - name: Publish release images for FE
+        if: ${{ steps.filter_editions.outputs.DEPLOY_FE == 'yes' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           WERF_ENV: FE
         run: |
           ## Source: .gitlab/ci_templates/deploy.yml
+
+          echo Publish FE edition.
+
+          exit 0
 
           # Some precautions.
           if [[ -z $DEV_REGISTRY_PATH ]] ; then
