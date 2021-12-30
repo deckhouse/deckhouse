@@ -34,6 +34,11 @@
             img {
                 height: 40px;
             }
+            @media (max-width: 1499px) and (min-width: 1440px) {
+                img {
+                  max-width: 90%;
+                }
+            }
         }
         &-flag {
             img {
