@@ -27,7 +27,7 @@ title: "Модуль extended-monitoring: настройки"
 
 **Внимание!** Все аннотации:
 1. Начинаются с префикса `threshold.extended-monitoring.flant.com/`;
-2. Имеют целочисленное значение в качестве value, за исключением Namespace аннотации `extended-monitoring.flant.com/enabled` (в которой value можно опустить). Указанное в value значение устанавливает порог срабатывания алерта.
+2. Имеют целочисленное значение в качестве value, за исключением Namespace-аннотации `extended-monitoring.flant.com/enabled` (в которой value можно опустить). Указанное в value значение устанавливает порог срабатывания алерта.
 
 #### Non-namespaced Kubernetes objects
 
@@ -44,7 +44,7 @@ title: "Модуль extended-monitoring: настройки"
 | load-average-per-core-warning           | int           | 3              |
 | load-average-per-core-critical          | int           | 10             |
 
-> ВНИМАНИЕ! Эти аннотации НЕ действуют для тех разделов, в которых расположены imagefs (по умолчанию, /var/lib/docker) и nodefs (по умолчанию, /var/lib/kubelet).
+> ВНИМАНИЕ! Эти аннотации **не** действуют для тех разделов, в которых расположены `imagefs` (по умолчанию, — `/var/lib/docker`) и `nodefs` (по умолчанию, — `/var/lib/kubelet`).
 Для этих разделов пороги настраиваются полностью автоматически согласно [eviction thresholds в kubelet](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
 Значения по умолчанию см. [тут](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), подробнее см. [экспортер](https://github.com/deckhouse/deckhouse/blob/main/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/loop).
 
@@ -76,7 +76,7 @@ title: "Модуль extended-monitoring: настройки"
 |------------------------|---------------|---------------|
 | replicas-not-ready     | int (count)   | 0             |
 
-Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). Сработает, если недоступно реплик больше на указанное значение чем разрешено в `maxUnavailable` - т.е. при нуле сработает, если недоступно больше чем указано в `maxUnavailable`, а при единице, сработает если недоступно больше чем указано в `maxUnavailable` плюс 1. Таким образом можно у конкретных Deployment, находящихся в namespace со включенным расширенным мониторингом, и которым можно быть недоступными, подкрутить этот параметр, чтобы не получать ненужные алерты.
+Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). Сработает, если недоступно реплик больше на указанное значение чем разрешено в `maxUnavailable`. Т.е. при нуле сработает, если недоступно больше чем указано в `maxUnavailable`, а при единице, сработает если недоступно больше чем указано в `maxUnavailable` плюс 1. Таким образом, у конкретных Deployment, находящихся в Namespace со включенным расширенным мониторингом и которым допустимо быть недоступными, можно подкрутить этот параметр, чтобы не получать ненужные алерты.
 
 ##### Statefulset
 
@@ -84,7 +84,7 @@ title: "Модуль extended-monitoring: настройки"
 |------------------------|---------------|---------------|
 | replicas-not-ready     | int (count)   | 0             |
 
-Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
+Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
 ##### DaemonSet
 
@@ -92,7 +92,7 @@ title: "Модуль extended-monitoring: настройки"
 |------------------------|---------------|---------------|
 | replicas-not-ready     | int (count)   | 0             |
 
-Порог подразумевает количество недоступных реплик **СВЕРХ** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
+Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
 ##### CronJob
 
@@ -100,7 +100,7 @@ title: "Модуль extended-monitoring: настройки"
 
 ### Как работает
 
-Модуль экспортирует в Prometheus специальные аннотации Kubernetes объектов. Позволяет улучшить Prometheus правила, путём добавления порога срабатывания для алертов. 
+Модуль экспортирует в Prometheus специальные аннотации Kubernetes-объектов. Позволяет улучшить Prometheus-правила, путём добавления порога срабатывания для алертов. 
 Использование метрик, экспортируемых данным модулем, позволяет, например, заменить "магические" константы в правилах.
 
 До:
