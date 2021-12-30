@@ -78,9 +78,15 @@ spec:
                     dataStreamEnabled:
                       description: |
                         Использовать Datastream для хранения логов (https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
-                    docTypeSupport:
-                      description: |
-                        Использовать doc_type (_doc) для индексов. Это имеет значение только для Elasticsearch <= 6.X.
+
+                        Datastreams производительнее для хранения логов и метрик, но они существуют только в Elasticsearch >= 7.16.X
+                      docType:
+                        description: |
+                          Использовать doc_type для индексов. Это имеет значение только для Elasticsearch <= 6.X.
+
+                          Для ES >= 7.X - вам не нужно использовать эту опцию. Все работает по-умолчанию
+                          Для ES >= 6.X - рекомендуемое значение '_doc', это позволит легко обновиться до версии ES 7.X
+                          Для ES < 6.X - вы можете использовать любое значение, которое не начинается с '_'. Например: 'vector'
                     tls:
                       description: Настройки защищённого TLS соединения.
                       properties:

@@ -178,9 +178,10 @@ spec:
 ```
 
 
-## Elasticsearch <= 6.X usage
+## Elasticsearch < 6.X usage
 
-For Elasticsearch < 7.0 doc_type indexing should be enabled. You can do it by adding `docTypeSupport: true` in a spec:
+For Elasticsearch < 6.0 doc_type indexing should be set.
+Config should look like this:
 
 ```yaml
 ---
@@ -192,7 +193,7 @@ spec:
   type: Elasticsearch
   elasticsearch:
     endpoint: http://192.168.1.1:9200
-    docTypeSupport: true
+    docType: "vector" # Set any string here. It should not start with '_'
     auth:
       strategy: Basic
       user: elastic
