@@ -23,6 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+// change for trigger build
+
 func KeyFromConfigMap(key string) func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		var cm v1core.ConfigMap
