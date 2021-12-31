@@ -29,7 +29,7 @@ The hook then deletes the Secret, Job, and Pod if copying is successful.
 
 ## Copying Images 
 
-- Run the `../images/images-copier/generate-copier-secret.sh` script and specify target registry credentials.
+- Run [the script](../../images/images-copier/generate-copier-secret.sh) and specify target registry credentials.
   
   Example: 
   `REPO_USER="u" REPO_PASSWORD='Pass"Word' IMAGE_WITH_TAG="client.registry/repo/deckhouse:test" ./generate-copier-secret.sh`
@@ -57,16 +57,5 @@ The hook then deletes the Secret, Job, and Pod if copying is successful.
 Caution! If you delete Secret, the Job and Pod will be deleted as well regardless of the status of the Job.
 
 ## Switching the repository
-The `generate-copier-secret.sh` script generates the following two commands in addition to the Secret:
-- the first one replaces the `deckhouse-registry` Secret;
-- the second one replaces the `deckhouse-controller` image name.
 
-Execute them in the given order and wait for all the Pods to re-deploy. 
-
-The command below displays the list of images in use:
-```shell
-kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*].image}" |\
-tr -s '[[:space:]]' '\n' |\
-sort |\
-uniq -c
-```
+Use this [instruction](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry)
