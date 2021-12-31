@@ -1,0 +1,13 @@
+diff --git a/provisioner.go b/provisioner.go
+index b6591d0..be1aa9b 100644
+--- a/provisioner.go
++++ b/provisioner.go
+@@ -215,7 +215,7 @@ func (p *LocalPathProvisioner) Provision(opts pvController.ProvisionOptions) (*v
+ 	}
+ 
+ 	fs := v1.PersistentVolumeFilesystem
+-	hostPathType := v1.HostPathDirectoryOrCreate
++	hostPathType := v1.HostPathDirectory
+ 
+ 	valueNode, ok := node.GetLabels()[KeyNode]
+ 	if !ok {
