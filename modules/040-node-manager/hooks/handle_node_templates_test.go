@@ -555,6 +555,44 @@ spec:
 		})
 	})
 
+	Context("Update NG: NodeGroup with labels adding annotation", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: wor-ker
+spec:
+  nodeType: Static
+  nodeTemplate:
+    annotations:
+      test: test
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker
+  labels:
+    node.deckhouse.io/type: Static
+    node.deckhouse.io/group: wor-ker
+    node-role.kubernetes.io/wor-ker: ""
+spec:
+  taints:
+  - key: a
+    effect: NoSchedule
+`))
+			f.RunHook()
+		})
+
+		It("Must add annotation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			node := f.KubernetesGlobalResource("Node", "wor-ker").Parse()
+			Expect(node.Get("metadata.annotations").Map()["test"].String()).To(Equal("test"))
+		})
+	})
+
 	Context("Update NG: set empty nodeTemplate", func() {
 		BeforeEach(func() {
 
@@ -617,5 +655,4 @@ spec:
 			Expect(taintKeys).ToNot(HaveKey("a"), "taint with key 'a' should be removed")
 		})
 	})
-
 })
