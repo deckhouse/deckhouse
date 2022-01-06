@@ -1,0 +1,1439 @@
+diff --git a/pkg/kubeapiserver/authenticator/config.go b/pkg/kubeapiserver/authenticator/config.go
+index e6c00731746..aced3f1c3b7 100644
+--- a/pkg/kubeapiserver/authenticator/config.go
++++ b/pkg/kubeapiserver/authenticator/config.go
+@@ -18,10 +18,17 @@ package authenticator
+ 
+ import (
+ 	"errors"
++	"fmt"
++	"io/ioutil"
+ 	"time"
+ 
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/serializer"
+ 	utilnet "k8s.io/apimachinery/pkg/util/net"
+ 	"k8s.io/apimachinery/pkg/util/wait"
++	apiserveroidc "k8s.io/apiserver/pkg/apis/oidc"
++	apiserveroidcv1alpha1 "k8s.io/apiserver/pkg/apis/oidc/v1alpha1"
++	"k8s.io/apiserver/pkg/apis/oidc/validation"
+ 	"k8s.io/apiserver/pkg/authentication/authenticator"
+ 	"k8s.io/apiserver/pkg/authentication/authenticatorfactory"
+ 	"k8s.io/apiserver/pkg/authentication/group"
+@@ -51,6 +58,7 @@ type Config struct {
+ 	BootstrapToken bool
+ 
+ 	TokenAuthFile               string
++	OIDCProviderConfigFile      string
+ 	OIDCIssuerURL               string
+ 	OIDCClientID                string
+ 	OIDCCAFile                  string
+@@ -149,7 +157,13 @@ func (config Config) New() (authenticator.Request, *spec.SecurityDefinitions, er
+ 	// cache misses for all requests using the other. While the service account plugin
+ 	// simply returns an error, the OpenID Connect plugin may query the provider to
+ 	// update the keys, causing performance hits.
+-	if len(config.OIDCIssuerURL) > 0 && len(config.OIDCClientID) > 0 {
++	if config.OIDCProviderConfigFile != "" {
++		oidcAuth, err := newAuthenticatorFromOIDCConfigFile(config.OIDCProviderConfigFile)
++		if err != nil {
++			return nil, nil, err
++		}
++		tokenAuthenticators = append(tokenAuthenticators, authenticator.WrapAudienceAgnosticToken(config.APIAudiences, oidcAuth))
++	} else if len(config.OIDCIssuerURL) > 0 && len(config.OIDCClientID) > 0 {
+ 		// TODO(enj): wire up the Notifier and ControllerRunner bits when OIDC supports CA reload
+ 		var oidcCAContent oidc.CAContentProvider
+ 		if len(config.OIDCCAFile) != 0 {
+@@ -264,6 +278,64 @@ func newAuthenticatorFromOIDCIssuerURL(opts oidc.Options) (authenticator.Token,
+ 	return tokenAuthenticator, nil
+ }
+ 
++// newAuthenticatorFromOIDCConfigFile returns an authenticator.Token or an error.
++func newAuthenticatorFromOIDCConfigFile(file string) (authenticator.Token, error) {
++	content, err := ioutil.ReadFile(file)
++	if err != nil {
++		return nil, err
++	}
++
++	scheme := runtime.NewScheme()
++	codecs := serializer.NewCodecFactory(scheme)
++	apiserveroidc.AddToScheme(scheme)
++	apiserveroidcv1alpha1.AddToScheme(scheme)
++
++	configObj, gvk, err := codecs.UniversalDecoder().Decode(content, nil, nil)
++	if err != nil {
++		return nil, err
++	}
++	config, ok := configObj.(*apiserveroidc.Config)
++	if !ok {
++		return nil, fmt.Errorf("got unexpected config type: %v", gvk)
++	}
++
++	if err := validation.ValidateConfig(config).ToAggregate(); err != nil {
++		return nil, err
++	}
++
++	algs := make([]string, 0, len(config.Issuer.SupportedSigningAlgs))
++	for _, v := range config.Issuer.SupportedSigningAlgs {
++		algs = append(algs, string(v))
++	}
++
++	rules := make([]oidc.ValidationRule, 0, len(config.ClaimValidationRules))
++	for _, v := range config.ClaimValidationRules {
++		rules = append(rules, oidc.ValidationRule{Rule: v.Rule, Message: v.Message})
++	}
++
++	opts := oidc.Options{
++		IssuerURL:            config.Issuer.URL,
++		SupportedSigningAlgs: algs,
++		UsernameClaim:        config.ClaimMappings.Username,
++		UsernamePrefix:       config.AttributePrefixes.Username,
++		GroupsClaim:          config.ClaimMappings.Groups,
++		GroupsPrefix:         config.AttributePrefixes.Groups,
++		ValidationRules:      rules,
++	}
++
++	var oidcCAErr error
++	if len(config.Issuer.CertificateAuthority) > 0 {
++		opts.CAContentProvider, oidcCAErr = dynamiccertificates.NewDynamicCAContentFromFile("oidc-authenticator", config.Issuer.CertificateAuthority)
++	} else if len(config.Issuer.CertificateAuthorityData) > 0 {
++		opts.CAContentProvider, oidcCAErr = dynamiccertificates.NewStaticCAContent("oidc-authenticator", config.Issuer.CertificateAuthorityData)
++	}
++	if oidcCAErr != nil {
++		return nil, oidcCAErr
++	}
++
++	return newAuthenticatorFromOIDCIssuerURL(opts)
++}
++
+ // newLegacyServiceAccountAuthenticator returns an authenticator.Token or an error
+ func newLegacyServiceAccountAuthenticator(keyfiles []string, lookup bool, apiAudiences authenticator.Audiences, serviceAccountGetter serviceaccount.ServiceAccountTokenGetter) (authenticator.Token, error) {
+ 	allPublicKeys := []interface{}{}
+diff --git a/pkg/kubeapiserver/options/authentication.go b/pkg/kubeapiserver/options/authentication.go
+index d7747f73fb5..ab5b30e47ae 100644
+--- a/pkg/kubeapiserver/options/authentication.go
++++ b/pkg/kubeapiserver/options/authentication.go
+@@ -81,6 +81,7 @@ type OIDCAuthenticationOptions struct {
+ 	GroupsPrefix   string
+ 	SigningAlgs    []string
+ 	RequiredClaims map[string]string
++	ConfigFile     string
+ }
+ 
+ // ServiceAccountAuthenticationOptions contains service account authentication options for API Server
+@@ -187,8 +188,13 @@ func (o *BuiltInAuthenticationOptions) WithWebHook() *BuiltInAuthenticationOptio
+ func (o *BuiltInAuthenticationOptions) Validate() []error {
+ 	var allErrors []error
+ 
+-	if o.OIDC != nil && (len(o.OIDC.IssuerURL) > 0) != (len(o.OIDC.ClientID) > 0) {
+-		allErrors = append(allErrors, fmt.Errorf("oidc-issuer-url and oidc-client-id should be specified together"))
++	if o.OIDC != nil {
++		requiredOIDCFlagsPresent := (len(o.OIDC.IssuerURL) > 0) && (len(o.OIDC.ClientID) > 0)
++		if len(o.OIDC.ConfigFile) > 0 && requiredOIDCFlagsPresent {
++			allErrors = append(allErrors, fmt.Errorf("oidc-issuer-url and oidc-client-id must not be specified along with oidc-provider-config"))
++		} else if !requiredOIDCFlagsPresent {
++			allErrors = append(allErrors, fmt.Errorf("oidc-issuer-url and oidc-client-id should be specified together"))
++		}
+ 	}
+ 
+ 	if o.ServiceAccounts != nil && len(o.ServiceAccounts.Issuers) > 0 {
+@@ -306,6 +312,8 @@ func (o *BuiltInAuthenticationOptions) AddFlags(fs *pflag.FlagSet) {
+ 			"A key=value pair that describes a required claim in the ID Token. "+
+ 			"If set, the claim is verified to be present in the ID Token with a matching value. "+
+ 			"Repeat this flag to specify multiple claims.")
++
++		fs.StringVar(&o.OIDC.ConfigFile, "oidc-provider-config-file", o.OIDC.ConfigFile, "")
+ 	}
+ 
+ 	if o.RequestHeader != nil {
+@@ -410,6 +418,8 @@ func (o *BuiltInAuthenticationOptions) ToAuthenticationConfig() (kubeauthenticat
+ 		ret.OIDCUsernamePrefix = o.OIDC.UsernamePrefix
+ 		ret.OIDCSigningAlgs = o.OIDC.SigningAlgs
+ 		ret.OIDCRequiredClaims = o.OIDC.RequiredClaims
++		// Other options will not work if provider config file is specified
++		ret.OIDCProviderConfigFile = o.OIDC.ConfigFile
+ 	}
+ 
+ 	if o.RequestHeader != nil {
+diff --git a/staging/src/k8s.io/apiserver/go.mod b/staging/src/k8s.io/apiserver/go.mod
+index ac331e435c1..c40d6498c11 100644
+--- a/staging/src/k8s.io/apiserver/go.mod
++++ b/staging/src/k8s.io/apiserver/go.mod
+@@ -15,6 +15,8 @@ require (
+ 	github.com/go-openapi/jsonreference v0.19.5 // indirect
+ 	github.com/go-openapi/swag v0.19.14 // indirect
+ 	github.com/gogo/protobuf v1.3.2
++	github.com/google/cel-go v0.9.0
++	google.golang.org/protobuf v1.27.1
+ 	github.com/google/go-cmp v0.5.5
+ 	github.com/google/gofuzz v1.1.0
+ 	github.com/google/uuid v1.1.2
+diff --git a/staging/src/k8s.io/apiserver/go.sum b/staging/src/k8s.io/apiserver/go.sum
+index c647eddd35c..38be01b616d 100644
+--- a/staging/src/k8s.io/apiserver/go.sum
++++ b/staging/src/k8s.io/apiserver/go.sum
+@@ -63,6 +63,8 @@ github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRF
+ github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
+ github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
+ github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
++github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20210826220005-b48c857c3a0e h1:GCzyKMDDjSGnlpl3clrdAK7I1AaVoaiKDOYkUzChZzg=
++github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20210826220005-b48c857c3a0e/go.mod h1:F7bn7fEU90QkQ3tnmaTx3LTKLEDqnwWODIYppRQ5hnY=
+ github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
+ github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
+ github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
+@@ -181,6 +183,7 @@ github.com/gogo/protobuf v1.3.1/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXP
+ github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
+ github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
+ github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
++github.com/golang/glog v1.0.0/go.mod h1:EWib/APOK0SL3dFbYqvxE3UYd8E6s1ouQ7iEp/0LWV4=
+ github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+ github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+ github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+@@ -217,6 +220,9 @@ github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Z
+ github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
+ github.com/google/btree v1.0.1 h1:gK4Kx5IaGY9CD5sPJ36FHiBJ6ZXl0kilRiiCj+jdYp4=
+ github.com/google/btree v1.0.1/go.mod h1:xXMiIv4Fb/0kKde4SpL7qlzvu5cMJDRkFDxJfI9uaxA=
++github.com/google/cel-go v0.9.0 h1:u1hg7lcZ/XWw2d3aV1jFS30ijQQ6q0/h1C2ZBeBD1gY=
++github.com/google/cel-go v0.9.0/go.mod h1:U7ayypeSkw23szu4GaQTPJGx66c20mx8JklMSxrmI1w=
++github.com/google/cel-spec v0.6.0/go.mod h1:Nwjgxy5CbjlPrtCWjeDjUyKMl8w41YBYGjsyDdqk0xA=
+ github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
+ github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
+ github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
+@@ -449,6 +455,7 @@ github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
+ github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+ github.com/spf13/viper v1.7.0/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5qpdg=
+ github.com/spf13/viper v1.8.1/go.mod h1:o0Pch8wJ9BVSWGQMbra6iw0oQ5oktSIBaujf1rJH9Ns=
++github.com/stoewer/go-strcase v1.2.0 h1:Z2iHWqGXH00XYgqDmNgQbIBxf3wrNq0F3feEy0ainaU=
+ github.com/stoewer/go-strcase v1.2.0/go.mod h1:IBiWB2sKIp3wVVQ3Y035++gc+knqhUQag1KpM8ahLw8=
+ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+ github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+@@ -623,6 +630,7 @@ golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v
+ golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4/go.mod h1:RBQZq4jEuRlivfhVLdyRGr576XBO4/greRjx4P4O3yc=
+ golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4/go.mod h1:p54w0d4576C0XHj96bSt6lcn1PtDYWL6XObtHCRCNQM=
+ golang.org/x/net v0.0.0-20210525063256-abc453219eb5/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
++golang.org/x/net v0.0.0-20210825183410-e898025ed96a/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
+ golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
+ golang.org/x/net v0.0.0-20211209124913-491a49abca63 h1:iocB37TsdFuN6IBRZ+ry36wrkoV51/tl5vOWqkcPGvY=
+ golang.org/x/net v0.0.0-20211209124913-491a49abca63/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
+@@ -712,6 +720,7 @@ golang.org/x/sys v0.0.0-20210510120138-977fb7262007/go.mod h1:oPkhp1MJrh7nUepCBc
+ golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.0.0-20210616094352-59db8d763f22/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
++golang.org/x/sys v0.0.0-20210831042530-f4d43177bf5e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 h1:id054HUawV2/6IGm2IV8KZQjqtwAOo2CYlOToYqa0d0=
+ golang.org/x/sys v0.0.0-20211019181941-9d821ace8654/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
+@@ -860,6 +869,7 @@ google.golang.org/genproto v0.0.0-20200804131852-c06518451d9c/go.mod h1:FWY/as6D
+ google.golang.org/genproto v0.0.0-20200825200019-8632dd797987/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
+ google.golang.org/genproto v0.0.0-20200904004341-0bd0a958aa1d/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
+ google.golang.org/genproto v0.0.0-20201019141844-1ed22bb0c154/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
++google.golang.org/genproto v0.0.0-20201102152239-715cce707fb0/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
+ google.golang.org/genproto v0.0.0-20201109203340-2640f1f9cdfb/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
+ google.golang.org/genproto v0.0.0-20201201144952-b05cb90ed32e/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
+ google.golang.org/genproto v0.0.0-20201210142538-e3217bee35cc/go.mod h1:FWY/as6DDZQgahTzZj3fqbO1CbirC29ZNUFHwi0/+no=
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/OWNERS b/staging/src/k8s.io/apiserver/pkg/apis/oidc/OWNERS
+new file mode 100644
+index 00000000000..72f9f9c6904
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/OWNERS
+@@ -0,0 +1,8 @@
++# See the OWNERS docs at https://go.k8s.io/owners
++
++# approval on api packages bubbles to api-approvers
++reviewers:
++  - sig-auth-audit-approvers
++  - sig-auth-audit-reviewers
++labels:
++  - sig/auth
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/doc.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/doc.go
+new file mode 100644
+index 00000000000..c95c2495f8d
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/doc.go
+@@ -0,0 +1,20 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// +k8s:deepcopy-gen=package
++// +groupName=oidc.k8s.io
++
++package oidc // import "k8s.io/apiserver/pkg/apis/oidc"
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/register.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/register.go
+new file mode 100644
+index 00000000000..05582d09cf4
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/register.go
+@@ -0,0 +1,51 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package oidc
++
++import (
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++)
++
++// GroupName is the group name use in this package
++const GroupName = "oidc.k8s.io"
++
++// SchemeGroupVersion is group version used to register these objects
++var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: runtime.APIVersionInternal}
++
++// Kind takes an unqualified kind and returns a Group qualified GroupKind
++func Kind(kind string) schema.GroupKind {
++	return SchemeGroupVersion.WithKind(kind).GroupKind()
++}
++
++// Resource takes an unqualified resource and returns a Group qualified GroupResource
++func Resource(resource string) schema.GroupResource {
++	return SchemeGroupVersion.WithResource(resource).GroupResource()
++}
++
++var (
++	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
++	AddToScheme   = SchemeBuilder.AddToScheme
++)
++
++func addKnownTypes(scheme *runtime.Scheme) error {
++	scheme.AddKnownTypes(SchemeGroupVersion,
++		&Config{},
++		&ConfigList{},
++	)
++	return nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/types.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/types.go
+new file mode 100644
+index 00000000000..7bdd3859f86
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/types.go
+@@ -0,0 +1,105 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package oidc
++
++import (
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++)
++
++// SigningAlg is allowed JOSE asymmetric signing algorithm.
++// Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1.
++// +enum
++type SigningAlg string
++
++const (
++	SigningAlgRS256 SigningAlg = "RS256"
++	SigningAlgRS384 SigningAlg = "RS384"
++	SigningAlgRS512 SigningAlg = "RS512"
++	SigningAlgES256 SigningAlg = "ES256"
++	SigningAlgES384 SigningAlg = "ES384"
++	SigningAlgES512 SigningAlg = "ES512"
++	SigningAlgPS256 SigningAlg = "PS256"
++	SigningAlgPS384 SigningAlg = "PS384"
++	SigningAlgPS512 SigningAlg = "PS512"
++)
++
++// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
++
++// ConfigList is a list of OpenID connector authentication configurations.
++type ConfigList struct {
++	metav1.TypeMeta
++	// +optional
++	metav1.ListMeta
++
++	Items []Config
++}
++
++// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
++
++// Config is a settings to connect Kubernetes to OIDC as an authentication provider.
++type Config struct {
++	metav1.TypeMeta
++	// ObjectMeta is included for interoperability with API infrastructure.
++	// +optional
++	metav1.ObjectMeta
++
++	// Issuer is a basic OIDC provider connection options.
++	Issuer Issuer
++
++	// ClaimMappings points claims of an ID token to be treated as user attributes.
++	ClaimMappings UserAttributes
++
++	// AttributePrefixes is an option which shows how attributes extracted from token claims should be prefixed.
++	// This option is a way to deal with overlapping with service accounts, certificates and other authentication methods.
++	// +optional
++	AttributePrefixes UserAttributes
++
++	// ClaimValidationRules are rules that are applied to validate ID token claims to authorize users.
++	// +optional
++	ClaimValidationRules []ClaimValidationRule
++}
++
++type UserAttributes struct {
++	// Username represents an option for the username attribute.
++	// +optional
++	Username string
++	// Groups represents an option for the groups attribute.
++	// +optional
++	Groups string
++}
++
++type Issuer struct {
++	// URL points to the issuer URL in a format schema://url/path.
++	URL string
++	// CertificateAuthority is the path to a cert file for the certificate authority.
++	// +optional
++	CertificateAuthority string
++	// CertificateAuthorityData contains PEM-encoded certificate authority certificates. Overrides CertificateAuthority
++	// +optional
++	CertificateAuthorityData []byte
++	// SupportedSigningAlgs validates that OIDC provider supports required signing algorythm.
++	// +optional
++	SupportedSigningAlgs []SigningAlg
++}
++
++type ClaimValidationRule struct {
++	// Rule is a logical expression that is written in CEL https://github.com/google/cel-go.
++	Rule string
++	// Message customize returning message for validation error of the particular rule.
++	// +optional
++	Message string
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/doc.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/doc.go
+new file mode 100644
+index 00000000000..c26b9188573
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/doc.go
+@@ -0,0 +1,20 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// +k8s:deepcopy-gen=package
++// +groupName=oidc.k8s.io
++
++package v1alpha1 // import "k8s.io/apiserver/pkg/apis/oidc/v1alpha1"
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/register.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/register.go
+new file mode 100644
+index 00000000000..8ef19f49137
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/register.go
+@@ -0,0 +1,51 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package v1alpha1
++
++import (
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++)
++
++// GroupName is the group name use in this package
++const GroupName = "oidc.k8s.io"
++
++// SchemeGroupVersion is group version used to register these objects
++var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
++
++// Kind takes an unqualified kind and returns a Group qualified GroupKind
++func Kind(kind string) schema.GroupKind {
++	return SchemeGroupVersion.WithKind(kind).GroupKind()
++}
++
++// Resource takes an unqualified resource and returns a Group qualified GroupResource
++func Resource(resource string) schema.GroupResource {
++	return SchemeGroupVersion.WithResource(resource).GroupResource()
++}
++
++var (
++	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
++	AddToScheme   = SchemeBuilder.AddToScheme
++)
++
++func addKnownTypes(scheme *runtime.Scheme) error {
++	scheme.AddKnownTypes(SchemeGroupVersion,
++		&Config{},
++		&ConfigList{},
++	)
++	return nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/types.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/types.go
+new file mode 100644
+index 00000000000..1e95b9f44f3
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/types.go
+@@ -0,0 +1,105 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package v1alpha1
++
++import (
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++)
++
++// SigningAlg is allowed JOSE asymmetric signing algorithm.
++// Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1.
++// +enum
++type SigningAlg string
++
++const (
++	SigningAlgRS256 SigningAlg = "RS256"
++	SigningAlgRS384 SigningAlg = "RS384"
++	SigningAlgRS512 SigningAlg = "RS512"
++	SigningAlgES256 SigningAlg = "ES256"
++	SigningAlgES384 SigningAlg = "ES384"
++	SigningAlgES512 SigningAlg = "ES512"
++	SigningAlgPS256 SigningAlg = "PS256"
++	SigningAlgPS384 SigningAlg = "PS384"
++	SigningAlgPS512 SigningAlg = "PS512"
++)
++
++// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
++
++// ConfigList is a list of OpenID connector authentication configurations.
++type ConfigList struct {
++	metav1.TypeMeta
++	// +optional
++	metav1.ListMeta
++
++	Items []Config
++}
++
++// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
++
++// Config is a settings to connect Kubernetes to OIDC as an authentication provider.
++type Config struct {
++	metav1.TypeMeta
++	// ObjectMeta is included for interoperability with API infrastructure.
++	// +optional
++	metav1.ObjectMeta
++
++	// Issuer is a basic OIDC provider connection options.
++	Issuer Issuer
++
++	// ClaimMappings points claims of an ID token to be treated as user attributes.
++	ClaimMappings UserAttributes
++
++	// AttributePrefixes is an option which shows how attributes extracted from token claims should be prefixed.
++	// This option is a way to deal with overlapping with service accounts, certificates and other authentication methods.
++	// +optional
++	AttributePrefixes UserAttributes
++
++	// ClaimValidationRules are rules that are applied to validate ID token claims to authorize users.
++	// +optional
++	ClaimValidationRules []ClaimValidationRule
++}
++
++type UserAttributes struct {
++	// Username represents an option for the username attribute.
++	// +optional
++	Username string
++	// Groups represents an option for the groups attribute.
++	// +optional
++	Groups string
++}
++
++type Issuer struct {
++	// URL points to the issuer URL in a format schema://url/path.
++	URL string
++	// CertificateAuthority is the path to a cert file for the certificate authority.
++	// +optional
++	CertificateAuthority string
++	// CertificateAuthorityData contains PEM-encoded certificate authority certificates. Overrides CertificateAuthority
++	// +optional
++	CertificateAuthorityData []byte
++	// SupportedSigningAlgs validates that OIDC provider supports required signing algorythm.
++	// +optional
++	SupportedSigningAlgs []SigningAlg
++}
++
++type ClaimValidationRule struct {
++	// Rule is a logical expression that is written in CEL https://github.com/google/cel-go.
++	Rule string
++	// Message customize returning message for validation error of the particular rule.
++	// +optional
++	Message string
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/zz_generated.deepcopy.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/zz_generated.deepcopy.go
+new file mode 100644
+index 00000000000..80104e88241
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/v1alpha1/zz_generated.deepcopy.go
+@@ -0,0 +1,151 @@
++//go:build !ignore_autogenerated
++// +build !ignore_autogenerated
++
++/*
++Copyright The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Code generated by deepcopy-gen. DO NOT EDIT.
++
++package v1alpha1
++
++import (
++	runtime "k8s.io/apimachinery/pkg/runtime"
++)
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *ClaimValidationRule) DeepCopyInto(out *ClaimValidationRule) {
++	*out = *in
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ClaimValidationRule.
++func (in *ClaimValidationRule) DeepCopy() *ClaimValidationRule {
++	if in == nil {
++		return nil
++	}
++	out := new(ClaimValidationRule)
++	in.DeepCopyInto(out)
++	return out
++}
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *Config) DeepCopyInto(out *Config) {
++	*out = *in
++	out.TypeMeta = in.TypeMeta
++	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
++	in.Issuer.DeepCopyInto(&out.Issuer)
++	out.ClaimMappings = in.ClaimMappings
++	out.AttributePrefixes = in.AttributePrefixes
++	if in.ClaimValidationRules != nil {
++		in, out := &in.ClaimValidationRules, &out.ClaimValidationRules
++		*out = make([]ClaimValidationRule, len(*in))
++		copy(*out, *in)
++	}
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new Config.
++func (in *Config) DeepCopy() *Config {
++	if in == nil {
++		return nil
++	}
++	out := new(Config)
++	in.DeepCopyInto(out)
++	return out
++}
++
++// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
++func (in *Config) DeepCopyObject() runtime.Object {
++	if c := in.DeepCopy(); c != nil {
++		return c
++	}
++	return nil
++}
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *ConfigList) DeepCopyInto(out *ConfigList) {
++	*out = *in
++	out.TypeMeta = in.TypeMeta
++	in.ListMeta.DeepCopyInto(&out.ListMeta)
++	if in.Items != nil {
++		in, out := &in.Items, &out.Items
++		*out = make([]Config, len(*in))
++		for i := range *in {
++			(*in)[i].DeepCopyInto(&(*out)[i])
++		}
++	}
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ConfigList.
++func (in *ConfigList) DeepCopy() *ConfigList {
++	if in == nil {
++		return nil
++	}
++	out := new(ConfigList)
++	in.DeepCopyInto(out)
++	return out
++}
++
++// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
++func (in *ConfigList) DeepCopyObject() runtime.Object {
++	if c := in.DeepCopy(); c != nil {
++		return c
++	}
++	return nil
++}
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *Issuer) DeepCopyInto(out *Issuer) {
++	*out = *in
++	if in.CertificateAuthorityData != nil {
++		in, out := &in.CertificateAuthorityData, &out.CertificateAuthorityData
++		*out = make([]byte, len(*in))
++		copy(*out, *in)
++	}
++	if in.SupportedSigningAlgs != nil {
++		in, out := &in.SupportedSigningAlgs, &out.SupportedSigningAlgs
++		*out = make([]SigningAlg, len(*in))
++		copy(*out, *in)
++	}
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new Issuer.
++func (in *Issuer) DeepCopy() *Issuer {
++	if in == nil {
++		return nil
++	}
++	out := new(Issuer)
++	in.DeepCopyInto(out)
++	return out
++}
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *UserAttributes) DeepCopyInto(out *UserAttributes) {
++	*out = *in
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new UserAttributes.
++func (in *UserAttributes) DeepCopy() *UserAttributes {
++	if in == nil {
++		return nil
++	}
++	out := new(UserAttributes)
++	in.DeepCopyInto(out)
++	return out
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/validation/validation.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/validation/validation.go
+new file mode 100644
+index 00000000000..ab7a576d2b4
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/validation/validation.go
+@@ -0,0 +1,35 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Package validation validates EncryptionConfiguration.
++package validation
++
++import (
++	"k8s.io/apimachinery/pkg/util/validation/field"
++	"k8s.io/apiserver/pkg/apis/oidc"
++)
++
++// ValidateConfig validates a v1alpha1.Config.
++func ValidateConfig(c *oidc.Config) field.ErrorList {
++	allErrs := field.ErrorList{}
++
++	if len(c.Issuer.CertificateAuthority) > 0 && len(c.Issuer.CertificateAuthorityData) > 0 {
++		allErrs = append(allErrs, field.Invalid(field.NewPath("issuer"), c.Issuer, "Only one certificate authority option could be specified for the issue"))
++
++	}
++
++	return allErrs
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/validation/validation_test.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/validation/validation_test.go
+new file mode 100644
+index 00000000000..8281bc11c37
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/validation/validation_test.go
+@@ -0,0 +1,67 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package validation
++
++import (
++	"testing"
++
++	"github.com/google/go-cmp/cmp"
++	"k8s.io/apimachinery/pkg/util/validation/field"
++	"k8s.io/apiserver/pkg/apis/oidc"
++)
++
++func TestConfig(t *testing.T) {
++	testCases := []struct {
++		desc string
++		in   *oidc.Config
++		want field.ErrorList
++	}{
++		{
++			desc: "no error",
++			in:   &oidc.Config{Issuer: oidc.Issuer{}},
++			want: field.ErrorList{},
++		},
++		{
++			desc: "no error with one option",
++			in:   &oidc.Config{Issuer: oidc.Issuer{CertificateAuthority: "test"}},
++			want: field.ErrorList{},
++		},
++		{
++			desc: "no error with another option",
++			in:   &oidc.Config{Issuer: oidc.Issuer{CertificateAuthorityData: []byte("test")}},
++			want: field.ErrorList{},
++		},
++		{
++			desc: "both options provided",
++			in:   &oidc.Config{Issuer: oidc.Issuer{CertificateAuthority: "test", CertificateAuthorityData: []byte("test")}},
++			want: field.ErrorList{
++				field.Invalid(field.NewPath("issuer"),
++					oidc.Issuer{CertificateAuthority: "test", CertificateAuthorityData: []byte("test")},
++					"Only one certificate authority option could be specified for the issue"),
++			},
++		},
++	}
++
++	for _, tt := range testCases {
++		t.Run(tt.desc, func(t *testing.T) {
++			got := ValidateConfig(tt.in)
++			if d := cmp.Diff(tt.want, got); d != "" {
++				t.Fatalf("Config validation results mismatch (-want +got):\n%s", d)
++			}
++		})
++	}
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/apis/oidc/zz_generated.deepcopy.go b/staging/src/k8s.io/apiserver/pkg/apis/oidc/zz_generated.deepcopy.go
+new file mode 100644
+index 00000000000..83760c5d9b0
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/apis/oidc/zz_generated.deepcopy.go
+@@ -0,0 +1,151 @@
++//go:build !ignore_autogenerated
++// +build !ignore_autogenerated
++
++/*
++Copyright The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Code generated by deepcopy-gen. DO NOT EDIT.
++
++package oidc
++
++import (
++	runtime "k8s.io/apimachinery/pkg/runtime"
++)
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *ClaimValidationRule) DeepCopyInto(out *ClaimValidationRule) {
++	*out = *in
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ClaimValidationRule.
++func (in *ClaimValidationRule) DeepCopy() *ClaimValidationRule {
++	if in == nil {
++		return nil
++	}
++	out := new(ClaimValidationRule)
++	in.DeepCopyInto(out)
++	return out
++}
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *Config) DeepCopyInto(out *Config) {
++	*out = *in
++	out.TypeMeta = in.TypeMeta
++	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
++	in.Issuer.DeepCopyInto(&out.Issuer)
++	out.ClaimMappings = in.ClaimMappings
++	out.AttributePrefixes = in.AttributePrefixes
++	if in.ClaimValidationRules != nil {
++		in, out := &in.ClaimValidationRules, &out.ClaimValidationRules
++		*out = make([]ClaimValidationRule, len(*in))
++		copy(*out, *in)
++	}
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new Config.
++func (in *Config) DeepCopy() *Config {
++	if in == nil {
++		return nil
++	}
++	out := new(Config)
++	in.DeepCopyInto(out)
++	return out
++}
++
++// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
++func (in *Config) DeepCopyObject() runtime.Object {
++	if c := in.DeepCopy(); c != nil {
++		return c
++	}
++	return nil
++}
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *ConfigList) DeepCopyInto(out *ConfigList) {
++	*out = *in
++	out.TypeMeta = in.TypeMeta
++	in.ListMeta.DeepCopyInto(&out.ListMeta)
++	if in.Items != nil {
++		in, out := &in.Items, &out.Items
++		*out = make([]Config, len(*in))
++		for i := range *in {
++			(*in)[i].DeepCopyInto(&(*out)[i])
++		}
++	}
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ConfigList.
++func (in *ConfigList) DeepCopy() *ConfigList {
++	if in == nil {
++		return nil
++	}
++	out := new(ConfigList)
++	in.DeepCopyInto(out)
++	return out
++}
++
++// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
++func (in *ConfigList) DeepCopyObject() runtime.Object {
++	if c := in.DeepCopy(); c != nil {
++		return c
++	}
++	return nil
++}
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *Issuer) DeepCopyInto(out *Issuer) {
++	*out = *in
++	if in.CertificateAuthorityData != nil {
++		in, out := &in.CertificateAuthorityData, &out.CertificateAuthorityData
++		*out = make([]byte, len(*in))
++		copy(*out, *in)
++	}
++	if in.SupportedSigningAlgs != nil {
++		in, out := &in.SupportedSigningAlgs, &out.SupportedSigningAlgs
++		*out = make([]SigningAlg, len(*in))
++		copy(*out, *in)
++	}
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new Issuer.
++func (in *Issuer) DeepCopy() *Issuer {
++	if in == nil {
++		return nil
++	}
++	out := new(Issuer)
++	in.DeepCopyInto(out)
++	return out
++}
++
++// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
++func (in *UserAttributes) DeepCopyInto(out *UserAttributes) {
++	*out = *in
++	return
++}
++
++// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new UserAttributes.
++func (in *UserAttributes) DeepCopy() *UserAttributes {
++	if in == nil {
++		return nil
++	}
++	out := new(UserAttributes)
++	in.DeepCopyInto(out)
++	return out
++}
+diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/cel.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/cel.go
+new file mode 100644
+index 00000000000..170f670b123
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/cel.go
+@@ -0,0 +1,109 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package oidc
++
++import (
++	"fmt"
++	"strings"
++
++	"github.com/google/cel-go/cel"
++	"github.com/google/cel-go/checker/decls"
++	"github.com/google/cel-go/common/types"
++	"google.golang.org/protobuf/proto"
++	"k8s.io/apimachinery/pkg/util/validation/field"
++)
++
++type ValidationRule struct {
++	Rule    string
++	Message string
++
++	prog cel.Program
++}
++
++func (r *ValidationRule) String() string {
++	if r.Message != "" {
++		return r.Message
++	}
++	return r.Rule
++}
++
++type celValidator struct {
++	rules []ValidationRule
++}
++
++func newCelValidator(expressions []ValidationRule) (*celValidator, error) {
++	env, err := cel.NewEnv(cel.Declarations(
++		decls.NewVar("self", decls.NewMapType(decls.String, decls.Dyn)),
++	))
++	if err != nil {
++		return nil, err
++	}
++
++	var allErrs field.ErrorList
++	root := field.NewPath("claimValidationRules")
++
++	for i, rule := range expressions {
++		if len(strings.TrimSpace(rule.Rule)) == 0 {
++			// include a compilation result, but leave both program and error nil per documented return semantics of this
++			// function
++		} else {
++			ast, issues := env.Compile(rule.Rule)
++			if issues != nil {
++				allErrs = append(allErrs, field.Invalid(root.Index(i), rule, "compilation failed: "+issues.String()))
++			} else if !proto.Equal(ast.ResultType(), decls.Bool) {
++				allErrs = append(allErrs, field.Invalid(root.Index(i), rule, "cel expression must evaluate to a bool"))
++			} else {
++				prog, err := env.Program(ast)
++				if err != nil {
++					allErrs = append(allErrs, field.Invalid(root.Index(i), rule, "program instantiation failed: "+err.Error()))
++				} else {
++					expressions[i].prog = prog
++				}
++			}
++		}
++	}
++
++	if len(allErrs) > 0 {
++		return nil, allErrs.ToAggregate()
++	}
++
++	return &celValidator{rules: expressions}, nil
++}
++
++func (v *celValidator) Validate(claims map[string]interface{}) error {
++	var allErrs field.ErrorList
++	root := field.NewPath("self")
++
++	for _, rule := range v.rules {
++		evalResult, _, err := rule.prog.Eval(claims)
++		if err != nil {
++			// see types.Err for list of well defined error types
++			if strings.HasPrefix(err.Error(), "no such overload") {
++				allErrs = append(allErrs, field.Invalid(root, claims, fmt.Sprintf("'%v': call arguments did not match a supported operator, function or macro signature for rule: %v", err, rule.String())))
++			} else {
++				// no such key: {key}, index out of bounds: {index}, integer overflow, division by zero, ...
++				allErrs = append(allErrs, field.Invalid(root, claims, fmt.Sprintf("%v evaluating rule: %v", err, rule.String())))
++			}
++			continue
++		}
++		if evalResult != types.True {
++			allErrs = append(allErrs, field.Invalid(root, claims, rule.String()))
++		}
++	}
++
++	return allErrs.ToAggregate()
++}
+diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/cel_test.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/cel_test.go
+new file mode 100644
+index 00000000000..ebf4cd566dd
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/cel_test.go
+@@ -0,0 +1,126 @@
++/*
++Copyright 2022 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package oidc
++
++import (
++	"fmt"
++	"testing"
++)
++
++func TestCelValidator(t *testing.T) {
++	testsSuit := []struct {
++		name  string
++		rules []ValidationRule
++		in    map[string]interface{}
++		out   error
++	}{
++		{
++			name: "Valid client ID",
++			rules: []ValidationRule{
++				{Rule: `self.aud == "test"`},
++			},
++			in: map[string]interface{}{
++				"aud": "test",
++			},
++			out: nil,
++		},
++		{
++			name: "Forbidden client ID",
++			rules: []ValidationRule{
++				{
++					Rule:    `self.aud == "test-1" || self.aud == "test-2"`,
++					Message: "tests other than test-1 or test-2 are not allowed",
++				},
++			},
++			in: map[string]interface{}{
++				"aud": "test-3",
++			},
++			out: fmt.Errorf(`self: Invalid value: map[string]interface {}{"self":map[string]interface {}{"aud":"test-3"}}: tests other than test-1 or test-2 are not allowed`),
++		},
++		{
++			name: "Two claims validation",
++			rules: []ValidationRule{
++				{
++					Rule: `self.aud == "kubernetes"`,
++				},
++				{
++					Rule:    `self.sub == "Jack"`,
++					Message: "Only Jack is allowed to access Kubernetes",
++				},
++			},
++			in: map[string]interface{}{
++				"sub": "Jane",
++				"aud": "kubernetes",
++			},
++			out: fmt.Errorf(`self: Invalid value: map[string]interface {}{"self":map[string]interface {}{"aud":"kubernetes", "sub":"Jane"}}: Only Jack is allowed to access Kubernetes`),
++		},
++		{
++			name: "Array aud",
++			rules: []ValidationRule{
++				{
++					Rule: `self.aud.exists(k, k == "kubernetes")`,
++				},
++			},
++			in: map[string]interface{}{
++				"aud": []string{"kubernetes", "something else"},
++			},
++			out: nil,
++		},
++		{
++			name: "Array aud forbidden",
++			rules: []ValidationRule{
++				{
++					Rule: `self.aud.exists(k, k == "kubernetes")`,
++				},
++			},
++			in: map[string]interface{}{
++				"aud": []string{"one", "another"},
++			},
++			out: fmt.Errorf(`self: Invalid value: map[string]interface {}{"self":map[string]interface {}{"aud":[]string{"one", "another"}}}: self.aud.exists(k, k == "kubernetes")`),
++		},
++	}
++
++	for _, testCase := range testsSuit {
++		t.Run(testCase.name, func(t *testing.T) {
++			validator, err := newCelValidator(testCase.rules)
++			if err != nil {
++				t.Fatalf(err.Error())
++			}
++
++			err = validator.Validate(map[string]interface{}{
++				"self": testCase.in,
++			})
++
++			wantErr := testCase.out != nil
++			if wantErr && err == nil {
++				t.Fatalf("wanted error \"%v\", got \"%v\"", testCase.out, err)
++			}
++
++			if !wantErr && err != nil {
++				t.Fatalf("wanted error \"%v\", got \"%v\"", testCase.out, err)
++			}
++
++			if !wantErr && err == nil {
++				return
++			}
++
++			if testCase.out.Error() != err.Error() {
++				t.Fatalf("wanted error \"%v\", got \"%v\"", testCase.out, err)
++			}
++		})
++	}
++}
+diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
+index 0a79502aa64..08a1d32b317 100644
+--- a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
++++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
+@@ -118,11 +118,14 @@ type Options struct {
+ 	// required claims key value pairs are present in the ID Token.
+ 	RequiredClaims map[string]string
+ 
++	// ValidationRules are additional rules that are applied to ID token claims.
++	ValidationRules []ValidationRule
++
+ 	// now is used for testing. It defaults to time.Now.
+ 	now func() time.Time
+ }
+ 
+-// Subset of dynamiccertificates.CAContentProvider that can be used to dynamically load root CAs.
++// CAContentProvider is a subset of dynamiccertificates.CAContentProvider that can be used to dynamically load root CAs.
+ type CAContentProvider interface {
+ 	CurrentCABundleContent() []byte
+ }
+@@ -208,6 +211,9 @@ type Authenticator struct {
+ 
+ 	// resolver is used to resolve distributed claims.
+ 	resolver *claimResolver
++
++	// validator is used to apply additional custom claim validation rules to the ID token claims
++	validator *celValidator
+ }
+ 
+ func (a *Authenticator) setVerifier(v *oidc.IDTokenVerifier) {
+@@ -246,7 +252,7 @@ func New(opts Options) (*Authenticator, error) {
+ 	}
+ 
+ 	if url.Scheme != "https" {
+-		return nil, fmt.Errorf("'oidc-issuer-url' (%q) has invalid scheme (%q), require 'https'", opts.IssuerURL, url.Scheme)
++		return nil, fmt.Errorf("'oidc issuer url' (%q) has invalid scheme (%q), require 'https'", opts.IssuerURL, url.Scheme)
+ 	}
+ 
+ 	if opts.UsernameClaim == "" {
+@@ -293,6 +299,11 @@ func New(opts Options) (*Authenticator, error) {
+ 		client = &http.Client{Transport: tr, Timeout: 30 * time.Second}
+ 	}
+ 
++	validator, err := newCelValidator(opts.ValidationRules)
++	if err != nil {
++		return nil, err
++	}
++
+ 	ctx, cancel := context.WithCancel(context.Background())
+ 	ctx = oidc.ClientContext(ctx, client)
+ 
+@@ -307,6 +318,11 @@ func New(opts Options) (*Authenticator, error) {
+ 		Now:                  now,
+ 	}
+ 
++	// Do not validate client id with go-oidc, because we will do it later with validating rules
++	if verifierConfig.ClientID == "" {
++		verifierConfig.SkipClientIDCheck = true
++	}
++
+ 	var resolver *claimResolver
+ 	if opts.GroupsClaim != "" {
+ 		resolver = newClaimResolver(opts.GroupsClaim, client, verifierConfig)
+@@ -321,6 +337,7 @@ func New(opts Options) (*Authenticator, error) {
+ 		requiredClaims: opts.RequiredClaims,
+ 		cancel:         cancel,
+ 		resolver:       resolver,
++		validator:      validator,
+ 	}
+ 
+ 	if opts.KeySet != nil {
+@@ -638,6 +655,16 @@ func (a *Authenticator) AuthenticateToken(ctx context.Context, token string) (*a
+ 		}
+ 	}
+ 
++	var celClaims map[string]interface{}
++	if err := idToken.Claims(&celClaims); err != nil {
++		return nil, false, fmt.Errorf("oidc: unmarshal claims: %v", err)
++	}
++
++	err = a.validator.Validate(map[string]interface{}{"self": celClaims})
++	if err != nil {
++		return nil, false, fmt.Errorf("oidc: validate claims: %v", err)
++	}
++
+ 	return &authenticator.Response{User: info}, true, nil
+ }
+ 
+diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc_test.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc_test.go
+index 85ba2959daa..6171da469c2 100644
+--- a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc_test.go
++++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc_test.go
+@@ -1387,7 +1387,7 @@ func TestToken(t *testing.T) {
+ 			pubKeys: []*jose.JSONWebKey{
+ 				loadRSAKey(t, "testdata/rsa_1.pem", jose.RS256),
+ 			},
+-			wantInitErr: `'oidc-issuer-url' ("http://auth.example.com") has invalid scheme ("http"), require 'https'`,
++			wantInitErr: `'oidc issuer url' ("http://auth.example.com") has invalid scheme ("http"), require 'https'`,
+ 		},
+ 		{
+ 			name: "no-username-claim",
+@@ -1472,6 +1472,28 @@ func TestToken(t *testing.T) {
+ 			}`, valid.Unix()),
+ 			wantErr: `oidc: verify token: oidc: expected audience "my-client" got ["my-wrong-client"]`,
+ 		},
++		{
++			name: "good token with bad client id (validating rules)",
++			options: Options{
++				IssuerURL: "https://auth.example.com",
++				ValidationRules: []ValidationRule{
++					{Rule: `self.aud == "my-client"`},
++				},
++				UsernameClaim: "username",
++				now:           func() time.Time { return now },
++			},
++			signingKey: loadRSAPrivKey(t, "testdata/rsa_1.pem", jose.RS256),
++			pubKeys: []*jose.JSONWebKey{
++				loadRSAKey(t, "testdata/rsa_1.pem", jose.RS256),
++			},
++			claims: fmt.Sprintf(`{
++				"iss": "https://auth.example.com",
++				"aud": "my-wrong-client",
++				"username": "jane",
++				"exp": %d
++			}`, valid.Unix()),
++			wantErr: "oidc: validate claims: self: Invalid value: map[string]interface {}{\"self\":map[string]interface {}{\"aud\":\"my-wrong-client\", \"exp\":1.2578976e+09, \"iss\":\"https://auth.example.com\", \"username\":\"jane\"}}: self.aud == \"my-client\"",
++		},
+ 	}
+ 	for _, test := range tests {
+ 		t.Run(test.name, test.run)

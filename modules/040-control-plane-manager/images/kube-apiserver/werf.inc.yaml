@@ -32,6 +32,8 @@ from: {{ env "BASE_GOLANG_16_ALPINE" }}
 git:
   - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
+    stageDependencies:
+      install: '**/*'
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync
