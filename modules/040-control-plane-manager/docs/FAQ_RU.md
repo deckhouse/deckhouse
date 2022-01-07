@@ -4,7 +4,46 @@ title: "Управление control plane: FAQ"
 
 ## Как добавить master-узел?
 
-Поставить на узле кластер label `node-role.kubernetes.io/master: ""`, все остальное произойдет полностью автоматически.
+### Cтатичный или гибридный кластер
+Добавление master-узла в статичный или гибридный кластер ничем не отличается от добавления обычного узла в кластер. Воспользуйтесь для этого соответствующей [инструкцией](../040-node-manager/faq.html#как-автоматически-добавить-статичный-узел-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе Ready.
+
+### Облачный кластер
+
+> Перед добавлением узлов, убедитесь в наличии необходимых квот!
+
+Чтобы добавить в облачный кластер один или несколько master-узлов, выполните следующие действия:
+- Определите версию и редакцию Deckhouse используемую в кластере. Для этого, выполните на master-узле, или на хосте с настроенным доступом kubectl в кластер:
+  ```shell
+  kubectl -n d8-system get deployment deckhouse \
+  -o jsonpath='version-{.metadata.annotations.core\.deckhouse\.io\/version}, edition-{.metadata.annotations.core\.deckhouse\.io\/edition}' \
+  | tr '[:upper:]' '[:lower:]'
+  ```
+- Запустите контейнер с инсталлятором, версия и редакция которого соответствуют версии и редакции Deckhouse в кластере:
+  ```shell
+  docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+  registry.deckhouse.io/deckhouse/<DECKHOUSE_EDITION>/install:<DECKHOUSE_VERSION> bash
+  ```
+
+  Например, если версия Deckhouse в кластере — `v1.28.0`, редакция — `ee`, то команда запуска инсталлятора будет следующей:
+  ```shell
+  docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ee/install:v1.28.0 bash
+  ```
+  
+  > Измените адрес container registry при необходимости (например, если вы используете внутренний container registry).  
+
+- В контейнере с инсталлятором выполните следующую команду (используйте ключи `--ssh-bastion-*` в случае доступа через bastion-хост):
+  ```shell
+  dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+  --ssh-host <SSH_HOST>
+  ```
+- В открывшемся окне редактирования ресурса `<PROVIDERNAME>ClusterConfiguration` (например, `OpenStackClusterConfiguration` в случае OpenStack) укажите необходимое количество реплик master-узла в поле `masterNodeGroup.replicas` и сохраните изменения.
+- Запустите масштабирование, выполнив следующую команду (необходимо указать соответствующие параметры доступа в кластер, как на предыдущем шаге):
+  ```shell
+  dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <SSH_HOST>
+  ```
+- Ответьте утвердительно на вопрос `Do you want to CHANGE objects state in the cloud?`.
+
+Все остальные действия будут выполнены автоматически, дождитесь их завершения — появления необходимого количества master-узлов в статусе `Ready`.  
 
 ## Как удалить master-узел?
 

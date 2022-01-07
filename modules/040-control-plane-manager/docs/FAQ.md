@@ -3,8 +3,45 @@ title: "Managing control plane: FAQ"
 ---
 
 ## How do I add a master node?
+### Static or hybrid cluster
+Adding a master node to a static or hybrid cluster has no difference from adding a regular node to a cluster. To do this, use the corresponding [instruction](../040-node-manager/faq.html#how-do-i-automatically-add-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in Ready status.
 
-All you need to do is to attach the `node-role.kubernetes.io/master: ""` label to a cluster node (all other actions are performed automatically).
+### Cloud cluster
+> Make sure you have all the necessary quota limits, before adding nodes.
+
+To add one or more master nodes to a cloud cluster, follow these steps:
+- Determine the Deckhouse version and edition used in the cluster by running the following command on the master node or a host with configured kubectl access to the cluster: 
+  ```shell
+  kubectl -n d8-system get deployment deckhouse \
+  -o jsonpath='version-{.metadata.annotations.core\.deckhouse\.io\/version}, edition-{.metadata.annotations.core\.deckhouse\.io\/edition}' \
+  | tr '[:upper:]' '[:lower:]'
+  ```
+- Run the corresponding version and edition of the Deckhouse installer:
+  ```shell
+  docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+  registry.deckhouse.io/deckhouse/<DECKHOUSE_EDITION>/install:<DECKHOUSE_VERSION> bash
+  ```
+
+  For example, if the Deckhouse version in the cluster is `v1.28.0` and the Deckhouse edition is `ee`, the command to run the installer will be:
+  ```shell
+  docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ee/install:v1.28.0 bash
+  ```
+  
+  > Change the container registry address if necessary (e.g, if you use an internal container registry).
+
+- Run the following command inside the installer container (use the `--ssh-bastion-*` parameters if using a bastion host):
+  ```shell
+  dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+  --ssh-host <SSH_HOST>
+  ```
+- Specify the required number of master node replicas in the `masterNodeGroup.replicas` field and save changes.
+- Start scaling process by running the following command (specify the appropriate cluster access parameters, as in the previous step):
+  ```shell
+  dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <SSH_HOST>
+  ```
+- Answer `Yes` to the question `Do you want to CHANGE objects state in the cloud?`.
+
+All the other actions are performed automatically. Wait until the master nodes appears in Ready status.
 
 ## How do I delete the master node?
 
