@@ -133,7 +133,7 @@ metadata:
   name: bashible-apiserver-context
   namespace: d8-cloud-instance-manager
   annotations:
-    checksum/node-users: {{ .Values.nodeManager.internal.nodeUsers | sha256sum }}
+    checksum/node-users: {{ .Values.nodeManager.internal.nodeUsers | toJson | sha256sum }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
 data:
   input.yaml: |-
