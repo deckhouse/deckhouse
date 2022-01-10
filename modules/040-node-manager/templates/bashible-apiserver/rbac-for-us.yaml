@@ -77,6 +77,16 @@ rules:
     resources: ["prioritylevelconfigurations", "flowschemas"]
     verbs: ["get", "watch", "list"]
 ---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:node-manager:bashible-apiserver:nodeconfigurations
+{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
+rules:
+  - apiGroups: ["deckhouse.io"]
+    resources: ["nodegroupconfigurations"]
+    verbs: ["get", "list", "watch"]
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -90,6 +100,20 @@ subjects:
 - kind: ServiceAccount
   name: bashible-apiserver
   namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible-apiserver:nodeconfigurations-reader
+{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible-apiserver:nodeconfigurations
+subjects:
+  - kind: ServiceAccount
+    name: bashible-apiserver
+    namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

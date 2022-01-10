@@ -17,17 +17,19 @@ limitations under the License.
 package template
 
 import (
+	"errors"
 	"fmt"
 )
 
 const versionMap = "versionMap"
 
-func NewStepsRenderer(bashibleContext Context, rootDir, target string, nameMapper NameMapper) *StepsRenderer {
+func NewStepsRenderer(stepsStorage *StepsStorage, bashibleContext Context, rootDir, target string, nameMapper NameMapper) *StepsRenderer {
 	return &StepsRenderer{
 		bashibleContext: bashibleContext,
 		rootDir:         rootDir,
 		contextName:     nameMapper,
 		target:          target,
+		stepsStorage:    stepsStorage,
 	}
 }
 
@@ -36,10 +38,12 @@ type StepsRenderer struct {
 	rootDir         string
 	contextName     NameMapper
 	target          string
+
+	stepsStorage *StepsStorage
 }
 
 // Render renders single script content by name which is expected to be of form {os}.{target}
-func (s StepsRenderer) Render(name string) (map[string]string, error) {
+func (s StepsRenderer) Render(name string, ng ...string) (map[string]string, error) {
 	templateContext, err := s.getContext(name)
 	if err != nil {
 		return nil, err
@@ -48,8 +52,12 @@ func (s StepsRenderer) Render(name string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	stepsStorage := NewStepsStorage(s.rootDir, providerType, s.target)
-	return stepsStorage.Render(templateContext)
+
+	bundle, ok := templateContext["bundle"].(string)
+	if !ok {
+		return nil, errors.New("expected string in templateContext[\"bundle\"]")
+	}
+	return s.stepsStorage.Render(s.target, bundle, providerType, templateContext, ng...)
 }
 
 func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {

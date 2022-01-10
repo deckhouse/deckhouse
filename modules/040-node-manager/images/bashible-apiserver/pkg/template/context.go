@@ -46,13 +46,14 @@ const (
 	versionMapFile = "/var/files/version_map.yml"
 )
 
-func NewContext(ctx context.Context, contextSecretFactory, registrySecretFactory informers.SharedInformerFactory, secretHandler checksumSecretUpdater, updateHandler UpdateHandler) *BashibleContext {
+func NewContext(ctx context.Context, stepsStorage *StepsStorage, contextSecretFactory, registrySecretFactory informers.SharedInformerFactory, secretHandler checksumSecretUpdater, updateHandler UpdateHandler) *BashibleContext {
 	c := BashibleContext{
 		ctx:            ctx,
 		updateHandler:  updateHandler,
 		secretHandler:  secretHandler,
-		contextBuilder: NewContextBuilder(ctx, "/bashible/templates"),
+		contextBuilder: NewContextBuilder(ctx, stepsStorage),
 		checksums:      make(map[string]string),
+		stepsStorage:   stepsStorage,
 	}
 
 	c.runFilesParser()
@@ -91,20 +92,22 @@ type BashibleContext struct {
 	updateHandler UpdateHandler
 	secretHandler checksumSecretUpdater
 
+	// input values checksums
 	checksums map[string]string
 
 	// data (taken by secretKey from secret) maps `contextKey` to `contextValue`,
 	// the being arbitrary data for a combination of os, nodegroup, & kubeversion
 	data map[string]interface{}
+
+	stepsStorage *StepsStorage
 }
 
 func (c *BashibleContext) subscribe(ctx context.Context, factory informers.SharedInformerFactory, secretName string) chan map[string][]byte {
 	ch := make(chan map[string][]byte)
-	stopInformer := make(chan struct{})
 
 	// Launch the informer
 	informer := factory.Core().V1().Secrets().Informer()
-	go informer.Run(stopInformer)
+	go informer.Run(ctx.Done())
 
 	// Subscribe to updates
 	informer.AddEventHandler(cache.FilteringResourceEventHandler{
@@ -116,10 +119,6 @@ func (c *BashibleContext) subscribe(ctx context.Context, factory informers.Share
 	for !informer.HasSynced() {
 		time.Sleep(200 * time.Millisecond)
 	}
-	go func() {
-		<-ctx.Done()
-		close(stopInformer)
-	}()
 
 	return ch
 }
@@ -288,6 +287,9 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.contextBuilder.SetRegistryData(input.toRegistry())
 			c.registrySynced = true
 			c.saveChecksum("registry", checksum)
+			c.update()
+
+		case <-c.stepsStorage.OnNodeConfigurationsChanged():
 			c.update()
 
 		case <-ctx.Done():
