@@ -5,7 +5,7 @@ metadata:
   name: annotations-converter
 {{ include "helm_lib_module_labels" (list . (dict "app" "annotations-converter")) | indent 2 }}
 webhooks:
-- name: webhook.cert-manager.io
+- name: annotations-converter.webhook.cert-manager.io
   admissionReviewVersions: ["v1", "v1beta1"]
   failurePolicy: Fail
   {{- if semverCompare ">=1.15" .Values.global.discovery.kubernetesVersion }}
