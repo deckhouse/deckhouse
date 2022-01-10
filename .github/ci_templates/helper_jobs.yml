@@ -93,16 +93,19 @@ pull_request_info:
     - name: Check if allow to run tests
       id: check
       uses: {!{ index (ds "actions") "actions/github-script" }!}
-      if: ${{ !(
-        context.payload.pull_request.head.repo.full_name == context.payload.repository.full_name &&
-        startsWith( context.payload.pull_request.head.ref, 'changelog/v' )
-      ) }}
+      # Skip automation PRs, e.g. changelog
+      if: ${{ github.pull_request.author.login != "deckhouse-BOaTswain" }}
       with:
         script: |
           console.log("(a) context.payload.pull_request.head.repo.full_name = ${{ context.payload.pull_request.head.repo.full_name }}")
           console.log("(b) context.payload.repository.full_name = ${{ context.payload.repository.full_name }}")
           console.log("(a) == (b) = ${{ context.payload.pull_request.head.repo.full_name == context.payload.repository.full_name }}")
           console.log("isChangelog = startsWith( ${{ context.payload.pull_request.head.ref }}, 'changelog/v' ) = ${{ startsWith( context.payload.pull_request.head.ref, 'changelog/v' ) }}")
+          console.log("context.payload.pull_request.author = ${{ context.payload.pull_request.author }}")
+          console.log("github.pull_request.author = ${{ github.pull_request.author }}")
+          console.log("github.pull_request.author.login = ${{ github.pull_request.author.login }}")
+          console.log("github.pull_request.user = ${{ github.pull_request.user }}")
+          console.log("github.pull_request.user.login = ${{ github.pull_request.user.login }}")
 
           // Assume workflow_dispatch is safe to run.
           // TODO add owner, repo, sha to inputs to check them here.
