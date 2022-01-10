@@ -93,21 +93,17 @@ pull_request_info:
     - name: Check if allow to run tests
       id: check
       uses: {!{ index (ds "actions") "actions/github-script" }!}
-      if: (
-        (
-          # inner PR, but not changelog and not from dependabot
-          context.payload.pull_request.head.repo.full_name == context.payload.repository.full_name &&
-          context.actor != 'dependabot[bot]' &&
-          context.payload.pull_request.head.ref.startsWith('changelog/v') == false
-        ) || (
-          # external PR from dependabot and labelled ok to test
-          context.payload.pull_request.head.repo.full_name != context.payload.repository.full_name &&
-          context.actor == 'dependabot[bot]' &&
-          response.data[0].labels.some((l) => l.name === 'status/ok-to-test')
-        )
-      )
+      if: ${{ !(
+        context.payload.pull_request.head.repo.full_name == context.payload.repository.full_name &&
+        startsWith( context.payload.pull_request.head.ref, 'changelog/v' )
+      ) }}
       with:
         script: |
+          console.log("(a) context.payload.pull_request.head.repo.full_name = ${{ context.payload.pull_request.head.repo.full_name }}")
+          console.log("(b) context.payload.repository.full_name = ${{ context.payload.repository.full_name }}")
+          console.log("(a) == (b) = ${{ context.payload.pull_request.head.repo.full_name == context.payload.repository.full_name }}")
+          console.log("isChangelog = startsWith( ${{ context.payload.pull_request.head.ref }}, 'changelog/v' ) = ${{ startsWith( context.payload.pull_request.head.ref, 'changelog/v' ) }}")
+
           // Assume workflow_dispatch is safe to run.
           // TODO add owner, repo, sha to inputs to check them here.
           if (context.eventName === 'workflow_dispatch') {
