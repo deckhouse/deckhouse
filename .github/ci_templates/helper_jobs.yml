@@ -93,6 +93,19 @@ pull_request_info:
     - name: Check if allow to run tests
       id: check
       uses: {!{ index (ds "actions") "actions/github-script" }!}
+      if: (
+        (
+          # inner PR, but not changelog and not from dependabot
+          context.payload.pull_request.head.repo.full_name == context.payload.repository.full_name &&
+          context.actor != 'dependabot[bot]' &&
+          context.payload.pull_request.head.ref.startsWith('changelog/v') == false
+        ) || (
+          # external PR from dependabot and labelled ok to test
+          context.payload.pull_request.head.repo.full_name != context.payload.repository.full_name &&
+          context.actor == 'dependabot[bot]' &&
+          response.data[0].labels.some((l) => l.name === 'status/ok-to-test')
+        )
+      )
       with:
         script: |
           // Assume workflow_dispatch is safe to run.
@@ -128,6 +141,7 @@ pull_request_info:
           const isDependabot = (context.actor === 'dependabot[bot]');
           const isChangelog = context.payload.pull_request.head.ref.startsWith('changelog/v');
           const okToTest = response.data[0].labels.some((l) => l.name === 'status/ok-to-test');
+
           core.info(`PR internal?          ${isInternal}`)
           core.info(`PR from dependabot?   ${isDependabot}`)
           core.info(`PR changelog?         ${isChangelog}`)
