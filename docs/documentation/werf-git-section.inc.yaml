@@ -4,7 +4,7 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  excludePaths: ['*/docs/internal/','110-istio/crds']
+  excludePaths: ['*/docs/internal/','110-istio/crds','040-node-manager/crds/mcm.yaml']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
 {{- if or (eq .Env "EE") (eq .Env "FE") }}
 - add: /ee/modules
