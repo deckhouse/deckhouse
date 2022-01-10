@@ -39,6 +39,7 @@ webhooks:
         name: cert-manager-webhook
         namespace: d8-cert-manager
         path: /mutate
+{{- if semverCompare "< 1.22" .Values.global.discovery.kubernetesVersion }}
   - name: webhook.certmanager.k8s.io
     rules:
       - apiGroups:
@@ -64,4 +65,4 @@ webhooks:
         name: kubernetes
         namespace: default
         path: /apis/webhook.certmanager.k8s.io/v1beta1/mutations
-
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if semverCompare "< 1.22" .Values.global.discovery.kubernetesVersion }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -100,3 +101,4 @@ spec:
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
+{{- end }}
