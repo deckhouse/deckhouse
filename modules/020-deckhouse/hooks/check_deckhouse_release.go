@@ -250,11 +250,11 @@ type canarySettings struct {
 	Interval Duration `json:"interval"` // in minutes
 }
 
-func GetCA(input *go_hook.HookInput) string {
+func getCA(input *go_hook.HookInput) string {
 	return input.Values.Get("global.modulesImages.registryCA").String()
 }
 
-func IsHTTP(input *go_hook.HookInput) bool {
+func isHTTP(input *go_hook.HookInput) bool {
 	registryScheme := input.Values.Get("global.modulesImages.registryScheme").String()
 	return registryScheme == "http"
 }
@@ -321,7 +321,7 @@ func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Containe
 	repo := input.Values.Get("global.modulesImages.registry").String() // host/ns/repo
 
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), GetCA(input), IsHTTP(input))
+	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)))
 	if err != nil {
 		return nil, err
 	}

@@ -35,6 +35,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		  }
         },
 		"deckhouse": {
+              "internal": {},
               "releaseChannel": "Stable",
 			  "update": {
 				"mode": "Auto",

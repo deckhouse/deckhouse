@@ -37,6 +37,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/v1alpha1"
 )
@@ -414,6 +415,8 @@ func applyRelease(input *go_hook.HookInput, rl deckhouseRelease, ts time.Time) {
 		TransitionTime: ts,
 	}
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+	// patch deckhouse deployment is faster then set internal values and then upgrade by helm
+	// we can set "deckhouse.internal.currentReleaseImageName" value but lets left it this way
 	input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var depl appsv1.Deployment
 		err := sdk.FromUnstructured(u, &depl)
@@ -477,7 +480,7 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container) error {
 	repo := deckhousePod.Image[:imageSplitIndex]
 	tag := deckhousePod.Image[imageSplitIndex+1:]
 
-	regClient, err := dc.GetRegistryClient(repo, GetCA(input), IsHTTP(input))
+	regClient, err := dc.GetRegistryClient(repo, cr.WithCA(getCA(input)), cr.WithInsecureSchema(isHTTP(input)))
 	if err != nil {
 		input.LogEntry.Errorf("Registry (%s) client init failed: %s", repo, err)
 		return nil

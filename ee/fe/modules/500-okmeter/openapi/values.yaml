@@ -5,3 +5,9 @@ properties:
   internal:
     type: object
     default: {}
+    properties:
+      currentReleaseImage:
+        type: string
+        default: 'registry.okmeter.io/agent/okagent:stub'
+      currentReleaseImageHash:
+        type: string

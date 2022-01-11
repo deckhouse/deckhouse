@@ -42,8 +42,6 @@ spec:
       labels:
         name: okmeter
     spec:
-      imagePullSecrets:
-      - name: deckhouse-registry
       serviceAccountName: okmeter
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -57,7 +55,7 @@ spec:
       containers:
       - name: okagent
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.okmeter.okagent }}
+        image: {{ $.Values.okmeter.internal.currentReleaseImage }}
         env:
         - name: OKMETER_API_TOKEN
           valueFrom:
