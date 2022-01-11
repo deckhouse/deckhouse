@@ -3,8 +3,8 @@ module ingress-webhook
 go 1.12
 
 require (
-	github.com/slok/kubewebhook v0.3.0
-	k8s.io/api v0.18.2 // indirect
-	k8s.io/apimachinery v0.18.2
-	k8s.io/klog v1.0.0
+	github.com/sirupsen/logrus v1.8.1
+	github.com/slok/kubewebhook/v2 v2.2.0
+	k8s.io/apimachinery v0.22.4
+	k8s.io/klog/v2 v2.9.0
 )

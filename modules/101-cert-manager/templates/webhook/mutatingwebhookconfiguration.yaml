@@ -5,7 +5,7 @@ metadata:
   name: cert-manager-webhook
 {{ include "helm_lib_module_labels" (list . (dict "app" "webhook")) | indent 2 }}
 webhooks:
-  - name: webhook.cert-manager.io
+  - name: mutating.webhook.cert-manager.io
     rules:
       - apiGroups:
           - "cert-manager.io"
@@ -40,7 +40,7 @@ webhooks:
         namespace: d8-cert-manager
         path: /mutate
 {{- if semverCompare "< 1.22" .Values.global.discovery.kubernetesVersion }}
-  - name: webhook.certmanager.k8s.io
+  - name: mutating.webhook.certmanager.k8s.io
     rules:
       - apiGroups:
           - "certmanager.k8s.io"

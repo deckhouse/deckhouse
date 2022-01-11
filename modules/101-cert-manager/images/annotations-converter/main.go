@@ -22,16 +22,19 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/sirupsen/logrus"
+	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
+	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	whhttp "github.com/slok/kubewebhook/pkg/http"
-	"github.com/slok/kubewebhook/pkg/webhook/mutating"
+	whhttp "github.com/slok/kubewebhook/v2/pkg/http"
+	"github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 )
 
-func mutateIngress(_ context.Context, obj metav1.Object) (stop bool, err error) {
+func mutateIngress(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (mr *mutating.MutatorResult, err error) {
 	annotations := obj.GetAnnotations()
 
 	for annotation, value := range annotations {
@@ -68,7 +71,7 @@ func mutateIngress(_ context.Context, obj metav1.Object) (stop bool, err error) 
 	}
 
 	obj.SetAnnotations(annotations)
-	return true, nil
+	return &mutating.MutatorResult{MutatedObject: obj}, nil
 }
 
 func addIfNotExists(obj map[string]string, key, value string) {
@@ -77,28 +80,11 @@ func addIfNotExists(obj map[string]string, key, value string) {
 	}
 }
 
-type klogLogger struct{}
-
-func (*klogLogger) Infof(format string, args ...interface{}) {
-	klog.Infof(format, args...)
-}
-
-func (*klogLogger) Errorf(format string, args ...interface{}) {
-	klog.Errorf(format, args...)
-}
-
-func (*klogLogger) Warningf(format string, args ...interface{}) {
-	klog.Warningf(format, args...)
-}
-
-func (*klogLogger) Debugf(format string, args ...interface{}) {
-	klog.Warningf(format, args...)
-}
-
 type config struct {
 	certFile   string
 	keyFile    string
 	listenAddr string
+	debug      bool
 }
 
 func initFlags() *config {
@@ -108,6 +94,7 @@ func initFlags() *config {
 	fl.StringVar(&cfg.certFile, "tls-cert-file", "", "TLS certificate file")
 	fl.StringVar(&cfg.keyFile, "tls-key-file", "", "TLS key file")
 	fl.StringVar(&cfg.listenAddr, "listen-address", ":8080", "listen address")
+	fl.BoolVar(&cfg.debug, "debug", false, "debug logging")
 
 	klog.InitFlags(fl)
 
@@ -120,21 +107,28 @@ func initFlags() *config {
 
 func main() {
 	cfg := initFlags()
+	logrusLogEntry := logrus.NewEntry(logrus.New())
+	logLevel := logrus.WarnLevel
+	if cfg.debug {
+		logLevel = logrus.DebugLevel
+	}
+	logrusLogEntry.Logger.SetLevel(logLevel)
+	kl := kwhlogrus.NewLogrus(logrusLogEntry)
 
 	wh, err := mutating.NewWebhook(
 		mutating.WebhookConfig{
-			Name: "ingressAnnotate",
-			Obj:  &unstructured.Unstructured{},
-		},
-		mutating.MutatorFunc(mutateIngress),
-		nil, nil, &klogLogger{})
+			ID:      "ingressAnnotate",
+			Obj:     &unstructured.Unstructured{},
+			Mutator: mutating.MutatorFunc(mutateIngress),
+			Logger:  kl,
+		})
 	if err != nil {
 		klog.Fatalf("error creating webhook: %s", err)
 	}
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/mutate", whhttp.MustHandlerFor(wh))
+	mux.Handle("/mutate", whhttp.MustHandlerFor(whhttp.HandlerConfig{Webhook: wh, Logger: kl}))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 
 	klog.Info("Listening on :8080")
