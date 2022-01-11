@@ -34,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ref: ${{ steps.ref.outputs.ref }}
+    # Skip the CI for automation PRs, e.g. changelog
+    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - name: Check if allow to run tests
         id: check
@@ -73,6 +75,7 @@ jobs:
             const isDependabot = (context.actor === 'dependabot[bot]');
             const isChangelog = context.payload.pull_request.head.ref.startsWith('changelog/v');
             const okToTest = response.data[0].labels.some((l) => l.name === 'status/ok-to-test');
+
             core.info(`PR internal?          ${isInternal}`)
             core.info(`PR from dependabot?   ${isDependabot}`)
             core.info(`PR changelog?         ${isChangelog}`)

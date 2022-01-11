@@ -97,6 +97,8 @@ jobs:
       ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
       ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
+    # Skip the CI for automation PRs, e.g. changelog
+    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - id: git_info
         name: Get tag name and SHA
