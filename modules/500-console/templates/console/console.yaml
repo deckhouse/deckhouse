@@ -1,0 +1,85 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    qbec.io/component: console
+  labels:
+    qbec.io/application: openshift-console
+    qbec.io/environment: stage
+  name: openshift-console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openshift-console
+  template:
+    metadata:
+      labels:
+        app: openshift-console
+    spec:
+      containers:
+      - args:
+        - /opt/bridge/bin/bridge
+        - --public-dir=/opt/bridge/static
+        - --listen=http://0.0.0.0:9000
+        - --k8s-auth=oidc
+        - --user-auth=oidc
+        - --user-auth-oidc-issuer-url=https://dex.example.org/
+        - --user-auth-oidc-client-id=kubernetes
+        - --user-auth-oidc-client-secret=3n1ZZGV0WvNczrDDyLh3
+        - --base-address=https://console.example.org/
+        - --custom-product-name=Deckhouse
+        #- --custom-logo-file=deckhouse.svg
+        - --documentation-base-url=https://deckhouse.example.org/
+        - --prometheus-public-url=https://grafana.example.org/prometheus/
+        - --grafana-public-url=https://grafana.example.org/
+        #- --v=10
+        #- --plugins=kubevirt-plugin=http://kubevirt-plugin.kubevirt-plugin.svc:9443/
+        image: quay.io/openshift/origin-console:latest
+        name: openshift-console
+        ports:
+        - containerPort: 9000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt
+  name: openshift-console
+spec:
+  rules:
+  - host: console.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: openshift-console
+            port:
+              name: http
+        path: /
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - console.example.org
+    secretName: ingress-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    qbec.io/component: console
+  labels:
+    qbec.io/application: openshift-console
+    qbec.io/environment: stage
+  name: openshift-console
+spec:
+  ports:
+  - port: 9000
+    name: http
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app: openshift-console
+  type: ClusterIP
