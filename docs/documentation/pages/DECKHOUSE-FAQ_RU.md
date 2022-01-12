@@ -112,6 +112,22 @@ deckhouse: |
 * Установить `Maximum metadata age` в 0 (иначе, автоматическое обновление Deckhouse не будет работать корректно из-за кеширования)
 ![](../images/registry/nexus/Nexus3.png)
 
+#### Harbor
+Необходимо использовать такой функционал [Harbor](https://github.com/goharbor/harbor) как Proxy Cache
+
+* Если вы используете Deckhouse Enterprise Edition, то обратитесь в поддержку для получения учетных данных для подключения вашего registry 
+
+* Настройка Registry: `Administration - Registies - New Endpoint. Provider - Docker Registry`.<br /> `Name` - любое удобное для вас. `Endpoint URL`: https://registry.deckhouse.io. `Access ID` и `Access Secret` заполните данными из предыдушего пункта или оставьте пустыми если используете Deckhouse Community Edition.
+![](../images/registry/harbor/harbor1.png)
+
+* Далее создайте новый проект. `Projects - New Project`. `Name` будет использоваться в URL, может быть любым, например `d8s`. `Access Level - Public`. `Proxy Cache` - включить и выбрать в списке созданный в предыдущем пункте Registry
+![](../images/registry/harbor/harbor2.png)
+
+
+* Таким образом images deckhouse будут доступны по адресу<br />
+https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}
+
+
 ## Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 * Изменить секрет `d8-system/deckhouse-registry` (все параметры хранятся в кодировке BASE64):

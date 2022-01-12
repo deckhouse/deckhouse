@@ -110,6 +110,22 @@ The following parameters must be set if the [Nexus](https://github.com/sonatype/
 * Set the `Maximum metadata age` to 0 (otherwise, the automatic update of Deckhouse will fail due to caching)
   ![](../images/registry/nexus/Nexus3.png)
 
+#### Harbor
+You need to use [Harbor](https://github.com/goharbor/harbor) feature Proxy Cache
+
+* Ask our support for credentials, if you are using Deckhouse Enterprise Edition.
+
+* Create Registry: `Administration - Registies - New Endpoint`.<br /> `Provider - Docker Registry`. `Name` - you can choose any. `Endpoint URL`: https://registry.deckhouse.io. `Access ID` and `Access Secret` you must receive from the previous paragraph, or leave empty if you using Deckhouse Community Edition
+![](../images/registry/harbor/harbor1.png)
+
+* Next Create new Project. `Projects - New Project`. `Name` will be used in the URL, you can choose any, for example `d8s`. `Access Level - Public`. `Proxy Cache` - enable and choose the Registry, created in the previous paragraph.
+![](../images/registry/harbor/harbor2.png)
+
+
+* Thus, the images deckhouse will be available at<br />
+https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}
+
+
 ## How do I switch a running Deckhouse cluster to use a third-party registry?
 
 * Edit the `d8-system/deckhouse-registry` secret (note that all parameters are BASE64-encoded):
