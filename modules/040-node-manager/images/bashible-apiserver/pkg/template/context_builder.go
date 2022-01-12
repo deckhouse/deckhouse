@@ -235,14 +235,13 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 		res[k] = v
 	}
 
+	var providerType string
 	cloudProvider, ok := bundleNgContext.CloudProvider.(map[string]interface{})
-	if !ok {
-		// absent cloud provider means static nodes
-		return errors.New("cloud provider has wrong type")
-	}
-	providerType, ok := cloudProvider["type"].(string)
-	if !ok {
-		return fmt.Errorf("cloudProvider.type is not a string")
+	if ok {
+		providerType, ok = cloudProvider["type"].(string)
+		if !ok {
+			return fmt.Errorf("cloudProvider.type is not a string")
+		}
 	}
 
 	// render steps
