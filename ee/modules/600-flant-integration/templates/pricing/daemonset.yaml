@@ -125,6 +125,13 @@ spec:
       - name: grafana-agent
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.flantIntegration.grafanaAgent }}
+        args:
+          - -config.expand-env
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         volumeMounts:
         - name: agent-data
           mountPath: /data/agent
