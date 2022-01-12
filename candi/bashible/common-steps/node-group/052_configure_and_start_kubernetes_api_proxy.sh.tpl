@@ -13,9 +13,17 @@
 # limitations under the License.
 
 {{- if eq .bundle "ubuntu-lts" }}
-bb-rp-install "nginx:1.20.1-$(bb-get-ubuntu-codename)"
+if bb-is-ubuntu-version? 16.04 ; then
+  bb-rp-install "nginx:{{ .images.registrypackages.nginxUbuntu1202Xenial }}"
+fi
+if bb-is-ubuntu-version? 18.04 ; then
+  bb-rp-install "nginx:{{ .images.registrypackages.nginxUbuntu1202Bionic }}"
+fi
+if bb-is-ubuntu-version? 20.04 ; then
+  bb-rp-install "nginx:{{ .images.registrypackages.nginxUbuntu1202Focal }}"
+fi
 {{- else if eq .bundle "centos-7" }}
-bb-rp-install "nginx:1.20.1-centos7"
+bb-rp-install "nginx:{{ .images.registrypackages.nginxCentos71202 }}"
 {{- end }}
 
 # Disable default nginx vhost

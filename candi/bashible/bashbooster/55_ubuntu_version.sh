@@ -20,7 +20,3 @@ bb-is-ubuntu-version?() {
     return 1
   fi
 }
-
-bb-get-ubuntu-codename() {
-  source /etc/os-release && echo "${UBUNTU_CODENAME}"
-}

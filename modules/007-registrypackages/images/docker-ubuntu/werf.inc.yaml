@@ -1,0 +1,41 @@
+{{- $docker_versions := list }}
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- range $key, $versions := $value.bashible.ubuntu }}
+    {{- if $versions.docker.desiredVersion }}
+      {{- $docker_versions = $versions.docker.desiredVersion | toString | append $docker_versions }}
+    {{- end}}
+  {{- end }}
+{{- end }}
+{{- range $value := $docker_versions | uniq }}
+  {{- $version := $value | toString }}
+  {{- $image_version := $version | replace "docker-ce=" "" | replace "." "-" | replace "~" "-" | replace ":" "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - docker-ce_amd64.deb
+  - docker-ce-cli_amd64.deb
+  - install
+  - uninstall
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - DISTRO="$(awk -F "-" '{print $NF}' <<< "{{ $version }}")"
+  - curl -sL "https://download.docker.com/linux/ubuntu/dists/${DISTRO}/pool/stable/amd64/{{ $version | replace "=" "_" | replace "5:" "" }}_amd64.deb" --output /docker-ce_amd64.deb
+  - curl -sL "https://download.docker.com/linux/ubuntu/dists/${DISTRO}/pool/stable/amd64/{{ $version | replace "=" "_" | replace "5:" "" | replace "docker-ce" "docker-ce-cli" }}_amd64.deb" --output /docker-ce-cli_amd64.deb
+{{- end }}

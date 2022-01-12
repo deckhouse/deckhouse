@@ -1,0 +1,43 @@
+{{- $containerd_versions := list }}
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- range $key, $versions := $value.bashible.ubuntu }}
+    {{- if $versions.containerd.desiredVersion }}
+      {{- $containerd_versions = $versions.containerd.desiredVersion | toString | append $containerd_versions }}
+    {{- end}}
+    {{- if $versions.docker.containerd.desiredVersion }}
+      {{- $containerd_versions = $versions.docker.containerd.desiredVersion | toString | append $containerd_versions }}
+    {{- end}}
+  {{- end }}
+{{- end }}
+{{- range $value := $containerd_versions | uniq }}
+  {{- range $distro := tuple "focal" "bionic" "xenial" }}
+    {{- $version := $value | toString }}
+    {{- $image_version := $version | replace "containerd.io=" "" | replace "." "-" | replace "~" "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-{{ $distro }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}-{{ $distro }}
+  add: /
+  to: /
+  includePaths:
+  - containerd.io_amd64.deb
+  - install
+  - uninstall
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}-{{ $distro }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - curl -sL "https://download.docker.com/linux/ubuntu/dists/{{ $distro }}/pool/stable/amd64/{{ $version | replace "=" "_" }}_amd64.deb" --output /containerd.io_amd64.deb
+  {{- end }}
+{{- end }}

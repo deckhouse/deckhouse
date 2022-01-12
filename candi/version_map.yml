@@ -79,7 +79,7 @@ k8s:
   '1.19':
     status: end-of-life
     patch: 16
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: &bashible_k8s_ge_1_19
       <<: *bashible
       ubuntu:
@@ -129,7 +129,7 @@ k8s:
   '1.20':
     status: available
     patch: 13
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.20.1
@@ -153,7 +153,7 @@ k8s:
   '1.21':
     status: available
     patch: 7
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.21.0
@@ -178,7 +178,7 @@ k8s:
   '1.22':
     status: available
     patch: 4
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.22.0

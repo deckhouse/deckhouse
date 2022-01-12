@@ -54,7 +54,7 @@ if bb-apt-package? containerd.io && ! bb-apt-package? docker-ce ; then
   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
   # Remove mounts
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
-  bb-rp-remove containerd.io crictl containerd-werf-edition
+  bb-rp-remove containerd-io crictl containerd-flant-edition
   rm -rf /var/lib/containerd/ /var/run/containerd /etc/containerd/config.toml /etc/systemd/system/containerd.service.d
   # Pod kubelet-eviction-thresholds-exporter in cri=Containerd mode mounts /var/run/docker.sock, /var/run/docker.sock will be a directory and newly installed docker won't run.
   rm -rf /var/run/docker.sock
@@ -100,8 +100,15 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-  containerd_version="$(sed "s/=/:/" <<< "${desired_version_containerd}")-$(bb-get-ubuntu-codename)"
-  bb-rp-install "${containerd_version}"
+{{- $ubuntuName := dict "16.04" "Xenial" "18.04" "Bionic" "20.04" "Focal" }}
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
+  {{- $ubuntuVersion := toString $key }}
+  if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
+    containerd_tag="{{- index $.images.registrypackages (printf "containerdUbuntu%s%s" ($value.docker.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $ubuntuName $ubuntuVersion)) }}"
+  fi
+{{- end }}
+
+  bb-rp-install "containerd-io:${containerd_tag}"
 fi
 
 should_install_docker=true
@@ -123,8 +130,14 @@ if [[ "$should_install_docker" == true ]]; then
 
   bb-flag-set new-docker-installed
 
-  docker_image="$(sed "s/[:~]/-/g" <<< "$desired_version_docker" | sed "s/docker-ce=/docker-ce:/")"
-  bb-rp-install "${docker_image}"
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
+  {{- $ubuntuVersion := toString $key }}
+  if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
+    docker_tag="{{- index $.images.registrypackages (printf "dockerUbuntu%s" ($value.docker.desiredVersion | replace "docker-ce=" "" | replace "." "_" | replace ":" "_" | replace "~" "_" | camelcase)) }}"
+  fi
+{{- end }}
+
+  bb-rp-install "docker-ce:${docker_tag}"
 fi
 
 {{- end }}

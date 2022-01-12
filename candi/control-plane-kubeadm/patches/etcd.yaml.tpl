@@ -4,8 +4,9 @@ kind: Pod
 metadata:
   name: etcd
   namespace: kube-system
-{{- if hasKey . "images" }}
-  {{- if hasKey $.images "etcd" }}
+{{- if hasKey $ "images" }}
+  {{- if hasKey $.images "controlPlaneManager" }}
+    {{- if hasKey $.images.controlPlaneManager "etcd" }}
 ---
 apiVersion: v1
 kind: Pod
@@ -15,7 +16,8 @@ metadata:
 spec:
   containers:
     - name: etcd
-      image: {{ pluck "etcd" $.images | first }}
+      image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "etcd") }}
+    {{- end }}
   {{- end }}
 {{- end }}
 ---
