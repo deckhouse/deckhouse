@@ -355,7 +355,12 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 
 	raw, ok := c.data[contextKey]
 	if !ok {
-		return nil, fmt.Errorf("context not found for secretKey \"%s\"", contextKey)
+		// log exists keys for debug purposes
+		keys := make([]string, 0, len(c.data))
+		for k := range c.data {
+			keys = append(keys, k)
+		}
+		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
 	}
 
 	converted, ok := raw.(map[string]interface{})

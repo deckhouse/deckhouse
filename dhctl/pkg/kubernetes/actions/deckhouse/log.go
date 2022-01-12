@@ -270,6 +270,14 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 		case <-ctx.Done():
 			return false, ErrTimedOut
 		default:
+			ready, err := d.checkDeckhousePodReady()
+			if err != nil {
+				return false, err
+			}
+			if ready {
+				return true, nil
+			}
+
 			request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
 			result, err := request.DoRaw(context.TODO())
 			if err != nil {
@@ -278,13 +286,6 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 			}
 
 			d.printLogsByLine(result)
-			ready, err := d.checkDeckhousePodReady()
-			if err != nil {
-				return false, err
-			}
-			if ready {
-				return true, nil
-			}
 
 			time.Sleep(time.Second)
 			currentTime := metav1.NewTime(time.Now())
