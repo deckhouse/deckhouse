@@ -88,6 +88,8 @@ properties:
         properties:
           annotations:
             type: object
+            additionalProperties:
+              type: string
             description: |
               Annotations to attach to a service to fine-tune the load balancer.
               > **Caution!** The module does not take into account the specifics of setting annotations in various cloud environments. If the annotations for load balancer provisioning are only applied when creating a service, you will need to delete and add the `apiserver.loadBalancer` parameter to update such parameters.
