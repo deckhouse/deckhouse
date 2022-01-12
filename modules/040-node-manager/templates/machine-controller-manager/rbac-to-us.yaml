@@ -6,7 +6,7 @@ kind: Role
 metadata:
   name: access-to-machine-controller-manager-prometheus-metrics
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 rules:
 - apiGroups: ["apps"]
   resources: ["deployments/prometheus-metrics"]
@@ -18,7 +18,7 @@ kind: RoleBinding
 metadata:
   name: access-to-machine-controller-manager-prometheus-metrics
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

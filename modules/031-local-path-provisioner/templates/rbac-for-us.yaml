@@ -4,13 +4,13 @@ kind: ServiceAccount
 metadata:
   name: {{ .Chart.Name }}
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | nindent 2 }}
 rules:
 - apiGroups: [ "" ]
   resources: [ "nodes", "persistentvolumeclaims", "configmaps" ]
@@ -29,7 +29,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "local-path-provisioner")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: node-termination-handler
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -20,9 +20,9 @@ kind: PodDisruptionBudget
 metadata:
   name: node-termination-handler
   namespace: d8-cloud-provider-aws
-{{ include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler")) | nindent 2 }}
 spec:
-{{ include "helm_lib_pdb_daemonset" . | indent 2}}
+  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
   selector:
     matchLabels:
       app: node-termination-handler
@@ -32,7 +32,7 @@ apiVersion: apps/v1
 metadata:
   name: node-termination-handler
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -52,15 +52,15 @@ spec:
                 values: ["CloudEphemeral"]
       imagePullSecrets:
       - name: deckhouse-registry
-{{- include "helm_lib_priority_class" (tuple . "system-node-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: node-termination-handler
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: node-termination-handler
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.cloudProviderAws.nodeTerminationHandler }}
         env:
         - name: NODE_NAME
@@ -69,4 +69,4 @@ spec:
               fieldPath: spec.nodeName
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

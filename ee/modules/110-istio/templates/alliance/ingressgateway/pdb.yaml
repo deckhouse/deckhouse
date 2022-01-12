@@ -5,9 +5,9 @@ kind: PodDisruptionBudget
 metadata:
   name: ingressgateway
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | nindent 2 }}
 spec:
-{{ include "helm_lib_pdb_daemonset" . | indent 2}}
+  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
   selector:
     matchLabels:
       app: ingressgateway

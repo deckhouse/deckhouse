@@ -3,7 +3,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: annotations-converter
-{{ include "helm_lib_module_labels" (list . (dict "app" "annotations-converter")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "annotations-converter")) | nindent 2 }}
 webhooks:
 - name: annotations-converter.webhook.cert-manager.io
   admissionReviewVersions: ["v1", "v1beta1"]

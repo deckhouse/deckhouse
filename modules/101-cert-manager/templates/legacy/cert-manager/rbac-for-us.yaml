@@ -4,13 +4,13 @@ kind: ServiceAccount
 metadata:
   name: legacy-cert-manager
   namespace: d8-cert-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cert-manager:legacy:cert-manager:leaderelection
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 rules:
   # Used for leader election by the controller
   - apiGroups: [""]
@@ -21,7 +21,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:legacy:cert-manager:leaderelection
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -35,7 +35,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cert-manager:legacy:cert-manager:issuers
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 rules:
   - apiGroups: ["certmanager.k8s.io"]
     resources: ["issuers", "issuers/status"]
@@ -54,7 +54,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:legacy:cert-manager:issuers
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -68,7 +68,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cert-manager:legacy:cert-manager:clusterissuers
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 rules:
   - apiGroups: ["certmanager.k8s.io"]
     resources: ["clusterissuers", "clusterissuers/status"]
@@ -87,7 +87,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:legacy:cert-manager:clusterissuers
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -102,7 +102,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cert-manager:legacy:cert-manager:certificates
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 rules:
   - apiGroups: ["certmanager.k8s.io"]
     resources: ["certificates", "certificates/status", "certificaterequests", "certificaterequests/status"]
@@ -130,7 +130,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:legacy:cert-manager:certificates
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -144,7 +144,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cert-manager:legacy:cert-manager:orders
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 rules:
   - apiGroups: ["certmanager.k8s.io"]
     resources: ["orders", "orders/status"]
@@ -172,7 +172,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:legacy:cert-manager:orders
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -186,7 +186,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cert-manager:legacy:cert-manager:challenges
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 rules:
   # Use to update challenge resource status
   - apiGroups: ["certmanager.k8s.io"]
@@ -226,7 +226,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:legacy:cert-manager:challenges
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -241,7 +241,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cert-manager:legacy:cert-manager:ingress-shim
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 rules:
   - apiGroups: ["certmanager.k8s.io"]
     resources: ["certificates", "certificaterequests"]
@@ -266,7 +266,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:legacy:cert-manager:ingress-shim
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -280,7 +280,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cert-manager:legacy:cert-manager:rbac-proxy
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-cert-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

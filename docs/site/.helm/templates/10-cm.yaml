@@ -14,5 +14,5 @@ metadata:
   name: release-channels-data
 data:
   channels.yaml: |
-{{ $.Files.Get "channels.yaml" | indent 4 }}
+    {{- $.Files.Get "channels.yaml" | nindent 4 }}
 {{- end }}

@@ -5,5 +5,5 @@ kind: ConfigMap
 metadata:
   name: istio-operator-lock-{{ $revision }}
   namespace: d8-istio
-{{ include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
 {{- end }}

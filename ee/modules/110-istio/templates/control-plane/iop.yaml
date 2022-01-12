@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: istiod-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -22,7 +22,7 @@ kind: IstioOperator
 metadata:
   name: {{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 2 }}
 spec:
   revision: {{ $revision }}
 
@@ -134,7 +134,7 @@ spec:
             cpu: 10m
             memory: 10Mi
 
-{{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
     pilot:
       autoscaleEnabled: false
@@ -146,8 +146,8 @@ spec:
           cpu: 25m
           memory: 256Mi
 #TODO: affinity by revision
-{{- include "helm_lib_node_selector" (tuple $ "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple $ "master") | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "master") | nindent 6 }}
     telemetry:
       enabled: true
       v2:

@@ -5,7 +5,7 @@ kind: Service
 metadata:
   name: istiod
   namespace: d8-istio
-{{ include "helm_lib_module_labels" (list . (dict "app" "istiod" "istio" "pilot" "istio.io/rev" .Values.istio.internal.globalRevision)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "istiod" "istio" "pilot" "istio.io/rev" .Values.istio.internal.globalRevision)) | nindent 2 }}
 spec:
   ports:
   - name: grpc-xds

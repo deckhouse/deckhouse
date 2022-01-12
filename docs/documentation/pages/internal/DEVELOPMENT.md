@@ -274,7 +274,7 @@ Note that you **MUST** use it in all controllers without exception.
 An example:
 ```gotemplate
 spec:
-{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 2 }}
+  {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | nindent 2 }}
 ```
 The helper gets the global context and the desired priorityClassName value as an input. If the `010-priority-class` module is enabled in Deckhouse, the template will look like this:
 ```yaml
@@ -296,7 +296,7 @@ A special helper is also implemented in `helm_lib` to facilitate setting the `no
 {% raw %}
 An example:
 ```gotemplate
-{{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
 ```
 The helper gets the global context and the desired strategy as the input to set the nodeSelector parameter.
 
@@ -324,7 +324,7 @@ A special helper is also implemented in `helm_lib` to facilitate setting the `to
 
 An example:
 ```gotemplate
-{{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 2 }}
+  {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 2 }}
 ```
 The helper gets the global context and the desired strategy as the input to set the tolerations parameter.
 
@@ -404,19 +404,19 @@ The rules below ensure the correct operation and update of module components (De
 * Always set podAntiAffinity for a Deployment and StatefulSet to ensure that the Pods are not run on the same node. Below is an example for prometheus:
 
   ```yaml
-  {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "deployment-label")) | indent 6 }}
+        {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "deployment-label")) | nindent 6 }}
   ```
 * Set the correct `replicas` and `strategy` values for a Deployment:
   * If the Deployment is NOT running on master nodes:
 
     ```yaml
-    {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
+      {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
     ```
     It prevents blocking updates when the number of Deployment Pods is equal to the number of nodes, and nodeSelector and podAntiAffinity parameters are set.
   * If the Deployment is running on master nodes (on each master node!):
 
     ```yaml
-    {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
+      {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
     ```
     It prevents blocking the Deployment update even if one of the master nodes is unavailable (if there are three or more master nodes!).
 

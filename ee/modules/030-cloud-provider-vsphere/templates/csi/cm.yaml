@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: csi-controller-internal-feature-states
   namespace: d8-cloud-provider-vsphere
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 data:
   "csi-migration": "false"
   "csi-auth-check": "true"

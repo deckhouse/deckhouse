@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: descheduler
   namespace: d8-descheduler
-{{ include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -20,7 +20,7 @@ kind: PodDisruptionBudget
 metadata:
   name: descheduler
   namespace: d8-descheduler
-{{ include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -32,7 +32,7 @@ kind: Deployment
 metadata:
   name: descheduler
   namespace: d8-descheduler
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   replicas: {{ .Values.descheduler.internal.replicas }}
   selector:
@@ -48,13 +48,13 @@ spec:
       serviceAccountName: descheduler
       imagePullSecrets:
       - name: deckhouse-registry
-{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       containers:
       - name: descheduler
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.descheduler.descheduler }}
         volumeMounts:
         - mountPath: /policy
@@ -72,7 +72,7 @@ spec:
         - "15m"
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       volumes:
       - name: policy-volume
         configMap:

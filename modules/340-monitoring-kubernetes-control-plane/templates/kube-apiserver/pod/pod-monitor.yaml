@@ -5,11 +5,11 @@ kind: PodMonitor
 metadata:
   name: kube-apiserver
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
-{{ .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.pod.podSelector | toYaml | indent 6 }}
+      {{- .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.pod.podSelector | toYaml | nindent 6 }}
   namespaceSelector:
     matchNames:
     - {{ .Values.monitoringKubernetesControlPlane.internal.kubeApiserver.pod.podNamespace }}

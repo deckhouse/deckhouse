@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: keepalived-{{ $instance_name }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -21,7 +21,7 @@ kind: StatefulSet
 metadata:
   name: keepalived-{{ $instance_name }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -37,8 +37,8 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-{{- include "helm_lib_priority_class" (tuple $ "system-node-critical") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -47,16 +47,16 @@ spec:
                 app: keepalived-{{ $instance_name }}
             topologyKey: kubernetes.io/hostname
       nodeSelector:
-{{ $instance.nodeSelector | toYaml | indent 8 }}
+        {{- $instance.nodeSelector | toYaml | nindent 8 }}
     {{- if $instance.tolerations }}
       tolerations:
-{{ $instance.tolerations | toYaml | indent 8 }}
+        {{- $instance.tolerations | toYaml | nindent 8 }}
     {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       initContainers:
       - name: init
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         command: ['/prepare-config.py']
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.keepalived.keepalived }}
         env:
@@ -73,10 +73,10 @@ spec:
           mountPath: /etc/keepalived-instance-secret
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       containers:
       - name: keepalived
-{{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "DAC_OVERRIDE")) | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "DAC_OVERRIDE")) | nindent 8 }}
         command: ['/usr/sbin/keepalived', '-n', '-l']
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.keepalived.keepalived }}
         volumeMounts:
@@ -84,7 +84,7 @@ spec:
           mountPath: /etc/keepalived
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       volumes:
       - name: config
         emptyDir: {}

@@ -9,7 +9,7 @@ kind: Ingress
 metadata:
   name: api-proxy
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     nginx.ingress.kubernetes.io/proxy-body-size: 2m
@@ -44,7 +44,7 @@ kind: Certificate
 metadata:
   name: api-proxy
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
 spec:
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "api-proxy-ingress-tls") }}
   dnsNames:

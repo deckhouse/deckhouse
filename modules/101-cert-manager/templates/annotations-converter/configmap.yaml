@@ -4,4 +4,4 @@ kind: ConfigMap
 metadata:
   name: d8-cert-manager-migrated
   namespace: d8-cert-manager
-{{ include "helm_lib_module_labels" (list . (dict)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict)) | nindent 2 }}

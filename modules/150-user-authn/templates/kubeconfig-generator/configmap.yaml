@@ -5,7 +5,7 @@ kind: ConfigMap
 metadata:
   name: kubeconfig-generator
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 data:
   config.yaml: |-
     # Base web settings (address, icon)
@@ -16,12 +16,12 @@ data:
 
     # Always add Kubernetes CA to validate the Dex internal cetificate
     trusted_root_ca: |
-{{ .Values.global.discovery.kubernetesCA | indent 6 }}
+      {{- .Values.global.discovery.kubernetesCA | nindent 6 }}
 
     # Optionally add discovered Dex CA to validate the Dex external cetificate (for kubeconfigs)
 {{- with .Values.userAuthn.internal.discoveredDexCA }}
     idp_ca_pem: |
-{{ . | indent 6 }}
+      {{- . | nindent 6 }}
 {{- end }}
 
     # Specify the cluster Kubernetes versiob to have the right link to download kubectl
@@ -48,11 +48,11 @@ data:
     {{- $_ := set $publish_api_cluster "masterCA" (.Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA | default $.Values.global.discovery.kubernetesCA) }}
     {{- end }}
 
-{{- include "kubeconfig_settings" (list $ "" $publish_api_cluster) | indent 4 }}
+    {{- include "kubeconfig_settings" (list $ "" $publish_api_cluster) | nindent 4 }}
   {{- range $index, $cluster := .Values.userAuthn.kubeconfigGenerator }}
   {{- $_ := set $cluster "client_id" (printf "kubeconfig-generator-%d" $index) }}
   {{- $_ := set $cluster "masterCA" ($cluster.masterCA | default $.Values.global.discovery.kubernetesCA )}}
-{{- include "kubeconfig_settings" (list $ $index $cluster) | indent 4 }}
+    {{- include "kubeconfig_settings" (list $ $index $cluster) | nindent 4 }}
   {{- end }}
 {{- end }}
 

@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: webhook-handler
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "webhook-handler" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -20,9 +20,9 @@ apiVersion: apps/v1
 metadata:
   name: webhook-handler
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
 spec:
-{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: webhook-handler
@@ -31,17 +31,17 @@ spec:
       labels:
         app: webhook-handler
     spec:
-{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook-handler")) | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook-handler")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: webhook-handler
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: handler
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.deckhouse.webhookHandler }}"
         env:
         - name: SHELL_OPERATOR_NAMESPACE
@@ -84,7 +84,7 @@ spec:
           periodSeconds: 10
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
         volumeMounts:
         - name: certs
           mountPath: /certs/

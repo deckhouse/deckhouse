@@ -114,10 +114,10 @@
         startTLS: true
         {{- end }}
         userSearch:
-{{ $provider.ldap.userSearch | toYaml | indent 10 }}
+          {{- $provider.ldap.userSearch | toYaml | nindent 10 }}
         {{- if $provider.ldap.groupSearch }}
         groupSearch:
-{{ $provider.ldap.groupSearch | toYaml | indent 10 }}
+          {{- $provider.ldap.groupSearch | toYaml | nindent 10 }}
         {{- end }}
         usernamePrompt: {{ $provider.ldap.usernamePrompt | default "LDAP username" | quote }}
       {{- end }}
@@ -145,7 +145,7 @@
         userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
         scopes:
         {{- if $provider.oidc.scopes }}
-{{ $provider.oidc.scopes | toYaml | indent 8 }}
+        {{- $provider.oidc.scopes | toYaml | nindent 8 }}
         {{- else }}
         - openid
         - profile
@@ -168,7 +168,7 @@
         clientSecret: {{ $provider.crowd.clientSecret | quote }}
         {{- if $provider.crowd.groups }}
         groups:
-{{ $provider.crowd.groups | toYaml | indent 8 }}
+        {{- $provider.crowd.groups | toYaml | nindent 8 }}
         {{- end }}
         usernamePrompt: {{ $provider.crowd.usernamePrompt | default "Crowd username" | quote }}
       {{- end }}
@@ -181,7 +181,7 @@ kind: Secret
 metadata:
   name: dex
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
 data:
   config.yaml: |-
-{{ include "dex_conf" . | b64enc | indent 4 }}
+    {{- include "dex_conf" . | b64enc | nindent 4 }}

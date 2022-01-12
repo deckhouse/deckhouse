@@ -4,13 +4,13 @@ kind: ServiceAccount
 metadata:
   name: d8-vertical-pod-autoscaler-admission-controller
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:vertical-pod-autoscaler:admission-controller
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - ""
@@ -63,7 +63,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:vertical-pod-autoscaler:admission-controller
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

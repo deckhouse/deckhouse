@@ -6,7 +6,7 @@ kind: OAuth2Client
 metadata:
   name: nn2wezldn5xgm2lhfvtwk3tfojqxi33szpzjzzeeeirsk  # kubeconfig-generator
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "kubernetes-configurator")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "kubernetes-configurator")) | nindent 2 }}
 id: kubeconfig-generator
 name: kubeconfig-generator
 secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
@@ -24,7 +24,7 @@ kind: OAuth2Client
 metadata:
   name: {{ index $context.Values.userAuthn.internal.kubeconfigEncodedNames $index}}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "kubernetes-configurator")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "kubernetes-configurator")) | nindent 2 }}
 id: kubeconfig-generator-{{ $index }}
 name: kubeconfig-generator-{{ $index }}
 secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}

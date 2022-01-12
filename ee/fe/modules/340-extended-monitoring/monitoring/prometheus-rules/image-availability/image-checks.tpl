@@ -146,7 +146,7 @@
   rules:
 
 {{- range list "Deployment" "StatefulSet" "DaemonSet" "CronJob" }}
-{{- include "image-availability-alerts-by-mode" . | indent 2 }}
+  {{- include "image-availability-alerts-by-mode" . | nindent 2 }}
 {{- end }}
 
   - alert: UnavailableImagesInNamespace

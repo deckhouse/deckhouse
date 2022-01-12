@@ -4,7 +4,7 @@ apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1beta1.webhook.certmanager.k8s.io
-{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-webhook")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "legacy-webhook")) | nindent 2 }}
 spec:
   caBundle: {{ .Values.certManager.internal.webhookCACrt | b64enc }}
   group: webhook.certmanager.k8s.io

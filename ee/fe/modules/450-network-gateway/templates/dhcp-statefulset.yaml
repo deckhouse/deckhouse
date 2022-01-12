@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: dhcp
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "dhcp" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "dhcp" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -21,7 +21,7 @@ kind: PodDisruptionBudget
 metadata:
   name: dhcp
   namespace: d8-network-gateway
-{{ include "helm_lib_module_labels" (list . (dict "app" "dhcp")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dhcp")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -33,7 +33,7 @@ kind: StatefulSet
 metadata:
   name: dhcp
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "dhcp")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "dhcp")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -49,15 +49,15 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
-{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       initContainers:
       - name: init
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         command: ['/prepare-config.py']
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}
         volumeMounts:
@@ -67,10 +67,10 @@ spec:
           mountPath: /etc/network-gateway-config
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       containers:
       - name: dhcp
-{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_BIND_SERVICE" "NET_RAW")) | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_BIND_SERVICE" "NET_RAW")) | nindent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}
         command: ['dnsmasq', '-dK', '--dhcp-leasefile=/var/lib/dnsmasq/dhcp.leases']
         volumeMounts:
@@ -80,7 +80,7 @@ spec:
           mountPath: /var/lib/dnsmasq/
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
       volumes:
       - name: dhcp-config
         emptyDir: {}

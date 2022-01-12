@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: early-oom
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "early-oom" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "early-oom" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -21,9 +21,9 @@ kind: PodDisruptionBudget
 metadata:
   name: early-oom
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "early-oom")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "early-oom")) | nindent 2 }}
 spec:
-{{ include "helm_lib_pdb_daemonset" . | indent 2}}
+  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
   selector:
     matchLabels:
       app: early-oom
@@ -33,7 +33,7 @@ kind: DaemonSet
 metadata:
   name: early-oom
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "early-oom")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "early-oom")) | nindent 2 }}
 spec:
   updateStrategy:
     rollingUpdate:
@@ -48,9 +48,9 @@ spec:
         app: early-oom
       name: early-oom
     spec:
-{{- include "helm_lib_priority_class" (tuple . "system-node-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       containers:
       - name: oom-killer
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.alpine }}
@@ -76,7 +76,7 @@ spec:
             name: proc
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
       volumes:
         - name: proc
           hostPath:

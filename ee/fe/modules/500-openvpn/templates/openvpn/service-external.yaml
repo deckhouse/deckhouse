@@ -7,17 +7,17 @@ kind: Service
 metadata:
   name: {{ .Chart.Name }}-external
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
   {{- if .Values.openvpn.loadBalancer.annotations }}
   annotations:
-{{ .Values.openvpn.loadBalancer.annotations | toYaml | indent 4 }}
+    {{- .Values.openvpn.loadBalancer.annotations | toYaml | nindent 4 }}
   {{- end }}
 
 spec:
   externalTrafficPolicy: Local
   {{- if .Values.openvpn.loadBalancer.sourceRanges }}
   loadBalancerSourceRanges:
-{{ .Values.openvpn.loadBalancer.sourceRanges | toYaml | indent 4 }}
+    {{- .Values.openvpn.loadBalancer.sourceRanges | toYaml | nindent 4 }}
   {{- end }}
   type: LoadBalancer
   ports:
@@ -34,7 +34,7 @@ kind: Service
 metadata:
   name: {{ .Chart.Name }}-external
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   type: ClusterIP
   externalIPs:

@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: kubeconfig-generator
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -21,9 +21,9 @@ kind: Deployment
 metadata:
   name: kubeconfig-generator
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
-{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: kubeconfig-generator
@@ -34,11 +34,11 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/kubeconfig-generator/configmap.yaml") . | sha256sum }}
     spec:
-{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
-{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "kubeconfig-generator")) | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "kubeconfig-generator")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       volumes:
@@ -53,7 +53,7 @@ spec:
       {{- end }}
       containers:
       - name: kubeconfig-generator
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.userAuthn.kubeconfigGenerator }}
         command:
         - "/app/bin/dex-k8s-authenticator"
@@ -75,5 +75,5 @@ spec:
           mountPath: /app/config.yaml
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- end }}

@@ -14,7 +14,7 @@ kind: OAuth2Client
 metadata:
   name: nn2wezlsnzsxizltzpzjzzeeeirsk # kubernetes
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "dex")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex")) | nindent 2 }}
 id: kubernetes
 name: kubernetes
 secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}

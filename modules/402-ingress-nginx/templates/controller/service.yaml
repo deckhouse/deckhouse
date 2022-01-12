@@ -16,7 +16,7 @@ kind: Service
 metadata:
   name: {{ $crd.name }}-load-balancer
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name )) | nindent 2 }}
     {{- if $annotations }}
   annotations:
       {{- range $key, $value := $annotations }}
@@ -28,7 +28,7 @@ spec:
   externalTrafficPolicy: Local
     {{- if $sourceRanges }}
   loadBalancerSourceRanges:
-{{ $sourceRanges | toYaml | indent 4 }}
+    {{- $sourceRanges | toYaml | nindent 4 }}
     {{- end }}
   ports:
   - name: http

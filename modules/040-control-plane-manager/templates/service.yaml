@@ -6,7 +6,7 @@ kind: Service
 metadata:
   name: d8-control-plane-apiserver
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
     {{- if .Values.controlPlaneManager.apiserver.loadBalancer.annotations }}
   annotations:
       {{- range $key, $value := .Values.controlPlaneManager.apiserver.loadBalancer.annotations }}
@@ -17,7 +17,7 @@ spec:
   type: LoadBalancer
     {{- if .Values.controlPlaneManager.apiserver.loadBalancer.sourceRanges }}
   loadBalancerSourceRanges:
-{{ .Values.controlPlaneManager.apiserver.loadBalancer.sourceRanges | toYaml | indent 4 }}
+    {{- .Values.controlPlaneManager.apiserver.loadBalancer.sourceRanges | toYaml | nindent 4 }}
     {{- end }}
   ports:
   - name: https

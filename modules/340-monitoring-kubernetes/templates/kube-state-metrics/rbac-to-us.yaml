@@ -4,7 +4,7 @@ kind: Role
 metadata:
   name: access-to-kube-state-metrics-prometheus-metrics
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics")) | nindent 2 }}
 rules:
 - apiGroups: ["apps"]
   resources:
@@ -18,7 +18,7 @@ kind: RoleBinding
 metadata:
   name: access-to-kube-state-metrics-prometheus-metrics
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

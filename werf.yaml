@@ -53,7 +53,7 @@ gitWorktree:
   - name: "Install kubectl wrapper"
     copy:
       content: |
-{{ .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | indent 8 }}
+        {{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | nindent 8 }}
       dest: /usr/local/bin/kubectl
       mode: +x
 
@@ -97,13 +97,13 @@ gitWorktree:
   - name: "Shell comfort: inputrc"
     copy:
       content: |
-{{ .Files.Get "deckhouse-controller/files/inputrc" | indent 8 }}
+        {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 8 }}
       dest: /etc/inputrc
 
   - name: "Shell comfort: bashrc"
     copy:
       content: |
-{{ .Files.Get "deckhouse-controller/files/bashrc" | indent 8 }}
+        {{- .Files.Get "deckhouse-controller/files/bashrc" | nindent 8 }}
       dest: /etc/bashrc
 
   - name: "Shell comfort: add bashrc for root"
@@ -115,7 +115,7 @@ gitWorktree:
   - name: "Shell comfort: vimrc.local"
     copy:
       content: |
-{{ .Files.Get "deckhouse-controller/files/vimrc.local" | indent 8 }}
+        {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 8 }}
       dest: /etc/vim/vimrc.local
 
   - raw: rm -rf /var/cache/apk/*
@@ -238,20 +238,20 @@ ansible:
   - name: "Add modules images tags.json"
     copy:
       content: |
-{{ .Files.Get (printf "modules/images_tags_%s.json" .Env) | indent 8 }}
+        {{- .Files.Get (printf "modules/images_tags_%s.json" .Env) | nindent 8 }}
       dest: /deckhouse/modules/images_tags.json
 
 {{- range $key := list "default" "managed" "minimal" }}
   - name: "Add bundle {{ $key }}"
     copy:
       content: |
-{{ $.Files.Get (printf "modules/values-%s.yaml" $key ) | indent 8 }}
+        {{- $.Files.Get (printf "modules/values-%s.yaml" $key ) | nindent 8 }}
 {{- if eq $.Env "EE" }}
-{{ $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | indent 8 }}
+        {{- $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | nindent 8 }}
 {{- end }}
 {{- if eq $.Env "FE" }}
-{{ $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | indent 8 }}
-{{ $.Files.Get (printf "ee/fe/modules/values-%s.yaml" $key ) | indent 8 }}
+        {{- $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | nindent 8 }}
+        {{- $.Files.Get (printf "ee/fe/modules/values-%s.yaml" $key ) | nindent 8 }}
 {{- end }}
       dest: /deckhouse/modules/values-{{ $key }}.yaml
 {{- end }}
@@ -259,13 +259,13 @@ ansible:
   - name: "Add version info"
     copy:
       content: |
-{{ env "CI_COMMIT_TAG" | default "dev" | indent 8}}
+        {{- env "CI_COMMIT_TAG" | default "dev" | nindent 8}}
       dest: /deckhouse/version
 
   - name: "Add edition info"
     copy:
       content: |
-{{ env "WERF_ENV" | default "unknown" | indent 8}}
+        {{- env "WERF_ENV" | default "unknown" | nindent 8}}
       dest: /deckhouse/edition
 
   # Because of https://github.com/flant/werf/issues/1741 just make symlink for the entry point
@@ -354,7 +354,7 @@ ansible:
   - name: "Add modules images tags.json"
     copy:
       content: |
-{{ .Files.Get (printf "modules/images_tags_%s.json" .Env) | indent 8 }}
+        {{- .Files.Get (printf "modules/images_tags_%s.json" .Env) | nindent 8 }}
       dest: /deckhouse/modules/images_tags.json
 docker:
   ENV:
@@ -695,7 +695,7 @@ ansible:
   - name: "Shell comfort: inputrc"
     copy:
       content: |
-{{ .Files.Get "deckhouse-controller/files/inputrc" | indent 8 }}
+        {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 8 }}
       dest: /etc/inputrc
 
   - name: "Shell comfort: bashrc"
@@ -716,7 +716,7 @@ ansible:
   - name: "Shell comfort: vimrc.local"
     copy:
       content: |
-{{ .Files.Get "deckhouse-controller/files/vimrc.local" | indent 8 }}
+        {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 8 }}
       dest: /etc/vim/vimrc.local
 
   - name: "Add dhctl completion"

@@ -80,7 +80,7 @@ certManager:
   {{- end -}}
 {{- end -}}
 
-{{- /* Usage: {{ include "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" . | indent 4 }} */ -}}
+    {{- /* Usage: {{ include "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" . | nindent 4 }} */ -}}
 {{- define "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" -}}
   {{- $context := . -}}
   {{- if (include "helm_lib_module_https_cert_manager_cluster_issuer_is_dns01_challenge_solver" $context) }}
@@ -118,10 +118,10 @@ kind: Secret
 metadata:
   name: {{ $secret_name }}
   namespace: {{ $namespace }}
-{{ include "helm_lib_module_labels" (list $context) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 type: kubernetes.io/tls
 data:
-{{ $module_values.internal.customCertificateData | toYaml | indent 2 }}
+  {{- $module_values.internal.customCertificateData | toYaml | nindent 2 }}
   {{- end -}}
 {{- end -}}
 

@@ -9,7 +9,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: proxy-{{ $crd.name }}-failover
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -24,9 +24,9 @@ kind: PodDisruptionBudget
 metadata:
   name: proxy-{{ $crd.name }}-failover
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name )) | nindent 2 }}
 spec:
-{{ include "helm_lib_pdb_daemonset" $context | indent 2}}
+  {{- include "helm_lib_pdb_daemonset" $context | nindent 2}}
   selector:
     matchLabels:
       app: proxy-failover
@@ -37,7 +37,7 @@ kind: DaemonSet
 metadata:
   name: proxy-{{ $crd.name }}-failover
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name "ingress-nginx-safe-update" "" )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name "ingress-nginx-safe-update" "" )) | nindent 2 }}
   annotations:
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
@@ -55,17 +55,17 @@ spec:
     spec:
   {{- if $crd.spec.nodeSelector }}
       nodeSelector:
-{{ $crd.spec.nodeSelector | toYaml | indent 8 }}
+        {{- $crd.spec.nodeSelector | toYaml | nindent 8 }}
   {{- else }}
-{{- include "helm_lib_node_selector" (tuple $context "frontend") | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $context "frontend") | nindent 6 }}
   {{- end }}
   {{- if $crd.spec.tolerations }}
       tolerations:
-{{ $crd.spec.tolerations | toYaml | indent 6 }}
+      {{- $crd.spec.tolerations | toYaml | nindent 6 }}
   {{- else }}
-{{- include "helm_lib_tolerations" (tuple $context "frontend") | indent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "frontend") | nindent 6 }}
   {{- end }}
-{{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
       serviceAccountName: ingress-nginx
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -93,7 +93,7 @@ spec:
               command: ["/usr/sbin/nginx","-s","quit"]
         resources:
           requests:
-          {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.proxyFailoverIptables }}
         name: iptables-loop
         securityContext:
@@ -120,7 +120,7 @@ spec:
             host: 127.0.0.1
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: kube-rbac-proxy
         image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
@@ -152,7 +152,7 @@ spec:
           name: https-metrics
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       imagePullSecrets:
       - name: deckhouse-registry
   {{- end }}

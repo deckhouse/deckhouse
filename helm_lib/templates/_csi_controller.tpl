@@ -39,7 +39,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "csi-controller" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -54,7 +54,7 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "csi-controller"))  | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller"))  | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -66,7 +66,7 @@ apiVersion: apps/v1
 metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | nindent 2 }}
 spec:
   replicas: 1
   selector:
@@ -82,14 +82,14 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
       - name: deckhouse-registry
-{{ include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | indent 6 }}
-{{ include "helm_lib_node_selector" (tuple $context "master") | indent 6 }}
-{{ include "helm_lib_tolerations" (tuple $context "master") | indent 6 }}
-{{ include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $context "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "master") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: csi
       containers:
       - name: provisioner
-{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $provisionerImage | quote }}
         args:
         - "--timeout={{ $provisionerTimeout }}"
@@ -109,9 +109,9 @@ spec:
           mountPath: /csi
         resources:
           requests:
-{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       - name: attacher
-{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $attacherImage | quote }}
         args:
         - "--timeout={{ $attacherTimeout }}"
@@ -122,9 +122,9 @@ spec:
           mountPath: /csi
         resources:
           requests:
-{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       - name: resizer
-{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $resizerImage | quote }}
         args:
         - "--timeout={{ $resizerTimeout }}"
@@ -135,17 +135,17 @@ spec:
           mountPath: /csi
         resources:
           requests:
-{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       - name: controller
-{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $controllerImage | quote }}
         args:
     {{- if $additionalControllerArgs }}
-{{ $additionalControllerArgs | toYaml | indent 8 }}
+        {{- $additionalControllerArgs | toYaml | nindent 8 }}
     {{- end }}
     {{- if $additionalControllerEnvs }}
         env:
-{{ $additionalControllerEnvs | toYaml | indent 8 }}
+        {{- $additionalControllerEnvs | toYaml | nindent 8 }}
     {{- end }}
         volumeMounts:
         - name: socket-dir
@@ -156,11 +156,11 @@ spec:
           mountPath: /tmp
         {{- end }}
     {{- if $additionalControllerVolumeMounts }}
-{{ $additionalControllerVolumeMounts | toYaml | indent 8 }}
+        {{- $additionalControllerVolumeMounts | toYaml | nindent 8 }}
     {{- end }}
         resources:
           requests:
-{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       volumes:
       - name: socket-dir
         emptyDir: {}
@@ -170,7 +170,7 @@ spec:
         emptyDir: {}
       {{- end }}
     {{- if $additionalControllerVolumes }}
-{{ $additionalControllerVolumes | toYaml | indent 6 }}
+      {{- $additionalControllerVolumes | toYaml | nindent 6 }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -183,7 +183,7 @@ kind: ServiceAccount
 metadata:
   name: csi
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 
 # ===========
 # provisioner
@@ -193,7 +193,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:{{ .Chart.Name }}:csi:controller:external-provisioner
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["persistentvolumes"]
@@ -234,7 +234,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:{{ .Chart.Name }}:csi:controller:external-provisioner
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: csi
@@ -249,7 +249,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi:controller:external-provisioner
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 rules:
 # Only one of the following rules for endpoints or leases is required based on
 # what is set for `--leader-election-type`. Endpoints are deprecated in favor of Leases.
@@ -280,7 +280,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi:controller:external-provisioner
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: csi
@@ -298,7 +298,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:{{ .Chart.Name }}:csi:controller:external-attacher
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["persistentvolumes"]
@@ -317,7 +317,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:{{ .Chart.Name }}:csi:controller:external-attacher
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: csi
@@ -332,7 +332,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi:controller:external-attacher
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 rules:
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
@@ -343,7 +343,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi:controller:external-attacher
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: csi
@@ -361,7 +361,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:{{ .Chart.Name }}:csi:controller:external-resizer
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["persistentvolumes"]
@@ -383,7 +383,7 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:{{ .Chart.Name }}:csi:controller:external-resizer
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: csi
@@ -398,7 +398,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi:controller:external-resizer
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 rules:
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
@@ -409,7 +409,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi:controller:external-resizer
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
   name: csi

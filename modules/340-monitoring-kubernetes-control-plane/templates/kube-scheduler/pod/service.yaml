@@ -5,7 +5,7 @@ kind: Service
 metadata:
   name: d8-monitoring-control-plane-kube-scheduler
   namespace: {{ .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.podNamespace }}
-{{ include "helm_lib_module_labels" (list . (dict "d8-monitoring-control-plane-component" "kube-scheduler")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "d8-monitoring-control-plane-component" "kube-scheduler")) | nindent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None
@@ -13,5 +13,5 @@ spec:
   - name: metrics
     port: {{ .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.port }}
   selector:
-{{ .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.podSelector | toYaml | indent 4 }}
+    {{- .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.podSelector | toYaml | nindent 4 }}
 {{- end }}

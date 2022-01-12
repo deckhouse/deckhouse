@@ -43,7 +43,7 @@ kind: Secret
 metadata:
   name: grafana-agent-config
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "pricing")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "pricing")) | nindent 2 }}
 data:
   agent-scraping-service.yaml: {{ include "grafana_agent_config" . | b64enc }}
 {{- end }}

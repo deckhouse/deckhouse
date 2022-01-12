@@ -5,7 +5,7 @@ metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
   name: d8:user-authz:{{ .Chart.Name }}:user
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - networking.istio.io
@@ -34,7 +34,7 @@ metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Editor
   name: d8:user-authz:{{ .Chart.Name }}:editor
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - networking.istio.io

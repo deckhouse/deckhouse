@@ -25,13 +25,13 @@ spec:
         - name: backend
           command: ["/app/server"]
           image: {{ index .Values.werf.image "web-backend" }}
-{{- include "resources" . | indent 10 }}
+          {{- include "resources" . | nindent 10 }}
           ports:
           - containerPort: 8080
             name: http
             protocol: TCP
           env:
-{{- include "vrouter_envs" . | indent 10 }}
+          {{- include "vrouter_envs" . | nindent 10 }}
           livenessProbe:
             httpGet:
               path: /health

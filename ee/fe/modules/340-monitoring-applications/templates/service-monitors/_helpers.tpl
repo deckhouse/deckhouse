@@ -68,12 +68,12 @@ kind: ServiceMonitor
 metadata:
   name: {{ $name }}
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list $context (dict "prometheus" "main")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "prometheus" "main")) | nindent 2 }}
 spec:
   sampleLimit: {{ $limit }}
   endpoints:
   - relabelings:
-{{ include "basic_relabeling_for_schema" (list "http" $name) | indent 4 }}
+    {{- include "basic_relabeling_for_schema" (list "http" $name) | nindent 4 }}
 
   - scheme: https
     tlsConfig:
@@ -86,7 +86,7 @@ spec:
         name: prometheus-scraper-tls
         key: tls.key
     relabelings:
-{{ include "basic_relabeling_for_schema" (list "https" $name) | indent 4 }}
+    {{- include "basic_relabeling_for_schema" (list "https" $name) | nindent 4 }}
 
   selector: {}
   namespaceSelector:

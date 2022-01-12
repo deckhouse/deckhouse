@@ -7,7 +7,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: ingressgateway
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -22,7 +22,7 @@ kind: DaemonSet
 metadata:
   name: ingressgateway
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -33,22 +33,22 @@ spec:
         app: ingressgateway
         sidecar.istio.io/inject: "false"
     spec:
-{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: alliance-ingressgateway
   {{- if $.Values.istio.alliance.ingressGateway.nodeSelector }}
       nodeSelector:
-{{ $.Values.istio.alliance.ingressGateway.nodeSelector | toYaml | indent 8 }}
+        {{- $.Values.istio.alliance.ingressGateway.nodeSelector | toYaml | nindent 8 }}
   {{- end }}
   {{- if $.Values.istio.alliance.ingressGateway.tolerations }}
       tolerations:
-{{ $.Values.istio.alliance.ingressGateway.tolerations | toYaml | indent 8 }}
+        {{- $.Values.istio.alliance.ingressGateway.tolerations | toYaml | nindent 8 }}
   {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: istio-proxy
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         args:
         - proxy
         - router
@@ -147,7 +147,7 @@ spec:
             port: 15021
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
         volumeMounts:
         - mountPath: /etc/istio/proxy
           name: istio-envoy

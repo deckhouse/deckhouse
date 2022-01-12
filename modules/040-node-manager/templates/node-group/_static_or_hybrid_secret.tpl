@@ -10,7 +10,7 @@ kind: Secret
 metadata:
   name: manual-bootstrap-for-{{ $ng.name }}
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list $context) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 type: Opaque
 data:
   cloud-config: {{ include "node_group_cloud_init_cloud_config" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}

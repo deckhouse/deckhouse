@@ -7,7 +7,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -22,7 +22,7 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" )) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -35,7 +35,7 @@ apiVersion: apps/v1
 metadata:
   name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" )) | nindent 2 }}
 spec:
   replicas: 1
   selector:
@@ -50,10 +50,10 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $context | sha256sum }}
     spec:
-{{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | indent 6 }}
-{{- include "helm_lib_node_selector" (tuple $context "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple $context "wildcard") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $context | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $context "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "wildcard") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $context | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       hostNetwork: true
@@ -61,7 +61,7 @@ spec:
       serviceAccountName: {{ $context.Chart.Name }}
       containers:
       - name: local-path-provisioner
-{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $context | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $context | nindent 8 }}
         image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.localPathProvisioner }}
         imagePullPolicy: IfNotPresent
         command:
@@ -88,7 +88,7 @@ spec:
               fieldPath: metadata.namespace
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" $context | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       volumes:
       - name: config-volume
         configMap:

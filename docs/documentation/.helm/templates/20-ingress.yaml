@@ -16,7 +16,7 @@ metadata:
       proxy_set_header X-Original-URI         $request_uri;
       ssi on;
       ssi_silent_errors on;
-{{- include "rewrites" . | indent 6 }}
+      {{- include "rewrites" . | nindent 6 }}
 {{- if eq .Values.web.env "web-stage" }}
     nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
     nginx.ingress.kubernetes.io/auth-url: https://{{ .Chart.Name }}-public-dex-authenticator.deckhouse-{{ .Values.web.env }}.svc.cluster.local/dex-authenticator/auth

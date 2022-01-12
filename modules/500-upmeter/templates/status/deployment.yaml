@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: status
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "status")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -20,7 +20,7 @@ kind: PodDisruptionBudget
 metadata:
   name: status
   namespace: d8-upmeter
-{{ include "helm_lib_module_labels" (list . (dict "app" "status")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -32,7 +32,7 @@ kind: Deployment
 metadata:
   name: status
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "status")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
 spec:
   replicas: 1
   selector:
@@ -51,13 +51,13 @@ spec:
         - name: deckhouse-registry
       terminationGracePeriodSeconds: 5
       enableServiceLinks: false
-{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       containers:
         - name: status
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.upmeter.status }}
           lifecycle:
             preStop:
@@ -91,7 +91,7 @@ spec:
             timeoutSeconds: 5
           resources:
             requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 14 }}
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
       volumes:
       - name: config
         configMap:

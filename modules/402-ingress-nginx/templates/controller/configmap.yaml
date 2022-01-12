@@ -15,7 +15,7 @@ kind: ConfigMap
 metadata:
   name: {{ $name }}-config
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 data:
   # Additional headers config map name in format namespace/name
   proxy-set-headers: "d8-ingress-nginx/{{ $crd.name }}-custom-headers"
@@ -217,7 +217,7 @@ kind: ConfigMap
 metadata:
   name: {{ $crd.name }}-custom-headers
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 data:
   X-Request-Start: "t=${msec}"
   {{- if $crd.spec.additionalHeaders }}

@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: status
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "status")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
 data:
   nginx.conf: |
     worker_processes 1;
