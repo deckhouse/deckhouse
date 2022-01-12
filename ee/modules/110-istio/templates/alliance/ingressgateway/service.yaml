@@ -16,6 +16,9 @@ spec:
   - name: tls
     port: 15443
     protocol: TCP
+  {{- if and (eq .Values.istio.alliance.ingressGateway.inlet "NodePort") .Values.istio.alliance.ingressGateway.nodePort.port }}
+    nodePort: {{ .Values.istio.alliance.ingressGateway.nodePort.port }}
+  {{- end }}
   selector:
     app: ingressgateway
   sessionAffinity: None

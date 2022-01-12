@@ -91,6 +91,7 @@ const istioValues = `
     alliance:
       ingressGateway:
         inlet: LoadBalancer
+        nodePort: {}
     tracing: {}
 `
 
