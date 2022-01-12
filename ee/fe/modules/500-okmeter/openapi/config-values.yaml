@@ -1,5 +1,5 @@
 type: object
-required: [apiKey]
+required: [apiKey, image]
 properties:
   apiKey:
     type: string
@@ -38,3 +38,16 @@ properties:
           format: int64
         value:
           type: string
+  image:
+    type: object
+    default: {}
+    required: [repository, tag]
+    properties:
+      repository:
+        type: string
+        default: 'registry.okmeter.io/agent/okagent'
+        description: Docker repository for okmeter agent image.
+      tag:
+        type: string
+        default: 'latest'
+        description: Okmeter agent image tag.

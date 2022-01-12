@@ -43,23 +43,29 @@ type Client interface {
 type client struct {
 	registryURL string
 	authConfig  authn.AuthConfig
-	ca          string
-	isHTTP      bool
+	options     *registryOptions
 }
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
-func NewClient(repo, ca string, isHTTP bool) (Client, error) {
-	authConfig, err := readAuthConfig("/etc/registrysecret/.dockerconfigjson")
-	if err != nil {
-		return nil, err
+func NewClient(repo string, options ...Option) (Client, error) {
+	opts := &registryOptions{}
+
+	for _, opt := range options {
+		opt(opts)
 	}
 
 	r := &client{
 		registryURL: repo,
-		authConfig:  authConfig,
-		ca:          ca,
-		isHTTP:      isHTTP,
+		options:     opts,
+	}
+
+	if !opts.withoutAuth {
+		authConfig, err := readAuthConfig("/etc/registrysecret/.dockerconfigjson")
+		if err != nil {
+			return nil, err
+		}
+		r.authConfig = authConfig
 	}
 
 	return r, nil
@@ -69,7 +75,7 @@ func (r *client) Image(tag string) (v1.Image, error) {
 	imageURL := r.registryURL + ":" + tag
 
 	var nameOpts []name.Option
-	if r.isHTTP {
+	if r.options.useHTTP {
 		nameOpts = append(nameOpts, name.Insecure)
 	}
 
@@ -78,10 +84,17 @@ func (r *client) Image(tag string) (v1.Image, error) {
 		return nil, err
 	}
 
+	imageOptions := make([]remote.Option, 0)
+	if !r.options.withoutAuth {
+		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
+	}
+	if r.options.ca != "" {
+		imageOptions = append(imageOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
+	}
+
 	return remote.Image(
 		ref,
-		remote.WithAuth(authn.FromConfig(r.authConfig)),
-		remote.WithTransport(GetHTTPTransport(r.ca)),
+		imageOptions...,
 	)
 }
 
@@ -142,5 +155,34 @@ func GetHTTPTransport(ca string) (transport http.RoundTripper) {
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       &tls.Config{RootCAs: caPool},
 		TLSNextProto:          make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+	}
+}
+
+type registryOptions struct {
+	ca          string
+	useHTTP     bool
+	withoutAuth bool
+}
+
+type Option func(options *registryOptions)
+
+// WithCA use custom CA certificate
+func WithCA(ca string) Option {
+	return func(options *registryOptions) {
+		options.ca = ca
+	}
+}
+
+// WithInsecureSchema use http schema instead of https
+func WithInsecureSchema(insecure bool) Option {
+	return func(options *registryOptions) {
+		options.useHTTP = insecure
+	}
+}
+
+// WithDisabledAuth dont use authConfig
+func WithDisabledAuth() Option {
+	return func(options *registryOptions) {
+		options.withoutAuth = true
 	}
 }

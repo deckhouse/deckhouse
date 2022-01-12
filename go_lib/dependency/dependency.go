@@ -41,7 +41,7 @@ type Container interface {
 	MustGetEtcdClient(endpoints []string, options ...etcd.Option) etcd.Client
 	GetK8sClient(options ...k8s.Option) (k8s.Client, error)
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
-	GetRegistryClient(repo, ca string, isHTTP bool) (cr.Client, error)
+	GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error)
 }
 
 var (
@@ -160,9 +160,9 @@ func (dc *dependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s.Clien
 	return client
 }
 
-func (dc *dependencyContainer) GetRegistryClient(repo, ca string, isHTTP bool) (cr.Client, error) {
+func (dc *dependencyContainer) GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error) {
 	if dc.isTestEnvironment() {
-		return TestDC.GetRegistryClient(repo, ca, isHTTP)
+		return TestDC.GetRegistryClient(repo, options...)
 	}
 
 	// Maybe we should use multitone here
@@ -170,7 +170,7 @@ func (dc *dependencyContainer) GetRegistryClient(repo, ca string, isHTTP bool) (
 	// 	return dc.crClient, nil
 	// }
 
-	client, err := cr.NewClient(repo, ca, isHTTP)
+	client, err := cr.NewClient(repo, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func (mdc *mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8
 	return k
 }
 
-func (mdc *mockedDependencyContainer) GetRegistryClient(string, string, bool) (cr.Client, error) {
+func (mdc *mockedDependencyContainer) GetRegistryClient(string, ...cr.Option) (cr.Client, error) {
 	if mdc.CRClient != nil {
 		return mdc.CRClient, nil
 	}

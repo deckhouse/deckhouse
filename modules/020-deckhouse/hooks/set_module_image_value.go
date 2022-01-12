@@ -24,6 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 func getDeploymentImage(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -51,7 +52,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"deckhouse"},
 			},
-			FilterFunc: getDeploymentImage,
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          getDeploymentImage,
 		},
 	},
 }, parseDeckhouseImage)
