@@ -18,11 +18,11 @@ title: "Сloud provider — VMware vSphere: настройки"
 * `host` — домен vCenter сервера.
 * `username` — логин.
 * `password` — пароль.
-* `vmFolderPath` — путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
-  * Пример — `dev/test`
 * `insecure` — можно выставить в `true`, если vCenter имеет самоподписанный сертификат.
   * Формат — bool.
   * Опциональный параметр. По умолчанию `false`.
+* `vmFolderPath` — путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
+  * Пример — `dev/test`
 * `regionTagCategory`— имя **категории** тэгов, использующихся для идентификации региона (vSphere Datacenter).
   * Формат — string.
   * Опциональный параметр. По умолчанию `k8s-region`.

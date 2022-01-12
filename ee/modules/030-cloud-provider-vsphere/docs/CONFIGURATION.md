@@ -17,11 +17,11 @@ If you need to configure a module because, say, you have a bare metal cluster an
 * `host` — the domain of the vCenter server;
 * `username` — the login ID;
 * `password` — the password;
-* `vmFolderPath` — the path to the VirtualMachine Folder where the cloned VMs will be created;
-  * e.g., `dev/test`;
 * `insecure` — can be set to `true` if vCenter has a self-signed certificate;
   * Format — bool;
   * An optional parameter; by default `false`;
+* `vmFolderPath` — the path to the VirtualMachine Folder where the cloned VMs will be created;
+  * e.g., `dev/test`;
 * `regionTagCategory`— the name of the tag **category** used to identify the region (vSphere Datacenter);
   * Format — string;
   * An optional parameter; by default `k8s-region`;
@@ -37,7 +37,7 @@ If you need to configure a module because, say, you have a bare metal cluster an
   * Format — an array of strings;
   * An optional parameter; by default there are no allowed keys for the user;
 * `externalNetworkNames` — names of networks (just the name and not the full path) connected to VirtualMachines and used by vsphere-cloud-controller-manager to insert ExternalIP into the `.status.addresses` field in the Node API object.
-  * Format — an array of strings; for eaxmple,
+  * Format — an array of strings; for example,
 
   Example:
   ```yaml

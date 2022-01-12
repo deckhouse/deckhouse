@@ -8,7 +8,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
 2. There are applications which must be deployed — cloud-controller-manager, csi.
-3. There is list of datastores in values.yaml. StorageClass must be created for every datastore. Datastore mentioned in value `.storageClass.default` must be annotated as default.
+3. StorageClass must be created for every internal.storageClasses. One mentioned in value `.storageClass.default` must be annotated as default.
 
 */
 
@@ -81,23 +81,27 @@ const moduleValuesA = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      server: myhost
-      username: myuname
-      password: myPaSsWd
-      insecure: true
-      regionTagCategory: myregtagcat
-      zoneTagCategory: myzonetagcat
-      region: myreg
-      sshKey: mysshkey1
-      vmFolderPath: dev/test
-      datacenter: X1
-      zones: ["aaa", "bbb"]
-      masterInstanceClass:
-        datastore: dev/lun_1
-        mainNetwork: k8s-msk/test_187
-        memory: 8192
-        numCPUs: 4
-        template: dev/golden_image
+      vsphereDiscoveryData:
+        datacenter: X1
+        zones: ["aaa", "bbb"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        masterNodeGroup:
+          instanceClass:
+            datastore: dev/lun_1
+            mainNetwork: k8s-msk/test_187
+            memory: 8192
+            numCPUs: 4
+            template: dev/golden_image
 `
 
 const moduleValuesB = `
@@ -114,21 +118,26 @@ const moduleValuesB = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      server: myhost
-      username: myuname
-      password: myPaSsWd
-      insecure: true
-      regionTagCategory: myregtagcat
-      zoneTagCategory: myzonetagcat
-      region: myreg
-      sshKey: mysshkey1
-      vmFolderPath: dev/test
-      datacenter: X1
-      zones: ["aaa", "bbb"]
-      masterInstanceClass: null
-      defaultResourcePoolPath: kubernetes-dev
-      externalNetworkNames: ["aaa", "bbb"]
-      internalNetworkNames: ["ccc", "ddd"]
+      vsphereDiscoveryData:
+        zones: ["aaa", "bbb"]
+        datacenter: X1
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        masterNodeGroup:
+          instanceClass: null
+        externalNetworkNames: ["aaa", "bbb"]
+        internalNetworkNames: ["ccc", "ddd"]
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
 `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {

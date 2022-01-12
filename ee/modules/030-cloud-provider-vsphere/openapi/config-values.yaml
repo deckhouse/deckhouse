@@ -1,0 +1,103 @@
+type: object
+properties:
+  host:
+    type: string
+    description: |
+      the domain of the vCenter server;
+  username:
+    type: string
+    description: |
+      the login ID;
+  password:
+    type: string
+    description: |
+      the password;
+  insecure:
+    type: boolean
+    description: |
+      can be set to `true` if vCenter has a self-signed certificate;
+        * by default `false`;
+  vmFolderPath:
+    type: string
+    description: |
+      the path to the VirtualMachine Folder where the cloned VMs will be created;
+        * e.g., `dev/test`;
+  regionTagCategory:
+    type: string
+    description: |
+      the name of the tag **category** used to identify the region (vSphere Datacenter);
+        * by default `k8s-zone`
+  zoneTagCategory:
+    type: string
+    description: |
+      the name of the tag **category** used to identify the region (vSphere Cluster);
+        * by default `k8s-zone`
+  disableTimesync:
+    type: boolean
+    description: |
+      disable time synchronization on the vSphere side;
+        * by default `true`;
+      **Note** that this parameter will not disable the NTP daemons in the guest OS, but only disable the time correction on the part of ESXi;
+  region:
+    type: string
+    description: |
+      is a tag added to the vSphere Datacenter where all actions will occur: provisioning VirtualMachines, storing virtual disks on datastores, connecting to the network.
+  zones:
+    type: array
+    items:
+      type: string
+    description: |
+      the globally restricted set of zones that this Cloud Provider works with.
+  sshKeys:
+    type: array
+    items:
+      type: string
+    description: |
+      a list of public SSH keys in plain-text format;
+        * an optional parameter;
+        * by default there are no allowed keys for the user;
+  externalNetworkNames:
+    type: array
+    items:
+      type: string
+    description: |
+      a list of names of networks (just the name and not the full path) connected to VirtualMachines and used by vsphere-cloud-controller-manager to insert ExternalIP into the `.status.addresses` field in the Node API object.
+        * an optional parameter
+  internalNetworkNames:
+    type: array
+    items:
+      type: string
+    description: |
+      a list of names of networks (just the name and not the full path) connected to VirtualMachines and used by vsphere-cloud-controller-manager to insert InternalIP into the `.status.addresses` field in the Node API object.
+        * an optional parameter
+  storageClass:
+    type: object
+    properties:
+      exclude:
+        type: array
+        items:
+          type: string
+        description: |
+          a list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster;
+            * an optional parameter;
+        x-examples:
+        - [".*-lun101-.*", "slow-lun103-1c280603"]
+      default:
+        type: string
+        description: |
+          the name of StorageClass that will be used by default in the cluster;
+            * an optional parameter;
+            * If the parameter is omitted, the default StorageClass is either:
+              * an arbitrary StorageClass present in the cluster that has the default annotation;
+              * the first (in lexicographic order) StorageClass of those created by the module.
+        x-examples:
+        - "fast-lun102-7d0bf578"
+      compatibilityFlag:
+        type: string
+        enum: ["legacy", "migration"]
+        description: |
+          a flag allowing the use of the old CSI version;
+            * Possible values:
+              * `legacy` — use the old version of the driver. FCD discs only, no online-resizing;
+              * `migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.
+            * An optional parameter;

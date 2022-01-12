@@ -1,0 +1,66 @@
+type: object
+properties:
+  host:
+    description: |
+      домен vCenter сервера.
+  username:
+    description: |
+      логин.
+  password:
+    description: |
+      пароль.
+  insecure:
+    description: |
+      можно выставить в `true`, если vCenter имеет самоподписанный сертификат.
+        * По умолчанию `false`.
+  vmFolderPath:
+    description: |
+      путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
+        * Пример — `dev/test`.
+  regionTagCategory:
+    description: |
+      имя **категории** тэгов, использующихся для идентификации региона (vSphere Datacenter).
+        * По умолчанию `k8s-region`.
+  zoneTagCategory:
+    description: |
+      имя **категории** тэгов, использующихся для идентификации зоны (vSphere Cluster).
+        * По умолчанию `k8s-zone`.
+  disableTimesync:
+    description: |
+      отключить ли синхронизацию времени со стороны vSphere.
+        * По умолчанию `true`.
+      **Внимание!** это не отключит NTP демоны в гостевой ОС, а лишь отключит "подруливание" временем со стороны ESXi.
+  region:
+    description: |
+      тэг, прикреплённый к vSphere Datacenter, в котором будут происходить все операции: заказ VirtualMachines, размещение их дисков на datastore, подключение к network.
+  zones:
+    description: |
+      глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+  sshKeys:
+    description: |
+      список public SSH ключей в plain-text формате.
+        * Опциональный параметр.
+        * По умолчанию разрешённых ключей для пользователя по умолчанию не будет.
+  externalNetworkNames:
+    description: |
+      имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
+        * Опциональный параметр.
+  internalNetworkNames:
+    description: |
+      имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
+        * Опциональный параметр.
+  storageClass:
+    properties:
+      exclude:
+        description: |
+          полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
+            * Формат — массив строк.
+            * Опциональный параметр.
+      default:
+        description: |
+          имя StorageClass, который будет использоваться в кластере по умолчанию.
+            * Формат — строка.
+            * Опциональный параметр.
+            * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
+              * Присутствующий в кластере произвольный StorageClass с default аннотацией.
+              * Лексикографически первый StorageClass из создаваемых модулем.

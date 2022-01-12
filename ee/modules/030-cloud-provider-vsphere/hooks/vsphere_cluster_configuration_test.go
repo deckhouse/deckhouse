@@ -8,6 +8,7 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -114,6 +115,10 @@ data: {}
 `
 	)
 
+	// todo(31337Ghost) eliminate the following dirty hack after `ee` subdirectory will be merged to the root
+	// Used to make dhctl config function able to validate `VsphereClusterConfiguration`.
+	_ = os.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "/deckhouse/ee/candi")
+
 	a := HookExecutionConfigInit(initValuesStringA, `{}`)
 
 	Context("Cluster has minimal cloudProviderVsphere configuration", func() {
@@ -124,28 +129,8 @@ data: {}
 
 		It("Should fill values", func() {
 			Expect(a).To(ExecuteSuccessfully())
-			Expect(a.ValuesGet("cloudProviderVsphere.internal").String()).To(MatchYAML(`
-server: test
-username: test
-password: test
-insecure: true
-regionTagCategory: test
-zoneTagCategory: test
-internalNetworkNames: [test1, test2]
-externalNetworkNames: [test1, test2]
-disableTimesync: true
-vmFolderPath: test
-sshKey: test
-region: test
-zones: [test1, test2]
-defaultResourcePoolPath: test
-masterInstanceClass:
-  datastore: dev/lun_1
-  mainNetwork: k8s-msk/test_187
-  memory: 8192
-  numCPUs: 4
-  template: dev/golden_image
-`))
+			Expect(a.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration + "disableTimesync: true"))
+			Expect(a.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
 		})
 	})
 
@@ -158,23 +143,23 @@ masterInstanceClass:
 
 		It("Should fill values from cloudProviderVsphere", func() {
 			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("cloudProviderVsphere.internal").String()).To(MatchYAML(`
-server: override
-username: override
-password: override
-insecure: true
+			Expect(b.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(`
+provider:
+  server: override
+  username: override
+  password: override
+  insecure: true
 regionTagCategory: override
 zoneTagCategory: override
 internalNetworkNames: [override1, override2]
 externalNetworkNames: [override1, override2]
-disableTimesync: true
+disableTimesync: false
 vmFolderPath: override
-sshKey: override1
+sshPublicKey: override1
 region: override
 zones: [override1, override2]
-defaultResourcePoolPath: null
-masterInstanceClass: null
 `))
+			Expect(b.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
 		})
 	})
 
@@ -185,23 +170,23 @@ masterInstanceClass: null
 		})
 		It("Should fill values from config", func() {
 			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("cloudProviderVsphere.internal").String()).To(MatchYAML(`
-server: override
-username: override
-password: override
-insecure: true
+			Expect(b.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(`
+provider:
+  server: override
+  username: override
+  password: override
+  insecure: true
 regionTagCategory: override
 zoneTagCategory: override
 internalNetworkNames: [override1, override2]
 externalNetworkNames: [override1, override2]
-disableTimesync: true
+disableTimesync: false
 vmFolderPath: override
-sshKey: override1
+sshPublicKey: override1
 region: override
 zones: [override1, override2]
-defaultResourcePoolPath: null
-masterInstanceClass: null
 `))
+			Expect(b.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
 		})
 
 		Context("Cluster has cloudProviderVsphere and discovery data", func() {
@@ -212,28 +197,49 @@ masterInstanceClass: null
 
 			It("Should override values cloudProviderVsphere configuration", func() {
 				Expect(b).To(ExecuteSuccessfully())
-				Expect(b.ValuesGet("cloudProviderVsphere.internal").String()).To(MatchYAML(`
-server: override
-username: override
-password: override
-insecure: true
+				Expect(b.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+provider:
+  server: override
+  username: override
+  password: override
+  insecure: true
 regionTagCategory: override
 zoneTagCategory: override
+internalNetworkCIDR: test
 internalNetworkNames: [override1, override2]
 externalNetworkNames: [override1, override2]
-disableTimesync: true
+disableTimesync: false
+layout: Standard
 vmFolderPath: override
-sshKey: override1
+sshPublicKey: override1
 region: override
 zones: [override1, override2]
-defaultResourcePoolPath: test
-masterInstanceClass:
-  datastore: dev/lun_1
-  mainNetwork: k8s-msk/test_187
-  memory: 8192
-  numCPUs: 4
-  template: dev/golden_image
+masterNodeGroup:
+  instanceClass:
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+    memory: 8192
+    numCPUs: 4
+    template: dev/golden_image
+  replicas: 1
+  zones:
+    - test
+nodeGroups:
+  - instanceClass:
+      datastore: dev/lun_1
+      mainNetwork: k8s-msk/test_187
+      memory: 8192
+      numCPUs: 4
+      template: dev/golden_image
+    name: khm
+    replicas: 1
+    zones:
+      - test
+
 `))
+				Expect(b.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
 			})
 		})
 	})

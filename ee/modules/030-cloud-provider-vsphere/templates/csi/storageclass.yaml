@@ -15,7 +15,7 @@ allowedTopologies:
 - matchLabelExpressions:
   - key: failure-domain.beta.kubernetes.io/region
     values:
-    - {{ $.Values.cloudProviderVsphere.internal.region }}
+    - {{ $.Values.cloudProviderVsphere.internal.providerClusterConfiguration.region }}
   - key: failure-domain.beta.kubernetes.io/zone
     values:
   {{- range $storageClass.zones}}
