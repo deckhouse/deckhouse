@@ -341,6 +341,8 @@ func (c *BashibleContext) update() {
 
 	c.data = res
 
+	klog.Infof("Set context data:\n%v\n", c.data)
+
 	c.secretHandler.OnChecksumUpdate(ngmap)
 	c.updateHandler.OnUpdate()
 
@@ -355,6 +357,7 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 
 	raw, ok := c.data[contextKey]
 	if !ok {
+		klog.Errorf("Not found context key %s c.data:\n%v\n", contextKey, c.data)
 		return nil, fmt.Errorf("context not found for secretKey \"%s\"", contextKey)
 	}
 
