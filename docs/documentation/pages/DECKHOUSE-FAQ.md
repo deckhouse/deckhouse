@@ -121,4 +121,4 @@ The following parameters must be set if the [Nexus](https://github.com/sonatype/
 * Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry.
 * Wait for the Deckhouse Pod to become Ready.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
-* Remove `releaseChannel` setting from configmap `d8-system/deckhouse`
+* Only if Deckhouse won't be updated using a third-party registry, then you have to remove `releaseChannel` setting from configmap `d8-system/deckhouse`

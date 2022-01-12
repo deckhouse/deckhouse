@@ -123,4 +123,4 @@ deckhouse: |
 * Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry.
 * Дождаться перехода Pod'а Deckhouse в статус Ready.
 * Дождаться применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
-* Удалить releaseChannel из конфигмапы `d8-system/deckhouse` 
+* Только если обновление Deckhouse через сторонний registry не планируется, то следует удалить releaseChannel из конфигмапа `d8-system/deckhouse` 
