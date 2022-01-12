@@ -11,10 +11,10 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.16+
+      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.22+
       description: |
         To see all resources please use the  expr `max without(instance, pod, hook, job, tier, module) (resource_versions_compatibility) == 1` in prometheus.
-        For more details, please follow the link https://kubernetes.io/blog/2019/07/18/api-deprecations-in-1-16/
+        For more details, please follow the link https://kubernetes.io/blog/2021/07/14/upcoming-changes-in-kubernetes-1-22/
 
   - alert: ClusterHasProblemsWithHelmReleasesWithResourceVersions
     expr: |
@@ -27,7 +27,7 @@
       plk_protocol_version: "1"
       plk_alert_type: "group"
       plk_group_for__helm_release_resource_versions_deprecated: HelmReleaseHasResourcesWithDeprecatedVersions,prometheus=deckhouse
-      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.16+
+      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.22+
       description: |
         Examine groupped alerts to find the cause.
 
@@ -41,7 +41,7 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.16+
+      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.22+
       description: |
         To see all resources please use the  expr `max without(instance, pod, hook, job, tier, module) (resource_versions_compatibility) == 1` in prometheus.
-        For more details, please follow the link https://kubernetes.io/blog/2019/07/18/api-deprecations-in-1-16/
+        For more details, please follow the link https://kubernetes.io/blog/2021/07/14/upcoming-changes-in-kubernetes-1-22/
