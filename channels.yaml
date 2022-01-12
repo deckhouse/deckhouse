@@ -6,8 +6,8 @@ groups:
     - name: beta
       version: v1.29.0-beta.0
     - name: ea
-      version: v1.28.0
+      version: v1.28.1
     - name: stable
-      version: v1.28.0
+      version: v1.28.1
     - name: rock-solid
       version: v1.27.2
