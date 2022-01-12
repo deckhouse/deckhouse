@@ -6,7 +6,7 @@ kind: ConfigMap
 metadata:
   name: grafana-datasources
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
 data:
   prometheus.yaml: |+
     apiVersion: 1
@@ -71,5 +71,5 @@ data:
   additional_datasources.yaml: |+
     apiVersion: 1
     datasources:
-{{ .Values.prometheus.internal.grafana.additionalDatasources | toYaml | indent 6 }}
+      {{- .Values.prometheus.internal.grafana.additionalDatasources | toYaml | nindent 6 }}
 {{- end }}

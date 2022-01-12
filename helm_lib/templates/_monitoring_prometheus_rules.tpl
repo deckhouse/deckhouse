@@ -32,10 +32,10 @@ kind: PrometheusRule
 metadata:
   name: {{ $resourceName }}
   namespace: {{ $namespace }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
 spec:
   groups:
-{{ $definition | indent 4 }}
+    {{- $definition | nindent 4 }}
   {{- end }}
 
   {{- $subDirs := list }}

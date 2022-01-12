@@ -4,14 +4,14 @@ kind: ServiceAccount
 metadata:
   name: {{ $.Chart.Name }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ $.Chart.Name }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 rules:
   - apiGroups:
       - ""
@@ -26,7 +26,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 rules:
   - apiGroups:
       - ""
@@ -57,7 +57,7 @@ kind: RoleBinding
 metadata:
   name: {{ $.Chart.Name }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -71,7 +71,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -85,7 +85,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:{{ $.Chart.Name }}:rbac-proxy
-{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

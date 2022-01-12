@@ -6,7 +6,7 @@ apiVersion: v1
 metadata:
   name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner")) | nindent 2 }}
 data:
   config.json: |-
     {

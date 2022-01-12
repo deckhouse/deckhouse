@@ -4,7 +4,7 @@ kind: PrometheusRule
 metadata:
   name: prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main" "component" "rules")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "component" "rules")) | nindent 2 }}
 spec:
   groups:
     - name: prometheus-metrics-adapter.d8-ingress-nginx
@@ -24,7 +24,7 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: hpa-scaler-{{ $name }}
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context (dict "app" "hpa-scaler" "name" $name )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "hpa-scaler" "name" $name )) | nindent 2 }}
 spec:
   minReplicas: {{ $crd.spec.minReplicas }}
   maxReplicas: {{ $crd.spec.maxReplicas }}
@@ -49,7 +49,7 @@ kind: Deployment
 metadata:
   name: hpa-scaler-{{ $name }}
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
 spec:
   replicas: {{ $crd.spec.minReplicas }}
   selector:
@@ -66,7 +66,7 @@ spec:
       nodeSelector:
       {{ $crd.spec.nodeSelector | toYaml | nindent 8 }}
       {{- else }}
-      {{- include "helm_lib_node_selector" (tuple $context "frontend") | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $context "frontend") | nindent 6 }}
       {{- end }}
       {{- if $crd.spec.tolerations }}
       tolerations:

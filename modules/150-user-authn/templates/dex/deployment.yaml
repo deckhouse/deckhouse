@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: dex
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -20,9 +20,9 @@ kind: Deployment
 metadata:
   name: dex
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
 spec:
-{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: dex
@@ -34,11 +34,11 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/dex/config.yaml") . | sha256sum }}
         checksum/tls: {{ include (print $.Template.BasePath "/dex/secret-tls.yaml") . | sha256sum }}
     spec:
-{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
-{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dex")) | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dex")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: dex
@@ -54,7 +54,7 @@ spec:
           secretName: dex-tls
       containers:
       - name: dex
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.userAuthn.dex }}
         command: ["/usr/local/bin/dex", "serve", "/etc/dex/config/config.yaml"]
         env:
@@ -85,4 +85,4 @@ spec:
           mountPath: /etc/dex/certs
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

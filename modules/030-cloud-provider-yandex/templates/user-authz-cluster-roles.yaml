@@ -5,7 +5,7 @@ metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
   name: d8:user-authz:cloud-provider-yandex:user
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - deckhouse.io
@@ -22,7 +22,7 @@ metadata:
   annotations:
     user-authz.deckhouse.io/access-level: ClusterAdmin
   name: d8:user-authz:cloud-provider-yandex:cluster-admin
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - deckhouse.io

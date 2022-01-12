@@ -4,7 +4,7 @@ kind: Role
 metadata:
   name: bashible
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resourceNames:
@@ -26,7 +26,7 @@ kind: Role
 metadata:
   name: bashible-mcm-bootstrapped-nodes
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
 - apiGroups:
   - machine.sapcloud.io
@@ -42,7 +42,7 @@ kind: Role
 metadata:
   name: node-manager:bashible-mcm-bootstrapped-masters
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resourceNames:
@@ -58,7 +58,7 @@ kind: RoleBinding
 metadata:
   name: bashible
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -77,7 +77,7 @@ kind: RoleBinding
 metadata:
   name: bashible-mcm-bootstrapped-nodes
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -93,7 +93,7 @@ kind: RoleBinding
 metadata:
   name: node-manager:bashible-mcm-bootstrapped-masters
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -108,7 +108,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:node-manager:bashible:bashible-apiserver
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
   - apiGroups:
       - bashible.deckhouse.io
@@ -122,7 +122,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:node-manager:bashible:bashible-apiserver
-{{ include "helm_lib_module_labels" (list . ) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

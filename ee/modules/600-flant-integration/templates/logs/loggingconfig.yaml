@@ -4,7 +4,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
   name: flant-integration-d8-logs
-{{ include "helm_lib_module_labels" (list . (dict "app" "flant-integration")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "flant-integration")) | nindent 2 }}
 spec:
   destinationRefs:
   - flant-integration-loki-storage

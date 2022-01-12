@@ -5,7 +5,7 @@ kind: Issuer
 metadata:
   name: kubernetes-api
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   ca:
     secretName: kubernetes-api-ca-key-pair
@@ -15,7 +15,7 @@ kind: Secret
 metadata:
   name: kubernetes-api-ca-key-pair
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 data:
   tls.crt: {{ .Values.userAuthn.internal.selfSignedCA.cert | b64enc }}
   tls.key: {{ .Values.userAuthn.internal.selfSignedCA.key | b64enc }}

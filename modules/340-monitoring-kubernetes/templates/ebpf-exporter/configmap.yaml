@@ -47,7 +47,7 @@ kind: ConfigMap
 metadata:
   name: ebpf-exporter-config
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "ebpf-exporter")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ebpf-exporter")) | nindent 2 }}
 data:
   config.yaml: |
-{{ include "ebpf-exporter-config" . | indent 4 }}
+    {{- include "ebpf-exporter-config" . | nindent 4 }}

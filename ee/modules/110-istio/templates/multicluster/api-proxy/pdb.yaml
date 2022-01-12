@@ -8,7 +8,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: api-proxy
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:

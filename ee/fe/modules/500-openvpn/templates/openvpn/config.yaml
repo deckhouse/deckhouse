@@ -7,7 +7,7 @@ kind: ConfigMap
 metadata:
   name: {{ .Chart.Name }}
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 data:
   openvpn.conf: |-
     server {{ $tunnelNetworkAddress }} {{ $tunnelNetworkNetmask }}

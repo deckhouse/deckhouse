@@ -4,13 +4,13 @@ kind: ServiceAccount
 metadata:
   name: speaker
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "speaker")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "speaker")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:metallb:speaker
-{{ include "helm_lib_module_labels" (list . (dict "app" "speaker")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "speaker")) | nindent 2 }}
 rules:
   - apiGroups:
       - ''
@@ -42,7 +42,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:metallb:speaker
-{{ include "helm_lib_module_labels" (list . (dict "app" "speaker")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "speaker")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -57,7 +57,7 @@ kind: Role
 metadata:
   name: speaker
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "config-watcher")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "config-watcher")) | nindent 2 }}
 rules:
   - apiGroups:
       - ''
@@ -73,7 +73,7 @@ kind: RoleBinding
 metadata:
   name: speaker
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "config-watcher")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "config-watcher")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

@@ -5,7 +5,7 @@ kind: Service
 metadata:
   name: kubeconfig-generator
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None

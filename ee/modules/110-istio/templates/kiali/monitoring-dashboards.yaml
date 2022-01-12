@@ -5,7 +5,7 @@ kind: MonitoringDashboard
 metadata:
   name: envoy
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   title: Envoy Metrics
 #  discoverOn: "envoy_server_uptime"
@@ -57,7 +57,7 @@ kind: MonitoringDashboard
 metadata:
   name: go
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   title: Go Metrics
   runtime: Go
@@ -120,7 +120,7 @@ kind: MonitoringDashboard
 metadata:
   name: kiali
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   title: Kiali Internal Metrics
   items:
@@ -160,7 +160,7 @@ kind: MonitoringDashboard
 metadata:
   name: micrometer-1.0.6-jvm-pool
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: JVM
   title: JVM Pool Metrics
@@ -198,7 +198,7 @@ apiVersion: "monitoring.kiali.io/v1alpha1"
 kind: MonitoringDashboard
 metadata:
   name: micrometer-1.0.6-jvm
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: JVM
   title: JVM Metrics
@@ -259,7 +259,7 @@ kind: MonitoringDashboard
 metadata:
   name: micrometer-1.1-jvm
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: JVM
   title: JVM Metrics
@@ -323,7 +323,7 @@ kind: MonitoringDashboard
 metadata:
   name: microprofile-1.1
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   title: MicroProfile Metrics
   runtime: MicroProfile
@@ -378,7 +378,7 @@ kind: MonitoringDashboard
 metadata:
   name: microprofile-x.y
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   title: MicroProfile Metrics
   runtime: MicroProfile
@@ -412,7 +412,7 @@ kind: MonitoringDashboard
 metadata:
   name: nodejs
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Node.js
   title: Node.js Metrics
@@ -467,7 +467,7 @@ kind: MonitoringDashboard
 metadata:
   name: quarkus
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   title: Quarkus Metrics
   runtime: Quarkus
@@ -496,7 +496,7 @@ kind: MonitoringDashboard
 metadata:
   name: springboot-jvm-pool
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Spring Boot
   title: JVM Pool Metrics
@@ -508,7 +508,7 @@ kind: MonitoringDashboard
 metadata:
   name: springboot-jvm
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Spring Boot
   title: JVM Metrics
@@ -520,7 +520,7 @@ kind: MonitoringDashboard
 metadata:
   name: springboot-tomcat
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Spring Boot
   title: Tomcat Metrics
@@ -532,7 +532,7 @@ kind: MonitoringDashboard
 metadata:
   name: thorntail
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Thorntail
   title: Thorntail Metrics
@@ -550,7 +550,7 @@ kind: MonitoringDashboard
 metadata:
   name: tomcat
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Tomcat
   title: Tomcat Metrics
@@ -613,7 +613,7 @@ kind: MonitoringDashboard
 metadata:
   name: vertx-client
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Vert.x
   title: Vert.x Client Metrics
@@ -669,7 +669,7 @@ kind: MonitoringDashboard
 metadata:
   name: vertx-eventbus
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Vert.x
   title: Vert.x Eventbus Metrics
@@ -724,7 +724,7 @@ kind: MonitoringDashboard
 metadata:
   name: vertx-jvm
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Vert.x
   title: JVM Metrics
@@ -736,7 +736,7 @@ kind: MonitoringDashboard
 metadata:
   name: vertx-pool
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Vert.x
   title: Vert.x Pools Metrics
@@ -800,7 +800,7 @@ kind: MonitoringDashboard
 metadata:
   name: vertx-server
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
 spec:
   runtime: Vert.x
   title: Vert.x Server Metrics

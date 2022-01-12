@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: operator-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -24,7 +24,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: operator-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
 spec:
   minAvailable: 0
   selector:
@@ -37,7 +37,7 @@ kind: Deployment
 metadata:
   namespace: d8-{{ $.Chart.Name }}
   name: operator-{{ $revision }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
 spec:
   replicas: 1
   selector:
@@ -50,10 +50,10 @@ spec:
         app: operator
         revision: {{ $revision }}
     spec:
-{{- include "helm_lib_node_selector" (tuple $ "system") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple $ "system") | indent 6 }}
-{{- include "helm_lib_priority_class" (tuple $ "cluster-low") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: operator
       imagePullSecrets:
       - name: deckhouse-registry
@@ -76,7 +76,7 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
         env:
           - name: WATCH_NAMESPACE
             value: d8-{{ $.Chart.Name }}

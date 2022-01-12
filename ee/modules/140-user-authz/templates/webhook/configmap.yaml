@@ -5,7 +5,7 @@ kind: ConfigMap
 metadata:
   name: user-authz-webhook
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook")) | nindent 2 }}
 data:
   config.json: |
     { "crds": {{ .Values.userAuthz.internal.crds | toJson}} }

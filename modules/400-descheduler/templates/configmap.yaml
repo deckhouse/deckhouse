@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: descheduler-policy-configmap
   namespace: d8-descheduler
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
   policy.yaml: |
     apiVersion: "descheduler/v1alpha1"

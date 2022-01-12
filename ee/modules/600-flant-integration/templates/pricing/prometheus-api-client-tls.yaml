@@ -4,7 +4,7 @@ kind: Secret
 metadata:
   name: pricing-prometheus-api-client-tls
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: kubernetes.io/tls
 data:
   tls.crt: {{ .Values.flantIntegration.internal.prometheusAPIClientTLS.certificate | b64enc }}

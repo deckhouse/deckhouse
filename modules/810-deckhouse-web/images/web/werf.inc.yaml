@@ -7,7 +7,7 @@ ansible:
   - name: "Copy nginx.conf"
     copy:
       content: |
-{{ .Files.Get "modules/810-deckhouse-web/images/web/nginx.conf" | indent 8 }}
+        {{- .Files.Get "modules/810-deckhouse-web/images/web/nginx.conf" | nindent 8 }}
       dest: /etc/nginx/nginx.conf
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
@@ -112,15 +112,15 @@ ansible:
         chdir: /srv/jekyll-data/documentation/
     - copy:
         content: |
-{{ .Files.Get "modules/810-deckhouse-web/images/web/_config.yml" | indent 10 }}
+          {{- .Files.Get "modules/810-deckhouse-web/images/web/_config.yml" | nindent 10 }}
         dest: /tmp/_config_additional.yml
     - copy:
         content: |
-{{ .Files.Get "modules/810-deckhouse-web/images/web/site/_data/topnav.yml" | indent 10 }}
+          {{- .Files.Get "modules/810-deckhouse-web/images/web/site/_data/topnav.yml" | nindent 10 }}
         dest: /srv/jekyll-data/documentation/_data/topnav.yml
     - copy:
         content: |
-{{ .Files.Get "modules/810-deckhouse-web/images/web/site/_includes/footer.html" | indent 10 }}
+          {{- .Files.Get "modules/810-deckhouse-web/images/web/site/_includes/footer.html" | nindent 10 }}
         dest: /srv/jekyll-data/site/_includes/footer.html
     - name: "Creating additional config..."
       shell: |

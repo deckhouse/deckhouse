@@ -92,7 +92,7 @@ It will be better for you to enable `control-plane-manager` module to be able to
       plk_incident_initial_status: "todo"
       description: |
         Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 7 days) on node {{`{{$labels.node}}`}}.
-{{ include "instruction" . | indent 8 }}
+        {{- include "instruction" . | nindent 8 }}
       summary: Kubernetes has API clients with soon expiring certificates
   - alert: K8sCertificateExpiration
     expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="86400", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
@@ -104,5 +104,5 @@ It will be better for you to enable `control-plane-manager` module to be able to
       plk_incident_initial_status: "todo"
       description: |
         Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 1 day) on node {{`{{$labels.component}}`}}.
-{{ include "instruction" . | indent 8 }}
+        {{- include "instruction" . | nindent 8 }}
       summary: Kubernetes has API clients with soon expiring certificates

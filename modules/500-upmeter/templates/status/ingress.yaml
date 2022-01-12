@@ -5,7 +5,7 @@ kind: Ingress
 metadata:
   name: status
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "status")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if not .Values.upmeter.statusPageAuthDisabled }}
@@ -46,7 +46,7 @@ kind: Ingress
 metadata:
   name: upmeter-api-status
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "status")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if not .Values.upmeter.statusPageAuthDisabled }}
@@ -95,7 +95,7 @@ kind: Certificate
 metadata:
   name: status
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   secretName: ingress-tls-status
   dnsNames:

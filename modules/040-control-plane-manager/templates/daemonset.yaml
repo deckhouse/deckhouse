@@ -97,9 +97,9 @@ kind: Secret
 metadata:
   name: d8-control-plane-manager-config
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 data:
-{{ include "control_plane_config" (list . $tpl_context) | indent 2 }}
+  {{- include "control_plane_config" (list . $tpl_context) | nindent 2 }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -107,7 +107,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: d8-control-plane-manager
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -122,9 +122,9 @@ kind: PodDisruptionBudget
 metadata:
   name: d8-control-plane-manager
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 spec:
-{{ include "helm_lib_pdb_daemonset" . | indent 2}}
+  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
   selector:
     matchLabels:
       app: d8-control-plane-manager
@@ -134,7 +134,7 @@ kind: DaemonSet
 metadata:
   name: d8-control-plane-manager
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -148,15 +148,15 @@ spec:
         checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
         rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
-{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: d8-control-plane-manager
       containers:
       - name: control-plane-manager
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
         volumeMounts:
         - mountPath: /var/lib/etcd
@@ -196,7 +196,7 @@ spec:
           timeoutSeconds: 8
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
 {{- range $name, $imageTag := $images }}
       - name: image-holder-{{ $name | kebabcase }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ $imageTag }}

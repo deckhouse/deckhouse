@@ -28,7 +28,7 @@ spec:
         - name: web
           command: ["nginx", "-g", "daemon off;"]
           image: {{ index .Values.werf.image "web" }}
-{{- include "resources" . | indent 10 }}
+          {{- include "resources" . | nindent 10 }}
           ports:
           - containerPort: 80
             name: http

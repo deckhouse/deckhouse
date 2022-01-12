@@ -5,7 +5,7 @@ metadata:
   annotations:
     user-authz.deckhouse.io/access-level: User
   name: d8:user-authz:prometheus-metrics-adapter:user
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - deckhouse.io
@@ -34,7 +34,7 @@ metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Editor
   name: d8:user-authz:prometheus-metrics-adapter:editor
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - deckhouse.io
@@ -58,7 +58,7 @@ metadata:
   annotations:
     user-authz.deckhouse.io/access-level: ClusterEditor
   name: d8:user-authz:prometheus-metrics-adapter:cluster-editor
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - deckhouse.io

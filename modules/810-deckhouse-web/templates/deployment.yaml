@@ -5,7 +5,7 @@ apiVersion: apps/v1
 metadata:
   name: deckhouse-web
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | nindent 2 }}
 spec:
   replicas: 1
   revisionHistoryLimit: 10
@@ -17,15 +17,15 @@ spec:
       labels:
         app: deckhouse-web
     spec:
-{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
-{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: web
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.deckhouseWeb.web }}"
         command: ["nginx", "-g", "daemon off;"]
         ports:
@@ -38,7 +38,7 @@ spec:
               command: ["/usr/sbin/nginx", "-s", "quit"]
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
         volumeMounts:
           - name: config
             mountPath: /usr/share/nginx/html/config

@@ -8,7 +8,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: cloud-controller-manager
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -23,7 +23,7 @@ kind: PodDisruptionBudget
 metadata:
   name: cloud-controller-manager
   namespace: d8-cloud-provider-aws
-{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
@@ -35,9 +35,9 @@ kind: Deployment
 metadata:
   name: cloud-controller-manager
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 spec:
-{{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: cloud-controller-manager
@@ -50,17 +50,17 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
-{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | indent 6 }}
-{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       hostNetwork: true
       dnsPolicy: Default
       serviceAccountName: cloud-controller-manager
       containers:
         - name: aws-cloud-controller-manager
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.cloudProviderAws $ccmImageName }}
           args:
           - --leader-elect=true
@@ -109,7 +109,7 @@ spec:
             readOnly: true
           resources:
             requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 14 }}
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
       volumes:
       - hostPath:
           path: /etc/kubernetes/pki

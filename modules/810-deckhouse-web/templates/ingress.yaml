@@ -5,7 +5,7 @@ kind: Ingress
 metadata:
   name: deckhouse-web
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | nindent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.deckhouseWeb.auth.externalAuthentication }}
@@ -52,7 +52,7 @@ kind: Certificate
 metadata:
   name: deckhouse-web
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | nindent 2 }}
 spec:
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   dnsNames:

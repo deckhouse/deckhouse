@@ -6,14 +6,14 @@ kind: ServiceAccount
 metadata:
   name: machine-controller-manager
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: machine-controller-manager
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 rules:
 -  apiGroups:
    - machine.sapcloud.io
@@ -98,7 +98,7 @@ kind: RoleBinding
 metadata:
   name: machine-controller-manager
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -112,7 +112,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:node-manager:machine-controller-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 rules:
 -  apiGroups:
    - ""
@@ -169,7 +169,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:node-manager:machine-controller-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -183,7 +183,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:node-manager:machine-controller-manager:rbac-proxy
-{{ include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

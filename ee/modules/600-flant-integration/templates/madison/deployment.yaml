@@ -7,7 +7,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: madison-proxy-{{ . | sha256sum }}
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list $ (dict "app" "madison-proxy" "madison-backend" .)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "madison-proxy" "madison-backend" .)) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -22,7 +22,7 @@ kind: Deployment
 metadata:
   name: madison-proxy-{{ . | sha256sum }}
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list $ (dict "app" "madison-proxy" "madison-backend" .)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "madison-proxy" "madison-backend" .)) | nindent 2 }}
 spec:
   replicas: 1
   strategy:
@@ -39,10 +39,10 @@ spec:
       annotations:
         checksum/key: {{ include (print $.Template.BasePath "/madison/secret.yaml") $ | sha256sum }}
     spec:
-{{- include "helm_lib_node_selector" (tuple $ "monitoring") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple $ "monitoring") | indent 6 }}
-{{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $ "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | nindent 6 }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -54,7 +54,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
       - name: nginx
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.flantIntegration.madisonProxy }}
         env:
         - name: MADISON_BACKEND
@@ -89,7 +89,7 @@ spec:
             name: tmp
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       volumes:
         - name: tmp
           emptyDir: {}

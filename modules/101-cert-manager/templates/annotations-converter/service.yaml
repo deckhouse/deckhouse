@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: annotations-converter-webhook
   namespace: d8-cert-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "annotations-converter-webhook")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "annotations-converter-webhook")) | nindent 2 }}
 spec:
   selector:
     heritage: deckhouse

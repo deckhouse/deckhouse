@@ -5,10 +5,10 @@ kind: Service
 metadata:
   name: ingressgateway
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | nindent 2 }}
 {{- if .Values.istio.alliance.ingressGateway.serviceAnnotations }}
   annotations:
-{{ .Values.istio.alliance.ingressGateway.serviceAnnotations | toYaml | indent 4 }}
+    {{- .Values.istio.alliance.ingressGateway.serviceAnnotations | toYaml | nindent 4 }}
 {{- end }}
 spec:
   externalTrafficPolicy: Local

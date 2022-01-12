@@ -33,7 +33,7 @@
   {{- if eq $strategy "monitoring" }}
     {{- if $module_values.nodeSelector }}
 nodeSelector:
-{{ $module_values.nodeSelector | toYaml | indent 2 }}
+  {{- $module_values.nodeSelector | toYaml | nindent 2 }}
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.deckhouse.io/{{$context.Chart.Name}}: ""
@@ -48,7 +48,7 @@ nodeSelector:
   {{- else if or (eq $strategy "frontend") (eq $strategy "system") }}
     {{- if $module_values.nodeSelector }}
 nodeSelector:
-{{ $module_values.nodeSelector | toYaml | indent 2 }}
+  {{- $module_values.nodeSelector | toYaml | nindent 2 }}
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.deckhouse.io/{{$context.Chart.Name}}: ""

@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: snat
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "snat")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snat")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -20,9 +20,9 @@ kind: PodDisruptionBudget
 metadata:
   name: snat
   namespace: d8-network-gateway
-{{ include "helm_lib_module_labels" (list . (dict "app" "snat")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snat")) | nindent 2 }}
 spec:
-{{ include "helm_lib_pdb_daemonset" . | indent 2}}
+  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
   selector:
     matchLabels:
       app: snat
@@ -32,7 +32,7 @@ kind: DaemonSet
 metadata:
   name: snat
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "snat")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snat")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -44,19 +44,19 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-{{- include "helm_lib_priority_class" (tuple . "system-node-critical") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       nodeSelector:
-{{ .Values.networkGateway.nodeSelector | toYaml | indent 8 }}
+        {{- .Values.networkGateway.nodeSelector | toYaml | nindent 8 }}
 {{- if (.Values.networkGateway.tolerations) }}
       tolerations:
-{{ .Values.networkGateway.tolerations | toYaml | indent 8 }}
+        {{- .Values.networkGateway.tolerations | toYaml | nindent 8 }}
 {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: snat
-{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_RAW")) | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.snat }}
         command: ["/iptables-loop.py"]
         env:
@@ -74,7 +74,7 @@ spec:
           readOnly: false
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       volumes:
       - name: network-gateway-config
         configMap:

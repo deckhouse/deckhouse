@@ -27,7 +27,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "csi-node" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -42,9 +42,9 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | nindent 2 }}
 spec:
-{{ include "helm_lib_pdb_daemonset" $context | indent 2 }}
+  {{- include "helm_lib_pdb_daemonset" $context | nindent 2 }}
   selector:
     matchLabels:
       app: {{ $fullname }}
@@ -54,7 +54,7 @@ apiVersion: apps/v1
 metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | nindent 2 }}
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -79,14 +79,14 @@ spec:
                 - CloudStatic
       imagePullSecrets:
       - name: deckhouse-registry
-{{ include "helm_lib_priority_class" (tuple $context "system-node-critical") | indent 6 }}
-{{ include "helm_lib_tolerations" (tuple $context "any-node-with-no-csi") | indent 6 }}
-{{ include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "any-node-with-no-csi") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: node-driver-registrar
-{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
@@ -104,18 +104,18 @@ spec:
           mountPath: /registration
         resources:
           requests:
-{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       - name: node
         securityContext:
           privileged: true
         image: {{ $nodeImage }}
         args:
       {{- if $additionalNodeArgs }}
-{{ $additionalNodeArgs | toYaml | indent 8 }}
+        {{- $additionalNodeArgs | toYaml | nindent 8 }}
       {{- end }}
       {{- if $additionalNodeEnvs }}
         env:
-{{ $additionalNodeEnvs | toYaml | indent 8 }}
+        {{- $additionalNodeEnvs | toYaml | nindent 8 }}
       {{- end }}
         volumeMounts:
         - name: kubelet-dir
@@ -126,11 +126,11 @@ spec:
         - name: device-dir
           mountPath: /dev
     {{- if $additionalNodeVolumeMounts }}
-{{ $additionalNodeVolumeMounts | toYaml | indent 8 }}
+        {{- $additionalNodeVolumeMounts | toYaml | nindent 8 }}
       {{- end }}
         resources:
           requests:
-{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       serviceAccount: {{ $serviceAccount | quote }}
       serviceAccountName: {{ $serviceAccount | quote }}
       volumes:
@@ -151,7 +151,7 @@ spec:
           path: /dev
           type: Directory
     {{- if $additionalNodeVolumes }}
-{{ $additionalNodeVolumes | toYaml | indent 6 }}
+      {{- $additionalNodeVolumes | toYaml | nindent 6 }}
       {{- end }}
     {{- end }}
   {{- end }}

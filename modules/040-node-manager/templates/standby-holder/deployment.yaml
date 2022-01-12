@@ -7,7 +7,7 @@ metadata:
     extended-monitoring.flant.com/enabled: "false"
   name: standby-holder-{{ $ng.name }}
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list $ (dict "app" "standby-holder")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "standby-holder")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -37,7 +37,7 @@ spec:
         node.deckhouse.io/group: {{ $ng.name }}
       priorityClassName: standby
       tolerations:
-{{ $ng.taints | toYaml | indent 8 }}
+        {{- $ng.taints | toYaml | nindent 8 }}
       containers:
       - name: reserve-resources
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.pause }}"

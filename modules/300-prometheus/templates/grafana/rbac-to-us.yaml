@@ -5,7 +5,7 @@ kind: Role
 metadata:
   name: access-to-grafana-http
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
 rules:
 - apiGroups: ["apps"]
   resources: ["statefulsets/http"]
@@ -17,7 +17,7 @@ kind: RoleBinding
 metadata:
   name: access-to-grafana-http
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -32,7 +32,7 @@ kind: Role
 metadata:
   name: access-to-grafana-prometheus-metrics
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
 rules:
 - apiGroups: ["apps"]
   resources: ["statefulsets/prometheus-metrics"]
@@ -44,7 +44,7 @@ kind: RoleBinding
 metadata:
   name: access-to-grafana-prometheus-metrics
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "grafana")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

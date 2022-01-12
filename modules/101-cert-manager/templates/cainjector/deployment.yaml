@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: cainjector
   namespace: d8-cert-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "cainjector" "workload-resource-policy.deckhouse.io" "master"  )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector" "workload-resource-policy.deckhouse.io" "master"  )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -20,9 +20,9 @@ kind: Deployment
 metadata:
   name: cainjector
   namespace: d8-cert-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | nindent 2 }}
 spec:
-{{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: cainjector
@@ -32,16 +32,16 @@ spec:
         app: cainjector
     spec:
       serviceAccountName: cainjector
-{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cainjector")) | indent 6 }}
-{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cainjector")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
         - name: cainjector
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.certManagerCainjector }}
           args:
           - --leader-election-namespace=$(POD_NAMESPACE)
@@ -52,4 +52,4 @@ spec:
                 fieldPath: metadata.namespace
           resources:
             requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}

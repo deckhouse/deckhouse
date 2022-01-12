@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: nginx-config
   namespace: kube-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 data:
   nginx.conf: |
     worker_processes 1;

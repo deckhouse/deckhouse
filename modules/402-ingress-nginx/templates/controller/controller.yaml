@@ -74,7 +74,7 @@ kind: DaemonSet
 metadata:
   name: controller-{{ $name }}
   namespace: d8-ingress-nginx
-{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
     {{- if $failover }}
     ingress-nginx-failover: ""
@@ -115,13 +115,13 @@ spec:
     spec:
   {{- if $crd.spec.nodeSelector }}
       nodeSelector:
-{{ $crd.spec.nodeSelector | toYaml | indent 8 }}
+        {{- $crd.spec.nodeSelector | toYaml | nindent 8 }}
   {{- else }}
-{{- include "helm_lib_node_selector" (tuple $context "frontend") | indent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $context "frontend") | nindent 6 }}
   {{- end }}
   {{- if $crd.spec.tolerations }}
       tolerations:
-{{ $crd.spec.tolerations | toYaml | indent 6 }}
+      {{- $crd.spec.tolerations | toYaml | nindent 6 }}
   {{- else }}
 {{- include "helm_lib_tolerations" (tuple $context "frontend") | nindent 6 }}
   {{- end }}
@@ -235,7 +235,7 @@ spec:
   {{- end }}
         resources:
           requests:
-{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
   {{- if and $loadBalancer (not $resourcesRequests) }}
             cpu: "350m"
             memory: "500Mi"
@@ -294,7 +294,7 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: kube-rbac-proxy
         image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
@@ -340,7 +340,7 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       volumes:
       - name: client-body-temp-path
         emptyDir: {}

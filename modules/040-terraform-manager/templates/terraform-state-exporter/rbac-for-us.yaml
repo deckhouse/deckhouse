@@ -4,14 +4,14 @@ kind: ServiceAccount
 metadata:
   name: terraform-state-exporter
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: terraform-state-exporter
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["secrets"]
@@ -22,7 +22,7 @@ kind: RoleBinding
 metadata:
   name: terraform-state-exporter
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -36,7 +36,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:terraform-manager:terraform-state-exporter:rbac-proxy
-{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -51,7 +51,7 @@ kind: Role
 metadata:
   name: d8:terraform-manager:terraform-state-exporter
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources: ["secrets", "configmaps"]
@@ -62,7 +62,7 @@ kind: RoleBinding
 metadata:
   name: d8:terraform-manager:terraform-state-exporter
   namespace: kube-system
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -76,7 +76,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:terraform-manager:terraform-state-exporter
-{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | nindent 2 }}
 rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["nodegroups"]
@@ -89,7 +89,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:terraform-manager:terraform-state-exporter
-{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

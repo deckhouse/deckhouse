@@ -4,13 +4,13 @@ kind: ServiceAccount
 metadata:
   name: controller
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "controller")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:metallb:controller
-{{ include "helm_lib_module_labels" (list . (dict "app" "metallb")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metallb")) | nindent 2 }}
 rules:
   - apiGroups:
       - ''
@@ -39,7 +39,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:metallb:controller
-{{ include "helm_lib_module_labels" (list . (dict "app" "controller")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -54,7 +54,7 @@ kind: Role
 metadata:
   name: controller
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "config-watcher")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "config-watcher")) | nindent 2 }}
 rules:
   - apiGroups:
       - ''
@@ -70,7 +70,7 @@ kind: RoleBinding
 metadata:
   name: controller
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "config-watcher")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "config-watcher")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

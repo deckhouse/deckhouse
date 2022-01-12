@@ -3,7 +3,7 @@ kind: YandexMachineClass
 metadata:
   name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   regionID: {{ .Values.nodeManager.internal.cloudProvider.yandex.region }}
   zoneID: {{ .zoneName }}

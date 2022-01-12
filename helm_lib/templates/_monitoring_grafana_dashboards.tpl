@@ -24,11 +24,11 @@ apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
 metadata:
   name: d8-{{ $resourceName }}
-{{ include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "prometheus.deckhouse.io/grafana-dashboard" "")) | nindent 2 }}
 spec:
   folder: "{{ $folder }}"
   definition: |
-{{ $definition | indent 4 }}
+    {{- $definition | nindent 4 }}
 
   {{- end }}
 

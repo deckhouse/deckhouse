@@ -11,7 +11,7 @@ ansible:
   - name: "Setup /etc/nginx/nginx.conf"
     copy:
       content: |
-{{ .Files.Get ".werf/nginx.conf" | indent 8 }}
+        {{- .Files.Get ".werf/nginx.conf" | nindent 8 }}
       dest: /etc/nginx/nginx.conf
 import:
 - image: static-pages
