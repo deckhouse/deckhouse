@@ -115,10 +115,16 @@ pull_request_info:
           const owner = context.payload.pull_request.head.repo.owner.login
           const repo = context.payload.pull_request.head.repo.name
           const commit_sha = context.payload.pull_request.head.sha
-          core.info(`List pull request inputs: ${JSON.stringify({ owner, repo, commit_sha })}`);
-          const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha });
+          const head_label = context.payload.pull_request.head.label
+          core.info(`Pull request: ${JSON.stringify({ owner, repo, commit_sha, head_label })}`);
+          core.info(`Base repo: ${JSON.stringify({owner: context.repo.owner, repo: context.repo.repo})}`);
+          const response = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            head: head_label
+          });
           if (response.status != 200) {
-            return core.setFailed(`Cannot list PRs for commit ${commit_sha}: ${JSON.stringify(response)}`);
+            return core.setFailed(`Cannot list PRs for head ${head_label} (${commit_sha}): ${JSON.stringify(response)}`);
           }
 
           // No PR found, do not run next jobs.
