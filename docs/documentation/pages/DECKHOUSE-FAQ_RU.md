@@ -104,13 +104,13 @@ deckhouse: |
 При использовании [Nexus](https://github.com/sonatype/nexus-public) в режиме registry-прокси необходимо соблюдение нескольких условий:
 
 * Включить `Docker Bearer Token Realm`
-![](../images/registry/nexus/Nexus1.png)
+![](images/registry/nexus/nexus1.png)
 
 * Включить анонимный доступ к registry (иначе, [не будет работать](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer Token-авторизация)
-![](../images/registry/nexus/Nexus2.png)
+![](images/registry/nexus/nexus2.png)
 
 * Установить `Maximum metadata age` в 0 (иначе, автоматическое обновление Deckhouse не будет работать корректно из-за кеширования)
-![](../images/registry/nexus/Nexus3.png)
+![](images/registry/nexus/nexus3.png)
 
 #### Harbor
 Необходимо использовать такой функционал [Harbor](https://github.com/goharbor/harbor) как Proxy Cache.
