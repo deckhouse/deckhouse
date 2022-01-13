@@ -36,7 +36,8 @@ import (
 
 type StandbyNodeGroupInfo struct {
 	Name                    string
-	MaxInstances            int
+	MaxPerZone              int
+	ZonesCount              int
 	Standby                 *intstr.IntOrString
 	StandbyNotHeldResources ngv1.Resources
 	Taints                  []v1.Taint
@@ -54,7 +55,7 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		maxPerZone = int(*nodeGroup.Spec.CloudInstances.MaxPerZone)
 	}
 
-	zonesCount := 1
+	var zonesCount int
 	if nodeGroup.Spec.CloudInstances.Zones != nil {
 		zonesCount = len(nodeGroup.Spec.CloudInstances.Zones)
 	}
@@ -66,7 +67,8 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	return StandbyNodeGroupInfo{
 		Name:                    nodeGroup.GetName(),
-		MaxInstances:            maxPerZone * zonesCount,
+		MaxPerZone:              maxPerZone,
+		ZonesCount:              zonesCount,
 		Standby:                 nodeGroup.Spec.CloudInstances.Standby,
 		StandbyNotHeldResources: nodeGroup.Spec.CloudInstances.StandbyHolder.NotHeldResources,
 		Taints:                  taints,
@@ -220,10 +222,19 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			}
 		}
 
-		desiredStandby := intOrPercent(ng.Standby, ng.MaxInstances)
+		if ng.ZonesCount == 0 {
+			if zones, ok := input.Values.GetOk("nodeManager.internal.cloudProvider.zones"); ok {
+				ng.ZonesCount = len(zones.Array())
+			} else {
+				ng.ZonesCount = 1
+			}
+		}
+		maxInstances := ng.MaxPerZone * ng.ZonesCount
+
+		desiredStandby := intOrPercent(ng.Standby, maxInstances)
 		totalNodesCount := readyNodesCount + desiredStandby - actualStandby
-		if totalNodesCount > ng.MaxInstances {
-			excessNodesCount := totalNodesCount - ng.MaxInstances
+		if totalNodesCount > maxInstances {
+			excessNodesCount := totalNodesCount - maxInstances
 			desiredStandby -= excessNodesCount
 		}
 

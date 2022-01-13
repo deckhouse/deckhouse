@@ -216,6 +216,39 @@ spec:
         memory: 750Mi
 status: {}
 `
+		nodeGroupWithoutZones = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: worker
+    maxPerZone: 8
+    minPerZone: 2
+    standby: "3"
+  nodeType: CloudEphemeral
+`
+
+		nodeWorkerTemplate = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-%d
+  labels:
+    node.deckhouse.io/group: worker
+status:
+  allocatable:
+    cpu: 4
+    memory: 2063326004
+  conditions:
+  - status: "True"
+    type: Ready
+`
 	)
 
 	f := HookExecutionConfigInit(`
@@ -392,6 +425,23 @@ status: {}
 			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":2,"reserveCPU":"5100m","reserveMemory": "2673Mi","taints":[]}`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "standby-absolute").Field("status").String()).To(MatchJSON(`{"standby":1}`))
+		})
+	})
+
+	Context("Cluster containing NG without zones defined, but having internal cloudProvider zones defined ", func() {
+		BeforeEach(func() {
+			state := nodeGroupWithoutZones
+			for i := 1; i <= 12; i++ {
+				state = state + fmt.Sprintf(nodeWorkerTemplate, i)
+			}
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.ValuesSet("nodeManager.internal.cloudProvider.zones", []string{"zoneA", "zoneB", "zoneC"})
+			f.RunHook()
+		})
+
+		It("Hook must not fail; standby NGs should be discovered", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"worker","standby":3,"reserveCPU":"3700m","reserveMemory": "1455Mi","taints":[]}`))
 		})
 	})
 
