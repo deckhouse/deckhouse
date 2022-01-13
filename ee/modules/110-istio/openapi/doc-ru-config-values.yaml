@@ -1,5 +1,9 @@
 type: object
 properties:
+  globalVersion:
+    description: Явно заданная версия control-plane Istio, который обслуживает data-plane с неопределённой версией (Namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`). По умолчанию — последняя версия из списка `supportedVersions`.
+  supportedVersions:
+    description: Список поддерживаемых версий Istio control plane. Технический параметр для продвинутых пользователей, значение по умолчанию контролируется разработчиками Deckhouse.
   tlsMode:
     description: |
       Режим прозрачного шифрования трафика между Pod'ами ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).

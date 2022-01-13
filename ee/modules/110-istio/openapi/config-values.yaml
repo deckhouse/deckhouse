@@ -2,7 +2,17 @@ type: object
 properties:
   globalVersion:
     type: string
-    x-examples: [1.8.5]
+    description: Specific version of Istio control-plane which handles unspecific versions of data-plane (namespaces with `istio-injection=enabled` label, not with `istio.io/rev=`). Must be in `supportedVersions` list. By default — the latest version in `supportedVersions`.
+    x-examples: [1.10.1]
+  supportedVersions:
+    type: array
+    description: Istio control plane supported versions list. Technical option for advanced users. The default value is under Deckhouse maintainers' control.
+    items:
+      type: string
+    default:
+    - 1.10.1
+    x-examples:
+    - ["1.10.1"]
   tlsMode:
     type: string
     enum: ["Off", MutualPermissive, Mutual]

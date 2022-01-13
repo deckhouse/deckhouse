@@ -25,8 +25,8 @@ var _ = Describe("Istio hooks :: revisions_discovery ::", func() {
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
 			values := `
-internal:
-  supportedVersions: ["1.2.3-beta.45"]
+supportedVersions: ["1.2.3-beta.45"]
+internal: {}
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 
@@ -49,8 +49,8 @@ internal:
 		BeforeEach(func() {
 			values := `
 globalVersion: "1.1.0"
-internal:
-  supportedVersions: ["1.0.0","1.1.0","1.5.0","1.7.4","1.8.0","1.8.0-alpha.2","1.9.0","1.2.3-beta.45"]
+supportedVersions: ["1.0.0","1.1.0","1.5.0","1.7.4","1.8.0","1.8.0-alpha.2","1.9.0","1.2.3-beta.45"]
+internal: {}
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -177,8 +177,8 @@ metadata:
 		BeforeEach(func() {
 			values := `
 globalVersion: "1.1.0"
-internal:
-  supportedVersions: ["1.1.0","1.2.3-beta.45","1.3.1"]
+supportedVersions: ["1.1.0","1.2.3-beta.45","1.3.1"]
+internal: {}
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(`

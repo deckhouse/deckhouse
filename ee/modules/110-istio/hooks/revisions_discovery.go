@@ -132,7 +132,7 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 
 	var supportedRevisions []string
 
-	var supportedVersionsResult = input.Values.Get("istio.internal.supportedVersions").Array()
+	var supportedVersionsResult = input.Values.Get("istio.supportedVersions").Array()
 	for _, versionResult := range supportedVersionsResult {
 		supportedRevisions = append(supportedRevisions, versionToRevision(versionResult.String()))
 	}
