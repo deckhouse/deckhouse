@@ -95,8 +95,10 @@ module Jekyll
         result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),converter.convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))) if attributes['description']
 
         if attributes.has_key?('x-doc-default')
-            if attributes['x-doc-default'].is_a?(Array)
-                result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default'].to_json))
+            if attributes['x-doc-default'].is_a?(Array) || attributes['x-doc-default'].is_a?(Hash)
+                if attributes['x-doc-default'].length > 0
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default'].to_json))
+                end
             else
                 if attributes['type'] == 'string'
                     result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
@@ -105,8 +107,10 @@ module Jekyll
                 end
             end
         elsif attributes.has_key?('default')
-            if attributes['default'].is_a?(Array)
-                result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default'].to_json))
+            if attributes['default'].is_a?(Array) || attributes['default'].is_a?(Hash)
+                if attributes['default'].length > 0
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default'].to_json))
+                end
             else
                 if attributes['type'] == 'string'
                     result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
