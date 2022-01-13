@@ -128,7 +128,7 @@ k8s:
       kubeProxy: sha256:092f9526686d27964d17be772c42cde086690209cc8aea10c49991456eb879c2
   '1.20':
     status: available
-    patch: 13
+    patch: 14
     cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -152,7 +152,7 @@ k8s:
       kubeProxy: sha256:df40eaf6eaa87aa748974e102fad6865bfaa01747561e4d01a701ae69e7c785d
   '1.21':
     status: available
-    patch: 7
+    patch: 8
     cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -177,7 +177,7 @@ k8s:
       kubeProxy: sha256:ed16fc3467873e99ad90389160330b57eed80ad71faec5bba154059ced8dd6f8
   '1.22':
     status: available
-    patch: 4
+    patch: 5
     cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
