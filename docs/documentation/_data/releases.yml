@@ -15,7 +15,7 @@ channels:
     tooltip: Чуть более стабильный чем канал Alpha
   - name: early-access
     stability: 2
-    title: Early-Access
+    title: Early Access
     description:
       ru: <b>Рекомендуемый</b> канал обновлений, если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются, дорабатываются новые приложения, и т.п.). Обновления функционала до этого канала доходят не ранее чем через одну неделю после их появления в релизе.
       en: <b>Recommended</b> channel. Is mostly safe and can be used in non-critical environments or for local development
@@ -33,7 +33,7 @@ channels:
       en: For production clusters
   - name: rock-solid
     stability: 4
-    title: Rock-Solid
+    title: Rock Solid
     description:
       ru: Наиболее стабильный канал обновлений. Подойдет для кластеров, которым необходимо обеспечить повышенный уровень стабильности. Обновления функционала до этого канала доходят не ранее чем через месяц после их появления в релизе.
       en: The most stable channel and recommended for usage in critical environments with tight SLA
