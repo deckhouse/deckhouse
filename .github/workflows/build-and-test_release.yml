@@ -1881,6 +1881,23 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_flant_registry_step>
+      - name: Login to flant registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_flant_registry_step>
+
       # <template: doc_version_template>
       - name: Set documentation version
         env:
@@ -1954,6 +1971,23 @@ jobs:
     if: ${{ needs.git_info.outputs.ci_commit_tag != '' }}
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_flant_registry_step>
+      - name: Login to flant registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_flant_registry_step>
 
       # <template: doc_version_template>
       - name: Set documentation version
