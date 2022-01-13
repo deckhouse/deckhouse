@@ -111,20 +111,24 @@ The following parameters must be set if the [Nexus](https://github.com/sonatype/
   ![](../images/registry/nexus/Nexus3.png)
 
 #### Harbor
-You need to use [Harbor](https://github.com/goharbor/harbor) feature Proxy Cache
+You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbor/harbor).
 
-* Ask our support for credentials, if you are using Deckhouse Enterprise Edition.
+* Create a Registry 
+  - `Administration -> Registries -> New Endpoint`
+  - `Provider`: `Docker Registry`
+  - `Name` — specify any of your choice.
+  - `Endpoint URL`: `https://registry.deckhouse.io`
+  - Specify the `Access ID` and `Access Secret` if you use Deckhouse Enterprise Edition; otherwise, leave them blank.  
+![](images/registry/harbor/harbor1.png)
 
-* Create Registry: `Administration - Registies - New Endpoint`.<br /> `Provider - Docker Registry`. `Name` - you can choose any. `Endpoint URL`: https://registry.deckhouse.io. `Access ID` and `Access Secret` you must receive from the previous paragraph, or leave empty if you using Deckhouse Community Edition
-![](../images/registry/harbor/harbor1.png)
+* Create a new Project
+  - `Projects -> New Project`
+  - `Project Name` will be used in the URL. You can choose any name, for example, `d8s`.
+  - `Access Level`: `Public`
+  - `Proxy Cache` — enable and choose the Registry, created in the previous step.
+![](images/registry/harbor/harbor2.png)
 
-* Next Create new Project. `Projects - New Project`. `Name` will be used in the URL, you can choose any, for example `d8s`. `Access Level - Public`. `Proxy Cache` - enable and choose the Registry, created in the previous paragraph.
-![](../images/registry/harbor/harbor2.png)
-
-
-* Thus, the images deckhouse will be available at<br />
-https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}
-
+Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
 
 ## How do I switch a running Deckhouse cluster to use a third-party registry?
 
