@@ -102,13 +102,13 @@ Use the `dhctl`'s `--dont-use-public-control-plane-images` key to instruct Deckh
 The following parameters must be set if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
 * Enable `Docker Bearer Token Realm`
-  ![](../images/registry/nexus/Nexus1.png)
+  ![](images/registry/nexus/Nexus1.png)
 
 * Enable anonymous registry access (otherwise, Bearer authentication [won't work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms))
-  ![](../images/registry/nexus/Nexus2.png)
+  ![](images/registry/nexus/Nexus2.png)
 
 * Set the `Maximum metadata age` to 0 (otherwise, the automatic update of Deckhouse will fail due to caching)
-  ![](../images/registry/nexus/Nexus3.png)
+  ![](images/registry/nexus/Nexus3.png)
 
 #### Harbor
 You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbor/harbor).
