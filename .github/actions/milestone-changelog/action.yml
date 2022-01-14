@@ -24,11 +24,13 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
+      # Pick at most 1000 PRs with possible changes blocks
       run: |
         prs="$(gh pr list \
           --repo '${{ github.repository }}' \
           --search 'milestone:${{ steps.args.outputs.milestone_title }}' \
           --state merged \
+          --limit 1000 \
           --json number,url,title,body,state,milestone)"
         echo "::set-output name=prs::${prs}"
 
