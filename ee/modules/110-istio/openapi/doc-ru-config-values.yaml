@@ -8,8 +8,11 @@ properties:
       - `Off` — pod'ы не будут шифровать исходящие запросы и не будут отклонять реквесты, которые не зашифрованы.
       - `MutualPermissive` — pod'ы будут шифровать исходящие запросы, но не будут отклонять реквесты, которые не зашифрованы. Режим полезен в переходный момент при переезде на mTLS.
       - `Mutual` — pod'ы будут шифровать исходящие запросы и строго будут принимать только зашифрованные реквесты.
+      
       При включении режима `Mutual` перестанут работать классические HTTP-пробы, так как kubelet ничего про mTLS не знает. Но в sidecar c istio предусмотрен специальный порт, куда можно эти пробы направить. Sidecar-injector, который добавляет sidecar-ы в поды, заодно перенаправит ваши пробы на специальный порт.
+      
       Для шифрования и аутентификации каждый сервис получит собственный индивидуальный ключ, подписанный корневым CA. Этот CA либо генерится при первом запуске модуля, либо указывается явно (см. `ca`).
+      
       Управлять режимом mTLS можно отдельно для каждого приложения и его клиентских соединений с помощью ресурсов [AuthorizationPolicy](istio-cr.html#authorizationpolicy) и [DestinationRule](istio-cr.html#destinationrule).
   outboundTrafficPolicyMode:
     description: |
@@ -38,7 +41,10 @@ properties:
               - `LoadBalancer` — рекомендуется в случае, если площадка облачная и поддерживает LB.
               - `NodePort` — для площадок без LB.
           serviceAnnotations:
-            description: Дополнительные аннотации для сервиса ingressgateway. Полезно, например, для настройки локального LB в Yandex.Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
+            description: |
+              Дополнительные аннотации для сервиса ingressgateway. 
+              
+              Полезно, например, для настройки локального LB в Yandex.Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
           nodeSelector:
             description: |
               Cелектор для DaemonSet'а ingressgateway.
@@ -58,10 +64,13 @@ properties:
         description: Параметры отправки трейсов в коллектор.
         properties:
           zipkin:
-            description: Параметры протокола zipkin, который использует Istio для отправки трейсов. Jaeger поддерживает этот протокол.
+            description: |
+              Параметры протокола zipkin, который использует Istio для отправки трейсов. 
+              
+              Jaeger поддерживает этот протокол.
             properties:
               address:
-                description: сетевой адрес в формате `<IP of FQDN>:<port>`, по которому доступен zipkin-коллектор.
+                description: Сетевой адрес в формате `<IP of FQDN>:<port>`, по которому доступен zipkin-коллектор.
       kiali:
         description: |
           Настройки отображения span-ов в Kiali.
@@ -69,7 +78,10 @@ properties:
           Если настройки не предоставлены, kiali не будет отображать трассировку.
         properties:
           jaegerURLForUsers:
-            description: Адрес UI jaeger, доступный пользователю в формате `<proto>://<fqdn>[:port]/<base path>`. Обязательный параметр.
+            description: |
+              Адрес UI jaeger, доступный пользователю в формате `<proto>://<fqdn>[:port]/<base path>`. 
+              
+              Обязательный параметр.
           jaegerGRPCEndpoint:
             description: |
               Адрес GRPC-интерфейса jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису kiali изнутри кластера для служебных запросов.
