@@ -186,6 +186,28 @@ status:
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeFalse())
 		})
 	})
+
+	Context("Release has requirements", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.30.0", "requirements": {"k8s": "1.19", "req1": "dep1"}}`}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66858")
+				},
+			}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with requirements", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0")
+			Expect(rl.Field("spec.requirements").String()).To(Equal(`{"k8s":"1.19","req1":"dep1"}`))
+		})
+	})
 })
 
 type fakeLayer struct {

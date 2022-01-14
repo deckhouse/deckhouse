@@ -44,6 +44,11 @@ spec:
                 applyAfter:
                   type: string
                   description: Marks release as a part of canary release. This release will be delayed until this time.
+                requirements:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Deckhouse release requirements.
             status:
               type: object
               properties:
@@ -55,6 +60,9 @@ spec:
                     - Outdated
                     - Suspended
                   description: Current status of the release.
+                message:
+                  type: string
+                  description: Detailed status or error message.
                 transitionTime:
                   type: string
                   description: Time of release status change.

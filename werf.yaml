@@ -742,5 +742,6 @@ shell:
   - |
     version="{{ env "CI_COMMIT_REF_NAME" }}"
     canary='{{ .Files.Get "canary.json" | fromJson | toJson }}'
-    json="{\"version\": \"${version}\", \"canary\": ${canary}}"
+    requirements='{{ .Files.Get "requirements.json" | fromJson | toJson }}'
+    json="{\"version\": \"${version}\", \"canary\": ${canary}, \"requirements\": ${requirements}}"
     echo "$json" > /version.json
