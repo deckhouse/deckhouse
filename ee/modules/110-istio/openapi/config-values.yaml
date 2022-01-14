@@ -320,7 +320,10 @@ properties:
           authURL:
             type: string
             x-examples: ["https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth"]
-            description: The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+            description: |
+              The URL of the authentication service. 
+              
+              If the user is authenticated, the service should return an HTTP 200 response code.
           authSignInURL:
             type: string
             x-examples: ["https://myhost.ru/dex/sign_in"]

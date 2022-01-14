@@ -36,7 +36,9 @@ spec:
                   type: boolean
                   default: true
                   description: |
-                    Should Istio use ingressgateways to access remote Pods? If remote Pods are accessible directly from our cluster ("flat" network), it is efficient not to use extra hop.
+                    Should Istio use ingressgateways to access remote Pods? 
+                    
+                    If remote Pods are accessible directly from our cluster ("flat" network), it is efficient not to use extra hop.
                 metadataEndpoint:
                   type: string
                   description: |
