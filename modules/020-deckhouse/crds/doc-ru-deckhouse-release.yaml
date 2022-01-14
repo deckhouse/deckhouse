@@ -17,10 +17,14 @@ spec:
                   description: Версия Deckhouse.
                 applyAfter:
                   description: Релиз является частью canary-release. Он отложен до указанного времени.
+                requirements:
+                  description: Требования для установки релиза.
             status:
               properties:
                 phase:
                   description: Текущий статус релиза.
+                message:
+                  description: Детальное сообщение об ошибки или статусе релиза.
                 transitionTime:
                   description: Время изменения статуса релиза
                 approved:

@@ -38,6 +38,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/v1alpha1"
 )
@@ -242,6 +243,7 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		Name:                 release.Name,
 		Version:              semver.MustParse(release.Spec.Version),
 		ApplyAfter:           release.Spec.ApplyAfter,
+		Requirements:         release.Spec.Requirements,
 		Phase:                release.Status.Phase,
 		ManualApproved:       release.Approved,
 		StatusApproved:       release.Status.Approved,
@@ -250,9 +252,11 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 }
 
 type deckhouseRelease struct {
-	Name           string
-	Version        *semver.Version
-	ApplyAfter     *time.Time
+	Name         string
+	Version      *semver.Version
+	ApplyAfter   *time.Time
+	Requirements map[string]string
+
 	Phase          string
 	ManualApproved bool
 	StatusApproved bool
@@ -328,13 +332,14 @@ func (du *deckhouseUpdater) releaseChannelUpdate(input *go_hook.HookInput) error
 		// It's much more comfortable to observe DeckhouseReleases like this because by default they are sorted by Name
 		// and sometimes it's a bit weird for semver names. This statuses shows you the real view of releases
 		case v1alpha1.PhaseOutdated, v1alpha1.PhaseSuspended:
-			// pass
+		// pass
 
 		case v1alpha1.PhasePending:
 			// skip suspended releases
 			if rl.HasSuspendAnnotation {
 				sp := statusPatch{
 					Phase:          v1alpha1.PhaseSuspended,
+					Message:        "",
 					TransitionTime: now,
 				}
 				input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
@@ -346,6 +351,7 @@ func (du *deckhouseUpdater) releaseChannelUpdate(input *go_hook.HookInput) error
 				// mark it as Outdated
 				sp := statusPatch{
 					Phase:          v1alpha1.PhaseOutdated,
+					Message:        "",
 					TransitionTime: now,
 				}
 				input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
@@ -367,7 +373,10 @@ func (du *deckhouseUpdater) releaseChannelUpdate(input *go_hook.HookInput) error
 			}
 
 			// apply patch - update deployment
-			applyRelease(input, rl, now)
+			applied := applyRelease(input, rl, now)
+			if !applied {
+				return nil
+			}
 
 			// mark previous release as outdated
 			if currentDeployedReleaseIndex != -1 {
@@ -375,6 +384,7 @@ func (du *deckhouseUpdater) releaseChannelUpdate(input *go_hook.HookInput) error
 				sp := statusPatch{
 					Phase:          v1alpha1.PhaseOutdated,
 					Approved:       currentDeployedRelease.StatusApproved,
+					Message:        "",
 					TransitionTime: now,
 				}
 				input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentDeployedRelease.Name, object_patch.WithSubresource("/status"))
@@ -395,7 +405,7 @@ func (du *deckhouseUpdater) releaseChannelUpdate(input *go_hook.HookInput) error
 		// no deployed releases found - deploy first pending release
 		for _, rl := range du.releases {
 			if rl.Phase == v1alpha1.PhasePending {
-				applyRelease(input, rl, now)
+				_ = applyRelease(input, rl, now)
 				return nil
 			}
 		}
@@ -404,7 +414,33 @@ func (du *deckhouseUpdater) releaseChannelUpdate(input *go_hook.HookInput) error
 	return nil
 }
 
-func applyRelease(input *go_hook.HookInput, rl deckhouseRelease, ts time.Time) {
+func checkReleaseRequirements(input *go_hook.HookInput, rl deckhouseRelease, ts time.Time) bool {
+	for key, value := range rl.Requirements {
+		passed, err := requirements.CheckRequirement(key, value, input.Values)
+		if !passed {
+			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, rl.Version, err)
+			st := statusPatch{
+				Phase:          v1alpha1.PhasePending,
+				Message:        msg,
+				Approved:       true,
+				TransitionTime: ts,
+			}
+			input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+			return false
+		}
+	}
+
+	return true
+}
+
+func applyRelease(input *go_hook.HookInput, rl deckhouseRelease, ts time.Time) (applied bool) {
+	// check release dependencies
+	passed := checkReleaseRequirements(input, rl, ts)
+	if !passed {
+		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": rl.Name}, metrics.WithGroup("d8_releases"))
+		return false
+	}
+
 	input.LogEntry.Infof("Applying release %s", rl.Name)
 
 	repo := input.Values.Get("global.modulesImages.registry").String()
@@ -412,6 +448,7 @@ func applyRelease(input *go_hook.HookInput, rl deckhouseRelease, ts time.Time) {
 	st := statusPatch{
 		Phase:          v1alpha1.PhaseDeployed,
 		Approved:       true,
+		Message:        "",
 		TransitionTime: ts,
 	}
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
@@ -428,6 +465,8 @@ func applyRelease(input *go_hook.HookInput, rl deckhouseRelease, ts time.Time) {
 
 		return sdk.ToUnstructured(&depl)
 	}, "apps/v1", "Deployment", "d8-system", "deckhouse")
+
+	return true
 }
 
 func isUpdatePermitted(windowsData []byte) (bool, error) {
