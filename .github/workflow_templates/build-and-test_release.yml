@@ -210,6 +210,8 @@ jobs:
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
     runs-on: [self-hosted, regular]
     steps:
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
@@ -225,6 +227,8 @@ jobs:
     if: ${{ needs.git_info.outputs.ci_commit_tag != '' }}
     runs-on: [self-hosted, regular]
     steps:
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
