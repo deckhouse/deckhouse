@@ -129,6 +129,7 @@ type: kubernetes.io/tls
 				Labels: map[string]string{
 					"namespace":   "d8-dashboard",
 					"secret_name": "ingress-tls",
+					"annotation":  "certmanager.k8s.io/certificate-name",
 				},
 			}
 			Expect(ops[1]).To(BeEquivalentTo(expectedMetric))

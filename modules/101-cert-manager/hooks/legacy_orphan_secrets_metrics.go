@@ -83,6 +83,7 @@ func legacyOrphanSecretsMetrics(input *go_hook.HookInput) error {
 			map[string]string{
 				"namespace":   secretInfoVal.Namespace,
 				"secret_name": secretInfoVal.Name,
+				"annotation":  "certmanager.k8s.io/certificate-name",
 			},
 			metrics.WithGroup(legacyMetricsGroup),
 		)
