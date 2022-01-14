@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("User Authn hooks :: discover dex ca ::", func() {
-	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{"controlPlaneConfigurator":{}}, "controlPlaneConfigurator":{"enabled":true}, "https": {"mode":"CertManager"}}}`, "")
+	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{},"controlPlaneConfigurator":{"enabled":true}, "https": {"mode":"CertManager"}}}`, "")
 
 	Context("With FromIngressSecret option and empty cluster", func() {
 		BeforeEach(func() {

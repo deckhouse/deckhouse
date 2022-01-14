@@ -32,7 +32,7 @@ type inputPublishAPICACert struct {
 
 var _ = Describe("User Authn hooks :: discover publish api cert ::", func() {
 	f := HookExecutionConfigInit(
-		`{"userAuthn":{"publishAPI": {"enabled": true, "https":{"mode": "SelfSigned"}}, "internal": {}, "https": {"mode": "CertManager"}}}`,
+		`{"userAuthn":{"publishAPI": {"enable": true, "https":{"mode": "SelfSigned"}}, "internal": {}, "https": {"mode": "CertManager"}}}`,
 		"",
 	)
 	selfSignedCertSecret := `
