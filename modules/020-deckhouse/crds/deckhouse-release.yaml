@@ -44,6 +44,10 @@ spec:
                 applyAfter:
                   type: string
                   description: Marks release as a part of canary release. This release will be delayed until this time.
+                requirements:
+                  type: object
+                    additionalProperties:
+                      type: string
             status:
               type: object
               properties:
@@ -55,6 +59,8 @@ spec:
                     - Outdated
                     - Suspended
                   description: Current status of the release.
+                message:
+                  type: string
                 transitionTime:
                   type: string
                   description: Time of release status change.

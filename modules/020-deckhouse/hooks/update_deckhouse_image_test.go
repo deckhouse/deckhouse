@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"errors"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -316,6 +318,52 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.2"))
 		})
 	})
+
+	Context("Release with not met requirements", func() {
+		BeforeEach(func() {
+			requirements.Register("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+				v := getter.Get("global.discovery.kubernetesVersion").String()
+				if v != requirementValue {
+					return false, errors.New("min k8s version failed")
+				}
+
+				return true, nil
+			})
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.16")
+			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should not update deckhouse deployment", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0")
+			Expect(r130.Field("status.phase").String()).To(Equal("Pending"))
+			Expect(r130.Field("status.message").String()).To(Equal(`"k8s" requirement for DeckhouseRelease "1.30.0" not met: min k8s version failed`))
+			Expect(f.MetricsCollector.CollectedMetrics()[1].Name).To(Equal("d8_release_blocked"))
+			Expect(*f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(float64(1)))
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
+		})
+
+		Context("Release requirements passed", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.19")
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+				f.RunHook()
+			})
+
+			It("Should update deckhouse deployment", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0")
+				Expect(r130.Field("status.phase").String()).To(Equal("Deployed"))
+				Expect(r130.Field("status.message").String()).To(Equal(``))
+				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.30.0"))
+			})
+		})
+	})
+
 })
 
 var (
@@ -527,6 +575,29 @@ metadata:
 spec:
   version: "v1.25.1"
   applyAfter: "2222-11-11T23:23:23Z"
+status:
+  phase: Pending
+`
+
+	releaseWithRequirements = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-29-0
+spec:
+  version: "v1.29.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-30-0
+spec:
+  version: "v1.30.0"
+  requirements:
+    k8s: "1.19"
 status:
   phase: Pending
 `

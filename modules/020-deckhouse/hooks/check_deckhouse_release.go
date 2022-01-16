@@ -159,8 +159,9 @@ releaseLoop:
 			Name: releaseName,
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
-			Version:    releaseChecker.releaseMetadata.Version,
-			ApplyAfter: applyAfter,
+			Version:      releaseChecker.releaseMetadata.Version,
+			ApplyAfter:   applyAfter,
+			Requirements: releaseChecker.releaseMetadata.Requirements,
 		},
 		Approved: false,
 	}
@@ -239,9 +240,10 @@ func untarLayer(rc io.Reader) (io.Reader, error) {
 }
 
 type releaseMetadata struct {
-	Version string                    `json:"version"`
-	Canary  map[string]canarySettings `json:"canary"`
-	Suspend bool                      `json:"suspend"`
+	Version      string                    `json:"version"`
+	Canary       map[string]canarySettings `json:"canary"`
+	Requirements map[string]string         `json:"requirements"`
+	Suspend      bool                      `json:"suspend"`
 }
 
 type canarySettings struct {

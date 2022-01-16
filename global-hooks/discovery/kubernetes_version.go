@@ -247,9 +247,6 @@ func k8sVersions(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	cl := dc.GetHTTPClient()
-	if err != nil {
-		return err
-	}
 
 	versions := make([]string, 0)
 	var minVer *semver.Version

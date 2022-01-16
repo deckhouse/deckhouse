@@ -71,3 +71,20 @@
         Please run `kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'` for confirmation.
       summary: |
         Deckhouse release is waiting for manual approval.
+  - alert: DeckhouseReleaseIsBlocked
+    expr: max by (name) (d8_release_blocked) >= 1
+    labels:
+      severity_level: "5"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      description: |
+        Deckhouse release requirements is not met.
+
+        Please run `kubectl describe DeckhouseRelease {{ $labels.name }}` for details.
+      summary: |
+        Deckhouse release requirements unmet.
