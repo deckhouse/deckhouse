@@ -29,9 +29,14 @@ spec:
           properties:
             spec:
               type: object
-              required:
+              oneOf:
+              - required:
                 - uid
                 - sshPublicKey
+                - passwordHash
+              - required:
+                - uid
+                - sshPublicKeys
                 - passwordHash
               properties:
                 uid:
@@ -45,7 +50,14 @@ spec:
                 sshPublicKey:
                   type: string
                   description: 'Node user ssh public key.'
-                  example: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ'
+                  example: 'ssh-rsa AAABBB'
+                sshPublicKeys:
+                  type: array
+                  items:
+                    type: string
+                  description: 'Node user ssh public keys.'
+                  example:
+                    - [ 'ssh-rsa AAABBB', 'ssh-rsa BBBCCC' ]
                 passwordHash:
                   type: string
                   description: |
@@ -57,10 +69,23 @@ spec:
                   type: boolean
                   description: 'Persistence of node user in sudo group.'
                   example: 'true'
-                  x-doc-default: false
+                  default: false
                 extraGroups:
                   type: array
                   description: 'Node user additional system groups.'
+                  items:
+                    type: string
+                  example:
+                  - [ 'docker' ]
+                  - [ 'docker', 'ftp' ]
+                nodeGroups:
+                  type: array
+                  default: [ '*' ]
+                  description: List of NodeGroups to apply the user for.
+                  example:
+                  - [ 'master', 'worker' ]
+                  - [ 'worker' ]
+                  - [ '*' ]
                   items:
                     type: string
       additionalPrinterColumns: &additionalPrinterColumns
@@ -76,6 +101,10 @@ spec:
           jsonPath: .spec.extraGroups
           type: string
           description: extra groups for user
+        - name: NodeGroups
+          jsonPath: .spec.nodeGroups
+          type: string
+          description: nodegroups for user
         - name: Age
           jsonPath: .metadata.creationTimestamp
           type: date

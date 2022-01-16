@@ -40,12 +40,15 @@ type ContextBuilder struct {
 
 	// debug function injection
 	emitStepsOutput func(string, string, map[string]string)
+
+	nodeUserConfigurations map[string][]*UserConfiguration
 }
 
 func NewContextBuilder(ctx context.Context, stepsStorage *StepsStorage) *ContextBuilder {
 	cb := &ContextBuilder{
-		ctx:          ctx,
-		stepsStorage: stepsStorage,
+		ctx:                    ctx,
+		stepsStorage:           stepsStorage,
+		nodeUserConfigurations: make(map[string][]*UserConfiguration),
 	}
 
 	return cb
@@ -302,7 +305,20 @@ func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, bun
 		NodeGroup:                 ng,
 		CloudProvider:             cloudProvider,
 		NodeStatusUpdateFrequency: freq,
+		NodeUsers:                 cb.getNodeUserConfigurations(ng.Name()),
 	}
+}
+
+func (cb *ContextBuilder) getNodeUserConfigurations(nodeGroup string) []*UserConfiguration {
+
+	users := make([]*UserConfiguration, 0)
+	wildcardBundle := fmt.Sprintf("*:%s", nodeGroup)
+	totalWildcard := "*:*"
+
+	users = append(users, cb.nodeUserConfigurations[wildcardBundle]...)
+	users = append(users, cb.nodeUserConfigurations[totalWildcard]...)
+
+	return users
 }
 
 func (rid *registryInputData) FromMap(m map[string][]byte) {
@@ -427,14 +443,15 @@ type tplContextCommon struct {
 type bundleNGContext struct {
 	*tplContextCommon
 
-	Bundle            string    `json:"bundle" yaml:"bundle"`
-	KubernetesVersion string    `json:"kubernetesVersion" yaml:"kubernetesVersion"`
-	CRI               string    `json:"cri" yaml:"cri"`
-	NodeGroup         nodeGroup `json:"nodeGroup" yaml:"nodeGroup"`
-
-	CloudProvider interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Bundle            string      `json:"bundle" yaml:"bundle"`
+	KubernetesVersion string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
+	CRI               string      `json:"cri" yaml:"cri"`
+	NodeGroup         nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
+	CloudProvider     interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
 
 	NodeStatusUpdateFrequency interface{} `json:"nodeStatusUpdateFrequency,omitempty" yaml:"nodeStatusUpdateFrequency,omitempty"`
+
+	NodeUsers []*UserConfiguration `json:"nodeUsers" yaml:"nodeUsers"`
 }
 
 type bundleK8sVersionContext struct {

@@ -19,11 +19,15 @@ package template
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"sort"
 	"strings"
 	"text/template"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -181,4 +185,46 @@ func fromJSONArray(str string) []interface{} {
 		a = []interface{}{err.Error()}
 	}
 	return a
+}
+
+func slicesIsEqual(s1orig, s2orig []string) bool {
+	s1 := make([]string, len(s1orig))
+	s2 := make([]string, len(s2orig))
+	copy(s1, s1orig)
+	copy(s2, s2orig)
+
+	if len(s1) != len(s2) {
+		return false
+	}
+
+	sort.Strings(s1)
+	sort.Strings(s2)
+
+	for i := 0; i < len(s2); i++ {
+		if s1[i] != s2[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func fromUnstructured(unstructuredObj *unstructured.Unstructured, obj interface{}) error {
+	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.UnstructuredContent(), obj)
+}
+
+func generateNgBundlePairs(ngs, bundles []string) []string {
+	result := make([]string, 0)
+
+	for _, ng := range ngs {
+		for _, bundle := range bundles {
+			result = append(result, fmt.Sprintf("%s:%s", bundle, ng))
+		}
+	}
+
+	if len(result) == 0 {
+		result = []string{"*:*"}
+	}
+
+	return result
 }

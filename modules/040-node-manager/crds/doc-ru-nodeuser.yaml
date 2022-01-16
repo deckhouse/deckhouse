@@ -19,6 +19,9 @@ spec:
                 sshPublicKey:
                   description: |
                     Публичный ssh ключ пользователя.
+                sshPublicKeys:
+                  description: |
+                    Массив публичных ssh ключей пользователя.
                 passwordHash:
                   description: |
                     Хеш пароля пользователя.
@@ -30,6 +33,9 @@ spec:
                 extraGroups:
                   description: |
                     Список дополнительных групп, в которые должен быть включен пользователь.
+                nodeGroups:
+                  description: |
+                    Список NodeGroup к которым применять настройку пользователя.
     - name: v1
       served: true
       storage: false

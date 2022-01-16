@@ -17,8 +17,6 @@ limitations under the License.
 package template
 
 import (
-	"sort"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,44 +53,12 @@ func (ngc NodeGroupConfigurationSpec) IsEqual(newSpec NodeGroupConfigurationSpec
 		return false
 	}
 
-	oldNGs := ngc.NodeGroups[:]
-	newNGs := newSpec.NodeGroups[:]
-
-	if len(oldNGs) != len(newNGs) {
+	if slicesIsEqual(ngc.NodeGroups, newSpec.NodeGroups) {
 		return false
 	}
 
-	if len(newNGs) == 0 {
-		return true
-	}
-
-	sort.Strings(oldNGs)
-	sort.Strings(newNGs)
-
-	for i := 0; i < len(newNGs); i++ {
-		if oldNGs[i] != newNGs[i] {
-			return false
-		}
-	}
-
-	oldBundles := ngc.Bundles[:]
-	newBundles := newSpec.Bundles[:]
-
-	if len(oldBundles) != len(newBundles) {
+	if slicesIsEqual(ngc.Bundles, newSpec.Bundles) {
 		return false
-	}
-
-	if len(newBundles) == 0 {
-		return true
-	}
-
-	sort.Strings(oldBundles)
-	sort.Strings(newBundles)
-
-	for i := 0; i < len(newBundles); i++ {
-		if oldBundles[i] != newBundles[i] {
-			return false
-		}
 	}
 
 	return true
