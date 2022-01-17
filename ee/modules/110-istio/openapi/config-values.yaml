@@ -62,6 +62,17 @@ properties:
               - `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
               - `NodePort` — for installations that do not have the LB.
             default: LoadBalancer
+          nodePort:
+            type: object
+            description: Special settings for NodePort inlet.
+            default: {}
+            x-examples: [{}, {"port": 30001}]
+            properties:
+              port:
+                type: integer
+                description: Static port number for NodePort-type Service. Must be in range, set by kube-apiserver --service-node-port-range argument (default is 30000-32767).
+                minimum: 1024
+                maximum: 65535
           serviceAnnotations:
             type: object
             additionalProperties:
@@ -267,7 +278,7 @@ properties:
         certManager:
           clusterIssuerName: letsencrypt
     description: |
-      What certificate type to use with Grafana/Prometheus.
+      What certificate type to use with module's public web interfaces.
 
       This parameter completely overrides the `global.modules.https` settings.
     properties:
@@ -341,7 +352,7 @@ properties:
         items:
           type: string
         description: |
-          An array of user groups that can access Grafana & Prometheus.
+          An array of user groups that can access module's public web interfaces.
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
@@ -352,7 +363,7 @@ properties:
           type: string
         x-examples:
           - [ "1.1.1.1/32" ]
-        description: An array if CIDRs that are allowed to authenticate in Grafana & Prometheus.
+        description: An array if CIDRs that are allowed to authenticate in module's public web interfaces.
       satisfyAny:
         type: boolean
         default: false
