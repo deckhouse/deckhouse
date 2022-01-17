@@ -93,10 +93,10 @@ spec:
   serviceAccountName: prometheus
   podMonitorNamespaceSelector:
     matchLabels:
-      heritage: deckhouse
+      prometheus.deckhouse.io/monitor-watcher-enabled: "true"
   serviceMonitorNamespaceSelector:
     matchLabels:
-      heritage: deckhouse
+      prometheus.deckhouse.io/monitor-watcher-enabled: "true"
   ruleNamespaceSelector:
     matchLabels:
       heritage: deckhouse
