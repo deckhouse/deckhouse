@@ -303,7 +303,7 @@ module Jekyll
            then
             converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
-            if get_hash_value(input,'spec','validation','openAPIV3Schema') then
+            if get_hash_value(input,'spec','validation','openAPIV3Schema','properties') then
                 # v1beta1 CRD
                 fullPath=[sprintf(%q(v1beta1-%s), input["spec"]["names"]["kind"])]
                 result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
@@ -340,6 +340,17 @@ module Jekyll
                 end
             elsif input.has_key?("spec") and input["spec"].has_key?("versions") then
                 # v1+ CRD
+
+                 hasNonEmptyFields = false
+                 input["spec"]["versions"].each do |item|
+                     if get_hash_value(item,'schema','openAPIV3Schema','properties') then
+                         hasNonEmptyFields = true
+                     end
+                 end
+
+                 if !hasNonEmptyFields then
+                     return nil
+                 end
 
                  result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
 
