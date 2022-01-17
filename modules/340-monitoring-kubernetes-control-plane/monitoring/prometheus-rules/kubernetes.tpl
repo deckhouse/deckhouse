@@ -76,7 +76,7 @@ It will be better for you to enable `control-plane-manager` module to be able to
     expr: absent(up{job="kube-apiserver"} == 1)
     for: 20m
     labels:
-      severity: critical
+      severity_level: 3
     annotations:
       plk_protocol_version: "1"
       description: No API servers are reachable or all have disappeared from service
