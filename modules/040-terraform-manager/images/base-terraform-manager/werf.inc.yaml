@@ -1,41 +1,11 @@
 ---
-artifact: dhctl
-from: {{ env "BASE_GOLANG_16_ALPINE" }}
-git:
-- add: /dhctl
-  to: /dhctl
-  excludePaths:
-  - "**/*.md"
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - "**/*.go"
-    - Makefile
-ansible:
-  beforeInstall:
-  - apk:
-      name: git,ca-certificates,make
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
-
-  install:
-  - shell: go mod download
-    args:
-      chdir: /dhctl
-
-  setup:
-  - command: make build
-    args:
-      chdir: /dhctl
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ env "BASE_ALPINE" }}
 docker:
   ENTRYPOINT: ["dhctl"]
 import:
-- artifact: dhctl
+- artifact: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /usr/bin/dhctl
   before: setup

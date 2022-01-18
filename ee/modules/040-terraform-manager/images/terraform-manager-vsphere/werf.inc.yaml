@@ -23,30 +23,33 @@ ansible:
 artifact: terraform-provider-vsphere
 from: {{ env "BASE_GOLANG_ALPINE" }}
 git:
-  - url: https://github.com/deckhouse/3p-terraform-provider-vsphere
-    add: /
-    to: /terraform-provider-vsphere
-    tag: v{{ env "TF_VSPHERE_VERSION" }}-flant.1
-    stageDependencies:
-      install:
-        - "**/*"
+- url: https://github.com/deckhouse/3p-terraform-provider-vsphere
+  add: /
+  to: /terraform-provider-vsphere
+  tag: v{{ env "TF_VSPHERE_VERSION" }}-flant.1
+  stageDependencies:
+    install:
+    - "**/*"
+mount:
+- from: build_dir
+  to: /go/pkg
 ansible:
   beforeInstall:
-    - apk:
-        name:
-        - git
-        - ca-certificates
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
+  - apk:
+      name:
+      - git
+      - ca-certificates
+      update_cache: yes
+  - command: rm -rf /var/cache/apk/*
 
   install:
-    - command: go mod download
-      args:
-        chdir: /terraform-provider-vsphere
+  - command: go mod download
+    args:
+      chdir: /terraform-provider-vsphere
 
   setup:
-    - command: go build -o terraform-provider-vsphere
-      args:
-        chdir: /terraform-provider-vsphere
-      environment:
-        CGO_ENABLED: "0"
+  - command: go build -o terraform-provider-vsphere
+    args:
+      chdir: /terraform-provider-vsphere
+    environment:
+      CGO_ENABLED: "0"

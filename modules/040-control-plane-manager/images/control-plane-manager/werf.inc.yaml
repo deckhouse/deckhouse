@@ -2,24 +2,24 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ env "BASE_ALPINE" }}
 import:
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /usr/local/bin
-    to: /usr/local/bin
-    includePaths:
-    - kubeadm-*
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-etcd-artifact
-    add: /usr/local/bin/etcdctl
-    before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /usr/local/bin
+  to: /usr/local/bin
+  includePaths:
+  - kubeadm-*
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-etcd-artifact
+  add: /usr/local/bin/etcdctl
+  before: setup
 git:
-  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/control-plane-manager
-    to: /control-plane-manager
-  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/readiness-check
-    to: /usr/local/bin/readiness-check
+- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/control-plane-manager
+  to: /control-plane-manager
+- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/readiness-check
+  to: /usr/local/bin/readiness-check
 shell:
   beforeInstall:
   - apk add --no-cache jq curl bash gettext grep
@@ -34,8 +34,11 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ env "BASE_GOLANG_16_BUSTER" }}
 git:
-  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
+- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
   - apt update

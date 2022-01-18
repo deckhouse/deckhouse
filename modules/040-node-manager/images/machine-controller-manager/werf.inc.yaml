@@ -13,6 +13,16 @@ import:
 artifact: {{ .ModuleName }}/{{ .ImageName }}/build
 from: {{ env "BASE_GOLANG_ALPINE" }}
 fromCacheVersion: "20210607"
+git:
+- url: https://github.com/deckhouse/mcm.git
+  to: /src
+  tag: v0.36.0-flant.10
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- from: build_dir
+  to: /go/pkg
 ansible:
   beforeInstall:
   - name: "Install dependencies"
@@ -28,10 +38,3 @@ ansible:
     shell: make build-local
     args:
       chdir: /src
-git:
-- url: https://github.com/deckhouse/mcm.git
-  to: /src
-  tag: v0.36.0-flant.10
-  stageDependencies:
-    install:
-    - '**/*'

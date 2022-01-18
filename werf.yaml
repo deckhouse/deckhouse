@@ -1,3 +1,4 @@
+---
 project: deckhouse
 configVersion: 1
 cleanup:
@@ -13,19 +14,13 @@ cleanup:
 gitWorktree:
   forceShallowClone: true
 ---
+
 {{- define "base components" }}
 {{- $CandiVersionMap := .Files.Get "candi/version_map.yml" | fromYaml }}
   - name: "Install jo"
     apk:
       name:
       - jo
-      update_cache: yes
-
-  - name: "Install rgxg"
-    apk:
-      name:
-        - rgxg
-      repository: http://nl.alpinelinux.org/alpine/edge/testing/
       update_cache: yes
 
   - name: "install cfssl"
@@ -133,7 +128,6 @@ ansible:
         - ca-certificates
         - curl
         - pwgen
-        - apache2-utils
         - bc
         - grep
         - tar
@@ -142,7 +136,6 @@ ansible:
         - util-linux
         - sed
         - gawk
-        - netcat-openbsd
         - busybox-extras
         - vim
         - tini
@@ -170,7 +163,6 @@ ansible:
         - util-linux
         - sed
         - gawk
-        - netcat-openbsd
         - busybox-extras
         - vim
         - tini
@@ -189,7 +181,7 @@ docker:
   ENV:
     PATH: /usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin
 ---
-image: dev
+image: dev-prebuild
 fromImage: common-base
 fromCacheVersion: 2020-05-08.1
 git:
@@ -214,7 +206,6 @@ git:
   - modules/*/.namespace
   - modules/*/values_matrix_test.yaml
   - global-hooks/**/*.go
-  - modules/images_tags_*.json
   - ee
 - url: https://github.com/flant/shell-operator
   tag: v1.0.1
@@ -226,19 +217,16 @@ import:
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
-  before: setup
+  after: setup
 - artifact: jq
   add: /usr/bin/jq
   to: /usr/bin/jq
-  before: setup
+  after: setup
+mount:
+- from: build_dir
+  to: /go/pkg
 ansible:
   setup:
-  - name: "Add modules images tags.json"
-    copy:
-      content: |
-        {{- .Files.Get (printf "modules/images_tags_%s.json" .Env) | nindent 8 }}
-      dest: /deckhouse/modules/images_tags.json
-
 {{- range $key := list "default" "managed" "minimal" }}
   - name: "Add bundle {{ $key }}"
     copy:
@@ -284,7 +272,7 @@ docker:
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
 
 ---
-image: tests
+image: tests-prebuild
 fromImage: base-for-go
 fromCacheVersion: "20210413"
 git:
@@ -296,7 +284,7 @@ git:
       - go.sum
   excludePaths:
   - docs
-  - modules/images_tags_*.json
+  - modules/*/images
   - ee
 - url: https://github.com/flant/shell-operator
   tag: v1.0.1
@@ -308,15 +296,18 @@ import:
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
-  before: setup
+  after: setup
 - artifact: libjq
   add: /libjq
   to: /libjq
-  before: setup
+  after: setup
 - artifact: jq
   add: /usr/bin/jq
   to: /usr/bin/jq
-  before: setup
+  after: setup
+mount:
+- from: build_dir
+  to: /go/pkg
 ansible:
   beforeInstall:
   - name: "Install dumb-init"
@@ -348,12 +339,6 @@ ansible:
       curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
         | sh -s -- -b $(go env GOPATH)/bin v1.32.2
 
-  setup:
-  - name: "Add modules images tags.json"
-    copy:
-      content: |
-        {{- .Files.Get (printf "modules/images_tags_%s.json" .Env) | nindent 8 }}
-      dest: /deckhouse/modules/images_tags.json
 docker:
   ENV:
     ADDON_OPERATOR_NAMESPACE: tests
@@ -379,6 +364,9 @@ git:
     - go.sum
     - tools
   excludePaths:
+    - global-hooks/**/*_test.go
+    - modules/**/*_test.go
+    - modules/*/images
     - deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
     - dhctl/development
     - deckhouse-controller/development
@@ -402,7 +390,9 @@ import:
   add: /libjq
   to: /libjq
   before: setup
-
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
   - apk add --no-cache git ca-certificates gcc libc-dev
@@ -435,6 +425,9 @@ git:
       setup:
         - "**/*.go"
         - Makefile
+mount:
+- from: build_dir
+  to: /go/pkg
 ansible:
   beforeInstall:
     - apk:
@@ -458,6 +451,9 @@ fromImage: base-for-go
 git:
 - add: /
   to: /deckhouse
+mount:
+- from: build_dir
+  to: /go/pkg
 ansible:
   beforeInstall:
     - apk:
@@ -525,71 +521,6 @@ ansible:
   setup:
   - shell: /src/scripts/build-libjq-static.sh /src /libjq
 ---
-artifact: terraform-provider-vsphere
-fromImage: base-for-go
-git:
-  - url: https://github.com/deckhouse/3p-terraform-provider-vsphere
-    add: /
-    to: /terraform-provider-vsphere
-    tag: v{{ env "TF_VSPHERE_VERSION" }}-flant.1
-    stageDependencies:
-      install:
-        - "**/*"
-ansible:
-  beforeInstall:
-    - apk:
-        name:
-        - git
-        - ca-certificates
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
-
-  install:
-    - command: go mod download
-      args:
-        chdir: /terraform-provider-vsphere
-
-  setup:
-    - command: go build -o terraform-provider-vsphere
-      args:
-        chdir: /terraform-provider-vsphere
-      environment:
-        CGO_ENABLED: "0"
-
----
-artifact: terraform-provider-gcp
-fromImage: base-for-go
-fromCacheVersion: "20210527"
-git:
-  - url: https://github.com/flant/terraform-provider-google
-    add: /
-    to: /terraform-provider-gcp
-    tag: v{{ env "TF_GCP_VERSION" }}-flant.1
-    stageDependencies:
-      install:
-        - "**/*"
-ansible:
-  beforeInstall:
-    - apk:
-        name:
-        - git
-        - ca-certificates
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
-
-  install:
-    - command: go mod download
-      args:
-        chdir: /terraform-provider-gcp
-
-  setup:
-    - command: go build -o terraform-provider-gcp
-      args:
-        chdir: /terraform-provider-gcp
-      environment:
-        CGO_ENABLED: "0"
-
----
 image: dev/install
 from: {{ env "BASE_ALPINE" }}
 git:
@@ -602,19 +533,19 @@ import:
 - artifact: dhctl
   add: /dhctl/bin/dhctl
   to: /usr/bin/dhctl
-  before: setup
-- artifact: terraform-provider-vsphere
+  after: setup
+- artifact: terraform-provider-vsphere # from modules/040-terraform-manager/images/terraform-manager-vsphere/werf.inc.yaml
   add: /terraform-provider-vsphere/terraform-provider-vsphere
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_VSPHERE_NAMESPACE" }}/{{ env "TF_VSPHERE_TYPE" }}/{{ env "TF_VSPHERE_VERSION" }}/linux_amd64/terraform-provider-vsphere
-  before: setup
-- artifact: terraform-provider-gcp
+  after: setup
+- artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
   add: /terraform-provider-gcp/terraform-provider-gcp
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
-  before: setup
-- image: dev
-  add: /deckhouse/modules/images_tags.json
+  after: setup
+- image: images-tags
+  add: /images_tags.json
   to: /deckhouse/candi/images_tags.json
-  before: setup
+  after: setup
 docker:
   ENV:
     EDITOR: vim
@@ -744,3 +675,119 @@ shell:
     requirements='{{ .Files.Get "requirements.json" | fromJson | toJson }}'
     json="{\"version\": \"${version}\", \"canary\": ${canary}, \"requirements\": ${requirements}}"
     echo "$json" > /version.json
+
+# modules_images
+{{- define "module_image_template" }}
+{{- if  eq .ImageInstructionType "Dockerfile" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
+dockerfile: Dockerfile
+args:
+  BASE_ALPINE: {{ env "BASE_ALPINE" }}
+  BASE_ALPINE_3_15: {{ env "BASE_ALPINE_3_15" }}
+  BASE_DEBIAN: {{ env "BASE_DEBIAN" }}
+  BASE_GOLANG_ALPINE: {{ env "BASE_GOLANG_ALPINE" }}
+  BASE_GOLANG_16_ALPINE: {{ env "BASE_GOLANG_16_ALPINE" }}
+  BASE_GOLANG_17_ALPINE: {{ env "BASE_GOLANG_17_ALPINE" }}
+  BASE_GOLANG_BUSTER: {{ env "BASE_GOLANG_BUSTER" }}
+  BASE_GOLANG_16_BUSTER: {{ env "BASE_GOLANG_16_BUSTER" }}
+  BASE_GOLANG_17_BUSTER: {{ env "BASE_GOLANG_17_BUSTER" }}
+  BASE_NGINX_ALPINE:  {{ env "BASE_NGINX_ALPINE" }}
+  BASE_NODE_16_ALPINE: {{ env "BASE_NODE_16_ALPINE" }}
+  BASE_PYTHON_ALPINE:  {{ env "BASE_PYTHON_ALPINE" }}
+  BASE_SHELL_OPERATOR: {{ env "BASE_SHELL_OPERATOR" }}
+  BASE_UBUNTU: {{ env "BASE_UBUNTU" }}
+  BASE_JEKYLL: {{ env "BASE_JEKYLL" }}
+{{- else }}
+{{ tpl .ImageBuildData . }}
+{{- end }}
+{{- end }}
+
+{{- $Root := . }}
+{{- $CandiVersionMap := .Files.Get "candi/version_map.yml" | fromYaml }}
+{{- $ModulesImagesIDList := list }}
+
+# Collect EE and FE images if desired
+{{ $ModulesImagesBuildFiles := .Files.Glob "modules/*/images/*/{Dockerfile,werf.inc.yaml}" }}
+{{- if eq .Env "EE" }}
+  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
+{{- end }}
+{{- if eq .Env "FE" }}
+  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
+  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles (.Files.Glob "ee/fe/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
+{{- end }}
+
+{{- range $path, $content := $ModulesImagesBuildFiles  }}
+  {{- $ctx := dict }}
+  {{- if regexMatch "/werf.inc.yaml$" $path }}
+  {{- $_ := set $ctx "ImageInstructionType" "Stapel" }}
+  {{- else }}
+  {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
+  {{- end }}
+  {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
+  {{- $_ := set $ctx "CandiVersionMap" $CandiVersionMap }}
+  {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
+  {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
+  {{- $_ := set $ctx "ModuleName" $ImageData._2 }}
+  {{- $_ := set $ctx "ImageName" $ImageData._3 }}
+  {{- $_ := set $ctx "ImageBuildData" $content }}
+  {{- $_ := set $ctx "Files" $Root.Files }}
+  {{- $_ := set $ctx "Env" $Root.Env }}
+---
+{{ include "module_image_template" $ctx }}
+  {{- range $ImageYamlMainfest := (include "module_image_template" $ctx | splitList "---\n") }}
+    {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
+    {{- if $ImageManifest.image }}
+      {{- $ModulesImagesIDList = append $ModulesImagesIDList $ImageManifest.image }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+---
+image: images-tags
+from: {{ env "BASE_ALPINE" }}
+dependencies:
+{{- range $ImageID := $ModulesImagesIDList  }}
+  {{- $ModuleNameCamel := $ImageID | splitList "/" | first | camelcase | untitle }}
+  {{- $ImageNameCamel  := $ImageID | splitList "/" | last  | camelcase | untitle }}
+  - image: {{ $ImageID }}
+    before: setup
+    imports:
+    - type: ImageTag
+      targetEnv: MODULES_IMAGES_TAGS_{{ $ModuleNameCamel }}_{{ $ImageNameCamel }}
+{{- end }}
+import:
+- artifact: jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+shell:
+  setup:
+  - |
+    env | grep MODULES_IMAGES_TAGS | jq -Rn '
+      reduce inputs as $i (
+        {};
+        . * (
+          $i | ltrimstr("MODULES_IMAGES_TAGS_") | sub("=";"_") |
+          split("_") as [$moduleName, $imageName, $tag] |
+          {($moduleName): {($imageName): $tag}}
+        )
+      )
+    ' > /images_tags.json
+
+---
+image: dev
+fromImage: dev-prebuild
+import:
+- image: images-tags
+  add: /images_tags.json
+  to: /deckhouse/modules/images_tags.json
+  after: setup
+---
+image: tests
+fromImage: tests-prebuild
+import:
+- image: images-tags
+  add: /images_tags.json
+  to: /deckhouse/modules/images_tags.json
+  after: setup

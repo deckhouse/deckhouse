@@ -221,7 +221,6 @@ properties:
           Map module_name => map(image_name => tag)
           The map loads from /deckhouse/modules/images_tags.json file.
           That file generated on build stage.
-          See modules_images_werf and modules_images_werf.yaml for additional information.
           Values from this map uses in helm teplates for generating container image address in deployments sts...
         x-examples:
         - tags:

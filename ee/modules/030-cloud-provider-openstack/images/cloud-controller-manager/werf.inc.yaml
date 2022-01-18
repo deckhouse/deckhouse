@@ -5,10 +5,10 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_DEBIAN" }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /src/openstack-cloud-controller-manager-amd64
-    to: /bin/openstack-cloud-controller-manager
-    before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/openstack-cloud-controller-manager-amd64
+  to: /bin/openstack-cloud-controller-manager
+  before: setup
 shell:
   beforeInstall:
   - apt update
@@ -27,8 +27,11 @@ from: {{ env "BASE_GOLANG_BUSTER" }}
 from: {{ env "BASE_GOLANG_16_BUSTER" }}
     {{- end }}
 git:
-  - add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
+- add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
   - apt update

@@ -23,6 +23,9 @@ from: {{ env "BASE_GOLANG_ALPINE" }}
     {{- else }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
     {{- end }}
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
     - apk add --no-cache make bash git mercurial patch rsync

@@ -5,10 +5,10 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_ALPINE" }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
-    to: /bin/vsphere-cloud-controller-manager
-    before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
+  to: /bin/vsphere-cloud-controller-manager
+  before: setup
 shell:
   beforeInstall:
   - apk add --no-cache ca-certificates
@@ -26,6 +26,9 @@ from: {{ env "BASE_GOLANG_16_ALPINE" }}
 git:
   - add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync

@@ -16,41 +16,6 @@ steps:
 # </template: go_generate_template>
 {!{ end }!}
 
-{!{ define "build_modules_images_template" }!}
-# <template: build_modules_images_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 2 }!}
-
-  - name: Build and push modules images
-    env:
-      CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-      DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-      REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-      REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
-    run: |
-      #export WERF_REPO="${DEV_REGISTRY_PATH}"
-      #type werf && source $(werf ci-env github --verbose --as-file)
-
-      ./modules_images_werf bp
-
-  #- name: Build and push modules images
-  #  if: always()
-  #  run: |
-  #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
-  #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
-  #      rm -rf $WERF_DOCKER_CONFIG
-  #    fi
-
-  {!{ tmpl.Exec "save_images_tags_json_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "save_images_tags_json_to_cache_step" . | strings.Indent 2 }!}
-# </template: build_modules_images_template>
-{!{ end }!}
-
 {!{ define "build_template" }!}
 {!{- $ctx := index . 0 -}!}
 {!{- $buildType := index . 1 -}!}
@@ -63,7 +28,6 @@ steps:
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_flant_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "restore_images_tags_json_step" $ctx | strings.Indent 2 }!}
 
   - name: Build and push deckhouse images
     env:

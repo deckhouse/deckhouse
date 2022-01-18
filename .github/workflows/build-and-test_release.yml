@@ -185,357 +185,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-  build_modules_images_fe:
-    name: Build Modules Images FE
-    needs:
-      - git_info
-      - comment_on_start
-
-    # <template: build_modules_images_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Build and push modules images
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
-        run: |
-          #export WERF_REPO="${DEV_REGISTRY_PATH}"
-          #type werf && source $(werf ci-env github --verbose --as-file)
-
-          ./modules_images_werf bp
-
-      #- name: Build and push modules images
-      #  if: always()
-      #  run: |
-      #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
-      #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
-      #      rm -rf $WERF_DOCKER_CONFIG
-      #    fi
-
-
-      # <template: save_images_tags_json_step>
-      - name: Save images_tags file
-        uses: actions/upload-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-      # </template: save_images_tags_json_step>
-
-      # <template: save_images_tags_json_to_cache_step>
-      - name: Save images_tags file
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      # </template: save_images_tags_json_to_cache_step>
-    # </template: build_modules_images_template>
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusSource = 'job,inline';
-            const name = 'Build Modules Images FE';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
-      # </template: update_comment_on_finish>
-
-  build_modules_images_ee:
-    name: Build Modules Images EE
-    needs:
-      - git_info
-      - comment_on_start
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
-    env:
-      WERF_ENV: "EE"
-
-    # <template: build_modules_images_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Build and push modules images
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
-        run: |
-          #export WERF_REPO="${DEV_REGISTRY_PATH}"
-          #type werf && source $(werf ci-env github --verbose --as-file)
-
-          ./modules_images_werf bp
-
-      #- name: Build and push modules images
-      #  if: always()
-      #  run: |
-      #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
-      #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
-      #      rm -rf $WERF_DOCKER_CONFIG
-      #    fi
-
-
-      # <template: save_images_tags_json_step>
-      - name: Save images_tags file
-        uses: actions/upload-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-      # </template: save_images_tags_json_step>
-
-      # <template: save_images_tags_json_to_cache_step>
-      - name: Save images_tags file
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      # </template: save_images_tags_json_to_cache_step>
-    # </template: build_modules_images_template>
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusSource = 'job,inline';
-            const name = 'Build Modules Images EE';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
-      # </template: update_comment_on_finish>
-
-  build_modules_images_ce:
-    name: Build Modules Images CE
-    needs:
-      - git_info
-      - comment_on_start
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
-    env:
-      WERF_ENV: "CE"
-
-    # <template: build_modules_images_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Build and push modules images
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
-        run: |
-          #export WERF_REPO="${DEV_REGISTRY_PATH}"
-          #type werf && source $(werf ci-env github --verbose --as-file)
-
-          ./modules_images_werf bp
-
-      #- name: Build and push modules images
-      #  if: always()
-      #  run: |
-      #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
-      #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
-      #      rm -rf $WERF_DOCKER_CONFIG
-      #    fi
-
-
-      # <template: save_images_tags_json_step>
-      - name: Save images_tags file
-        uses: actions/upload-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-      # </template: save_images_tags_json_step>
-
-      # <template: save_images_tags_json_to_cache_step>
-      - name: Save images_tags file
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      # </template: save_images_tags_json_to_cache_step>
-    # </template: build_modules_images_template>
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusSource = 'job,inline';
-            const name = 'Build Modules Images CE';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
-      # </template: update_comment_on_finish>
-
   go_generate:
     name: Go Generate
     needs:
@@ -598,7 +247,6 @@ jobs:
     name: Build FE
     needs:
       - git_info
-      - build_modules_images_fe
       - go_generate
     env:
       WERF_ENV: "FE"
@@ -659,14 +307,6 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
 
       - name: Build and push deckhouse images
         env:
@@ -801,7 +441,6 @@ jobs:
     name: Build EE
     needs:
       - git_info
-      - build_modules_images_ee
       - go_generate
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
@@ -863,14 +502,6 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
 
       - name: Build and push deckhouse images
         env:
@@ -1005,7 +636,6 @@ jobs:
     name: Build CE
     needs:
       - git_info
-      - build_modules_images_ce
       - go_generate
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
@@ -1067,14 +697,6 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
 
       - name: Build and push deckhouse images
         env:
@@ -1210,7 +832,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-      - build_modules_images_fe
+      - go_generate
     # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
@@ -1279,7 +901,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-      - build_modules_images_fe
+      - go_generate
     # <template: main_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
@@ -1347,7 +969,6 @@ jobs:
     name: Tests
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1381,14 +1002,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1430,7 +1043,6 @@ jobs:
     name: Matrix tests
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1464,14 +1076,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1513,7 +1117,6 @@ jobs:
     name: Dhctl Tests
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1547,14 +1150,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1596,7 +1191,6 @@ jobs:
     name: GolangCI Lint
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1630,14 +1224,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1679,7 +1265,6 @@ jobs:
     name: OpenAPI Test Cases
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1713,14 +1298,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1897,7 +1474,6 @@ jobs:
     name: Validators
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1931,14 +1507,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -2162,9 +1730,6 @@ jobs:
     name: Update comment on finish
     needs:
       - git_info
-      - build_modules_images_fe
-      - build_modules_images_ee
-      - build_modules_images_ce
       - go_generate
       - build_fe
       - build_ee

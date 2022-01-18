@@ -5,13 +5,13 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_ALPINE" }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /src/yandex-cloud-controller-manager
-    to: /usr/local/bin/cloud-controller-manager
-    before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/yandex-cloud-controller-manager
+  to: /usr/local/bin/cloud-controller-manager
+  before: setup
 shell:
   beforeInstall:
-    - apk add --no-cache ca-certificates
+  - apk add --no-cache ca-certificates
 docker:
   ENV:
     container: docker
@@ -23,6 +23,9 @@ from: {{ env "BASE_GOLANG_ALPINE" }}
   {{- else }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
   {{- end }}
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
     - apk add --no-cache make bash git mercurial patch rsync

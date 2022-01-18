@@ -6,14 +6,14 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_UBUNTU" }}
 import:
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /src/_output/bin/kube-controller-manager
-    to: /usr/bin/kube-controller-manager
-    before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/_output/bin/kube-controller-manager
+  to: /usr/bin/kube-controller-manager
+  before: setup
 shell:
   beforeInstall:
   - apt-get update
@@ -38,8 +38,11 @@ from: {{ env "BASE_GOLANG_ALPINE" }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
   {{- end }}
 git:
-  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
+- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync

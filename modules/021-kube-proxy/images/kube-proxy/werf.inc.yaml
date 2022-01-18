@@ -30,8 +30,11 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace ".
   {{- if semverCompare "=1.21" $version }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
 git:
-  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
+- add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync

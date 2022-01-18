@@ -55,7 +55,6 @@ steps:
 {!{ tmpl.Exec "checkout_full_step"            $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_dev_registry_step"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_readonly_registry_step"  $ctx | strings.Indent 2 }!}
-{!{ tmpl.Exec "restore_images_tags_json_step" $ctx | strings.Indent 2 }!}
   - name: Run tests
     uses: {!{ index (ds "actions") "werf/actions/run" }!}
     with:

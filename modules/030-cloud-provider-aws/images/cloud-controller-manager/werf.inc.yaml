@@ -5,13 +5,13 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_ALPINE" }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /src/aws-cloud-controller-manager
-    to: /usr/local/bin/aws-cloud-controller-manager
-    before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/aws-cloud-controller-manager
+  to: /usr/local/bin/aws-cloud-controller-manager
+  before: setup
 shell:
   beforeInstall:
-    - apk add --no-cache ca-certificates
+  - apk add --no-cache ca-certificates
 docker:
   ENV:
     container: docker
@@ -24,11 +24,14 @@ from: {{ env "BASE_GOLANG_ALPINE" }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
     {{- end }}
 git:
-  - add: /modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-      - '**/*'
+- add: /modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- from: build_dir
+  to: /go/pkg
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync

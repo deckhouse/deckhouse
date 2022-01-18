@@ -246,7 +246,6 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
       with:
         name: test_output_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
         path: |
-          modules/images_tags_${{env.WERF_ENV}}.json
           testing/cloud_layouts/
 
     - name: Cleanup temp directory
