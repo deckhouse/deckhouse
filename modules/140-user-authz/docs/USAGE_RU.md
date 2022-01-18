@@ -219,7 +219,7 @@ spec:
 Необходимо выполнить следующую команду, в которой будут указаны:
 * `resourceAttributes` (как в RBAC) — к чему мы проверяем доступ
 * `user` — имя пользователя
-* `group` — группы пользователя
+* `groups` — группы пользователя
 
 P.S. При совместном использовании с модулем `user-authn`, группы и имя пользователя можно посмотреть в логах Dex — `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации)
 
@@ -236,7 +236,7 @@ cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectac
       "resource": "pods"
     },
     "user": "system:kube-controller-manager",
-    "group": [
+    "groups": [
       "Admins"
     ]
   }
@@ -268,7 +268,7 @@ cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/web
       "resource": "pods"
     },
     "user": "system:kube-controller-manager",
-    "group": [
+    "groups": [
       "Admins"
     ]
   }
