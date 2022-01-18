@@ -2,7 +2,7 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
-name: 'e2e: Openstack'
+name: 'e2e: OpenStack'
 on:
   workflow_dispatch:
     inputs:
@@ -205,7 +205,7 @@ jobs:
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_19 == 'true'
     env:
-      PROVIDER: Openstack
+      PROVIDER: OpenStack
       CRI: Docker
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.19
@@ -252,7 +252,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: Openstack, Docker, k8s 1.19';
+            const name = 'e2e: OpenStack, Docker, k8s 1.19';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -310,9 +310,9 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: "Run e2e test: Openstack/Docker/1.19"
+      - name: "Run e2e test: OpenStack/Docker/1.19"
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.19"
@@ -380,7 +380,7 @@ jobs:
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.19"
@@ -476,7 +476,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'e2e: Openstack, Kubernetes 1.19';
+            const name = 'e2e: OpenStack, Kubernetes 1.19';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 
@@ -490,7 +490,7 @@ jobs:
       - name: Alert on fail in default branch
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.19"
@@ -533,7 +533,7 @@ jobs:
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_20 == 'true'
     env:
-      PROVIDER: Openstack
+      PROVIDER: OpenStack
       CRI: Docker
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.20
@@ -580,7 +580,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: Openstack, Docker, k8s 1.20';
+            const name = 'e2e: OpenStack, Docker, k8s 1.20';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -638,9 +638,9 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: "Run e2e test: Openstack/Docker/1.20"
+      - name: "Run e2e test: OpenStack/Docker/1.20"
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.20"
@@ -708,7 +708,7 @@ jobs:
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.20"
@@ -804,7 +804,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'e2e: Openstack, Kubernetes 1.20';
+            const name = 'e2e: OpenStack, Kubernetes 1.20';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 
@@ -818,7 +818,7 @@ jobs:
       - name: Alert on fail in default branch
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.20"
@@ -861,7 +861,7 @@ jobs:
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_21 == 'true'
     env:
-      PROVIDER: Openstack
+      PROVIDER: OpenStack
       CRI: Docker
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.21
@@ -908,7 +908,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: Openstack, Docker, k8s 1.21';
+            const name = 'e2e: OpenStack, Docker, k8s 1.21';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -966,9 +966,9 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: "Run e2e test: Openstack/Docker/1.21"
+      - name: "Run e2e test: OpenStack/Docker/1.21"
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
@@ -1036,7 +1036,7 @@ jobs:
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
@@ -1132,7 +1132,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'e2e: Openstack, Kubernetes 1.21';
+            const name = 'e2e: OpenStack, Kubernetes 1.21';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 
@@ -1146,7 +1146,7 @@ jobs:
       - name: Alert on fail in default branch
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
@@ -1189,7 +1189,7 @@ jobs:
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_22 == 'true'
     env:
-      PROVIDER: Openstack
+      PROVIDER: OpenStack
       CRI: Docker
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.22
@@ -1236,7 +1236,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: Openstack, Docker, k8s 1.22';
+            const name = 'e2e: OpenStack, Docker, k8s 1.22';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1294,9 +1294,9 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: "Run e2e test: Openstack/Docker/1.22"
+      - name: "Run e2e test: OpenStack/Docker/1.22"
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.22"
@@ -1364,7 +1364,7 @@ jobs:
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.22"
@@ -1460,7 +1460,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'e2e: Openstack, Kubernetes 1.22';
+            const name = 'e2e: OpenStack, Kubernetes 1.22';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 
@@ -1474,7 +1474,7 @@ jobs:
       - name: Alert on fail in default branch
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.22"
@@ -1517,7 +1517,7 @@ jobs:
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_19 == 'true'
     env:
-      PROVIDER: Openstack
+      PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.19
@@ -1564,7 +1564,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: Openstack, Containerd, k8s 1.19';
+            const name = 'e2e: OpenStack, Containerd, k8s 1.19';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1622,9 +1622,9 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: "Run e2e test: Openstack/Containerd/1.19"
+      - name: "Run e2e test: OpenStack/Containerd/1.19"
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.19"
@@ -1692,7 +1692,7 @@ jobs:
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.19"
@@ -1788,7 +1788,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'e2e: Openstack, Kubernetes 1.19';
+            const name = 'e2e: OpenStack, Kubernetes 1.19';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 
@@ -1802,7 +1802,7 @@ jobs:
       - name: Alert on fail in default branch
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.19"
@@ -1845,7 +1845,7 @@ jobs:
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_20 == 'true'
     env:
-      PROVIDER: Openstack
+      PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.20
@@ -1892,7 +1892,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: Openstack, Containerd, k8s 1.20';
+            const name = 'e2e: OpenStack, Containerd, k8s 1.20';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -1950,9 +1950,9 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: "Run e2e test: Openstack/Containerd/1.20"
+      - name: "Run e2e test: OpenStack/Containerd/1.20"
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.20"
@@ -2020,7 +2020,7 @@ jobs:
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.20"
@@ -2116,7 +2116,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'e2e: Openstack, Kubernetes 1.20';
+            const name = 'e2e: OpenStack, Kubernetes 1.20';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 
@@ -2130,7 +2130,7 @@ jobs:
       - name: Alert on fail in default branch
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.20"
@@ -2173,7 +2173,7 @@ jobs:
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
     env:
-      PROVIDER: Openstack
+      PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.21
@@ -2220,7 +2220,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: Openstack, Containerd, k8s 1.21';
+            const name = 'e2e: OpenStack, Containerd, k8s 1.21';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2278,9 +2278,9 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: "Run e2e test: Openstack/Containerd/1.21"
+      - name: "Run e2e test: OpenStack/Containerd/1.21"
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
@@ -2348,7 +2348,7 @@ jobs:
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
@@ -2444,7 +2444,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'e2e: Openstack, Kubernetes 1.21';
+            const name = 'e2e: OpenStack, Kubernetes 1.21';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 
@@ -2458,7 +2458,7 @@ jobs:
       - name: Alert on fail in default branch
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
@@ -2501,7 +2501,7 @@ jobs:
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_22 == 'true'
     env:
-      PROVIDER: Openstack
+      PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.22
@@ -2548,7 +2548,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'e2e: Openstack, Containerd, k8s 1.22';
+            const name = 'e2e: OpenStack, Containerd, k8s 1.22';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -2606,9 +2606,9 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: "Run e2e test: Openstack/Containerd/1.22"
+      - name: "Run e2e test: OpenStack/Containerd/1.22"
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.22"
@@ -2676,7 +2676,7 @@ jobs:
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.22"
@@ -2772,7 +2772,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'e2e: Openstack, Kubernetes 1.22';
+            const name = 'e2e: OpenStack, Kubernetes 1.22';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 
@@ -2786,7 +2786,7 @@ jobs:
       - name: Alert on fail in default branch
         if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
-          PROVIDER: Openstack
+          PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.22"
