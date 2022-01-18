@@ -40,12 +40,7 @@ env:
   # </template: werf_envs>
   DEPLOY_CHANNEL: stable
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
-concurrency:
-  group: ${{ github.ref }}-deploy-channel-stable
-  cancel-in-progress: true
+# Note: no concurrency section for deploy workflows.
 
 jobs:
 
@@ -122,40 +117,12 @@ jobs:
 
   # </template: git_info_job>
 
-  # <template: check_label_job>
-  check_label:
-    name: Check label
-    runs-on: ubuntu-latest
-    outputs:
-      should_run: ${{ steps.check_label.outputs.should_run }}
-      labels: ${{ steps.check_label.outputs.labels }}
-    steps:
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-
-      # </template: checkout_step>
-      - id: check_label
-        name: Check labels on push
-        uses: actions/github-script@v5.0.0
-        with:
-          script: |
-            const labelType = 'deploy';
-            const labelSubject = 'stable';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.checkLabel({github, context, core, labelType, labelSubject});
-  # </template: check_label_job>
-
   run_deploy:
     name: Deploy deckhouse to stable channel
     environment:
       name: stable
     needs:
-      - check_label
       - git_info
-    if: needs.check_label.outputs.should_run == 'true'
     runs-on: [self-hosted, regular]
     steps:
 

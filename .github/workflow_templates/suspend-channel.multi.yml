@@ -1,3 +1,13 @@
+{!{/*
+  Multifile generator of suspend workflows.
+
+  One workflow file for each channel: suspend-alpha.yml, suspend-beta.yml, etc.
+
+  The only reason to use separate files for each channel
+  is a filtering on 'Actions' page.
+
+*/}!}
+
 {!{- range $channel := slice "alpha" "beta" "early-access" "stable" "rock-solid" -}!}
 {!{- $ctx := dict "channel" $channel }!}
 {!{- $outFile := printf "suspend-%s.yml" $channel }!}
@@ -27,26 +37,17 @@ env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
   DEPLOY_CHANNEL: {!{ .channel }!}
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
-concurrency:
-  group: ${{ github.ref }}-suspend-channel-{!{ .channel }!}
-  cancel-in-progress: true
+# Note: no concurrency section for suspend workflows.
 
 jobs:
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
-
-{!{ tmpl.Exec "check_label_job" (slice "suspend" .channel) | strings.Indent 2 }!}
 
   run_suspend:
     name: Suspend deckhouse release on {!{ .channel }!} channel
     environment:
       name: {!{ .channel }!}
     needs:
-      - check_label
       - git_info
-    if: needs.check_label.outputs.should_run == 'true'
     runs-on: self-hosted
     steps:
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}

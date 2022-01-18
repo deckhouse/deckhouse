@@ -1,9 +1,27 @@
-name: Changelog Command Dispatch
+name: Dispatch slash command
 on:
   issue_comment:
     types: [created]
+
 jobs:
-  dispatch:
+  trigger_for_release_issue:
+    name: Trigger workflow by comment
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.issue.labels.*.name, 'issue/release') &&
+      (github.event.comment.author_association == 'OWNER' ||
+       github.event.comment.author_association == 'MEMBER')
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Run workflow
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.runSlashCommandForReleaseIssue({github, context, core});
+
+  trigger_for_changelog:
     name: Dispatch Changelog Event
     runs-on: ubuntu-latest
     if: |
@@ -12,12 +30,10 @@ jobs:
       contains(github.event.issue.labels.*.name, 'changelog') &&
       contains(github.event.issue.labels.*.name, 'auto')
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Find milestone
         id: milestone
-        uses: actions/github-script@v5
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
         with:
           result-encoding: json
           script: |

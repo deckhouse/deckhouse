@@ -112,7 +112,7 @@ check_e2e_labels:
 {!{-     $cri := $criName | toLower -}!}
 {!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower }!}
     {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
-{!{- end -}!}
+{!{-   end -}!}
 {!{- end }!}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
@@ -122,11 +122,8 @@ check_e2e_labels:
       with:
         script: |
           const provider = '{!{ $ctx.provider }!}';
-          const defaults = {!{ $ctx.defaults | toJSON }!};
-          const criNames = {!{ $ctx.criNames | toJSON }!};
-          const kubernetesVersions = {!{ $ctx.kubernetesVersions | toJSON }!};
 
           const ci = require('./.github/scripts/js/ci');
-          return await ci.checkE2ELabels({github, context, core, provider, defaults, criNames, kubernetesVersions});
+          return await ci.checkE2ELabels({github, context, core, provider});
 # </template: check_e2e_labels_job>
 {!{- end -}!}
