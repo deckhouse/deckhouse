@@ -90,10 +90,6 @@ func applyD8ImageFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, err
 	}
 
-	// dev-deckhouse image is 'dev' name . remove it
-	// because stages is in repo
-	image = strings.TrimSuffix(image, "/dev")
-
 	return image, nil
 }
 

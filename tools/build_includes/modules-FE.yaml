@@ -17,8 +17,6 @@
   to: /deckhouse/modules/600-namespace-configurator
 - add: /ee/fe/modules/600-secret-copier
   to: /deckhouse/modules/600-secret-copier
-- add: /ee/modules/007-registrypackages
-  to: /deckhouse/modules/007-registrypackages
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
 - add: /ee/modules/030-cloud-provider-vsphere

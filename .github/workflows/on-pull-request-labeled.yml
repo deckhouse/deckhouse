@@ -18,21 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ref: ${{ steps.ref.outputs.ref }}
-    # Skip the CI for automation PRs, e.g. changelog
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    # Skip if PR from deckhouse-BOaTswain, e.g. changelog PRs.
+    if: ${{ ! startsWith(github.event_name, 'pull_request') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
       - name: Check if allow to run tests
         id: check
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            // Assume workflow_dispatch is safe to run.
-            // TODO add owner, repo, sha to inputs to check them here.
-            if (context.eventName === 'workflow_dispatch') {
-              core.info(`workflow_dispatch detected, set should_run to 'true'`);
-              return core.setOutput('should_run', 'true');
-            }
-
             if (!context.payload.pull_request) {
               return core.setFailed(`Unknown event, no pull request context. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
             }
@@ -85,6 +79,7 @@ jobs:
 
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
         uses: actions/checkout@v2.4.0
         with:
           ref: "refs/pull/${{ github.event.number }}/head"
@@ -92,7 +87,7 @@ jobs:
       # Detect dangerous changes in external PR.
       - name: Check for dangerous changes
         uses: dorny/paths-filter@v2
-        if: github.event.pull_request.head.repo.full_name != github.repository
+        if: ${{ startsWith(github.event_name, 'pull_request') && github.event.pull_request.head.repo.full_name != github.repository }}
         id: changes
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
@@ -121,7 +116,13 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            const ref = `refs/pull/${ context.issue.number }/head`
+            let ref = context.ref;
+            if (context.eventName.startsWith('pull_request')) {
+              ref = `refs/pull/${ context.issue.number }/head`
+            }
+            if (context.eventName === 'workflow_dispatch' &&  context.payload.inputs && context.payload.inputs.pull_request_ref) {
+              ref = context.payload.inputs.pull_request_ref;
+            }
             core.info(`ref: '${ref}'`)
             core.setOutput('ref', ref)
   # </template: pull_request_info>

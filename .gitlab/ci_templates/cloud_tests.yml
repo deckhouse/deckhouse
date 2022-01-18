@@ -104,7 +104,6 @@
     expire_in: 30 days
   needs:
   - "Build"
-  - "Build Modules Images"
 
 .Cloud layouts Tests template for containerd:
   stage: cloud_testing_containerd
@@ -271,7 +270,6 @@
     expire_in: 30 days
   needs:
   - "Build"
-  - "Build Modules Images"
 
 .Cloud layouts Tests vSphere template for containerd:
   stage: cloud_testing_containerd
@@ -371,7 +369,6 @@
     expire_in: 30 days
   needs:
   - "Build"
-  - "Build Modules Images"
 
 .Cloud layouts Tests Static template for containerd:
   stage: cloud_testing_containerd

@@ -16,6 +16,9 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 ansible:
   beforeInstall:
   - apk:

@@ -34,7 +34,7 @@ endif
 
 export PATH := $(abspath bin/protoc/bin/):$(abspath bin/):${PATH}
 
-INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:main
+INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/install:main
 
 .PHONY : deps fmt lint build test all ci devenv devstop
 

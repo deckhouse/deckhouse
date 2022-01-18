@@ -14,17 +14,12 @@ include:
   - '.gitlab/ci_templates/deploy.yml'
 
 stages:
-  - build_modules_images
+  - go_generate
   - build
   - testing
   - deploy
   - cleanup_registry
   - cleanup_builder
-
-Build Modules Images:
-  extends: .Build Modules Images template
-  tags:
-  - deckhouse
 
 Go Generate:
   extends: .Go Generate template

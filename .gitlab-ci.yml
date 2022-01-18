@@ -22,7 +22,6 @@ include:
   - '.gitlab/ci_templates/deploy.yml'
 
 stages:
-  - build_modules_images
   - build
   - testing
   - cloud_testing_docker
@@ -31,30 +30,6 @@ stages:
   - deploy_website
   - cleanup_registry
   - cleanup_builder
-
-Build Modules Images CE:
-  extends: .Build Modules Images template
-  tags:
-    - werf-distributed
-  variables:
-    WERF_ENV: CE
-  only:
-  - tags
-
-Build Modules Images EE:
-  extends: .Build Modules Images template
-  tags:
-    - werf-distributed
-  variables:
-    WERF_ENV: EE
-  only:
-  - tags
-
-Build Modules Images FE:
-  extends: .Build Modules Images template
-  tags:
-    - werf-distributed
-
 
 Go Generate:
   extends: .Go Generate template
@@ -90,7 +65,6 @@ Tests:
     - werf-distributed
   needs: &needs
     - "Build FE"
-    - "Build Modules Images FE"
 
 Matrix Tests:
   extends: .Matrix Tests template
@@ -272,9 +246,6 @@ Copyright Validation:
     - "Build CE"
     - "Build EE"
     - "Build FE"
-    - "Build Modules Images CE"
-    - "Build Modules Images EE"
-    - "Build Modules Images FE"
     - "Go Generate"
   tags:
     - werf-distributed
@@ -282,9 +253,6 @@ Copyright Validation:
     - "Build CE"
     - "Build EE"
     - "Build FE"
-    - "Build Modules Images CE"
-    - "Build Modules Images EE"
-    - "Build Modules Images FE"
   parallel:
     matrix:
     - WERF_ENV: CE
@@ -320,15 +288,5 @@ rock-solid:
 
 Cleanup registry:
   extends: .Cleanup registry template
-  tags:
-    - werf-distributed
-
-Cleanup modules registry:
-  extends: .Cleanup modules registry template
-  tags:
-    - werf-distributed
-
-Cleanup modules images:
-  extends: .Cleanup modules images template
   tags:
     - werf-distributed
