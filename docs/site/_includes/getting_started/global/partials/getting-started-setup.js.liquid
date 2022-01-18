@@ -25,9 +25,12 @@ $(document).ready(function(){
   let publicDomainTemplatePattern = /^([a-zA-Z0-9][a-zA-Z0-9-.]+)?%s([a-zA-Z0-9-]+)?\.[a-zA-Z0-9-.]+/;
   restoreData();
 	$('#clusterdomain').change(function(){
-	    if (!$(this).val().match(publicDomainTemplatePattern)) {
+	    if (!$(this).val().match(publicDomainTemplatePattern))  {
             $(this).addClass('invalid');
-            $(this).parent().find('.invalid-message').addClass('active');
+            $(this).parent().find('.invalid-message-main').addClass('active');
+        } else if ($(this).val().match(/\.example\.com/))  {
+            $(this).addClass('invalid');
+            $(this).parent().find('.invalid-message-example-com').addClass('active');
         } else {
             $(this).removeClass('invalid');
             $(this).parent().find('.invalid-message').removeClass('active');
