@@ -218,7 +218,7 @@ Changes to the `kube-apiserver` manifest that will occur after enabling multi-te
 Execute the command below with the following parameters:
 * `resourceAttributes` (the same as in RBAC) - target resources;
 * `user` - the name of the user;
-* `group` - user groups;
+* `groups` - user groups;
 
 P.S. You can use Dex logs to find out groups and a username if this module is used together with the `user-authn` module (`kubectl -n d8-user-authn logs -l app=dex`); logs available only if the user is authorized).
 
@@ -235,7 +235,7 @@ cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectac
       "resource": "pods"
     },
     "user": "system:kube-controller-manager",
-    "group": [
+    "groups": [
       "Admins"
     ]
   }
@@ -267,7 +267,7 @@ cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/web
       "resource": "pods"
     },
     "user": "system:kube-controller-manager",
-    "group": [
+    "groups": [
       "Admins"
     ]
   }
