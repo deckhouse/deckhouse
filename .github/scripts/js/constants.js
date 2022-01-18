@@ -11,7 +11,7 @@ const labels = {
   e2e: [
     'e2e/run/aws',
     'e2e/run/azure',
-    'e2e/run/gce',
+    'e2e/run/gcp',
     'e2e/run/openstack',
     'e2e/run/vsphere',
     'e2e/run/yandex-cloud',
@@ -66,7 +66,7 @@ module.exports.labelsSrv = {
 const providers = [
   //
   'aws',
-  'gce',
+  'gcp',
   'azure',
   'openstack',
   'yandex-cloud',
