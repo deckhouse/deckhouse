@@ -106,7 +106,12 @@ properties:
         type: boolean
         default: false
         description: |
-          Enable [event auditing](faq.html#how-do-i-enable-event-auditing) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
+          Enforce [additional audit policies](faq.html#how-do-i-add-audit-policies) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
+      basicAuditPolicyEnabled:
+        type: boolean
+        default: true
+        description: |
+          Enforce basic Deckhouse audit policies.
   etcd:
     type: object
     description: |

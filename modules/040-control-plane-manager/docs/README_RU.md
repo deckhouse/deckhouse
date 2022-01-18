@@ -67,3 +67,16 @@ title: Управление control plane
     - Например, `maxUsedControlPlaneVersion = 1.20`. Минимально возможная версия control plane компонентов в кластере — `1.19`.
 
 [Список поддерживаемых версий Kubernetes...](../../supported_versions.html#kubernetes)
+
+## Аудит
+
+Если требуется журналировать операции с API или отдебажить неожиданное поведение — для всего этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/). Его можно настроить путём создания правил [Audit Policy](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy), а результат работы аудита будет лог-файл `/var/log/kube-audit/audit.log` со всеми интересующими операциями.
+
+В инсталляциях Deckhouse по умолчанию созданы базовые политики, они отвечают за логирование событий:
+- связанных с операциями создания, удаления и изменения ресурсов;
+- совершаемых от имён сервисных аккаунтов из системных Namespace `kube-system`, `d8-*`;
+- совершаемых с ресурсами в системных Namespace `kube-system`, `d8-*`.
+
+Для выключения базовых политик установите флаг [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
+
+Настройка дополнительных политик аудита подробно рассмотрена в [одноимённой секции FAQ](faq.html#как-настроить-дополнительные-политики-аудита). 
