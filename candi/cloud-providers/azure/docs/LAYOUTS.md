@@ -2,6 +2,8 @@
 title: "Cloud provider — Azure: Layouts"
 ---
 
+> **Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
+
 ## Layouts
 ### Standard
 * A separate [resorce group](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal) is created for the cluster.
