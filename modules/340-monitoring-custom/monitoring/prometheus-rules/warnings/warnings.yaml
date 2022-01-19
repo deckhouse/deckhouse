@@ -1,6 +1,6 @@
 - name: d8.monitoring-custom.warnings
   rules:
-  - alert: D8CustomServiceMonitorFoundInCluster
+  - alert: CustomServiceMonitorFoundInD8Namespace
     expr: |
       max(d8_monitoring_custom_unknown_service_monitor_total{job="deckhouse"} > 0)
     labels:
@@ -11,16 +11,16 @@
       plk_incident_initial_status: "todo"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
-        There are ServiceMonitors in the cluster that were not created by Deckhouse.
+        There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
 
         Use the following command for filtering: `kubectl get servicemonitors --all-namespaces -l heritage!=deckhouse`.
 
-        They must be abandoned and replaced with the Deckhouse-specific project customization solutions.
+        They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
 
         The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/en/documentation/v1/modules/300-prometheus/faq.html).
-      summary: There are ServiceMonitors in the cluster that were not created by Deckhouse.
+      summary: There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
 
-  - alert: D8CustomPodMonitorFoundInCluster
+  - alert: CustomPodMonitorFoundInCluster
     expr: |
       max(d8_monitoring_custom_unknown_pod_monitor_total{job="deckhouse"} > 0)
     labels:
@@ -31,14 +31,14 @@
       plk_incident_initial_status: "todo"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
-        There are PodMonitors in the cluster that were not created by Deckhouse.
+        There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
 
         Use the following command for filtering: `kubectl get podmonitors --all-namespaces -l heritage!=deckhouse`.
 
-        They must be abandoned and replaced with the Deckhouse-specific project customization solutions.
+        They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
 
         The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/en/documentation/v1/modules/300-prometheus/faq.html).
-      summary: There are PodMonitors in the cluster that were not created by Deckhouse.
+      summary: There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
 
   - alert: D8CustomPrometheusRuleFoundInCluster
     expr: |

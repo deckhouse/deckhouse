@@ -328,3 +328,33 @@ spec:
 
 После деплоя ресурсов, метрики Prometheus будут доступны по адресу `lens-proxy/prometheus-lens-proxy:8080`.
 Тип Prometheus в Lens - `Prometheus Operator`.
+
+## Как настроить ServiceMonitor или PodMonitor для работы с Prometheus? 
+
+Добавьте лейбл `prometheus: main` к Pod/Service Monitor.
+Добавьте в namespace, в котором находится Pod/Service Monitor, лейбл `prometheus.deckhouse.io/monitor-watcher-enabled: "true"`. 
+
+Пример:
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    prometheus.deckhouse.io/monitor-watcher-enabled: "true"
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: example-app
+  namespace: frontend
+  labels:
+    prometheus: main
+spec:
+  selector:
+    matchLabels:
+      app: example-app
+  endpoints:
+    - port: web
+```
