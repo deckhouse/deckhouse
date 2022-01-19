@@ -2,6 +2,8 @@
 title: "Cloud provider — Azure: схемы размещения"
 ---
 
+> **Внимание!** Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region) в которых доступны `Availability Zones`.
+
 ## Схемы размещения
 ### Standard
 * Для кластера создаётся отдельная [resorce group](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal).

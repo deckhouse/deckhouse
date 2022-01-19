@@ -1,3 +1,5 @@
+> **Внимание!** Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region) в которых доступны `Availability Zones`.
+
 Чтобы Deckhouse Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/ru/documentation/v1/modules/030-cloud-provider-azure/environment.html).
 
 Далее представлена краткая последовательность действий (выполняйте их на **[персональном компьютере](step2.html#процесс-установки)**), которую необходимо выполнить с помощью консольной утилиты Azure CLI.
