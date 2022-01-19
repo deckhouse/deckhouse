@@ -5,9 +5,9 @@
 {{- $CurrentPageURLRelative := .CurrentPageURLRelative }}
 {{- $CurrentLang := .CurrentLang }}
 {{- $current := index .VersionItems 0 }}
-{{- if or (eq $current.Version "v1") (eq $current.Version "latest") }}{{ $prevVersion = "latest" }}{{- end }}
+{{- if eq $current.Version "rock-solid" }}{{ $prevVersion = "rock-solid" }}{{- end }}
 <a data-proofer-ignore href="#" class="highlight">
-  {{- if eq $current.Version "v1" }}latest{{- else }}{{ $current.Version }}{{- end }}</a>
+  {{- if eq $current.Version "v1" }}stable{{- else }}{{ $current.Version }}{{- end }}</a>
 </a>
 <div class="submenu-container">
     <ul class="submenu">
