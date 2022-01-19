@@ -4,3 +4,5 @@
 * Публичные IP адреса можно назначить на master-узлы и узлы, созданные Terraform.
 * Если master не имеет публичного IP, то для установки и доступа в кластер, необходим дополнительный инстанс с публичным IP (aka bastion). В этом случае так же потребуется настроить peering между VNet кластера и VNet bastion.
 * Между VNet кластера и другими VNet можно настроить peering.
+
+> **Внимание!** Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region) в которых доступны `Availability Zones`.
