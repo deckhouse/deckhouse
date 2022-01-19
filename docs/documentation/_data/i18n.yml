@@ -53,6 +53,9 @@ common:
   example:
     en: example
     ru: пример
+  examples:
+    en: examples
+    ru: примеры
   x-kubernetes-int-or-string:
     en: integer or string
     ru: строка или число
@@ -62,6 +65,12 @@ common:
   length:
     en: length
     ru: длина
+  min_length:
+    en: minimal length
+    ru: минимальная длина
+  max_length:
+    en: maximum length
+    ru: максимальная длина
   required_value_sentence:
     en: Required value
     ru: Обязательный параметр

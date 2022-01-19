@@ -129,15 +129,15 @@ module Jekyll
           end
         end
 
-        if attributes['minimum'] || attributes['maximum']
+        if attributes.has_key?('minimum') or attributes.has_key?('maximum')
             valuesRange = '<p class="resources__attrs"><span class="resources__attrs_name">' + get_i18n_term("allowed_values").capitalize + ':</span> '
             valuesRange += '<span class="resources__attrs_content"><code>'
-            if attributes['minimum']
+            if attributes.has_key?('minimum')
               comparator = attributes['exclusiveMinimum'] ? '<' : '<='
               valuesRange += "#{attributes['minimum'].to_json} #{comparator} "
             end
             valuesRange += ' X '
-            if attributes['maximum']
+            if attributes.has_key?('maximum')
               comparator = attributes['exclusiveMaximum'] ? '<' : '<='
               valuesRange += " #{comparator} #{attributes['maximum'].to_json}"
             end
@@ -145,7 +145,7 @@ module Jekyll
             result.push(converter.convert(valuesRange.to_s))
         end
 
-        if attributes['enum']
+        if attributes.has_key?('enum')
             enum_result = '<p class="resources__attrs"><span class="resources__attrs_name">' + get_i18n_term("allowed_values").capitalize
             if name == "" and parent['type'] == 'array'
                 enum_result += ' ' + get_i18n_term("allowed_values_of_array")
@@ -153,54 +153,87 @@ module Jekyll
             result.push(enum_result + ':</span> <span class="resources__attrs_content">'+ [*attributes['enum']].map { |e| "<code>#{e}</code>" }.join(', ') + '</span></p>')
         end
 
-        if attributes['pattern']
+        if attributes.has_key?('pattern')
             result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <code class="resources__attrs_content">%s</code></p>),get_i18n_term("pattern").capitalize, attributes['pattern']))
         end
 
-        if attributes['minLength'] || attributes['maxLength']
-            description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term('length').capitalize}</span>: <span class="resources__attrs_content"><code>)
-            if attributes['minLength']
-              description += "#{attributes['minLength'].to_json}"
+        if attributes.has_key?('minLength') || attributes.has_key?('maxLength')
+            if attributes.has_key?('minLength') && attributes.has_key?('maxLength')
+                caption = 'length'
+                lengthValue = "#{attributes['minLength'].to_json}..#{attributes['maxLength'].to_json}"
+            elsif attributes.has_key?('minLength')
+                caption = 'min_length'
+                lengthValue = "#{attributes['minLength'].to_json}"
+            else
+                caption = 'max_length'
+                lengthValue = "#{attributes['maxLength'].to_json}"
             end
-            unless attributes['minLength'] == attributes['maxLength']
-              if attributes['maxLength']
-                unless attributes['minLength']
-                  description += '0'
-                end
-                description += "..#{attributes['maxLength'].to_json}"
-              else
-                description += '..∞'
-              end
+            unless attributes['type'] == 'string' && caption == 'min_length'
+                description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term(caption).capitalize}</span>: <span class="resources__attrs_content"><code>#{lengthValue}</code></span></p>)
+                result.push(converter.convert(description.to_s))
             end
-            description += '</code></span></p>'
-            result.push(converter.convert(description.to_s))
         end
 
         if attributes.has_key?('x-doc-example')
-            exampleObject = attributes['x-doc-example']
+            exampleKeyToUse = 'x-doc-example'
         elsif attributes.has_key?('example')
-            exampleObject = attributes['example']
+            exampleKeyToUse = 'example'
         elsif attributes.has_key?('x-examples')
-            exampleObject = attributes['x-examples']
+            exampleKeyToUse = 'x-examples'
         end
+        exampleObject = attributes[exampleKeyToUse]
         if exampleObject != nil
-            example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term('example').capitalize}:</span>)
-            exampleContent =  converter.convert(
+            exampleObjectIsArrayOfExamples =  false
+            if exampleKeyToUse == 'x-examples' then
+                exampleObjectIsArrayOfExamples =  true
+            end
+            if exampleKeyToUse == 'x-doc-example' then
+                if attributes['type'] == 'array' and exampleObject.is_a?(Array) then
+                   exampleObjectIsArrayOfExamples =  true
+                end
+            end
+            if attributes['type'] == 'array' and !exampleObject.is_a?(Array) then
+               if exampleKeyToUse == 'example' then
+                   exampleObject = [exampleObject]
+                   exampleObjectIsArrayOfExamples =  true
+               end
+            end
+
+            if exampleObjectIsArrayOfExamples and exampleObject.length > 1 then
+                exampleTitle = get_i18n_term('examples').capitalize
+            else
+                exampleTitle = get_i18n_term('example').capitalize
+            end
+
+            example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{exampleTitle}:</span>)
+            exampleContent = ""
                         if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
-                            exampleObject['oneOf'].map { |e| "`#{e.to_json}`" }.join(' ' + get_i18n_term('or') + ' ')
-                        elsif exampleObject.is_a?(Array) || exampleObject.is_a?(Hash)
-                            '`' + exampleObject.map { |e| "`#{e.to_json}`" }.join('`, `') + '`'
+                            exampleContent = %Q(```yaml\n#{{name => exampleObject['oneOf']}.to_yaml.delete_prefix("---\n")}```)
+                        elsif exampleObject.is_a?(Hash)
+                            exampleContent = %Q(```yaml\n#{{name => exampleObject}.to_yaml.delete_prefix("---\n")}```)
+                        elsif exampleObjectIsArrayOfExamples and (exampleObject.length == 1)
+                            exampleContent = %Q(```yaml\n#{{name => exampleObject[0]}.to_yaml.delete_prefix("---\n")}```)
+                        elsif exampleObjectIsArrayOfExamples and (exampleObject.length > 1)
+                            exampleObject.each do | value |
+                                if value == nil then continue end
+                                if exampleContent.length > 0 then exampleContent = exampleContent + "\n" end
+                                exampleContent = %Q(#{exampleContent}\n```yaml\n#{{name => value}.to_yaml.delete_prefix("---\n")}```)
+                            end
+                        elsif exampleObject.is_a?(Array)
+                            exampleContent = %Q(```yaml\n#{{name => exampleObject}.to_yaml.delete_prefix("---\n")}```)
                         else
                             if exampleObject =~ /\`\`\`|\n/
-                                "\n\n#{exampleObject}"
+                                exampleContent = "#{exampleObject}"
+                            elsif attributes['type'] == 'boolean' then
+                                exampleContent = %Q(```yaml\n#{{name => (exampleObject and true)}.to_yaml.delete_prefix("---\n")}```)
+                            elsif attributes['type'] == 'integer' or attributes['type'] == 'number' then
+                                exampleContent = %Q(```yaml\n#{{name => exampleObject.to_i}.to_yaml.delete_prefix("---\n")}```)
                             else
-                              if attributes['type'] == 'string'
-                                 "`\"#{exampleObject}\"`"
-                              else
-                                "`#{exampleObject}`"
-                              end
+                                exampleContent = %Q(```yaml\n#{{name => exampleObject.to_s}.to_yaml.delete_prefix("---\n")}```)
                             end
-                        end).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
+
+                        end
+            exampleContent = converter.convert(exampleContent).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
             if exampleContent.match?(/^<div/)
                 result.push(%Q(#{example}</p>#{exampleContent}))
             else
