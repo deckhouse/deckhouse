@@ -134,7 +134,7 @@ properties:
                     x-doc-example: |
                       ```yaml
                       project: cms-production
-                      severity: critical
+                      severity_level: 3
                       ```
                     additionalProperties:
                       type: string

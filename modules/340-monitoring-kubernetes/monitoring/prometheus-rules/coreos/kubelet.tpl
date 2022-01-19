@@ -4,7 +4,7 @@
     expr: min(kube_node_status_condition{condition="Ready",status="true"}) BY (node) == 0
     for: 10m
     labels:
-      severity: critical
+      severity_level: 3
     annotations:
       plk_protocol_version: "1"
       description: The Kubelet on {{ `{{ $labels.node }}` }} has not checked in with the API,
@@ -16,7 +16,7 @@
       0) / count(kube_node_status_condition{condition="Ready",status="true"})) > 0.2
     for: 1m
     labels:
-      severity: critical
+      severity_level: 3
     annotations:
       plk_protocol_version: "1"
       description: '{{ `{{ $value }}` }}% of Kubernetes nodes are not ready'
@@ -25,7 +25,7 @@
     expr: count(up{job="kubelet"} == 0) / count(up{job="kubelet"}) * 100 > 3
     for: 10m
     labels:
-      severity: critical
+      severity_level: 3
     annotations:
       plk_protocol_version: "1"
       plk_group_for__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
