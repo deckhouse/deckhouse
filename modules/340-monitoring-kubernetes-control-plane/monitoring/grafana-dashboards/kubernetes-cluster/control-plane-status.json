@@ -8,40 +8,66 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
   "editable": false,
+  "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 57,
-  "iteration": 1637061768986,
+  "id": 31,
+  "iteration": 1642787489404,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "rgba(245, 54, 54, 0.9)",
-        "rgba(237, 129, 40, 0.89)",
-        "rgba(50, 172, 45, 0.97)"
-      ],
       "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 50
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
         },
         "overrides": []
-      },
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": true,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 7,
@@ -50,40 +76,22 @@
         "y": 0
       },
       "id": 1,
-      "interval": null,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
       },
-      "tableColumn": "",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "expr": "(sum(up{job=\"kube-apiserver\"} == 1) / sum(up{job=\"kube-apiserver\"})) * 100",
@@ -94,42 +102,50 @@
           "step": 600
         }
       ],
-      "thresholds": "50,80",
       "title": "API Servers UP",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "type": "gauge"
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "rgba(245, 54, 54, 0.9)",
-        "rgba(237, 129, 40, 0.89)",
-        "rgba(50, 172, 45, 0.97)"
-      ],
       "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 50
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
         },
         "overrides": []
-      },
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": true,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 7,
@@ -138,40 +154,22 @@
         "y": 0
       },
       "id": 2,
-      "interval": null,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
       },
-      "tableColumn": "",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "expr": "(sum(up{job=\"kube-controller-manager\"} == 1) / sum(up{job=\"kube-controller-manager\"})) * 100",
@@ -182,42 +180,50 @@
           "step": 600
         }
       ],
-      "thresholds": "50,80",
       "title": "Controller Managers UP",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "type": "gauge"
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "rgba(245, 54, 54, 0.9)",
-        "rgba(237, 129, 40, 0.89)",
-        "rgba(50, 172, 45, 0.97)"
-      ],
       "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 50
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
         },
         "overrides": []
-      },
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": true,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 7,
@@ -226,40 +232,22 @@
         "y": 0
       },
       "id": 3,
-      "interval": null,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
       },
-      "tableColumn": "",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "expr": "(sum(up{job=\"kube-scheduler\"} == 1) / sum(up{job=\"kube-scheduler\"})) * 100",
@@ -270,27 +258,16 @@
           "step": 600
         }
       ],
-      "thresholds": "50,80",
       "title": "Schedulers UP",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "type": "gauge"
     },
     {
-      "datasource":  "$ds_prometheus",
+      "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "custom": {},
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -328,123 +305,106 @@
         "showUnfilled": true,
         "text": {}
       },
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "expr": "count(kube_namespace_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "Namespaces",
           "refId": "N"
         },
         {
           "expr": "count(kube_daemonset_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "DaemonSets",
           "refId": "C"
         },
         {
           "expr": "count(kube_deployment_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "Deployments",
           "refId": "D"
         },
         {
           "expr": "count(kube_statefulset_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "StatefulSets",
           "refId": "M"
         },
         {
           "expr": "count(kube_replicaset_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "ReplicaSets",
           "refId": "B"
         },
         {
           "expr": "count(kube_pod_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "Pods",
           "refId": "K"
         },
         {
           "expr": "count(kube_verticalpodautoscaler_labels)",
           "hide": false,
-          "interval": "",
           "legendFormat": "VPA",
           "refId": "O"
         },
         {
           "expr": "count(kube_poddisruptionbudget_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "PDB",
           "refId": "Q"
         },
         {
           "expr": "count(kube_persistentvolumeclaim_info)",
           "hide": false,
-          "interval": "",
           "legendFormat": "PVC",
           "refId": "J"
         },
         {
           "expr": "count(kube_persistentvolume_info)",
           "hide": false,
-          "interval": "",
           "legendFormat": "PV",
           "refId": "I"
         },
         {
           "expr": "count(kube_cronjob_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "CronJobs",
           "refId": "F"
         },
         {
           "expr": "count(kube_job_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "Jobs",
           "refId": "G"
         },
         {
           "expr": "count(kube_secret_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "Secrets",
           "refId": "P"
         },
         {
           "expr": "count(kube_configmap_created)",
-          "interval": "",
           "legendFormat": "ConfigMaps",
           "refId": "A"
         },
         {
           "expr": "count(kube_service_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "Services",
           "refId": "L"
         },
         {
           "expr": "count(kube_endpoint_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "Endpoints",
           "refId": "E"
         },
         {
           "expr": "count(kube_node_created)",
           "hide": false,
-          "interval": "",
           "legendFormat": "Nodes",
           "refId": "H"
         }
@@ -460,27 +420,39 @@
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource":  "$ds_prometheus",
+      "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
         },
         "overrides": []
-      },
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 3,
@@ -489,40 +461,24 @@
         "y": 7
       },
       "id": 9,
-      "interval": null,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
       },
-      "tableColumn": "",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "expr": "count(up{job=\"kube-apiserver\"})",
@@ -531,42 +487,44 @@
           "refId": "A"
         }
       ],
-      "thresholds": "",
       "title": "API Servers count",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "type": "stat"
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource":  "$ds_prometheus",
+      "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
         },
         "overrides": []
-      },
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 3,
@@ -575,40 +533,24 @@
         "y": 7
       },
       "id": 10,
-      "interval": null,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
       },
-      "tableColumn": "",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "expr": "count(up{job=\"kube-controller-manager\"})",
@@ -617,42 +559,44 @@
           "refId": "A"
         }
       ],
-      "thresholds": "",
       "title": "Controller Managers count",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "type": "stat"
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource":  "$ds_prometheus",
+      "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
         },
         "overrides": []
-      },
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
       },
       "gridPos": {
         "h": 3,
@@ -661,40 +605,24 @@
         "y": 7
       },
       "id": 11,
-      "interval": null,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
       },
-      "tableColumn": "",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "expr": "count(up{job=\"kube-scheduler\"})",
@@ -703,22 +631,12 @@
           "refId": "A"
         }
       ],
-      "thresholds": "",
       "title": "Schedulers count",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "type": "stat"
     },
     {
       "collapsed": false,
-      "datasource":  "$ds_prometheus",
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -735,13 +653,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource":  "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -768,18 +680,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\", instance=~\"$instance:.*\"}[$__interval_sx4])",
-          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -833,13 +744,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource":  "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -866,18 +771,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "process_resident_memory_bytes{job=\"kube-apiserver\", instance=~\"$instance:.*\"}",
-          "interval": "",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -927,15 +831,27 @@
     },
     {
       "aliasColors": {},
-      "bars": false,
+      "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource":  "$ds_prometheus",
+      "datasource": "$ds_prometheus",
+      "description": "",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              }
+            ]
+          }
+        ]
       },
       "fill": 1,
       "fillGradient": 0,
@@ -944,6 +860,495 @@
         "w": 12,
         "x": 0,
         "y": 19
+      },
+      "hiddenSeries": false,
+      "id": 27,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.2.6",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by(verb, resource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-apiserver requests rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:339",
+          "format": "reqps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:340",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "$ds_prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "basic"
+              },
+              {
+                "id": "displayName",
+                "value": "RPS"
+              },
+              {
+                "id": "unit",
+                "value": "reqps"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resource"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 291
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "verb"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "id": 47,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value"
+          }
+        ]
+      },
+      "pluginVersion": "8.2.6",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by(verb, resource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Kube-apiserver requests rate",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "resource",
+                "verb",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "bytes/sec"
+              },
+              {
+                "id": "unit",
+                "value": "binBps"
+              }
+            ]
+          }
+        ]
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "hiddenSeries": false,
+      "id": 36,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.2.6",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max by (verb, resource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-apiserver response sizes",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:339",
+          "format": "binBps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:340",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "$ds_prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "basic"
+              },
+              {
+                "id": "displayName",
+                "value": "bytes/s"
+              },
+              {
+                "id": "unit",
+                "value": "binBps"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resource"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 291
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "verb"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "id": 48,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "8.2.6",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max by (verb, resource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Kube-apiserver responce sizes",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "resource",
+                "verb",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "regex",
+                  "options": {
+                    "value": "NaN"
+                  }
+                },
+                "fieldName": "Value"
+              }
+            ],
+            "match": "any",
+            "type": "exclude"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
       },
       "hiddenSeries": false,
       "id": 29,
@@ -958,23 +1363,23 @@
       },
       "lines": true,
       "linewidth": 1,
-      "nullPointMode": "null",
+      "nullPointMode": "null as zero",
       "options": {
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
-          "expr": "max by (verb) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
-          "interval": "",
+          "exemplar": true,
+          "expr": "max by (verb, resource) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
           "intervalFactor": 1,
           "legendFormat": "{{verb}}",
           "refId": "A"
@@ -1024,210 +1429,165 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource":  "$ds_prometheus",
+      "datasource": "$ds_prometheus",
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "basic"
+              },
+              {
+                "id": "displayName",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resource"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 291
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "verb"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          }
+        ]
       },
-      "fill": 1,
-      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 35
       },
-      "hiddenSeries": false,
-      "id": 36,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": false,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
+      "id": 49,
       "options": {
-        "alertThreshold": true
+        "showHeader": true,
+        "sortBy": []
       },
-      "percentage": false,
-      "pluginVersion": "7.4.2",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
+      "pluginVersion": "8.2.6",
       "targets": [
         {
-          "expr": "max by (verb, resource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
-          "interval": "",
+          "exemplar": true,
+          "expr": "max by (verb, resource) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "format": "table",
+          "instant": true,
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
-      "title": "Kube-apiserver response sizes",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
+      "title": "Kube-apiserver latency",
+      "transformations": [
         {
-          "$$hashKey": "object:339",
-          "format": "bytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "resource",
+                "verb",
+                "Value"
+              ]
+            }
+          }
         },
         {
-          "$$hashKey": "object:340",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "regex",
+                  "options": {
+                    "value": "NaN"
+                  }
+                },
+                "fieldName": "Value"
+              }
+            ],
+            "match": "any",
+            "type": "exclude"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
         }
       ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "type": "table"
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource":  "$ds_prometheus",
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 27
-      },
-      "hiddenSeries": false,
-      "id": 27,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": false,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.4.2",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum by(verb, resource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Kube-apiserver requests rate",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:339",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:340",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "datasource":  "$ds_prometheus",
+      "collapsed": false,
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "id": 44,
+      "panels": [],
       "title": "Kube-scheduler",
       "type": "row"
     },
@@ -1236,20 +1596,14 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource":  "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 37,
@@ -1269,18 +1623,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "rate(process_cpu_seconds_total{job=\"kube-scheduler\", instance=~\"$instance:.*\"}[$__interval_sx4])",
-          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -1334,20 +1687,14 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource":  "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 38,
@@ -1367,18 +1714,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "process_resident_memory_bytes{job=\"kube-scheduler\", instance=~\"$instance:.*\"}",
-          "interval": "",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -1428,12 +1774,12 @@
     },
     {
       "collapsed": false,
-      "datasource":  "$ds_prometheus",
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 52
       },
       "id": 42,
       "panels": [],
@@ -1445,20 +1791,14 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource":  "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 53
       },
       "hiddenSeries": false,
       "id": 39,
@@ -1478,18 +1818,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "rate(process_cpu_seconds_total{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}[$__interval_sx4])",
-          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -1543,20 +1882,14 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource":  "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
+      "datasource": "$ds_prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 53
       },
       "hiddenSeries": false,
       "id": 40,
@@ -1576,18 +1909,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": false,
+      "steppedLine": true,
       "targets": [
         {
           "expr": "process_resident_memory_bytes{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}",
-          "interval": "",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -1637,7 +1969,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 27,
+  "schemaVersion": 32,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1674,7 +2006,7 @@
             "$__all"
           ]
         },
-        "datasource":  "$ds_prometheus",
+        "datasource": "$ds_prometheus",
         "definition": "label_values(up{job=\"kube-apiserver\"}, instance)",
         "description": null,
         "error": null,
@@ -1691,9 +2023,8 @@
         "refresh": 2,
         "regex": "/(.*):.*/",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -1709,7 +2040,7 @@
             "$__all"
           ]
         },
-        "datasource":  "$ds_prometheus",
+        "datasource": "$ds_prometheus",
         "definition": "label_values(apiserver_request_total, resource)",
         "description": null,
         "error": null,
@@ -1726,9 +2057,8 @@
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -1744,7 +2074,7 @@
             "$__all"
           ]
         },
-        "datasource":  "$ds_prometheus",
+        "datasource": "$ds_prometheus",
         "definition": "label_values(apiserver_request_total{verb!~\"CONNECT|WATCH\"}, verb)",
         "description": null,
         "error": null,
@@ -1761,9 +2091,8 @@
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -1802,5 +2131,5 @@
   "timezone": "",
   "title": "Control Plane Status",
   "uid": "3yqtXDzia",
-  "version": 12
+  "version": 2
 }

@@ -47,7 +47,6 @@
         "y": 0
       },
       "id": 28,
-      "interval": null,
       "isNew": true,
       "links": [],
       "mappingType": 1,
@@ -350,7 +349,6 @@
           "expr": "etcd_mvcc_db_total_size_in_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
           "format": "time_series",
           "hide": false,
-          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{node}} DB Size",
           "metric": "",
@@ -905,7 +903,6 @@
           "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node)",
           "format": "time_series",
           "hide": false,
-          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{node}} Peer Traffic Out",
           "metric": "etcd_network_peer_sent_bytes_total",
