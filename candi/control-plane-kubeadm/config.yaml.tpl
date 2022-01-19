@@ -26,6 +26,7 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+    service-account-api-audiences: "https://kubernetes.default.svc.cluster.local,api,istio-ca"
 {{- if ne .runType "ClusterBootstrap" }}
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
