@@ -223,12 +223,7 @@ spec:
                         List of availability zones to create instances in.
 
                         The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-                      x-doc-example: |
-                        ```yaml
-                        - Helsinki
-                        - Espoo
-                        - Tampere
-                        ```
+                      x-doc-example: [["Helsinki","Espoo","Tampere"]]
                       type: array
                       items:
                         type: string
