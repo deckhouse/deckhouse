@@ -12,7 +12,7 @@ resources:
 - name: VROUTER_DEFAULT_CHANNEL
   value: {{ .Values.vrouter.defaultChannel | quote }}
 - name: VROUTER_DEFAULT_CHANNEL_FOR_DEFAULT_GROUP
-  value: {{ .Values.vrouter.defaultChannel4DefaultGroup | quote }}
+  value: {{ pluck .Values.web.env .Values.vrouter.defaultChannel4DefaultGroup | first | default .Values.vrouter.defaultChannel4DefaultGroup._default | quote }}
 - name: VROUTER_SHOW_LATEST_CHANNEL
   value: {{ .Values.vrouter.showLatestChannel | quote }}
 - name: VROUTER_LISTEN_PORT

@@ -11,7 +11,9 @@ resources:
 vrouter:
   defaultGroup: "v1"
   defaultChannel: "stable"
-  defaultChannel4DefaultGroup: "v1-stable"
+  defaultChannel4DefaultGroup:
+    web-production: "v1-stable"
+    _default: "latest"
   showLatestChannel: "true"
   i18nType: "location"
   logLevel:
