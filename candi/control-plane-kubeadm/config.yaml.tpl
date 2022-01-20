@@ -27,9 +27,8 @@ apiServer:
 {{- end }}
   extraArgs:
     enable-admission-plugins: "AlwaysPullImages,EventRateLimit"
-    admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
-    service-account-api-audiences: "https://kubernetes.default.svc.cluster.local,api,istio-ca"
 {{- if ne .runType "ClusterBootstrap" }}
+    admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
@@ -134,7 +133,9 @@ scheduler:
     readOnly: true
     pathType: DirectoryOrCreate
   extraArgs:
+{{- if ne .runType "ClusterBootstrap" }}
     config: "/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml"
+{{- end }}
     profiling: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
