@@ -84,6 +84,18 @@ extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "w
   {{- if $tpl_context.apiserver.auditPolicy }}
 extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- end }}
+
+extra-file-scheduler-config.yaml: |
+  apiVersion: kubescheduler.config.k8s.io/v1beta1
+  kind: KubeSchedulerConfiguration
+  profiles:
+  - pluginConfig:
+    - name: PodTopologySpread
+      args:
+        defaultConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
 {{- end }}
 ---
 apiVersion: v1
