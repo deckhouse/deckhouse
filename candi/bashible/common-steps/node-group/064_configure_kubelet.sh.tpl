@@ -200,7 +200,7 @@ healthzBindAddress: 127.0.0.1
 healthzPort: 10248
 protectKernelDefaults: true
 {{- if eq .cri "Containerd" }}
-containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize }}
-containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles }}
+containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" }}
+containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 {{- end }}
 EOF
