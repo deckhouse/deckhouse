@@ -19,7 +19,7 @@ package linter
 import (
 	"fmt"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
