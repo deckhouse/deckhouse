@@ -85,9 +85,9 @@ extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "w
 extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- end }}
 
-extra-file-scheduler-config.yaml: {{ include "schedulerConfig" | b64enc }}
-extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" | b64enc }}
-extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" | b64enc }}
+extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
+extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
+extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" $tpl_context | b64enc }}
 {{- end }}
 ---
 apiVersion: v1
