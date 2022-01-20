@@ -26,6 +26,8 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+    enable-admission-plugins: "EventRateLimit"
+    admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
     service-account-api-audiences: "https://kubernetes.default.svc.cluster.local,api,istio-ca"
 {{- if ne .runType "ClusterBootstrap" }}
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
