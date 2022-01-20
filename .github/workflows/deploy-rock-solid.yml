@@ -254,8 +254,6 @@ jobs:
 
           echo Publish CE edition.
 
-          exit 0
-
           # Some precautions.
           if [[ -z $DEV_REGISTRY_PATH ]] ; then
             echo "DEV_REGISTRY_PATH is not set!"
@@ -366,8 +364,6 @@ jobs:
 
           echo Publish EE edition.
 
-          exit 0
-
           # Some precautions.
           if [[ -z $DEV_REGISTRY_PATH ]] ; then
             echo "DEV_REGISTRY_PATH is not set!"
@@ -477,8 +473,6 @@ jobs:
           ## Source: .gitlab/ci_templates/deploy.yml
 
           echo Publish FE edition.
-
-          exit 0
 
           # Some precautions.
           if [[ -z $DEV_REGISTRY_PATH ]] ; then

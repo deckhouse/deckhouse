@@ -105,8 +105,6 @@ Destination registries:
 
           echo Publish {!{ $werfEnv }!} edition.
 
-          exit 0
-
           # Some precautions.
           if [[ -z $DEV_REGISTRY_PATH ]] ; then
             echo "DEV_REGISTRY_PATH is not set!"
