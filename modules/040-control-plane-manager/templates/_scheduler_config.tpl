@@ -1,6 +1,8 @@
 {{- define "schedulerConfig" }}
 apiVersion: kubescheduler.config.k8s.io/v1beta1
 kind: KubeSchedulerConfiguration
+clientConnection:
+  kubeconfig: /etc/kubernetes/scheduler.conf
 profiles:
 - pluginConfig:
   - name: PodTopologySpread
