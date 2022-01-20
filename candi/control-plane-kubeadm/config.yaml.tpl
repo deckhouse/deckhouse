@@ -73,10 +73,10 @@ apiServer:
   {{- end -}}
   {{- if .apiserver.auditPolicy }}
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
-    audit-log-path: /var/log/kube-audit/audit.log
+    audit-log-path: "-"
     audit-log-format: json
     audit-log-truncate-enabled: "true"
-    audit-log-maxage: "7"
+    audit-log-maxage: "30"
     audit-log-maxsize: "100"
     audit-log-maxbackup: "10"
   {{- end }}
