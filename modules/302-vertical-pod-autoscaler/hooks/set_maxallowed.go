@@ -23,6 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,9 +44,9 @@ We have 3 groups of resources:
    3. EveryNode - vpa resources, working on every node (label "workload-resource-policy.deckhouse.io: every-node").
 Calculate steps:
    1. We calculate sum of uncappedTargets requests for all vpa resources in Master group, and proportionally sets MaxAllowed values for this resources,
-      based on resources requests from global config for Master group.
+      based on resources requests from global config for Master group. If newly calculated value differs less than 10% from old value, new value set is skipped.
    2. We calculate sum of uncappedTargets requests for all vpa resources in EveryNode group, and proportionally sets MaxAllowed values for this resources,
-      based on resources requests from global config for EveryNode group.
+      based on resources requests from global config for EveryNode group. If newly calculated value differs less than 10% from old value, new value set is skipped.
 Hook start conditions:
    1. If uncappedTarget value changed in vpa with labels "workload-resource-policy.deckhouse.io: master" or "workload-resource-policy.deckhouse.io: every-node".
    2. If user changed global.modules.resourcesRequests values.
@@ -53,10 +54,11 @@ Hook start conditions:
 */
 
 const (
-	groupLabelKey  = "workload-resource-policy.deckhouse.io"
-	everyNodeLabel = "every-node"
-	masterLabel    = "master"
-	vpaAPIVersion  = "autoscaling.k8s.io/v1"
+	groupLabelKey   = "workload-resource-policy.deckhouse.io"
+	everyNodeLabel  = "every-node"
+	masterLabel     = "master"
+	vpaAPIVersion   = "autoscaling.k8s.io/v1"
+	tresholdPercent = 10
 )
 
 type VPA struct {
@@ -64,6 +66,27 @@ type VPA struct {
 	Namespace                string
 	Label                    string
 	ContainerRecommendations []autoscaler.RecommendedContainerResources
+}
+
+type DeckhousePod struct {
+	IsReady bool
+}
+
+func applyDeckhousePodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var isReady bool
+
+	pod := &v1.Pod{}
+	err := sdk.FromUnstructured(obj, pod)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse pod object from unstructured: %v", err)
+	}
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+			isReady = true
+			break
+		}
+	}
+	return &DeckhousePod{IsReady: isReady}, nil
 }
 
 func applyVpaResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -120,6 +143,28 @@ var (
 				},
 				FilterFunc: applyVpaResourcesFilter,
 			},
+			{
+				Name:                   "DeckhousePod",
+				WaitForSynchronization: pointer.BoolPtr(false),
+				ExecuteHookOnEvents:    pointer.BoolPtr(false),
+				ApiVersion:             "v1",
+				Kind:                   "Pod",
+				LabelSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "app",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{"deckhouse"},
+						},
+					},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{
+						MatchNames: []string{"d8-system"},
+					},
+				},
+				FilterFunc: applyDeckhousePodFilter,
+			},
 		},
 	}, updateVpaResources)
 )
@@ -135,7 +180,32 @@ func updateVpaResources(input *go_hook.HookInput) error {
 		totalRequestsMasterNodeMemory   float64
 		totalRequestsEveryNodeMilliCPU  float64
 		totalRequestsEveryNodeMemory    float64
+
+		deckhousePodIsReady bool
 	)
+
+	// Check if Deckhouse pod is ready
+	podSnapshots := input.Snapshots["DeckhousePod"]
+	if len(podSnapshots) == 0 {
+		input.LogEntry.Info("deckhouse pod is not ready, skipping")
+		return nil
+	}
+
+	for _, podSnapshot := range podSnapshots {
+		if podSnapshot == nil {
+			continue
+		}
+		pod := podSnapshot.(*DeckhousePod)
+		if pod.IsReady {
+			deckhousePodIsReady = true
+			break
+		}
+	}
+
+	if !deckhousePodIsReady {
+		input.LogEntry.Info("deckhouse pod is not ready, skipping")
+		return nil
+	}
 
 	configEveryNodeMilliCPU, err := getPathFloat64(input, "global.internal.modules.resourcesRequests.milliCpuEveryNode")
 	if err != nil {
@@ -193,8 +263,15 @@ func updateVpaResources(input *go_hook.HookInput) error {
 				containerPolicies       []autoscaler.ContainerResourcePolicy
 			)
 
-			for _, container := range v.ContainerRecommendations {
-				switch v.Label {
+			vpa := &autoscaler.VerticalPodAutoscaler{}
+			err := sdk.FromUnstructured(obj, vpa)
+			if err != nil {
+				return nil, fmt.Errorf("cannot parse vpa object from unstructured: %v", err)
+			}
+
+			// calculate cpu and memory maxAllowed values for containers
+			for _, container := range vpa.Status.Recommendation.ContainerRecommendations {
+				switch vpa.Labels[groupLabelKey] {
 				case masterLabel:
 					recommendationsMilliCPU = float64(container.UncappedTarget.Cpu().MilliValue()) * (configMasterNodeMilliCPU / totalRequestsMasterNodeMilliCPU)
 					recommendationsMemory = float64(container.UncappedTarget.Memory().Value()) * (configMasterNodeMemory / totalRequestsMasterNodeMemory)
@@ -203,11 +280,11 @@ func updateVpaResources(input *go_hook.HookInput) error {
 					recommendationsMemory = float64(container.UncappedTarget.Memory().Value()) * (configEveryNodeMemory / totalRequestsEveryNodeMemory)
 				}
 
-				if math.IsInf(recommendationsMilliCPU, 1) || math.IsInf(recommendationsMilliCPU, -1) {
+				if isInfinity(recommendationsMilliCPU) {
 					return nil, fmt.Errorf("recommendationsMilliCPU is infinity number")
 				}
 
-				if math.IsInf(recommendationsMemory, 1) || math.IsInf(recommendationsMemory, -1) {
+				if isInfinity(recommendationsMemory) {
 					return nil, fmt.Errorf("recommendationsMemory is infinity number")
 				}
 
@@ -218,14 +295,12 @@ func updateVpaResources(input *go_hook.HookInput) error {
 						v1.ResourceMemory: *resource.NewQuantity(int64(recommendationsMemory), resource.DecimalExponent),
 					},
 				}
-
 				containerPolicies = append(containerPolicies, newContainerPolicy)
 			}
 
-			vpa := &autoscaler.VerticalPodAutoscaler{}
-			err := sdk.FromUnstructured(obj, vpa)
-			if err != nil {
-				return nil, fmt.Errorf("cannot parse vpa object from unstructured: %v", err)
+			if vpa.Spec.ResourcePolicy != nil {
+				// if percent treshold between newly calculated and old values < percentTreshold, use old values
+				containerPoliciesTreshold(containerPolicies, vpa.Spec.ResourcePolicy.ContainerPolicies)
 			}
 
 			vpa.Spec.ResourcePolicy = &autoscaler.PodResourcePolicy{ContainerPolicies: containerPolicies}
@@ -245,4 +320,41 @@ func getPathFloat64(input *go_hook.HookInput, path string) (float64, error) {
 		return 0, fmt.Errorf("%s must be set", path)
 	}
 	return input.Values.Get(path).Float(), nil
+}
+
+func containerPoliciesTreshold(newPolicies []autoscaler.ContainerResourcePolicy, oldPolicies []autoscaler.ContainerResourcePolicy) {
+	for i, newPolicy := range newPolicies {
+		cpu := newPolicy.MaxAllowed.Cpu().MilliValue()
+		memory := newPolicy.MaxAllowed.Memory().Value()
+		for _, oldPolicy := range oldPolicies {
+			if oldPolicy.ContainerName != newPolicy.ContainerName {
+				continue
+			}
+			cpuPercent := calculatePercent(cpu, oldPolicy.MaxAllowed.Cpu().MilliValue())
+			memoryPercent := calculatePercent(memory, oldPolicy.MaxAllowed.Memory().Value())
+			if inTreshold(cpuPercent) {
+				cpu = oldPolicy.MaxAllowed.Cpu().MilliValue()
+			}
+			if inTreshold(memoryPercent) {
+				memory = oldPolicy.MaxAllowed.Memory().Value()
+			}
+			newPolicies[i].MaxAllowed = v1.ResourceList{
+				v1.ResourceCPU:    *resource.NewMilliQuantity(cpu, resource.BinarySI),
+				v1.ResourceMemory: *resource.NewQuantity(memory, resource.DecimalExponent),
+			}
+		}
+	}
+	return
+}
+
+func isInfinity(value float64) bool {
+	return math.IsInf(value, 1) || math.IsInf(value, -1)
+}
+
+func calculatePercent(value1, value2 int64) int64 {
+	return int64(float64(value1) / float64(value2) * 100)
+}
+
+func inTreshold(valuePercent int64) bool {
+	return valuePercent >= 100-tresholdPercent && valuePercent <= 100+tresholdPercent
 }
