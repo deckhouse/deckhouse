@@ -14,12 +14,9 @@
 
 # Chrony module synchronizes the time on all nodes, so systemd-timesyncd system unit isn't used and must be disabled.
 
-if systemctl --no-legend --plain --no-pager | grep -q systemd-timesyncd; then
-  systemctl stop systemd-timesyncd
-  systemctl disable systemd-timesyncd
-fi
-
-if systemctl --no-legend --plain --no-pager | grep -q ntp.service ; then
-  systemctl stop ntp.service
-  systemctl disable ntp.service
-fi
+for ntp_service in systemd-timesyncd ntp.service ntpd.service; do
+  if systemctl --no-legend --plain --no-pager | grep -q $ntp_service; then
+    systemctl stop $ntp_service
+    systemctl disable $ntp_service
+  fi
+done
