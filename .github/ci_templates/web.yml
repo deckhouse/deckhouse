@@ -114,7 +114,7 @@ steps:
 # </template: web_links_test_template>
 {!{- end -}!}
 
-{!{/* doc version is a tag name or 'latest' for main branch or a branch name for dev branches */}!}
+{!{/* doc version is a tag name or 'latest' for main branch and pull requests */}!}
 {!{/* ci_commit_ref_name is a tagname or branch name */}!}
 {!{ define "doc_version_template" }!}
 # <template: doc_version_template>
