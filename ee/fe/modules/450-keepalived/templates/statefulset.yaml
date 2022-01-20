@@ -13,7 +13,7 @@ spec:
     kind: StatefulSet
     name: keepalived-{{ $instance_name }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
   {{- end }}
 ---
 apiVersion: apps/v1
