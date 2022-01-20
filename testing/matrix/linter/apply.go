@@ -19,7 +19,7 @@ package linter
 import (
 	"fmt"
 
-	"sigs.k8s.io/yaml"
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
@@ -30,7 +30,9 @@ import (
 
 func ApplyLintRules(module utils.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
 	var v struct {
-		Global struct{ EnabledModules []string }
+		Global struct {
+			EnabledModules []string `yaml:"enabledModules"`
+		} `yaml:"global"`
 	}
 	err := yaml.Unmarshal([]byte(values), &v)
 	if err != nil {
