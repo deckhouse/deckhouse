@@ -28,13 +28,21 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+)
+
+var (
+	// cache for event messages to avoid event spamming
+	// it's much harder to increment counter for existing event
+	ngStatusCache = make(map[string]string)
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -183,6 +191,9 @@ func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterRes
 		MaxPerZone: maxPerZone,
 		ZonesNum:   int32(zonesNum),
 		Error:      ng.Status.Error,
+
+		UID:             ng.UID,
+		ResourceVersion: ng.ResourceVersion,
 	}, nil
 }
 
@@ -335,10 +346,21 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 				return imts.Before(&jmts)
 			})
 			failureReason = lastMachineFailures[len(lastMachineFailures)-1].LastOperation.Description
-		}
 
+		}
 		statusMsg := fmt.Sprintf("%s %s", nodeGroup.Error, failureReason)
 		statusMsg = strings.TrimSpace(statusMsg)
+		if len(statusMsg) > 0 {
+			prev := ngStatusCache[nodeGroup.Name]
+			// skip events with the same in-row message
+			if prev != statusMsg {
+				failureEvent := buildEvent(nodeGroup, statusMsg)
+				input.PatchCollector.Create(failureEvent)
+				ngStatusCache[nodeGroup.Name] = statusMsg
+			}
+			// rewrite status message for NG description field
+			statusMsg = "Machine creation failed. Check events for details."
+		}
 
 		instancesCount := instances[ngName]
 
@@ -354,6 +376,46 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func buildEvent(nodeGroup statusNodeGroup, msg string) *eventsv1.Event {
+	eventType := corev1.EventTypeWarning
+	reason := "MachineFailed"
+
+	if msg == "Started Machine creation process" {
+		eventType = corev1.EventTypeNormal
+		reason = "MachineCreating"
+	}
+
+	now := time.Now()
+
+	return &eventsv1.Event{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "Event",
+			APIVersion: "events.k8s.io/v1",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			// Namespace field has to be filled - event will not be created without it
+			// and we have to set 'default' value here for linking this event with a NodeGroup object, which is global
+			// if we set 'd-cloud-instance-manager' here for example, `Events` field on `kubectl describe ng $X` will be empty
+			Namespace:    "default",
+			GenerateName: "ng-" + nodeGroup.Name + "-",
+		},
+		Regarding: corev1.ObjectReference{
+			Kind:            "NodeGroup",
+			Name:            nodeGroup.Name,
+			UID:             nodeGroup.UID,
+			APIVersion:      "deckhouse.io/v1",
+			ResourceVersion: nodeGroup.ResourceVersion,
+		},
+		Reason:              reason,
+		Note:                msg,
+		Type:                eventType,
+		EventTime:           v1.MicroTime{Time: now},
+		Action:              "Binding",
+		ReportingInstance:   "deckhouse",
+		ReportingController: "deckhouse",
+	}
 }
 
 func buildUpdateStatusPatch(
@@ -404,6 +466,10 @@ type statusNodeGroup struct {
 	MaxPerZone int32
 	ZonesNum   int32
 	Error      string
+
+	// for event generation
+	UID             apimtypes.UID
+	ResourceVersion string
 }
 
 type statusNode struct {
