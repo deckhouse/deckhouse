@@ -21,7 +21,7 @@
     expr: absent(up{job="node-exporter"} == 1)
     for: 10m
     labels:
-      severity_level: 3
+      severity_level: "3"
     annotations:
       plk_protocol_version: "1"
       description: Prometheus could not scrape a node-exporter for more than 10m,

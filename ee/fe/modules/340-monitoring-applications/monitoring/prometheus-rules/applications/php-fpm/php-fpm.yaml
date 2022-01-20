@@ -4,7 +4,7 @@
     expr: (sum(phpfpm_processes_total{state="idle"} ) by (namespace, pod))/((sum(phpfpm_processes_total) by (namespace, pod))/100) < 10
     for: 5m
     labels:
-      severity_level: 4
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"

@@ -6,7 +6,7 @@
         (sum by (namespace, service) (up{job="nats"})) + 1 != 0
     for: 2m
     labels:
-      severity_level: 3
+      severity_level: "3"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -27,7 +27,7 @@
         (sum by (namespace, service) (nats_up{job="nats"})) + 1 != 0
     for: 2m
     labels:
-      severity_level: 3
+      severity_level: "3"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
