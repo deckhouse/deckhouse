@@ -49,7 +49,7 @@
     expr: absent(up{job="kube-scheduler"} == 1)
     for: 5m
     labels:
-      severity_level: 3
+      severity_level: "3"
     annotations:
       plk_protocol_version: "1"
       description: There is no running K8S scheduler. New pods are not being assigned

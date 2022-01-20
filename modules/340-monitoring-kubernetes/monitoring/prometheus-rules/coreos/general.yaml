@@ -3,7 +3,7 @@
   - alert: DeadMansSwitch
     expr: vector(1)
     labels:
-      severity_level: 4
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       description: This is a DeadMansSwitch meant to ensure that the entire Alerting
@@ -15,7 +15,7 @@
     expr: max(predict_linear(fd_utilization{pod!=""}[1h], 3600 * 4)) BY (job, namespace, pod) > 1
     for: 10m
     labels:
-      severity_level: 4
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance
@@ -25,7 +25,7 @@
     expr: max(predict_linear(fd_utilization{pod=""}[1h], 3600 * 4)) BY (job, instance) > 1
     for: 10m
     labels:
-      severity_level: 4
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       description: '{{ $labels.job }}: {{ $labels.instance }} instance
@@ -35,7 +35,7 @@
     expr: max(predict_linear(fd_utilization{pod!=""}[10m], 3600)) BY (job, namespace, pod) > 1
     for: 10m
     labels:
-      severity_level: 3
+      severity_level: "3"
     annotations:
       plk_protocol_version: "1"
       description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance
@@ -45,7 +45,7 @@
     expr: max(predict_linear(fd_utilization{pod=""}[10m], 3600)) BY (job, instance) > 1
     for: 10m
     labels:
-      severity_level: 3
+      severity_level: "3"
     annotations:
       plk_protocol_version: "1"
       description: '{{ $labels.job }}: {{ $labels.instance }} instance
