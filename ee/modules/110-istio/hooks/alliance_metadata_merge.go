@@ -181,6 +181,11 @@ federationsLoop:
 multiclustersLoop:
 	for _, multicluster := range input.Snapshots["multiclusters"] {
 		multiclusterInfo := multicluster.(IstioMulticlusterMergeCrdInfo)
+
+		if multiclusterInfo.EnableIngressGateway {
+			multiclustersNeedIngressGateway = true
+		}
+
 		if multiclusterInfo.Public == nil {
 			input.LogEntry.Warnf("public metadata for IstioMulticluster %s wasn't fetched yet", multiclusterInfo.Name)
 			continue multiclustersLoop
@@ -192,12 +197,10 @@ multiclustersLoop:
 			input.LogEntry.Warnf("private metadata for IstioMulticluster %s wasn't fetched yet", multiclusterInfo.Name)
 			continue multiclustersLoop
 		}
-		if multiclusterInfo.EnableIngressGateway {
-			if multiclusterInfo.IngressGateways == nil || len(*multiclusterInfo.IngressGateways) == 0 {
-				input.LogEntry.Warnf("ingressGateways for IstioMulticluster %s weren't fetched yet", multiclusterInfo.Name)
-				continue multiclustersLoop
-			}
-			multiclustersNeedIngressGateway = true
+		if multiclusterInfo.EnableIngressGateway &&
+			(multiclusterInfo.IngressGateways == nil || len(*multiclusterInfo.IngressGateways) == 0) {
+			input.LogEntry.Warnf("ingressGateways for IstioMulticluster %s weren't fetched yet", multiclusterInfo.Name)
+			continue multiclustersLoop
 		}
 
 		privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
