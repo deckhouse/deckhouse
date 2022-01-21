@@ -72,6 +72,7 @@ const nodeManagerConfigValues = `
 allowedBundles:
   - "ubuntu-lts"
   - "centos-7"
+  - "debian"
 allowedKubernetesVersions:
   - "1.19"
   - "1.20"

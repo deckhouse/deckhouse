@@ -57,7 +57,10 @@ cri_type="Containerd"
 {{- end }}
 
 if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
-  cgroup_driver="cgroupfs"
+# Debian 11 docker uses only systemd as cgroup driver
+  if ! bb-is-debian-version? 11; then
+    cgroup_driver="cgroupfs"
+  fi
   criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
   if [ -d "${criDir}/overlay2" ]; then
     criDir="${criDir}/overlay2"

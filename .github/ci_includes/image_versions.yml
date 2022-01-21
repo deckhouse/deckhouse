@@ -7,6 +7,7 @@
 # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
 # https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
 BASE_ALPINE: "{!{$BASE_IMAGES_REGISTRY_PATH}!}alpine:3.12.1@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a"
+BASE_ALPINE_3_15: "{!{$BASE_IMAGES_REGISTRY_PATH}!}alpine:3.15@sha256:21a3deaa0d32a8057914f36584b5288d2e5ecc984380bc0118285c70fa8c9300"
 BASE_DEBIAN: "{!{$BASE_IMAGES_REGISTRY_PATH}!}debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"
 BASE_ETCD: "k8s.gcr.io/etcd:3.5.1-0@sha256:64b9ea357325d5db9f8a723dcf503b5a449177b17ac87d69481e126bb724c263"
 BASE_GOLANG_16_ALPINE: "{!{$BASE_IMAGES_REGISTRY_PATH}!}golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"

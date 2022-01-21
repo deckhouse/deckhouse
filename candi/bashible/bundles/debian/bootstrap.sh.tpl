@@ -1,0 +1,1 @@
+../ubuntu-lts/bootstrap.sh.tpl
