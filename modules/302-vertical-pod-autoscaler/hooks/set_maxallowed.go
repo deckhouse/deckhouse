@@ -344,7 +344,6 @@ func containerPoliciesTreshold(newPolicies []autoscaler.ContainerResourcePolicy,
 			}
 		}
 	}
-	return
 }
 
 func isInfinity(value float64) bool {
