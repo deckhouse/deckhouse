@@ -323,20 +323,20 @@ func getPathFloat64(input *go_hook.HookInput, path string) (float64, error) {
 }
 
 func containerPoliciesTreshold(newPolicies []autoscaler.ContainerResourcePolicy, oldPolicies []autoscaler.ContainerResourcePolicy) {
-	for i, newPolicy := range newPolicies {
-		cpu := newPolicy.MaxAllowed.Cpu().MilliValue()
-		memory := newPolicy.MaxAllowed.Memory().Value()
-		for _, oldPolicy := range oldPolicies {
-			if oldPolicy.ContainerName != newPolicy.ContainerName {
+	for i := range newPolicies {
+		cpu := newPolicies[i].MaxAllowed.Cpu().MilliValue()
+		memory := newPolicies[i].MaxAllowed.Memory().Value()
+		for j := range oldPolicies {
+			if oldPolicies[j].ContainerName != newPolicies[i].ContainerName {
 				continue
 			}
-			cpuPercent := calculatePercent(cpu, oldPolicy.MaxAllowed.Cpu().MilliValue())
-			memoryPercent := calculatePercent(memory, oldPolicy.MaxAllowed.Memory().Value())
+			cpuPercent := calculatePercent(cpu, oldPolicies[j].MaxAllowed.Cpu().MilliValue())
+			memoryPercent := calculatePercent(memory, oldPolicies[j].MaxAllowed.Memory().Value())
 			if inTreshold(cpuPercent) {
-				cpu = oldPolicy.MaxAllowed.Cpu().MilliValue()
+				cpu = oldPolicies[j].MaxAllowed.Cpu().MilliValue()
 			}
 			if inTreshold(memoryPercent) {
-				memory = oldPolicy.MaxAllowed.Memory().Value()
+				memory = oldPolicies[j].MaxAllowed.Memory().Value()
 			}
 			newPolicies[i].MaxAllowed = v1.ResourceList{
 				v1.ResourceCPU:    *resource.NewMilliQuantity(cpu, resource.BinarySI),
