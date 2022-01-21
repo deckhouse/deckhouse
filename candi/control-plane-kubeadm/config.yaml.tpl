@@ -26,6 +26,11 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+    api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }},api,istio-ca
+    service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
+    service-account-key-file: /etc/kubernetes/pki/sa.pub
+    service-account-signing-key-file: /etc/kubernetes/pki/sa.key
+
     enable-admission-plugins: "AlwaysPullImages,EventRateLimit"
 {{- if ne .runType "ClusterBootstrap" }}
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
