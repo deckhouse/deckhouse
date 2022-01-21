@@ -39,8 +39,8 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
   # Remove mounts
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
-  bb-apt-remove docker.io
   bb-rp-remove docker-ce containerd-io
+  bb-apt-remove docker.io docker-ce containerd-io
   rm -rf /var/lib/docker/ /var/run/docker.sock /var/lib/containerd/ /etc/docker /etc/containerd/config.toml
   # Pod kubelet-eviction-thresholds-exporter in cri=Docker mode mounts /var/run/containerd/containerd.sock, /var/run/containerd/containerd.sock will be a directory and newly installed containerd won't run. Same thing with crictl.
   rm -rf /var/run/containerd /usr/local/bin/crictl
