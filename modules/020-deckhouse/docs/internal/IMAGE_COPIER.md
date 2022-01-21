@@ -12,9 +12,8 @@ We have created a script to re-push the images and a corresponding hook to simpl
 
 # How does it work?
 
-A special `images-copier-config` Secret is created in the `d8-system` Namespace
-that has access to the target registry.
-This Secret stores the resulting address (with a TAG) of the `deckhouse` Deployment image.
+You'll need to create `images-copier-config` Secret  in the `d8-system` Namespace
+that contains credentials to the target registry and the resulting address (with a TAG) of the `deckhouse` Deployment image.
 
 > Note that it is NOT possible to use the image address with the `/dev` suffix due to technical limitations, e.g., `client.registry/repo/deckhouse/dev:test`.
 
