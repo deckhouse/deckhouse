@@ -28,7 +28,7 @@ apiServer:
   extraArgs:
     api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }},api,istio-ca
     service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
-    service-account-key-file: /etc/kubernetes/pki/sa.key
+    service-account-key-file: /etc/kubernetes/pki/sa.pub
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
 
     enable-admission-plugins: "AlwaysPullImages,EventRateLimit"
