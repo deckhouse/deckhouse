@@ -9,18 +9,23 @@ metadata:
   {{ include "helm_lib_module_labels" (list . ) | nindent 2 }}
 webhooks:
     {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
-      {{- if $crd.spec.validationEnabled }}
+    {{- $controllerVersion := ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+    {{- if $crd.spec.validationEnabled }}
         # there is a bug https://github.com/kubernetes/ingress-nginx/issues/4916
         # admission webhook was speed up in 0.48 https://github.com/kubernetes/ingress-nginx/pull/7298
         # before that fix sometime we get context deadline on a large installation
-        {{- if semverCompare ">=0.48" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+        {{- if semverCompare ">=0.48" $controllerVersion }}
   - name: {{ $crd.name }}.validate.d8-ingress-nginx
     matchPolicy: Equivalent
     rules:
       - apiGroups:
           - networking.k8s.io
         apiVersions:
+          {{- if semverCompare ">=1.0" $controllerVersion }}
+          - v1
+          {{- else }}
           - v1beta1
+          {{- end }}
         operations:
           - CREATE
           - UPDATE
@@ -31,13 +36,21 @@ webhooks:
     sideEffects: None
     timeoutSeconds: 15
     admissionReviewVersions:
+      {{- if semverCompare ">=1.0" $controllerVersion }}
+      - v1
+      {{- else }}
       - v1
       - v1beta1
+      {{- end }}
     clientConfig:
       service:
         namespace: d8-ingress-nginx
         name: {{ $crd.name }}-admission
+        {{- if semverCompare ">=1.0" $controllerVersion }}
+        path: /networking/v1/ingresses
+        {{- else }}
         path: /networking/v1beta1/ingresses
+        {{- end }}
       caBundle: {{ $context.Values.ingressNginx.internal.admissionCertificate.ca | b64enc }}
         {{- end }}
       {{- end }}
