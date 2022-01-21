@@ -1,6 +1,2 @@
-{{ $ns := printf "d8-%s" $.Chart.Name }}
----
-{{- if and (.Values.global.enabledModules | has "prometheus") (.Values.logShipper.internal.activated) }}
-  {{- include "helm_lib_grafana_dashboard_definitions" . }}
-  {{- include "helm_lib_prometheus_rules" (list . $ns) }}
-{{- end }}
+{{- include "helm_lib_grafana_dashboard_definitions" . }}
+{{- include "helm_lib_prometheus_rules" (list . "d8-log-shipper") }}

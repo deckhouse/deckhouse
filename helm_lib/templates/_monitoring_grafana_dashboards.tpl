@@ -48,5 +48,7 @@ spec:
 {{- /* returns dashboard-definintions from monitoring/grafana-dashboards/ */ -}}
 {{- define "helm_lib_grafana_dashboard_definitions" -}}
   {{- $context := . }}
-  {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards") }}
+  {{- if ( $context.Values.global.enabledModules | has "prometheus-crd" ) }}
+{{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards") }}
+  {{- end }}
 {{- end }}

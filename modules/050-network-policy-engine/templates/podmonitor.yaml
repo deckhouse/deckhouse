@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -20,3 +21,4 @@ spec:
   selector:
     matchLabels:
       app: kube-router
+{{- end }}
