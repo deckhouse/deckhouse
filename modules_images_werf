@@ -15,7 +15,7 @@ function bp() {
   fi
 
   # Always push images to "dev" repository.
-  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json
+  werf build --config modules_images_werf.yaml --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --report-path images_tags_werf.json
   # Push images to "release" repository on git tag.
   if [[ -n "${GIT_TAG_NAME}" && -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
     REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
