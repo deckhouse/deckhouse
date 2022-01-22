@@ -8,16 +8,16 @@ This module allows [HPA](https://kubernetes.io/docs/tasks/run-application/horizo
 It installs an [implementation](https://github.com/DirectXMan12/k8s-prometheus-adapter) of the Kubernetes [resource metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/custom-metrics-api.md), and [external metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/external-metrics-api.md) to get Prometheus metrics.
 
 As a result:
-- kubectl top can collect Prometheus metrics via the adapter;
+- `kubectl top` can collect Prometheus metrics via the adapter;
 - [autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#metricspec-v2beta2-autoscaling) can be used for scaling applications (HPA);
-- prometheus data can be obtained using the Kubernetes API and utilized in other modules (Vertical Pod Autoscaler, etc.).
+- Prometheus data can be obtained using the Kubernetes API and utilized in other modules (Vertical Pod Autoscaler, etc.).
 
 The following parameters serve as a basis for scaling:
-* cpu (of the pod),
-* memory (of the pod),
-* rps (of the ingress) - over 1,5,15 minutes (`rps_Nm`),
-* cpu (of the pod) - over 1,5,15 minutes (`cpu_Nm`) - average CPU utilization over N minutes,
-* memory (of the pod) - over 1,5,15 minutes (`memory_Nm`) - average Memory utilization over N minutes,
+* CPU (of the Pod),
+* memory (of the Pod),
+* rps (of the Ingress) — over 1,5,15 minutes (`rps_Nm`),
+* CPU (of the Pod) — over 1,5,15 minutes (`cpu_Nm`) — average CPU utilization over N minutes,
+* memory (of the Pod) — over 1,5,15 minutes (`memory_Nm`) — average Memory utilization over N minutes,
 * any Prometheus metrics and any queries based on them.
 
 ## How does it work?

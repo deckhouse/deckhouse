@@ -29,9 +29,9 @@
 {% assign layoutCode = '' | append: layout[0] %}
 <div id='block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" {% if layout[1].recommended %}recommended-layout{% endif %} markdown="1">
     {% if page.lang == 'ru' %}
-    {% include getting_started/global/partials/INSTALL_CONFIG_RU.md revision=revision layout=layoutCode %}
+    {% include getting_started/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
     {% else %}
-    {% include getting_started/global/partials/INSTALL_CONFIG.md revision=revision layout=layoutCode %}
+    {% include getting_started/global/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
     {% endif %}
 </div>
 {% endfor %}
@@ -57,9 +57,9 @@ Resources for the **"{{ preset[1].name[page.lang] }}"** preset.
 {%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
 <div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
 {% if page.lang == 'ru' %}
-{% include getting_started/global/partials/INSTALL_OTHER_RU.md revision=revision %}
+{% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
 {% else %}
-{% include getting_started/global/partials/INSTALL_OTHER.md revision=revision %}
+{% include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
 {% endif %}
 </div>
 {% endfor %}

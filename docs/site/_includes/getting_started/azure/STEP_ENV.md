@@ -1,4 +1,4 @@
-> **Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
+{%- include getting_started/global/partials/NOTICES.liquid %}
 
 You have to create a service account with {{ page.platform_name[page.lang] }} so that Deckhouse Platform can manage cloud resources. The detailed instructions for creating a service account with Microsoft Azure are available in the [documentation](/en/documentation/v1/modules/030-cloud-provider-azure/environment.html).
 

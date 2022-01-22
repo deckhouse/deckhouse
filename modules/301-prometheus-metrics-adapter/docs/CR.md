@@ -10,7 +10,7 @@ search: autoscaler, HorizontalPodAutoscaler
     * `<<.GroupBy>>` — will be replaced with `namespace,ingress` labels for grouping (`max() by(...)`, `sum() by (...)`, etc.).
 {% endcapture %}
 
-Setting up a vanilla prometheus-metrics-adapter is a time-consuming process. Happily, we have somewhat simplified it by defining a set of **CRDs** with different Scopes.
+Setting up a vanilla `prometheus-metrics-adapter` is a time-consuming process. Happily, we have somewhat simplified it by defining a set of **CRDs** with different Scopes.
 
 You can globally define a metric using the Cluster resource, while the Namespaced resource allows you to redefine it locally. All CRs have the same format.
 
