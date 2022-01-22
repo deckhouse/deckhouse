@@ -10,7 +10,10 @@ resources:
 
 vrouter:
   defaultGroup: "v1"
-  defaultChannel: "stable"
+  defaultChannel:
+    web-production: "stable"
+    web-stage: "latest"
+    _default: "latest"
   showLatestChannel: "true"
   i18nType: "location"
   logLevel:
