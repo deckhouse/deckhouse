@@ -6,13 +6,13 @@ search: autoscaler, HorizontalPodAutoscaler
 Below, only HPAs of the [apiVersion: autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#horizontalpodautoscalerspec-v2beta2-autoscaling) type (supported from Kubernetes v1.12 onward) are considered.
 
 To configure an HPA, you need to:
-* determine the scaling target (`.spec.scaleTargetRef`),
-* define the scaling range (`.spec.minReplicas`, `.scale.maxReplicas`),
+* determine the scaling target (`.spec.scaleTargetRef`);
+* define the scaling range (`.spec.minReplicas`, `.scale.maxReplicas`);
 * define the metrics that will be used for scaling and register them with the Kubernetes API (`.spec.metrics`).
 
 There are three types of metrics in terms of an HPA:
 * [classic](#classic-resource-consumption-based-scaling) — these have the "Resource" type (`.spec.metrics[].type`) and are used to scale based on memory and CPU consumption;
-* [custom](#custom-metrics-based-scaling) — these have the "Pods" or "Object" type (`.spec.metrics[].type`).
+* [custom](#custom-metrics-based-scaling) — these have the "Pods" or "Object" type (`.spec.metrics[].type`);
 * [external](#using-external-metrics-with-hpa) — these have the "External" type (`.spec.metrics[].type`).
 
 **Caution!** During scale, HPA uses different approaches [by default](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior):
@@ -31,7 +31,7 @@ If you have metric flapping problems which lead to unwanted scales, there are op
 1. Use [custom](#custom-metrics-based-scaling) Cluster-wide metrics if multiple applications use the same metric associated with one of the objects, and the metric's source belongs to the Application Namespace. Such metrics can help you combine common infrastructure components into a separate ("infra") Deployment.
 1. Use [external](#using-external-metrics-with-hpa) metrics if the source of the metric does not belong to the App Namespace. These can be, for example, cloud provider or SaaS-related metrics.
 
-**Caution!** We strongly recommend using either 1. [classic](#classic-resource-consumption-based-scaling) metrics or 2. [custom](#custom-metrics-based-scaling) metrics defined in the Namespace. In this case, you can define the entire configuration of the application (including the autoscaling logic) in the repository of the application. Options 3 and 4 should only be considered if you have a large collection of identical microservices.
+**Caution!** We strongly recommend using either Option 1. ([classic](#classic-resource-consumption-based-scaling) metrics) or Option 2. ([custom](#custom-metrics-based-scaling) metrics defined in the Namespace). In this case, you can define the entire configuration of the application (including the autoscaling logic) in the repository of the application. Options 3 and 4 should only be considered if you have a large collection of identical microservices.
 
 ## Classic resource consumption-based scaling
 
@@ -292,9 +292,9 @@ spec:
 
 The `prometheus-metrics-adapter` module supports the `externalRules` mechanism. Using it, you can create custom PromQL requests and register them as metrics.
 
-In our installations, we have implemented a universal rule that allows you to create your metrics without using prometheus-metrics-adapter — "any Prometheus metric called `kube_adapter_metric_<name>` will be registered in the API under the `<name>`". In other words, all you need is to either write an exporter (to export the metric) or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
+In our installations, we have implemented a universal rule that allows you to create your metrics without using `prometheus-metrics-adapter` — "any Prometheus metric called `kube_adapter_metric_<name>` will be registered in the API under the `<name>`". In other words, all you need is to either write an exporter (to export the metric) or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
 
-An example of CustomPrometheusRules:
+An example of `CustomPrometheusRules`:
 
 {% raw %}
 ```yaml

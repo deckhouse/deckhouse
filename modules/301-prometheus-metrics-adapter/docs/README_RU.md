@@ -8,16 +8,16 @@ search: autoscaler, HorizontalPodAutoscaler
 Устанавливает в кластер [имплементацию](https://github.com/DirectXMan12/k8s-prometheus-adapter) Kubernetes [resource metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/custom-metrics-api.md) и [external metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/external-metrics-api.md) для получения метрик из Prometheus.
 
 Это позволяет:
-- kubectl top брать метрики из Prometheus, через адаптер;
-- использовать [autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#metricspec-v2beta2-autoscaling) для скейлинга приложений (HPA);
-- получать информацию из prometheus средствами API kubernetes для других модулей (Vertical Pod Autoscaler, ...).
+- `kubectl top` брать метрики из Prometheus, через адаптер;
+- использовать CR версии [autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#metricspec-v2beta2-autoscaling) для масштабирования приложений (HPA);
+- получать информацию из Prometheus средствами API Kubernetes для других модулей (Vertical Pod Autoscaler, ...).
 
-Модуль позволяет производить скейлинг по следующим параметрам:
-* cpu (pod'а),
-* memory (pod'а),
-* rps (ingress'а) - за 1,5,15 минут (`rps_Nm`),
-* cpu (pod'а) - за 1,5,15 минут (`cpu_Nm`) - среднее потребления CPU за N минут,
-* memory (pod'a) - за 1,5,15 минут (`memory_Nm`) - среднее потребление Memory за N минут,
+Модуль позволяет производить масштабирование по следующим параметрам:
+* CPU (Pod'а),
+* memory (Pod'а),
+* rps (Ingress'а) — за 1,5,15 минут (`rps_Nm`),
+* CPU (Pod'а) — за 1,5,15 минут (`cpu_Nm`) — среднее потребление CPU за N минут,
+* memory (Pod'a) — за 1,5,15 минут (`memory_Nm`) — среднее потребление Memory за N минут,
 * любые Prometheus-метрики и любые запросы на их основе.
 
 ## Как работает
