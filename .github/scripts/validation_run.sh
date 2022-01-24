@@ -16,7 +16,7 @@
 
 # This script has just one purpose:
 # Fetch inputs for validation script:
-#   - title and description of merge request
+#   - title and description of pull request
 #   - diff content
 
 set -Eeo pipefail

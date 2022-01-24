@@ -83,7 +83,8 @@ git_info:
 
 # Only useful with pull_request_target.
 #
-# Checks out merge commit, checks for dangerous changes, and if none found, returns the ref.
+# Checkout the head commit, checks if changes are safe and returns the ref.
+# Job fails if changes seem dangerous.
 {!{ define "pull_request_info_job" }!}
 # <template: pull_request_info>
 pull_request_info:
@@ -156,11 +157,11 @@ pull_request_info:
             }
           }
 
-    # Checkhout the merge commit
-    - name: Checkout PR merge commit
+    # Checkhout the head commit of the PR branch.
+    - name: Checkout PR head commit
       uses: {!{ index (ds "actions") "actions/checkout" }!}
       with:
-        ref: "refs/pull/${{ github.event.number }}/merge"
+        ref: "refs/pull/${{ github.event.number }}/head"
 
     # Detect dangerous changes in external PR.
     - name: Check for dangerous changes
@@ -189,12 +190,12 @@ pull_request_info:
           core.setFailed('External PR contains dangerous changes.')
 
     # Set output.
-    - name: Return PR merge commit ref
+    - name: Return PR head commit ref
       id: ref
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
-          const ref = `refs/pull/${ context.issue.number }/merge`
+          const ref = `refs/pull/${ context.issue.number }/head`
           core.info(`ref: '${ref}'`)
           core.setOutput('ref', ref)
 # </template: pull_request_info>

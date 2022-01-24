@@ -83,11 +83,11 @@ jobs:
               }
             }
 
-      # Checkhout the merge commit
-      - name: Checkout PR merge commit
+      # Checkhout the head commit of the PR branch.
+      - name: Checkout PR head commit
         uses: actions/checkout@v2.4.0
         with:
-          ref: "refs/pull/${{ github.event.number }}/merge"
+          ref: "refs/pull/${{ github.event.number }}/head"
 
       # Detect dangerous changes in external PR.
       - name: Check for dangerous changes
@@ -116,12 +116,12 @@ jobs:
             core.setFailed('External PR contains dangerous changes.')
 
       # Set output.
-      - name: Return PR merge commit ref
+      - name: Return PR head commit ref
         id: ref
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            const ref = `refs/pull/${ context.issue.number }/merge`
+            const ref = `refs/pull/${ context.issue.number }/head`
             core.info(`ref: '${ref}'`)
             core.setOutput('ref', ref)
   # </template: pull_request_info>
