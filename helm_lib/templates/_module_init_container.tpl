@@ -5,7 +5,7 @@
   {{- $context := index . 0 -}}
   {{- $volume_name := index . 1  -}}
 - name: chown-volume-{{ $volume_name }}
-  image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.alpine }}
+  image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.alpine }}"
   command: ["sh", "-c", "chown -R 65534:65534 /tmp/{{ $volume_name }}"]
   securityContext:
     runAsNonRoot: false

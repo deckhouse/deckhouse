@@ -24,16 +24,15 @@
   {{- $strategy := index . 1 | include "helm_lib_internal_check_node_selector_strategy" }}
   {{- $module_values := dict }}
   {{- if lt (len .) 3 }}
-    {{- $module_values = include "helm_lib_module_values" $context | fromYaml }}
+    {{- $module_values = (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
   {{- else }}
     {{- $module_values = index . 2 }}
   {{- end }}
-  {{- $camel_chart_name := $context.Chart.Name | replace "-" "_" | camelcase | untitle }}
+  {{- $camel_chart_name := (include "helm_lib_module_camelcase_name" $context) }}
 
   {{- if eq $strategy "monitoring" }}
     {{- if $module_values.nodeSelector }}
-nodeSelector:
-  {{- $module_values.nodeSelector | toYaml | nindent 2 }}
+nodeSelector: {{ $module_values.nodeSelector | toJson }}
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.deckhouse.io/{{$context.Chart.Name}}: ""
@@ -47,8 +46,7 @@ nodeSelector:
 
   {{- else if or (eq $strategy "frontend") (eq $strategy "system") }}
     {{- if $module_values.nodeSelector }}
-nodeSelector:
-  {{- $module_values.nodeSelector | toYaml | nindent 2 }}
+nodeSelector: {{ $module_values.nodeSelector | toJson }}
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
   node-role.deckhouse.io/{{$context.Chart.Name}}: ""
@@ -106,7 +104,7 @@ nodeSelector:
   {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }}
   {{- $module_values := dict }}
   {{- if lt (len .) 3 }}
-    {{- $module_values = include "helm_lib_module_values" $context | fromYaml }}
+    {{- $module_values = (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
   {{- else }}
     {{- $module_values = index . 2 }}
   {{- end }}

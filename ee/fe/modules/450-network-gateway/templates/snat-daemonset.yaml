@@ -57,7 +57,7 @@ spec:
       containers:
       - name: snat
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.snat }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.snat }}"
         command: ["/iptables-loop.py"]
         env:
         - name: POD_SUBNET

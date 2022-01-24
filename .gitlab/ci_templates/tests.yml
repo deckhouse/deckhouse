@@ -14,7 +14,7 @@
   - pwd
   - werf run tests
       --docker-options="-w /deckhouse"
-      -- ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/matrix/
+      -- go test ./testing/matrix/ -v
   except:
   - schedules
   - alpha

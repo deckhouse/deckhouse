@@ -59,7 +59,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: operator
-        image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "operator%s" ($revision | title)) }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "operator%s" ($revision | title)) }}"
         command:
         - operator
         - server

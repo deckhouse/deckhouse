@@ -45,7 +45,7 @@ spec:
       containers:
       - name: recommender
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.recommender }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.verticalPodAutoscaler.recommender }}"
         command:
         - /recommender
         - --address=:8942

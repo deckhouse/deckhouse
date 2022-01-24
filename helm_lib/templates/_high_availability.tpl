@@ -5,7 +5,7 @@
   {{- $yes := index . 1 -}} {{- /* argv1 */ -}}
   {{- $no  := index . 2 -}} {{- /* argv2 */ -}}
 
-  {{- $module_values := include "helm_lib_module_values" $context | fromYaml }}
+  {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
 
   {{- if hasKey $module_values "highAvailability" -}}
     {{- if $module_values.highAvailability -}} {{- $yes -}} {{- else -}} {{- $no -}} {{- end -}}
@@ -21,7 +21,7 @@
 {{- define "helm_lib_ha_enabled" }}
   {{- $context := . -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
 
-  {{- $module_values := include "helm_lib_module_values" $context | fromYaml }}
+  {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
 
   {{- if hasKey $module_values "highAvailability" -}}
     {{- if $module_values.highAvailability -}}

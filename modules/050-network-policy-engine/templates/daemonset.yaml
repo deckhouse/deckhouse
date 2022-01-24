@@ -50,7 +50,7 @@ spec:
       containers:
       - name: kube-router
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkPolicyEngine.kubeRouter }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkPolicyEngine.kubeRouter }}"
         args:
         - --run-router=false
         - --run-firewall=true

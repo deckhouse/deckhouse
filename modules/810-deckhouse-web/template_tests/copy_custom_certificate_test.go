@@ -31,6 +31,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
+clusterIsBootstrapped: false
 enabledModules: ["vertical-pod-autoscaler-crd", "deckhouse-web"]
 modulesImages:
   registry: registry.deckhouse.io

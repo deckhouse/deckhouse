@@ -9,7 +9,7 @@ docker_options: '-w /deckhouse'
 
 {!{ define "matrix_run_args" }!}
 # <template: matrix_run_args>
-args: 'ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/matrix/'
+args: 'go test ./testing/matrix/ -v'
 docker_options: '-w /deckhouse'
 # </template: matrix_run_args>
 {!{- end -}!}

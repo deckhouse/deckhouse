@@ -157,7 +157,7 @@ spec:
       containers:
       - name: control-plane-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}"
         volumeMounts:
         - mountPath: /var/lib/etcd
           name: etcd
@@ -199,7 +199,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
 {{- range $name, $imageTag := $images }}
       - name: image-holder-{{ $name | kebabcase }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $imageTag }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $imageTag }}"
         command:
         - /pause
 {{- end }}

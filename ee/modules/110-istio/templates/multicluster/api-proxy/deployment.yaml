@@ -43,7 +43,7 @@ spec:
       containers:
       - name: api-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.apiProxy }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.apiProxy }}"
         imagePullPolicy: IfNotPresent
         env:
         - name: CLUSTER_DOMAIN

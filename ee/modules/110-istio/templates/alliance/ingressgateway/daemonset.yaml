@@ -126,7 +126,7 @@ spec:
           value: {{ include "istioNetworkName" $ }}
         - name: ISTIO_META_CLUSTER_ID
           value: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 15021

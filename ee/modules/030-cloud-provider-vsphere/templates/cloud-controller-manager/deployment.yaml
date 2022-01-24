@@ -61,7 +61,7 @@ spec:
       containers:
         - name: vsphere-cloud-controller-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.cloudProviderVsphere $ccmImageName }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.cloudProviderVsphere $ccmImageName }}"
           args:
           - --leader-elect=true
           - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config

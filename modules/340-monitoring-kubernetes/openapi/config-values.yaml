@@ -52,7 +52,7 @@ properties:
       - { kubeStateMetricsMaxCPU: "130m", kubeStateMetricsMaxMemory: "115Mi" }
     properties:
       kubeStateMetricsMaxCPU:
-        x-examples: [3, "100m", "1000m"]
+        x-examples: [3, "1000m"]
         oneOf:
           - type: string
             pattern: "^[0-9]+m?$"
