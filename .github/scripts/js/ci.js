@@ -621,7 +621,7 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
- * @param {string} inputs.ref - A git ref to checkout merge commit for PR (e.g. refs/pull/133/merge).
+ * @param {string} inputs.ref - A git ref to checkout head commit for PR (e.g. refs/pull/133/head).
  * @returns {Promise<void>}
  */
 module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }) => {
