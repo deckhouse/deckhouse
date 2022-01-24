@@ -43,11 +43,26 @@ data:
 			f.RunHook()
 		})
 
-		It("Should fill internal values", func() {
+		It("Should fill internal values from secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
 			Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()).To(Equal("ABC"))
+		})
+
+		Context("With  empty value", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "")
+
+				f.RunHook()
+			})
+
+			It("Should fill internal values from secret", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+				Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()).To(Equal("ABC"))
+			})
 		})
 	})
 
@@ -62,6 +77,17 @@ data:
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
 			Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").Exists()).To(BeTrue())
+			v := f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()
+			Expect(v).NotTo(BeEmpty())
+		})
+
+		It("Should fill internal values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").Exists()).To(BeTrue())
+			v := f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()
+			Expect(v).NotTo(BeEmpty())
 		})
 
 		Context("With another run", func() {
@@ -79,6 +105,23 @@ data:
 				Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").Exists()).To(BeTrue())
 				Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()).To(Equal(clientAppSecret))
 			})
+		})
+	})
+
+	Context("With default empty value", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "")
+
+			f.RunHook()
+		})
+
+		It("Should fill non empty internal values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()).NotTo(BeEmpty())
 		})
 	})
 })

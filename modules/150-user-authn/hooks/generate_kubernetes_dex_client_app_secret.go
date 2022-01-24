@@ -61,7 +61,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func kubernetesDexClientAppSecret(input *go_hook.HookInput) error {
 	secretPath := "userAuthn.internal.kubernetesDexClientAppSecret"
-	if input.Values.Exists(secretPath) {
+	if input.Values.Exists(secretPath) && input.Values.Get(secretPath).String() != "" {
 		return nil
 	}
 
