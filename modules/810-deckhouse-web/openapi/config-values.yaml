@@ -2,7 +2,6 @@ type: object
 properties:
   ingressClass:
     type: string
-    x-examples: ["main", "front"]
     description: |
       The class of the Ingress controller of the documentation web UI.
 

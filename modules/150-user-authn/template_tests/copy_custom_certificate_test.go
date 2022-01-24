@@ -51,24 +51,16 @@ discovery:
     system: 1
     master: 1
 `
-	const customCertificatePresent = `
-https:
-  mode: CustomCertificate
-internal:
-  kubernetesDexClientAppSecret: plainstring
-  dexTLS:
-    certificate: plainstring
-    key: plainstring
-  customCertificateData:
-    tls.crt: CRTCRTCRT
-    tls.key: KEYKEYKEY
-`
+
 	f := SetupHelmConfig(``)
 
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSetFromYaml("userAuthn", customCertificatePresent)
+			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"certificate":"plainstring","key":"plainstring"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
+			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 			f.HelmRender()
 		})
 
@@ -86,7 +78,10 @@ internal:
 	Context("Default with PublishAPI", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSetFromYaml("userAuthn", customCertificatePresent)
+			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"certificate":"plainstring","key":"plainstring"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
+			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 			f.ValuesSet("userAuthn.publishAPI.enable", true)
 			f.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
 			f.HelmRender()
