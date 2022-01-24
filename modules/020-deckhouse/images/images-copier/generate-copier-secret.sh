@@ -120,11 +120,17 @@ EndOfSecret
 
 # Wait for sync images. After finish sync images, run next commands:
 
+# change deckhouse image
+$patch_deployment_cmd
+
 # patch d8-system/deckhouse-registry
 $patch_secret_cmd
 
-# change deckhouse image
-$patch_deployment_cmd
+# check deckhouse pod
+kubectl -n d8-system get po -l app=deckhouse
+
+# if it is in ImagePullBackoff, restart it
+kubectl -n d8-system rollout restart deployment deckhouse
 
 # Wait for the Deckhouse Pod to become Ready.
 # Wait for bashible to apply the new settings on the master node.

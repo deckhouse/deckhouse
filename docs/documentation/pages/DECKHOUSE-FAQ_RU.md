@@ -134,13 +134,13 @@ deckhouse: |
 
 ## Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
+* Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry.
 * Изменить секрет `d8-system/deckhouse-registry` (все параметры хранятся в кодировке BASE64):
   * Исправить `.dockerconfigjson` с учетом авторизации в новом registry.
   * Исправить `address` на адрес нового registry (например, `registry.example.com`).
   * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/fe`).
   * При необходимости, изменить `scheme` на `http` (если используется HTTP registry).
   * Если registry использует самоподписные сертификаты, то изменить или добавить поле `ca` куда внести корневой сертификат соответствующего сертификата registry.
-* Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry.
-* Дождаться перехода Pod'а Deckhouse в статус Ready.
+* Дождаться перехода Pod'а Deckhouse в статус Ready. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
 * Дождаться применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
 * Только если обновление Deckhouse через сторонний registry не планируется, то следует удалить releaseChannel из конфигмапа `d8-system/deckhouse` 
