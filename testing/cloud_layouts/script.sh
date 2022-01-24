@@ -14,6 +14,76 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+usage=$(cat <<EOF
+Usage:
+  ./script.sh [command]
+
+Commands:
+
+  run-test       Create cluster and install Deckhouse
+                 using dhctl.
+
+  cleanup        Delete cluster.
+
+  <no-command>   Create cluster, install Deckhouse and delete cluster
+                 if no command specified (execute run-test + cluster).
+
+Required environment variables:
+
+Name                  Description
+---------------------+---------------------------------------------------------
+$PROVIDER             An infrastructure provider: AWS, GCP, Azure, OpenStack,
+                      Static, vSphere or Yandex.Cloud.
+                      See them in the cloud_layout directory.
+$LAYOUT               Layout for provider: WithoutNAT, Standard or Static.
+                      See available layouts inside the provider directory.
+$PREFIX               A unique prefix to run several tests simultaneously.
+$KUBERNETES_VERSION   A version of Kubernetes to install.
+$CRI                  Docker or Containerd.
+$DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
+$DEV_BRANCH           An image tag for deckhouse Deployment. A Git tag to
+                      test prerelease and release images or pr<NUM> slug
+                      to test changes in pull requests.
+
+Provider specific environment variables:
+
+  Yandex.Cloud:
+
+$LAYOUT_YANDEX_CLOUD_ID
+$LAYOUT_YANDEX_FOLDER_ID
+$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
+
+  GCP:
+
+$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
+
+  AWS:
+
+$LAYOUT_AWS_ACCESS_KEY
+$LAYOUT_AWS_SECRET_ACCESS_KEY
+
+  Azure:
+
+$LAYOUT_AZURE_SUBSCRIPTION_ID
+$LAYOUT_AZURE_TENANT_ID
+$LAYOUT_AZURE_CLIENT_ID
+$LAYOUT_AZURE_CLIENT_SECRET
+
+  Openstack:
+
+$LAYOUT_OS_PASSWORD
+
+  vSphere:
+
+$LAYOUT_VSPHERE_PASSWORD
+
+  Static:
+
+$LAYOUT_OS_PASSWORD
+
+EOF
+)
+
 set -Eeo pipefail
 shopt -s inherit_errexit
 shopt -s failglob
@@ -487,11 +557,18 @@ function main() {
       cleanup || exitCode=$?
     ;;
 
-    *)
+    "")
       # default action is bootstrap + cleanup
       run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
       # Ignore cleanup exit code, return exit code of bootstrap phase.
       cleanup || true
+    ;;
+
+    *)
+      >&2 echo "Unknown command '${1}'"
+      >&2 echo
+      >&2 echo "${usage}"
+      exit 1
     ;;
   esac
   if [[ $exitCode == 0 ]]; then

@@ -106,6 +106,7 @@ jobs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
       ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
+      ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
       ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
     # Skip the CI for automation PRs, e.g. changelog
@@ -124,6 +125,7 @@ jobs:
             let githubTag = '';
             let githubSHA = '';
             let refName = '';
+            let refSlug = '';
             if (context.eventName === "workflow_dispatch") {
               // workflow_dispatch run for pull request should have input 'pull_request_ref'.
               // Note: value in inputs.pull_request_ref is for pull_request_info job.
@@ -131,12 +133,17 @@ jobs:
                 refName       = context.payload.inputs.ci_commit_ref_name
                 githubBranch  = refName
                 githubSHA     = context.payload.inputs.pull_request_sha
+                // Extract pull request number from 'refs/pull/<NUM>/merge'
+                const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '');
+                refSlug       = `pr${prNum}`;
                 core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
               } else {
                 refName       = GITHUB_REF_NAME
                 githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
                 githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
                 githubSHA     = context.sha
+                // refName is 'main' or tag name, so slug is not necessary.
+                refSlug       = refName
                 core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
               }
             } else {
@@ -145,17 +152,20 @@ jobs:
               const prRepo = context.payload.pull_request.head.repo.full_name
               const prRef = context.payload.pull_request.head.ref
 
-              refName = (prRepo === targetRepo) ? prRef : `pr${context.issue.number}`
+              refSlug = `pr${context.issue.number}`;
+              refName = (prRepo === targetRepo) ? prRef : refSlug;
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
             }
 
+            core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
             core.info(`output.ci_commit_ref_name: '${refName}'`)
             core.info(`output.ci_commit_tag:      '${githubTag}'`)
             core.info(`output.ci_commit_branch:   '${githubBranch}'`)
             core.info(`output.github_sha:         '${githubSHA}'`)
 
+            core.setOutput('ci_commit_ref_slug', refSlug)
             core.setOutput('ci_commit_ref_name', refName)
             core.setOutput(`ci_commit_tag`, githubTag)
             core.setOutput(`ci_commit_branch`, githubBranch)
@@ -237,6 +247,20 @@ jobs:
             mkdir -p "${tmppath}"
           fi
           echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
 
 
       # <template: checkout_from_event_ref_step>
@@ -322,6 +346,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -341,7 +366,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -358,7 +383,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -394,6 +419,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -413,7 +439,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -430,7 +456,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -574,6 +600,20 @@ jobs:
           fi
           echo "::set-output name=tmppath::${tmppath}"
 
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -658,6 +698,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -677,7 +718,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -694,7 +735,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -730,6 +771,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -749,7 +791,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -766,7 +808,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -910,6 +952,20 @@ jobs:
           fi
           echo "::set-output name=tmppath::${tmppath}"
 
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -994,6 +1050,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -1013,7 +1070,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -1030,7 +1087,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1066,6 +1123,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -1085,7 +1143,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -1102,7 +1160,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1246,6 +1304,20 @@ jobs:
           fi
           echo "::set-output name=tmppath::${tmppath}"
 
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -1330,6 +1402,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -1349,7 +1422,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -1366,7 +1439,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1402,6 +1475,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -1421,7 +1495,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -1438,7 +1512,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1582,6 +1656,20 @@ jobs:
           fi
           echo "::set-output name=tmppath::${tmppath}"
 
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -1666,6 +1754,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -1685,7 +1774,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -1702,7 +1791,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1738,6 +1827,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -1757,7 +1847,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -1774,7 +1864,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1918,6 +2008,20 @@ jobs:
           fi
           echo "::set-output name=tmppath::${tmppath}"
 
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -2002,6 +2106,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -2021,7 +2126,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -2038,7 +2143,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2074,6 +2179,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -2093,7 +2199,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -2110,7 +2216,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2254,6 +2360,20 @@ jobs:
           fi
           echo "::set-output name=tmppath::${tmppath}"
 
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -2338,6 +2458,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -2357,7 +2478,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -2374,7 +2495,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2410,6 +2531,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -2429,7 +2551,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -2446,7 +2568,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2590,6 +2712,20 @@ jobs:
           fi
           echo "::set-output name=tmppath::${tmppath}"
 
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -2674,6 +2810,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -2693,7 +2830,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -2710,7 +2847,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2746,6 +2883,7 @@ jobs:
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -2765,7 +2903,7 @@ jobs:
           Use environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_NAME}
+            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
@@ -2782,7 +2920,7 @@ jobs:
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
