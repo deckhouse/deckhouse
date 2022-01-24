@@ -132,13 +132,13 @@ Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhou
 
 ## How do I switch a running Deckhouse cluster to use a third-party registry?
 
+* Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry.
 * Edit the `d8-system/deckhouse-registry` secret (note that all parameters are BASE64-encoded):
   * Insert third-party registry credentials into `.dockerconfigjson`.
   * Replace `address` with the third-party registry's host address (e.g., `registry.example.com`).
   * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/fe`).
   * If necessary, change `scheme` to `http` (if the third-party registry uses HTTP scheme).
   * If necessary, change or add the `ca` field with the root CA certificate that validates the third-party registry's https certificate (if the third-party registry uses self-signed certificates).
-* Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry.
-* Wait for the Deckhouse Pod to become Ready.
+* Wait for the Deckhouse Pod to become Ready. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * Only if Deckhouse won't be updated using a third-party registry, then you have to remove `releaseChannel` setting from configmap `d8-system/deckhouse`

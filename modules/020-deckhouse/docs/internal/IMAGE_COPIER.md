@@ -57,4 +57,11 @@ Caution! If you delete Secret, the Job and Pod will be deleted as well regardles
 
 ## Switching the repository
 
-Use this [instruction](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry)
+Execute commands another commands from `generate-copier-secret.sh` output:
+
+* Change Deckhouse Deployment image.
+* Change `d8-system/deckhouse-registry secret.
+* Wait for Deckhouse pod ready (restart pod if it is in ImagePullBackoff state).
+* Check bashible on master node restart correctly.
+
+Or use this [instruction](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry)
