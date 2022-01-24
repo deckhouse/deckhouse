@@ -61,15 +61,9 @@
 {{- end }}
 
 {{- define "tls_config" }}
+bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
 tlsConfig:
   insecureSkipVerify: true
-  cert:
-    secret:
-      name: prometheus-scraper-tls
-      key: tls.crt
-  keySecret:
-    name: prometheus-scraper-tls
-    key: tls.key
 {{- end }}
 
 {{- define "keep_targets_for_schema" }}

@@ -5,10 +5,9 @@
   honor_labels: true
   metrics_path: '/main/metrics'
   scheme: https
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
   tls_config:
     insecure_skip_verify: true
-    cert_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-    key_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
   static_configs:
   - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
   relabel_configs:
@@ -25,8 +24,7 @@
   scheme: https
   tls_config:
     insecure_skip_verify: true
-    cert_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-    key_file: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
   static_configs:
   - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
   relabel_configs:

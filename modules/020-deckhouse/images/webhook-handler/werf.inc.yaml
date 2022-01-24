@@ -11,9 +11,11 @@ ansible:
     - name: "Install promtool"
       unarchive:
         extra_opts:
-          - prometheus-2.13.0.linux-amd64/promtool
+          # The promtool version should match prometheus version from the 300-prometheus module.
+          {{- $promVersion := (.Files.Get "modules/300-prometheus/images/Dockerfile" | regexFind "PROMETHEUS_VERSION=v[\.0-9]+" | trimPrefix "PROMETHEUS_VERSION=v") }}
+          - prometheus-{{ $promVersion }}.linux-amd64/promtool
           - --strip-components=1
-        src: https://github.com/prometheus/prometheus/releases/download/v2.13.0/prometheus-2.13.0.linux-amd64.tar.gz
+        src: https://github.com/prometheus/prometheus/releases/download/v{{ $promVersion }}/prometheus-{{ $promVersion }}.linux-amd64.tar.gz
         remote_src: yes
         dest: /usr/local/bin
 git:
