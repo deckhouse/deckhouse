@@ -176,7 +176,7 @@ func (d *LogPrinter) printLogsByLine(content []byte) {
 		}
 
 		if needPrintLogLine {
-			log.DebugF(line.StringWithLogLevel())
+			log.InfoLn(line.StringWithLogLevel())
 			return true
 		}
 
