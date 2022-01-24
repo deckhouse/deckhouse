@@ -64,7 +64,6 @@ function __main__() {
       "name": "flant_pricing_kubeall",
       "set": '$(date +%s)',
       "labels": {
-        "team": "'$FP_KUBEALL_TEAM'",
         "host": "'$FP_KUBEALL_HOST'",
         "kubectl": "'$FP_KUBEALL_KUBECTL'",
         "kubeconfig": "'$FP_KUBEALL_KUBECONFIG'",

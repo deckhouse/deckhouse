@@ -82,7 +82,7 @@ properties:
         type: string
         x-examples: ["teamA"]
         description: |
-          The team serving this cluster.
+          **Unused.** The team serving this cluster.
       host:
         type: string
         x-examples: ["hostA"]
