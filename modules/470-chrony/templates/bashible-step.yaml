@@ -1,7 +1,7 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: disable_ntp_on_node.sh
+  name: disable-ntp-on-node.sh
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   weight: 100
