@@ -253,7 +253,12 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 			app.SSHHosts = mastersIPs
 
-			bastionHost := operations.GetBastionHostFromCache()
+			bastionHost, err := operations.GetBastionHostFromCache()
+			if err != nil {
+				log.ErrorF("Can not load bastion host: %v\n", err)
+				return err
+			}
+
 			if bastionHost != "" {
 				setBastionHostFromCloudProvider(bastionHost, nil)
 			}

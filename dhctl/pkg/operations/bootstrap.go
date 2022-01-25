@@ -365,12 +365,22 @@ func SaveBastionHostToCache(host string) {
 	}
 }
 
-func GetBastionHostFromCache() string {
+func GetBastionHostFromCache() (string, error) {
+	exists, err := cache.Global().InCache(BastionHostCacheKey)
+	if err != nil {
+		return "", err
+	}
+
+	if !exists {
+		return "", nil
+	}
+
 	host, err := cache.Global().Load(BastionHostCacheKey)
 	if err != nil {
-		log.ErrorF("Cannot load bastion host: %v", err)
+		return "", err
 	}
-	return string(host)
+
+	return string(host), nil
 }
 
 func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {
