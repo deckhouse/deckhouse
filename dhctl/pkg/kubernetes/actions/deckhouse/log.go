@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -168,17 +167,13 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 }
 
 func (d *LogPrinter) printLogsByLine(content []byte) {
-	needPrintLogLine := os.Getenv("DHCTL_PRINT_DECKHOUSE_LOGS") != ""
 	parseLogByLine(content, func(line *logLine) bool {
 		if isErrorLine(line) {
 			d.printErrorsForTask(line.TaskID, line.Time)
 			return true
 		}
 
-		if needPrintLogLine {
-			log.InfoLn(line.StringWithLogLevel())
-			return true
-		}
+		log.InfoLn(line.StringWithLogLevel())
 
 		// TODO use module.state label
 		if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
