@@ -17,21 +17,12 @@ package openstack
 import (
 	"fmt"
 
-	"github.com/blang/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/apiversions"
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
-var onlineResizeMinVersion = semVerMustParseTolerant("3.42")
-
-func semVerMustParseTolerant(ver string) semver.Version {
-	semVersion, err := semver.ParseTolerant(ver)
-	if err != nil {
-		panic(err)
-	}
-
-	return semVersion
-}
+var onlineResizeMinVersion = semver.MustParse("3.42")
 
 func SupportsOnlineDiskResize() error {
 	client, err := clientconfig.NewServiceClient("volume", nil)
@@ -58,10 +49,10 @@ func SupportsOnlineDiskResize() error {
 		return fmt.Errorf("cannot determine current API version for 3.0 block-storage")
 	}
 
-	currentVersionSemVer := semVerMustParseTolerant(currentVersion)
+	currentVersionSemVer := semver.MustParse(currentVersion)
 
 	var stdout string
-	if currentVersionSemVer.GE(onlineResizeMinVersion) {
+	if currentVersionSemVer.GreaterThan(onlineResizeMinVersion) || currentVersionSemVer.Equal(onlineResizeMinVersion) {
 		stdout = "yes"
 	} else {
 		stdout = "no"

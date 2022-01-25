@@ -8,7 +8,7 @@ package pricing
 import (
 	"fmt"
 
-	"github.com/blang/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -86,17 +86,17 @@ func nodeHandler(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	var minNodeVersion semver.Version
+	var minNodeVersion *semver.Version
 	stats := NodeStats{}
 
 	for _, s := range snaps {
 		node := s.(*Node)
 
-		nodeVersion, err := semver.Make(node.Version)
+		nodeVersion, err := semver.NewVersion(node.Version)
 		if err != nil {
 			return fmt.Errorf("can't parse Node version: %v", err)
 		}
-		if minNodeVersion.Equals(semver.Version{}) || nodeVersion.LT(minNodeVersion) {
+		if minNodeVersion == nil || nodeVersion.LessThan(minNodeVersion) {
 			minNodeVersion = nodeVersion
 		}
 
@@ -125,7 +125,7 @@ func nodeHandler(input *go_hook.HookInput) error {
 		}
 	}
 
-	stats.MinimalKubeletVersion = fmt.Sprintf("%d.%d", minNodeVersion.Major, minNodeVersion.Minor)
+	stats.MinimalKubeletVersion = fmt.Sprintf("%d.%d", minNodeVersion.Major(), minNodeVersion.Minor())
 
 	input.Values.Set("flantIntegration.internal.nodeStats", stats)
 	return nil

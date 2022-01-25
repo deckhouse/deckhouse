@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/blang/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -176,12 +176,12 @@ func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version
 		return nil, err
 	}
 
-	ver, err := semver.ParseTolerant(info.GitVersion)
+	ver, err := semver.NewVersion(info.GitVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ver, nil
+	return ver, nil
 }
 
 func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
@@ -257,7 +257,7 @@ func k8sVersions(input *go_hook.HookInput, dc dependency.Container) error {
 			return err
 		}
 
-		if minVer == nil || ver.LT(*minVer) {
+		if minVer == nil || ver.LessThan(minVer) {
 			minVer = ver
 		}
 		versions = append(versions, ver.String())
