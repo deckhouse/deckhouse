@@ -37,7 +37,7 @@ data "vsphere_datastore" "datastore" {
 }
 
 data "vsphere_resource_pool" "resource_pool" {
-  count         = length(local.resource_pool) == 0 ? 0 : 1
+  count         = 1
   name          = join("/", [data.vsphere_dynamic.cluster_id.inventory_path, "Resources", local.resource_pool])
   datacenter_id = data.vsphere_dynamic.datacenter_id.id
 }
@@ -131,7 +131,7 @@ resource "vsphere_virtual_disk" "kubernetes_data" {
 
 resource "vsphere_virtual_machine" "master" {
   name             = join("-", [local.prefix, "master", var.nodeIndex])
-  resource_pool_id = length(local.resource_pool) == 0 ? null : data.vsphere_resource_pool.resource_pool[0].id
+  resource_pool_id = data.vsphere_resource_pool.resource_pool[0].id
   datastore_id     = data.vsphere_datastore.datastore.id
   folder           = var.providerClusterConfiguration.vmFolderPath
 

@@ -113,6 +113,7 @@ title: "Cloud provider — VMware vSphere: настройки провайдер
   * Опциональный параметр. По умолчанию `true`.
 * `region` — тэг, прикреплённый к vSphere Datacenter, в котором будут происходить все операции: заказ VirtualMachines, размещение их дисков на datastore, подключение к network.
 * `baseResourcePool` — относительный (от vSphere Cluster) путь до существующего родительского `resourcePool` для всех создаваемых (в каждой зоне) `resourcePool`'ов.
+* `useNestedResourcePool` - создавать вложенный пул (`true`) или использовать основной пул (`false`). По-умолчанию - `true`.
 * `sshPublicKey` — публичный ключ для доступа на узлы.
 * `externalNetworkNames` — имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
   * Формат — массив строк. Например,

@@ -43,8 +43,9 @@ locals {
   zones           = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
   zone            = element(local.zones, var.nodeIndex)
 
+  use_nested_resource_pool = lookup(var.providerClusterConfiguration, "useNestedResourcePool", true)
   base_resource_pool    = trim(lookup(var.providerClusterConfiguration, "baseResourcePool", ""), "/")
-  default_resource_pool = join("/", local.base_resource_pool != "" ? [local.base_resource_pool, local.prefix] : [local.prefix])
+  default_resource_pool = local.use_nested_resource_pool == true ? join("/", local.base_resource_pool != "" ? [local.base_resource_pool, local.prefix] : [local.prefix]) : ""
 
   resource_pool      = lookup(local.master_instance_class, "resourcePool", local.default_resource_pool)
   additionalNetworks = lookup(local.master_instance_class, "additionalNetworks", [])
