@@ -19,29 +19,28 @@ package hooks
 import (
 	"errors"
 
-	"github.com/blang/semver"
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 func init() {
 	f := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		desiredVersion, err := semver.Parse(requirementValue)
+		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
 			return false, err
 		}
-
 		currentVersionStr := getter.Get("global.discovery.kubernetesVersion").String()
-		currentVersion, err := semver.Parse(currentVersionStr)
+		currentVersion, err := semver.NewVersion(currentVersionStr)
 		if err != nil {
 			return false, err
 		}
 
-		if currentVersion.GE(desiredVersion) {
-			return true, nil
+		if currentVersion.LessThan(desiredVersion) {
+			return false, errors.New("current kubernetes version is lower then required")
 		}
 
-		return false, errors.New("current kubernetes version is lower then required")
+		return true, nil
 	}
 
 	requirements.Register("k8s", f)
