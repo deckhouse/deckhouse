@@ -50,14 +50,16 @@ type DeckhouseRelease struct {
 }
 
 type DeckhouseReleaseSpec struct {
-	Version    string     `json:"version,omitempty"`
-	ApplyAfter *time.Time `json:"applyAfter,omitempty"`
+	Version      string            `json:"version,omitempty"`
+	ApplyAfter   *time.Time        `json:"applyAfter,omitempty"`
+	Requirements map[string]string `json:"requirements,omitempty"`
 }
 
 type DeckhouseReleaseStatus struct {
 	Phase          string    `json:"phase,omitempty"`
 	Approved       bool      `json:"approved"`
 	TransitionTime time.Time `json:"transitionTime,omitempty"`
+	Message        string    `json:"message"`
 }
 
 type deckhouseReleaseKind struct{}
