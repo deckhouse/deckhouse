@@ -12,7 +12,7 @@ properties:
     description: |
       The Deckhouse bundle defines a set of modules enabled by default.
       - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs (the current list is available [here](https://github.com/deckhouse/deckhouse/blob/main/modules/values-default.yaml)).
-      - `Minimal` — the minimum possible bundle option (includes a single module - this one).
+      - `Minimal` — the minimum possible bundle option (includes a single module — this one).
       - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
     default: "Default"
   releaseChannel:
@@ -42,7 +42,9 @@ properties:
           - `Auto` — All updates are applied automatically.
 
             Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel.
-          - `Manual` — To change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. To confirm the update, edit [CR 'DeckhouseRelease'](https://deckhouse.io/en/documentation/v1/modules/020-deckhouse/cr.html), which corresponds to the version by setting the `approved' field to 'true'.
+          - `Manual` — To change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. 
+          
+            To confirm the update, edit [CR 'DeckhouseRelease'](https://deckhouse.io/en/documentation/v1/modules/020-deckhouse/cr.html), which corresponds to the version by setting the `approved' field to 'true'.
         enum:
           - 'Auto'
           - 'Manual'
