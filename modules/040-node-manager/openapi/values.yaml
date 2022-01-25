@@ -80,60 +80,6 @@ properties:
         description: |
           Private key for API server used by bashible.
 
-      nodeUsers:
-        type: array
-        description: |
-          Available NodeUser resources.
-        items:
-          type: object
-          description: |
-            Defines the linux users to create on all nodes.
-
-            The user's home directory is created in the `/home/deckhouse/` directory.
-          required:
-            - spec
-          properties:
-            name:
-              type: string
-            spec:
-              type: object
-              required:
-                - uid
-                - sshPublicKey
-                - passwordHash
-              properties:
-                uid:
-                  type: number
-                  description: |
-                    Node user ID.
-
-                    This parameter does not change during the entire resource life.
-                  example: '1001'
-                  minimum: 1001
-                sshPublicKey:
-                  type: string
-                  description: 'Node user ssh public key.'
-                  example: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ'
-                passwordHash:
-                  type: string
-                  description: |
-                    Hashed user password.
-
-                    The format corresponds to the password hashes in `/etc/shadow`. Yoou can get it using the following command: `openssl passwd -6`.
-                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
-                isSudoer:
-                  type: boolean
-                  description: 'Persistence of node user in sudo group.'
-                  example: 'true'
-                  x-doc-default: false
-                extraGroups:
-                  type: array
-                  description: 'Node user additional system groups.'
-                  items:
-                    type: string
-        x-examples:
-          - [{"name":"test1","spec":{"extraGroups":["docker","printer"],"isSudoer":false,"passwordHash":"$2a$10","sshPublicKey":"ssh-rsa pubkey","uid":1001}},{"name":"test2","spec":{"isSudoer":true,"passwordHash":"$2a$20","sshPublicKey":"ssh-rsa pubkey2","uid":1002}}]
-
       nodeStatusUpdateFrequency:
         type: [integer, string]
         description: |

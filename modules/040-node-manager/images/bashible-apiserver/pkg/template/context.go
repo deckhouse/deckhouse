@@ -30,8 +30,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/flant/kube-client/client"
 	"github.com/fsnotify/fsnotify"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -41,31 +46,11 @@ import (
 const (
 	contextSecretName  = "bashible-apiserver-context"
 	registrySecretName = "deckhouse-registry"
+	nodeUserCRDName    = "nodeusers"
 
 	imageTagsFile  = "/var/files/images_tags.json"
 	versionMapFile = "/var/files/version_map.yml"
 )
-
-func NewContext(ctx context.Context, stepsStorage *StepsStorage, contextSecretFactory, registrySecretFactory informers.SharedInformerFactory, secretHandler checksumSecretUpdater, updateHandler UpdateHandler) *BashibleContext {
-	c := BashibleContext{
-		ctx:            ctx,
-		updateHandler:  updateHandler,
-		secretHandler:  secretHandler,
-		contextBuilder: NewContextBuilder(ctx, stepsStorage),
-		checksums:      make(map[string]string),
-		stepsStorage:   stepsStorage,
-	}
-
-	c.runFilesParser()
-
-	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
-
-	registrySecretUpdates := c.subscribe(ctx, registrySecretFactory, registrySecretName)
-
-	go c.onSecretsUpdate(ctx, contextSecretUpdates, registrySecretUpdates)
-
-	return &c
-}
 
 type Context interface {
 	Get(contextKey string) (map[string]interface{}, error)
@@ -100,6 +85,50 @@ type BashibleContext struct {
 	data map[string]interface{}
 
 	stepsStorage *StepsStorage
+	emitter      changesEmitter
+
+	nodeUsersQueue                chan usersQueueAction
+	nodeUsersConfigurationChanged chan struct{}
+}
+
+type usersQueueAction struct {
+	action    string
+	newObject *unstructured.Unstructured
+	oldObject *unstructured.Unstructured
+}
+
+type UserConfiguration struct {
+	Name string       `json:"name" yaml:"name"`
+	Spec NodeUserSpec `json:"spec" yaml:"spec"`
+}
+
+func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient client.Client, resyncTimeout time.Duration, secretHandler checksumSecretUpdater, updateHandler UpdateHandler) *BashibleContext {
+	c := BashibleContext{
+		ctx:                           ctx,
+		updateHandler:                 updateHandler,
+		secretHandler:                 secretHandler,
+		contextBuilder:                NewContextBuilder(ctx, stepsStorage),
+		checksums:                     make(map[string]string),
+		stepsStorage:                  stepsStorage,
+		nodeUsersQueue:                make(chan usersQueueAction, 100),
+		nodeUsersConfigurationChanged: make(chan struct{}, 1),
+	}
+
+	c.runFilesParser()
+
+	// Bashible context and its dynamic update
+	contextSecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
+	registrySecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=registry")
+	nodeUserCRDFactory := newNodeUserInformerFactory(kubeClient, resyncTimeout)
+
+	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
+	registrySecretUpdates := c.subscribe(ctx, registrySecretFactory, registrySecretName)
+
+	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
+
+	go c.onSecretsUpdate(ctx, contextSecretUpdates, registrySecretUpdates)
+
+	return &c
 }
 
 func (c *BashibleContext) subscribe(ctx context.Context, factory informers.SharedInformerFactory, secretName string) chan map[string][]byte {
@@ -292,6 +321,9 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 		case <-c.stepsStorage.OnNodeConfigurationsChanged():
 			c.update()
 
+		case <-c.nodeUsersConfigurationChanged:
+			c.update()
+
 		case <-ctx.Done():
 			return
 		}
@@ -421,4 +453,169 @@ func (c *BashibleContext) saveChecksum(name, newChecksum string) {
 	defer c.rw.Unlock()
 
 	c.checksums[name] = newChecksum
+}
+
+// newBashibleInformerFactory creates informer factory for particular namespace and label selector.
+// Bashible apiserver is expected to use single namespace and only related resources.
+func newBashibleInformerFactory(kubeClient client.Client, resync time.Duration, namespace, labelSelector string) informers.SharedInformerFactory {
+	factory := informers.NewSharedInformerFactoryWithOptions(
+		kubeClient,
+		resync,
+		informers.WithNamespace(namespace),
+		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
+			opts.LabelSelector = labelSelector
+		}),
+	)
+
+	return factory
+}
+
+func newNodeUserInformerFactory(kubeClient client.Client, resync time.Duration) dynamicinformer.DynamicSharedInformerFactory {
+	factory := dynamicinformer.NewDynamicSharedInformerFactory(
+		kubeClient.Dynamic(),
+		resync,
+	)
+
+	return factory
+}
+
+func (c *BashibleContext) subscribeOnNodeUserCRD(ctx context.Context, ngConfigFactory dynamicinformer.DynamicSharedInformerFactory) {
+	if ngConfigFactory == nil {
+		return
+	}
+
+	go c.emitter.runBufferedEmitter(c.nodeUsersConfigurationChanged)
+	go c.runNodeUserCRDQueue(ctx)
+
+	// Launch the informer
+	ginformer := ngConfigFactory.ForResource(schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1",
+		Resource: nodeUserCRDName,
+	})
+
+	informer := ginformer.Informer()
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			c.nodeUsersQueue <- usersQueueAction{
+				action:    "add",
+				newObject: obj.(*unstructured.Unstructured),
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			c.nodeUsersQueue <- usersQueueAction{
+				action:    "update",
+				newObject: newObj.(*unstructured.Unstructured),
+				oldObject: oldObj.(*unstructured.Unstructured),
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			c.nodeUsersQueue <- usersQueueAction{
+				action:    "delete",
+				oldObject: obj.(*unstructured.Unstructured),
+			}
+		},
+	})
+
+	go informer.Run(ctx.Done())
+
+	// Wait for the first sync of the informer cache, should not take long
+	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
+		klog.Fatalf("unable to sync caches: %v", ctx.Err())
+	}
+}
+
+func (c *BashibleContext) AddNodeUserConfiguration(nu *NodeUser) {
+	klog.Infof("Adding NodeUser %s to context", nu.Name)
+	ngBundlePairs := generateNgBundlePairs(nu.Spec.NodeGroups, []string{"*"})
+
+	nuc := UserConfiguration{
+		Name: nu.Name,
+		Spec: nu.Spec,
+	}
+
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	for _, ngBundlePair := range ngBundlePairs {
+		if m, ok := c.contextBuilder.nodeUserConfigurations[ngBundlePair]; ok {
+			m = append(m, &nuc)
+			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = m
+		} else {
+			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = []*UserConfiguration{&nuc}
+		}
+	}
+}
+
+func (c *BashibleContext) RemoveNodeUserConfiguration(nu *NodeUser) {
+	klog.Infof("Removing NodeUser %s from context", nu.Name)
+	ngBundlePairs := generateNgBundlePairs(nu.Spec.NodeGroups, []string{"*"})
+
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	for _, ngBundlePair := range ngBundlePairs {
+		if configs, ok := c.contextBuilder.nodeUserConfigurations[ngBundlePair]; ok {
+			for i, v := range configs {
+				if v.Name == nu.Name {
+					configs = append(configs[:i], configs[i+1:]...)
+					break
+				}
+			}
+			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = configs
+		}
+	}
+}
+
+func (c *BashibleContext) runNodeUserCRDQueue(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case event := <-c.nodeUsersQueue:
+			switch event.action {
+			case "add":
+				var nu NodeUser
+				err := fromUnstructured(event.newObject, &nu)
+				if err != nil {
+					klog.Errorf("Action: add, nodeUser: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					continue
+				}
+				c.AddNodeUserConfiguration(&nu)
+
+			case "update":
+				var newConf NodeUser
+				err := fromUnstructured(event.newObject, &newConf)
+				if err != nil {
+					klog.Errorf("Action: update, nodeUser: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					continue
+				}
+
+				var oldConf NodeUser
+				err = fromUnstructured(event.oldObject, &oldConf)
+				if err != nil {
+					klog.Errorf("Action: update, nodeUser: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					continue
+				}
+
+				if newConf.Spec.IsEqual(oldConf.Spec) {
+					continue
+				}
+
+				c.RemoveNodeUserConfiguration(&oldConf)
+				c.AddNodeUserConfiguration(&newConf)
+
+			case "delete":
+				var nu NodeUser
+				err := fromUnstructured(event.oldObject, &nu)
+				if err != nil {
+					klog.Errorf("Action: delete, nodeUser: %s - convert from unstructured failed: %v", event.newObject.GetName(), err)
+					continue
+				}
+				c.RemoveNodeUserConfiguration(&nu)
+			}
+
+			c.emitter.emitChanges()
+		}
+	}
 }

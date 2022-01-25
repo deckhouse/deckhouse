@@ -24,10 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
@@ -52,9 +50,15 @@ type StepsStorage struct {
 	emitter               changesEmitter
 }
 
-type changesEmitter struct {
-	sync.Mutex
-	count int
+type nodeConfigurationQueueAction struct {
+	action    string
+	newObject *unstructured.Unstructured
+	oldObject *unstructured.Unstructured
+}
+
+type nodeConfigurationScript struct {
+	Name    string
+	Content string
 }
 
 // NewStepsStorage creates StepsStorage for target and cloud provider.
@@ -100,32 +104,12 @@ func (s *StepsStorage) OnNodeConfigurationsChanged() chan struct{} {
 	return s.configurationsChanged
 }
 
-func (s *StepsStorage) runBufferedEmitter() chan struct{} {
-	for {
-		// we need sleep to avoid emitting configuration change on batch updates
-		// for example on a start - we add all NodeGroupConfigurations, but need to rerender context and checksums only once
-		time.Sleep(500 * time.Millisecond)
-		s.emitter.Lock()
-		if s.emitter.count > 0 {
-			s.configurationsChanged <- struct{}{}
-			s.emitter.count = 0
-		}
-		s.emitter.Unlock()
-	}
-}
-
-func (s *StepsStorage) emitChanges() {
-	s.emitter.Lock()
-	s.emitter.count++
-	s.emitter.Unlock()
-}
-
 func (s *StepsStorage) subscribeOnCRD(ctx context.Context, ngConfigFactory dynamicinformer.DynamicSharedInformerFactory) {
 	if ngConfigFactory == nil {
 		return
 	}
 
-	go s.runBufferedEmitter()
+	go s.emitter.runBufferedEmitter(s.configurationsChanged)
 	go s.runNodeConfigurationQueue(ctx)
 
 	// Launch the informer
@@ -268,7 +252,7 @@ func (s *StepsStorage) readTemplates(baseDir string, templates map[string][]byte
 
 func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 	name := fmt.Sprintf("%d_%s", nc.Spec.Weight, nc.Name)
-	ngBundlePairs := s.generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
+	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
 	sc := nodeConfigurationScript{
 		Name:    name,
@@ -289,7 +273,7 @@ func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 
 func (s *StepsStorage) RemoveNodeGroupConfiguration(nc *NodeGroupConfiguration) {
 	name := fmt.Sprintf("%d_%s", nc.Spec.Weight, nc.Name)
-	ngBundlePairs := s.generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
+	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -304,27 +288,6 @@ func (s *StepsStorage) RemoveNodeGroupConfiguration(nc *NodeGroupConfiguration) 
 			s.nodeGroupConfigurations[ngBundlePair] = configs
 		}
 	}
-}
-
-func (s *StepsStorage) generateNgBundlePairs(ngs, bundles []string) []string {
-	result := make([]string, 0)
-
-	for _, ng := range ngs {
-		for _, bundle := range bundles {
-			result = append(result, fmt.Sprintf("%s:%s", bundle, ng))
-		}
-	}
-
-	if len(result) == 0 {
-		result = []string{"*:*"}
-	}
-
-	return result
-}
-
-type nodeConfigurationScript struct {
-	Name    string
-	Content string
 }
 
 func (s *StepsStorage) renderNodeGroupConfigurations(bundle, ng string, templateContext map[string]interface{}) (map[string]string, error) {
@@ -352,16 +315,6 @@ func (s *StepsStorage) renderNodeGroupConfigurations(bundle, ng string, template
 	}
 
 	return steps, nil
-}
-
-func fromUnstructured(unstructuredObj *unstructured.Unstructured, obj interface{}) error {
-	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.UnstructuredContent(), obj)
-}
-
-type nodeConfigurationQueueAction struct {
-	action    string
-	newObject *unstructured.Unstructured
-	oldObject *unstructured.Unstructured
 }
 
 func (s *StepsStorage) runNodeConfigurationQueue(ctx context.Context) {
@@ -413,7 +366,7 @@ func (s *StepsStorage) runNodeConfigurationQueue(ctx context.Context) {
 				s.RemoveNodeGroupConfiguration(&ngc)
 			}
 
-			s.emitChanges()
+			s.emitter.emitChanges()
 		}
 	}
 }

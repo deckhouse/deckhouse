@@ -139,23 +139,12 @@ func (c completedConfig) New() (*BashibleServer, error) {
 		return nil, err
 	}
 
-	// Bashible context and its dynamic update
-	factory, err := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
-	if err != nil {
-		panic("cannot create informer " + err.Error())
-	}
-
-	registryFactory, err := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=registry")
-	if err != nil {
-		panic("cannot create informer: " + err.Error())
-	}
-
 	ngConfigFactory := newNodeGroupConfigurationInformerFactory(kubeClient, resyncTimeout)
 	stepsStorage := template.NewStepsStorage(ctx, templatesRootDir, ngConfigFactory)
 
 	cachesManager := bashibleregistry.NewCachesManager()
 	secretUpdater := checksumSecretUpdater{client: kubeClient}
-	bashibleContext := template.NewContext(ctx, stepsStorage, factory, registryFactory, secretUpdater, cachesManager)
+	bashibleContext := template.NewContext(ctx, stepsStorage, kubeClient, resyncTimeout, secretUpdater, cachesManager)
 
 	// Template-based REST API
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(bashible.GroupName, Scheme, metav1.ParameterCodec, Codecs)
