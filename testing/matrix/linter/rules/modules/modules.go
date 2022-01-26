@@ -251,6 +251,7 @@ func lintModuleStructure(lintRuleErrorsList *errors.LintRuleErrorsList, modulePa
 	}
 
 	lintRuleErrorsList.Merge(ossModuleRule(moduleName, modulePath))
+	lintRuleErrorsList.Add(monitoringModuleRule(moduleName, modulePath, namespace))
 
 	module := utils.Module{Name: name, Path: modulePath, Namespace: namespace}
 	return module, true

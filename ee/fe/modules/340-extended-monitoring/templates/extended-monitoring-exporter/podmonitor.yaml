@@ -1,4 +1,4 @@
-
+{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -33,3 +33,4 @@ spec:
   namespaceSelector:
     matchNames:
     - d8-monitoring
+{{- end }}

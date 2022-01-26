@@ -55,5 +55,7 @@ spec:
 {{- define "helm_lib_prometheus_rules" -}}
   {{- $context := index . 0 }}
   {{- $namespace := index . 1 }}
-  {{- include "helm_lib_prometheus_rules_recursion" (list $context $namespace "monitoring/prometheus-rules") }}
+  {{- if ( $context.Values.global.enabledModules | has "operator-prometheus-crd" ) }}
+{{- include "helm_lib_prometheus_rules_recursion" (list $context $namespace "monitoring/prometheus-rules") }}
+  {{- end }}
 {{- end }}
