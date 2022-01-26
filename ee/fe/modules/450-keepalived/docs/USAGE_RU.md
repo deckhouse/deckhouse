@@ -4,7 +4,7 @@ title: "Модуль keepalived: примеры конфигурации"
 
 ## Три публичных IP-адреса
 
-Три публичных IP-адреса на трёх фронтах. Каждый виртуальный IP-адрес вынесен в отдельную VRRP-группу, таким образом, каждый адрес "прыгает" независимо от других и если в кластере три узла с лейблами `node-role/frontend: ""`, то каждый IP получит по своей MASTER-ноде.
+Три публичных IP-адреса на трёх фронтах. Каждый виртуальный IP-адрес вынесен в отдельную VRRP-группу, таким образом, каждый адрес "прыгает" независимо от других и если в кластере три узла с лейблами `node-role.deckhouse.io/frontend: ""`, то каждый IP получит по своей MASTER-ноде.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -13,9 +13,9 @@ metadata:
   name: front
 spec:
   nodeSelector: # обязательно
-    node-role/frontend: ""
+    node-role.deckhouse.io/frontend: ""
   tolerations:  # опционально
-  - key: dedicated
+  - key: dedicated.deckhouse.io
     operator: Equal
     value: frontend
   vrrpInstances:
@@ -46,9 +46,9 @@ metadata:
   name: mygateway
 spec:
   nodeSelector:
-    node-role/mygateway: ""
+    node-role.deckhouse.io/mygateway: ""
   tolerations:
-  - key: node-role/mygateway
+  - key: node-role.deckhouse.io/mygateway
     operator: Exists
   vrrpInstances:
   - id: 4 # id "1", "2", "3" уже заняты в KeepalivedInstance "front" выше
