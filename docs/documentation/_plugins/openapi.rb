@@ -212,7 +212,11 @@ module Jekyll
                         elsif exampleObject.is_a?(Hash)
                             exampleContent = %Q(```yaml\n#{{name => exampleObject}.to_yaml.delete_prefix("---\n")}```)
                         elsif exampleObjectIsArrayOfExamples and (exampleObject.length == 1)
-                            exampleContent = %Q(```yaml\n#{{name => exampleObject[0]}.to_yaml.delete_prefix("---\n")}```)
+                            if exampleObject[0].class.to_s == "String" and exampleObject[0] =~ /\`\`\`|\n/
+                                exampleContent = "#{exampleObject[0]}"
+                            else
+                                exampleContent = %Q(```yaml\n#{{name => exampleObject[0]}.to_yaml.delete_prefix("---\n")}```)
+                            end
                         elsif exampleObjectIsArrayOfExamples and (exampleObject.length > 1)
                             exampleObject.each do | value |
                                 if value == nil then continue end
