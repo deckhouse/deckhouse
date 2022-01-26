@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
 
-            `metadata.name` — задаёт имя upstream, который будет использоваться в CR [ClusterLoggingConfig](https://deckhouse.io/ru/documentation/modules/460-log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` — задаёт имя upstream, который будет использоваться в CR [ClusterLoggingConfig](https://deckhouse.io/ru/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               properties:
