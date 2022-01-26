@@ -7,7 +7,7 @@ title: "The keepalived module: usage"
 Suppose there are three public IP addresses on three front nodes. Each virtual IP address is placed in a separate VRRP group. Thus, each address "jumps" independently of the others, and if there are three nodes in the cluster with the `node-role.deckhouse.io/frontend: ""` labels, then each IP gets its own MASTER node.
 
 ```yaml
-apiVersion: node-role.deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha1
 kind: KeepalivedInstance
 metadata:
   name: front
