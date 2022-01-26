@@ -56,7 +56,7 @@ spec:
                         ```yaml
                         matchExpressions:
                         - key: tier
-                          operator": In
+                          operator: In
                           values:
                           - production
                           - staging
