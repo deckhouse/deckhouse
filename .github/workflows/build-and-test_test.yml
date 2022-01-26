@@ -6,7 +6,8 @@
 name: Build and test for dev branches
 on:
   push:
-    branches: 'werf-build-tests'
+    branches:
+      - 'werf-build-tests*'
 env:
 
   # <template: werf_envs>
@@ -71,7 +72,7 @@ env:
 # Note: Concurrency is currently in beta and subject to change.
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  group: ${{ github.event.number }}-dev
+  group: ${{ github.event.number }}-dev-registry
   cancel-in-progress: true
 
 jobs:
@@ -85,109 +86,14 @@ jobs:
     # Skip the CI for automation PRs, e.g. changelog
     if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
-      - name: Check if allow to run tests
-        id: check
-        uses: actions/github-script@v5.0.0
-        with:
-          script: |
-            // Assume workflow_dispatch is safe to run.
-            // TODO add owner, repo, sha to inputs to check them here.
-            if (context.eventName === 'workflow_dispatch') {
-              core.info(`workflow_dispatch detected, set should_run to 'true'`);
-              return core.setOutput('should_run', 'true');
-            }
-
-            if (!context.payload.pull_request) {
-              return core.setFailed(`Unknown event, no pull request context. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
-            }
-
-            // Fetch fresh pull request state using sha.
-            // Why? Workflow rerun of 'opened' pull request contains outdated labels.
-            const owner = context.payload.pull_request.head.repo.owner.login
-            const repo = context.payload.pull_request.head.repo.name
-            const commit_sha = context.payload.pull_request.head.sha
-            const head_label = context.payload.pull_request.head.label
-            core.info(`Pull request: ${JSON.stringify({ owner, repo, commit_sha, head_label })}`);
-            core.info(`Base repo: ${JSON.stringify({owner: context.repo.owner, repo: context.repo.repo})}`);
-            const response = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: head_label
-            });
-            if (response.status != 200) {
-              return core.setFailed(`Cannot list PRs for head ${head_label} (${commit_sha}): ${JSON.stringify(response)}`);
-            }
-
-            // No PR found, do not run next jobs.
-            if (!response.data || response.data.length === 0) {
-              return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
-            }
-
-            const prRepo = context.payload.pull_request.head.repo.full_name;
-            const targetRepo = context.payload.repository.full_name;
-            const isInternal = prRepo === targetRepo;
-            const isDependabot = (context.actor === 'dependabot[bot]');
-            const isChangelog = context.payload.pull_request.head.ref.startsWith('changelog/v');
-            const okToTest = response.data[0].labels.some((l) => l.name === 'status/ok-to-test');
-
-            core.info(`PR internal?          ${isInternal}`)
-            core.info(`PR from dependabot?   ${isDependabot}`)
-            core.info(`PR changelog?         ${isChangelog}`)
-            core.info(`PR has 'ok-to-test'?  ${okToTest}`)
-
-            if (isInternal && !isDependabot) {
-              // Ignore changelog pull requests.
-              if (isChangelog) {
-                return core.setFailed(`PR#${context.payload.pull_request.number} for changelog is ignored.`);
-              }
-            } else {
-              // External and dependabot pull requests should be labeled with 'status/ok-to-test'.
-              if (!okToTest) {
-                return core.setFailed(`PR#${context.payload.pull_request.number} without label 'status/ok-to-test' is ignored.`);
-              }
-            }
-
-      # Checkhout the head commit of the PR branch.
-      - name: Checkout PR head commit
-        uses: actions/checkout@v2.4.0
-        with:
-          ref: "refs/pull/${{ github.event.number }}/head"
-
-      # Detect dangerous changes in external PR.
-      - name: Check for dangerous changes
-        uses: dorny/paths-filter@v2
-        if: github.event.pull_request.head.repo.full_name != github.repository
-        id: changes
-        with:
-          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          filters: |
-            dangerous:
-              - './.github/**'
-              - './.gitlab/**'
-              - './tools/**'
-              - './testing/**'
-              - './docs/**/js/**'
-              - './docs/**/css/**'
-              - './docs/**/images/**'
-              - './docs/**/assets/**'
-
-      # Stop workflow if external PR contains dangerous changes.
-      - name: Fail workflow on dangerous changes
-        if: steps.changes.outputs.dangerous == 'true'
-        uses: actions/github-script@v5.0.0
-        with:
-          script: |
-            core.setFailed('External PR contains dangerous changes.')
-
       # Set output.
       - name: Return PR head commit ref
         id: ref
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            const ref = `refs/pull/${ context.issue.number }/head`
-            core.info(`ref: '${ref}'`)
-            core.setOutput('ref', ref)
+            core.info(`ref: '${context.ref}'`)
+            core.setOutput('ref', context.ref);
   # </template: pull_request_info>
 
   # <template: git_info_job>
@@ -239,7 +145,8 @@ jobs:
                 refSlug       = refName
                 core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
               }
-            } else {
+            }
+            if (context.eventName === "pull_request") {
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
               const targetRepo = context.payload.repository.full_name;
               const prRepo = context.payload.pull_request.head.repo.full_name
@@ -250,6 +157,13 @@ jobs:
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+            }
+            if (context.eventName === "push") {
+              refName       = GITHUB_REF_NAME
+              githubBranch = refName;
+              githubSHA = context.sha;
+              refSlug = refName;
+              core.info(`push event: set git info from context.ref=${context.ref}.`)
             }
 
             core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
