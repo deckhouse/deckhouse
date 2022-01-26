@@ -1,0 +1,131 @@
+bashible:
+  fixes:
+    - description: Disable ntp.service on nodes due to d8-chrony module is work.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/568
+    - description: Fix incorrect auth value for containerd config only
+      pull_request: https://github.com/deckhouse/deckhouse/pull/521
+    - description: Cluster bootstrap on Azure works for Ubuntu 20.04
+      pull_request: https://github.com/deckhouse/deckhouse/pull/422
+cert-manager:
+  features:
+    - description: Upgrade cert-manager to v1.6.1
+      note: >-
+        The cert-manager controller will be restarted. CRD with version 
+        is no longer supported.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/398
+    - description: Instructions for connecting Vault to the .
+      pull_request: https://github.com/deckhouse/deckhouse/pull/374
+chrony:
+  fixes:
+    - description: Fix rollout restart time of chrony daemonset.
+      note: The module will be restarted.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/364
+deckhouse:
+  features:
+    - description: Cleanup deckhouse Outdated releases (> 10)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/573
+  fixes:
+    - description: Clear values cache when a module is disabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/416
+    - description: Move context generation into a bashible-apiserver.
+      note: A bashible-apiserver will be restarted.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/375
+    - description: Fix Deckhouse Manual update mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/362
+deckhouse-web:
+  fixes:
+    - description: Add missing 'ca.crt' field to internal values schema.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/518
+docs:
+  features:
+    - description: Add documentation on using Harbor as a third-party registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/565
+documentation:
+  features:
+    - description: Redesign CR and configuration page
+      pull_request: https://github.com/deckhouse/deckhouse/pull/371
+  fixes:
+    - description: Show examples from OpenAPI specs (module configuration and CR page) as YAML.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/617
+    - description: '[docs][control-plane-manager] Add instruction on how to add master nodes in a cloud cluster'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/463
+istio:
+  features:
+    - description: Great module refactoring
+      pull_request: https://github.com/deckhouse/deckhouse/pull/357
+  fixes:
+    - description: Missing customCertificateData in openapi fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/563
+log-shipper:
+  features:
+    - description: Support storing data in Elasticsearch datastreams.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/372
+  fixes:
+    - description: Fix default CRD values.
+      note: CR , created in , should be recreated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/520
+monitoring-kubernetes:
+  fixes:
+    - description: Fix description for alert .
+      note: >-
+        We only use the Deckhouse chrony module, so a description about another NTP daemons is not
+        needed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/456
+node-manager:
+  features:
+    - description: Add Pods deletion from a node that requests disruption updates, when pod eviction fails.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/367
+prometheus:
+  features:
+    - description: Improve Prometheus FAQ about Lens access.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/406
+  fixes:
+    - description: >-
+        Migrate Grafana old tables to new and replace from __cell variable to __value and add a time
+        interval to URL.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/532
+    - description: Bump Grafana version to fix zero-day path traversal bug (CVE-2021-43798).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/421
+secret-copier:
+  features:
+    - description: Implement create–or–update logic for proper reconcile.
+      note: >-
+        Add support of namespace label-selector in
+         annotation value.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/411
+upmeter:
+  features:
+    - description: Assign more specific nodes for the server pod
+      pull_request: https://github.com/deckhouse/deckhouse/pull/351
+  fixes:
+    - description: >-
+        Re-create pods which change their availability zones by re-creating corresponding
+        StatefulSets
+      note: >-
+        Accidentally, fix PVC re-creation by avoiding a race with kube-controller-manager. Fixes
+        #281
+      pull_request: https://github.com/deckhouse/deckhouse/pull/350
+    - description: HTTP probe status is "down" when it cannot connect to endpoint, instead of "unknown"
+      note: >-
+        Unavailable Prometheus is not considered "up" anymore, like everything else that depends on
+        it
+      pull_request: https://github.com/deckhouse/deckhouse/pull/349
+user-authn:
+  features:
+    - description: Add the doc about Dex rate limit
+      pull_request: https://github.com/deckhouse/deckhouse/pull/352
+  fixes:
+    - description: Fixed secret name in crowd-proxy deployment.
+      note: >-
+        Fixed bug when kubernetes-api certificate had differrent name from crowd-proxy certificate
+        name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/559
+user-authz:
+  features:
+    - description: Add the doc about how cluster authorization rules are combined
+      pull_request: https://github.com/deckhouse/deckhouse/pull/342
+‎ingress-nginx‎:
+  features:
+    - description: Add the ability to set a default certificate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/393
+
