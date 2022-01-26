@@ -193,7 +193,7 @@ spec:
                       description: |
                         Список ревизий баз данных, которые будут скачаны при старте.
 
-                        Чем отличаются, например, `GeoIP2-City` от `GeoLite2-City` можно ознакомиться [в этой статье](https://support.maxmind.com/geolite-faq/general/what-is-the-difference-between-geoip2-and-geolite2/).
+                        [Подробнее...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
                 legacySSL:
                   description: |
                     Включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).

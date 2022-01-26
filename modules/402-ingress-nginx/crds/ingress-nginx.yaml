@@ -307,7 +307,7 @@ spec:
                       description: |
                         A list of database editions to download at startup.
 
-                        [This article](https://support.maxmind.com/geolite-faq/general/what-is-the-difference-between-geoip2-and-geolite2/) sheds light on the differences between GeoIP2-City and GeoLite2-City databases.
+                        [More info...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
                       default: ["GeoLite2-City", "GeoLite2-ASN"]
                       items:
                         type: string
