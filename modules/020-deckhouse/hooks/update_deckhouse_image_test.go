@@ -329,7 +329,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 				return true, nil
 			})
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.16")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.0")
 			f.KubeStateSet(deckhousePodYaml + releaseWithRequirements)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -348,7 +348,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 		Context("Release requirements passed", func() {
 			BeforeEach(func() {
-				f.ValuesSet("global.discovery.kubernetesVersion", "1.19")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.19.0")
 				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 				f.RunHook()
 			})
@@ -597,7 +597,7 @@ metadata:
 spec:
   version: "v1.30.0"
   requirements:
-    k8s: "1.19"
+    k8s: "1.19.0"
 status:
   phase: Pending
 `
