@@ -16,3 +16,6 @@ spec:
               path:
                 description: |
                   Корневой путь на ноде к директории для хранения PV.
+              reclaimPolicy:
+                description: |
+                  Сохранять ли PV после удаления PVC.

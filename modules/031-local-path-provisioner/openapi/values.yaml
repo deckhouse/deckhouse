@@ -38,6 +38,11 @@ properties:
                   minLength: 1
                   description: |
                     Node root path for local-path-provisioner PV's.
+                reclaimPolicy:
+                  type: string
+                  enum: ["Retain", "Delete"]
+                  description: |
+                    Retain policy for PV's.
         x-examples:
           - []
-          - [{"name":"test1","spec":{"nodeGroups": ["master","worker"],"path": "/tmp/test"}}, {"name":"test2","spec":{"path": "/opt/local-path-provisioner"}}]
+          - [{"name":"test1", "spec":{"nodeGroups": ["master","worker"], "path": "/tmp/test", reclaimPolicy: "Retain"}}, {"name":"test2", "spec":{"path": "/opt/local-path-provisioner",  reclaimPolicy: "Delete"}}]

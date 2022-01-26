@@ -20,4 +20,5 @@ When a Pod orders a disk:
   ```
 
 ## Limitations
-The disk size limit is not supported for the local path provisioned volumes.
+
+- The disk size limit is not supported for the local path provisioned volumes.
