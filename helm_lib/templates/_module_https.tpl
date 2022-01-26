@@ -2,8 +2,21 @@
 {{- /* return module uri scheme "http" or "https" */ -}}
 {{- define "helm_lib_module_uri_scheme" -}}
   {{- $context := . -}}
+  {{- $mode := "" -}}
 
-  {{- if eq "Disabled" (include "helm_lib_module_https_mode" $context) -}}
+  {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
+  {{- if hasKey $module_values "https" -}}
+    {{- if hasKey $module_values.https "mode" -}}
+      {{- $mode = $module_values.https.mode -}}
+    {{- else }}
+      {{- $mode = $context.Values.global.modules.https.mode | default "" -}}
+    {{- end }}
+  {{- else }}
+    {{- $mode = $context.Values.global.modules.https.mode | default "" -}}
+  {{- end }}
+
+
+  {{- if eq "Disabled" $mode -}}
     http
   {{- else -}}
     https
