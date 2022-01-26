@@ -106,7 +106,7 @@ properties:
         type: boolean
         default: false
         description: |
-          Enforce [additional audit policies](faq.html#how-do-i-add-audit-policies) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
+          Enforce [additional audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
       basicAuditPolicyEnabled:
         type: boolean
         default: true
