@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -25,7 +25,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleGlobalValuesAndKubectl(input *go_hook.HookInput, dc dependency.Container) error {
 	var (
 		cloudProvider           = "none"
-		controlPlaneVersion     semver.Version
+		controlPlaneVersion     *semver.Version
 		clusterType             = "Cloud"
 		terraformManagerEnabled bool
 	)
@@ -53,7 +53,7 @@ func handleGlobalValuesAndKubectl(input *go_hook.HookInput, dc dependency.Contai
 		return fmt.Errorf("can't get Kubernetes version: %v", err)
 	}
 	serverVersion := version.String()
-	controlPlaneVersion, err = semver.Make(serverVersion[1:])
+	controlPlaneVersion, err = semver.NewVersion(serverVersion[1:])
 	if err != nil {
 		return fmt.Errorf("can't parse Kubernetes version: %v", err)
 	}
@@ -75,7 +75,7 @@ func handleGlobalValuesAndKubectl(input *go_hook.HookInput, dc dependency.Contai
 
 	input.Values.Set("flantIntegration.internal.cloudProvider", cloudProvider)
 	input.Values.Set("flantIntegration.internal.controlPlaneVersion",
-		fmt.Sprintf("%d.%d", controlPlaneVersion.Major, controlPlaneVersion.Minor))
+		fmt.Sprintf("%d.%d", controlPlaneVersion.Major(), controlPlaneVersion.Minor()))
 
 	input.Values.Set("flantIntegration.internal.clusterType", clusterType)
 	input.Values.Set("flantIntegration.internal.terraformManagerEnabled", terraformManagerEnabled)

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/blang/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -57,12 +57,12 @@ func getNodeNameWithSupportedDistro(obj *unstructured.Unstructured) (go_hook.Fil
 	}
 	kernelSemVerStr := matches[1]
 
-	kernelSemVer, err := semver.New(kernelSemVerStr)
+	kernelSemVer, err := semver.NewVersion(kernelSemVerStr)
 	if err != nil {
 		return nil, fmt.Errorf("cannot use %q as semver: %s", kernelSemVerStr, err)
 	}
 
-	if kernelSemVer.GE(minSupportedKernelSemVer) {
+	if kernelSemVer.GreaterThan(minSupportedKernelSemVer) || kernelSemVer.Equal(minSupportedKernelSemVer) {
 		nodeEligibility.IsEbpfSupported = true
 	}
 
