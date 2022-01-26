@@ -288,7 +288,7 @@ jobs:
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          registry: 'dev-test-registry.deckhouse.io'
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
@@ -422,7 +422,7 @@ jobs:
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          registry: 'dev-test-registry.deckhouse.io'
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
@@ -673,7 +673,7 @@ jobs:
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          registry: 'dev-test-registry.deckhouse.io'
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
@@ -735,7 +735,7 @@ jobs:
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          registry: 'dev-test-registry.deckhouse.io'
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
@@ -797,7 +797,7 @@ jobs:
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          registry: 'dev-test-registry.deckhouse.io'
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
@@ -859,7 +859,7 @@ jobs:
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          registry: 'dev-test-registry.deckhouse.io'
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
@@ -921,7 +921,7 @@ jobs:
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          registry: 'dev-test-registry.deckhouse.io'
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
@@ -1098,7 +1098,7 @@ jobs:
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          registry: 'dev-test-registry.deckhouse.io'
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
