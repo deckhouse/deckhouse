@@ -266,9 +266,9 @@ status:
 			"kubernetesVersion": "1.16.15",
 			"kubernetesVersions": [
 				"1.16.15"
-			]
+			],
+			"clusterUUID": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 		},
-		"clusterUUID": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 	},
 	"nodeManager": {
 		"internal": {}

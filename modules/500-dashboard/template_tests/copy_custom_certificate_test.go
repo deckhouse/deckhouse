@@ -28,7 +28,7 @@ var _ = Describe("Module :: dashboard :: helm template :: custom-certificate", f
 enabledModules: ["vertical-pod-autoscaler-crd", "dashboard"]
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeCaAuthProxy: tagstring

@@ -117,8 +117,9 @@ func SetupHelmConfig(values string) *Config {
 		config.values = values_store.NewStoreFromRawJSON(initialValuesJSON)
 
 		// set some common values
-		config.values.SetByPath("global.discovery.kubernetesVersion", "1.17.0")
+		config.values.SetByPath("global.discovery.kubernetesVersion", "1.22.0")
 		config.values.SetByPath("global.modulesImages.registry", "registry.example.com")
+		config.values.SetByPathFromYAML("global.modules.placement", []byte("{}"))
 	})
 
 	return config

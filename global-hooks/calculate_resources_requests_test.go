@@ -51,7 +51,7 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"global": {"modules": {"resourcesRequests": {"internal": {}}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"internal": {"modules": {"resourcesRequests": {}}}}}`, `{}`)
 	Context("Cluster without master nodes (managed)", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -62,12 +62,12 @@ status:
 
 		It("Hook should not run, because nodes resources dont exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuControlPlane").Int()).To(Equal(int64(0)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryControlPlane").Int()).To(Equal(int64(0)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuMaster").Int()).To(Equal(int64(700)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryMaster").Int()).To(Equal(int64(512 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuEveryNode").Int()).To(Equal(int64(300)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryEveryNode").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(0)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(0)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuMaster").Int()).To(Equal(int64(700)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryMaster").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuEveryNode").Int()).To(Equal(int64(300)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryEveryNode").Int()).To(Equal(int64(512 * 1024 * 1024)))
 		})
 
 	})
@@ -125,12 +125,12 @@ status:
 
 		It("Hook should run and set global internal values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuControlPlane").Int()).To(Equal(int64(1850)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryControlPlane").Int()).To(Equal(int64(3840 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuMaster").Int()).To(Equal(int64(1850)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryMaster").Int()).To(Equal(int64(3840 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuEveryNode").Int()).To(Equal(int64(300)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryEveryNode").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(1850)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(3840 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuMaster").Int()).To(Equal(int64(1850)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryMaster").Int()).To(Equal(int64(3840 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuEveryNode").Int()).To(Equal(int64(300)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryEveryNode").Int()).To(Equal(int64(512 * 1024 * 1024)))
 		})
 
 	})
@@ -147,12 +147,12 @@ status:
 
 		It("Hook should run and set global internal values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuControlPlane").Int()).To(Equal(int64(500)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryControlPlane").Int()).To(Equal(int64(512 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuMaster").Int()).To(Equal(int64(500)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryMaster").Int()).To(Equal(int64(512 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuEveryNode").Int()).To(Equal(int64(500)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryEveryNode").Int()).To(Equal(int64(1 * 1024 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuMaster").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryMaster").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuEveryNode").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryEveryNode").Int()).To(Equal(int64(1 * 1024 * 1024 * 1024)))
 		})
 
 	})
@@ -167,12 +167,12 @@ status:
 
 		It("Hook should run and set global internal values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuControlPlane").Int()).To(Equal(int64(874)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryControlPlane").Int()).To(Equal(int64(1792 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuMaster").Int()).To(Equal(int64(874)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryMaster").Int()).To(Equal(int64(1792 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuEveryNode").Int()).To(Equal(int64(300)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryEveryNode").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(874)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(1792 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuMaster").Int()).To(Equal(int64(874)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryMaster").Int()).To(Equal(int64(1792 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuEveryNode").Int()).To(Equal(int64(300)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryEveryNode").Int()).To(Equal(int64(512 * 1024 * 1024)))
 		})
 
 	})
@@ -189,12 +189,12 @@ status:
 
 		It("Hook should run and set global internal values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuControlPlane").Int()).To(Equal(int64(500)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryControlPlane").Int()).To(Equal(int64(512 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuMaster").Int()).To(Equal(int64(500)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryMaster").Int()).To(Equal(int64(512 * 1024 * 1024)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuEveryNode").Int()).To(Equal(int64(500)))
-			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryEveryNode").Int()).To(Equal(int64(1 * 1024 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuMaster").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryMaster").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuEveryNode").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryEveryNode").Int()).To(Equal(int64(1 * 1024 * 1024 * 1024)))
 		})
 
 	})

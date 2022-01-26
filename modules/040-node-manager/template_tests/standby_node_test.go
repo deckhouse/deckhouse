@@ -30,7 +30,19 @@ var _ = Describe("Module :: node-manager :: helm template :: standby node", func
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager.internal.standbyNodeGroups", `[{name: standby-absolute, standby: 2, reserveCPU: "5500m", reserveMemory: "983Mi", taints: [{effect: NoExecute, key: ship-class, value: frigate}]}, {name: standby-percent, standby: 12, reserveCPU: "3400m", reserveMemory: 10Mi, taints: [{effect: NoExecute, key: ship-class, value: frigate}]}]`)
 			f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{"master":1}`)
-			f.ValuesSetFromYaml("global.clusterConfiguration", `{}`)
+			f.ValuesSetFromYaml("global.clusterConfiguration", `apiVersion: deckhouse.io/v1
+cloud:
+  prefix: sandbox
+  provider: vSphere
+clusterDomain: cluster.local
+clusterType: Cloud
+defaultCRI: Docker
+kind: ClusterConfiguration
+kubernetesVersion: "1.19"
+podSubnetCIDR: 10.111.0.0/16
+podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 10.222.0.0/16
+`)
 			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})

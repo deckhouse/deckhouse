@@ -23,7 +23,7 @@ const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "openvpn"]
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeCaAuthProxy: tagstring

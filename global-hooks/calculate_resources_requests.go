@@ -182,12 +182,12 @@ func calculateResourcesRequests(input *go_hook.HookInput) error {
 		calculatedMasterNodeMemory = calculatedMasterNodeMemory * (100 - controlPlanePercent) / 100
 	}
 
-	input.Values.Set("global.modules.resourcesRequests.internal.milliCpuEveryNode", configEveryNodeMilliCPU)
-	input.Values.Set("global.modules.resourcesRequests.internal.memoryEveryNode", configEveryNodeMemory)
-	input.Values.Set("global.modules.resourcesRequests.internal.milliCpuControlPlane", calculatedControlPlaneMilliCPU)
-	input.Values.Set("global.modules.resourcesRequests.internal.memoryControlPlane", calculatedControlPlaneMemory)
-	input.Values.Set("global.modules.resourcesRequests.internal.milliCpuMaster", calculatedMasterNodeMilliCPU)
-	input.Values.Set("global.modules.resourcesRequests.internal.memoryMaster", calculatedMasterNodeMemory)
+	input.Values.Set("global.internal.modules.resourcesRequests.milliCpuEveryNode", configEveryNodeMilliCPU)
+	input.Values.Set("global.internal.modules.resourcesRequests.memoryEveryNode", configEveryNodeMemory)
+	input.Values.Set("global.internal.modules.resourcesRequests.milliCpuControlPlane", calculatedControlPlaneMilliCPU)
+	input.Values.Set("global.internal.modules.resourcesRequests.memoryControlPlane", calculatedControlPlaneMemory)
+	input.Values.Set("global.internal.modules.resourcesRequests.milliCpuMaster", calculatedMasterNodeMilliCPU)
+	input.Values.Set("global.internal.modules.resourcesRequests.memoryMaster", calculatedMasterNodeMemory)
 
 	return nil
 }

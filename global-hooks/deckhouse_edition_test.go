@@ -35,7 +35,7 @@ var _ = Describe("Global hooks :: deckhouse_edition ", func() {
 
 		It("Should run", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.deckhouseEdition").String()).To(Equal(`unknown`))
+			Expect(f.ValuesGet("global.deckhouseEdition").String()).To(Equal(`Unknown`))
 		})
 	})
 

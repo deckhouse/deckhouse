@@ -33,6 +33,7 @@ func TestMatrix(t *testing.T) {
 }
 
 var _ = Describe("Matrix tests", func() {
+	// use MODULES_DIR=/deckhouse/modules/000-module-name env var for run matrix tests for one module
 	modules, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
 
 	modulesCH := make(chan utils.Module, len(modules))

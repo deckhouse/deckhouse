@@ -6,6 +6,13 @@
     setup: ['**/*']
   excludePaths: ['*/docs/internal/','110-istio/crds','040-node-manager/crds/mcm.yaml']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+- add: /global-hooks/openapi
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['config-values.yaml','doc-ru-config-values.yaml']
 {{- if or (eq .Env "EE") (eq .Env "FE") }}
 - add: /ee/modules
   to: /src/ee/modules

@@ -37,7 +37,7 @@ const (
     placement: {}
   modulesImages:
     registry: registry.deckhouse.io
-    registryDockercfg: cfg
+    registryDockercfg: Y2ZnCg==
     tags:
       localPathProvisioner:
         localPathProvisioner: imagehash

@@ -120,8 +120,8 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateWithStableChannel))
 			f.ConfigValuesSetFromYaml("deckhouse", []byte(`{
-				"bundle": "Default", 
-				"logLevel": "Info", 
+				"bundle": "Default",
+				"logLevel": "Info",
 				"releaseChannel": "Stable"
 			}`))
 

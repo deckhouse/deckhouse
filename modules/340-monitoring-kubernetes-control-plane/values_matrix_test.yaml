@@ -5,7 +5,7 @@ global:
     - ["vertical-pod-autoscaler-crd", "control-plane-manager", "priority-class"]
   modulesImages:
     registry: registry.deckhouse.io
-    registryDockercfg: cfg
+    registryDockercfg: Y2ZnCg==
     tags:
       monitoringKubernetesControlPlane:
         proxy: tagstring
@@ -21,8 +21,7 @@ global:
     placement:
       __ConstantChoices__:
         - {}
-        - tolerations:
-            - operator: Exists
+        - customTolerationKeys: ["key-key"]
 
 monitoringKubernetesControlPlane:
   internal:

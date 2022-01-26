@@ -19,7 +19,7 @@ var _ = Describe("Modules :: cloud-provider-openstack :: hooks :: openstack_clus
 	const (
 		initValuesStringA = `
 global:
-  discovery": {}
+  discovery: {}
 cloudProviderOpenstack:
   internal:
     instances: {}

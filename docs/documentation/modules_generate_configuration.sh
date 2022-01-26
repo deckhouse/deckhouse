@@ -25,3 +25,11 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
     echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md"
   fi
 done
+
+if [ -d /src/global ]; then
+  mkdir -p /srv/jekyll-data/documentation/_data/schemas/global
+  cp -f /src/global/config-values.yaml _data/schemas/global/
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/config-values.yaml
+  cat /src/global/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/global/config-values.yaml
+fi
+

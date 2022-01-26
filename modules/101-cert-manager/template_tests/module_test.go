@@ -36,7 +36,7 @@ modules:
   placement: {}
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: tagstring
@@ -65,7 +65,7 @@ modules:
   placement: {}
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: tagstring
@@ -95,7 +95,7 @@ modules:
   placement: {}
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: tagstring
@@ -124,7 +124,7 @@ modules:
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
   registry: registry.deckhouse.io
-  registryDockercfg: cfg
+  registryDockercfg: Y2ZnCg==
   tags:
     common:
       kubeRbacProxy: tagstring

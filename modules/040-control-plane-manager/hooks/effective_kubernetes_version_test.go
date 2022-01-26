@@ -24,6 +24,7 @@ package hooks
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -136,7 +137,21 @@ data:
 
 	b.WriteString(strings.ReplaceAll(d8ConfigurationSecretTemplate, "<<PLACEHOLDER_B64>>", base64.StdEncoding.EncodeToString([]byte(caseInput.maxUsedControlPlaneVersion))))
 
-	hec.ValuesSet("global.clusterConfiguration.kubernetesVersion", caseInput.configVersion)
+	clusterConf := fmt.Sprintf(`
+apiVersion: deckhouse.io/v1
+cloud:
+  prefix: sandbox
+  provider: OpenStack
+clusterDomain: cluster.local
+clusterType: Cloud
+defaultCRI: Docker
+kind: ClusterConfiguration
+kubernetesVersion: "%s"
+podSubnetCIDR: 10.111.0.0/16
+podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 10.222.0.0/16
+`, caseInput.configVersion)
+	hec.ValuesSetFromYaml("global.clusterConfiguration", []byte(clusterConf))
 	hec.BindingContexts.Set(hec.KubeStateSet(b.String()))
 }
 
