@@ -60,11 +60,14 @@ properties:
         x-examples:
         - certificate: test
           key: test
+          certificate_updated: true
         properties:
           certificate:
             type: string
           key:
             type: string
+          certificate_updated:
+            type: boolean
       dexAuthenticatorCRDs:
         type: array
         default: []
