@@ -16,6 +16,8 @@
         To see all resources please use the  expr `max without(instance, pod, hook, job, tier, module) (resource_versions_compatibility) == 1` in prometheus.
         For more details, please follow the link https://kubernetes.io/blog/2021/07/14/upcoming-changes-in-kubernetes-1-22/
 
+        Deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v1-22
+
   - alert: ClusterHasProblemsWithHelmReleasesWithResourceVersions
     expr: |
       count by (alertname) (ALERTS{alertname=~"HelmReleaseHasResourcesWithDeprecatedVersions", alertstate="firing"})
@@ -45,3 +47,5 @@
       description: |
         To see all resources please use the  expr `max without(instance, pod, hook, job, tier, module) (resource_versions_compatibility) == 1` in prometheus.
         For more details, please follow the link https://kubernetes.io/blog/2021/07/14/upcoming-changes-in-kubernetes-1-22/
+
+        Deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v1-22
