@@ -35,8 +35,8 @@ const (
 )
 
 type Node struct {
-	allocatableMilliCPU int64
-	allocatableMemory   int64
+	AllocatableMilliCPU int64
+	AllocatableMemory   int64
 }
 
 func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -48,8 +48,8 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 
 	n := &Node{}
 
-	n.allocatableMilliCPU = node.Status.Allocatable.Cpu().MilliValue()
-	n.allocatableMemory = node.Status.Allocatable.Memory().Value()
+	n.AllocatableMilliCPU = node.Status.Allocatable.Cpu().MilliValue()
+	n.AllocatableMemory = node.Status.Allocatable.Memory().Value()
 
 	return n, nil
 }
@@ -96,11 +96,11 @@ func calculateResourcesRequests(input *go_hook.HookInput) error {
 		discoveryMasterNodeMemory = hardLimitMemory
 		for _, snapshot := range snapshots {
 			n := snapshot.(*Node)
-			if n.allocatableMilliCPU < discoveryMasterNodeMilliCPU {
-				discoveryMasterNodeMilliCPU = n.allocatableMilliCPU
+			if n.AllocatableMilliCPU < discoveryMasterNodeMilliCPU {
+				discoveryMasterNodeMilliCPU = n.AllocatableMilliCPU
 			}
-			if n.allocatableMemory < discoveryMasterNodeMemory {
-				discoveryMasterNodeMemory = n.allocatableMemory
+			if n.AllocatableMemory < discoveryMasterNodeMemory {
+				discoveryMasterNodeMemory = n.AllocatableMemory
 			}
 		}
 	} else {

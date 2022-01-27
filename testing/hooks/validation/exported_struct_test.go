@@ -19,6 +19,7 @@ limitations under the License.
 package validation
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -238,15 +239,66 @@ func parseFilterFuncDeclaration(fn *ast.FuncDecl) string {
 		}
 
 		// parse only return statement
-		compositeLit, ok := ret.Results[0].(*ast.CompositeLit)
-		if !ok {
+		firstStatement := ret.Results[0]
+		switch lit := firstStatement.(type) {
+		case *ast.CompositeLit:
+			ident, ok := lit.Type.(*ast.Ident)
+			if !ok {
+				return ""
+			}
+			return ident.Name
+
+		case *ast.Ident:
+			if lit.Obj == nil {
+				return ""
+			}
+			assign, ok := lit.Obj.Decl.(*ast.AssignStmt)
+			if !ok {
+				return ""
+			}
+			if len(assign.Rhs) > 0 {
+				switch rhs0 := assign.Rhs[0].(type) {
+				// pointer
+				case *ast.UnaryExpr:
+					comp, ok := rhs0.X.(*ast.CompositeLit)
+					if !ok {
+						return ""
+					}
+					ident, ok := comp.Type.(*ast.Ident)
+					if !ok {
+						return ""
+					}
+					return ident.Name
+
+					// struct
+				case *ast.CompositeLit:
+					ident, ok := rhs0.Type.(*ast.Ident)
+					if !ok {
+						return ""
+					}
+					return ident.Name
+
+					// called with new(Struct)
+				case *ast.CallExpr:
+					ident, ok := rhs0.Args[0].(*ast.Ident)
+					if !ok {
+						return ""
+					}
+
+					return ident.Name
+
+				case *ast.IndexExpr:
+					// it's some built in types, like getting value := map[string][]byte
+					// pass
+
+				default:
+					fmt.Println("Unknown type", rhs0)
+				}
+			}
+
+		default:
 			return ""
 		}
-		ident, ok := compositeLit.Type.(*ast.Ident)
-		if !ok {
-			return ""
-		}
-		return ident.Name
 	}
 
 	return ""
