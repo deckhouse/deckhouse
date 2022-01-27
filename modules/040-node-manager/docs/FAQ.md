@@ -3,9 +3,9 @@ title: "Managing nodes: FAQ"
 search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 ---
 
-## How do I automatically add a static node to a cluster?
+## How do I add a static node to a cluster?
 
-To add a new node to a static cluster, you need to:
+To add a new static node (e.g., VM or bare-metal server) to the cluster, you need to:
 
 - Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
 - Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r`
@@ -15,9 +15,9 @@ To add a new node to a static cluster, you need to:
   - Configured the network in the cluster;
 - Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
 
-## How to put a node under the node-manager's control?
+## How to put an existing cluster node under the node-manager's control?
 
-To make a node controllable by `node-manager`, perform the following steps:
+To make an existing Node controllable by the `node-manager`, perform the following steps:
 
 - Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
 - Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."adopt.sh"' -r`
