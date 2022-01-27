@@ -158,7 +158,7 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 		if r := recover(); r != nil {
 			lintError = fmt.Errorf(
 				manifestErrorMessage,
-				"panic during unmarshalling (probably because of yaml file is invalid)",
+				fmt.Errorf("panic during unmarshalling (probably because of yaml file is invalid): %v", r),
 				lastTest,
 			)
 		}
@@ -169,9 +169,16 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 		dec := yaml.NewDecoder(strings.NewReader(bigFile))
 		for {
 			var node map[string]interface{}
-			if err := dec.Decode(&node); err == io.EOF {
+			err := dec.Decode(&node)
+
+			if err == io.EOF {
 				break
 			}
+
+			if err != nil {
+				panic(fmt.Errorf("parsing failed: %s", err))
+			}
+
 			if node == nil {
 				continue
 			}

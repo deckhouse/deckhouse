@@ -16,6 +16,7 @@ properties:
       A global switch to enable the HA mode for modules that support it.
 
       The parameter is not defined by default; the decision is made based on the `global.discovery.clusterControlPlaneIsHighlyAvailable` parameter.
+    x-examples: [ true, false ]
   modules:
     description: |
       Parameters of service components.
@@ -28,6 +29,7 @@ properties:
         default: nginx
         description: |
           The class of the Ingress controller used for service components.
+        x-examples: [ "nginx" ]
       publicDomainTemplate:
         type: string
         # only check that is containing %s
@@ -42,6 +44,7 @@ properties:
 
           If this parameter is omitted, no Ingress resources will be created.
         x-doc-example: '%s.kube.company.my'
+        x-examples: [ "%s.kube.company.my" ]
       placement:
         description: |
           Parameters regulating the layout of Deckhouse components.
@@ -61,11 +64,22 @@ properties:
             type: array
             items:
               type: string
+            x-examples:
+            - [ "dedicated.example.com" ]
       https:
         description: |
           The HTTPS implementation used by the service components.
         type: object
         additionalProperties: false
+        x-examples:
+        - certManager:
+            clusterIssuerName: letsencrypt
+          mode: CertManager
+        - mode: Disabled
+        - mode: OnlyInURI
+        - mode: CustomCertificate
+          customCertificate:
+            secretName: plainstring
         properties:
           mode:
             type: string
@@ -118,6 +132,9 @@ properties:
             additionalProperties: false
             description: |
               System components running on every cluster node (usually DaemonSets)
+            x-examples:
+            - cpu: 100m
+              memory: 150M
             properties:
               cpu:
                 description: |
@@ -138,6 +155,9 @@ properties:
               System components (control plane and system components on the master nodes).
 
               **Caution!** Deckhouse does not manage control plane components in managed clusters, so all resources are allocated to the system components.
+            x-examples:
+            - cpu: "1"
+              memory: 150Mi
             properties:
               cpu:
                 description: |
