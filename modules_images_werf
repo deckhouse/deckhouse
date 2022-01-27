@@ -7,6 +7,7 @@ set -e
 # Remove after merge !!!
 export BASE_ALPINE_3_15="registry.deckhouse.io/base_images/alpine:3.15@sha256:21a3deaa0d32a8057914f36584b5288d2e5ecc984380bc0118285c70fa8c9300"
 export BASE_SCRATCH="registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
+export REGISTRY_SUFFIX=fe
 
 function bp() {
   # Set env DECKHOUSE_PULL_MODULES_IMAGES_BEFORE_BUILD=true to pull every image used in modules
@@ -18,7 +19,7 @@ function bp() {
   set -x
   echo "WERF_REPO=$WERF_REPO"
   echo "secondary repo: ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
-  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} extended-monitoring/events-exporter
+  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
   # Push images to "release" repository on git tag.
   if [[ -n "${GIT_TAG_NAME}" && -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
     REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
