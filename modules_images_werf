@@ -16,13 +16,8 @@ function bp() {
     pull
   fi
 
-  wget https://github.com/google/go-containerregistry/releases/download/v0.8.0/go-containerregistry_Linux_x86_64.tar.gz -O /tmp/cr.tar.gz || true
-  tar xf /tmp/cr.tar.gz
-  ./crane ls dev-test-registry.deckhouse.io/sys/deckhouse-oss | grep client-id-d220d981-ca77-402d-8655-e75a1c556539
-  echo EXIT
-  exit 1
-
   # Always push images to "dev" repository.
+  export WERF_REPO="${WERF_REPO}-tst"
   set -x
   echo "WERF_REPO=$WERF_REPO"
   echo "secondary repo: ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
