@@ -23,9 +23,9 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
-}, dependency.WithExternalDependencies(flantIntegrationPlanRemovalMigration))
+}, dependency.WithExternalDependencies(flantIntegrationKubeallTeamRemovalMigration))
 
-func flantIntegrationPlanRemovalMigration(input *go_hook.HookInput, dc dependency.Container) error {
+func flantIntegrationKubeallTeamRemovalMigration(input *go_hook.HookInput, dc dependency.Container) error {
 	// Setup
 	configMigrator, err := newModuleConfigMigrator(dc, input)
 	if err != nil {
@@ -40,7 +40,12 @@ func flantIntegrationPlanRemovalMigration(input *go_hook.HookInput, dc dependenc
 	}
 
 	// Migrate
-	delete(config, "plan")
+	if config["kubeall"] == nil {
+		return nil
+	}
+	kubeall := config["kubeall"].(map[string]interface{})
+	delete(kubeall, "team")
+	config["kubeall"] = kubeall
 
 	// Save config
 	return configMigrator.setConfig(cmKey, config)

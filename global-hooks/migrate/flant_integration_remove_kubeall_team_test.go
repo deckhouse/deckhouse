@@ -27,7 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: migrate/flant_integration_remove_plan ::", func() {
+var _ = Describe("Global hooks :: migrate/flant_integration_remove_kubeall_team ::", func() {
 	const (
 		initValuesString       = `{}`
 		initConfigValuesString = `{}`
@@ -80,7 +80,7 @@ data:
 		})
 	})
 
-	Context("Without plan", func() {
+	Context("Without team", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -139,7 +139,7 @@ metrics:
 		})
 	})
 
-	Context("With plan", func() {
+	Context("With team", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -152,8 +152,8 @@ data:
   anotherModule: |
     yes: no
   flantIntegration: |
-    plan: "Silver"
     kubeall:
+      team: "pravo"
       context: "test"
     madisonAuthKey: "efgh"
     metrics:
@@ -199,7 +199,7 @@ metrics:
 		})
 	})
 
-	Context("Only plan", func() {
+	Context("Only team", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -212,7 +212,8 @@ data:
   anotherModule: |
     yes: no
   flantIntegration: |
-    plan: "Silver"
+    kubeall:
+      team: "pravo"
 `
 		)
 
@@ -244,7 +245,56 @@ data:
 				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
 
 			Expect(err).To(BeNil())
-			Expect(resCm.Data["flantIntegration"]).To(MatchYAML(`{}`))
+			Expect(resCm.Data["flantIntegration"]).To(MatchYAML(`kubeall: {}`))
+		})
+	})
+
+	Context("No kubeall", func() {
+		const (
+			cmDeckhouse = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deckhouse
+  namespace: d8-system
+data:
+  anotherModule: |
+    yes: no
+  flantIntegration: |
+    madisonAuthKey: "efgh"
+`
+		)
+
+		var cm v1.ConfigMap
+		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
+
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+
+		BeforeEach(func() {
+			f.KubeStateSet("")
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				ConfigMaps("d8-system").
+				Create(context.TODO(), &cm, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("Hook does not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook does not change the config", func() {
+			resCm, err := dependency.TestDC.K8sClient.CoreV1().
+				ConfigMaps("d8-system").
+				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+
+			Expect(err).To(BeNil())
+			Expect(resCm.Data["flantIntegration"]).To(MatchYAML(`madisonAuthKey: "efgh"`))
 		})
 	})
 })
