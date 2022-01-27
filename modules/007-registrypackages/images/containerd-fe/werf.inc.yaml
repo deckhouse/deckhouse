@@ -23,6 +23,11 @@ git:
     stageDependencies:
       setup:
       - '**/*'
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+      - '**/*'
 shell:
   beforeInstall:
   - apt-get update
