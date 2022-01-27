@@ -19,7 +19,7 @@ function bp() {
   set -x
   echo "WERF_REPO=$WERF_REPO"
   echo "secondary repo: ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
-  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} extended-monitoring/events-exporter
+  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
   # Push images to "release" repository on git tag.
   if [[ -n "${GIT_TAG_NAME}" && -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
     REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
