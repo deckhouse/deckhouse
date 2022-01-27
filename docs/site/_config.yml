@@ -119,6 +119,11 @@ defaults:
     values:
       versionType: experimental
   - scope:
+      path: "*/600-namespace-configurator"
+      type: "pages"
+    values:
+      versionType: experimental
+  - scope:
       path: "*/500-basic-auth"
       type: "pages"
     values:
