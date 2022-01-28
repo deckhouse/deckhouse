@@ -278,6 +278,22 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
+	Context("Forced release", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deckhousePodYaml + forcedReleaes)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should update deckhouse even on suspended forced release", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Field("status.phase").String()).To(Equal("Outdated"))
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.31.1"))
+		})
+	})
+
 	Context("Postponed release", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(deckhousePodYaml + postponedRelease)
@@ -315,7 +331,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
-	FContext("Suspend release", func() {
+	Context("Suspend release", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(deckhousePodYaml + withSuspendedRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -664,5 +680,27 @@ spec:
   version: "v1.32.0"
 status:
   phase: Pending
+`
+	forcedReleaes = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-31-0
+spec:
+  version: "v1.31.0"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-31-1
+  annotations:
+    release.deckhouse.io/force: "true"
+spec:
+  version: "v1.31.1"
+status:
+  phase: Suspended
 `
 )

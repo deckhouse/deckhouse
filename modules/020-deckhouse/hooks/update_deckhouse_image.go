@@ -107,6 +107,12 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	// predict next patch for Deploy
 	updater.PredictNextRelease()
 
+	// some release is forced, burn everything, apply this patch!
+	if updater.HasForceRelease() {
+		updater.ApplyForcedRelease(input)
+		return nil
+	}
+
 	// update windows works only for Auto deployment mode
 	if !updater.inManualMode {
 		windows, exists := input.Values.GetOk("deckhouse.update.windows")
@@ -141,10 +147,17 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		return nil, err
 	}
 
-	var hasSuspendAnnotation bool
+	var hasSuspendAnnotation, hasForceAnnotation bool
+
 	if v, ok := release.Annotations["release.deckhouse.io/suspended"]; ok {
 		if v == "true" {
 			hasSuspendAnnotation = true
+		}
+	}
+
+	if v, ok := release.Annotations["release.deckhouse.io/force"]; ok {
+		if v == "true" {
+			hasForceAnnotation = true
 		}
 	}
 
@@ -157,6 +170,7 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		ManuallyApproved:     release.Approved,
 		StatusApproved:       release.Status.Approved,
 		HasSuspendAnnotation: hasSuspendAnnotation,
+		HasForceAnnotation:   hasForceAnnotation,
 	}, nil
 }
 
@@ -279,6 +293,7 @@ type deckhouseUpdater struct {
 
 	predictedReleaseIndex       int
 	currentDeployedReleaseIndex int
+	forcedReleaseIndex          int
 }
 type deckhouseRelease struct {
 	Name    string
@@ -286,6 +301,7 @@ type deckhouseRelease struct {
 
 	ManuallyApproved     bool
 	HasSuspendAnnotation bool
+	HasForceAnnotation   bool
 
 	Requirements map[string]string
 	ApplyAfter   *time.Time
@@ -300,6 +316,7 @@ func newDeckhouseUpdater(mode string) *deckhouseUpdater {
 		inManualMode:                mode == "Manual",
 		predictedReleaseIndex:       -1,
 		currentDeployedReleaseIndex: -1,
+		forcedReleaseIndex:          -1,
 	}
 }
 
@@ -408,6 +425,42 @@ func (du *deckhouseUpdater) PredictNextRelease() {
 		case v1alpha1.PhaseDeployed:
 			du.currentDeployedReleaseIndex = i
 		}
+
+		if release.HasForceAnnotation {
+			du.forcedReleaseIndex = i
+		}
+	}
+}
+
+func (du *deckhouseUpdater) HasForceRelease() bool {
+	if du.forcedReleaseIndex == -1 {
+		return false
+	}
+
+	return true
+}
+func (du *deckhouseUpdater) ApplyForcedRelease(input *go_hook.HookInput) {
+	forcedRelease := &(du.releases[du.forcedReleaseIndex])
+	var currentRelease *deckhouseRelease
+	if du.currentDeployedReleaseIndex != -1 {
+		currentRelease = &(du.releases[du.currentDeployedReleaseIndex])
+	}
+
+	input.LogEntry.Warnf("Forcing release %s", forcedRelease.Name)
+
+	du.runReleaseDeploy(input, forcedRelease, currentRelease)
+
+	// Outdate all previous releases
+	st := statusPatch{
+		Phase:          v1alpha1.PhaseOutdated,
+		Approved:       true,
+		Message:        "",
+		TransitionTime: du.now,
+	}
+	for i, release := range du.releases {
+		if i < du.forcedReleaseIndex {
+			input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
+		}
 	}
 }
 
@@ -487,6 +540,7 @@ func (du *deckhouseUpdater) patchSuspendedStatus(input *go_hook.HookInput, relea
 	statusPatch := statusPatch{
 		Phase:          v1alpha1.PhaseSuspended,
 		Approved:       false,
+		Message:        "Release is suspended",
 		TransitionTime: du.now,
 	}
 
@@ -515,6 +569,7 @@ func (du *deckhouseUpdater) patchManualRelease(input *go_hook.HookInput, release
 	// check and set .status.approved for pending releases
 	if du.inManualMode && !release.ManuallyApproved {
 		statusPatch.Approved = false
+		statusPatch.Message = "Release is waiting for manual approval"
 		du.totalPendingManualReleases++
 		if release.StatusApproved {
 			statusChanged = true
