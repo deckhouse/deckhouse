@@ -264,10 +264,10 @@ status:
 	Context("Cluster with two VPAs without container recommendationsm Deckhouse pod is ready", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsReady + TwoVpasWithoutRecommendations))
-			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuMaster", "1024")
-			f.ValuesSet("global.internal.modules.resourcesRequests.memoryMaster", "520093696")
-			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuEveryNode", "1024")
-			f.ValuesSet("global.internal.modules.resourcesRequests.memoryEveryNode", "520093696")
+			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuMaster", 1024)
+			f.ValuesSet("global.internal.modules.resourcesRequests.memoryMaster", 520093696)
+			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuEveryNode", 1024)
+			f.ValuesSet("global.internal.modules.resourcesRequests.memoryEveryNode", 520093696)
 			f.RunHook()
 		})
 
@@ -293,10 +293,10 @@ name: node-exporter
 	})
 	Context("Cluster with two VPAs and set of global.internal.modules.resourcesRequests variables, Deckhouse pod is ready", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuMaster", "1850")
-			f.ValuesSet("global.internal.modules.resourcesRequests.memoryMaster", "3864053781")
-			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuEveryNode", "300")
-			f.ValuesSet("global.internal.modules.resourcesRequests.memoryEveryNode", "536870912")
+			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuMaster", 1850)
+			f.ValuesSet("global.internal.modules.resourcesRequests.memoryMaster", 3864053781)
+			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuEveryNode", 300)
+			f.ValuesSet("global.internal.modules.resourcesRequests.memoryEveryNode", 536870912)
 			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsReady + TwoVpas))
 			f.RunHook()
 		})
@@ -344,10 +344,10 @@ name: node-exporter
 	Context("Cluster with two VPAs, and another set of global.internal.modules.resourcesRequests variables, Deckhouse pod is ready", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsReady + TwoVpas))
-			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuMaster", "4096")
-			f.ValuesSet("global.internal.modules.resourcesRequests.memoryMaster", "8589934592")
-			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuEveryNode", "750")
-			f.ValuesSet("global.internal.modules.resourcesRequests.memoryEveryNode", "134217728")
+			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuMaster", 4096)
+			f.ValuesSet("global.internal.modules.resourcesRequests.memoryMaster", 8589934592)
+			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuEveryNode", 750)
+			f.ValuesSet("global.internal.modules.resourcesRequests.memoryEveryNode", 134217728)
 			f.RunHook()
 		})
 
@@ -395,10 +395,10 @@ name: node-exporter
 	Context("Cluster with two VPAs, maxAllowed values near newly calculated values, Deckhouse pod is ready", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsReady + TwoVpasInTreshold))
-			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuMaster", "4096")
-			f.ValuesSet("global.internal.modules.resourcesRequests.memoryMaster", "8589934592")
-			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuEveryNode", "750")
-			f.ValuesSet("global.internal.modules.resourcesRequests.memoryEveryNode", "134217728")
+			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuMaster", 4096)
+			f.ValuesSet("global.internal.modules.resourcesRequests.memoryMaster", 8589934592)
+			f.ValuesSet("global.internal.modules.resourcesRequests.milliCpuEveryNode", 750)
+			f.ValuesSet("global.internal.modules.resourcesRequests.memoryEveryNode", 134217728)
 			f.RunHook()
 		})
 
