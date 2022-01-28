@@ -1,0 +1,5 @@
+flant-integration:
+  fixes:
+    - description: Getting rid of deprecated  config value spec.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/695
+
