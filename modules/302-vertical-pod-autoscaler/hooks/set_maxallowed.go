@@ -54,11 +54,11 @@ Hook start conditions:
 */
 
 const (
-	groupLabelKey   = "workload-resource-policy.deckhouse.io"
-	everyNodeLabel  = "every-node"
-	masterLabel     = "master"
-	vpaAPIVersion   = "autoscaling.k8s.io/v1"
-	tresholdPercent = 10
+	groupLabelKey    = "workload-resource-policy.deckhouse.io"
+	everyNodeLabel   = "every-node"
+	masterLabel      = "master"
+	vpaAPIVersion    = "autoscaling.k8s.io/v1"
+	thresholdPercent = 10
 )
 
 type VPA struct {
@@ -66,10 +66,6 @@ type VPA struct {
 	Namespace                string
 	Label                    string
 	ContainerRecommendations []autoscaler.RecommendedContainerResources
-}
-
-type DeckhousePod struct {
-	IsReady bool
 }
 
 func applyDeckhousePodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -86,7 +82,7 @@ func applyDeckhousePodFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 			break
 		}
 	}
-	return &DeckhousePod{IsReady: isReady}, nil
+	return isReady, nil
 }
 
 func applyVpaResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -195,9 +191,8 @@ func updateVpaResources(input *go_hook.HookInput) error {
 		if podSnapshot == nil {
 			continue
 		}
-		pod := podSnapshot.(*DeckhousePod)
-		if pod.IsReady {
-			deckhousePodIsReady = true
+		deckhousePodIsReady = podSnapshot.(bool)
+		if deckhousePodIsReady {
 			break
 		}
 	}
@@ -299,8 +294,8 @@ func updateVpaResources(input *go_hook.HookInput) error {
 			}
 
 			if vpa.Spec.ResourcePolicy != nil {
-				// if percent treshold between newly calculated and old values < percentTreshold, use old values
-				containerPoliciesTreshold(containerPolicies, vpa.Spec.ResourcePolicy.ContainerPolicies)
+				// if percent threshold between newly calculated and old values < percentThreshold, use old values
+				containerPoliciesThreshold(containerPolicies, vpa.Spec.ResourcePolicy.ContainerPolicies)
 			}
 
 			vpa.Spec.ResourcePolicy = &autoscaler.PodResourcePolicy{ContainerPolicies: containerPolicies}
@@ -322,7 +317,7 @@ func getPathFloat64(input *go_hook.HookInput, path string) (float64, error) {
 	return input.Values.Get(path).Float(), nil
 }
 
-func containerPoliciesTreshold(newPolicies []autoscaler.ContainerResourcePolicy, oldPolicies []autoscaler.ContainerResourcePolicy) {
+func containerPoliciesThreshold(newPolicies []autoscaler.ContainerResourcePolicy, oldPolicies []autoscaler.ContainerResourcePolicy) {
 	for i := range newPolicies {
 		cpu := newPolicies[i].MaxAllowed.Cpu().MilliValue()
 		memory := newPolicies[i].MaxAllowed.Memory().Value()
@@ -332,10 +327,10 @@ func containerPoliciesTreshold(newPolicies []autoscaler.ContainerResourcePolicy,
 			}
 			cpuPercent := calculatePercent(cpu, oldPolicies[j].MaxAllowed.Cpu().MilliValue())
 			memoryPercent := calculatePercent(memory, oldPolicies[j].MaxAllowed.Memory().Value())
-			if inTreshold(cpuPercent) {
+			if inThreshold(cpuPercent) {
 				cpu = oldPolicies[j].MaxAllowed.Cpu().MilliValue()
 			}
-			if inTreshold(memoryPercent) {
+			if inThreshold(memoryPercent) {
 				memory = oldPolicies[j].MaxAllowed.Memory().Value()
 			}
 			newPolicies[i].MaxAllowed = v1.ResourceList{
@@ -354,6 +349,6 @@ func calculatePercent(value1, value2 int64) int64 {
 	return int64(float64(value1) / float64(value2) * 100)
 }
 
-func inTreshold(valuePercent int64) bool {
-	return valuePercent >= 100-tresholdPercent && valuePercent <= 100+tresholdPercent
+func inThreshold(valuePercent int64) bool {
+	return valuePercent >= 100-thresholdPercent && valuePercent <= 100+thresholdPercent
 }
