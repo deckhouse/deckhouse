@@ -98,8 +98,6 @@ spec:
           value: {{ .Values.flantIntegration.internal.terraformManagerEnabled | quote }}
         - name: DEBUG_UNIX_SOCKET
           value: /tmp/shell-operator-debug.socket
-        - name: FP_KUBEALL_TEAM
-          value: {{ .Values.flantIntegration.kubeall.team | quote }}
         - name: FP_KUBEALL_HOST
           value: {{ .Values.flantIntegration.kubeall.host | quote }}
         - name: FP_KUBEALL_KUBECTL
