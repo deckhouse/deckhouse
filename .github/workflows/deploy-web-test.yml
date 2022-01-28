@@ -62,6 +62,7 @@ env:
   BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555"
   BASE_NODE_16_ALPINE: "registry.deckhouse.io/base_images/node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
   BASE_PYTHON_ALPINE: "registry.deckhouse.io/base_images/python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
+  BASE_SCRATCH: "registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
   BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/flant/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
   BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
 
