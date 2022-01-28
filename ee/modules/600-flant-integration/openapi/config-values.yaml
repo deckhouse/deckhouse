@@ -76,7 +76,7 @@ properties:
     default: {}
     description: |
       Parameters for generating the kubeall registry.
-    required: [team, host]
+    required: [host]
     properties:
       team:
         type: string

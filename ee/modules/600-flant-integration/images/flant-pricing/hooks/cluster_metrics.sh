@@ -58,7 +58,7 @@ function __main__() {
   output_metric "flant_pricing_auxiliary_cluster" "$FP_AUXILIARY_CLUSTER"
   output_metric "flant_pricing_nodes_discount" "$FP_NODES_DISCOUNT"
 
-  if [[ "$FP_KUBEALL_TEAM" != "" && "$FP_KUBEALL_HOST" != "" ]]; then
+  if [[ "$FP_KUBEALL_HOST" != "" ]]; then
     echo '
     {
       "name": "flant_pricing_kubeall",
