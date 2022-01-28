@@ -272,6 +272,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		It("Should update deckhouse deployment for latest patch", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-3").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-2").Field("status.phase").String()).To(Equal("Outdated"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Field("status.phase").String()).To(Equal("Outdated"))
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-32-0").Field("status.phase").String()).To(Equal("Pending"))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.31.3"))

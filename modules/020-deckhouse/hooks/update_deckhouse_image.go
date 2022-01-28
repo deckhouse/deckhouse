@@ -103,6 +103,9 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// fetch releases from snapshot and patch initial statuses
 	updater.FetchAndPrepareReleases(input)
+	if len(updater.releases) == 0 {
+		return nil
+	}
 
 	// predict next patch for Deploy
 	updater.PredictNextRelease()
@@ -292,6 +295,7 @@ type deckhouseUpdater struct {
 	totalPendingManualReleases int
 
 	predictedReleaseIndex       int
+	skippedPatcheIndexes        []int
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
 }
@@ -317,6 +321,7 @@ func newDeckhouseUpdater(mode string) *deckhouseUpdater {
 		predictedReleaseIndex:       -1,
 		currentDeployedReleaseIndex: -1,
 		forcedReleaseIndex:          -1,
+		skippedPatcheIndexes:        make([]int, 0),
 	}
 }
 
@@ -411,6 +416,19 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 		}
 		input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentRelease.Name, object_patch.WithSubresource("/status"))
 	}
+
+	if len(du.skippedPatcheIndexes) > 0 {
+		sp := statusPatch{
+			Phase:          v1alpha1.PhaseOutdated,
+			Approved:       true,
+			Message:        "",
+			TransitionTime: du.now,
+		}
+		for _, index := range du.skippedPatcheIndexes {
+			release := du.releases[index]
+			input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
+		}
+	}
 }
 
 func (du *deckhouseUpdater) PredictNextRelease() {
@@ -499,6 +517,7 @@ func (du *deckhouseUpdater) processPendingRelease(index int, release deckhouseRe
 			return
 		}
 		// it's a patch for predicted release, continue
+		du.skippedPatcheIndexes = append(du.skippedPatcheIndexes, du.predictedReleaseIndex)
 	}
 
 	// release is predicted to be Deployed
