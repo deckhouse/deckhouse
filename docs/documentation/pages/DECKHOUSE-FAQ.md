@@ -5,48 +5,59 @@ permalink: en/deckhouse-faq.html
 
 ## How do I find out all Deckhouse parameters?
 
-All the essential Deskhouse settings (including module parameters) are stored in the `deckhouse` ConfigMap in the `d8-system` namespace. You can view its contents using the command below:
+All the essential Deskhouse settings (including module parameters) are stored in the `deckhouse` ConfigMap in the `d8-system` namespace. 
+
+To view Deckhouse settings use the following command:
 ```
 kubectl -n d8-system get cm deckhouse -o yaml
 ```
 
 ## How do I find the documentation for the version installed?
 
+> Documentation in the cluster is available when the [deckhouse-web](modules/810-deckhouse-web/) module is enabled (it is enabled by default except the `Minimal` [bundle](modules/020-deckhouse/configuration.html#parameters-bundle)). 
+
 The documentation for the Deckhouse version running in the cluster is available at `deckhouse.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the `global.modules.publicDomainTemplate` parameter.
 
 ## How do I set the desired release channel?
-Change (set) the module's `releaseChannel` parameter to automatically switch to another release channel (and minimize version drift in the cluster). It will activate the mechanism of [automatic stabilization of the release channel](#how-does-the-mechanism-of-automatic-stabilization-of-the-release-channel-work).
+Change (set) the `releaseChannel` parameter in the `deckhouse` module [configuration](modules/020-deckhouse/configuration.html#parameters-releasechannel) to automatically switch to another release channel. 
+
+It will activate the mechanism of [automatic stabilization of the release channel](#how-does-automatic-deckhouse-update-work).
 
 Here is an example of the module configuration:
 ```yaml
 deckhouse: |
-  releaseChannel: RockSolid
+  releaseChannel: Stable
 ```
 
-## How does the mechanism of automatic stabilization of the release channel work?
-Deckhouse will switch to the image with the corresponding Docker image tag in response to setting the `releaseChannel` parameter. No other action is required on the part of the user.
+## How do I disable automatic updates?
+To completely disable the Deckhouse update mechanism, remove the `releaseChannel` parameter in the `deckhouse' module [configuration](modules/020-deckhouse/configuration.html#parameters-releasechannel).
 
-**Note:** Switching is not instantaneous and relies on the Deckhouse update process.
+In this case, Deckhouse does not check for updates and even doesn't apply patch releases.
 
-The release channel stabilization script runs every 10 minutes. It implements the following algorithm:
-* If the specified release channel matches the Deckhouse Docker image's tag — do nothing;
-* When switching to a more stable release channel (e.g., `Alpha` -> `EarlyAccess`), the gradual transition takes place:
+> It is highly not recommended to disable automatic updates! It will block updates to patch releases that may contain critical vulnerabilities and bugs fixes.
 
-  - First, the script compares the [digests](https://success.mirantis.com/article/images-tagging-vs-digests) of Docker image tags that correspond to the current release channel and the next more stable channel (`Alpha` and `Beta` in our example).
+## How does automatic Deckhouse update work?
+Every minute Deckhouse checks a new release appeared in the release-channel specified by the `releaseChannel` parameter.
 
-  - If the digests are equal, the script checks the next tag (in our example, this tag corresponds to the `EarlyAccess` release channel).
+When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource `DeckhouseRelease`. 
 
-  - In the end, Deckhouse will switch to a more stable release channel with a digest equal to the current one.
+After creating a `DeckhouseRelease` CR in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/020-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default). 
 
-* Suppose a less stable release channel is specified than the channel that corresponds to the current tag of the Deckhouse Docker image. In that case, the script compares digests corresponding to the Docker images for the current release channel and the next, less stable one. For example, when switching to the `Alpha` channel from the `EarlyAccess` channel, the script compares the  `EarlyAccess` and `Beta` channels:
+To get list and status of all releases use the following command:
+```shell
+kubectl get deckhousereleases
+```
 
-  - If the digests are not equal, Deckhouse switches to the next release channel (`Beta` in our case). Such an approach ensures that some crucial migrations are performed during Deckhouse upgrades.
+> Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignore update windows settings and apply as soon as they are available.
 
-  - If the digests are equal, the script checks the next less stable release channel (`Alpha` in our case).
-
-  - When the script reaches the desired release channel (`Alpha` in our example), Deckhouse will switch to it regardless of the digest comparison results.
-
-Since the stabilization script runs continuously, Deckhouse will eventually end up in a state where the tag of its Docker image corresponds to the release channel selected.
+### Change the release channel
+* When switching to a **more stable** release channel (e.g., from `Alpha` to `EarlyAccess`), Deckhouse downloads release data from the release channel (the `EarlyAccess` release channel in the example) and compares it with the existing `DeckhouseReleases`:
+    - Deckhouse deletes *later* releases (by semver) that have not yet been applied (with the `Pending` status);
+    - if *the latest* releases have been already Deployed, then Deckhouse will hold the current release until a later release appears on the update channel (on the `EarlyAccess` release channel in the example).
+  
+* When switching to a less stable release channel (e.g., from `EarlyAcess` to `Alpha`), the following actions take place:
+  - Deckhouse downloads release data from the release channel (the `Alpha` release channel in the example) and compares it with the existing `DeckhouseReleases`;
+  - Deckhouse performs the update according to the [update parameters](modules/020-deckhouse/configuration.html#parameters-update).
 
 ## How do I run Deckhouse on a particular node?
 Set the `nodeSelector` [parameter](modules/020-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
