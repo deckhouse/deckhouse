@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"sort"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -51,6 +52,8 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	now := time.Now().UTC()
+
 	releases := make([]deckhouseRelease, 0, len(snap))
 	for _, sn := range snap {
 		releases = append(releases, sn.(deckhouseRelease))
@@ -59,14 +62,20 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	sort.Sort(sort.Reverse(byVersion(releases)))
 
 	var (
+		pendingReleasesIndexes  []int
 		deployedReleasesIndexes []int
 		outdatedReleasesIndexes []int
 	)
 
 	for i, release := range releases {
-		if release.Phase == v1alpha1.PhaseDeployed {
+		switch release.Phase {
+		case v1alpha1.PhasePending:
+			pendingReleasesIndexes = append(pendingReleasesIndexes, i)
+
+		case v1alpha1.PhaseDeployed:
 			deployedReleasesIndexes = append(deployedReleasesIndexes, i)
-		} else if release.Phase == v1alpha1.PhaseOutdated {
+
+		case v1alpha1.PhaseOutdated:
 			outdatedReleasesIndexes = append(outdatedReleasesIndexes, i)
 		}
 	}
@@ -74,7 +83,8 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	if len(deployedReleasesIndexes) > 1 {
 		// cleanup releases stacked in Deployed status
 		sp := statusPatch{
-			Phase: v1alpha1.PhaseOutdated,
+			Phase:          v1alpha1.PhaseOutdated,
+			TransitionTime: now,
 		}
 		// everything except the last Deployed release
 		for i := 1; i < len(deployedReleasesIndexes); i++ {
@@ -88,6 +98,23 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		for i := 10; i < len(outdatedReleasesIndexes); i++ {
 			release := releases[i]
 			input.PatchCollector.Delete("deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.InBackground())
+		}
+	}
+
+	// some old releases, for example - when downgrade the release channel
+	// mark them as Outdated
+	if len(deployedReleasesIndexes) > 0 && len(pendingReleasesIndexes) > 0 {
+		lastDeployed := deployedReleasesIndexes[len(deployedReleasesIndexes)-1]
+		sp := statusPatch{
+			Phase:          v1alpha1.PhaseOutdated,
+			TransitionTime: now,
+		}
+
+		for _, index := range pendingReleasesIndexes {
+			if index < lastDeployed {
+				release := releases[index]
+				input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			}
 		}
 	}
 
