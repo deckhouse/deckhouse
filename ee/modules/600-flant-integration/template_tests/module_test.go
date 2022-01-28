@@ -55,7 +55,6 @@ nodesDiscount: 10
 metrics:
   url: "https://example.com/remote_write"
 kubeall:
-  team: ""
   host: ""
   kubectl: "sudo kubectl"
   kubeconfig: "/root/.kube/config"
@@ -92,7 +91,6 @@ nodesDiscount: 10
 metrics:
   url: "https://example.com/remote_write"
 kubeall:
-  team: ""
   host: ""
   kubectl: "sudo kubectl"
   kubeconfig: "/root/.kube/config"
@@ -197,8 +195,6 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
   value: "true"
 - name: DEBUG_UNIX_SOCKET
   value: /tmp/shell-operator-debug.socket
-- name: FP_KUBEALL_TEAM
-  value: ""
 - name: FP_KUBEALL_HOST
   value: ""
 - name: FP_KUBEALL_KUBECTL
