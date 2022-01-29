@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Check if allow to run tests
         id: check
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v5.1.0
         with:
           script: |
             // Assume workflow_dispatch is safe to run.
@@ -110,7 +110,7 @@ jobs:
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
         if: steps.changes.outputs.dangerous == 'true'
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v5.1.0
         with:
           script: |
             core.setFailed('External PR contains dangerous changes.')
@@ -118,7 +118,7 @@ jobs:
       # Set output.
       - name: Return PR head commit ref
         id: ref
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v5.1.0
         with:
           script: |
             const ref = `refs/pull/${ context.issue.number }/head`
@@ -138,7 +138,7 @@ jobs:
 
       # </template: checkout_step>
       - name: Rerun workflow
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v5.1.0
         with:
           github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           script: |
