@@ -24,7 +24,7 @@ standard:
   natGatewayPublicIpCount: 1 # optional, by default 0
 masterNodeGroup:
   replicas: 1
-  zones: [1] # optional, by default [1]
+  zones: ["1"] # optional, by default ["1"]
   instanceClass:
     machineSize: Standard_F4 # required
     diskSizeGb: 32

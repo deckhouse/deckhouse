@@ -4,13 +4,19 @@ title: "Cloud provider — Azure: Preparing environment"
 
 > **Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
 
-You have to create a service account with Microsoft Azure so that Deckhouse can manage cloud resources. The detailed instructions for creating a service account with Microsoft Azure are available in the provider's [documentation](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli). Below, we will provide a brief overview of the necessary actions:
-- Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) and perform a `login`;
-- Export the environment variable by substituting the Microsoft Azure subscription ID instead of the `my-subscription-id`;
+To rule the Microsoft Azure cloud, you need an account and at least a single [Subscription connected to id](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
+
+You have to create a service account with Microsoft Azure so that Deckhouse can manage cloud resources:
+- Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), login and get Subscription ID:
   ```shell
-export SUBSCRIPTION_ID="my-subscription-id"
-```
-- Create a service account:
+  export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
+  ```
+- Create the service account:
   ```shell
-az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "account_name"
+  az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "DeckhouseCANDI"
+  ```
+
+You have to be logged in for further work with the `az` tool. Use the service account username, password, and tenant to log in:
+```shell
+az login --service-principal -u <username> -p <password> --tenant <tenant>
 ```

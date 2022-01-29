@@ -59,7 +59,8 @@ apiVersions:
                 description: |
                   Тип заказываемых инстансов.
 
-                  Список всех доступных типов в регионе, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  Получение всех доступных типов в регионе с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
                   ```shell
                   az vm list-sizes --location westeurope -o table
                   ```
@@ -69,9 +70,11 @@ apiVersions:
 
                   Подробнее про образы виртуальных машин можно посмотреть в [официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
 
-                  Последнюю доступную версию образа можно получить c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
-                  - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`
-                  - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`
+                  Получить urn образа c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (столбец №4):
+                  ```shell
+                  az vm image list --location westeurope --publisher Canonical --all --sku 20_04-lts -o table
+                  az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
+                  ```
 
                   **По умолчанию:** образ из `AzureCloudDiscoveryData` (образ из которого был создан мастер при развертывании кластера).
 
@@ -89,8 +92,9 @@ apiVersions:
                   Тип созданного диска.
 
                   Список доступных типов дисков, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
                   ```shell
-                  az vm list-skus -l westeurope --zone`
+                  az vm list-skus -l westeurope --zone
                   ```
               additionalTags:
                 description: |
@@ -109,6 +113,7 @@ apiVersions:
                 Список зон, в которых допустимо создавать узлы.
 
                 Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
                 ```shell
                 az vm list-skus -l westeurope -o table
                 ```
@@ -149,7 +154,11 @@ apiVersions:
         properties:
           location:
             description: |
-              Имя региона, в котором будут созданы все ресурсы.
+              Имя географического региона, в котором будут созданы все ресурсы. Получение списка доступных локаций через [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+              ```shell
+              az account list-locations -o table
+              ```
           subscriptionId:
             description: |
               Идентификатор подписки.
