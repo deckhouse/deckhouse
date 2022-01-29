@@ -104,13 +104,37 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 	l.ErrorsList.Add(containerNameDuplicates(object, containers))
 	l.ErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
 	l.ErrorsList.Add(containerImageTagLatest(object, containers))
-	l.ErrorsList.Add(containerImagePullPolicyIfNotPresent(object, containers))
+	l.ErrorsList.Add(containersImagePullPolicy(object, containers))
 
 	if !skipObjectIfNeeded(&object) {
 		l.ErrorsList.Add(containerStorageEphemeral(object, containers))
 		l.ErrorsList.Add(containerSecurityContext(object, containers))
 		l.ErrorsList.Add(containerPorts(object, containers))
 	}
+}
+
+func containersImagePullPolicy(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+	o := object.Unstructured
+	if o.GetNamespace() == "d8-system" && o.GetKind() == "Deployment" && o.GetName() == "deckhouse" {
+		c := containers[0]
+		if c.ImagePullPolicy != "Always" {
+			// image pull policy must be Always,
+			// because changing d8-system/deckhouse-registry triggers restart deckhouse deployment
+			// d8-system/deckhouse-registry can contain invalid registry creds
+			// and restarting deckhouse with invalid creads will break all static pods on masters
+			// and bashible
+			return errors.NewLintRuleError(
+				"CONTAINER004",
+				object.Identity()+"; container = "+c.Name,
+				c.ImagePullPolicy,
+				"Container imagePullPolicy should be unspecified or \"Always\"",
+			)
+		}
+
+		return errors.EmptyRuleError
+	}
+
+	return containerImagePullPolicyIfNotPresent(object, containers)
 }
 
 func containerNameDuplicates(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
