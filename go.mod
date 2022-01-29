@@ -28,7 +28,7 @@ require (
 	github.com/imdario/mergo v0.3.11
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	github.com/otiai10/copy v1.0.2
 	github.com/pkg/errors v0.9.1
