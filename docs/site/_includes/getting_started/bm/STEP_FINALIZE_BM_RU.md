@@ -1,5 +1,6 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
+<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
 На данном этапе вы создали кластер, который состоит из **единственного** master-узла.
 
@@ -89,7 +90,7 @@ EOF
 
 <script type="text/javascript">
 $(document).ready(function () {
-    generate_password();
+    generate_password(true);
     update_parameter('dhctl-user-password-hash', 'password', '<GENERATED_PASSWORD_HASH>', null, null);
     update_parameter('dhctl-user-password-hash', null, '<GENERATED_PASSWORD_HASH>', null, '[user-yml]');
     update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, '[user-yml]');
