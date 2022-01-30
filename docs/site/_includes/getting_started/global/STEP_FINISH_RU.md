@@ -139,7 +139,7 @@ nodegroups`. Подробнее об этом в
 если они не равны, — у вас автоматически заработает автоскейлинг.
 
 Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/ru/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) и
-[NodeGroup](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup), которая на него
+[NodeGroup](/ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup), которая на него
 ссылается.
 {% else %}
 # TODO Bare metal!!!

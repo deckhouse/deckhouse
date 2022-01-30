@@ -195,7 +195,7 @@ spec:
 
 > **Важно!** Режим HPA возможен только для контроллеров с inlet: `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
 
-HPA выставляется с помощью аттрибутов `minReplicas` и `maxReplicas` в [IngressNginxController CR](https://deckhouse.io/ru/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller).
+HPA выставляется с помощью аттрибутов `minReplicas` и `maxReplicas` в [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
 При этом создается deployment `hpa-scaler` и HPA resource, который следит за предварительно созданной метрикой `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`.
 
