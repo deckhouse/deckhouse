@@ -290,6 +290,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		It("Should update deckhouse even on suspended forced release", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Field("status.phase").String()).To(Equal("Deployed"))
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Field("metadata.annotations.release\\.deckhouse\\.io/force").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Field("status.phase").String()).To(Equal("Outdated"))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.31.1"))

@@ -468,6 +468,16 @@ func (du *deckhouseUpdater) ApplyForcedRelease(input *go_hook.HookInput) {
 
 	du.runReleaseDeploy(input, forcedRelease, currentRelease)
 
+	annotationsPatch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"release.deckhouse.io/force": nil,
+			},
+		},
+	}
+	// remove annotation
+	input.PatchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", forcedRelease.Name)
+
 	// Outdate all previous releases
 	st := statusPatch{
 		Phase:          v1alpha1.PhaseOutdated,
