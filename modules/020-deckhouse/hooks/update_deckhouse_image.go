@@ -451,11 +451,7 @@ func (du *deckhouseUpdater) PredictNextRelease() {
 }
 
 func (du *deckhouseUpdater) HasForceRelease() bool {
-	if du.forcedReleaseIndex == -1 {
-		return false
-	}
-
-	return true
+	return du.forcedReleaseIndex != -1
 }
 func (du *deckhouseUpdater) ApplyForcedRelease(input *go_hook.HookInput) {
 	forcedRelease := &(du.releases[du.forcedReleaseIndex])
