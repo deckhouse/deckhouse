@@ -17,9 +17,11 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"runtime/trace"
 	"strconv"
 	"time"
 
@@ -48,6 +50,8 @@ type InstanceClassCrdInfo struct {
 }
 
 func applyInstanceClassCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerGetCRDInstanceClass").End()
+
 	return InstanceClassCrdInfo{
 		Name: obj.GetName(),
 		Spec: obj.Object["spec"],
@@ -62,6 +66,8 @@ type NodeGroupCrdInfo struct {
 
 // applyNodeGroupCrdFilter returns name, spec and manualRolloutID from the NodeGroup
 func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerGetCRDHandler").End()
+
 	var nodeGroup ngv1.NodeGroup
 	err := sdk.FromUnstructured(obj, &nodeGroup)
 	if err != nil {
@@ -81,6 +87,8 @@ type MachineDeploymentCrdInfo struct {
 }
 
 func applyMachineDeploymentCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerGetCRDMachineDeploymentFilter").End()
+
 	return MachineDeploymentCrdInfo{
 		Name: obj.GetName(),
 		Zone: obj.GetAnnotations()["zone"],
@@ -88,6 +96,8 @@ func applyMachineDeploymentCrdFilter(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func applyCloudProviderSecretKindZonesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerGetCRDSecretFilter").End()
+
 	secretData, err := DecodeDataFromSecret(obj)
 	if err != nil {
 		return nil, err
@@ -174,6 +184,8 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 var _ = sdk.RegisterFunc(getCRDsHookConfig, getCRDsHandler)
 
 func getCRDsHandler(input *go_hook.HookInput) error {
+	defer trace.StartRegion(context.Background(), "NodeManagerGetCRDHandler").End()
+
 	// Detect InstanceClass kind and change binding if needed.
 	kindInUse, kindFromSecret := detectInstanceClassKind(input, getCRDsHookConfig)
 

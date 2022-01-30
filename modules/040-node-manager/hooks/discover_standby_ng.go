@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
+	"runtime/trace"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -44,6 +46,8 @@ type StandbyNodeGroupInfo struct {
 }
 
 func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "StandByModuleFilterNG").End()
+
 	nodeGroup := new(ngv1.NodeGroup)
 	err := sdk.FromUnstructured(obj, nodeGroup)
 	if err != nil {
@@ -84,6 +88,8 @@ type StandbyNodeInfo struct {
 }
 
 func standbyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "StandByModuleNodeFilter").End()
+
 	node := new(v1.Node)
 	err := sdk.FromUnstructured(obj, node)
 	if err != nil {
@@ -114,6 +120,8 @@ type StandbyPodInfo struct {
 }
 
 func standbyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "StandByModulePodFilter").End()
+
 	pod := new(v1.Pod)
 	err := sdk.FromUnstructured(obj, pod)
 	if err != nil {
@@ -183,6 +191,8 @@ type StandbyNodeGroupForValues struct {
 }
 
 func discoverStandbyNGHandler(input *go_hook.HookInput) error {
+	defer trace.StartRegion(context.Background(), "StandByModuleHandler").End()
+
 	standbyNodeGroups := make([]StandbyNodeGroupForValues, 0)
 
 	for _, node := range input.Snapshots["node_groups"] {

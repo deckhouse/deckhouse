@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"runtime/trace"
 	"sort"
 	"strings"
 	"time"
@@ -124,6 +126,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleUpdateNGStatus)
 
 func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerNGMachineDeploymentFilter").End()
+
 	var md v1alpha1.MachineDeployment
 
 	err := sdk.FromUnstructured(obj, &md)
@@ -140,6 +144,8 @@ func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 func updStatusFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerNGUpdateNodeFilter").End()
+
 	var node corev1.Node
 
 	err := sdk.FromUnstructured(obj, &node)
@@ -166,6 +172,8 @@ func updStatusFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerNGUpdateStatusNGFilter").End()
+
 	var ng ngv1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
@@ -198,6 +206,8 @@ func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func updStatusFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerNGUpdateMachineFilter").End()
+
 	var machine v1alpha1.Machine
 
 	err := sdk.FromUnstructured(obj, &machine)
@@ -212,6 +222,8 @@ func updStatusFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 // returns count of zones for current cluster
 func updStatusFilterCpSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	defer trace.StartRegion(context.Background(), "NodeManagerNGZonesSecretFilter").End()
+
 	var sec corev1.Secret
 
 	err := sdk.FromUnstructured(obj, &sec)
@@ -232,6 +244,8 @@ func updStatusFilterCpSecrets(obj *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func handleUpdateNGStatus(input *go_hook.HookInput) error {
+	defer trace.StartRegion(context.Background(), "NodeManagerNGUpdateHandler").End()
+
 	var defaultZonesNum int32
 
 	snap := input.Snapshots["zones_count"]
