@@ -21,6 +21,7 @@
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
+  {{- $additionalContainers := $config.additionalContainers }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
@@ -257,6 +258,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+    {{- if $additionalContainers }}
+      {{- $additionalContainers | toYaml | nindent 6 }}
+    {{- end }}
       volumes:
       - name: socket-dir
         emptyDir: {}
@@ -270,6 +274,7 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
+
 
 {{- /* Usage: {{ include "helm_lib_csi_controller_rbac" . }} */ -}}
 {{- define "helm_lib_csi_controller_rbac" }}

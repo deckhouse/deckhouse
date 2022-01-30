@@ -1,0 +1,228 @@
+###
+### controller
+###
+
+{{- $deployCephFSController := false }}
+
+{{- range $cr := .Values.cephCsi.internal.crs }}
+  {{- if $cr.spec.cephfs }}
+    {{- $deployCephFSController = true }}
+  {{- end }}
+{{- end }}
+
+
+{{- $csiDriverName := "cephfs.csi.ceph.com" }}
+{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cephCsi.cephcsi)}}
+
+### cephfs_csi_controller_args
+
+{{- define "cephfs_csi_controller_args" }}
+- "--nodeid=$(NODE_ID)"
+- "--type=cephfs"
+- "--controllerserver=true"
+- "--pidlimit=-1"
+- "--endpoint=$(CSI_ENDPOINT)"
+- "--v=5"
+- "--drivername=$(DRIVER_NAME)"
+{{- end }}
+
+
+### cephfs_csi_controller_envs
+
+{{- define "cephfs_csi_controller_envs" }}
+{{- $csiDriverName := index . 0 }}
+- name: POD_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.podIP
+- name: DRIVER_NAME
+  value: {{ $csiDriverName }}
+- name: NODE_ID
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
+- name: CSI_ENDPOINT
+  value: "unix:///csi/csi.sock"
+{{- end }}
+
+
+### cephfs_csi_controller_volume_mounts
+
+{{- define "cephfs_csi_controller_volume_mounts" }}
+- name: host-sys
+  mountPath: /sys
+- name: lib-modules
+  mountPath: /lib/modules
+  readOnly: true
+- name: host-dev
+  mountPath: /dev
+- name: ceph-csi-config
+  mountPath: /etc/ceph-csi-config/
+- name: etc-ceph-dir
+  mountPath: /etc/ceph/
+# - name: ceph-config
+#   mountPath: /etc/ceph/
+- name: keys-tmp-dir
+  mountPath: /tmp/csi/keys
+{{- end }}
+
+
+### cephfs_csi_controller_volumes
+
+{{- define "cephfs_csi_controller_volumes" }}
+- name: ceph-csi-config
+  configMap:
+    name: ceph-csi-config
+    items:
+      - key: config.json
+        path: config.json
+- name: ceph-config
+  configMap:
+    name: ceph-config
+- name: host-dev
+  hostPath:
+    path: /dev
+- name: host-sys
+  hostPath:
+    path: /sys
+- name: lib-modules
+  hostPath:
+    path: /lib/modules
+- name: keys-tmp-dir
+  emptyDir: {
+    medium: "Memory"
+  }
+- name: etc-ceph-dir
+  emptyDir: {
+    medium: "Memory"
+  }
+{{- end }}
+
+
+{{- if $deployCephFSController }}
+
+  {{- $csiControllerConfig := dict }}
+  {{- $_ := set $csiControllerConfig "fullname" "csi-controller-cephfs" }}
+  {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
+
+  {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "cephfs_csi_controller_args" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "cephfs_csi_controller_envs" (list $csiDriverName) | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "cephfs_csi_controller_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "cephfs_csi_controller_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+{{- end }}
+
+###
+### node
+###
+
+### cephfs_csi_node_args
+
+{{- define "cephfs_csi_node_args" }}
+- "--nodeid=$(NODE_ID)"
+- "--type=cephfs"
+- "--nodeserver=true"
+- "--pidlimit=-1"
+- "--endpoint=$(CSI_ENDPOINT)"
+- "--v=5"
+- "--drivername=$(DRIVER_NAME)"
+{{- end }}
+
+
+### cephfs_csi_node_envs
+
+{{- define "cephfs_csi_node_envs" }}
+{{- $csiDriverName := index . 0 }}
+- name: POD_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.podIP
+- name: DRIVER_NAME
+  value: {{ $csiDriverName }}
+- name: NODE_ID
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
+- name: CSI_ENDPOINT
+  value: "unix:///csi/csi.sock"
+{{- end }}
+
+
+### cephfs_csi_node_volume_mounts
+
+{{- define "cephfs_csi_node_volume_mounts" }}
+- mountPath: /run/mount
+  name: host-mount
+- mountPath: /sys
+  name: host-sys
+- mountPath: /etc/selinux
+  name: etc-selinux
+  readOnly: true
+- mountPath: /lib/modules
+  name: lib-modules
+  readOnly: true
+- name: etc-ceph-dir
+  mountPath: /etc/ceph/
+# - name: ceph-config
+#   mountPath: /etc/ceph/
+- name: ceph-csi-config
+  mountPath: /etc/ceph-csi-config/
+- name: keys-tmp-dir
+  mountPath: /tmp/csi/keys
+{{- end }}
+
+
+### cephfs_csi_node_volumes
+
+{{- define "cephfs_csi_node_volumes" }}
+- name: host-sys
+  hostPath:
+    path: /sys
+- name: etc-selinux
+  hostPath:
+    path: /etc/selinux
+- name: host-mount
+  hostPath:
+    path: /run/mount
+- name: lib-modules
+  hostPath:
+    path: /lib/modules
+- name: ceph-config
+  configMap:
+    name: ceph-config
+- name: ceph-csi-config
+  configMap:
+    name: ceph-csi-config
+    items:
+      - key: config.json
+        path: config.json
+- name: keys-tmp-dir
+  emptyDir: {
+    medium: "Memory"
+  }
+- name: etc-ceph-dir
+  emptyDir: {
+    medium: "Memory"
+  }
+{{- end }}
+
+
+{{- if $deployCephFSController }}
+
+  {{- $csiNodeConfig := dict }}
+  {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+  {{- $_ := set $csiNodeConfig "driverFQDN" $csiDriverName }}
+  {{- $_ := set $csiNodeConfig "fullname" "csi-node-cephfs" }}
+  {{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
+
+  {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "cephfs_csi_node_args" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "cephfs_csi_node_envs" (list $csiDriverName) | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "cephfs_csi_node_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "cephfs_csi_node_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+
+{{- end }}
