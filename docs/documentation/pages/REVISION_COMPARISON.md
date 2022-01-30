@@ -4,7 +4,8 @@ permalink: en/revision-comparison.html
 toc: false
 ---
 
-The Deckhouse Platform editions come with different functions and support options. You can find a brief comparison of CE vs. EE editions listing its main features and functions [here](https://deckhouse.io/{{ page.lang }}/products/enterprise_edition.html#ce-vs-ee).
+The Deckhouse Platform editions come with different functions and support options. You can find a brief comparison of CE vs. EE editions listing its main features and functions [here](
+{{ site.url }}/{{ page.lang }}/products/enterprise_edition.html#ce-vs-ee).
 
 The table below provides listing of the Deckhouse Platform modules available in each edition:
 

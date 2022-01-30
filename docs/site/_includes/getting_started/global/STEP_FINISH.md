@@ -150,7 +150,7 @@ You need to create a new
 External authentication
 </h2>
 <div markdown="1">
-Deckhouse supports [various](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/usage.html)
+Deckhouse supports [various](/en/documentation/v1/modules/150-user-authn/usage.html)
 external authentication mechanisms.
 </div>
 <div class="cards-blocks__cards">
@@ -171,7 +171,7 @@ will be authenticated using GitHub.
 External authentication for any Ingress
 </h3>
 <div class="cards-item__text" markdown="1">
-You have to create a [DexAuthenticator](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator) object to enable external authentication for any Ingress resource.
+You have to create a [DexAuthenticator](/en/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator) object to enable external authentication for any Ingress resource.
 </div>
 </div>
 
