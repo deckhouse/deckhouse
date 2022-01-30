@@ -1,15 +1,15 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
 
-You have to create a service account with {{ page.platform_name[page.lang] }} so that Deckhouse Platform can manage cloud resources. The detailed instructions for creating a service account with Microsoft Azure are available in the [documentation](/en/documentation/v1/modules/030-cloud-provider-azure/environment.html).
+To rule the Microsoft Azure cloud, you need an account and at least a single [Subscription connected to id](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 
-Below, we will provide a brief overview of the necessary actions (run them on the **[personal computer](step2.html#installation-process)**).
+You have to create a service account with {{ page.platform_name[page.lang] }} so that Deckhouse Platform can manage cloud resources. The detailed instructions for creating a service account with Microsoft Azure are available in the [documentation](/en/documentation/v1/modules/030-cloud-provider-azure/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **[personal computer](step2.html#installation-process)**).
 
 Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) and perform a `login`.
 
 Export the environment variable by substituting the subscription ID instead of the `my-subscription-id`:
 {% snippetcut %}
 ```shell
-export SUBSCRIPTION_ID="my-subscription-id"
+export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
 ```
 {% endsnippetcut %}
 
