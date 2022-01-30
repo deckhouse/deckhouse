@@ -103,6 +103,8 @@ spec:
               value: "60"
             - name: ADDON_OPERATOR_CONFIG_MAP
               value: deckhouse
+            - name: ADDON_USE_RANDOM_FIRST_RUN_DELAY_SCHEDULE_HOOK
+              value: "true"
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
               value: deckhouse_
             - name: ADDON_OPERATOR_NAMESPACE
