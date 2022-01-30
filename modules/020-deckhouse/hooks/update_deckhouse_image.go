@@ -110,6 +110,11 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	// predict next patch for Deploy
 	updater.PredictNextRelease()
 
+	// has already Deployed latest release
+	if updater.LastReleaseDeployed() {
+		return nil
+	}
+
 	// some release is forced, burn everything, apply this patch!
 	if updater.HasForceRelease() {
 		updater.ApplyForcedRelease(input)
@@ -448,6 +453,10 @@ func (du *deckhouseUpdater) PredictNextRelease() {
 			du.forcedReleaseIndex = i
 		}
 	}
+}
+
+func (du *deckhouseUpdater) LastReleaseDeployed() bool {
+	return du.currentDeployedReleaseIndex == len(du.releases)-1
 }
 
 func (du *deckhouseUpdater) HasForceRelease() bool {
