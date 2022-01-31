@@ -101,3 +101,66 @@ properties:
               * `legacy` — use the old version of the driver. FCD discs only, no online-resizing;
               * `migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.
             * An optional parameter;
+
+  nsxt:
+    type: object
+    description: |
+      Kubernetes load balancer support using NSX-T for the vSphere cloud controller manager.
+    required: [defaultIPPoolName, size, tierFatewayPath, user, password, host]
+    properties:
+      defaultIpPoolName:
+        type: string
+        description: |
+          Name of the default ip pool used for the load balancers without `loadbalancer.vmware.io/class` annotation set.
+      defaulTcpAppProfileName:
+        type: string
+        description: |
+          Name of default application profile used for TCP connections.
+        default: "default-tcp-lb-app-profile"
+      size:
+        type: string
+        description: |
+          Size of load balancer service.
+        enum: ["SMALL", "MEDIUM", "LARGE", "XLARGE"]
+        default: "MEDIUM"
+      tier1GatewayPath:
+        description: |
+          Policy path for the NSX-T tier1 gateway.
+        type: string
+      user:
+        type: string
+        description: |
+          NSX-T user name.
+      password:
+        type: string
+        description: |
+          NSX-T password.
+      host:
+        type: string
+        description: |
+          NSX-T host.
+      insecureFlag:
+        type: boolean
+        description: |
+          To be set to true if NSX-T uses locally signed cert without specifying a ca.
+        default: true
+      loadBalancerClass:
+        type: array
+        description: |
+          Load Balancer Classes
+        items:
+          required: [name, ipPoolName]
+          properties:
+            name:
+              type: string
+              description: |
+                Load Balancer Class name.
+            ipPoolName:
+              type: string
+              description: |
+                Name of the ip pool used for the load balancers with `loadbalancer.vmware.io/class: <class name>` annotation set.
+            tcpAppProfileName:
+              type: string
+              description: |
+                Name of application profile used for TCP connections.
+

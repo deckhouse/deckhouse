@@ -252,27 +252,39 @@ apiVersions:
         - password
       nsxt:
         type: object
+        required: [defaultIPPoolName, size, tierFatewayPath, user, password, host]
         properties:
           defaultIpPoolName:
             type: string
-          defaultcpAppProfileName:
+          defaulTcpAppProfileName:
             type: string
+            default: "default-tcp-lb-app-profile"
           size:
             type: string
             enum: ["SMALL", "MEDIUM", "LARGE", "XLARGE"]
+            default: "MEDIUM"
           tier1GatewayPath:
             type: string
-          nsxtUser:
+          user:
             type: string
-          nsxtPassword:
+          password:
             type: string
-          nsxtHost:
+          host:
             type: string
           insecureFlag:
             type: boolean
+            default: true
           loadBalancerClass:
-            type: object
-            additionalProperties: true
+            type: array
+            items:
+              required: [name, ipPoolName]
+              properties:
+                name:
+                  type: string
+                ipPoolName:
+                  type: string
+                tcpAppProfileName:
+                  type: string
     oneOf:
     - required: [layout]
       properties:
