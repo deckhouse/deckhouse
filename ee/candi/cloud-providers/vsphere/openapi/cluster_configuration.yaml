@@ -250,6 +250,29 @@ apiVersions:
         - server
         - username
         - password
+      nsxt:
+        type: object
+        properties:
+          defaultIpPoolName:
+            type: string
+          defaultcpAppProfileName:
+            type: string
+          size:
+            type: string
+            enum: ["SMALL", "MEDIUM", "LARGE", "XLARGE"]
+          tier1GatewayPath:
+            type: string
+          nsxtUser:
+            type: string
+          nsxtPassword:
+            type: string
+          nsxtHost:
+            type: string
+          insecureFlag:
+            type: boolean
+          loadBalancerClass:
+            type: object
+            additionalProperties: true
     oneOf:
     - required: [layout]
       properties:
