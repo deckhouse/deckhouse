@@ -4,12 +4,12 @@ permalink: /candi/
 ---
 
 CandI subsystem consists of the following components:
-* [**bashible**](./bashible) - framework for dynamic configuration and updates.
+* [**bashible**](/candi/bashible/) - framework for dynamic configuration and updates.
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * **Deckhouse** modules:
-    * [**control-plane-manager**]({{"/modules/040-control-plane-manager/" | true_relative_url }} ) - `control-plane` maintaining.
-    * [**node-manager**]({{"/modules/040-node-manager/" | true_relative_url }} ) - swiss knife to create and update cloud and bare metal nodes.
+    * [**control-plane-manager**](https://deckhouse.io/en/documentation/v1/modules/040-control-plane-manager/) - `control-plane` maintaining.
+    * [**node-manager**](https://deckhouse.io/en/documentation/v1/modules/040-node-manager/) - swiss knife to create and update cloud and bare metal nodes.
     * **cloud-provider-** - modules to integrate different cloud with Deckhouse.
 * Installer or **dhctl** - tool for creating the first master node, deploy `Deckhouse` and converging the cluster state.
 
