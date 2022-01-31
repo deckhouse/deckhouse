@@ -4,7 +4,7 @@
   {{- $context := . -}}
   {{- $mode := "" -}}
 
-  {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
+  {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
   {{- if hasKey $module_values "https" -}}
     {{- if hasKey $module_values.https "mode" -}}
       {{- $mode = $module_values.https.mode -}}
