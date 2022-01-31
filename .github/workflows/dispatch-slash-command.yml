@@ -2,7 +2,7 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
-name: Trigger slash command
+name: Dispatch slash command
 on:
   issue_comment:
     types: [created]

@@ -50,6 +50,7 @@ jobs:
       - git_info
     runs-on: self-hosted
     steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
@@ -111,6 +112,6 @@ Destination registries:
           echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
 {!{- end }!}
 
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job" $workflowName) | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,final" $workflowName) | strings.Indent 6 }!}
 
 {!{ end -}!}

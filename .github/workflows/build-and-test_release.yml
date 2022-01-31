@@ -3,6 +3,7 @@
 #
 
 # on push to default branch or on tags
+
 name: Build and test for release
 
 on:
@@ -87,6 +88,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  started_at:
+    name: Save start timestamp
+    outputs:
+      started_at: ${{ steps.started_at.outputs.started_at }}
+    runs-on: "ubuntu-latest"
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
 
   # <template: git_info_job>
 
@@ -162,7 +178,7 @@ jobs:
   # </template: git_info_job>
 
   comment_on_start:
-    name: Add comment on start
+    name: Update issue comment
     runs-on: ubuntu-latest
     steps:
 
@@ -185,6 +201,7 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
   go_generate:
     name: Go Generate
     needs:
@@ -193,6 +210,14 @@ jobs:
     # <template: go_generate_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_step>
       - name: Checkout sources
@@ -222,26 +247,35 @@ jobs:
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Go Generate';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   build_fe:
     name: Build FE
@@ -253,6 +287,14 @@ jobs:
     # <template: build_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -431,26 +473,35 @@ jobs:
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Build FE';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   build_ee:
     name: Build EE
@@ -464,6 +515,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
@@ -641,26 +700,35 @@ jobs:
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Build EE';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   build_ce:
     name: Build CE
@@ -674,6 +742,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
@@ -851,26 +927,35 @@ jobs:
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Build CE';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   doc_web_build:
     name: Doc web build
@@ -880,6 +965,14 @@ jobs:
     # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -919,26 +1012,35 @@ jobs:
     # </template: doc_web_build_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Doc web build';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   main_web_build:
     name: Main web build
@@ -948,6 +1050,14 @@ jobs:
     # <template: main_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -987,26 +1097,35 @@ jobs:
     # </template: main_web_build_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Main web build';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   tests:
     name: Tests
@@ -1018,6 +1137,14 @@ jobs:
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1061,26 +1188,35 @@ jobs:
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Tests';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   matrix_tests:
     name: Matrix tests
@@ -1092,6 +1228,14 @@ jobs:
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1135,29 +1279,38 @@ jobs:
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Matrix tests';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+
   dhctl_tests:
-    name: Dhctl Tests
+    name: Matrix tests
     needs:
       - git_info
       - build_fe
@@ -1166,6 +1319,14 @@ jobs:
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1209,26 +1370,35 @@ jobs:
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
-            const name = 'Dhctl Tests';
+            const statusConfig = 'job,one-line';
+            const name = 'Matrix tests';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   golangci_lint:
     name: GolangCI Lint
@@ -1240,6 +1410,14 @@ jobs:
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1283,26 +1461,35 @@ jobs:
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'GolangCI Lint';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   openapi_test_cases:
     name: OpenAPI Test Cases
@@ -1314,6 +1501,14 @@ jobs:
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1357,26 +1552,35 @@ jobs:
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'OpenAPI Test Cases';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   web_links_test:
     name: Web links test
@@ -1388,6 +1592,14 @@ jobs:
     # <template: web_links_test_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1492,26 +1704,35 @@ jobs:
     # </template: web_links_test_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Web links test';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
   validators:
     name: Validators
@@ -1523,6 +1744,14 @@ jobs:
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1566,26 +1795,35 @@ jobs:
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Validators';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
 
   deploy_latest_web:
@@ -1598,6 +1836,14 @@ jobs:
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1658,26 +1904,35 @@ jobs:
       # </template: deploy_site_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
+            const statusConfig = 'job,one-line';
             const name = 'Deploy latest doc and site';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
+
 
 
   deploy_tagged_doc:
@@ -1689,6 +1944,14 @@ jobs:
     if: ${{ needs.git_info.outputs.ci_commit_tag != '' }}
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1748,30 +2011,39 @@ jobs:
       # </template: deploy_doc_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job,inline';
-            const name = 'Deploy tagged doc';
+            const statusConfig = 'job,one-line';
+            const name = 'Deploy tagged documentation';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
   last_comment:
     name: Update comment on finish
     needs:
+      - started_at
       - git_info
       - go_generate
       - build_fe
@@ -1790,6 +2062,9 @@ jobs:
       - validators
     if: ${{ always() }}
     runs-on: ubuntu-latest
+    env:
+      JOB_NAMES: |
+        {"build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","deploy_latest_web":"Deploy latest doc and site","deploy_tagged_doc":"Deploy tagged documentation","dhctl_tests":"Matrix tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","matrix_tests":"Matrix tests","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","validators":"Validators","web_links_test":"Web links test"}
     steps:
 
       # <template: checkout_step>
@@ -1799,23 +2074,31 @@ jobs:
       # </template: checkout_step>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'workflow';
+            const statusConfig = 'workflow,final,restore-one-line';
             const name = 'Build and test for release';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>

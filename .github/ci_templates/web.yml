@@ -2,6 +2,7 @@
 # <template: doc_web_build_template>
 runs-on: [self-hosted, regular]
 steps:
+  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
@@ -21,6 +22,7 @@ steps:
 # <template: main_web_build_template>
 runs-on: [self-hosted, regular]
 steps:
+  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
@@ -40,6 +42,7 @@ steps:
 # <template: web_links_test_template>
 runs-on: [self-hosted, regular]
 steps:
+  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step"           . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_flant_registry_step"    . | strings.Indent 2 }!}
