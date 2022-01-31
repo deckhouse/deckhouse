@@ -66,7 +66,9 @@ func (c *Command) Sudo() *Command {
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
 	sudoCmdLine := fmt.Sprintf(`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`, cmdLine)
 
-	args := append(c.SSHArgs, []string{
+	var args []string
+	args = append(args, c.SSHArgs...)
+	args = append(args, []string{
 		"-t", // allocate tty to auto kill remote process when ssh process is killed
 		"-t", // need to force tty allocation because of stdin is pipe!
 	}...)

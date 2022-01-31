@@ -53,6 +53,9 @@ type Config struct {
 	NodesTerraformState   map[string][]byte
 	CloudDiscovery        []byte
 	DeckhouseConfig       map[string]interface{}
+
+	KubeadmBootstrap   bool
+	MasterNodeSelector bool
 }
 
 func (c *Config) GetImage() string {
@@ -85,8 +88,10 @@ func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *C
 		// and prevents a race condition when deckhouse's Pod is scheduled
 		// on the non-approved node, so the bootstrap process never finishes.
 		deployTime := manifests.GetDeckhouseDeployTime(currentManifestInCluster)
+
 		params := deckhouseDeploymentParamsFromCfg(cfg)
 		params.DeployTime = deployTime
+
 		resDeployment = manifests.ParametrizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
 
 		return nil
@@ -385,10 +390,12 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) err
 
 func deckhouseDeploymentParamsFromCfg(cfg *Config) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:         cfg.GetImage(),
-		LogLevel:         cfg.LogLevel,
-		Bundle:           cfg.Bundle,
-		IsSecureRegistry: cfg.IsRegistryAccessRequired(),
+		Registry:           cfg.GetImage(),
+		LogLevel:           cfg.LogLevel,
+		Bundle:             cfg.Bundle,
+		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
+		KubeadmBootstrap:   cfg.KubeadmBootstrap,
+		MasterNodeSelector: cfg.MasterNodeSelector,
 	}
 }
 

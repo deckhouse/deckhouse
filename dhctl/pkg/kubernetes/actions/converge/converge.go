@@ -213,11 +213,7 @@ func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 			return ErrConvergeInterrupted
 		}
 
-		if err := SaveClusterTerraformState(r.kubeCl, outputs); err != nil {
-			return err
-		}
-
-		return nil
+		return SaveClusterTerraformState(r.kubeCl, outputs)
 	})
 }
 
@@ -240,10 +236,7 @@ func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroup
 			}
 		}
 
-		if err := WaitForNodesBecomeReady(r.kubeCl, group.Name, group.Replicas); err != nil {
-			return err
-		}
-		return nil
+		return WaitForNodesBecomeReady(r.kubeCl, group.Name, group.Replicas)
 	})
 }
 

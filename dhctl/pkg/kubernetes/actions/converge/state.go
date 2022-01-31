@@ -35,9 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var (
-	ErrNoTerraformState = errors.New("Terraform state is not found in outputs.")
-)
+var ErrNoTerraformState = errors.New("Terraform state is not found in outputs.")
 
 type NodeGroupTerraformState struct {
 	State    map[string][]byte
@@ -282,8 +280,10 @@ func GetClusterUUID(kubeCl *client.KubernetesClient) (string, error) {
 // got FS event "/tmp/dhctl/static-node-dhctl.043483477.tfstate": WRITE
 // '/tmp/dhctl/static-node-dhctl.043483477.tfstate' stat: 8840 bytes, mode: -rw-------
 
-var _ terraform.SaverDestination = &ClusterStateSaver{}
-var _ terraform.SaverDestination = &NodeStateSaver{}
+var (
+	_ terraform.SaverDestination = &ClusterStateSaver{}
+	_ terraform.SaverDestination = &NodeStateSaver{}
+)
 
 type ClusterStateSaver struct {
 	kubeCl *client.KubernetesClient

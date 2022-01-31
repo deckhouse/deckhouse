@@ -18,9 +18,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 )
 
@@ -80,37 +78,4 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 	}
 
 	fmt.Printf("%d lines are differ\n", diff)
-}
-
-func Test_DeployTime(t *testing.T) {
-	paramsGet := func() DeckhouseDeploymentParams {
-		return DeckhouseDeploymentParams{
-			Registry:         "registry.example.com/deckhouse:master",
-			LogLevel:         "debug",
-			Bundle:           "default",
-			IsSecureRegistry: true,
-		}
-	}
-
-	t.Run("set non zero deploy time if DeployTime param does not pass", func(t *testing.T) {
-		p := paramsGet()
-
-		depl := DeckhouseDeployment(p)
-		tm := GetDeckhouseDeployTime(depl)
-
-		require.False(t, tm.IsZero())
-	})
-
-	t.Run("set same deploy time as DeployTime from param if it present", func(t *testing.T) {
-		expectTime, _ := time.Parse(time.RFC822, "02 Jan 06 15:04 MST")
-
-		p := paramsGet()
-		p.DeployTime = expectTime
-
-		depl := DeckhouseDeployment(p)
-		tm := GetDeckhouseDeployTime(depl)
-
-		require.False(t, tm.IsZero())
-		require.Equal(t, tm.UnixNano(), expectTime.UnixNano())
-	})
 }
