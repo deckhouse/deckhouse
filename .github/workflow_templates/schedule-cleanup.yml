@@ -52,4 +52,5 @@ jobs:
           export WERF_REPO=${DEV_REGISTRY_PATH}
           type werf && source $(werf ci-env github --verbose --as-file)
           touch modules/images_tags_${WERF_ENV}.json
+          ls -l modules/*
           ./modules_images_werf cleanup
