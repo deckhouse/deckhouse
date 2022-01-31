@@ -39,7 +39,7 @@ function bp() {
 }
 
 function cleanup() {
-  werf cleanup --config modules_images_werf.yaml --without-kube
+  werf cleanup --config modules_images_werf.yaml --without-kube --dry-run
 }
 
 

@@ -1,7 +1,7 @@
 name: Cleanup registries
-on:
-  schedule:
-    - cron:  '12 0 * * *'
+on: push
+#  schedule:
+#    - cron:  '12 0 * * *'
   workflow_dispatch:
 
 env:
@@ -27,9 +27,6 @@ jobs:
     steps:
 {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 6 }!}
       - name: Cleanup
         env:
@@ -38,7 +35,7 @@ jobs:
         run: |
           export WERF_REPO=${DEV_REGISTRY_PATH}
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf cleanup --without-kube
+          werf cleanup --without-kube --dry-run
 
   cleanup_modules_registry:
     name: Cleanup modules registry
@@ -48,9 +45,6 @@ jobs:
     steps:
 {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 6 }!}
       - name: Cleanup
         env:
@@ -61,18 +55,3 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           ./modules_images_werf cleanup
-
-
-  cleanup_modules_images:
-    name: Cleanup modules images
-    runs-on: [self-hosted, regular]
-    steps:
-{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}
-      - name: Cleanup
-        run: |
-          docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
-          docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
