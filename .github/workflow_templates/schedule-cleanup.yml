@@ -32,6 +32,7 @@ jobs:
         run: |
           export WERF_REPO=${DEV_REGISTRY_PATH}
           touch modules/images_tags_${WERF_ENV}.json
+          ls -l modules
           type werf && source $(werf ci-env github --verbose --as-file)
           werf cleanup --without-kube --dry-run
 
