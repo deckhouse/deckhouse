@@ -12,7 +12,9 @@ name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
 secret: {{ $crd.credentials.appDexSecret }}
     {{- if $crd.spec.allowedGroups }}
 allowedGroups:
-{{ $crd.spec.allowedGroups | toYaml }}
+{{- range $group := $crd.spec.allowedGroups }}
+  - {{ $group }}
+{{- end }}
     {{- end }}
 redirectURIs:
 - https://{{ $crd.spec.applicationDomain }}/dex-authenticator/callback

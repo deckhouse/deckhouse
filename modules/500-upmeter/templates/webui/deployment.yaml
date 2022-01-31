@@ -58,7 +58,7 @@ spec:
       containers:
         - name: webui
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.upmeter.webui }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.upmeter.webui }}"
           lifecycle:
             preStop:
               exec:

@@ -42,7 +42,7 @@ spec:
       - name: deckhouse-registry
       containers:
         - name: webhook
-          image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeDns.stsPodsHostsAppenderWebhook }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeDns.stsPodsHostsAppenderWebhook }}"
           command:
           - /sts-pods-hosts-appender-webhook
           - -tls-cert-file=/etc/webhook/certs/tls.crt

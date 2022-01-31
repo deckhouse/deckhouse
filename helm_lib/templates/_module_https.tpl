@@ -4,7 +4,7 @@
   {{- $context := . -}}
   {{- $mode := "" -}}
 
-  {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
+  {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
   {{- if hasKey $module_values "https" -}}
     {{- if hasKey $module_values.https "mode" -}}
       {{- $mode = $module_values.https.mode -}}
@@ -26,7 +26,7 @@
 {{- /* Usage: {{ $https_values := include "helm_lib_https_values" . | fromYaml }} */ -}}
 {{- define "helm_lib_https_values" -}}
   {{- $context := . -}}
-  {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
+  {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
   {{- $mode := "" -}}
   {{- $certManagerClusterIssuerName := "" -}}
 
@@ -123,7 +123,7 @@ certManager:
   {{- $secret_name_prefix := index . 2 -}}
   {{- $mode := include "helm_lib_module_https_mode" $context -}}
   {{- if eq $mode "CustomCertificate" -}}
-    {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
+    {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
     {{- $secret_name := include "helm_lib_module_https_secret_name" (list $context $secret_name_prefix) -}}
 ---
 apiVersion: v1
@@ -133,8 +133,7 @@ metadata:
   namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 type: kubernetes.io/tls
-data:
-  {{- $module_values.internal.customCertificateData | toYaml | nindent 2 }}
+data: {{ $module_values.internal.customCertificateData | toJson }}
   {{- end -}}
 {{- end -}}
 

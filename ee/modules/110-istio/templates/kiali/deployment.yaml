@@ -43,7 +43,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: kiali
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.kiali }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.kiali }}"
         imagePullPolicy: IfNotPresent
         command:
         - "/opt/kiali/kiali"

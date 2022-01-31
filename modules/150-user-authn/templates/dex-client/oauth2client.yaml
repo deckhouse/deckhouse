@@ -12,15 +12,21 @@ name: {{ $crd.id }}
 secret: {{ $crd.clientSecret }}
   {{ if $crd.spec.trustedPeers }}
 trustedPeers:
-{{ $crd.spec.trustedPeers | toYaml }}
+{{- range $peer := $crd.spec.trustedPeers }}
+  - {{ $peer }}
+{{- end }}
   {{- end }}
   {{ if $crd.spec.redirectURIs }}
 redirectURIs:
-{{ $crd.spec.redirectURIs | toYaml }}
+{{- range $uri := $crd.spec.redirectURIs }}
+  - {{ $uri }}
+{{- end }}
   {{- end }}
   {{ if $crd.spec.allowedGroups }}
 allowedGroups:
-{{ $crd.spec.allowedGroups | toYaml }}
+{{- range $group := $crd.spec.allowedGroups }}
+- {{ $group }}
+{{- end }}
   {{- end }}
 
 # Following manifest should be deleted, because it uses colons in the client
@@ -37,14 +43,20 @@ name: {{ $crd.legacyID }}
 secret: {{ $crd.clientSecret }}
   {{ if $crd.spec.trustedPeers }}
 trustedPeers:
-{{ $crd.spec.trustedPeers | toYaml }}
+{{- range $peer := $crd.spec.trustedPeers }}
+  - {{- $peer }}
+{{- end }}
   {{- end }}
   {{ if $crd.spec.redirectURIs }}
 redirectURIs:
-{{ $crd.spec.redirectURIs | toYaml }}
+{{- range $uri := $crd.spec.redirectURIs }}
+  - {{ $uri }}
+{{- end }}
   {{- end }}
   {{ if $crd.spec.allowedGroups }}
 allowedGroups:
-{{ $crd.spec.allowedGroups | toYaml }}
+{{- range $group := $crd.spec.allowedGroups }}
+- {{ $group }}
+{{- end }}
   {{- end }}
 {{- end }}

@@ -42,7 +42,7 @@ spec:
       containers:
         - name: cainjector
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.certManagerCainjector }}
+          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.certManagerCainjector }}"
           args:
           - --leader-election-namespace=$(POD_NAMESPACE)
           env:

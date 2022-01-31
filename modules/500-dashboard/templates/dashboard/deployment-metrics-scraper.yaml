@@ -44,7 +44,7 @@ spec:
       containers:
       - name: metrics-scraper
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.dashboard.metricsScraper }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.dashboard.metricsScraper }}"
         ports:
         - containerPort: 8000
           protocol: TCP

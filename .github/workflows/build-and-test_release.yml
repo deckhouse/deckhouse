@@ -1396,7 +1396,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: tests
-          args: 'ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/matrix/'
+          args: 'go test ./testing/matrix/ -v'
         env:
           WERF_SKIP_BUILD: "true"
           WERF_DOCKER_OPTIONS: '-w /deckhouse'

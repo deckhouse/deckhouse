@@ -76,7 +76,7 @@ spec:
             path: /run/xtables.lock
             type: FileOrCreate
       containers:
-      - image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.proxyFailover }}
+      - image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.proxyFailover }}"
         name: nginx
         env:
         - name: CONTROLLER_NAME
@@ -94,7 +94,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-      - image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.proxyFailoverIptables }}
+      - image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.proxyFailoverIptables }}"
         name: iptables-loop
         securityContext:
           capabilities:
@@ -106,7 +106,7 @@ spec:
             name: xtables-lock
             readOnly: false
       - name: nginx-exporter
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.nginxExporter }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.nginxExporter }}"
         args:
         - "-web.listen-address=127.0.0.1:10354"
         - "-nginx.scrape-uri=http://127.0.0.1:10253/nginx_status"

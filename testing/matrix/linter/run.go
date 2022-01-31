@@ -40,6 +40,12 @@ func isExist(baseDir, filename string) bool {
 }
 
 func Run(tmpDir string, m utils.Module) error {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("panic on linter run occurred: %v\n", r)
+		}
+	}()
+
 	// Silence default loggers
 	log.SetOutput(ioutil.Discard)      // helm
 	logrus.SetLevel(logrus.PanicLevel) // shell-operator

@@ -30,8 +30,8 @@ spec:
       app: {{ $context.Chart.Name }}
       name: {{ $localPathProvisioner.name }}
 ---
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
   namespace: d8-{{ $context.Chart.Name }}
@@ -62,7 +62,7 @@ spec:
       containers:
       - name: local-path-provisioner
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $context | nindent 8 }}
-        image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.localPathProvisioner }}
+        image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.localPathProvisioner }}"
         imagePullPolicy: IfNotPresent
         command:
         - local-path-provisioner
@@ -73,11 +73,11 @@ spec:
         - --service-account-name
         - {{ $context.Chart.Name }}
         - --configmap-name
-        - {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
+        - "{{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}"
         - --provisioner-name
         - deckhouse.io/{{ $localPathProvisioner.name }}
         - --helper-image
-        - {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.helper }}
+        - "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.helper }}"
         volumeMounts:
         - name: config-volume
           mountPath: /etc/config/

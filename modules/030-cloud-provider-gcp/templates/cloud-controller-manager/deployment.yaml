@@ -61,7 +61,7 @@ spec:
       containers:
         - name: gcp-cloud-controller-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.cloudProviderGcp $ccmImageName }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.cloudProviderGcp $ccmImageName }}"
           command:
           - /usr/local/bin/cloud-controller-manager
           - --leader-elect=true

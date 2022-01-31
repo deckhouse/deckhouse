@@ -58,17 +58,18 @@ spec:
         app: dex-authenticator
         name: {{ $crd.name }}
       annotations:
-        checksum/config: {{ $crd.credentials | toYaml | b64enc | sha256sum }}
+        checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
     spec:
 {{- if $crd.spec.nodeSelector }}
       nodeSelector:
-        {{- $crd.spec.nodeSelector | toYaml | nindent 8 }}
+  {{- range $key, $value := $crd.spec.nodeSelector }}
+        {{ $key | quote }}: {{ $value | quote }}
+  {{- end }}
 {{- else }}
       {{- include "helm_lib_node_selector" (tuple $context "system") | nindent 6 }}
 {{- end }}
 {{- if $crd.spec.tolerations }}
-      tolerations:
-        {{- $crd.spec.tolerations | toYaml | nindent 8 }}
+      tolerations: {{ $crd.spec.tolerations | toJson }}
 {{- else }}
       {{- include "helm_lib_tolerations" (tuple $context "system") | nindent 6 }}
 {{- end }}

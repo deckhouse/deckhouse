@@ -3,7 +3,7 @@
 {{- define "helm_lib_module_ingress_class" -}}
   {{- $context := . -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
 
-  {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
+  {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
 
   {{- if hasKey $module_values "ingressClass" -}}
     {{- $module_values.ingressClass -}}

@@ -85,7 +85,7 @@ securityContext:
   capabilities:
     drop:
     - ALL
-    add: {{- index . 1 | toYaml | nindent 4 }}
+    add: {{ index . 1 | toJson }}
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list "KILL" "SYS_PTRACE")) }} */ -}}
@@ -96,5 +96,5 @@ securityContext:
   capabilities:
     drop:
     - ALL
-    add: {{- index . 1 | toYaml | nindent 4 }}
+    add: {{ index . 1 | toJson }}
 {{- end }}

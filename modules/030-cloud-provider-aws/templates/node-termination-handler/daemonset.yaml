@@ -61,7 +61,7 @@ spec:
       containers:
       - name: node-termination-handler
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.cloudProviderAws.nodeTerminationHandler }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.cloudProviderAws.nodeTerminationHandler }}"
         env:
         - name: NODE_NAME
           valueFrom:

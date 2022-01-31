@@ -46,7 +46,7 @@ spec:
       containers:
       - name: webhook
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.legacyCertManagerWebhook }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.legacyCertManagerWebhook }}"
         args:
         - --v=3
         - --secure-port=6443

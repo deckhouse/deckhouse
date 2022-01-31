@@ -31,7 +31,7 @@ spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
-  image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.prometheus.prometheus }}
+  image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.prometheus.prometheus }}"
   version: v2.13.0
   imagePullSecrets:
   - name: deckhouse-registry
@@ -39,7 +39,7 @@ spec:
   containers:
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
-    image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
+    image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}"
     args:
     - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9090"
     - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"

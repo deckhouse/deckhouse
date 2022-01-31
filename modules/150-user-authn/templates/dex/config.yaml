@@ -145,7 +145,9 @@
         userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
         scopes:
         {{- if $provider.oidc.scopes }}
-        {{- $provider.oidc.scopes | toYaml | nindent 8 }}
+           {{- range $scope := $provider.oidc.scopes }}
+        - {{ $scope | quote }}
+           {{- end }}
         {{- else }}
         - openid
         - profile
@@ -168,7 +170,9 @@
         clientSecret: {{ $provider.crowd.clientSecret | quote }}
         {{- if $provider.crowd.groups }}
         groups:
-        {{- $provider.crowd.groups | toYaml | nindent 8 }}
+          {{- range $group := $provider.crowd.groups }}
+        - {{ $group | quote }}
+          {{- end }}
         {{- end }}
         usernamePrompt: {{ $provider.crowd.usernamePrompt | default "Crowd username" | quote }}
       {{- end }}

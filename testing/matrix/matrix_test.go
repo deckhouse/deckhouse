@@ -17,38 +17,37 @@ limitations under the License.
 package matrix
 
 import (
+	"os"
+	"strings"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 func TestMatrix(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
+	discoveredModules, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
+	require.NoError(t, err)
 
-var _ = Describe("Matrix tests", func() {
-	// use MODULES_DIR=/deckhouse/modules/000-module-name env var for run matrix tests for one module
-	modules, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
+	// Use environment variable to focus on specific module, e.g. D8_TEST_MATRIX_FOCUS=user-authn,user-authz
+	focus := os.Getenv("D8_TEST_MATRIX_FOCUS")
 
-	modulesCH := make(chan utils.Module, len(modules))
-	Context("module discovery", func() {
-		It("", func() {
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-	})
+	focusNames := make(map[string]struct{})
+	if focus != "" {
+		parts := strings.Split(focus, ",")
+		for _, part := range parts {
+			focusNames[part] = struct{}{}
+		}
+	}
 
-	Context("run", func() {
-		for _, module := range modules {
-			modulesCH <- module
-			It("for module "+module.Name, func() {
-				Expect(linter.Run("", <-modulesCH)).ToNot(ErrorOccurred())
+	for _, module := range discoveredModules {
+		_, ok := focusNames[module.Name]
+		if len(focusNames) == 0 || ok {
+			t.Run(module.Name, func(t *testing.T) {
+				require.NoError(t, linter.Run("", module))
 			})
 		}
-	})
-})
+	}
+}

@@ -193,7 +193,6 @@ properties:
         default: []
         example: ["10.1.1.0/24"]
         x-examples:
-        - []
         - ["1.1.1.1/32", "1.2.3.0/24"]
       excludeInboundPorts:
         description: |
@@ -221,7 +220,6 @@ properties:
         default: []
         example: ["8080", "8443"]
         x-examples:
-        - []
         - ["8080", "8443"]
   ca:
     type: object
@@ -320,6 +318,13 @@ properties:
   auth:
     type: object
     default: {}
+    x-examples:
+    - {}
+    - externalAuthentication:
+        authURL: "https://dex.d8.svc.cluster.local/dex/auth"
+        authSignInURL: "https://myhost.ru/dex/sign_in"
+      allowedUserGroups:
+      - admins
     description: Options related to authentication or authorization in the application.
     properties:
       externalAuthentication:
@@ -333,8 +338,8 @@ properties:
             type: string
             x-examples: ["https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth"]
             description: |
-              The URL of the authentication service. 
-              
+              The URL of the authentication service.
+
               If the user is authenticated, the service should return an HTTP 200 response code.
           authSignInURL:
             type: string

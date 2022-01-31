@@ -114,7 +114,7 @@ spec:
       - d8-istio-sidecar-registry
 
       proxy:
-        image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}"
         clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
         resources: {}
         logLevel: warning
@@ -125,7 +125,7 @@ spec:
         excludeInboundPorts:  {{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," | quote }}
 
       proxy_init:
-        image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}"
         resources:
           limits:
             cpu: 2000m
@@ -139,7 +139,7 @@ spec:
     pilot:
       autoscaleEnabled: false
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
-      image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}
+      image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}"
       configNamespace: d8-{{ $.Chart.Name }}
       resources:
         requests:
