@@ -49,10 +49,15 @@ if bb-yum-package? docker-ce; then
   bb-flag-set reboot
 fi
 
-{{- $desired_version := index .k8s .kubernetesVersion "bashible" "centos" "7" "containerd" "desiredVersion" }}
-{{- $allowed_versions_pattern := index .k8s .kubernetesVersion "bashible" "centos" "7" "containerd" "allowedPattern" }}
-desired_version={{ $desired_version | quote }}
-allowed_versions_pattern={{ $allowed_versions_pattern | quote }}
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
+  {{- $centosVersion := toString $key }}
+  {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
+if bb-is-centos-version? {{ $centosVersion }} ; then
+  desired_version={{ $value.containerd.desiredVersion | quote }}
+  allowed_versions_pattern={{ $value.containerd.allowedPattern | quote }}
+fi
+  {{- end }}
+{{- end }}
 
 if [[ -z $desired_version ]]; then
   bb-log-error "Desired version must be set"
@@ -76,7 +81,13 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-  containerd_tag="{{ index .images.registrypackages (printf "containerdCentos7%s" ($desired_version | replace "containerd.io-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
+  {{- $centosVersion := toString $key }}
+  if bb-is-centos-version? {{ $centosVersion }} ; then
+    containerd_tag="{{- index $.images.registrypackages (printf "containerdCentos%s" ($value.containerd.desiredVersion | replace "containerd.io-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
+  fi
+{{- end }}
+
   crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
 
   bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}"

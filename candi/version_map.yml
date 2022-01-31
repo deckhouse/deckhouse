@@ -121,6 +121,20 @@ bashible: &bashible
         generic:
           desiredVersion: "3.10.0-1127.el7.x86_64"
           allowedPattern: "3.10.0-1127|3.10.0-1160"
+    '8':
+      docker:
+        desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
+          allowedPattern: "containerd.io-1.[1234]"
+      containerd:
+        desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
+        allowedPattern: "containerd.io-1.[1234]"
+      kernel:
+        generic:
+          desiredVersion: "4.18.0-305.3.1.el8.x86_64"
+          allowedPattern: "4.18.0-"
 k8s:
   '1.19':
     status: end-of-life
@@ -219,8 +233,7 @@ k8s:
       # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
       kubeScheduler: sha256:415afb38d7d610177753f1bd62fd6ef1bf3eec85cc17e100735775d7b7de1ccf
-      # kubeProxy: sha256 digest isn't needed because this component is compiled from source for that version of kubernetes
-      kubeProxy: sha256:ed16fc3467873e99ad90389160330b57eed80ad71faec5bba154059ced8dd6f8
+      # kubeProxy: sha256 digest isn't needed for this version of kubernetes because this component is compiled as a module image with a special patch
   '1.22':
     status: available
     patch: 5

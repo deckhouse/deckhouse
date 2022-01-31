@@ -30,6 +30,16 @@
 # Later, we plan render bootstrap with bashible-apiserver and use registry.host and registry.auth variables.
 # https://github.com/deckhouse/deckhouse/issues/143
 */}}
+{{- /*
+# By default, python is not installed on CentOS 8.
+# So we need to install it before first use
+*/}}
+. /etc/os-release
+if [ "${VERSION_ID}" == "8" ] ; then
+  yum install python3 -y
+  alternatives --set python /usr/bin/python3
+fi
+
 REGISTRY_ADDRESS="{{ .registry.address }}"
 SCHEME="{{ .registry.scheme }}"
 REGISTRY_PATH="{{ .registry.path }}"
@@ -155,6 +165,6 @@ done
 # Install jq from deckhouse registry.
 # When we will move to Centos 8, we should install jq from main repo.
 */}}
-bb-rp-install "jq:{{ .images.registrypackages.jq16 }}"
+yum install jq -y || bb-rp-install "jq:{{ .images.registrypackages.jq16 }}"
 
 mkdir -p /var/lib/bashible/

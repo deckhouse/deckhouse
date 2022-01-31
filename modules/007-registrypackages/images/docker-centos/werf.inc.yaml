@@ -2,7 +2,7 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- range $key, $versions := $value.bashible.centos }}
     {{- if $versions.docker.desiredVersion }}
-      {{- $docker_versions = $versions.docker.desiredVersion | toString | append $docker_versions }}
+      {{- $docker_versions = printf "%s-%s" $versions.docker.desiredVersion $key | toString | append $docker_versions }}
     {{- end}}
   {{- end }}
 {{- end }}
@@ -35,8 +35,11 @@ shell:
   beforeInstall:
   - apk add --no-cache curl
   setup:
-  - RPM_PACKAGE="https://download.docker.com/linux/centos/7/x86_64/stable/Packages/{{ $version }}.rpm"
-  - RPM_PACKAGE_CLI="https://download.docker.com/linux/centos/7/x86_64/stable/Packages/{{ $version | replace "docker-ce" "docker-ce-cli" }}.rpm"
+  - DISTRO="$(awk -F "-" '{print $NF}' <<< "{{ $version }}")"
+  - VERSION="$(sed "s/-${DISTRO}//" <<< "{{ $version }}")"
+  - CLI_VERSION="$(sed "s/docker-ce/docker-ce-cli/" <<< "${VERSION}")"
+  - RPM_PACKAGE="https://download.docker.com/linux/centos/${DISTRO}/x86_64/stable/Packages/${VERSION}.rpm"
+  - RPM_PACKAGE_CLI="https://download.docker.com/linux/centos/${DISTRO}/x86_64/stable/Packages/${CLI_VERSION}.rpm"
   - curl -sL ${RPM_PACKAGE} --output /docker-ce.x86_64.rpm
   - curl -sL ${RPM_PACKAGE_CLI} --output /docker-ce-cli.x86_64.rpm
 {{- end }}

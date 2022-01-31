@@ -55,6 +55,7 @@ context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images
 dockerfile: Dockerfile
 args:
   BASE_ALPINE: {{ env "BASE_ALPINE" }}
+  BASE_ALPINE_3_15: {{ env "BASE_ALPINE_3_15" }}
   BASE_DEBIAN: {{ env "BASE_DEBIAN" }}
   BASE_GOLANG_ALPINE: {{ env "BASE_GOLANG_ALPINE" }}
   BASE_GOLANG_16_ALPINE: {{ env "BASE_GOLANG_16_ALPINE" }}

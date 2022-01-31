@@ -385,6 +385,10 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
+	// TODO remove after 1.31 release !!!
+	// This replace is needed to first bsahible converge after change bundle name from centos-7 to centos
+	contextKey = strings.ReplaceAll(contextKey, "centos-7", "centos")
+
 	raw, ok := c.data[contextKey]
 	if !ok {
 		// log exists keys for debug purposes

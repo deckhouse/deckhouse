@@ -18,8 +18,8 @@ if [ -e /etc/os-release ]; then
   . /etc/os-release
   bundleName="${ID}-${VERSION_ID}"
   case $bundleName in
-    centos-7|rhel-7.*)
-      echo "centos-7"
+    centos-7|rhel-7.*|centos-8|rhel-8.*)
+      echo "centos"
       exit 0
     ;;
     ubuntu-16.04|ubuntu-18.04|ubuntu-20.04)

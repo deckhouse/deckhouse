@@ -86,7 +86,7 @@ if [[ "$should_install_containerd" == true ]]; then
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
   {{- $ubuntuVersion := toString $key }}
   if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdUbuntu%s%s" ($value.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $ubuntuName $ubuntuVersion)) }}"
+    containerd_tag="{{- index $.images.registrypackages (printf "containerdUbuntu%s%s" ($value.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "_" | replace "-" "_" | camelcase) (index $ubuntuName $ubuntuVersion)) }}"
   fi
 {{- end }}
 
