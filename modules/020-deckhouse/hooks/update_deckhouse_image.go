@@ -296,6 +296,7 @@ type deckhouseUpdater struct {
 	now          time.Time
 	inManualMode bool
 
+	// don't modify releases order, logic is based on this sorted slice
 	releases                   []deckhouseRelease
 	totalPendingManualReleases int
 
@@ -330,6 +331,11 @@ func newDeckhouseUpdater(mode string) *deckhouseUpdater {
 	}
 }
 
+// ApplyPredictedRelease applies predicted release, checks everything:
+//   - Deckhouse is ready (except patch)
+//   - Canary settings
+//   - Manual approving
+//   - Release requirements
 func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if du.predictedReleaseIndex == -1 {
 		return // has no predicted release
@@ -436,6 +442,8 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 	}
 }
 
+// PredictNextRelease runs prediction of the next release to deploy.
+// it skips patch releases and save only the latest one
 func (du *deckhouseUpdater) PredictNextRelease() {
 	for i, release := range du.releases {
 		switch release.Phase {
@@ -455,14 +463,21 @@ func (du *deckhouseUpdater) PredictNextRelease() {
 	}
 }
 
+// LastReleaseDeployed returns the equality of the latest existed release with the latest deployed
 func (du *deckhouseUpdater) LastReleaseDeployed() bool {
 	return du.currentDeployedReleaseIndex == len(du.releases)-1
 }
 
+// HasForceRelease check the existence of the forced release
 func (du *deckhouseUpdater) HasForceRelease() bool {
 	return du.forcedReleaseIndex != -1
 }
+
+// ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
 func (du *deckhouseUpdater) ApplyForcedRelease(input *go_hook.HookInput) {
+	if du.forcedReleaseIndex == -1 {
+		return
+	}
 	forcedRelease := &(du.releases[du.forcedReleaseIndex])
 	var currentRelease *deckhouseRelease
 	if du.currentDeployedReleaseIndex != -1 {
@@ -497,6 +512,7 @@ func (du *deckhouseUpdater) ApplyForcedRelease(input *go_hook.HookInput) {
 	}
 }
 
+// PredictedReleaseIsPatch shows if the predicted release is a patch with respect to the Deployed one
 func (du *deckhouseUpdater) PredictedReleaseIsPatch() bool {
 	if du.currentDeployedReleaseIndex == -1 {
 		return false
@@ -624,6 +640,10 @@ func (du *deckhouseUpdater) patchManualRelease(input *go_hook.HookInput, release
 	return release
 }
 
+// FetchAndPrepareReleases fetches releases from snapshot and then:
+//   - patch releases with empty status (just created)
+//   - handle suspended releases (patch status and remove annotation)
+//   - patch manual releases (change status)
 func (du *deckhouseUpdater) FetchAndPrepareReleases(input *go_hook.HookInput) {
 	snap := input.Snapshots["releases"]
 	if len(snap) == 0 {
