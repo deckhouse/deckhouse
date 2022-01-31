@@ -31,6 +31,7 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
+      plk_ignore_labels: "name"
       description: |
         Deckhouse release is waiting for manual approval.
 
@@ -48,6 +49,7 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
+      plk_ignore_labels: "name"
       description: |
         Deckhouse release is waiting for manual approval.
 
@@ -65,6 +67,7 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
+      plk_ignore_labels: "name"
       description: |
         Deckhouse release is waiting for manual approval.
 
