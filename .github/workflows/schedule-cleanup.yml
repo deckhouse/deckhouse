@@ -3,10 +3,7 @@
 #
 
 name: Cleanup registries
-on:
-  schedule:
-    - cron:  '12 0 * * *'
-  workflow_dispatch:
+on: push
 
 env:
 
@@ -175,36 +172,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Login to flant registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_flant_registry_step>
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
@@ -218,7 +185,7 @@ jobs:
         run: |
           export WERF_REPO=${DEV_REGISTRY_PATH}
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf cleanup --without-kube
+          werf cleanup --without-kube --dry-run
 
   cleanup_modules_registry:
     name: Cleanup modules registry
@@ -244,36 +211,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Login to flant registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_flant_registry_step>
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
@@ -289,59 +226,3 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           ./modules_images_werf cleanup
-
-
-  cleanup_modules_images:
-    name: Cleanup modules images
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-
-      # </template: checkout_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Login to flant registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_flant_registry_step>
-      - name: Cleanup
-        run: |
-          docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
-          docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm

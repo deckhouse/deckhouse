@@ -1,8 +1,5 @@
 name: Cleanup registries
 on: push
-#  schedule:
-#    - cron:  '12 0 * * *'
-  workflow_dispatch:
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
