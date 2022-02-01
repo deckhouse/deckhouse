@@ -162,7 +162,6 @@ properties:
                       type: string
                     tcpAppProfileName:
                       type: string
-
       providerDiscoveryData:
         type: object
         additionalProperties: false
