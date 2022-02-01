@@ -29,19 +29,19 @@ type VsphereInstanceClass struct {
 	// Root disk size in GiB to use in vSphere VirtualMachines.
 	RootDiskSize int32 `json:"rootDiskSize,omitempty" yaml:"rootDiskSize,omitempty"`
 	// Path to the template to be cloned. Relative to the datacenter.
-	Template string `json:"template,omitempty" yaml:"template,omitempty"`
+	Template string `json:"template" yaml:"template"`
 	// Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
 	MainNetwork string `json:"mainNetwork" yaml:"mainNetwork"`
 	// Paths to networks that VirtualMachines' secondary NICs will connect to. Relative to the datacenter.
 	AdditionalNetworks []string `json:"additionalNetworks,omitempty" yaml:"additionalNetworks,omitempty"`
 	// Path to a datastore in which VirtualMachines will be cloned. Relative to the datacenter.
-	Datastore string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
+	Datastore string `json:"datastore" yaml:"datastore"`
 	// Disable time synchronization in Guest VM.
 	DisableTimesync bool `json:"disableTimesync,omitempty" yaml:"disableTimesync,omitempty"`
 	// Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
 	ResourcePool string `json:"resourcePool,omitempty" yaml:"resourcePool,omitempty"`
 	// Additional VM's parameters.
-	RuntimeOptions VsphereInstanceClassRuntimeOptions `json:"runtimeOptions,omitempty" yaml:"runtimeOptions,omitempty"`
+	RuntimeOptions *VsphereInstanceClassRuntimeOptions `json:"runtimeOptions,omitempty" yaml:"runtimeOptions,omitempty"`
 }
 
 type VsphereInstanceClassRuntimeOptions struct {

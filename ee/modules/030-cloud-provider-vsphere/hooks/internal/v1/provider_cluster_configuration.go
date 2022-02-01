@@ -25,24 +25,24 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type VsphereProviderClusterConfiguration struct {
-	ApiVersion           string                 `json:"apiVersion" yaml:"apiVersion"`
-	Kind                 string                 `json:"kind" yaml:"kind"`
-	MasterNodeGroup      VsphereMasterNodeGroup `json:"masterNodeGroup" yaml:"masterNodeGroup"`
-	NodeGroups           []VsphereNodeGroup     `json:"nodeGroups,omitempty" yaml:"nodeGroups,omitempty"`
-	SshPublicKey         string                 `json:"sshPublicKey" yaml:"sshPublicKey"`
-	RegionTagCategory    string                 `json:"regionTagCategory" yaml:"regionTagCategory"`
-	ZoneTagCategory      string                 `json:"zoneTagCategory" yaml:"zoneTagCategory"`
-	DisableTimesync      bool                   `json:"disableTimesync,omitempty" yaml:"disableTimesync,omitempty"`
-	ExternalNetworkNames []string               `json:"externalNetworkNames,omitempty" yaml:"externalNetworkNames,omitempty"`
-	InternalNetworkNames []string               `json:"internalNetworkNames,omitempty" yaml:"internalNetworkNames,omitempty"`
-	InternalNetworkCIDR  []string               `json:"internalNetworkCIDR,omitempty" yaml:"internalNetworkCIDR,omitempty"`
-	VmFolderPath         string                 `json:"vmFolderPath" yaml:"vmFolderPath"`
-	Region               string                 `json:"region" yaml:"region"`
-	Zones                []string               `json:"zones" yaml:"zones"`
-	BaseResourcePool     string                 `json:"baseResourcePool" yaml:"baseResourcePool"`
-	Layout               string                 `json:"layout" yaml:"layout"`
-	Provider             VsphereProvider        `json:"provider" yaml:"provider"`
-	Nsxt                 VsphereNsxt            `json:"nsxt,omitempty" yaml:"nsxt,omitempty"`
+	ApiVersion           string                  `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	Kind                 string                  `json:"kind,omitempty" yaml:"kind,omitempty"`
+	MasterNodeGroup      *VsphereMasterNodeGroup `json:"masterNodeGroup,omitempty" yaml:"masterNodeGroup,omitempty"`
+	NodeGroups           []VsphereNodeGroup      `json:"nodeGroups,omitempty" yaml:"nodeGroups,omitempty"`
+	SshPublicKey         string                  `json:"sshPublicKey" yaml:"sshPublicKey"`
+	RegionTagCategory    string                  `json:"regionTagCategory" yaml:"regionTagCategory"`
+	ZoneTagCategory      string                  `json:"zoneTagCategory" yaml:"zoneTagCategory"`
+	DisableTimesync      bool                    `json:"disableTimesync,omitempty" yaml:"disableTimesync,omitempty"`
+	ExternalNetworkNames []string                `json:"externalNetworkNames,omitempty" yaml:"externalNetworkNames,omitempty"`
+	InternalNetworkNames []string                `json:"internalNetworkNames,omitempty" yaml:"internalNetworkNames,omitempty"`
+	InternalNetworkCIDR  string                  `json:"internalNetworkCIDR,omitempty" yaml:"internalNetworkCIDR,omitempty"`
+	VmFolderPath         string                  `json:"vmFolderPath" yaml:"vmFolderPath"`
+	Region               string                  `json:"region" yaml:"region"`
+	Zones                []string                `json:"zones" yaml:"zones"`
+	BaseResourcePool     string                  `json:"baseResourcePool,omitempty" yaml:"baseResourcePool,omitempty"`
+	Layout               string                  `json:"layout,omitempty" yaml:"layout,omitempty"`
+	Provider             *VsphereProvider        `json:"provider" yaml:"provider"`
+	Nsxt                 *VsphereNsxt            `json:"nsxt,omitempty" yaml:"nsxt,omitempty"`
 }
 
 type VsphereProvider struct {
@@ -53,20 +53,20 @@ type VsphereProvider struct {
 }
 
 type VsphereMasterNodeGroup struct {
-	Replicas      int32                         `json:"replicas" yaml:"replicas"`
-	Zones         []string                      `json:"zones,omitempty" yaml:"zones,omitempty"`
-	InstanceClass VsphereNodeGroupInstanceClass `json:"instanceClass" yaml:"instanceClass"`
+	Replicas      int32                          `json:"replicas" yaml:"replicas"`
+	Zones         []string                       `json:"zones,omitempty" yaml:"zones,omitempty"`
+	InstanceClass *VsphereNodeGroupInstanceClass `json:"instanceClass" yaml:"instanceClass"`
 }
 
 type VsphereNodeGroupInstanceClass struct {
 	VsphereInstanceClass
-	MainNetworkIPAddresses []VsphereMainNetworkIPAddresses `json:"mainNetworkIPAddresses" yaml:"mainNetworkIPAddresses"`
+	MainNetworkIPAddresses []VsphereMainNetworkIPAddresses `json:"mainNetworkIPAddresses,omitempty" yaml:"mainNetworkIPAddresses,omitempty"`
 }
 
 type VsphereMainNetworkIPAddresses struct {
-	Address     string                 `json:"address" yaml:"address"`
-	Gateway     string                 `json:"gateway" yaml:"gateway"`
-	Nameservers IPAddressesNameservers `json:"nameservers" yaml:"nameservers"`
+	Address     string                  `json:"address" yaml:"address"`
+	Gateway     string                  `json:"gateway" yaml:"gateway"`
+	Nameservers *IPAddressesNameservers `json:"nameservers" yaml:"nameservers"`
 }
 
 type IPAddressesNameservers struct {
@@ -75,14 +75,14 @@ type IPAddressesNameservers struct {
 }
 
 type VsphereNodeGroup struct {
-	Name          string                        `json:"name" yaml:"name"`
-	Replicas      int32                         `json:"replicas" yaml:"replicas"`
-	Zones         []string                      `json:"zones" yaml:"zones"`
-	NodeTemplate  NodeTemplate                  `json:"nodeTemplate,omitempty" yaml:"nodeTemplate"`
-	InstanceClass VsphereNodeGroupInstanceClass `json:"instanceClass" yaml:"instanceClass"`
+	Name          string                         `json:"name" yaml:"name"`
+	Replicas      int32                          `json:"replicas" yaml:"replicas"`
+	Zones         []string                       `json:"zones" yaml:"zones"`
+	NodeTemplate  *NodeTemplate                  `json:"nodeTemplate,omitempty" yaml:"nodeTemplate"`
+	InstanceClass *VsphereNodeGroupInstanceClass `json:"instanceClass" yaml:"instanceClass"`
 }
 
-// Copied from 040-node-manager/hooks/internal/v1/nodegroup.go
+// NodeTemplate copied from 040-node-manager/hooks/internal/v1/nodegroup.go
 type NodeTemplate struct {
 	// Annotations is an unstructured key value map that is used as default
 	// annotations for Nodes in NodeGroup.
