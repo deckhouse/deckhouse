@@ -28,14 +28,15 @@ if [[ "x$id" == "x" ]]; then
      --name "${DEV_CONTAINER_NAME}" \
      --detach \
      --rm \
+     --network host \
      --mount type=tmpfs,destination=/tmp:exec \
      -v $HOME/.ssh/:/root/.ssh/ \
-     -v $(pwd)/bin:/test-bin \
-     -v $(pwd)/.state/:/.state/ \
-     -v $(pwd)/../../dhctl:/dhctl \
-     -v $(pwd)/../../candi:/deckhouse/candi \
-     -v $(pwd)/../ee/candi/cloud-providers/openstack:/deckhouse/candi/cloud-providers/openstack \
-     -v $(pwd)/../ee/candi/cloud-providers/vsphere:/deckhouse/candi/cloud-providers/vsphere \
+     -v /deckhouse/dhctl/bin:/test-bin \
+     -v /deckhouse/dhctl/.state/:/.state/ \
+     -v /deckhouse/dhctl:/dhctl \
+     -v /deckhouse/candi:/deckhouse/candi \
+     -v /deckhouse/ee/candi/cloud-providers/openstack:/deckhouse/candi/cloud-providers/openstack \
+     -v /deckhouse/ee/candi/cloud-providers/vsphere:/deckhouse/candi/cloud-providers/vsphere \
      ${INSTALLER_IMAGE_URL} \
      tail -f /dev/null)
   echo "Run new container with ID: ${id}"

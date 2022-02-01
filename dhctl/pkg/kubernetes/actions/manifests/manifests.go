@@ -148,8 +148,10 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 		if !deployServiceHost {
 			deckhouseContainerEnv = append(deckhouseContainerEnv,
 				apiv1.EnvVar{
-					Name:  "KUBERNETES_SERVICE_HOST",
-					Value: "127.0.0.1",
+					Name: deployServiceHostEnvVarName,
+					ValueFrom: &apiv1.EnvVarSource{
+						FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.hostIP"},
+					},
 				},
 			)
 		}
@@ -157,7 +159,7 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 			deckhouseContainerEnv = append(deckhouseContainerEnv,
 				apiv1.EnvVar{
 					Name:  "KUBERNETES_SERVICE_PORT",
-					Value: "6445",
+					Value: "6443",
 				},
 			)
 		}

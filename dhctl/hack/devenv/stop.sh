@@ -19,4 +19,4 @@ shopt -s failglob
 
 DEV_CONTAINER_NAME=dhctl-dev
 
-docker kill $$(docker ps -f name=$(DEV_CONTAINER_NAME) -q) 2&>/dev/null
+docker kill $(docker ps -f "name=$DEV_CONTAINER_NAME" -q) 2&>/dev/null
