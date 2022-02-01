@@ -184,8 +184,9 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
         run: |
           export WERF_REPO=${DEV_REGISTRY_PATH}
-          type werf && source $(werf ci-env github --verbose --as-file)
           touch modules/images_tags_${WERF_ENV}.json
+          ls -l modules
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf cleanup --without-kube --dry-run
 
   cleanup_modules_registry:
@@ -224,6 +225,7 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
         run: |
           export WERF_REPO=${DEV_REGISTRY_PATH}
-          type werf && source $(werf ci-env github --verbose --as-file)
           touch modules/images_tags_${WERF_ENV}.json
+          ls -l /modules
+          type werf && source $(werf ci-env github --verbose --as-file)
           ./modules_images_werf cleanup
