@@ -8,16 +8,6 @@ metadata:
 secrets:
 - name: prometheus-token
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: prometheus-token
-  namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
-  annotations:
-    kubernetes.io/service-account.name: prometheus
-type: kubernetes.io/service-account-token
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
