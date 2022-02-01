@@ -205,7 +205,7 @@ To use Ingress, you need to:
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar can identify the application service that serves requests.
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: productpage
@@ -219,9 +219,12 @@ spec:
       http:
         paths:
         - path: /
+          pathType: Prefix
           backend:
-            serviceName: productpage
-            servicePort: 9080
+            service:
+              name: productpage
+              port:
+                number: 9080
 ```
 ```yaml
 apiVersion: v1
