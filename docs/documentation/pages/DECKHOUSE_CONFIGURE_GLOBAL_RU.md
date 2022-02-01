@@ -6,13 +6,15 @@ lang: ru
 
 ## Что нужно настроить?
 
-Желательно настроить `modules.publicDomainTemplate`.
+Первым делом рекомендуется настроить параметр `modules.publicDomainTemplate`:
 
 ```yaml
 global: |
   modules:
     publicDomainTemplate: "%s.kube.company.my"
 ```
+
+Подробнее про этот и другие параметры ниже.
 
 ## Параметры
 
