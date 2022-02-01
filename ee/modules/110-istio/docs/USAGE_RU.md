@@ -207,7 +207,7 @@ spec:
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: productpage
@@ -221,9 +221,12 @@ spec:
       http:
         paths:
         - path: /
+          pathType: Prefix
           backend:
-            serviceName: productpage
-            servicePort: 9080
+            service:
+              name: productpage
+              port:
+                number: 9080
 ```
 ```yaml
 apiVersion: v1
