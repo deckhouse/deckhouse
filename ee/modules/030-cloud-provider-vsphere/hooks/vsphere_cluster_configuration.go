@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
@@ -96,19 +97,26 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 			ValueKey:  "sshPublicKey",
 		},
 	}
-	providerClusterConfig := map[string]json.RawMessage{}
-	if metaCfg != nil {
-		providerClusterConfig = metaCfg.ProviderClusterConfig
-	}
-	input.Values.Set(internalPrefix+"providerClusterConfiguration", providerClusterConfig)
 
-	if _, ok := providerClusterConfig["provider"]; !ok {
+	p := map[string]json.RawMessage{}
+	if metaCfg != nil {
+		p = metaCfg.ProviderClusterConfig
+	}
+
+	var providerClusterConfiguration v1.VsphereProviderClusterConfiguration
+	err := convertJsonRawMessageToStruct(p, &providerClusterConfiguration)
+	if err != nil {
+		return err
+	}
+
+	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
+	if _, ok := p["provider"]; !ok {
 		input.Values.Set(clusterConfigurationPrefix+"provider", map[string]interface{}{})
 	}
 
 	for _, rule := range overrideMap {
 		configResult, configOk := input.Values.GetOk(configPrefix + rule.ConfigKey)
-		providerResultRaw, providerOk := providerClusterConfig[rule.ValueKey]
+		providerResultRaw, providerOk := p[rule.ValueKey]
 		if len(rule.ValuePath) > 0 && providerOk {
 			providerResult := gjson.Get(string(providerResultRaw), rule.ValuePath)
 			providerOk = providerResult.Exists()
@@ -128,3 +136,15 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 
 	return nil
 })
+
+func convertJsonRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
+	b, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(b, out)
+	if err != nil {
+		return err
+	}
+	return nil
+}

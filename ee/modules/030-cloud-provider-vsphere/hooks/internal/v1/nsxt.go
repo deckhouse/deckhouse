@@ -25,7 +25,7 @@ type VsphereNsxt struct {
 	// Default IP Address pool for LB
 	DefaultIpPoolName string `json:"defaultIpPoolName" yaml:"defaultIpPoolName"`
 	// Default profile name for LB
-	DefaulTcpAppProfileName string `json:"defaulTcpAppProfileName,omitempty" yaml:"defaulTcpAppProfileName,omitempty"`
+	DefaultTcpAppProfileName string `json:"defaultTcpAppProfileName,omitempty" yaml:"defaultTcpAppProfileName,omitempty"`
 	// LB size
 	Size string `json:"size" yaml:"size"`
 	// NSX-T path to tier1 gateway

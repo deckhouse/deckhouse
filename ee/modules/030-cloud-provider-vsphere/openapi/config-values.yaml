@@ -17,6 +17,7 @@ properties:
     description: |
       can be set to `true` if vCenter has a self-signed certificate.
         * by default `false`
+  vmFolderPath:
     type: string
     description: |
       the path to the VirtualMachine Folder where the cloned VMs will be created.
@@ -104,7 +105,7 @@ properties:
     type: object
     description: |
       Kubernetes load balancer support using NSX-T for the vSphere cloud controller manager.
-    required: [defaultIPPoolName, size, tierFatewayPath, user, password, host]
+#    required: [defaultIPPoolName, size, tierFatewayPath, user, password, host]
     properties:
       defaultIpPoolName:
         type: string
@@ -157,9 +158,9 @@ properties:
         description: |
           To be set to true if NSX-T uses locally signed cert without specifying a ca.
         default: true
-      x-examples:
-      - true
-      - false
+        x-examples:
+        - true
+        - false
       loadBalancerClass:
         type: array
         description: |
