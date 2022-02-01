@@ -1,6 +1,11 @@
-{{- $version := "1.20.2" }}
-{{- $image_version := $version | replace "." "-" }}
+{{- $version := "" }}
 {{- range $distro := tuple "focal" "bionic" "xenial" }}
+  {{- if eq $distro "xenial" }}
+    {{- $version = "1.20.1" }}
+  {{- else }}
+    {{- $version = "1.20.2" }}
+  {{- end }}
+  {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-{{ $distro }}
 from: spotify/scratch
