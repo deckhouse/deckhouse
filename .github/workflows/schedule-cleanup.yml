@@ -184,5 +184,5 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
         run: |
           export WERF_REPO=${DEV_REGISTRY_PATH}
-          type werf && source $(werf ci-env github --verbose --as-file)
+          type werf && source $(werf ci-env github --config werf_cleanup.yaml --verbose --as-file)
           werf cleanup --config werf_cleanup.yaml --without-kube --dry-run
