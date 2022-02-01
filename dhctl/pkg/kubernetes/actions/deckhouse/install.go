@@ -87,12 +87,10 @@ func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *C
 		// It helps to reduce wait time on bootstrap process restarting,
 		// and prevents a race condition when deckhouse's Pod is scheduled
 		// on the non-approved node, so the bootstrap process never finishes.
-		deployTime := manifests.GetDeckhouseDeployTime(currentManifestInCluster)
-
 		params := deckhouseDeploymentParamsFromCfg(cfg)
-		params.DeployTime = deployTime
+		params.DeployTime = manifests.GetDeckhouseDeployTime(currentManifestInCluster)
 
-		resDeployment = manifests.ParametrizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
+		resDeployment = manifests.ParameterizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
 
 		return nil
 	})

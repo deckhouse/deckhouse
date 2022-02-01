@@ -37,8 +37,10 @@ const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
 	deckhouseRegistryVolumeName = "registrysecret"
 
-	deployTimeEnvVarName   = "KUBERNETES_DEPLOYED"
-	deployTimeEnvVarFormat = time.RFC3339
+	deployTimeEnvVarName        = "KUBERNETES_DEPLOYED"
+	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
+	deployServicePortEnvVarName = "KUBERNETES_SERVICE_PORT"
+	deployTimeEnvVarFormat      = time.RFC3339
 )
 
 type DeckhouseDeploymentParams struct {
@@ -72,7 +74,9 @@ func GetDeckhouseDeployTime(deployment *appsv1.Deployment) time.Time {
 	return deployTime
 }
 
-func ParametrizeDeckhouseDeployment(deployment *appsv1.Deployment, params DeckhouseDeploymentParams) *appsv1.Deployment {
+func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseDeploymentParams) *appsv1.Deployment {
+	deployment := input.DeepCopy()
+
 	deckhousePodTemplate := deployment.Spec.Template
 	deckhouseContainer := deployment.Spec.Template.Spec.Containers[0]
 	deckhouseContainerEnv := deckhouseContainer.Env
@@ -83,12 +87,25 @@ func ParametrizeDeckhouseDeployment(deployment *appsv1.Deployment, params Deckho
 		params.DeployTime = time.Now()
 	}
 
-	deckhouseContainerEnv = append(deckhouseContainerEnv,
-		apiv1.EnvVar{
-			Name:  "KUBERNETES_DEPLOYED",
-			Value: params.DeployTime.Format(deployTimeEnvVarFormat),
-		},
+	var (
+		deployTime        bool
+		deployServiceHost bool
+		deployServicePort bool
 	)
+	for _, envEntry := range deckhouseContainerEnv {
+		deployTime = deployTime || envEntry.Name == deployTimeEnvVarName
+		deployServiceHost = deployServiceHost || envEntry.Name == deployServiceHostEnvVarName
+		deployServicePort = deployServicePort || envEntry.Name == deployServicePortEnvVarName
+	}
+
+	if !deployTime {
+		deckhouseContainerEnv = append(deckhouseContainerEnv,
+			apiv1.EnvVar{
+				Name:  "KUBERNETES_DEPLOYED",
+				Value: params.DeployTime.Format(deployTimeEnvVarFormat),
+			},
+		)
+	}
 
 	if params.MasterNodeSelector {
 		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/master": ""}
@@ -99,31 +116,51 @@ func ParametrizeDeckhouseDeployment(deployment *appsv1.Deployment, params Deckho
 			{Name: "deckhouse-registry"},
 		}
 
-		deckhousePodTemplate.Spec.Volumes = append(deckhousePodTemplate.Spec.Volumes, apiv1.Volume{
-			Name: deckhouseRegistryVolumeName,
-			VolumeSource: apiv1.VolumeSource{
-				Secret: &apiv1.SecretVolumeSource{SecretName: deckhouseRegistrySecretName},
-			},
-		})
+		var volumeFound bool
+		for _, volume := range deckhousePodTemplate.Spec.Volumes {
+			volumeFound = volumeFound || volume.Name == deckhouseRegistryVolumeName
+		}
 
-		deckhouseContainer.VolumeMounts = append(deckhouseContainer.VolumeMounts, apiv1.VolumeMount{
-			Name:      deckhouseRegistryVolumeName,
-			MountPath: "/etc/registrysecret",
-			ReadOnly:  true,
-		})
+		if !volumeFound {
+			deckhousePodTemplate.Spec.Volumes = append(deckhousePodTemplate.Spec.Volumes, apiv1.Volume{
+				Name: deckhouseRegistryVolumeName,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{SecretName: deckhouseRegistrySecretName},
+				},
+			})
+		}
+
+		var volumeMountFound bool
+		for _, volumeMount := range deckhouseContainer.VolumeMounts {
+			volumeMountFound = volumeMountFound || volumeMount.Name == deckhouseRegistryVolumeName
+		}
+
+		if !volumeMountFound {
+			deckhouseContainer.VolumeMounts = append(deckhouseContainer.VolumeMounts, apiv1.VolumeMount{
+				Name:      deckhouseRegistryVolumeName,
+				MountPath: "/etc/registrysecret",
+				ReadOnly:  true,
+			})
+		}
 	}
 
 	if params.KubeadmBootstrap && freshDeployment {
-		deckhouseContainerEnv = append(deckhouseContainerEnv,
-			apiv1.EnvVar{
-				Name:  "KUBERNETES_SERVICE_HOST",
-				Value: "127.0.0.1",
-			},
-			apiv1.EnvVar{
-				Name:  "KUBERNETES_SERVICE_PORT",
-				Value: "6445",
-			},
-		)
+		if !deployServiceHost {
+			deckhouseContainerEnv = append(deckhouseContainerEnv,
+				apiv1.EnvVar{
+					Name:  "KUBERNETES_SERVICE_HOST",
+					Value: "127.0.0.1",
+				},
+			)
+		}
+		if !deployServicePort {
+			deckhouseContainerEnv = append(deckhouseContainerEnv,
+				apiv1.EnvVar{
+					Name:  "KUBERNETES_SERVICE_PORT",
+					Value: "6445",
+				},
+			)
+		}
 	}
 
 	deckhouseContainer.Env = deckhouseContainerEnv
@@ -262,7 +299,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
 
-	return ParametrizeDeckhouseDeployment(deckhouseDeployment, params)
+	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
 
 func DeckhouseNamespace(name string) *apiv1.Namespace {

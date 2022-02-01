@@ -18,22 +18,14 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/yaml"
 )
 
-func Test_struct_vs_unmarshal(t *testing.T) {
-	params := DeckhouseDeploymentParams{
-		Registry:         "registry.example.com/deckhouse:master",
-		LogLevel:         "debug",
-		Bundle:           "default",
-		IsSecureRegistry: true,
-	}
-
-	depl1 := DeckhouseDeployment(params)
-
-	depl2 := DeckhouseDeployment(params)
-
+func compareDeployments(t *testing.T, depl1, depl2 *appsv1.Deployment) {
 	depl1Yaml, err := yaml.Marshal(depl1)
 	if err != nil {
 		t.Errorf("deployment from struct unmarshal: %v", err)
@@ -52,6 +44,9 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 
 	i := 0
 	diff := 0
+
+	builder := strings.Builder{}
+	builder.WriteString("\n")
 	for {
 		l1 := ""
 		l2 := ""
@@ -70,12 +65,133 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 			diff++
 		}
 
-		fmt.Printf("%s %-35s %-35s\n", mark, l1, l2)
+		builder.WriteString(fmt.Sprintf("%s %-70s %-35s\n", mark, l1, l2))
+
 		i++
 		if i >= len(depl1Lines) && i >= len(depl2Lines) {
 			break
 		}
 	}
 
-	fmt.Printf("%d lines are differ\n", diff)
+	if diff > 0 {
+		t.Fatalf(builder.String())
+	}
+}
+
+func Test_struct_vs_unmarshal(t *testing.T) {
+	params := DeckhouseDeploymentParams{
+		Registry:         "registry.example.com/deckhouse:master",
+		LogLevel:         "debug",
+		Bundle:           "default",
+		IsSecureRegistry: true,
+	}
+
+	depl1 := DeckhouseDeployment(params)
+	depl2 := DeckhouseDeployment(params)
+
+	compareDeployments(t, depl1, depl2)
+}
+
+func Test_DeployTime(t *testing.T) {
+	paramsGet := func() DeckhouseDeploymentParams {
+		return DeckhouseDeploymentParams{
+			Registry:         "registry.example.com/deckhouse:master",
+			LogLevel:         "debug",
+			Bundle:           "default",
+			IsSecureRegistry: true,
+		}
+	}
+
+	t.Run("set non zero deploy time if DeployTime param does not pass", func(t *testing.T) {
+		p := paramsGet()
+
+		depl := DeckhouseDeployment(p)
+		tm := GetDeckhouseDeployTime(depl)
+
+		require.False(t, tm.IsZero())
+	})
+
+	t.Run("set same deploy time as DeployTime from param if it present", func(t *testing.T) {
+		expectTime, _ := time.Parse(time.RFC822, "02 Jan 06 15:04 MST")
+
+		p := paramsGet()
+		p.DeployTime = expectTime
+
+		depl := DeckhouseDeployment(p)
+		tm := GetDeckhouseDeployTime(depl)
+
+		require.False(t, tm.IsZero())
+		require.Equal(t, tm.UnixNano(), expectTime.UnixNano())
+	})
+}
+
+func Test_DoNotMutateDeployment(t *testing.T) {
+	tc := []struct {
+		name   string
+		params DeckhouseDeploymentParams
+	}{
+		{
+			name: "Secure registry",
+			params: DeckhouseDeploymentParams{
+				Registry:         "registry.example.com/deckhouse:master",
+				LogLevel:         "debug",
+				Bundle:           "default",
+				IsSecureRegistry: true,
+			},
+		},
+		{
+			name: "Kube Service",
+			params: DeckhouseDeploymentParams{
+				Registry:         "registry.example.com/deckhouse:master",
+				LogLevel:         "debug",
+				Bundle:           "default",
+				KubeadmBootstrap: true,
+			},
+		},
+		{
+			name: "Master NodeSelector",
+			params: DeckhouseDeploymentParams{
+				Registry:           "registry.example.com/deckhouse:master",
+				LogLevel:           "debug",
+				Bundle:             "default",
+				MasterNodeSelector: true,
+			},
+		},
+		{
+			name: "All in",
+			params: DeckhouseDeploymentParams{
+				Registry:           "registry.example.com/deckhouse:master",
+				LogLevel:           "debug",
+				Bundle:             "default",
+				IsSecureRegistry:   true,
+				KubeadmBootstrap:   true,
+				MasterNodeSelector: true,
+			},
+		},
+		{
+			name: "With time",
+			params: DeckhouseDeploymentParams{
+				Registry:           "registry.example.com/deckhouse:master",
+				LogLevel:           "debug",
+				Bundle:             "default",
+				DeployTime:         time.Now(),
+				IsSecureRegistry:   true,
+				KubeadmBootstrap:   true,
+				MasterNodeSelector: true,
+			},
+		},
+	}
+
+	for _, c := range tc {
+		t.Run(c.name, func(t *testing.T) {
+			depl := DeckhouseDeployment(c.params)
+
+			if c.params.DeployTime.IsZero() {
+				c.params.DeployTime = time.Now()
+			}
+
+			newDepl := ParameterizeDeckhouseDeployment(depl, c.params)
+			compareDeployments(t, depl, newDepl)
+		})
+	}
 }
