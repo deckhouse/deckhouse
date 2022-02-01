@@ -18,7 +18,7 @@ docker_options: '-w /deckhouse'
 # <template: dhctl_run_args>
 image: dhctl-tests
 args: 'make ci'
-docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl'
+docker_options: '-w /deckhouse/dhctl'
 # </template: dhctl_run_args>
 {!{- end -}!}
 

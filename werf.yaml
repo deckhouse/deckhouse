@@ -458,12 +458,8 @@ image: dhctl-tests
 fromCacheVersion: "20220125"
 fromImage: base-for-go
 git:
-- add: /dhctl
-  to: /dhctl
-  stageDependencies:
-    install:
-      - go.sum
-      - Makefile
+- add: /
+  to: /deckhouse
 ansible:
   beforeInstall:
     - apk:
