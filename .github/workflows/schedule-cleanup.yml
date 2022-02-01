@@ -5,7 +5,7 @@
 name: Cleanup registries
 on:
   schedule:
-    - cron:  '12 0 * * *'
+  - cron:  '12 0 * * *'
   workflow_dispatch:
 
 env:
@@ -69,12 +69,11 @@ env:
   TF_YANDEX_TYPE: yandex
   TF_YANDEX_VERSION: 0.45.1
 
-# Analog of Gitlab's "interruptible: true" behaviour.
+# Always run a single job at a time.
 # Note: Concurrency is currently in beta and subject to change.
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  group: ${{ github.ref }}-schedule-cleanup
-  cancel-in-progress: true
+  group: schedule-cleanup
 
 jobs:
 # Note: git_info is needed for werf.yaml
@@ -99,8 +98,6 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            core.setOutput('ci_pipeline_created_at', new Date().toISOString())
-
             const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
 
             let githubBranch = '';
@@ -108,27 +105,17 @@ jobs:
             let githubSHA = '';
             let refName = '';
             let refSlug = '';
-            if (context.eventName === "workflow_dispatch") {
+            if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
               // workflow_dispatch run for pull request should have input 'pull_request_ref'.
               // Note: value in inputs.pull_request_ref is for pull_request_info job.
-              if (context.payload.inputs.pull_request_ref) {
-                refName       = context.payload.inputs.ci_commit_ref_name
-                githubBranch  = refName
-                githubSHA     = context.payload.inputs.pull_request_sha
-                // Extract pull request number from 'refs/pull/<NUM>/merge'
-                const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
-                refSlug       = `pr${prNum}`;
-                core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
-              } else {
-                refName       = GITHUB_REF_NAME
-                githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
-                githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
-                githubSHA     = context.sha
-                // refName is 'main' or tag name, so slug is not necessary.
-                refSlug       = refName
-                core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
-              }
-            } else {
+              refName       = context.payload.inputs.ci_commit_ref_name
+              githubBranch  = refName
+              githubSHA     = context.payload.inputs.pull_request_sha
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
+              refSlug       = `pr${prNum}`;
+              core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+            } else if (context.eventName === "pull_request") {
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
               const targetRepo = context.payload.repository.full_name;
               const prRepo = context.payload.pull_request.head.repo.full_name
@@ -139,6 +126,15 @@ jobs:
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+            } else {
+              // Events: workflow_dispatch without pull_request_ref, schedule, push...
+              refName       = GITHUB_REF_NAME
+              githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+              githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+              githubSHA     = context.sha
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = refName
+              core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
             }
 
             core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
@@ -179,36 +175,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Login to flant registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_flant_registry_step>
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
@@ -219,135 +185,7 @@ jobs:
         env:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         run: |
           export WERF_REPO=${DEV_REGISTRY_PATH}
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf cleanup --without-kube
-
-  cleanup_modules_registry:
-    name: Cleanup modules registry
-    needs:
-      - git_info
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Login to flant registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_flant_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-      - name: Cleanup
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-        run: |
-          export WERF_REPO=${DEV_REGISTRY_PATH}
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          ./modules_images_werf cleanup
-
-
-  cleanup_modules_images:
-    name: Cleanup modules images
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-
-      # </template: checkout_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: login_flant_registry_step>
-      - name: Login to flant registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_flant_registry_step>
-      - name: Cleanup
-        run: |
-          docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
-          docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
+          type werf && source $(werf ci-env github --config werf_cleanup.yaml --verbose --as-file)
+          werf cleanup --config werf_cleanup.yaml --without-kube
