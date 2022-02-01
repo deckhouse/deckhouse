@@ -1,7 +1,7 @@
 {{- $version := "" }}
 {{- range $distro := tuple "focal" "bionic" "xenial" }}
   {{- if eq $distro "xenial" }}
-    {{- $version = "1.20.1 }}
+    {{- $version = "1.20.1" }}
   {{- else }}
     {{- $version = "1.20.2" }}
   {{- end }}
