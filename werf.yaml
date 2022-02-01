@@ -606,7 +606,7 @@ git:
 {{ .Files.Get (printf "tools/build_includes/cloud-providers-%s.yaml" .Env) }}
 import:
 - artifact: dhctl
-  add: /tmp/dhctl
+  add: /dhctl/bin/dhctl
   to: /usr/bin/dhctl
   before: setup
 - artifact: terraform-provider-vsphere
