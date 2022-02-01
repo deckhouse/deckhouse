@@ -13,7 +13,7 @@
 # limitations under the License.
 
 if bb-is-ubuntu-version? 16.04 ; then
-  bb-rp-install "nginx:{{ .images.registrypackages.nginxUbuntu1202Xenial }}"
+  bb-rp-install "nginx:{{ .images.registrypackages.nginxUbuntu1201Xenial }}"
 fi
 if bb-is-ubuntu-version? 18.04 ; then
   bb-rp-install "nginx:{{ .images.registrypackages.nginxUbuntu1202Bionic }}"
