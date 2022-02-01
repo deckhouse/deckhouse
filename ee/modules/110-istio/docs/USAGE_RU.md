@@ -169,7 +169,6 @@ spec:
         host: reviews.prod.svc.cluster.local
         subset: testv1 # ссылка на subset из DestinationRule
       weight: 25
-  - route:
     - destination:
         host: reviews.prod.svc.cluster.local
         subset: testv3
