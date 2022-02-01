@@ -184,48 +184,5 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
         run: |
           export WERF_REPO=${DEV_REGISTRY_PATH}
-          touch modules/images_tags_${WERF_ENV}.json
-          ls -l modules
           type werf && source $(werf ci-env github --verbose --as-file)
-          werf cleanup --without-kube --dry-run
-
-  cleanup_modules_registry:
-    name: Cleanup modules registry
-    needs:
-      - git_info
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-      - name: Cleanup
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-        run: |
-          export WERF_REPO=${DEV_REGISTRY_PATH}
-          touch modules/images_tags_${WERF_ENV}.json
-          ls -l /modules
-          type werf && source $(werf ci-env github --verbose --as-file)
-          ./modules_images_werf cleanup
+          werf cleanup --config werf_cleanup.yaml --without-kube --dry-run
