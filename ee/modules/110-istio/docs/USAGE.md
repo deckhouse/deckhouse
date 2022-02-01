@@ -144,7 +144,6 @@ spec:
         host: productpage
         subset: v1 # reference to the subset defined in DestinationRule 
       weight: 90 # the percentage of traffic to send to pods labeled version: v1.
-  - route:
     - destination:
         host: productpage
         subset: v2
