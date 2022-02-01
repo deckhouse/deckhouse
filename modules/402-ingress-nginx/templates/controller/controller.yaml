@@ -187,6 +187,9 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        {{- if and (semverCompare ">=1.0" $controllerVersion) (eq "nginx" $crd.spec.ingressClass) }}
+        - --watch-ingress-without-class
+        {{- end }}
         {{- if semverCompare ">=0.46" $controllerVersion }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
         - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
