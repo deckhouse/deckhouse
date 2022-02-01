@@ -80,7 +80,10 @@ steps:
       werf build
 
       # Put tags on produced images and push to dev and release repositories.
+
+      echo Pull dev image.
       docker pull $(werf stage image dev)
+      echo Pull dev/install image.
       docker pull $(werf stage image dev/install)
 
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
@@ -105,20 +108,33 @@ steps:
           DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG_SLUG};
           DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG_SLUG};
           DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG_SLUG};
+          echo Tag dev image.
           docker image tag $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE};
+          echo Tag dev/install image.
           docker image tag $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE};
+          echo Pull and tag release-channel-version image.
+          docker pull $(werf stage image release-channel-version)
           docker image tag $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE};
+          echo Push dev image.
           docker image push ${DECKHOUSE_DESTINATION_IMAGE};
+          echo Push dev/install image.
           docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE};
+          echo Push release-channel-version image.
           docker image push ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE};
+          echo Remove local tags.
           docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
           docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
           docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true;
         fi;
+        echo Tag dev image.
         docker image tag $(werf stage image dev) ${DESTINATION_IMAGE};
+        echo Tag dev/install image.
         docker image tag $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE};
+        echo Push dev image.
         docker image push ${DESTINATION_IMAGE};
+        echo Push dev/install image.
         docker image push ${DESTINATION_INSTALL_IMAGE};
+        echo Remove local tags.
         docker image rmi ${DESTINATION_IMAGE} || true;
         docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
       fi
@@ -131,10 +147,15 @@ steps:
           DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_REF_SLUG};
           DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${CI_COMMIT_REF_SLUG};
         fi;
+        echo Tag dev image.
         docker image tag $(werf stage image dev) ${DESTINATION_IMAGE};
+        echo Tag dev/install image.
         docker image tag $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE};
+        echo Push dev image.
         docker image push ${DESTINATION_IMAGE};
+        echo Push dev/install image.
         docker image push ${DESTINATION_INSTALL_IMAGE};
+        echo Remove local tags.
         docker image rmi ${DESTINATION_IMAGE} || true;
         docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
       fi
