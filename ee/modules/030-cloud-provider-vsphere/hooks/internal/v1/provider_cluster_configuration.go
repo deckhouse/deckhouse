@@ -18,9 +18,6 @@ package v1
 
 import (
 	v1 "k8s.io/api/core/v1"
-
-	"github.com/deckhouse/deckhouse/go_lib/taints"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager"
 )
 
 // +genclient
@@ -28,22 +25,24 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type VsphereProviderClusterConfiguration struct {
+	ApiVersion           string                 `json:"apiVersion" yaml:"apiVersion"`
+	Kind                 string                 `json:"kind" yaml:"kind"`
+	MasterNodeGroup      VsphereMasterNodeGroup `json:"masterNodeGroup" yaml:"masterNodeGroup"`
+	NodeGroups           []VsphereNodeGroup     `json:"nodeGroups,omitempty" yaml:"nodeGroups,omitempty"`
 	SshPublicKey         string                 `json:"sshPublicKey" yaml:"sshPublicKey"`
 	RegionTagCategory    string                 `json:"regionTagCategory" yaml:"regionTagCategory"`
 	ZoneTagCategory      string                 `json:"zoneTagCategory" yaml:"zoneTagCategory"`
-	DisableTimesync      bool                   `json:"disableTimesync" yaml:"disableTimesync"`
-	ExternalNetworkNames []string               `json:"externalNetworkNames" yaml:"externalNetworkNames"`
-	InternalNetworkNames []string               `json:"internalNetworkNames" yaml:"internalNetworkNames"`
-	InternalNetworkCIDR  []string               `json:"internalNetworkCIDR" yaml:"internalNetworkCIDR"`
+	DisableTimesync      bool                   `json:"disableTimesync,omitempty" yaml:"disableTimesync,omitempty"`
+	ExternalNetworkNames []string               `json:"externalNetworkNames,omitempty" yaml:"externalNetworkNames,omitempty"`
+	InternalNetworkNames []string               `json:"internalNetworkNames,omitempty" yaml:"internalNetworkNames,omitempty"`
+	InternalNetworkCIDR  []string               `json:"internalNetworkCIDR,omitempty" yaml:"internalNetworkCIDR,omitempty"`
 	VmFolderPath         string                 `json:"vmFolderPath" yaml:"vmFolderPath"`
 	Region               string                 `json:"region" yaml:"region"`
 	Zones                []string               `json:"zones" yaml:"zones"`
 	BaseResourcePool     string                 `json:"baseResourcePool" yaml:"baseResourcePool"`
 	Layout               string                 `json:"layout" yaml:"layout"`
 	Provider             VsphereProvider        `json:"provider" yaml:"provider"`
-	Nsxt                 VsphereNsxt            `json:"nsxt" yaml:"nsxt"`
-	MasterNodeGroup      VsphereMasterNodeGroup `json:"masterNodeGroup" yaml:"masterNodeGroup"`
-	NodeGroups           []VsphereNodeGroup     `json:"nodeGroups" yaml:"nodeGroups"`
+	Nsxt                 VsphereNsxt            `json:"nsxt,omitempty" yaml:"nsxt,omitempty"`
 }
 
 type VsphereProvider struct {
@@ -54,8 +53,8 @@ type VsphereProvider struct {
 }
 
 type VsphereMasterNodeGroup struct {
-	Replicas      int32                           `json:"replicas" yaml:"replicas"`
-	Zones         []string                      `json:"zones" yaml:"zones"`
+	Replicas      int32                         `json:"replicas" yaml:"replicas"`
+	Zones         []string                      `json:"zones,omitempty" yaml:"zones,omitempty"`
 	InstanceClass VsphereNodeGroupInstanceClass `json:"instanceClass" yaml:"instanceClass"`
 }
 
@@ -77,9 +76,26 @@ type IPAddressesNameservers struct {
 
 type VsphereNodeGroup struct {
 	Name          string                        `json:"name" yaml:"name"`
-	Replicas      int32                           `json:"replicas" yaml:"replicas"`
+	Replicas      int32                         `json:"replicas" yaml:"replicas"`
 	Zones         []string                      `json:"zones" yaml:"zones"`
-	Taints		  []v1.Taint					`json:"taints" yaml:"taints"`
-	NodeTemplate  nodegroupv1
-	InstanceClass VsphereNodeGroupInstanceClass `json:"instanceClass" yaml:"instanceClass"``
+	NodeTemplate  NodeTemplate                  `json:"nodeTemplate,omitempty" yaml:"nodeTemplate"`
+	InstanceClass VsphereNodeGroupInstanceClass `json:"instanceClass" yaml:"instanceClass"`
+}
+
+// Copied from 040-node-manager/hooks/internal/v1/nodegroup.go
+type NodeTemplate struct {
+	// Annotations is an unstructured key value map that is used as default
+	// annotations for Nodes in NodeGroup.
+	// More info: http://kubernetes.io/docs/user-guide/annotations
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Map of string keys and values that is used as default
+	// labels for Nodes in NodeGroup.
+	// More info: http://kubernetes.io/docs/user-guide/labels
+	// +optional
+	Labels map[string]string `json:"labels"`
+
+	// Default taints for Nodes in NodeGroup.
+	Taints []v1.Taint `json:"taints,omitempty"`
 }
