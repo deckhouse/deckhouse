@@ -116,6 +116,10 @@
             padding: 14px 0;
             padding-left: 100px;
 
+            @media screen and (max-width: 1200px) {
+                padding-left: 70px;
+            }
+
             & svg {
                 width: 46px;
                 height: 62px;
@@ -125,10 +129,11 @@
         &--text {
             padding-right: 20px;
             padding-left: 25px;
+            color: $color-main;
 
             & span {
                 display: block;
-                color: $color-alt;
+                //color: $color-alt;
             }
         }
     }
