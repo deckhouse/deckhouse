@@ -11,6 +11,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks/internal/v1"
@@ -36,11 +37,16 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 		return err
 	}
 
-	overrideValues(providerClusterConfiguration, moduleConfiguration)
+	overrideValues(&providerClusterConfiguration, &moduleConfiguration)
 	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
 
 	var discoveryData v1.VsphereProviderClusterConfiguration
-	err = sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
+	if providerDiscoveryData != nil {
+		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
+		if err != nil {
+			return err
+		}
+	}
 	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
 
 	return nil
@@ -58,20 +64,32 @@ func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{
 	return nil
 }
 
-func overrideValues(p v1.VsphereProviderClusterConfiguration, m v1.VsphereModuleConfiguration) {
+func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModuleConfiguration) {
 	if m.Host != nil {
+		if p.Provider == nil {
+			p.Provider = &v1.VsphereProvider{}
+		}
 		p.Provider.Server = m.Host
 	}
 
 	if m.Username != nil {
+		if p.Provider == nil {
+			p.Provider = &v1.VsphereProvider{}
+		}
 		p.Provider.Username = m.Username
 	}
 
 	if m.Password != nil {
+		if p.Provider == nil {
+			p.Provider = &v1.VsphereProvider{}
+		}
 		p.Provider.Password = m.Password
 	}
 
 	if m.Insecure != nil {
+		if p.Provider == nil {
+			p.Provider = &v1.VsphereProvider{}
+		}
 		p.Provider.Insecure = m.Insecure
 	}
 
@@ -87,12 +105,16 @@ func overrideValues(p v1.VsphereProviderClusterConfiguration, m v1.VsphereModule
 		p.DisableTimesync = m.DisableTimesync
 	}
 
+	if p.DisableTimesync == nil {
+		p.DisableTimesync = pointer.BoolPtr(true)
+	}
+
 	if m.ExternalNetworkNames != nil {
 		p.ExternalNetworkNames = m.ExternalNetworkNames
 	}
 
 	if m.InternalNetworkNames != nil {
-		p.ExternalNetworkNames = m.ExternalNetworkNames
+		p.InternalNetworkNames = m.InternalNetworkNames
 	}
 
 	if m.Region != nil {
@@ -102,15 +124,16 @@ func overrideValues(p v1.VsphereProviderClusterConfiguration, m v1.VsphereModule
 	if m.Zones != nil {
 		p.Zones = m.Zones
 	}
-	/*
-			{
-				ConfigKey: "vmFolderPath",
-				ValueKey:  "vmFolderPath",
-			},
-			{
-				ConfigKey: "sshKeys.0",
-				ValueKey:  "sshPublicKey",
-			},
-		}
-	*/
+
+	if m.VMFolderPath != nil {
+		p.VMFolderPath = m.VMFolderPath
+	}
+
+	if m.SSHKeys != nil {
+		p.SSHPublicKey = &(*m.SSHKeys)[0]
+	}
+
+	if m.Nsxt != nil {
+		p.Nsxt = m.Nsxt
+	}
 }

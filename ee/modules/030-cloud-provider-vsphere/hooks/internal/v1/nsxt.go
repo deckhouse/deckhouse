@@ -8,19 +8,19 @@ package v1
 // VsphereNsxt config
 type VsphereNsxt struct {
 	// Default IP Address pool for LB
-	DefaultIPPoolName *string `json:"defaultIpPoolName" yaml:"defaultIpPoolName"`
+	DefaultIPPoolName *string `json:"defaultIpPoolName,omitempty" yaml:"defaultIpPoolName,omitempty"`
 	// Default profile name for LB
 	DefaultTCPAppProfileName *string `json:"defaultTcpAppProfileName,omitempty" yaml:"defaultTcpAppProfileName,omitempty"`
 	// LB size
-	Size *string `json:"size" yaml:"size"`
+	Size *string `json:"size,omitempty" yaml:"size,omitempty"`
 	// NSX-T path to tier1 gateway
-	Tier1GatewayPath *string `json:"tier1GatewayPath" yaml:"tier1GatewayPath"`
+	Tier1GatewayPath *string `json:"tier1GatewayPath,omitempty" yaml:"tier1GatewayPath,omitempty"`
 	// NSX-T user
-	User *string `json:"user" yaml:"user"`
+	User *string `json:"user,omitempty" yaml:"user,omitempty"`
 	// NSX-T password
-	Password *string `json:"password" yaml:"password"`
+	Password *string `json:"password,omitempty" yaml:"password,omitempty"`
 	// NSX-T host
-	Host         *string `json:"host" yaml:"host"`
+	Host         *string `json:"host,omitempty" yaml:"host,omitempty"`
 	InsecureFlag *bool   `json:"insecureFlag,omitempty" yaml:"insecureFlag,omitempty"`
 	// Additional LB classes
 	LoadBalancerClass *[]VsphereNsxtLoadBalancerClass `json:"loadBalancerClass,omitempty" yaml:"loadBalancerClass,omitempty"`
@@ -29,9 +29,9 @@ type VsphereNsxt struct {
 // VsphereNsxtLoadBalancerClass
 type VsphereNsxtLoadBalancerClass struct {
 	// Name of class
-	Name *string `json:"name" yaml:"name"`
+	Name *string `json:"name,omitempty" yaml:"name,omitempty"`
 	// IP Address pool for LB
-	IPPoolName *string `json:"ipPoolName" yaml:"ipPoolName"`
+	IPPoolName *string `json:"ipPoolName,omitempty" yaml:"ipPoolName,omitempty"`
 	// Default profile name for LB
 	TCPAppProfileName *string `json:"tcpAppProfileName,omitempty" yaml:"tcpAppProfileName,omitempty"`
 }

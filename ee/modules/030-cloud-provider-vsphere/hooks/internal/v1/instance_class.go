@@ -8,19 +8,19 @@ package v1
 // Parameters of a group of vSphere VirtualMachines used by `machine-controller-manager`
 type VsphereInstanceClass struct {
 	// Count of vCPUs to allocate to vSphere VirtualMachines.
-	NumCPUs *int32 `json:"numCPUs" yaml:"numCPUs"`
+	NumCPUs *int32 `json:"numCPUs,omitempty" yaml:"numCPUs,omitempty"`
 	// Memory in MiB to allocate to vSphere VirtualMachines.
-	Memory *int32 `json:"memory" yaml:"memory"`
+	Memory *int32 `json:"memory,omitempty" yaml:"memory,omitempty"`
 	// Root disk size in GiB to use in vSphere VirtualMachines.
 	RootDiskSize *int32 `json:"rootDiskSize,omitempty" yaml:"rootDiskSize,omitempty"`
 	// Path to the template to be cloned. Relative to the datacenter.
-	Template *string `json:"template" yaml:"template"`
+	Template *string `json:"template,omitempty" yaml:"template,omitempty"`
 	// Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
-	MainNetwork *string `json:"mainNetwork" yaml:"mainNetwork"`
+	MainNetwork *string `json:"mainNetwork,omitempty" yaml:"mainNetwork,omitempty"`
 	// Paths to networks that VirtualMachines' secondary NICs will connect to. Relative to the datacenter.
 	AdditionalNetworks *[]string `json:"additionalNetworks,omitempty" yaml:"additionalNetworks,omitempty"`
 	// Path to a datastore in which VirtualMachines will be cloned. Relative to the datacenter.
-	Datastore *string `json:"datastore" yaml:"datastore"`
+	Datastore *string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
 	// Disable time synchronization in Guest VM.
 	DisableTimesync *bool `json:"disableTimesync,omitempty" yaml:"disableTimesync,omitempty"`
 	// Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).

@@ -6,8 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package v1
 
 type VsphereCloudDiscoveryData struct {
-	APIVersion       *string `json:"apiVersion" yaml:"apiVersion"`
-	Kind             *string `json:"kind" yaml:"kind"`
-	VMFolderPath     *string `json:"vmFolderPath" yaml:"vmFolderPath"`
+	APIVersion       *string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	Kind             *string `json:"kind,omitempty" yaml:"kind,omitempty"`
+	VMFolderPath     *string `json:"vmFolderPath,omitempty" yaml:"vmFolderPath,omitempty"`
 	ResourcePoolPath *string `json:"resourcePoolPath,omitempty" yaml:"resourcePoolPath,omitempty"`
 }

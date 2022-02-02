@@ -17,9 +17,9 @@ type VsphereModuleConfiguration struct {
 	// the path to the VirtualMachine Folder where the cloned VMs will be created
 	VMFolderPath *string `json:"vmFolderPath,omitempty" yaml:"vmFolderPath,omitempty"`
 	// the name of the tag **category** used to identify the region (vSphere Datacenter)
-	RegionTagCategory *string `json:"regionTagCategory" yaml:"regionTagCategory"`
+	RegionTagCategory *string `json:"regionTagCategory,omitempty" yaml:"regionTagCategory,omitempty"`
 	// the name of the tag **category** used to identify the region (vSphere Cluster)
-	ZoneTagCategory *string `json:"zoneTagCategory" yaml:"zoneTagCategory"`
+	ZoneTagCategory *string `json:"zoneTagCategory,omitempty" yaml:"zoneTagCategory,omitempty"`
 	// disable time synchronization on the vSphere side
 	DisableTimesync *bool `json:"disableTimesync,omitempty" yaml:"disableTimesync,omitempty"`
 	// is a tag added to the vSphere Datacenter where all actions will occur: provisioning VirtualMachines, storing virtual disks on datastores, connecting to the network
