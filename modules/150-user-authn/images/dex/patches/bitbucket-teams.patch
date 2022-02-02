@@ -1,0 +1,124 @@
+diff --git a/connector/bitbucketcloud/bitbucketcloud.go b/connector/bitbucketcloud/bitbucketcloud.go
+index b9134e919..27eafb529 100644
+--- a/connector/bitbucketcloud/bitbucketcloud.go
++++ b/connector/bitbucketcloud/bitbucketcloud.go
+@@ -351,7 +351,7 @@ func (b *bitbucketConnector) userEmail(ctx context.Context, client *http.Client)
+
+ // getGroups retrieves Bitbucket teams a user is in, if any.
+ func (b *bitbucketConnector) getGroups(ctx context.Context, client *http.Client, groupScope bool, userLogin string) ([]string, error) {
+-	bitbucketTeams, err := b.userTeams(ctx, client)
++	bitbucketTeams, err := b.userWorkspaces(ctx, client)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -369,33 +369,33 @@ func (b *bitbucketConnector) getGroups(ctx context.Context, client *http.Client,
+ 	return nil, nil
+ }
+
+-type teamName struct {
+-	Name string `json:"username"` // The "username" from Bitbucket Cloud is actually the team name here
++type workspaceSlug struct {
++	Slug string `json:"slug"`
+ }
+
+-type team struct {
+-	Team teamName `json:"team"`
++type workspace struct {
++	Workspace workspaceSlug `json:"workspace"`
+ }
+
+-type userTeamsResponse struct {
++type userWorkspacesResponse struct {
+ 	pagedResponse
+-	Values []team
++	Values []workspace `json:"values"`
+ }
+
+-func (b *bitbucketConnector) userTeams(ctx context.Context, client *http.Client) ([]string, error) {
++func (b *bitbucketConnector) userWorkspaces(ctx context.Context, client *http.Client) ([]string, error) {
+ 	var teams []string
+-	apiURL := b.apiURL + "/user/permissions/teams"
++	apiURL := b.apiURL + "/user/permissions/workspaces"
+
+ 	for {
+-		// https://developer.atlassian.com/bitbucket/api/2/reference/resource/user/permissions/teams
+-		var response userTeamsResponse
++		// https://developer.atlassian.com/cloud/bitbucket/rest/api-group-workspaces/#api-workspaces-get
++		var response userWorkspacesResponse
+
+ 		if err := get(ctx, client, apiURL, &response); err != nil {
+ 			return nil, fmt.Errorf("bitbucket: get user teams: %v", err)
+ 		}
+
+ 		for _, value := range response.Values {
+-			teams = append(teams, value.Team.Name)
++			teams = append(teams, value.Workspace.Slug)
+ 		}
+
+ 		if response.Next == nil {
+diff --git a/connector/bitbucketcloud/bitbucketcloud_test.go b/connector/bitbucketcloud/bitbucketcloud_test.go
+index 3d984a8fc..9545ff09c 100644
+--- a/connector/bitbucketcloud/bitbucketcloud_test.go
++++ b/connector/bitbucketcloud/bitbucketcloud_test.go
+@@ -14,28 +14,28 @@ import (
+ )
+
+ func TestUserGroups(t *testing.T) {
+-	teamsResponse := userTeamsResponse{
++	teamsResponse := userWorkspacesResponse{
+ 		pagedResponse: pagedResponse{
+ 			Size:    3,
+ 			Page:    1,
+ 			PageLen: 10,
+ 		},
+-		Values: []team{
+-			{Team: teamName{Name: "team-1"}},
+-			{Team: teamName{Name: "team-2"}},
+-			{Team: teamName{Name: "team-3"}},
++		Values: []workspace{
++			{Workspace: workspaceSlug{Slug: "team-1"}},
++			{Workspace: workspaceSlug{Slug: "team-2"}},
++			{Workspace: workspaceSlug{Slug: "team-3"}},
+ 		},
+ 	}
+
+ 	s := newTestServer(map[string]interface{}{
+-		"/user/permissions/teams": teamsResponse,
+-		"/groups/team-1":          []group{{Slug: "administrators"}, {Slug: "members"}},
+-		"/groups/team-2":          []group{{Slug: "everyone"}},
+-		"/groups/team-3":          []group{},
++		"/user/permissions/workspaces": teamsResponse,
++		"/groups/team-1":               []group{{Slug: "administrators"}, {Slug: "members"}},
++		"/groups/team-2":               []group{{Slug: "everyone"}},
++		"/groups/team-3":               []group{},
+ 	})
+
+ 	connector := bitbucketConnector{apiURL: s.URL, legacyAPIURL: s.URL}
+-	groups, err := connector.userTeams(context.Background(), newClient())
++	groups, err := connector.userWorkspaces(context.Background(), newClient())
+
+ 	expectNil(t, err)
+ 	expectEquals(t, groups, []string{
+@@ -45,7 +45,7 @@ func TestUserGroups(t *testing.T) {
+ 	})
+
+ 	connector.includeTeamGroups = true
+-	groups, err = connector.userTeams(context.Background(), newClient())
++	groups, err = connector.userWorkspaces(context.Background(), newClient())
+
+ 	expectNil(t, err)
+ 	expectEquals(t, groups, []string{
+@@ -62,11 +62,11 @@ func TestUserGroups(t *testing.T) {
+
+ func TestUserWithoutTeams(t *testing.T) {
+ 	s := newTestServer(map[string]interface{}{
+-		"/user/permissions/teams": userTeamsResponse{},
++		"/user/permissions/workspaces": userWorkspacesResponse{},
+ 	})
+
+ 	connector := bitbucketConnector{apiURL: s.URL}
+-	groups, err := connector.userTeams(context.Background(), newClient())
++	groups, err := connector.userWorkspaces(context.Background(), newClient())
+
+ 	expectNil(t, err)
+ 	expectEquals(t, len(groups), 0)
