@@ -81,6 +81,7 @@ properties:
             type: string
           disableTimesync:
             type: boolean
+            default: true
           regionTagCategory:
             type: string
           zoneTagCategory:

@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/tidwall/gjson"
+	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -17,86 +17,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-type OverrideRule struct {
-	ConfigKey string
-	ValueKey  string
-	ValuePath string
-	Default   interface{}
-}
-
-func (rule OverrideRule) ValueFullPath() string {
-	path := rule.ValueKey
-	if len(rule.ValuePath) > 0 {
-		path = path + "." + rule.ValuePath
-	}
-	return path
-}
-
-const configPrefix = "cloudProviderVsphere."
-const internalPrefix = configPrefix + "internal."
-const clusterConfigurationPrefix = internalPrefix + "providerClusterConfiguration."
-
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
-	overrideMap := []OverrideRule{
-		{
-			ConfigKey: "host",
-			ValueKey:  "provider",
-			ValuePath: "server",
-		},
-		{
-			ConfigKey: "username",
-			ValueKey:  "provider",
-			ValuePath: "username",
-		},
-		{
-			ConfigKey: "password",
-			ValueKey:  "provider",
-			ValuePath: "password",
-		},
-		{
-			ConfigKey: "insecure",
-			ValueKey:  "provider",
-			ValuePath: "insecure",
-			Default:   false,
-		},
-		{
-			ConfigKey: "regionTagCategory",
-			ValueKey:  "regionTagCategory",
-		},
-		{
-			ConfigKey: "zoneTagCategory",
-			ValueKey:  "zoneTagCategory",
-		},
-		{
-			ConfigKey: "disableTimesync",
-			ValueKey:  "disableTimesync",
-			Default:   true,
-		},
-		{
-			ConfigKey: "externalNetworkNames",
-			ValueKey:  "externalNetworkNames",
-		},
-		{
-			ConfigKey: "internalNetworkNames",
-			ValueKey:  "internalNetworkNames",
-		},
-		{
-			ConfigKey: "region",
-			ValueKey:  "region",
-		},
-		{
-			ConfigKey: "zones",
-			ValueKey:  "zones",
-		},
-		{
-			ConfigKey: "vmFolderPath",
-			ValueKey:  "vmFolderPath",
-		},
-		{
-			ConfigKey: "sshKeys.0",
-			ValueKey:  "sshPublicKey",
-		},
-	}
 
 	p := map[string]json.RawMessage{}
 	if metaCfg != nil {
@@ -104,40 +25,28 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	}
 
 	var providerClusterConfiguration v1.VsphereProviderClusterConfiguration
-	err := convertJsonRawMessageToStruct(p, &providerClusterConfiguration)
+	err := convertJSONRawMessageToStruct(p, &providerClusterConfiguration)
 	if err != nil {
 		return err
 	}
 
+	var moduleConfiguration v1.VsphereModuleConfiguration
+	err = json.Unmarshal([]byte(input.Values.Get("cloudProviderVsphere").String()), &moduleConfiguration)
+	if err != nil {
+		return err
+	}
+
+	overrideValues(providerClusterConfiguration, moduleConfiguration)
 	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
-	if _, ok := p["provider"]; !ok {
-		input.Values.Set(clusterConfigurationPrefix+"provider", map[string]interface{}{})
-	}
 
-	for _, rule := range overrideMap {
-		configResult, configOk := input.Values.GetOk(configPrefix + rule.ConfigKey)
-		providerResultRaw, providerOk := p[rule.ValueKey]
-		if len(rule.ValuePath) > 0 && providerOk {
-			providerResult := gjson.Get(string(providerResultRaw), rule.ValuePath)
-			providerOk = providerResult.Exists()
-		}
-		if configOk {
-			input.Values.Set(clusterConfigurationPrefix+rule.ValueFullPath(), configResult.Value())
-		} else if rule.Default != nil && !providerOk {
-			input.Values.Set(clusterConfigurationPrefix+rule.ValueFullPath(), rule.Default)
-		}
-	}
-
-	providerDiscoveryDataObject := map[string]interface{}{}
-	if providerDiscoveryData != nil {
-		providerDiscoveryDataObject = providerDiscoveryData.Object
-	}
-	input.Values.Set(internalPrefix+"providerDiscoveryData", providerDiscoveryDataObject)
+	var discoveryData v1.VsphereProviderClusterConfiguration
+	err = sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
+	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
 
 	return nil
 })
 
-func convertJsonRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
+func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
 	b, err := json.Marshal(in)
 	if err != nil {
 		return err
@@ -147,4 +56,61 @@ func convertJsonRawMessageToStruct(in map[string]json.RawMessage, out interface{
 		return err
 	}
 	return nil
+}
+
+func overrideValues(p v1.VsphereProviderClusterConfiguration, m v1.VsphereModuleConfiguration) {
+	if m.Host != nil {
+		p.Provider.Server = m.Host
+	}
+
+	if m.Username != nil {
+		p.Provider.Username = m.Username
+	}
+
+	if m.Password != nil {
+		p.Provider.Password = m.Password
+	}
+
+	if m.Insecure != nil {
+		p.Provider.Insecure = m.Insecure
+	}
+
+	if m.RegionTagCategory != nil {
+		p.RegionTagCategory = m.RegionTagCategory
+	}
+
+	if m.ZoneTagCategory != nil {
+		p.ZoneTagCategory = m.ZoneTagCategory
+	}
+
+	if m.DisableTimesync != nil {
+		p.DisableTimesync = m.DisableTimesync
+	}
+
+	if m.ExternalNetworkNames != nil {
+		p.ExternalNetworkNames = m.ExternalNetworkNames
+	}
+
+	if m.InternalNetworkNames != nil {
+		p.ExternalNetworkNames = m.ExternalNetworkNames
+	}
+
+	if m.Region != nil {
+		p.Region = m.Region
+	}
+
+	if m.Zones != nil {
+		p.Zones = m.Zones
+	}
+	/*
+			{
+				ConfigKey: "vmFolderPath",
+				ValueKey:  "vmFolderPath",
+			},
+			{
+				ConfigKey: "sshKeys.0",
+				ValueKey:  "sshPublicKey",
+			},
+		}
+	*/
 }

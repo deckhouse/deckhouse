@@ -8,30 +8,30 @@ package v1
 // VsphereNsxt config
 type VsphereNsxt struct {
 	// Default IP Address pool for LB
-	DefaultIpPoolName string `json:"defaultIpPoolName" yaml:"defaultIpPoolName"`
+	DefaultIPPoolName *string `json:"defaultIpPoolName" yaml:"defaultIpPoolName"`
 	// Default profile name for LB
-	DefaultTcpAppProfileName string `json:"defaultTcpAppProfileName,omitempty" yaml:"defaultTcpAppProfileName,omitempty"`
+	DefaultTCPAppProfileName *string `json:"defaultTcpAppProfileName,omitempty" yaml:"defaultTcpAppProfileName,omitempty"`
 	// LB size
-	Size string `json:"size" yaml:"size"`
+	Size *string `json:"size" yaml:"size"`
 	// NSX-T path to tier1 gateway
-	Tier1GatewayPath string `json:"tier1GatewayPath" yaml:"tier1GatewayPath"`
+	Tier1GatewayPath *string `json:"tier1GatewayPath" yaml:"tier1GatewayPath"`
 	// NSX-T user
-	User string `json:"user" yaml:"user"`
+	User *string `json:"user" yaml:"user"`
 	// NSX-T password
-	Password string `json:"password" yaml:"password"`
+	Password *string `json:"password" yaml:"password"`
 	// NSX-T host
-	Host         string `json:"host" yaml:"host"`
-	InsecureFlag bool   `json:"insecureFlag,omitempty" yaml:"insecureFlag,omitempty"`
+	Host         *string `json:"host" yaml:"host"`
+	InsecureFlag *bool   `json:"insecureFlag,omitempty" yaml:"insecureFlag,omitempty"`
 	// Additional LB classes
-	LoadBalancerClass []VsphereNsxtLoadBalancerClass `json:"loadBalancerClass,omitempty" yaml:"loadBalancerClass,omitempty"`
+	LoadBalancerClass *[]VsphereNsxtLoadBalancerClass `json:"loadBalancerClass,omitempty" yaml:"loadBalancerClass,omitempty"`
 }
 
 // VsphereNsxtLoadBalancerClass
 type VsphereNsxtLoadBalancerClass struct {
 	// Name of class
-	Name string `json:"name" yaml:"name"`
+	Name *string `json:"name" yaml:"name"`
 	// IP Address pool for LB
-	IpPoolName string `json:"ipPoolName" yaml:"ipPoolName"`
+	IPPoolName *string `json:"ipPoolName" yaml:"ipPoolName"`
 	// Default profile name for LB
-	TcpAppProfileName string `json:"tcpAppProfileName,omitempty" yaml:"tcpAppProfileName,omitempty"`
+	TCPAppProfileName *string `json:"tcpAppProfileName,omitempty" yaml:"tcpAppProfileName,omitempty"`
 }
