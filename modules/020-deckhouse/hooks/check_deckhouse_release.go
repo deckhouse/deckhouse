@@ -48,9 +48,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/deckhouse/check_deckhouse_release",
 	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:          "check_deckhouse_release",
-			Crontab:       "* * * * *", // every minute
-			FirstRunDelay: time.Minute,
+			Name:    "check_deckhouse_release",
+			Crontab: "* * * * *", // every minute
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
