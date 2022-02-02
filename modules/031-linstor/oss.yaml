@@ -1,0 +1,10 @@
+- name: Piraeus
+  link: https://piraeus.io/
+  description: High Available Datastore for Kubernetes.
+  logo: https://avatars.githubusercontent.com/u/52698954?s=200&v=4
+  licence: Apache License 2.0
+- name: LINSTOR
+  link: https://github.com/kubernetes/ingress-nginx
+  description: A configuration management system for storage on Linux systems
+  logo: https://github.com/LINBIT/linstor-server/raw/master/docs/Linstor-Logo-Colour.png
+  licence: GNU General Public License v3.0

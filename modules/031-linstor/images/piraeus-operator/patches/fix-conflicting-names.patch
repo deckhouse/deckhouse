@@ -1,0 +1,120 @@
+diff --git a/pkg/controller/linstorcontroller/linstorcontroller_controller.go b/pkg/controller/linstorcontroller/linstorcontroller_controller.go
+index 284157f..2340040 100644
+--- a/pkg/controller/linstorcontroller/linstorcontroller_controller.go
++++ b/pkg/controller/linstorcontroller/linstorcontroller_controller.go
+@@ -710,7 +710,7 @@ func newDeploymentForResource(controllerResource *piraeusv1.LinstorController) *
+ 			VolumeSource: corev1.VolumeSource{
+ 				ConfigMap: &corev1.ConfigMapVolumeSource{
+ 					LocalObjectReference: corev1.LocalObjectReference{
+-						Name: controllerResource.Name + "-config",
++						Name: controllerResource.Name + "-controller-config",
+ 					},
+ 				},
+ 			},
+@@ -990,7 +990,7 @@ func NewConfigMapForResource(controllerResource *piraeusv1.LinstorController) (*
+ 	}
+ 
+ 	cm := &corev1.ConfigMap{
+-		ObjectMeta: getObjectMeta(controllerResource, "%s-config"),
++		ObjectMeta: getObjectMeta(controllerResource, "%s-controller-config"),
+ 		Data: map[string]string{
+ 			kubeSpec.LinstorControllerConfigFile: controllerConfigBuilder.String(),
+ 			kubeSpec.LinstorClientConfigFile:     clientConfigFile,
+diff --git a/pkg/controller/linstorcontroller/linstorcontroller_controller_test.go b/pkg/controller/linstorcontroller/linstorcontroller_controller_test.go
+index 8806837..15a1304 100644
+--- a/pkg/controller/linstorcontroller/linstorcontroller_controller_test.go
++++ b/pkg/controller/linstorcontroller/linstorcontroller_controller_test.go
+@@ -32,7 +32,7 @@ func TestNewConfigMapForPCS(t *testing.T) {
+ 			},
+ 			expected: &corev1.ConfigMap{
+ 				ObjectMeta: metav1.ObjectMeta{
+-					Name:      "test-config",
++					Name:      "test-controller-config",
+ 					Namespace: "default-ns",
+ 				},
+ 				Data: map[string]string{
+@@ -63,7 +63,7 @@ controllers = http://test.default-ns.svc:3370
+ 			},
+ 			expected: &corev1.ConfigMap{
+ 				ObjectMeta: metav1.ObjectMeta{
+-					Name:      "test-config",
++					Name:      "test-controller-config",
+ 					Namespace: "default-ns",
+ 				},
+ 				Data: map[string]string{
+@@ -96,7 +96,7 @@ controllers = http://test.default-ns.svc:3370
+ 			},
+ 			expected: &corev1.ConfigMap{
+ 				ObjectMeta: metav1.ObjectMeta{
+-					Name:      "test-config",
++					Name:      "test-controller-config",
+ 					Namespace: "default-ns",
+ 				},
+ 				Data: map[string]string{
+@@ -134,7 +134,7 @@ controllers = http://test.default-ns.svc:3370
+ 			},
+ 			expected: &corev1.ConfigMap{
+ 				ObjectMeta: metav1.ObjectMeta{
+-					Name:      "test-config",
++					Name:      "test-controller-config",
+ 					Namespace: "default-ns",
+ 				},
+ 				Data: map[string]string{
+diff --git a/pkg/controller/linstorcsidriver/linstorcsidriver_controller.go b/pkg/controller/linstorcsidriver/linstorcsidriver_controller.go
+index 83b0e57..0f94205 100644
+--- a/pkg/controller/linstorcsidriver/linstorcsidriver_controller.go
++++ b/pkg/controller/linstorcsidriver/linstorcsidriver_controller.go
+@@ -1011,7 +1011,7 @@ func getObjectMeta(controllerResource *piraeusv1.LinstorCSIDriver, nameFmt, comp
+ 		Name:      fmt.Sprintf(nameFmt, controllerResource.Name),
+ 		Namespace: controllerResource.Namespace,
+ 		Labels: map[string]string{
+-			"app.kubernetes.io/name":       kubeSpec.ControllerRole,
++			"app.kubernetes.io/name":       kubeSpec.CSIDriverRole,
+ 			"app.kubernetes.io/instance":   controllerResource.Name,
+ 			"app.kubernetes.io/managed-by": kubeSpec.Name,
+ 			"app.kubernetes.io/component":  component,
+diff --git a/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go b/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
+index c2eb993..e416081 100644
+--- a/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
++++ b/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
+@@ -1067,7 +1067,7 @@ func newSatelliteConfigMap(satelliteSet *piraeusv1.LinstorSatelliteSet) (*corev1
+ 	}
+ 
+ 	cm := &corev1.ConfigMap{
+-		ObjectMeta: getObjectMeta(satelliteSet, "%s-config"),
++		ObjectMeta: getObjectMeta(satelliteSet, "%s-node-config"),
+ 		Data: map[string]string{
+ 			kubeSpec.LinstorSatelliteConfigFile: tomlConfigBuilder.String(),
+ 			kubeSpec.LinstorClientConfigFile:    clientConfigFile,
+@@ -1079,7 +1079,7 @@ func newSatelliteConfigMap(satelliteSet *piraeusv1.LinstorSatelliteSet) (*corev1
+ 
+ func newMonitoringConfigMap(set *piraeusv1.LinstorSatelliteSet) *corev1.ConfigMap {
+ 	return &corev1.ConfigMap{
+-		ObjectMeta: getObjectMeta(set, "%s-monitoring"),
++		ObjectMeta: getObjectMeta(set, "%s-node-monitoring"),
+ 		Data: map[string]string{
+ 			"prometheus.toml": fmt.Sprintf(`
+ [[prometheus]]
+@@ -1229,7 +1229,7 @@ func daemonSetWithHttpsConfiguration(ds *apps.DaemonSet, satelliteSet *piraeusv1
+ }
+ 
+ func newMonitoringService(set *piraeusv1.LinstorSatelliteSet) *corev1.Service {
+-	meta := getObjectMeta(set, "%s-monitoring")
++	meta := getObjectMeta(set, "%s-node-monitoring")
+ 
+ 	return &corev1.Service{
+ 		ObjectMeta: meta,
+diff --git a/pkg/k8s/spec/piraeus.go b/pkg/k8s/spec/piraeus.go
+index 2827d14..ecb94db 100644
+--- a/pkg/k8s/spec/piraeus.go
++++ b/pkg/k8s/spec/piraeus.go
+@@ -29,6 +29,9 @@ const (
+ 	// NodeRole is the role for the node set
+ 	NodeRole = "piraeus-node"
+ 
++	// CSIDriverRole is the role for the CSI Workloads
++	CSIDriverRole = "piraeus-csi"
++
+ 	// CSIControllerRole is the role for the CSI Controller Workloads
+ 	CSIControllerRole = "csi-controller"
+ 

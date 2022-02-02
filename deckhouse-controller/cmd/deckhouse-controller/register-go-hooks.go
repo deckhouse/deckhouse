@@ -33,6 +33,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-azure/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-gcp/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/031-linstor/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/031-local-path-provisioner/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/035-cni-flannel/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"

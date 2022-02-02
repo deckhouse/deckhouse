@@ -1,0 +1,128 @@
+# Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/operator-csi-driver.yaml
+{{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: linstor-csi-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-csi-controller" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: linstor-csi-controller
+  updatePolicy:
+    updateMode: "Auto"
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: linstor-csi-node
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-csi-node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: linstor-csi-node
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: linstor-csi-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-csi-controller")) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: csi-controller
+      app.kubernetes.io/instance: linstor
+      app.kubernetes.io/managed-by: piraeus-operator
+      app.kubernetes.io/name: piraeus-csi
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: linstor-csi-node
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-csi-node")) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: csi-node
+      app.kubernetes.io/instance: linstor
+      app.kubernetes.io/managed-by: piraeus-operator
+      app.kubernetes.io/name: piraeus-csi
+---
+apiVersion: piraeus.linbit.com/v1
+kind: LinstorCSIDriver
+metadata:
+  name: linstor
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-csi-controller")) | nindent 2 }}
+spec:
+  imagePullSecret: deckhouse-registry
+  linstorPluginImage: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorCsi }}
+  imagePullPolicy: IfNotPresent
+  csiControllerServiceAccountName: csi
+  csiNodeServiceAccountName: default
+  {{- with .Values.global.modulesImages }}
+  csiAttacherImage: {{ .registry }}:{{ index .tags.common (list "csiExternalAttacher" $kubeVersion.Major $kubeVersion.Minor | join "") }}
+  csiLivenessProbeImage: {{ .registry }}:{{ index .tags.common (list "csiLivenessprobe" $kubeVersion.Major $kubeVersion.Minor | join "") }}
+  csiNodeDriverRegistrarImage: {{ .registry }}:{{ index .tags.common (list "csiNodeDriverRegistrar" $kubeVersion.Major $kubeVersion.Minor | join "") }}
+  csiProvisionerImage: {{ .registry }}:{{ index .tags.common (list "csiExternalProvisioner" $kubeVersion.Major $kubeVersion.Minor | join "") }}
+  csiResizerImage: {{ .registry }}:{{ index .tags.common (list "csiExternalResizer" $kubeVersion.Major $kubeVersion.Minor | join "") }}
+  csiSnapshotterImage: {{ .registry }}:{{ index .tags.common (list "csiExternalSnapshotter" $kubeVersion.Major $kubeVersion.Minor | join "") }}
+  {{- end }}
+  linstorHttpsClientSecret: linstor-client-https-cert
+  priorityClassName: ""
+  controllerReplicas: 1
+  controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
+  nodeAffinity: {}
+  nodeTolerations:
+    {{- index (include "helm_lib_tolerations" (tuple . "wildcard") | fromYaml) "tolerations" | toYaml | nindent 4 }}
+  controllerAffinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          {{- range $k, $v := index ((include "helm_lib_node_selector" (tuple . "master")) | fromYaml) "nodeSelector" }}
+          - key: {{ $k }}
+            operator: In
+            values:
+            - {{ $v | quote }}
+          {{- end }}
+    podantiaffinity:
+      preferredduringschedulingignoredduringexecution:
+      - weight: 1
+        podaffinityterm:
+        - topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: csi-controller
+              app.kubernetes.io/instance: linstor
+              app.kubernetes.io/managed-by: piraeus-operator
+              app.kubernetes.io/name: piraeus-csi
+
+  controllerTolerations:
+    {{- index (include "helm_lib_tolerations" (tuple . "wildcard") | fromYaml) "tolerations" | toYaml | nindent 4 }}
+  enableTopology: true
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
+  kubeletPath: /var/lib/kubelet
+  logLevel: info

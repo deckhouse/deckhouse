@@ -911,6 +911,31 @@ entries:
                   url: /modules/031-local-path-provisioner/cr.html
             - title: FAQ
               url: /modules/031-local-path-provisioner/faq.html
+        - title: linstor
+          versionType: experimental
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/031-linstor/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/031-linstor/usage.html
+            - title:
+                ru: Расширенная конфигурация
+                en: Advanced Usage
+              url: /modules/031-linstor/advanced_usage.html
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/031-linstor/configuration.html
+            - title: FAQ
+              url: /modules/031-linstor/faq.html
         - title: metallb
           versionType: ee
           folders:
