@@ -252,7 +252,7 @@ apiVersions:
         - password
       nsxt:
         type: object
-        required: [defaultIPPoolName, size, tierFatewayPath, user, password, host]
+        required: [defaultIpPoolName, size, tier1GatewayPath, user, password, host]
         properties:
           defaultIpPoolName:
             type: string
@@ -273,7 +273,6 @@ apiVersions:
             type: string
           insecureFlag:
             type: boolean
-            default: true
           loadBalancerClass:
             type: array
             items:

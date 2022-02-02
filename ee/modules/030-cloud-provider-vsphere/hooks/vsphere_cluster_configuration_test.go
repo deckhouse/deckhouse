@@ -43,6 +43,19 @@ cloudProviderVsphere:
   region: override
   zones: [override1, override2]
 `
+		initValuesStringC = `
+global:
+  discovery: {}
+cloudProviderVsphere:
+  internal: {}
+  nsxt:
+    defaultIpPoolName: pool1
+    size: SMALL
+    tier1GatewayPath: /host/tier1
+    user: nsxt
+    password: pass
+    host: host
+`
 	)
 
 	var (
@@ -94,6 +107,53 @@ nodeGroups:
     datastore: dev/lun_1
     mainNetwork: k8s-msk/test_187
 `
+		stateAClusterConfigurationNSXT = `
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+layout: Standard
+provider:
+  server: test
+  username: test
+  password: test
+  insecure: true
+vmFolderPath: test
+regionTagCategory: test
+zoneTagCategory: test
+region: test
+internalNetworkCIDR: test
+sshPublicKey: test
+internalNetworkNames: [test1, test2]
+externalNetworkNames: [test1, test2]
+zones: [test1, test2]
+masterNodeGroup:
+  replicas: 1
+  zones:
+  - test
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+nodeGroups:
+- name: khm
+  replicas: 1
+  zones:
+  - test
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: k8s-msk/test_187
+nsxt:
+  defaultIpPoolName: pool1
+  size: SMALL
+  tier1GatewayPath: /host/tier1
+  user: nsxt
+  password: pass
+  host: host
+`
 		notEmptyProviderClusterConfigurationState = fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
@@ -104,6 +164,17 @@ data:
   "cloud-provider-cluster-configuration.yaml": %s
   "cloud-provider-discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+		notEmptyProviderClusterConfigurationStateNSXT = fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfigurationNSXT)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
 
 		emptyProviderClusterConfigurationState = `
 apiVersion: v1
@@ -130,6 +201,19 @@ data: {}
 		It("Should fill values", func() {
 			Expect(a).To(ExecuteSuccessfully())
 			Expect(a.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration + "disableTimesync: true"))
+			Expect(a.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
+		})
+	})
+
+	Context("Cluster has minimal cloudProviderVsphere configuration with NSX-T", func() {
+		BeforeEach(func() {
+			a.BindingContexts.Set(a.KubeStateSet(notEmptyProviderClusterConfigurationStateNSXT))
+			a.RunHook()
+		})
+
+		It("Should fill values", func() {
+			Expect(a).To(ExecuteSuccessfully())
+			Expect(a.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfigurationNSXT + "disableTimesync: true"))
 			Expect(a.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
 		})
 	})

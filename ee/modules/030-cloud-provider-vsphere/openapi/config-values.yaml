@@ -105,7 +105,7 @@ properties:
     type: object
     description: |
       Kubernetes load balancer support using NSX-T for the vSphere cloud controller manager.
-#    required: [defaultIPPoolName, size, tierFatewayPath, user, password, host]
+    required: [defaultIpPoolName, size, tier1GatewayPath, user, password, host]
     properties:
       defaultIpPoolName:
         type: string
@@ -157,7 +157,6 @@ properties:
         type: boolean
         description: |
           To be set to true if NSX-T uses locally signed cert without specifying a ca.
-        default: true
         x-examples:
         - true
         - false
