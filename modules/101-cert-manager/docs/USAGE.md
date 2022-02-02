@@ -17,7 +17,7 @@ spec:
     kind: ClusterIssuer                      # the link to the certificate "issuer", see more below
     name: letsencrypt
   commonName: example.com                    # the main certificate domain
-  dnsNames:                                  # additional domains (optional)
+  dnsNames:                                  # additional domains (At least one DNS Name or IP address is required)
   - www.example.com
   - admin.example.com
 ```

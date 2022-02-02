@@ -17,7 +17,7 @@ spec:
     kind: ClusterIssuer                      # ссылка на "выдаватель" сертификатов, см. подробнее ниже
     name: letsencrypt
   commonName: example.com                    # основной домен сертификата
-  dnsNames:                                  # дополнительыне домены сертификата, указывать не обязательно
+  dnsNames:                                  # дополнительыне домены сертификата (Как минимум одно DNS имя или IP-адрес должен быть указан)
   - www.example.com
   - admin.example.com
 ```
