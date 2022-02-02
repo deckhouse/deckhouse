@@ -139,9 +139,11 @@ properties:
               cpu:
                 description: |
                   The combined CPU requests for all the components on each node.
-                type: string
                 default: "300m"
-                pattern: '^[0-9]+m?$'
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
               memory:
                 description: |
                   The combined memory requests for all the components on each node.
@@ -164,8 +166,10 @@ properties:
                   The combined CPU requests for the system components on master nodes in addition to `everyNode`.
                     * For a Deckhouse-controlled cluster, the default value is calculated automatically: `.status.allocatable.cpu` of the smallest master node (no more than 4 cores) minus `everyNode`.
                     * For a managed cluster, the default value is 1 core minus `everyNode`.
-                type: string
-                pattern: '^[0-9]+m?$'
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
               memory:
                 description: |
                   The total amount of memory allocated to system components on master nodes in addition to `everyNode`.
