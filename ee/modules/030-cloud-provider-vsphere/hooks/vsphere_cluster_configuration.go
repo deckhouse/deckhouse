@@ -40,7 +40,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	overrideValues(&providerClusterConfiguration, &moduleConfiguration)
 	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
 
-	var discoveryData v1.VsphereProviderClusterConfiguration
+	var discoveryData v1.VsphereCloudDiscoveryData
 	if providerDiscoveryData != nil {
 		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
 		if err != nil {

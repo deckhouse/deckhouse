@@ -121,7 +121,7 @@ data: {}
 
 	a := HookExecutionConfigInit(initValuesStringA, `{}`)
 
-	FContext("Cluster has minimal cloudProviderVsphere configuration", func() {
+	Context("Cluster has minimal cloudProviderVsphere configuration", func() {
 		BeforeEach(func() {
 			a.BindingContexts.Set(a.KubeStateSet(notEmptyProviderClusterConfigurationState))
 			a.RunHook()
