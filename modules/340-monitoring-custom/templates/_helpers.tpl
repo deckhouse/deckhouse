@@ -61,7 +61,9 @@
 {{- end }}
 
 {{- define "tls_config" }}
-bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+bearerTokenSecret:
+  name: "prometheus-token"
+  key: "token"
 tlsConfig:
   insecureSkipVerify: true
 {{- end }}
