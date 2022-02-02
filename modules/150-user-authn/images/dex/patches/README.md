@@ -20,3 +20,9 @@ As for now, Dex updates the lastUsed field of OfflineSession on every refresh to
 It causes unnecessary conflict errors for etcd and Kubernetes storages.
 
 Upstream PR - https://github.com/dexidp/dex/pull/2300/
+
+### Bitbucket teams
+
+Teams API was deprecated. This patch is a migration to use workspaces.
+
+Upstream PR - https://github.com/dexidp/dex/pull/2390/
