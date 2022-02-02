@@ -85,7 +85,7 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
   password_hash="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .spec.passwordHash' <<< "$node_users_json")"
   ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(",")' <<< "$node_users_json")"
   extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudoGroup" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
-  // remove trailing comma
+  # remove trailing comma
   extra_groups="${extra_groups%,}"
 
   # check for uid > 1000
