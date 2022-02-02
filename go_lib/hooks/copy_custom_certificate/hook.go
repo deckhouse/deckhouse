@@ -75,7 +75,6 @@ func RegisterHook(moduleName string) bool {
 }
 
 func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookInput) error {
-
 	return func(input *go_hook.HookInput) error {
 		snapshots, ok := input.Snapshots["custom_certificates"]
 		if !ok {
@@ -91,7 +90,7 @@ func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookIn
 
 		httpsMode := module.GetHTTPSMode(moduleName, input)
 
-		if httpsMode != "CustomCertificate" && input.Values.Exists(fmt.Sprintf("%s.internal.customCertificateData", moduleName)) {
+		if httpsMode != "CustomCertificate" {
 			input.Values.Remove(fmt.Sprintf("%s.internal.customCertificateData", moduleName))
 			return nil
 		}
