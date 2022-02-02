@@ -101,7 +101,7 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 	if !deployTime {
 		deckhouseContainerEnv = append(deckhouseContainerEnv,
 			apiv1.EnvVar{
-				Name:  "KUBERNETES_DEPLOYED",
+				Name:  deployTimeEnvVarName,
 				Value: params.DeployTime.Format(deployTimeEnvVarFormat),
 			},
 		)
@@ -158,7 +158,7 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 		if !deployServicePort {
 			deckhouseContainerEnv = append(deckhouseContainerEnv,
 				apiv1.EnvVar{
-					Name:  "KUBERNETES_SERVICE_PORT",
+					Name:  deployServicePortEnvVarName,
 					Value: "6443",
 				},
 			)
