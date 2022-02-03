@@ -11,6 +11,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-cloud-provider-openstack",
 	"d8-cloud-provider-vsphere",
 	"d8-cloud-provider-yandex",
+	"d8-cni-cilium",
 	"d8-cni-flannel",
 	"d8-cni-simple-bridge",
 	"d8-descheduler",
@@ -34,6 +35,7 @@ var auditPolicyBasicNamespaces = []string{
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{
+	"agent",
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
 	"annotations-converter",
@@ -77,6 +79,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"node-termination-handler",
 	"okmeter",
 	"openvpn",
+	"operator",
 	"operator-prometheus",
 	"pod-reloader",
 	"pricing",

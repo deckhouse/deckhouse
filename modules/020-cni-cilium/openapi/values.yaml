@@ -1,0 +1,14 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-required-for-helm:
+    - maglevHash
+    properties:
+      maglevHash:
+        type: string
+        minLength: 16
+        maxLength: 16
