@@ -501,6 +501,15 @@ spec:
                       type: string
                       x-doc-default: '/var/lib/kubelet'
                       description: Directory path for managing kubelet files (volume mounts,etc).
+                    containerLogMaxSize:
+                      type: string
+                      default: 50Mi
+                      description: Maximum log file size before it is rotated.
+                    containerLogMaxFiles:
+                      type: integer
+                      minimum: 1
+                      default: 4
+                      description: How many rotated log files to store before deleting them.
     - name: v1alpha2
       served: true
       storage: true
