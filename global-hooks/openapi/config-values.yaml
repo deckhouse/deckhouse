@@ -6,20 +6,19 @@ properties:
     type: string
     default: null
     description: |
-      The storage class to use with all service components (Prometheus, Grafana, OpenVPN, ...).
-        * By default, it is set to null. In this case, service components use `cluster.defaultStorageClass`
-          (which is determined automatically) or `emptyDir` (if `cluster.defaultStorageClass` isn't defined).
+      The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, ...).
+        * If not defined, components use `cluster.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `cluster.defaultStorageClass` isn't defined).
         * Use this parameter only in exceptional circumstances.
   highAvailability:
     type: boolean
     description: |
-      A global switch to enable the HA mode for modules that support it.
+      A global switch to enable the *high availability* mode for modules that support it.
 
-      The parameter is not defined by default; the decision is made based on the `global.discovery.clusterControlPlaneIsHighlyAvailable` parameter.
+      If not defined, the `global.discovery.clusterControlPlaneIsHighlyAvailable` parameter is used to determine the value of the `highAvailability` parameter.
     x-examples: [ true, false ]
   modules:
     description: |
-      Parameters of service components.
+      Common parameters of Deckhouse modules.
     additionalProperties: false
     default: {}
     type: object
@@ -28,7 +27,7 @@ properties:
         type: string
         default: nginx
         description: |
-          The class of the Ingress controller used for service components.
+          The class of the Ingress controller ([Ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
         x-examples: [ "nginx" ]
       publicDomainTemplate:
         type: string
@@ -47,7 +46,7 @@ properties:
         x-examples: [ "%s.kube.company.my" ]
       placement:
         description: |
-          Parameters regulating the layout of Deckhouse components.
+          Parameters regulating the layout of Deckhouse module components.
         type: object
         additionalProperties: false
         default: {}
@@ -68,7 +67,7 @@ properties:
             - [ "dedicated.example.com" ]
       https:
         description: |
-          The HTTPS implementation used by the service components.
+          The HTTPS implementation used by the Deckhouse modules.
         type: object
         additionalProperties: false
         x-examples:
@@ -85,10 +84,10 @@ properties:
             type: string
             description: |
               The HTTPS usage mode:
-              * `Disabled` — in this mode, all service components use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/));
-              * `CertManager` — all service components use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
-              * `CustomCertificate` — all service components use HTTPS using the certificate from the `d8-system` namespace;
-              * `OnlyInURI` — all service components use HTTP (in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS).
+              * `Disabled` — in this mode, Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/));
+              * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
+              * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
+              * `OnlyInURI` — Deckhouse modules use HTTP (in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS).
             default: CertManager
             enum:
             - Disabled
@@ -105,9 +104,9 @@ properties:
                 default: 'letsencrypt'
                 x-doc-default: 'letsencrypt'
                 description: |
-                  What `ClusterIssuer` to use for service components.
+                  Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own.
+                  The [cert-manager](https://deckhouse.io/en/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false
@@ -115,13 +114,15 @@ properties:
               secretName:
                 type: string
                 description: |
-                  The name of the secret in the `d8-system` namespace to use with Grafana/Prometheus.
+                  The name of the secret in the `d8-system` namespace to use with Deckhouse modules.
 
                   This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
                 default: "false"
       resourcesRequests:
         description: |
-          The amount of CPU and memory allocated to service components.
+          The amount of resources (CPU and memory) allocated to Deckhouse components.
+
+          [More](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) about resource units in Kubernetes.
         type: object
         default: {}
         additionalProperties: false
@@ -131,14 +132,14 @@ properties:
             default: {}
             additionalProperties: false
             description: |
-              System components running on every cluster node (usually DaemonSets)
+              The amount of resources (CPU and memory) allocated to Deckhouse components running on every cluster node (usually DaemonSets)
             x-examples:
             - cpu: 100m
               memory: 150M
             properties:
               cpu:
                 description: |
-                  The combined CPU requests for all the components on each node.
+                  The combined CPU requests for all the Deckhouse components on each node.
                 default: "300m"
                 oneOf:
                   - type: string
@@ -146,7 +147,7 @@ properties:
                   - type: number
               memory:
                 description: |
-                  The combined memory requests for all the components on each node.
+                  The combined memory requests for all the Deckhouse components on each node.
                 type: string
                 default: "512Mi"
                 pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
@@ -154,26 +155,26 @@ properties:
             type: object
             additionalProperties: false
             description: |
-              System components (control plane and system components on the master nodes).
+              The amount of resources (CPU and memory) allocated to Deckhouse components runnig on the master nodes (including control plane components, if they are managed by Deckhouse).
 
-              **Caution!** Deckhouse does not manage control plane components in managed clusters, so all resources are allocated to the system components.
+              **Caution!** Deckhouse does not manage control plane components in managed clusters, so all the specified resources are allocated to the Deckhouse components except the control plane.
             x-examples:
             - cpu: "1"
               memory: 150Mi
             properties:
               cpu:
                 description: |
-                  The combined CPU requests for the system components on master nodes in addition to `everyNode`.
-                    * For a Deckhouse-controlled cluster, the default value is calculated automatically: `.status.allocatable.cpu` of the smallest master node (no more than 4 cores) minus `everyNode`.
-                    * For a managed cluster, the default value is 1 core minus `everyNode`.
+                  The combined CPU requests for Deckhouse components on master nodes **in addition** to `everyNode.cpu`.
+                    * For a Deckhouse-controlled cluster, the default value is calculated automatically: `.status.allocatable.cpu` of the smallest master node (no more than `4` (CPU cores)) minus `everyNode.cpu`.
+                    * For a managed cluster, the default value is `1` (CPU core) minus `everyNode.cpu`.
                 oneOf:
                   - type: string
                     pattern: "^[0-9]+m?$"
                   - type: number
               memory:
                 description: |
-                  The total amount of memory allocated to system components on master nodes in addition to `everyNode`.
-                    * For a Deckhouse-managed cluster, the default value is calculated automatically: `.status.allocatable.memory` of the smallest master node (no more than 8GiB) minus `everyNode`.
-                    * For a managed cluster, the default value is 1GiB minus `everyNode`.
+                  The total amount of memory allocated to Deckhouse components on master nodes **in addition** to `everyNode.memory`.
+                    * For a Deckhouse-managed cluster, the default value is calculated automatically: `.status.allocatable.memory` of the smallest master node (no more than `8Gi`) minus `everyNode.memory`.
+                    * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
                 type: string
                 pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
