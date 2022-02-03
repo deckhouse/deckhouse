@@ -3,7 +3,7 @@
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
-  name: "status"
+  name: "upmeter"
   namespace: "d8-upmeter"
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "upmeter" )) | nindent 2 }}
 spec:

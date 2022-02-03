@@ -17,8 +17,9 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/external_auth"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/hooks/external_auth"
 )
 
 var _ = external_auth.RegisterHook(external_auth.Settings{
