@@ -10,7 +10,7 @@ spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "upmeter") }}
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
-  {{- with .Values.upmeter.webui.auth.allowedUserGroups }}
+  {{- with .Values.upmeter.auth.webui.allowedUserGroups }}
   allowedGroups:
     {{- range $group := . }}
     - {{ $group }}

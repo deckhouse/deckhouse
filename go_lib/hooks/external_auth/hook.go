@@ -19,9 +19,10 @@ package external_auth
 import (
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 type Settings struct {
