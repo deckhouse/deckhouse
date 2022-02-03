@@ -43,8 +43,11 @@ spec:
       - name: deckhouse-registry
       volumes:
       - name: config
-        configMap:
-          name: kubeconfig-generator
+        secret:
+          secretName: kubeconfig-generator
+          items:
+          - key: config.yaml
+            path: config.yaml
       {{- if .Values.userAuthn.internal.discoveredDexClusterIP }}
       hostAliases:
         - ip: {{ .Values.userAuthn.internal.discoveredDexClusterIP }}
