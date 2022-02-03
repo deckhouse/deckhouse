@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -354,8 +355,10 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 			prev := ngStatusCache[nodeGroup.Name]
 			// skip events with the same in-row message
 			if prev != statusMsg {
-				failureEvent := buildEvent(nodeGroup, statusMsg)
-				input.PatchCollector.Create(failureEvent)
+				err := createEvent(input, nodeGroup, statusMsg)
+				if err != nil {
+					return err
+				}
 				ngStatusCache[nodeGroup.Name] = statusMsg
 			}
 			// rewrite status message for NG description field
@@ -378,7 +381,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 	return nil
 }
 
-func buildEvent(nodeGroup statusNodeGroup, msg string) *eventsv1.Event {
+func createEvent(input *go_hook.HookInput, nodeGroup statusNodeGroup, msg string) error {
 	eventType := corev1.EventTypeWarning
 	reason := "MachineFailed"
 
@@ -386,9 +389,60 @@ func buildEvent(nodeGroup statusNodeGroup, msg string) *eventsv1.Event {
 		eventType = corev1.EventTypeNormal
 		reason = "MachineCreating"
 	}
-
 	now := time.Now()
+	minK8sVersionStr := input.Values.Get("global.discovery.kubernetesVersion").String()
 
+	minK8sVersion, err := semver.NewVersion(minK8sVersionStr)
+	if err != nil {
+		return fmt.Errorf("failed to parse minimal k8s version: %s", err)
+	}
+	// only from 1.20 k8s events.k8s.io API became public
+	v120 := semver.MustParse("1.20.0")
+
+	var event interface{}
+	if minK8sVersion.LessThan(v120) {
+		event = buildDeprecatedEvent(nodeGroup, eventType, reason, msg, now)
+	} else {
+		event = buildEventV1(nodeGroup, eventType, reason, msg, now)
+	}
+
+	input.PatchCollector.Create(event)
+	return nil
+}
+
+func buildDeprecatedEvent(nodeGroup statusNodeGroup, eventType, reason, msg string, now time.Time) *corev1.Event {
+	return &corev1.Event{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Event",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Namespace:    "default",
+			GenerateName: "ng-" + nodeGroup.Name + "-",
+		},
+		InvolvedObject: corev1.ObjectReference{
+			APIVersion:      "deckhouse.io/v1",
+			Kind:            "NodeGroup",
+			Name:            nodeGroup.Name,
+			UID:             nodeGroup.UID,
+			ResourceVersion: nodeGroup.ResourceVersion,
+		},
+		Reason:  reason,
+		Message: msg,
+		Source: corev1.EventSource{
+			Component: "deckhouse",
+		},
+		// Don't use EventTime, it's for event series
+		FirstTimestamp:      v1.Time{Time: now},
+		Count:               1,
+		Type:                eventType,
+		ReportingController: "deckhouse",
+		ReportingInstance:   "deckhouse",
+		Action:              "Binding",
+	}
+}
+
+func buildEventV1(nodeGroup statusNodeGroup, eventType, reason, msg string, now time.Time) *eventsv1.Event {
 	return &eventsv1.Event{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "Event",
@@ -397,7 +451,7 @@ func buildEvent(nodeGroup statusNodeGroup, msg string) *eventsv1.Event {
 		ObjectMeta: v1.ObjectMeta{
 			// Namespace field has to be filled - event will not be created without it
 			// and we have to set 'default' value here for linking this event with a NodeGroup object, which is global
-			// if we set 'd-cloud-instance-manager' here for example, `Events` field on `kubectl describe ng $X` will be empty
+			// if we set 'd8-cloud-instance-manager' here for example, `Events` field on `kubectl describe ng $X` will be empty
 			Namespace:    "default",
 			GenerateName: "ng-" + nodeGroup.Name + "-",
 		},
