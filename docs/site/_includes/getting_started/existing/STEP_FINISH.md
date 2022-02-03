@@ -9,13 +9,26 @@
 
 Now that you have installed and properly configured Deckhouse, let's look at what you can do with it.
 
-By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
+Внутрикластерная документация доступна по адресу [deckhouse.example.com](https://deckhouse.example.com)
 
-Here are credentials **generated** in the previous steps:
-- Username — `admin@example.com`
-- Password — `<GENERATED_PASSWORD>`
+Доступ к документации ограничен basic-аутентификацией (больше вариантов аутентификации можно получить включив модуль [user-auth](.
+./../documentation/v1/modules/150-user-authn/):
+- Логин — `admin`
+- Пароль — сгенерирован автоматически. Узнать его можно в ConfigMap `deckhouse` в секции конфигурации модуля `deckhouse-web`, например,
+  выполнив следующую команду:
+  ```bash
+  kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.deckhouseWeb}" | grep password
+  ```
+  Пример вывода:
+  ```
+  $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.deckhouseWeb}" | grep password 
+  password: UJvSB4UYTa3fnDOco6LF
+  ```
 
-Use them to access the web interface of the Deckhouse components.
+> Если адрес [deckhouse.example.com](https://deckhouse.example.com) недоступен, возможные следующие причины
+- проблема на уровне Ingress-контроллера
+- проблема с DNS
+- сетевые проблемы (фильтрация, маршрутизация...)
 </div>
 
 <section class="cards-blocks">
@@ -24,15 +37,6 @@ Use them to access the web interface of the Deckhouse components.
 Essentials
 </h2>
 <div class="cards-blocks__cards">
-
-<div class="cards-item cards-item_inverse">
-<h3 class="cards-item__title text_h3">
-Up-to-date Deckhouse documentation in your cluster
-</h3>
-<div class="cards-item__text" markdown="1">
-The in-cluster documentation for a specific version of Deckhouse used in your cluster is available at [deckhouse.example.com](https://deckhouse.example.com).
-</div>
-</div>
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">

@@ -1,2 +1,128 @@
+Кластеры некоторых провайдеров могут требовать дополнительных действий до или после установки Deckhouse.
 
-### TODO
+Ниже приведены частые проблемы и способы их решения. Если вы столкнулись с другими особенностями установки Deckhouse в существующем кластере, пожалуйста, опишите ваш опыт в [issue](https://github.com/deckhouse/deckhouse/issues).
+
+{% offtopic title="Ошибки установки на этапе 'Waiting for Deckhouse to become Ready'" %}
+- Ошибка вида:
+  ```
+  │ │ ┌ Waiting for Deckhouse to become Ready
+  │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
+  │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
+  ```
+
+  Возможная причина — в кластере нет узла с label `node-role.kubernetes.io/master: ""`, который первоначально используется в `nodeSelector` манифеста deployment `deckhouse`.
+
+  Варианты решения:
+  - Отредактировать deployment `deckhouse` и указать нужный `nodeSelector`:
+    ```shell
+    kubectl -n d8-system edit deployment/deckhouse
+    ```
+  - Удалить nodeSelector у deployment `deckhouse`:
+    ```shell
+    kubectl patch -n d8-system deployment deckhouse --type json -p '[{"op": "remove", "path": "/spec/template/spec/nodeSelector"}]'
+    ```
+{% endofftopic %}
+
+{% offtopic title="В кластере нет Ingress-контроллера..." %}
+Для работы модуля `deckhouse-web`, предоставляющего WEB-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/ru/documentation/v1/modules/402-ingress-nginx/) следующим способом:
+<ul>
+<li>Включите модуль:
+<ul>
+    <li>На этапе установки Deckhouse добавьте в файл <code>config.yml</code> в секцию <code>deckhouse.configOverrides</code>:
+{% snippetcut selector="ingress-nginx-install-enable" %}
+```yaml
+ingressNginxEnabled: true
+```
+{% endsnippetcut %}
+<p>Пример:</p>
+<div markdown="1">
+
+```yaml
+deckhouse:
+  configOverrides:
+    ingressNginxEnabled: true
+```
+</div>
+    </li>
+    <li><p>После установки Deckhouse, отредактируйте ConfigMap <code>deckhouse</code>:</p>
+{% snippetcut selector="deckhouse-cm-edit" %}
+```shell
+kubectl -n d8-system edit cm deckhouse
+```
+{% endsnippetcut %}
+<p>... и добавьте:</p>
+{% snippetcut selector="ingress-nginx-cm-enable" %}
+```yaml
+ingressNginxEnabled: "true"
+```
+{% endsnippetcut %}
+<p>Пример:</p>
+<div markdown="1">
+
+```yaml
+deckhouse:
+  ingressNginxEnabled: "true"
+```
+</div>
+</li>
+</ul>
+</li>
+<li><p>Создайте файл <code>ingress-nginx-controller.yml</code> следующего содержания:</p>
+{% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
+{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
+{% endsnippetcut %}</li>
+<li><p>Примените его, выполнив на следующую команду:</p>
+{% snippetcut %}
+```shell
+kubectl create -f ingress-nginx-controller.yml
+```
+{% endsnippetcut %}
+</li>
+</ul>
+{% endofftopic %}
+
+{% offtopic title="Кластер в EKS AWS (Amazon Elastic Kubernetes Service)" %}
+<div markdown="0">
+<p>Если вы устанавливаете Deckhouse в кластер <strong>EKS AWS</strong> (<a href="https://aws.amazon.com/ru/eks/">Amazon Elastic Kubernetes Service</a>), то в запущенном контейнере инсталлятора установите <a href="https://aws.amazon.com/ru/cli/">aws-cli</a>, выполнив:</p>
+{% snippetcut selector="azure-cli-install" %}
+```shell
+apk add python3 py3-pip && pip3 install --upgrade pip && pip3 install awscli
+```
+{% endsnippetcut %}
+</div>
+{% endofftopic %}
+
+
+{% offtopic title="Кластер в VK Cloud Solutions (MailRu Cloud Solutions)" %}
+<ul>
+<li><p>В конфигурации инсталляции Deckhouse в массиве <code>customTolerationKeys</code> укажите taint <code>CriticalAddonsOnly</code>.</p>
+<p>Пример:</p>
+<div markdown="1">
+```yaml
+deckhouse:
+  releaseChannel: Stable
+  bundle: Minimal
+  configOverrides:
+    global:
+      modules:
+        placement:
+          customTolerationKeys:
+          - CriticalAddonsOnly
+        publicDomainTemplate: "%s.example.com"
+```
+</div>
+</li>
+<li><p>В кластерах версии 1.21+ VK Cloud Solutions установлен Gatekeeper (OPA), который требует выставления requests и limits подам. Pod <code>deckhouse</code> не имеет requests/limits, остальные компоненты и модули Deckhouse получают вычисляемые параметры requests/limits в процессе работы Deckhouse.</p>
+<p>При просмотре событий Deployment <code>deckhouse</code> вы можете увидеть следующую ошибку:</p>
+<div class="highlight"><pre><code>admission webhook "validation.gatekeeper.sh" denied the request: [container-must-have-limits] container <...> has no resource limits...</code></pre></div>
+
+<p>Чтобы Deckhouse смог запуститься, необходимо перед установкой Deckhouse в таких кластерах добавить исключение GateKeeper (OPA) для namespace'ов компонентов Deckhouse (<code>d8*-</code>).</p><p>Выполните в кластере:</p>
+{% snippetcut selector="gatekeeper-uninstall" %}
+```shell
+kubectl patch constraints container-must-have-limits --type json -p '[{"op": "replace", "path": "/spec/match/excludedNamespaces", "value": ["d8-*"]}]'
+```
+{% endsnippetcut %}
+</li>
+</ul>
+{% endofftopic %}
+

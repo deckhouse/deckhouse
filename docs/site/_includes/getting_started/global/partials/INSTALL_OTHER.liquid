@@ -87,15 +87,13 @@ dhctl bootstrap-phase abort \
 
 After the installation is complete, you will be returned to the command line.
 
-{% if page.platform_type == "existing" -%}
-To create an Ingress controller and a user for cluster internal services, run the following command:
-{% snippetcut %}
-```shell
-dhctl bootstrap-phase create-resources \
-  --kubeconfig=/kubeconfig \
-  --resources /resources.yaml
-```
-{% endsnippetcut %}
-{%- endif %}
-
 Almost everything is ready for a fully-fledged Deckhouse Platform to work!
+
+<!-- Troubleshooting in existing cluster //-->
+{%- if page.platform_type == "existing" %}
+<h2 id="if-something-went-wrong">If something went wrong</h2>
+
+{%  include getting_started/existing/partials/TROUBLESHOOT.liquid %}
+
+{% endif %}
+<!--  //-->
