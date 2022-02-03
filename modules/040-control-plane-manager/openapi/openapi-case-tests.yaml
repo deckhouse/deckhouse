@@ -4,6 +4,7 @@ positive:
         loadBalancer:
           sourceRanges:
           - 192.168.0.0/24
+          port: 2533
   values:
     - internal:
         effectiveKubernetesVersion: "1.19"
