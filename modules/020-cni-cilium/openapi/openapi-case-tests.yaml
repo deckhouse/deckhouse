@@ -1,0 +1,19 @@
+positive:
+  configValues:
+  - debugLogging: true
+    cleanState: true
+    createNodeRoutes: true
+    svcSourceRangeCheck: true
+    policyAuditMode: true
+  - debugLogging: false
+    cleanState: false
+    createNodeRoutes: false
+    svcSourceRangeCheck: false
+    policyAuditMode: false
+  values:
+  - internal:
+      maglevHash:
+negative:
+  values:
+  - internal:
+      maglevHash: ""
