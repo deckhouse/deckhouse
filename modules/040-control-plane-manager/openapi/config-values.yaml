@@ -136,6 +136,13 @@ properties:
             items:
               type: string
               pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\/[0-9]+$'
+          port:
+            type: integer
+            default: 6443
+            minimum: 1
+            maximum: 65534
+            description: |
+              External LoadBalancer TCP port.
       auditPolicyEnabled:
         type: boolean
         default: false
