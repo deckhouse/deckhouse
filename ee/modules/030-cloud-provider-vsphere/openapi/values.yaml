@@ -58,7 +58,7 @@ properties:
                 memory: 8192
                 numCPUs: 4
                 template: dev/golden_image
-                replicas: 1
+              replicas: 1
           - sshPublicKey: "mysshkey2"
             region: myreg
             regionTagCategory: myregtagcat
