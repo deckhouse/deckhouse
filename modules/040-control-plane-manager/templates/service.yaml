@@ -21,7 +21,7 @@ spec:
     {{- end }}
   ports:
   - name: https
-    port: 443
+    port: {{ .Values.controlPlaneManager.apiserver.loadBalancer.port }}
     targetPort: 6443
     protocol: TCP
   selector:
