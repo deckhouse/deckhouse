@@ -84,7 +84,7 @@ jobs:
       - go_generate
     env:
       WERF_ENV: "FE"
-{!{ tmpl.Exec "build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build FE") | strings.Indent 6 }!}
 
   build_ee:
@@ -96,7 +96,7 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "EE"
-{!{ tmpl.Exec "build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build EE") | strings.Indent 6 }!}
 
   build_ce:
@@ -108,7 +108,7 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
       WERF_ENV: "CE"
-{!{ tmpl.Exec "build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build CE") | strings.Indent 6 }!}
 
   doc_web_build:
