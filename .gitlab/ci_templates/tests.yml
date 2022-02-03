@@ -200,7 +200,7 @@
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
   - pwd
-  - werf run dhctl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/dhctl" -- make ci
+  - werf run dhctl-tests --docker-options="-w /deckhouse/dhctl" -- make ci
   except:
   - schedules
   - alpha

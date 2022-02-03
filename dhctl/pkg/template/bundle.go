@@ -149,11 +149,8 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 
 	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
 	log.InfoF("Create %q\n", devicePathFile)
-	if err := fs.CreateFileWithContent(devicePathFile, devicePath); err != nil {
-		return err
-	}
 
-	return nil
+	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }
 
 func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {

@@ -36,7 +36,7 @@ docker:
   ENTRYPOINT: ["dhctl"]
 import:
 - artifact: dhctl
-  add: /tmp/dhctl
+  add: /dhctl/bin/dhctl
   to: /usr/bin/dhctl
   before: setup
 git:
