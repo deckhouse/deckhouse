@@ -42,13 +42,10 @@ func ExcludeElementFromSlice(list []string, elem string) []string {
 	}
 
 	if indx >= 0 {
-		firstPart := list[:indx]
-		// need tmp slice because
-		// res := append(list[:indx], list[indx+1:]...)
-		// can affect source list
-		tmp := make([]string, len(firstPart))
-		copy(tmp, firstPart)
-		res := append(tmp, list[indx+1:]...)
+		var res []string
+
+		res = append(res, list[:indx]...)
+		res = append(res, list[indx+1:]...)
 
 		return res
 	}

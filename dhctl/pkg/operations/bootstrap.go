@@ -174,10 +174,8 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	if err := ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
 		return err
 	}
-	if err := RebootMaster(sshClient); err != nil {
-		return err
-	}
-	return nil
+
+	return RebootMaster(sshClient)
 }
 
 func DetermineBundleName(sshClient *ssh.Client) (string, error) {
