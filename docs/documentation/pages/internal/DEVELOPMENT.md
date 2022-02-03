@@ -754,17 +754,6 @@ Debugging hooks
 
 Local development
 --------------------
-Create the following symlink to make the development process more convenient:
-```bash
-sudo ln -s "$PWD" /deckhouse
-```
-In macOS, if the root filesystem is in a Read-only mode, use the following command to create a symlink:
-```bash
-echo "deckhouse\t$PWD" >> /etc/synthetic.conf
-```
-and reboot the OS.
-
-NB: Both commands must be executed in the root directory of the repository.
 
 ### Running tests
 
