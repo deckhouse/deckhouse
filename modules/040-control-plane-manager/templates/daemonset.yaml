@@ -99,6 +99,7 @@ extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
 
 extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
 extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" $tpl_context | b64enc }}
+extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
 {{- end }}
 ---
 apiVersion: v1

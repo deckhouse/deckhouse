@@ -137,9 +137,15 @@ scheduler:
     readOnly: true
     pathType: DirectoryOrCreate
   extraArgs:
+{{- if ne .runType "ClusterBootstrap" }}
+    config: "/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml"
+{{- end }}
     profiling: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
+{{- end }}
+{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
+    feature-gates: "DefaultPodTopologySpread=true"
 {{- end }}
     bind-address: "127.0.0.1"
     port: "0"
