@@ -1,0 +1,10 @@
+{{- if .Values.dashboard.internal.deployDexAuthenticator }}
+  {{- $config := dict }}
+  {{- $_ := set $config "name"          "dashboard" }}
+  {{- $_ := set $config "namespace"     "d8-dashboard" }}
+  {{- $_ := set $config "module"        "dashboard" }}
+  {{- $_ := set $config "secretName"    "ingress-tls" }}
+  {{- $_ := set $config "ingressClass"  (include "helm_lib_module_ingress_class" . | quote) }}
+  {{- $_ := set $config "kubernetesAPI" true }}
+{{- include "helm_lib_dex_authenticator" (list . $config ) }}
+{{- end }}

@@ -1,0 +1,19 @@
+{{- if .Values.upmeter.internal.deployDexAuthenticator }}
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: "status"
+  namespace: "d8-upmeter"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "upmeter" )) | nindent 2 }}
+spec:
+  applicationDomain: {{ include "helm_lib_module_public_domain" (list . "upmeter") }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.upmeter.webui.auth.allowedUserGroups }}
+  allowedGroups:
+    {{- range $group := . }}
+    - {{ $group }}
+    {{- end }}
+  {{- end }}
+{{- end }}

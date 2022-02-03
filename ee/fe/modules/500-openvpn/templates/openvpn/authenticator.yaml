@@ -1,0 +1,19 @@
+{{- if .Values.openvpn.internal.deployDexAuthenticator }}
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: "openvpn"
+  namespace: "d8-openvpn"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "openvpn" )) | nindent 2 }}
+spec:
+  applicationDomain: {{ include "helm_lib_module_public_domain" (list . "openvpn") }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.openvpn.auth.allowedUserGroups }}
+  allowedGroups:
+    {{- range $group := . }}
+    - {{ $group }}
+    {{- end }}
+  {{- end }}
+{{- end }}

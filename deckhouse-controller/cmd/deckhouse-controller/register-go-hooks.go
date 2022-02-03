@@ -50,9 +50,9 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/500-dashboard/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks/dex"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks/https"
 )
