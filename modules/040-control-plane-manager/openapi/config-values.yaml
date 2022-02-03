@@ -6,6 +6,14 @@ properties:
     description: |
       `kube-apiserver` parameters.
     properties:
+      saTokenAPIAudiences:
+        type: array
+        description: |
+          A list of api audiences to use when provisioning ServiceAccount Tokens
+        x-examples:
+          - [ "foo", "istio-ca" ]
+        items:
+          type: string
       bindToWildcard:
         type: boolean
         default: false

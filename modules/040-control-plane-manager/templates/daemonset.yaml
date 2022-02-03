@@ -60,6 +60,9 @@
   {{- if hasKey .Values.controlPlaneManager.apiserver "certSANs" }}
     {{ $_ := set $tpl_context.apiserver "certSANs" .Values.controlPlaneManager.apiserver.certSANs }}
   {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "saTokenAPIAudiences" }}
+    {{ $_ := set $tpl_context.apiserver "saTokenAPIAudiences" .Values.controlPlaneManager.apiserver.saTokenAPIAudiences }}
+  {{- end }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
