@@ -59,7 +59,7 @@ data:
     spec:
       containers:
       - name: helper-pod
-        image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.helper }}
+        image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.helper }}"
         imagePullPolicy: IfNotPresent
       imagePullSecrets:
       - name: deckhouse-registry
