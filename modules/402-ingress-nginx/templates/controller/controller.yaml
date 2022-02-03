@@ -138,7 +138,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - image: "{{ $context.Values.global.modulesImages.registry }}:{{ pluck (printf "controller%s" ($crd.spec.controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}""
+      - image: "{{ $context.Values.global.modulesImages.registry }}:{{ pluck (printf "controller%s" ($crd.spec.controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}"
         name: controller
         env:
         - name: POD_NAME
