@@ -28,6 +28,10 @@ apiServer:
   {{- end }}
 {{- end }}
   extraArgs:
+    api-audiences: https://kubernetes.default.svc{{ if .apiserver.saTokenAPIAudiences }},{{ .apiserver.saTokenAPIAudiences | join "," }}{{ end }}
+    service-account-issuer: https://kubernetes.default.svc
+    service-account-key-file: /etc/kubernetes/pki/sa.pub
+    service-account-signing-key-file: /etc/kubernetes/pki/sa.key
 {{- if ne .runType "ClusterBootstrap" }}
     enable-admission-plugins: "EventRateLimit,ExtendedResourceToleration{{ if .apiserver.admissionPlugins }},{{ .apiserver.admissionPlugins | join "," }}{{ end }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
