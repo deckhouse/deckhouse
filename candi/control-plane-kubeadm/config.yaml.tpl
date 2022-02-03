@@ -39,6 +39,9 @@ apiServer:
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- end }}
+{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
+    feature-gates: "TTLAfterFinished=true"
+{{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
@@ -105,6 +108,9 @@ controllerManager:
     terminated-pod-gc-threshold: "12500"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
+{{- end }}
+{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
+    feature-gates: "TTLAfterFinished=true"
 {{- end }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
