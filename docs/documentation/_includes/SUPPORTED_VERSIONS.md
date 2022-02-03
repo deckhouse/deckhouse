@@ -20,10 +20,10 @@ The following Linux Distributions are currently supported for nodes:
 
 {% if page.lang == 'ru' %}
 ## Kubernetes
-В настоящий момент поддерживаются следующие версии Kubernetes.
+В настоящий момент поддерживаются следующие версии Kubernetes:
 {%- else %}
 ## Kubernetes
-The following Kubernetes versions are currently supported.
+The following Kubernetes versions are currently supported:
 {%- endif %}
 <table>
 <thead>
