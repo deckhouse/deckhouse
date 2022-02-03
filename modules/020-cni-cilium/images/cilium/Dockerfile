@@ -1,0 +1,76 @@
+# syntax=docker/dockerfile:1.2
+
+# Copyright 2020-2021 Authors of Cilium
+# SPDX-License-Identifier: Apache-2.0
+
+ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:9005878f5668f3f9bf49b237c9b8b37e248c33d6@sha256:682fc385c494984c2822ac1f2bc806e504addfdbd7a3257bfa587c0938b7614f
+ARG CILIUM_RUNTIME_IMAGE=quay.io/cilium/cilium-runtime:3e2ea3c996d8372ba65ee14058a716f797c67496@sha256:f5ea135fce72807158e520d1754e826b138cf9e97adde528fd992b3e79ef6ee8
+
+# cilium-envoy from github.com/cilium/proxy
+#
+FROM quay.io/cilium/cilium-envoy:9b1701da9cc035a1696f3e492ee2526101262e56@sha256:c0e0586bf97e69b9c16c95eff707a264c1c00bb89371205e88f6849d12ed2de2 as cilium-envoy
+
+#
+# Hubble CLI
+#
+FROM ${CILIUM_BUILDER_IMAGE} as hubble
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.1.tar.gz | tar xvz -C /tmp/cilium-repo
+RUN bash /tmp/cilium-repo/cilium-1.11.1/images/cilium/download-hubble.sh
+RUN /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
+
+#
+# Cilium incremental build. Should be fast given builder-deps is up-to-date!
+#
+# cilium-builder tag is the date on which the compatible build image
+# was pushed.  If a new version of the build image is needed, it needs
+# to be tagged with a new date and this file must be changed
+# accordingly.  Keeping the old images available will allow older
+# versions to be built while allowing the new versions to make changes
+# that are not backwards compatible.
+#
+FROM ${CILIUM_BUILDER_IMAGE} as builder
+
+RUN apt-get update && apt-get install patch -y
+
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.1.tar.gz | tar xvz -C /tmp/cilium-repo
+WORKDIR /tmp/cilium-repo/cilium-1.11.1
+
+COPY 001-netfilter-compatibility-mode.patch /
+RUN patch -p1 < /001-netfilter-compatibility-mode.patch
+
+RUN make PKG_BUILD=1 \
+    SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
+
+RUN make PKG_BUILD=1 \
+    SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all && \
+    mv LICENSE.all /tmp/install/LICENSE.all
+
+RUN cp -t /tmp/install images/cilium/init-container.sh \
+     plugins/cilium-cni/cni-install.sh \
+     plugins/cilium-cni/cni-uninstall.sh
+
+#
+# Cilium runtime install.
+#
+# cilium-runtime tag is a date on which the compatible runtime base
+# was pushed.  If a new version of the runtime is needed, it needs to
+# be tagged with a new date and this file must be changed accordingly.
+# Keeping the old runtimes available will allow older versions to be
+# built while allowing the new versions to make changes that are not
+# backwards compatible.
+#
+FROM ${CILIUM_RUNTIME_IMAGE}
+RUN groupadd -f cilium \
+    && echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
+COPY --from=cilium-envoy / /
+# When used within the Cilium container, Hubble CLI should target the
+# local unix domain socket instead of Hubble Relay.
+ENV HUBBLE_SERVER=unix:///var/run/cilium/hubble.sock
+COPY --from=hubble /out/linux/amd64/bin/hubble /usr/bin/hubble
+COPY --from=hubble /out/linux/bash_completion /etc/bash_completion.d/hubble
+
+COPY --from=builder /tmp/install /
+WORKDIR /home/cilium
+
+ENV INITSYSTEM="SYSTEMD"
+CMD ["/usr/bin/cilium"]

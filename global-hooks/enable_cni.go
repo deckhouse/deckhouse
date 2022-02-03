@@ -26,6 +26,7 @@ var (
 	cniNameToModule = map[string]string{
 		"flannel":       "cniFlannelEnabled",
 		"simple-bridge": "cniSimpleBridgeEnabled",
+		"cilium":        "cniCiliumEnabled",
 	}
 )
 
@@ -78,6 +79,11 @@ func enableCni(input *go_hook.HookInput) error {
 	}
 
 	for cniName, module := range cniNameToModule {
+		_, ok := input.ConfigValues.GetOk(module)
+		if ok {
+			continue
+		}
+
 		if cniToEnable == cniName {
 			input.Values.Set(module, true)
 		} else {
