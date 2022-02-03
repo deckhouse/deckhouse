@@ -3,6 +3,9 @@ properties:
     description: |
       Параметры `kube-apiserver`.
     properties:
+      saTokenAPIAudiences:
+        description: |
+          Список api audiences, которые следует использовать при создании ServiceAccount Tokens
       bindToWildcard:
         description: |
           Cлушать ли на `0.0.0.0`.

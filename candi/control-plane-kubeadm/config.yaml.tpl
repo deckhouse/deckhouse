@@ -26,6 +26,10 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+    api-audiences: https://kubernetes.default.svc{{ if .apiserver.saTokenAPIAudiences }},{{ .apiserver.saTokenAPIAudiences | join "," }}{{ end }}
+    service-account-issuer: https://kubernetes.default.svc
+    service-account-key-file: /etc/kubernetes/pki/sa.pub
+    service-account-signing-key-file: /etc/kubernetes/pki/sa.key
 {{- if ne .runType "ClusterBootstrap" }}
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
