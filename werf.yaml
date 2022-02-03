@@ -456,12 +456,8 @@ image: dhctl-tests
 fromCacheVersion: "20220125"
 fromImage: base-for-go
 git:
-- add: /dhctl
-  to: /dhctl
-  stageDependencies:
-    install:
-      - go.sum
-      - Makefile
+- add: /
+  to: /deckhouse
 ansible:
   beforeInstall:
     - apk:
@@ -472,7 +468,7 @@ ansible:
   install:
   - shell: make deps
     args:
-      chdir: /dhctl
+      chdir: /deckhouse/dhctl
 ---
 artifact: jq
 from: {{ env "BASE_ALPINE" }}
@@ -604,7 +600,7 @@ git:
 {{ .Files.Get (printf "tools/build_includes/cloud-providers-%s.yaml" .Env) }}
 import:
 - artifact: dhctl
-  add: /tmp/dhctl
+  add: /dhctl/bin/dhctl
   to: /usr/bin/dhctl
   before: setup
 - artifact: terraform-provider-vsphere

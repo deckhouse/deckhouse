@@ -30,6 +30,9 @@ var (
 
 	ForceAbortFromCache             = false
 	DontUsePublicControlPlaneImages = false
+
+	KubeadmBootstrap   = false
+	MasterNodeSelector = false
 )
 
 func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
@@ -78,4 +81,15 @@ func DefineDontUsePublicImagesFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("DONT_USE_PUBLIC_CONTROL_PLANE_IMAGES")).
 		Default("false").
 		BoolVar(&DontUsePublicControlPlaneImages)
+}
+
+func DefineDeckhouseInstallFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("kubeadm-bootstrap", "Use default Kubernetes API server host and port for Kubeadm installations to install Deckhouse.").
+		Envar(configEnvName("KUBEADM_BOOTSTRAP")).
+		Default("false").
+		BoolVar(&KubeadmBootstrap)
+	cmd.Flag("master-node-selector", "Schedule Deckhouse on master nodes.").
+		Envar(configEnvName("MASTER_NODE_SELECTOR")).
+		Default("false").
+		BoolVar(&MasterNodeSelector)
 }

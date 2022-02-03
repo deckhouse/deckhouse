@@ -77,7 +77,6 @@ func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (fu
 	localIdentity := getLocalConvergeLockIdentity(identity)
 	lockConfig := GetLockLeaseConfig(localIdentity)
 	unlockConverge, err := lockLease(kubeCl, lockConfig, false)
-
 	if err != nil {
 		return nil, err
 	}

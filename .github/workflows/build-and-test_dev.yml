@@ -851,7 +851,7 @@ jobs:
           args: 'make ci'
         env:
           WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl'
+          WERF_DOCKER_OPTIONS: '-w /deckhouse/dhctl'
           WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}

@@ -37,16 +37,22 @@ const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
 	deckhouseRegistryVolumeName = "registrysecret"
 
-	deployTimeEnvVarName   = "KUBERNETES_DEPLOYED"
-	deployTimeEnvVarFormat = time.RFC3339
+	deployTimeEnvVarName        = "KUBERNETES_DEPLOYED"
+	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
+	deployServicePortEnvVarName = "KUBERNETES_SERVICE_PORT"
+	deployTimeEnvVarFormat      = time.RFC3339
 )
 
 type DeckhouseDeploymentParams struct {
-	Bundle           string
-	Registry         string
-	LogLevel         string
-	DeployTime       time.Time
-	IsSecureRegistry bool
+	Bundle   string
+	Registry string
+	LogLevel string
+
+	DeployTime time.Time
+
+	IsSecureRegistry   bool
+	MasterNodeSelector bool
+	KubeadmBootstrap   bool
 }
 
 func GetDeckhouseDeployTime(deployment *appsv1.Deployment) time.Time {
@@ -68,190 +74,234 @@ func GetDeckhouseDeployTime(deployment *appsv1.Deployment) time.Time {
 	return deployTime
 }
 
-func ParametrizeDeckhouseDeployment(deployment *appsv1.Deployment, params DeckhouseDeploymentParams) *appsv1.Deployment {
-	deployment.Spec.Template.Spec.Containers[0].Image = params.Registry
+func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseDeploymentParams) *appsv1.Deployment {
+	deployment := input.DeepCopy()
 
-	deployTime := params.DeployTime
-	if deployTime.IsZero() {
-		deployTime = time.Now()
+	deckhousePodTemplate := deployment.Spec.Template
+	deckhouseContainer := deployment.Spec.Template.Spec.Containers[0]
+	deckhouseContainerEnv := deckhouseContainer.Env
+
+	freshDeployment := params.DeployTime.IsZero()
+
+	if freshDeployment {
+		params.DeployTime = time.Now()
 	}
 
-	for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
-		switch env.Name {
-		case "LOG_LEVEL":
-			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = params.LogLevel
-		case "DECKHOUSE_BUNDLE":
-			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = params.Bundle
-		case deployTimeEnvVarName:
-			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = deployTime.Format(deployTimeEnvVarFormat)
-		}
+	var (
+		deployTime        bool
+		deployServiceHost bool
+		deployServicePort bool
+	)
+	for _, envEntry := range deckhouseContainerEnv {
+		deployTime = deployTime || envEntry.Name == deployTimeEnvVarName
+		deployServiceHost = deployServiceHost || envEntry.Name == deployServiceHostEnvVarName
+		deployServicePort = deployServicePort || envEntry.Name == deployServicePortEnvVarName
+	}
+
+	if !deployTime {
+		deckhouseContainerEnv = append(deckhouseContainerEnv,
+			apiv1.EnvVar{
+				Name:  deployTimeEnvVarName,
+				Value: params.DeployTime.Format(deployTimeEnvVarFormat),
+			},
+		)
+	}
+
+	if params.MasterNodeSelector {
+		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/master": ""}
 	}
 
 	if params.IsSecureRegistry {
-		deployment.Spec.Template.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
-			{Name: deckhouseRegistrySecretName},
+		deckhousePodTemplate.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
+			{Name: "deckhouse-registry"},
 		}
 
-		// set volume
-
-		volumeToSet := apiv1.Volume{
-			Name: deckhouseRegistryVolumeName,
-			VolumeSource: apiv1.VolumeSource{
-				Secret: &apiv1.SecretVolumeSource{SecretName: deckhouseRegistrySecretName},
-			},
+		var volumeFound bool
+		for _, volume := range deckhousePodTemplate.Spec.Volumes {
+			volumeFound = volumeFound || volume.Name == deckhouseRegistryVolumeName
 		}
 
-		volumeIndx := -1
-
-		for i := range deployment.Spec.Template.Spec.Volumes {
-			if deployment.Spec.Template.Spec.Volumes[i].Name == deckhouseRegistryVolumeName {
-				volumeIndx = i
-				break
-			}
+		if !volumeFound {
+			deckhousePodTemplate.Spec.Volumes = append(deckhousePodTemplate.Spec.Volumes, apiv1.Volume{
+				Name: deckhouseRegistryVolumeName,
+				VolumeSource: apiv1.VolumeSource{
+					Secret: &apiv1.SecretVolumeSource{SecretName: deckhouseRegistrySecretName},
+				},
+			})
 		}
 
-		if volumeIndx < 0 {
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, volumeToSet)
-		} else {
-			deployment.Spec.Template.Spec.Volumes[volumeIndx] = volumeToSet
+		var volumeMountFound bool
+		for _, volumeMount := range deckhouseContainer.VolumeMounts {
+			volumeMountFound = volumeMountFound || volumeMount.Name == deckhouseRegistryVolumeName
 		}
 
-		// set volume mount
-
-		volumeMountToSet := apiv1.VolumeMount{
-			Name:      deckhouseRegistryVolumeName,
-			MountPath: "/etc/registrysecret",
-			ReadOnly:  true,
-		}
-
-		volumeMountIndx := -1
-
-		for i := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
-			if deployment.Spec.Template.Spec.Containers[0].VolumeMounts[i].Name == deckhouseRegistryVolumeName {
-				volumeMountIndx = i
-				break
-			}
-		}
-
-		if volumeMountIndx < 0 {
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMountToSet)
-		} else {
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts[volumeMountIndx] = volumeMountToSet
+		if !volumeMountFound {
+			deckhouseContainer.VolumeMounts = append(deckhouseContainer.VolumeMounts, apiv1.VolumeMount{
+				Name:      deckhouseRegistryVolumeName,
+				MountPath: "/etc/registrysecret",
+				ReadOnly:  true,
+			})
 		}
 	}
+
+	if params.KubeadmBootstrap && freshDeployment {
+		if !deployServiceHost {
+			deckhouseContainerEnv = append(deckhouseContainerEnv,
+				apiv1.EnvVar{
+					Name: deployServiceHostEnvVarName,
+					ValueFrom: &apiv1.EnvVarSource{
+						FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.hostIP"},
+					},
+				},
+			)
+		}
+		if !deployServicePort {
+			deckhouseContainerEnv = append(deckhouseContainerEnv,
+				apiv1.EnvVar{
+					Name:  deployServicePortEnvVarName,
+					Value: "6443",
+				},
+			)
+		}
+	}
+
+	deckhouseContainer.Env = deckhouseContainerEnv
+	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
+	deployment.Spec.Template = deckhousePodTemplate
 
 	return deployment
 }
 
-//nolint:funlen
 func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
-	deckhouseDeployment := `
-kind: Deployment
-apiVersion: apps/v1
-metadata:
-  name: deckhouse
-  namespace: d8-system
-  labels:
-    heritage: deckhouse
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    meta.helm.sh/release-name: deckhouse
-    meta.helm.sh/release-namespace: d8-system
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: deckhouse
-  strategy:
-    type: Recreate
-  template:
-    metadata:
-      labels:
-        app: deckhouse
-    spec:
-      containers:
-      - name: deckhouse
-        image: PLACEHOLDER
-        command:
-        - /deckhouse/deckhouse
-        imagePullPolicy: Always
-        env:
-# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT is needed on bootstrap phase to deckhouse work without kube-proxy
-        - name: KUBERNETES_SERVICE_HOST
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: status.hostIP
-        - name: KUBERNETES_SERVICE_PORT
-          value: "6443"
-        - name: LOG_LEVEL
-          value: PLACEHOLDER
-        - name: DECKHOUSE_BUNDLE
-          value: PLACEHOLDER
-        - name: DECKHOUSE_POD
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: HELM_HOST
-          value: "127.0.0.1:44434"
-        - name: ADDON_OPERATOR_CONFIG_MAP
-          value: deckhouse
-        - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
-          value: deckhouse_
-        - name: ADDON_OPERATOR_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: ADDON_OPERATOR_LISTEN_ADDRESS
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        - name: HELM3LIB
-          value: "yes"
-        - name: KUBERNETES_DEPLOYED
-          value: PLACEHOLDER
-        volumeMounts:
-        - mountPath: /tmp
-          name: tmp
-        - mountPath: /.kube
-          name: kube
-        ports:
-        - containerPort: 9650
-          name: self
-        - containerPort: 9651
-          name: custom
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 9650
-          initialDelaySeconds: 5
-          # fail after 10 minutes
-          periodSeconds: 5
-          failureThreshold: 120
-        workingDir: /deckhouse
-      hostNetwork: true
-      dnsPolicy: Default
-      serviceAccountName: deckhouse
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
-      tolerations:
-      - operator: Exists
-      volumes:
-      - emptyDir:
-          medium: Memory
-        name: tmp
-      - emptyDir:
-          medium: Memory
-        name: kube
-`
-
-	var deployment appsv1.Deployment
-	err := yaml.Unmarshal([]byte(deckhouseDeployment), &deployment)
-	if err != nil {
-		panic(err)
+	deckhouseDeployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse",
+			Namespace: "d8-system",
+			Labels: map[string]string{
+				"heritage":                     "deckhouse",
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+			Annotations: map[string]string{
+				"meta.helm.sh/release-name":      "deckhouse",
+				"meta.helm.sh/release-namespace": "d8-system",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "deckhouse",
+				},
+			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+		},
 	}
 
-	return ParametrizeDeckhouseDeployment(&deployment, params)
+	deckhousePodTemplate := apiv1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: deckhouseDeployment.Spec.Selector.MatchLabels,
+		},
+		Spec: apiv1.PodSpec{
+			HostNetwork:        true,
+			DNSPolicy:          apiv1.DNSDefault,
+			ServiceAccountName: "deckhouse",
+			Tolerations: []apiv1.Toleration{
+				{Operator: apiv1.TolerationOpExists},
+			},
+			Volumes: []apiv1.Volume{
+				{
+					Name: "tmp",
+					VolumeSource: apiv1.VolumeSource{
+						EmptyDir: &apiv1.EmptyDirVolumeSource{Medium: apiv1.StorageMediumMemory},
+					},
+				},
+				{
+					Name: "kube",
+					VolumeSource: apiv1.VolumeSource{
+						EmptyDir: &apiv1.EmptyDirVolumeSource{Medium: apiv1.StorageMediumMemory},
+					},
+				},
+			},
+		},
+	}
+
+	deckhouseContainer := apiv1.Container{
+		Name:            "deckhouse",
+		Image:           params.Registry,
+		ImagePullPolicy: apiv1.PullAlways,
+		Command: []string{
+			"/deckhouse/deckhouse",
+		},
+		WorkingDir: "/deckhouse",
+		ReadinessProbe: &apiv1.Probe{
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       5,
+			FailureThreshold:    120,
+			Handler: apiv1.Handler{
+				HTTPGet: &apiv1.HTTPGetAction{
+					Path: "/ready",
+					Port: intstr.FromInt(9650),
+				},
+			},
+		},
+		Ports: []apiv1.ContainerPort{
+			{Name: "self", ContainerPort: 9650},
+			{Name: "custom", ContainerPort: 9651},
+		},
+	}
+
+	deckhouseContainerEnv := []apiv1.EnvVar{
+		{
+			Name: "DECKHOUSE_POD",
+			ValueFrom: &apiv1.EnvVarSource{
+				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.name"},
+			},
+		},
+		{
+			Name:  "HELM_HOST",
+			Value: "127.0.0.1:44434",
+		},
+		{
+			Name:  "HELM3LIB",
+			Value: "yes",
+		},
+		{
+			Name:  "ADDON_OPERATOR_CONFIG_MAP",
+			Value: "deckhouse",
+		},
+		{
+			Name:  "ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX",
+			Value: "deckhouse_",
+		},
+		{
+			Name: "ADDON_OPERATOR_NAMESPACE",
+			ValueFrom: &apiv1.EnvVarSource{
+				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.namespace"},
+			},
+		},
+		{
+			Name: "ADDON_OPERATOR_LISTEN_ADDRESS",
+			ValueFrom: &apiv1.EnvVarSource{
+				FieldRef: &apiv1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"},
+			},
+		},
+		{
+			Name:  "LOG_LEVEL",
+			Value: params.LogLevel,
+		},
+		{
+			Name:  "DECKHOUSE_BUNDLE",
+			Value: params.Bundle,
+		},
+	}
+
+	// Deployment composition
+	deckhouseContainer.Env = deckhouseContainerEnv
+	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
+	deckhouseDeployment.Spec.Template = deckhousePodTemplate
+
+	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
 
 func DeckhouseNamespace(name string) *apiv1.Namespace {

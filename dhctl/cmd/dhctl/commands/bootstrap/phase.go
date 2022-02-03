@@ -43,6 +43,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineDeckhouseFlags(cmd)
+	app.DefineDeckhouseInstallFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
@@ -55,6 +56,9 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
+		installConfig.KubeadmBootstrap = app.KubeadmBootstrap
+		installConfig.MasterNodeSelector = app.MasterNodeSelector
+
 		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
@@ -66,10 +70,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 				return err
 			}
 
-			if err := operations.InstallDeckhouse(kubeCl, installConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
-				return err
-			}
-			return nil
+			return operations.InstallDeckhouse(kubeCl, installConfig, metaConfig.MasterNodeGroupManifest())
 		})
 	}
 

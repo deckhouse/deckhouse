@@ -107,7 +107,6 @@ func (s *StateCache) CleanWithExceptions(excludeKeys ...string) {
 		keysToRemove = append(keysToRemove, key)
 		return nil
 	})
-
 	if err != nil {
 		log.WarnF("Can't getting keys to remove: %s ...\n", err)
 		return

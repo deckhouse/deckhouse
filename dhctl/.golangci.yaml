@@ -4,13 +4,12 @@ run:
 issues:
   exclude:
     - ST1005.*
-    - "error strings should not be.*"
+    - "exported: .*"
+    - "error-strings: error strings should not be capitalized.*"
 
 linters-settings:
   goimports:
     local-prefixes: github.com/deckhouse/deckhouse
-  golint:
-    min-confidence: 0
   errcheck:
     ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
 
@@ -29,7 +28,6 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - golint
     - gosec
     - gosimple
     - govet
@@ -38,6 +36,7 @@ linters:
     - nakedret
     - nolintlint
     - prealloc
+    - revive
     - rowserrcheck
     - staticcheck
     - structcheck

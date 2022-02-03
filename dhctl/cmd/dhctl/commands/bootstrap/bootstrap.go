@@ -226,6 +226,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
+		// During full bootstrap we use the "kubeadm and deckhouse on master nodes" hack
+		deckhouseInstallConfig.KubeadmBootstrap = true
+		deckhouseInstallConfig.MasterNodeSelector = true
+
 		var nodeIP string
 		var devicePath string
 		if metaConfig.ClusterType == config.CloudClusterType {
@@ -302,7 +306,6 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			err := converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(func() error {
 				return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH)
 			})
-
 			if err != nil {
 				return err
 			}

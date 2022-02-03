@@ -16,9 +16,7 @@ package app
 
 import "gopkg.in/alecthomas/kingpin.v2"
 
-var (
-	SkipResources = false
-)
+var SkipResources = false
 
 func DefineDestroyResourcesFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").

@@ -227,7 +227,6 @@ func (c *StateCache) Delete(name string) {
 
 		return curState
 	})
-
 	if err != nil {
 		log.ErrorF("Cannot delete cache %s val %v\n", name, err)
 	}
@@ -250,7 +249,6 @@ func (c *StateCache) CleanWithExceptions(excludeKeys ...string) {
 
 		return newState
 	})
-
 	if err != nil {
 		log.ErrorF("Cannot clean cache %v\n", err)
 	}

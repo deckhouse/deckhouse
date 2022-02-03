@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-GO_VERSION=1.16.3
-GOLANGCI_LINT_VERSION=1.39.0
-GOFUMPT_VERSION=0.1.1
-GOARCH=amd64
-UNAME=$(shell uname -s)
-DEV_CONTAINER_NAME=dhctl-dev
 
-GOFUMPT_BIN=/tmp/gofumpt-$(GOFUMPT_VERSION)
-GOLANGCILINT_BIN=/tmp/golangci-lint-$(GOLANGCI_LINT_VERSION)
+# Dependency versions
+GOLANGCI_VERSION = 1.42.0
+GOFUMPT_VERSION=0.1.1
+
+# Build versions
+GO_VERSION=1.16.3
+GOARCH=amd64
+GO_VERSION=1.16.3
+
+DHCTL_BIN_NAME=bin/dhctl
 
 ifndef OS
 	ifeq ($(UNAME), Linux)
@@ -30,6 +32,8 @@ ifndef OS
 	endif
 endif
 
+export PATH := $(abspath bin/protoc/bin/):$(abspath bin/):${PATH}
+
 INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:main
 
 .PHONY : deps fmt lint build test all ci devenv devstop
@@ -38,62 +42,44 @@ all: deps fmt build test
 
 all-dev: deps fmt build-dev test
 
-deps:
-	go mod tidy
-	@test -f $(GOFUMPT_BIN)      || curl -sLo $(GOFUMPT_BIN) https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS)_$(GOARCH)
-	@test -f $(GOLANGCILINT_BIN) || curl -sfL https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_LINT_VERSION)/golangci-lint-$(GOLANGCI_LINT_VERSION)-$(OS)-$(GOARCH).tar.gz | tar -xzOf - golangci-lint-$(GOLANGCI_LINT_VERSION)-$(OS)-$(GOARCH)/golangci-lint > $(GOLANGCILINT_BIN)
-	@chmod +x $(GOLANGCILINT_BIN) $(GOFUMPT_BIN)
+bin/golangci-lint:
+	@mkdir -p bin
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
 
-lint:
-	$(GOLANGCILINT_BIN) run ./... -c .golangci.yaml
+bin/gofumpt:
+	@mkdir -p bin
+	curl -sLo "bin/gofumpt" https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS)_$(GOARCH)
+	@chmod +x "./bin/gofumpt"
 
-fmt:
-	@# - gofumpt is not included in the .golangci.yaml because it conflicts with imports https://github.com/golangci/golangci-lint/issues/1490#issuecomment-778782810
-	@# - goimports is not turned on since it is used mostly by gofumpt internally
-	$(GOFUMPT_BIN) -l -w -extra .
-	$(GOLANGCILINT_BIN) run ./... -c .golangci.yaml --fix
+build:
+	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+
+build-test:
+	GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
 
 test:
 	go test ./...
 
-build:
-	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o /tmp/dhctl ./cmd/dhctl
+deps: bin/golangci-lint bin/gofumpt
+	go mod tidy
 
-build-dev:
-	mkdir -p $$(pwd)/hack && GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o $$(pwd)/hack ./cmd/dhctl
+lint: bin/golangci-lint
+	golangci-lint run ./... -c .golangci.yaml
+
+fix: bin/golangci-lint
+	golangci-lint run ./... -c .golangci.yaml --fix
+
+fmt: bin/golangci-lint bin/gofumpt
+	@# - gofumpt is not included in the .golangci.yaml because it conflicts with imports https://github.com/golangci/golangci-lint/issues/1490#issuecomment-778782810
+	@# - goimports is not turned on since it is used mostly by gofumpt internally
+	gofumpt -l -w -extra .
+	golangci-lint run ./... -c .golangci.yaml --fix
 
 ci: deps lint
-	tmpfile=$(mktemp /tmp/coverage-report.XXXXXX)
-	go test -cover -coverprofile=${tmpfile} -vet=off ./pkg/... \
-        && echo "Coverage: $(go tool cover -func  ${tmpfile} | grep total | awk '{print $3}')" \
-        && echo "Success!" \
-        || exit 1
+	./hack/coverage.sh
 
-# Shell script within makefile https://stackoverflow.com/a/29085760
 devenv:
-	@set -e ;\
-	docker pull $(INSTALLER_IMAGE_URL) ;\
-	CONTAINER_ID=$$(docker ps -aqf "name=$(DEV_CONTAINER_NAME)") ;\
-	echo ;\
-	test -n "$$CONTAINER_ID" && echo "Container $$CONTAINER_ID exists, entering." || echo "Creating container..." ;\
-	echo ;\
-	test -z "$$CONTAINER_ID" && CONTAINER_ID=$$(docker run \
-			--name "$(DEV_CONTAINER_NAME)" \
-			--detach \
-			--rm \
-			-v $(HOME)/.ssh/tfadm-id-rsa/:/root/.ssh/tfadm-id-rsa \
-			-v $$(pwd)/.state/:/.state/ \
-			--mount type=tmpfs,destination=/tmp:exec \
-			-v "$$(pwd):/dhctl" \
-			-v "$$(pwd)/../candi:/deckhouse/candi" \
-			-v "$$(pwd)/../ee/candi/cloud-providers/openstack:/deckhouse/candi/cloud-providers/openstack" \
-			-v "$$(pwd)/../ee/candi/cloud-providers/vsphere:/deckhouse/candi/cloud-providers/vsphere" \
-			$(INSTALLER_IMAGE_URL) \
-			tail -f /dev/null) \
-		&& docker exec    "$$CONTAINER_ID" apk add go curl make musl\
-		&& docker exec -i "$$CONTAINER_ID" sh -c "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b \"$$(go env GOPATH)\" /bin v$(GOLANGCI_LINT_VERSION)" \
-		&& docker exec    "$$CONTAINER_ID" sh -c 'ln -fs /root/go/bin/golangci-lint /usr/local/bin/golangci-lint' ;\
-	docker exec -it -w /dhctl "$$CONTAINER_ID" bash
+		./hack/devenv/start.sh
 
 devstop:
-	@docker kill $$(docker ps -f name=$(DEV_CONTAINER_NAME) -q) 2&>/dev/null
+	./hack/devenv/stop.sh
