@@ -13,7 +13,7 @@ properties:
       compatibilityFlag:
         type: string
         x-examples:
-          - ""
+          - "none"
       storageClasses:
         type: array
         x-examples:
@@ -58,6 +58,25 @@ properties:
                 memory: 8192
                 numCPUs: 4
                 template: dev/golden_image
+                replicas: 1
+          - sshPublicKey: "mysshkey2"
+            region: myreg
+            regionTagCategory: myregtagcat
+            zoneTagCategory: myzonetagcat
+            provider:
+              server: myhost
+              username: myuname
+              password: myPaSsWd
+              insecure: true
+            zones: ["aaa", "bbb"]
+            vmFolderPath: dev/test
+            nsxt:
+              defaultIpPoolName: main
+              size: SMALL
+              tier1GatewayPath: /host/tier1
+              user: user
+              password: password
+              host: 1.2.3.4
         properties:
           apiVersion:
             type: string

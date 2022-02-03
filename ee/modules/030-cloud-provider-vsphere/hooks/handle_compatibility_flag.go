@@ -15,10 +15,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const (
+	legacyProvisioner = `vsphere.csi.vmware.com`
+	modernProvisioner = `csi.vsphere.vmware.com`
+)
+
 type StorageClass struct {
-	Name     string
-	IsLegacy bool
-	IsModern bool
+	Name        string
+	Provisioner string
 }
 
 func ApplyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -29,9 +33,8 @@ func ApplyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	}
 
 	return StorageClass{
-		Name:     sc.Name,
-		IsLegacy: sc.Provisioner == "vsphere.csi.vmware.com",
-		IsModern: sc.Provisioner == "csi.vsphere.vmware.com",
+		Name:        sc.Name,
+		Provisioner: sc.Provisioner,
 	}, nil
 }
 
@@ -61,7 +64,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleStorageClasses(input *go_hook.HookInput) error {
 	// We use `none` in internal values against empty string `` for cleaner conditions in Helm templates.
 	compatibilityFlag := "none"
-	if v, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.compatibilityFlag"); ok {
+	if v, ok := input.Values.GetOk("cloudProviderVsphere.compatibilityFlag"); ok {
 		compatibilityFlag = v.String()
 	}
 	input.Values.Set("cloudProviderVsphere.internal.compatibilityFlag", compatibilityFlag)
@@ -72,13 +75,14 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 	}
 	for _, s := range snap {
 		sc := s.(StorageClass)
-		if compatibilityFlag == "legacy" {
-			if sc.IsLegacy {
+		switch compatibilityFlag {
+		case "legacy":
+			if sc.Provisioner != modernProvisioner {
 				continue
 			}
 			input.LogEntry.Infof("Deleting storageclass/%s because legacy one will be rolled out", sc.Name)
-		} else {
-			if sc.IsModern {
+		default:
+			if sc.Provisioner != legacyProvisioner {
 				continue
 			}
 			input.LogEntry.Infof("Deleting storageclass/%s because modern one will be rolled out", sc.Name)

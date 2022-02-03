@@ -102,6 +102,7 @@ const moduleValuesA = `
             memory: 8192
             numCPUs: 4
             template: dev/golden_image
+          replicas: 1
 `
 
 const moduleValuesB = `
@@ -132,8 +133,6 @@ const moduleValuesB = `
         region: myreg
         sshPublicKey: mysshkey1
         vmFolderPath: dev/test
-        masterNodeGroup:
-          instanceClass: null
         externalNetworkNames: ["aaa", "bbb"]
         internalNetworkNames: ["ccc", "ddd"]
       providerDiscoveryData:
