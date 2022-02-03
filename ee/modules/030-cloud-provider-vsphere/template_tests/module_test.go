@@ -139,6 +139,91 @@ const moduleValuesB = `
         resourcePoolPath: kubernetes-dev
 `
 
+const moduleValuesC = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      vsphereDiscoveryData:
+        zones: ["aaa", "bbb"]
+        datacenter: X1
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        externalNetworkNames: ["aaa", "bbb"]
+        internalNetworkNames: ["ccc", "ddd"]
+        nsxt:
+          defaultIpPoolName: main
+          size: SMALL
+          tier1GatewayPath: /host/tier1
+          user: user
+          password: password
+          host: 1.2.3.4
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
+`
+
+const moduleValuesD = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      vsphereDiscoveryData:
+        zones: ["aaa", "bbb"]
+        datacenter: X1
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        externalNetworkNames: ["aaa", "bbb"]
+        internalNetworkNames: ["ccc", "ddd"]
+        nsxt:
+          defaultIpPoolName: main
+          size: SMALL
+          tier1GatewayPath: /host/tier1
+          user: user
+          password: password
+          host: 1.2.3.4
+          loadBalancerClass:
+          - name: class1
+            ipPoolName: pool2
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
+`
+
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -341,6 +426,104 @@ labels:
 			Expect(scMydsname2.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
+`))
+		})
+	})
+
+	Context("Vsphere with NSX-T specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			Expect(ccmSecret.Exists()).To(BeTrue())
+
+			cloudConfig, _ := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(cloudConfig).To(MatchYAML(`
+global:
+  user: "myuname"
+  password: "myPaSsWd"
+  insecureFlag: true
+
+vcenter:
+  main:
+    server: "myhost"
+    datacenters:
+      - "X1"
+    externalNetworkNames:
+      - aaa
+      - bbb
+    internalNetworkNames:
+      - ccc
+      - ddd
+    vmFolderPath: dev/test
+
+labels:
+  region: "myregtagcat"
+  zone: "myzonetagcat"
+
+loadBalancer:
+  ipPoolName: "main"
+  size: "SMALL"
+  tier1GatewayPath: "/host/tier1"
+  user: "user"
+  password: "password"
+  host: "1.2.3.4"
+  snatDisabled: true
+`))
+		})
+	})
+
+	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			Expect(ccmSecret.Exists()).To(BeTrue())
+
+			cloudConfig, _ := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(cloudConfig).To(MatchYAML(`
+global:
+  insecureFlag: true
+  password: myPaSsWd
+  user: myuname
+labels:
+  region: myregtagcat
+  zone: myzonetagcat
+loadBalancer:
+  host: 1.2.3.4
+  ipPoolName: main
+  loadBalancerClass:
+  - ipPoolName: pool2
+    name: class1
+  password: password
+  size: SMALL
+  snatDisabled: true
+  tier1GatewayPath: /host/tier1
+  user: user
+vcenter:
+  main:
+    datacenters:
+    - X1
+    externalNetworkNames:
+    - aaa
+    - bbb
+    internalNetworkNames:
+    - ccc
+    - ddd
+    server: myhost
+    vmFolderPath: dev/test
 `))
 		})
 	})
