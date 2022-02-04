@@ -113,7 +113,7 @@ properties:
           Name of the default ip pool used for the load balancers without `loadbalancer.vmware.io/class` annotation set.
         x-examples:
         - pool1
-      defaulTcpAppProfileName:
+      defaultTcpAppProfileName:
         type: string
         description: |
           Name of default application profile used for TCP connections.

@@ -46,6 +46,7 @@ cloudProviderVsphere:
 		filledValuesWithNSXT = filledValues + `
   nsxt:
     defaultIpPoolName: pool1
+    defaultTcpAppProfileName: default-tcp-lb-app-profile
     size: SMALL
     tier1GatewayPath: /host/tier1
     user: nsxt
@@ -176,6 +177,7 @@ zones:
 		nsxt = `
 nsxt:
   defaultIpPoolName: pool1
+  defaultTcpAppProfileName: default-tcp-lb-app-profile
   size: SMALL
   tier1GatewayPath: /host/tier1
   user: nsxt
@@ -186,6 +188,7 @@ nsxt:
 		nsxt2 = `
 nsxt:
   defaultIpPoolName: pool2
+  defaultTcpAppProfileName: default-tcp-lb-app-profile
   size: LARGE
   tier1GatewayPath: /host2/tier1
   user: nsxt1

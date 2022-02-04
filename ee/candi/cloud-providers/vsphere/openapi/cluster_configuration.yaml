@@ -252,11 +252,11 @@ apiVersions:
         - password
       nsxt:
         type: object
-        required: [defaultIpPoolName, size, tier1GatewayPath, user, password, host]
+        required: [defaultIpPoolName, tier1GatewayPath, user, password, host]
         properties:
           defaultIpPoolName:
             type: string
-          defaulTcpAppProfileName:
+          defaultTcpAppProfileName:
             type: string
             default: "default-tcp-lb-app-profile"
           size:
