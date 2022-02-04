@@ -472,15 +472,16 @@ labels:
   zone: "myzonetagcat"
 
 loadBalancer:
-  tcpAppProfileName: default-tcp-lb-app-profile
-  udpAppProfileName: default-udp-lb-app-profile
-  ipPoolName: "main"
-  size: "SMALL"
-  tier1GatewayPath: "/host/tier1"
-  user: "user"
-  password: "password"
-  host: "1.2.3.4"
+  ipPoolName: main
+  size: SMALL
   snatDisabled: true
+  tcpAppProfileName: default-tcp-lb-app-profile
+  tier1GatewayPath: /host/tier1
+  udpAppProfileName: default-udp-lb-app-profile
+nsxt:
+  host: 1.2.3.4
+  password: password
+  user: user
 `))
 		})
 	})
@@ -507,19 +508,24 @@ global:
 labels:
   region: myregtagcat
   zone: myzonetagcat
+
 loadBalancer:
-  tcpAppProfileName: default-tcp-lb-app-profile
-  udpAppProfileName: default-udp-lb-app-profile
-  host: 1.2.3.4
   ipPoolName: main
-  loadBalancerClass:
-  - ipPoolName: pool2
-    name: class1
-  password: password
   size: SMALL
   snatDisabled: true
+  tcpAppProfileName: default-tcp-lb-app-profile
   tier1GatewayPath: /host/tier1
+  udpAppProfileName: default-udp-lb-app-profile
+
+loadBalancerClass:
+- ipPoolName: pool2
+  name: class1
+
+nsxt:
+  host: 1.2.3.4
+  password: password
   user: user
+
 vcenter:
   main:
     datacenters:
