@@ -105,18 +105,18 @@ properties:
     type: object
     description: |
       Kubernetes load balancer support using NSX-T for the vSphere cloud controller manager.
-    required: [defaultIpPoolName, size, tier1GatewayPath, user, password, host]
+    required: [defaultIpPoolName, tier1GatewayPath, user, password, host]
     properties:
       defaultIpPoolName:
         type: string
         description: |
-          Name of the default ip pool used for the load balancers without `loadbalancer.vmware.io/class` annotation set.
+          Name of the default ip pool used for the SVC's without `loadbalancer.vmware.io/class` annotation set.
         x-examples:
         - pool1
       defaultTcpAppProfileName:
         type: string
         description: |
-          Name of default application profile used for TCP connections.
+          Name of default NSX-T application profile used for TCP connections.
         default: "default-tcp-lb-app-profile"
         x-examples:
         - default-tcp-lb-app-profile
@@ -124,7 +124,7 @@ properties:
       defaultUdpAppProfileName:
         type: string
         description: |
-          Name of default application profile used for UDP connections.
+          Name of default NSX-T application profile used for UDP connections.
         default: "default-udp-lb-app-profile"
         x-examples:
         - default-udp-lb-app-profile
@@ -171,26 +171,26 @@ properties:
       loadBalancerClass:
         type: array
         description: |
-          Load Balancer Classes
+          Load Balancer Classes.
         items:
           required: [name, ipPoolName]
           properties:
             name:
               type: string
               description: |
-                Load Balancer Class name.
+                Load Balancer Class name to use in SVC annotation `loadbalancer.vmware.io/class: <class name>`.
             ipPoolName:
               type: string
               description: |
-                Name of the ip pool used for the load balancers with `loadbalancer.vmware.io/class: <class name>` annotation set.
+                Name of the ip pool.
             tcpAppProfileName:
               type: string
               description: |
-                Name of application profile used for TCP connections.
+                Name of application profile used for TCP connections. If not set, `defaultTcpAppProfileName` used.
             udpAppProfileName:
               type: string
               description: |
-                Name of application profile used for UDP connections.
+                Name of application profile used for UDP connections. If not set, `defaultUdpAppProfileName` used.
         x-examples:
         - []
         - {"name": "LBC1", "ipPoolName": "pool2"}

@@ -64,3 +64,52 @@ properties:
             * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
               * Присутствующий в кластере произвольный StorageClass с default аннотацией.
               * Лексикографически первый StorageClass из создаваемых модулем.
+
+  nsxt:
+    description: |
+      Поддержка cloud controller manager'ом load balancers для vSphere в Kubernetes.
+    properties:
+      defaultIpPoolName:
+        description: |
+          Имя дефолтного ip pool, который используется если в SVC не установлена аннотация `loadbalancer.vmware.io/class`.
+      defaultTcpAppProfileName:
+        description: |
+          Имя дефолтного профиля, используемого для TCP соединений в NSX-T.
+      defaultUdpAppProfileName:
+        description: |
+          Имя дефолтного профиля, используемого для UDP соединений в NSX-T.
+      size:
+        description: |
+          Размер сервиса LoadBalancer.
+      tier1GatewayPath:
+        description: |
+          Путь к политике NSX-T tier1 gateway.
+      user:
+        description: |
+          Имя пользователя NSX-T.
+      password:
+        description: |
+          Пароль пользователя NSX-T.
+      host:
+        description: |
+          Адрес NSX-T.
+      insecureFlag:
+        description: |
+          Должен быть установлен в `true` если NSX-T использует самоподписанный сертификат.
+      loadBalancerClass:
+        description: |
+          Классы Load Balancer.
+        items:
+          properties:
+            name:
+              description: |
+                Имя Load Balancer Class для установки аннотации `loadbalancer.vmware.io/class: <class name>` в SVC.
+            ipPoolName:
+              description: |
+                Имя ip pool'а.
+            tcpAppProfileName:
+              description: |
+                Имя профиля по умолчанию, используемого для TCP соединений.
+            udpAppProfileName:
+              description: |
+                Имя профиля по умолчанию, используемого для UDP соединений.

@@ -138,3 +138,52 @@ A particular placement strategy is defined via the `VsphereClusterConfiguration`
 * `zones` — a limited set of zones in which nodes can be created;
   * A mandatory parameter;
   * Format — an array of strings;
+
+* `nsxt` - additional section in module config adds support of Vsphere LoadBalancers via NSX-T.
+
+  * `defaultIpPoolName` - name of the default ip pool used for the SVC's without `loadbalancer.vmware.io/class` annotation set.
+    * Format - string;
+    * Required parameter;
+  * `defaultTcpAppProfileName` - name of default NSX-T application profile used for TCP connections.
+    * Format - string;
+    * Optional parameter; by default `default-tcp-lb-app-profile`;
+  * `defaultUdpAppProfileName` - name of default NSX-T application profile used for UDP connections.
+    * Format - string;
+    * Optional parameter; by default `default-udp-lb-app-profile`;
+  * `size` - size of load balancer service.
+    * Format - string, one of `SMALL`, `MEDIUM`, `LARGE`, `XLARGE`;
+    * Optional parameter; by default `MEDIUM`;
+  * `tier1GatewayPath` - policy path for the NSX-T tier1 gateway.
+    * Format - string;
+    * Required parameter;
+  * `host` — NSX-T host.
+    * Format - string;
+    * Required parameter;
+  * `user` — NSX-T user name.
+    * Format - string;
+    * Required parameter;
+  * `password` — NSX-T password.
+    * Format - string;
+    * Required parameter;
+  * `insecureFlag` — to be set to `true` if NSX-T uses locally signed cert without specifying a ca.
+    * Format — bool;
+    * An optional parameter;
+
+  * `loadBalancerClass` - additional section to define Load Balancer Classes (to use class, set annotation `loadbalancer.vmware.io/class: <class name>` to SVC).
+    * Format - array
+
+    * `name` - Load Balancer Class name to use in SVC annotation `loadbalancer.vmware.io/class: <class name>`.
+      * Format - string;
+      * Required parameter;
+    * `ipPoolName` - name of the ip pool.
+      * Format - string;
+      * Required parameter;
+    * `tcpAppProfileName` - name of application profile used for TCP connections.
+      * Format - string;
+      * Optional parameter; if not set, `defaultTcpAppProfileName` used;
+    * `udpAppProfileName` - name of application profile used for UDP connections.
+      * Format - string;
+      * Optional parameter; if not set, `defaultUdpAppProfileName` used;
+
+
+Additional info about [Vsphere Cloud Load Balancers](https://github.com/kubernetes/cloud-provider-vsphere/tree/master/pkg/cloudprovider/vsphere/loadbalancer).

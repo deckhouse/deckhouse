@@ -59,6 +59,56 @@ title: "Сloud provider — VMware vSphere: настройки"
 
   * Опциональный параметр.
 
+## NSX-T
+
+* `nsxt` - Дополнительная секция в конфиге модуля для поддержки LoadBalancers в Vsphere черезе NSX-T.
+
+  * `defaultIpPoolName` - имя дефолтного ip pool, который используется если в SVC не установлена аннотация `loadbalancer.vmware.io/class`.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `defaultTcpAppProfileName` - имя дефолтного профиля, используемого для TCP соединений в NSX-T.
+    * Формат - строка;
+    * Опциональный параметр; по умолчанию `default-tcp-lb-app-profile`;
+  * `defaultUdpAppProfileName` - имя дефолтного профиля, используемого для UDP соединений в NSX-T.
+    * Формат - строка;
+    * Опциональный параметр; по умолчанию `default-udp-lb-app-profile`;
+  * `size` - размер сервиса LoadBalancer.
+    * Формат - строка, допустимые значения - `SMALL`, `MEDIUM`, `LARGE`, `XLARGE`;
+    * Опциональный параметр; по умолчанию `MEDIUM`;
+  * `tier1GatewayPath` - путь к политике NSX-T tier1 gateway.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `host` — адрес NSX-T.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `user` — имя пользователя NSX-T.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `password` — пароль пользователя NSX-T.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `insecureFlag` — должен быть установлен в `true` если NSX-T использует самоподписанный сертификат.
+    * Формат — bool;
+    * Опциональный параметр;
+
+  * `loadBalancerClass` - дополнительная секция, определяющая Load Balancer Classes (чтобы использовать Class, установите аннотацию `loadbalancer.vmware.io/class: <class name>` на SVC).
+    * Формат - массив; 
+
+    * `name` - имя Load Balancer Class для установки аннотации `loadbalancer.vmware.io/class: <class name>` в SVC.
+      * Формат - строка;
+      * Обязательный параметр;
+    * `ipPoolName` - имя ip pool'а.
+      * Формат - строка;
+      * Обязательный параметр;
+    * `tcpAppProfileName` - имя профиля по умолчанию, используемого для TCP соединений.
+      * Формат - строка;
+      * Опциональный параметр; если не установлен, используется `defaultTcpAppProfileName`; 
+    * `udpAppProfileName` - имя профиля по умолчанию, используемого для UDP соединений.
+      * Формат - строка;
+      * Опциональный параметр; если не установлен, используется `defaultUdpAppProfileName`;
+
+Дополнительная информация - [Vsphere Cloud Load Balancers](https://github.com/kubernetes/cloud-provider-vsphere/tree/master/pkg/cloudprovider/vsphere/loadbalancer).
+
 ## Storage
 
 Модуль автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster из зон(-ы). А также позволяет отфильтровать ненужные, указанием их в параметре `exclude`.

@@ -252,43 +252,73 @@ apiVersions:
         - password
       nsxt:
         type: object
+        description: |
+          Kubernetes load balancer support using NSX-T for the vSphere cloud controller manager.
         required: [defaultIpPoolName, tier1GatewayPath, user, password, host]
         properties:
           defaultIpPoolName:
             type: string
+            description: |
+              Name of the default ip pool used for the SVC's without `loadbalancer.vmware.io/class` annotation set.
           defaultTcpAppProfileName:
             type: string
+            description: |
+              Name of default NSX-T application profile used for TCP connections.
             default: "default-tcp-lb-app-profile"
           defaultUdpAppProfileName:
             type: string
+            description: |
+              Name of default NSX-T application profile used for UDP connections.
             default: "default-udp-lb-app-profile"
           size:
             type: string
+            description: |
+              Size of load balancer service.
             enum: ["SMALL", "MEDIUM", "LARGE", "XLARGE"]
             default: "MEDIUM"
           tier1GatewayPath:
             type: string
+            description: |
+              Policy path for the NSX-T tier1 gateway.
           user:
             type: string
+            description: |
+              NSX-T user name.
           password:
             type: string
+            description: |
+              NSX-T password.
           host:
             type: string
+            description: |
+              NSX-T host.
           insecureFlag:
             type: boolean
+            description: |
+              To be set to true if NSX-T uses locally signed cert without specifying a ca.
           loadBalancerClass:
             type: array
+            description: |
+              Load Balancer Classes
             items:
               required: [name, ipPoolName]
               properties:
                 name:
                   type: string
+                  description: |
+                    Load Balancer Class name to use in SVC annotation `loadbalancer.vmware.io/class: <class name>`.
                 ipPoolName:
                   type: string
+                  description: |
+                    Name of the ip pool.
                 tcpAppProfileName:
                   type: string
+                  description: |
+                    Name of application profile used for TCP connections. If not set, `defaultTcpAppProfileName` used.
                 udpAppProfileName:
                   type: string
+                  description: |
+                    Name of application profile used for UDP connections. If not set, `defaultUdpAppProfileName` used.
     oneOf:
     - required: [layout]
       properties:
