@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -34,13 +35,16 @@ New string
 `
 
 func assertCreateConfig(hec *Config) []byte {
-	Expect(hec.KubernetesResource("ConfigMap", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
+	Expect(hec.KubernetesResource("Secret", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 
-	kgConfig := hec.KubernetesResource("ConfigMap", "d8-user-authn", "kubeconfig-generator")
+	kgConfig := hec.KubernetesResource("Secret", "d8-user-authn", "kubeconfig-generator")
 	b64ConfigStr := []byte(kgConfig.Field("data.config\\.yaml").String())
 
+	configStr, err := base64.StdEncoding.DecodeString(string(b64ConfigStr))
+	Expect(err).ToNot(HaveOccurred())
+
 	var b64Config map[string]interface{}
-	err := yaml.Unmarshal(b64ConfigStr, &b64Config)
+	err = yaml.Unmarshal(configStr, &b64Config)
 	Expect(err).ToNot(HaveOccurred())
 
 	jsonBytes, err := json.Marshal(b64Config)
