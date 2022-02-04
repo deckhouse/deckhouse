@@ -55,10 +55,18 @@ func NewNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		break
 	}
 
+	var markedForScaleDown bool
+	for _, taint := range node.Spec.Taints {
+		if taint.Key == "DeletionCandidateOfClusterAutoscaler" {
+			markedForScaleDown = true
+			break
+		}
+	}
+
 	n := Node{
 		Name:        node.GetName(), // node name and hostname always equal
 		Zone:        zone,
-		Schedulable: !node.Spec.Unschedulable && isReady,
+		Schedulable: !node.Spec.Unschedulable && isReady && !markedForScaleDown,
 	}
 	return n, nil
 }
