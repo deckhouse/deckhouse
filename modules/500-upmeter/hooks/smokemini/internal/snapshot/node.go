@@ -61,6 +61,10 @@ func NewNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 			markedForScaleDown = true
 			break
 		}
+		if taint.Key == "ToBeDeletedByClusterAutoscaler" {
+			markedForScaleDown = true
+			break
+		}
 	}
 
 	n := Node{
