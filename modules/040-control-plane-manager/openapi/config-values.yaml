@@ -6,6 +6,32 @@ properties:
     description: |
       `kube-apiserver` parameters.
     properties:
+      admissionPlugins:
+        type: array
+        description: |
+          Enable additional [admission plugins](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+
+          Always enabled admission plugins in addition to the ones enabled by Kubernetes itself:
+          1. ExtendedResourceToleration
+          2. EventRateLimit with the following config:
+
+          apiVersion: eventratelimit.admission.k8s.io/v1alpha1
+          kind: Configuration
+          limits:
+          - type: Namespace
+            qps: 50
+            burst: 100
+            cacheSize: 2000
+        x-examples:
+          - [ "AlwaysPullImages", "NamespaceAutoProvision" ]
+        items:
+          type: string
+          enum:
+          - AlwaysPullImages
+          - NamespaceAutoProvision
+          - OwnerReferencesPermissionEnforcement
+          - PodNodeSelector
+          - PodTolerationRestriction
       bindToWildcard:
         type: boolean
         default: false

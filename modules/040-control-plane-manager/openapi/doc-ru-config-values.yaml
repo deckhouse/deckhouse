@@ -3,6 +3,21 @@ properties:
     description: |
       Параметры `kube-apiserver`.
     properties:
+      admissionPlugins:
+        description: |
+          Включить дополнительные [admission plugin'ы](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+
+          Список admission plugin'ов, включенных всегда вдобавок к включенным в Kubernetes по умолчанию:
+          1. ExtendedResourceToleration
+          2. EventRateLimit с конфигурацией:
+
+          apiVersion: eventratelimit.admission.k8s.io/v1alpha1
+          kind: Configuration
+          limits:
+          - type: Namespace
+            qps: 50
+            burst: 100
+            cacheSize: 2000
       bindToWildcard:
         description: |
           Cлушать ли на `0.0.0.0`.
