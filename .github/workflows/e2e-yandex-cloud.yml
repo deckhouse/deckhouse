@@ -405,7 +405,7 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
@@ -478,9 +478,10 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_yandex-cloud_docker_1_19
           path: |
             modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
@@ -757,7 +758,7 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
@@ -830,9 +831,10 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_yandex-cloud_docker_1_20
           path: |
             modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
@@ -1109,7 +1111,7 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
@@ -1182,9 +1184,10 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_yandex-cloud_docker_1_21
           path: |
             modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
@@ -1461,7 +1464,7 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
@@ -1534,9 +1537,10 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_yandex-cloud_docker_1_22
           path: |
             modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
@@ -1813,7 +1817,7 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
@@ -1886,9 +1890,10 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_yandex-cloud_containerd_1_19
           path: |
             modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
@@ -2165,7 +2170,7 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
@@ -2238,9 +2243,10 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_yandex-cloud_containerd_1_20
           path: |
             modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
@@ -2517,7 +2523,7 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
@@ -2590,9 +2596,10 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_yandex-cloud_containerd_1_21
           path: |
             modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
@@ -2869,7 +2876,7 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
@@ -2942,9 +2949,10 @@ jobs:
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_yandex-cloud_containerd_1_22
           path: |
             modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
