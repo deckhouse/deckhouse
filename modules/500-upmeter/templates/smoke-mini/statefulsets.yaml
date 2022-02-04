@@ -48,6 +48,7 @@ spec:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+        cluster-autoscaler.kubernetes.io/daemonset-pod: "true"
       labels:
         app: smoke-mini
         smoke-mini: {{ $k }}
