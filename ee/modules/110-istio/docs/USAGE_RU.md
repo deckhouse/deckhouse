@@ -201,7 +201,7 @@ spec:
 ## Ingress
 
 Для работы с Ingress требуется подготовить:
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](../../modules/402-ingress-nginx/). Данный контроллер сможет обслуживать толко Istio-окружение!
+* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](../../modules/402-ingress-nginx/).
 * Ingress, который ссылается на Service. Обязательные аннотации для Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Сайдкар istio-proxy перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
