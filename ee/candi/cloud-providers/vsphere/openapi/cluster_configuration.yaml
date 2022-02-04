@@ -230,6 +230,8 @@ apiVersions:
         uniqueItems: true
       baseResourcePool:
         type: string
+      useNestedResourcePool:
+        type: boolean
       layout:
         type: string
       provider:

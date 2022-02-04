@@ -40,6 +40,7 @@ data "vsphere_dynamic" "cluster_id" {
 
 locals {
   base_resource_pool = trim(lookup(var.providerClusterConfiguration, "baseResourcePool", ""), "/")
+  use_nested_resource_pool = lookup(var.providerClusterConfiguration, "useNestedResourcePool", true)
 }
 
 data "vsphere_resource_pool" "parent_resource_pool" {
@@ -49,7 +50,7 @@ data "vsphere_resource_pool" "parent_resource_pool" {
 }
 
 resource "vsphere_resource_pool" "resource_pool" {
-  for_each = toset([for s in data.vsphere_resource_pool.parent_resource_pool: s.id])
+  for_each = toset(local.use_nested_resource_pool == true ? [for s in data.vsphere_resource_pool.parent_resource_pool: s.id ] : [])
   name          = local.prefix
   parent_resource_pool_id = each.key
 

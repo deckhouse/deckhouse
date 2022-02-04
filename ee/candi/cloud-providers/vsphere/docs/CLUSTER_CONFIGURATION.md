@@ -113,6 +113,7 @@ A particular placement strategy is defined via the `VsphereClusterConfiguration`
   * An optional parameter; It is set to `true` by default;
 * `region` — is a tag added to the vSphere Datacenter where all actions will occur: provisioning VirtualMachines, storing virtual disks on datastores, connecting to the network.
 * `baseResourcePool` — a path (relative to vSphere Cluster) to the existing parent `resourcePool` for all `resourcePool` created in each zone;
+* `useNestedResourcePool` - create nested resource pool (`true`) or use main resource pool (`false`). Default - `true`;
 * `sshPublicKey` — a public key for accessing nodes;
 * `externalNetworkNames` — names of networks (just the name and not the full path) connected to VirtualMachines and used by vsphere-cloud-controller-manager to insert ExternalIP into the `.status.addresses` field in the Node API object.
   * Format — an array of strings. For example:

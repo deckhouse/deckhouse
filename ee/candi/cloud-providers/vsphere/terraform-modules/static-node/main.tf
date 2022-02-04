@@ -37,7 +37,7 @@ data "vsphere_datastore" "datastore" {
 }
 
 data "vsphere_resource_pool" "resource_pool" {
-  count         = length(local.resource_pool) == 0 ? 0 : 1
+  count         = 1
   name          = join("/", [data.vsphere_dynamic.cluster_id.inventory_path, "Resources", local.resource_pool])
   datacenter_id = data.vsphere_dynamic.datacenter_id.id
 }
