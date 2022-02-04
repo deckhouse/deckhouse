@@ -14,6 +14,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
+	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
 )
@@ -49,13 +50,25 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 		return fmt.Errorf("no providerClusterConfiguration present, skipping discovery")
 	}
 
-	var config vsphere.ProviderClusterConfiguration
-	err := json.Unmarshal([]byte(configJSON.String()), &config)
+	var c v1.VsphereProviderClusterConfiguration
+	err := json.Unmarshal([]byte(configJSON.String()), &c)
 	if err != nil {
 		return fmt.Errorf("error Unmarshalling ProviderClusterConfiguration: %v", err)
 	}
 
-	vc, err := dc.GetVsphereClient(&config)
+	config := &vsphere.ProviderClusterConfiguration{
+		Region:            *c.Region,
+		RegionTagCategory: *c.RegionTagCategory,
+		ZoneTagCategory:   *c.ZoneTagCategory,
+		Provider: vsphere.Provider{
+			Server:   *c.Provider.Server,
+			Username: *c.Provider.Username,
+			Password: *c.Provider.Password,
+			Insecure: *c.Provider.Insecure,
+		},
+	}
+
+	vc, err := dc.GetVsphereClient(config)
 	if err != nil {
 		return err
 	}
