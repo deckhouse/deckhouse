@@ -121,6 +121,14 @@ properties:
         x-examples:
         - default-tcp-lb-app-profile
         - tcp-profile1
+      defaultUdpAppProfileName:
+        type: string
+        description: |
+          Name of default application profile used for UDP connections.
+        default: "default-udp-lb-app-profile"
+        x-examples:
+        - default-udp-lb-app-profile
+        - udp-profile1
       size:
         type: string
         description: |
@@ -179,6 +187,11 @@ properties:
               type: string
               description: |
                 Name of application profile used for TCP connections.
+            udpAppProfileName:
+              type: string
+              description: |
+                Name of application profile used for UDP connections.
         x-examples:
         - []
-        - {"name": "LBC1", "ipPoolName": "pool2", "tcpAppProfileName": "profile2"}
+        - {"name": "LBC1", "ipPoolName": "pool2"}
+        - {"name": "LBC1", "ipPoolName": "pool2", "tcpAppProfileName": "profile2" , "udpAppProfileName": "profile3"}

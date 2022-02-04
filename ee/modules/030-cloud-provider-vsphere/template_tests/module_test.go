@@ -172,6 +172,7 @@ const moduleValuesC = `
         nsxt:
           defaultIpPoolName: main
           defaultTcpAppProfileName: default-tcp-lb-app-profile
+          defaultUdpAppProfileName: default-udp-lb-app-profile
           size: SMALL
           tier1GatewayPath: /host/tier1
           user: user
@@ -215,6 +216,7 @@ const moduleValuesD = `
           defaultIpPoolName: main
           size: SMALL
           defaultTcpAppProfileName: default-tcp-lb-app-profile
+          defaultUdpAppProfileName: default-udp-lb-app-profile
           tier1GatewayPath: /host/tier1
           user: user
           password: password
@@ -471,6 +473,7 @@ labels:
 
 loadBalancer:
   tcpAppProfileName: default-tcp-lb-app-profile
+  udpAppProfileName: default-udp-lb-app-profile
   ipPoolName: "main"
   size: "SMALL"
   tier1GatewayPath: "/host/tier1"
@@ -506,6 +509,7 @@ labels:
   zone: myzonetagcat
 loadBalancer:
   tcpAppProfileName: default-tcp-lb-app-profile
+  udpAppProfileName: default-udp-lb-app-profile
   host: 1.2.3.4
   ipPoolName: main
   loadBalancerClass:

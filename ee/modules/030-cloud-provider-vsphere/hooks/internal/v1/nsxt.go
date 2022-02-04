@@ -11,6 +11,7 @@ type VsphereNsxt struct {
 	DefaultIPPoolName *string `json:"defaultIpPoolName,omitempty" yaml:"defaultIpPoolName,omitempty"`
 	// Default profile name for LB
 	DefaultTCPAppProfileName *string `json:"defaultTcpAppProfileName,omitempty" yaml:"defaultTcpAppProfileName,omitempty"`
+	DefaultUDPAppProfileName *string `json:"defaultUdpAppProfileName,omitempty" yaml:"defaultUdpAppProfileName,omitempty"`
 	// LB size
 	Size *string `json:"size,omitempty" yaml:"size,omitempty"`
 	// NSX-T path to tier1 gateway
@@ -34,4 +35,5 @@ type VsphereNsxtLoadBalancerClass struct {
 	IPPoolName *string `json:"ipPoolName,omitempty" yaml:"ipPoolName,omitempty"`
 	// Default profile name for LB
 	TCPAppProfileName *string `json:"tcpAppProfileName,omitempty" yaml:"tcpAppProfileName,omitempty"`
+	UDPAppProfileName *string `json:"udpAppProfileName,omitempty" yaml:"udpAppProfileName,omitempty"`
 }

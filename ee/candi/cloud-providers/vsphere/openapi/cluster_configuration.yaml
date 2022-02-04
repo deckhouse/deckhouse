@@ -259,6 +259,9 @@ apiVersions:
           defaultTcpAppProfileName:
             type: string
             default: "default-tcp-lb-app-profile"
+          defaultUdpAppProfileName:
+            type: string
+            default: "default-udp-lb-app-profile"
           size:
             type: string
             enum: ["SMALL", "MEDIUM", "LARGE", "XLARGE"]
@@ -283,6 +286,8 @@ apiVersions:
                 ipPoolName:
                   type: string
                 tcpAppProfileName:
+                  type: string
+                udpAppProfileName:
                   type: string
     oneOf:
     - required: [layout]

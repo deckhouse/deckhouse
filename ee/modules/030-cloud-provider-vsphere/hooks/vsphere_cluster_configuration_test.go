@@ -47,6 +47,7 @@ cloudProviderVsphere:
   nsxt:
     defaultIpPoolName: pool1
     defaultTcpAppProfileName: default-tcp-lb-app-profile
+    defaultUdpAppProfileName: default-udp-lb-app-profile
     size: SMALL
     tier1GatewayPath: /host/tier1
     user: nsxt
@@ -178,6 +179,7 @@ zones:
 nsxt:
   defaultIpPoolName: pool1
   defaultTcpAppProfileName: default-tcp-lb-app-profile
+  defaultUdpAppProfileName: default-udp-lb-app-profile
   size: SMALL
   tier1GatewayPath: /host/tier1
   user: nsxt
@@ -189,6 +191,7 @@ nsxt:
 nsxt:
   defaultIpPoolName: pool2
   defaultTcpAppProfileName: default-tcp-lb-app-profile
+  defaultUdpAppProfileName: default-udp-lb-app-profile
   size: LARGE
   tier1GatewayPath: /host2/tier1
   user: nsxt1

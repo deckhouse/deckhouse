@@ -72,6 +72,8 @@ properties:
             vmFolderPath: dev/test
             nsxt:
               defaultIpPoolName: main
+              defaultTcpAppProfileName: profile1
+              defaultUdpAppProfileName: profile2
               size: SMALL
               tier1GatewayPath: /host/tier1
               user: user
@@ -90,6 +92,8 @@ properties:
             vmFolderPath: dev/test
             nsxt:
               defaultIpPoolName: main
+              defaultTcpAppProfileName: profile1
+              defaultUdpAppProfileName: profile2
               size: SMALL
               tier1GatewayPath: /host/tier1
               user: user
@@ -339,17 +343,17 @@ properties:
                 type: boolean
           nsxt:
             type: object
-            required: [ defaultIpPoolName, size, tier1GatewayPath, user, password, host ]
+            required: [ defaultIpPoolName, size, tier1GatewayPath, user, password, host, defaultTcpAppProfileName, defaultUdpAppProfileName ]
             properties:
               defaultIpPoolName:
                 type: string
-              defaulTcpAppProfileName:
+              defaultTcpAppProfileName:
                 type: string
-                default: "default-tcp-lb-app-profile"
+              defaultUdpAppProfileName:
+                type: string
               size:
                 type: string
                 enum: [ "SMALL", "MEDIUM", "LARGE", "XLARGE" ]
-                default: "MEDIUM"
               tier1GatewayPath:
                 type: string
               user:
@@ -370,6 +374,8 @@ properties:
                     ipPoolName:
                       type: string
                     tcpAppProfileName:
+                      type: string
+                    udpAppProfileName:
                       type: string
       providerDiscoveryData:
         type: object
