@@ -189,7 +189,7 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
 {!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test") | strings.Indent 6 }!}
 
     - name: Cleanup bootstrapped cluster
-      if: ${{ always() }}
+      if: always()
       env:
         JOB_STATUS: ${{ job.status }}
         PROVIDER: {!{ $ctx.providerName }!}
@@ -208,9 +208,10 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
 {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
 
     - name: Save test results
+      if: always()
       uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
       with:
-        name: test_output
+        name: test_output_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
         path: |
           modules/images_tags_${{env.WERF_ENV}}.json
           testing/cloud_layouts/
