@@ -77,6 +77,7 @@ module Jekyll
     def format_attribute(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil)
         result = Array.new()
         exampleObject = nil
+        lang = @context.registers[:page]["lang"]
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
         if parent.has_key?('required') && parent['required'].include?(name)
@@ -123,7 +124,7 @@ module Jekyll
         if attributes.has_key?('x-doc-versionType')
           case attributes['x-doc-versionType']
           when "ee"
-            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['ee']['ru'].capitalize + '**'))
+            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['ee'][lang].capitalize + '**'))
           when "experimental"
             result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['experimental'][lang].capitalize + '**'))
           end
