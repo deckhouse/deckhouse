@@ -224,6 +224,7 @@ const moduleValuesD = `
           loadBalancerClass:
           - name: class1
             ipPoolName: pool2
+            tcpAppProfileName: profile1
       providerDiscoveryData:
         resourcePoolPath: kubernetes-dev
 `
@@ -518,8 +519,9 @@ loadBalancer:
   udpAppProfileName: default-udp-lb-app-profile
 
 loadBalancerClass:
-- ipPoolName: pool2
-  name: class1
+  class1:
+    ipPoolName: pool2
+    tcpAppProfileName: profile1
 
 nsxt:
   host: 1.2.3.4
