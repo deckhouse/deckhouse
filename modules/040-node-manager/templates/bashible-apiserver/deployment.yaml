@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -12,6 +13,7 @@ spec:
     name: bashible-apiserver
   updatePolicy:
     updateMode: "Auto"
+{{- end }}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
