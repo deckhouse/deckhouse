@@ -63,6 +63,9 @@
   {{- if hasKey .Values.controlPlaneManager.apiserver "saTokenAPIAudiences" }}
     {{ $_ := set $tpl_context.apiserver "saTokenAPIAudiences" .Values.controlPlaneManager.apiserver.saTokenAPIAudiences }}
   {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "admissionPlugins" }}
+    {{ $_ := set $tpl_context.apiserver "admissionPlugins" .Values.controlPlaneManager.apiserver.admissionPlugins }}
+  {{- end }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
@@ -93,6 +96,9 @@ extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "w
   {{- if $tpl_context.apiserver.auditPolicy }}
 extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- end }}
+
+extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
+extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" $tpl_context | b64enc }}
 {{- end }}
 ---
 apiVersion: v1
