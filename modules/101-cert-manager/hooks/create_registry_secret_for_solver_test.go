@@ -127,9 +127,9 @@ metadata:
   namespace: %s`, solverSecretName, solverServiceAccountName, ns)
 }
 
-func setState(f *HookExecutionConfig, waitForQuantity int, ch ...string) {
+func setState(f *HookExecutionConfig, ch ...string) {
 	rs := strings.Join(ch, "\n---")
-	f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(rs, waitForQuantity))
+	f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(rs, 0))
 }
 
 func assertRegistrySecretAndSAExists(f *HookExecutionConfig, dockerCfgContent string, nss ...string) {
@@ -169,7 +169,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			setState(f, 0, ``)
+			setState(f, ``)
 
 			f.RunHook()
 		})
@@ -192,7 +192,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 		Context(tst.title, func() {
 			Context("Deckhouse registry secret", func() {
 				BeforeEach(func() {
-					setState(f, 1, genD8RegistrySecret(testDockerCfgEncoded))
+					setState(f, genD8RegistrySecret(testDockerCfgEncoded))
 
 					f.RunHook()
 				})
@@ -205,7 +205,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 				Context("add challenges", func() {
 					BeforeEach(func() {
-						setState(f, 4,
+						setState(f,
 							genD8RegistrySecret(testDockerCfgEncoded),
 
 							genChallengeManifest(chName, ns1),
@@ -222,7 +222,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 						BeforeEach(func() {
 							Expect(newContent).ToNot(Equal(testDockerCfgEncoded))
 
-							setState(f, 5,
+							setState(f,
 								genD8RegistrySecret(newContent),
 
 								genChallengeManifest(chName, ns1),
@@ -243,7 +243,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 			Context("Creating", func() {
 				BeforeEach(func() {
-					setState(f, 2,
+					setState(f,
 						genD8RegistrySecret(testDockerCfgEncoded),
 						genChallengeManifest(chName, ns1),
 					)
@@ -261,7 +261,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 				Context("multiple challenges in same namespace", func() {
 					BeforeEach(func() {
-						setState(f, 1,
+						setState(f,
 							genD8RegistrySecret(testDockerCfgEncoded),
 							genChallengeManifest(chName, ns1),
 							genChallengeManifest(chNameAnother, ns1),
@@ -279,7 +279,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 				Context("one challenge per namespace", func() {
 					BeforeEach(func() {
-						setState(f, 4,
+						setState(f,
 							genD8RegistrySecret(testDockerCfgEncoded),
 							genChallengeManifest(chName, ns1),
 							genChallengeManifest(chName, ns2),
@@ -298,7 +298,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 			Context("Deleting", func() {
 				BeforeEach(func() {
-					setState(f, 1,
+					setState(f,
 						genD8RegistrySecret(testDockerCfgEncoded),
 						genChallengeManifest(chName, ns1),
 						genChallengeManifest(chName, ns2),
@@ -312,7 +312,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 				Context("last challenge in one namespace", func() {
 					BeforeEach(func() {
-						setState(f, 7,
+						setState(f,
 							genD8RegistrySecret(testDockerCfgEncoded),
 							genChallengeManifest(chName, ns2),
 							genChallengeManifest(chName, ns3),
@@ -334,7 +334,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 				Context("not last challenge in one namespace", func() {
 					BeforeEach(func() {
-						setState(f, 1,
+						setState(f,
 							genD8RegistrySecret(testDockerCfgEncoded),
 							genChallengeManifest(chName, ns1),
 							genChallengeManifest(chName, ns2),
@@ -359,7 +359,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 	Context("Registry secret created without service account", func() {
 		BeforeEach(func() {
-			setState(f, 1,
+			setState(f,
 				genD8RegistrySecret(testDockerCfgEncoded),
 
 				genTestChallengeManifest(chName, ns1),
@@ -378,7 +378,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 	Context("Service account created without registry secret", func() {
 		BeforeEach(func() {
-			setState(f, 1,
+			setState(f,
 				genD8RegistrySecret(testDockerCfgEncoded),
 
 				genTestChallengeManifest(chName, ns1),
@@ -398,7 +398,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 	Context("Challenge deleted", func() {
 		Context("Service account was deleted but secret was not", func() {
 			BeforeEach(func() {
-				setState(f, 1,
+				setState(f,
 					genD8RegistrySecret(testDockerCfgEncoded),
 
 					genRegistrySecret(testDockerCfgEncoded, ns1, solverSecretName),
@@ -416,7 +416,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 		Context("Secret was deleted but service account was not", func() {
 			BeforeEach(func() {
-				setState(f, 1,
+				setState(f,
 					genD8RegistrySecret(testDockerCfgEncoded),
 
 					genServiceAccount(ns1),
@@ -437,7 +437,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 	Context("Legacy cert-manager manifests and new cert manager manifests both", func() {
 		Context("Removing", func() {
 			BeforeEach(func() {
-				setState(f, 7,
+				setState(f,
 					genD8RegistrySecret(testDockerCfgEncoded),
 
 					genTestChallengeManifest(chName, ns1),
@@ -459,7 +459,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 			Context("remove legacy challenge in one namespace", func() {
 				BeforeEach(func() {
-					setState(f, 1,
+					setState(f,
 						genD8RegistrySecret(testDockerCfgEncoded),
 
 						genTestChallengeManifest(chName, ns1),
@@ -481,7 +481,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 				Context("remove new challenge in one namespace", func() {
 					BeforeEach(func() {
-						setState(f, 7,
+						setState(f,
 							genD8RegistrySecret(testDockerCfgEncoded),
 
 							genTestChallengeManifest(chName, ns1),
@@ -505,7 +505,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 			Context("remove legacy challenges in all namespace", func() {
 				BeforeEach(func() {
-					setState(f, 3,
+					setState(f,
 						genD8RegistrySecret(testDockerCfgEncoded),
 
 						genTestChallengeManifest(chName, ns1),
@@ -525,7 +525,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 			Context("remove new challenges in all namespaces", func() {
 				BeforeEach(func() {
-					setState(f, 3,
+					setState(f,
 						genD8RegistrySecret(testDockerCfgEncoded),
 
 						genTestLegacyChallengeManifest(chNameAnother, ns1),
@@ -545,7 +545,7 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 
 			Context("remove all challenges in all namespaces", func() {
 				BeforeEach(func() {
-					setState(f, 12,
+					setState(f,
 						genD8RegistrySecret(testDockerCfgEncoded),
 					)
 
