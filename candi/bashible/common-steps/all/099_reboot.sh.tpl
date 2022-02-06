@@ -103,5 +103,4 @@ systemctl stop kubelet
 crictl stop $(crictl ps -q)
 kill -KILL $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
   {{- end }}
-
 {{- end }}
