@@ -98,7 +98,6 @@ bb-flag-unset disruption
 bb-flag-unset reboot
   {{- if eq .cri "Containerd" }}
 systemctl stop kubelet
-systemctl stop containerd
 # to speed up reboot process, we manually stop containers and kill appropriate containerd-shim processes with SIGKILL
 # https://github.com/containerd/containerd/issues/386
 crictl stop $(crictl ps -q)
