@@ -1,9 +1,8 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
-Если вы не включали в конфигурации Deckhouse другие модули, то единственным запущенным модулем после установки
-Deckhouse обладающим WEB-интерфейсом будет модуль [внутренней документации](../..
-/documentation/v1/modules/810-deckhouse-web/). Если вы не пользуетесь сервисами типа [nip.io](https://nip.io) или аналогами, то чтобы получить доступ к WEB-интерфейсу модуля нужно создать соответствующую DNS-запись.
+The in-cluster [documentation module](../..
+/documentation/v1/modules/810-deckhouse-web/) will be the only module with a WEB interface that runs after completing the Deckhouse installation (unless you have enabled other modules in the Deckhouse configuration). If you do not use [nip.io](https://nip.io) or similar services, you must add the appropriate DNS record to access the module’s WEB interface.
 
 Create a DNS record to access a WEB interface of the documentation module:
 <ul>
