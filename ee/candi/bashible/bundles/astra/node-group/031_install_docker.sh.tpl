@@ -1,16 +1,5 @@
 # Copyright 2021 Flant JSC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 {{- if eq .cri "Docker" }}
 
@@ -60,19 +49,12 @@ if bb-apt-package? containerd.io && ! bb-apt-package? docker-ce ; then
   bb-flag-set reboot
 fi
 
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
-  {{- $debianVersion := toString $key }}
-  {{- if or $value.docker.desiredVersion $value.docker.allowedPattern }}
-if bb-is-debian-version? {{ $debianVersion }} ; then
-  desired_version_docker={{ $value.docker.desiredVersion | quote }}
-  allowed_versions_docker_pattern={{ $value.docker.allowedPattern | quote }}
-    {{- if or $value.docker.containerd.desiredVersion $value.docker.containerd.allowedPattern }}
-  desired_version_containerd={{ $value.docker.containerd.desiredVersion | quote }}
-  allowed_versions_containerd_pattern={{ $value.docker.containerd.allowedPattern | quote }}
-    {{- end }}
+if bb-is-astra-version? 2.12.+; then
+  desired_version_docker={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "desiredVersion" | quote }}
+  allowed_versions_docker_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "allowedPattern" | quote }}
+  desired_version_containerd={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "desiredVersion" | quote }}
+  allowed_versions_containerd_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "allowedPattern" | quote }}
 fi
-  {{- end }}
-{{- end }}
 
 if [[ -z $desired_version_docker || -z $desired_version_containerd ]]; then
   bb-log-error "Desired version must be set"
@@ -97,13 +79,9 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-{{- $debianName := dict "9" "Stretch" "10" "Buster" "11" "Bullseye" }}
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
-  {{- $debianVersion := toString $key }}
-  if bb-is-debian-version? {{ $debianVersion }} ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%s%s" ($value.docker.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $debianName $debianVersion)) }}"
+  if bb-is-astra-version? 2.12.+; then
+    containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
   fi
-{{- end }}
 
   bb-rp-install "containerd-io:${containerd_tag}"
 fi
@@ -127,12 +105,9 @@ if [[ "$should_install_docker" == true ]]; then
 
   bb-flag-set new-docker-installed
 
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
-  {{- $debianVersion := toString $key }}
-  if bb-is-debian-version? {{ $debianVersion }} ; then
-    docker_tag="{{- index $.images.registrypackages (printf "dockerDebian%s" ($value.docker.desiredVersion | replace "docker-ce=" "" | replace "." "_" | replace ":" "_" | replace "~" "_" | camelcase)) }}"
+  if bb-is-astra-version? 2.12.+; then
+    docker_tag="{{- index $.images.registrypackages (printf "dockerDebian%s" (index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "desiredVersion" | replace "docker-ce=" "" | replace "." "_" | replace ":" "_" | replace "~" "_" | camelcase)) }}"
   fi
-{{- end }}
 
   bb-rp-install "docker-ce:${docker_tag}"
 fi

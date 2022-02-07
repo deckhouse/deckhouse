@@ -16,7 +16,7 @@ import:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}
 git:
-  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  - add: /ee/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
     stageDependencies:
       setup:

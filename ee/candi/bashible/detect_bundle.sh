@@ -30,6 +30,10 @@ if [ -e /etc/os-release ]; then
       echo "debian"
       exit 0
     ;;
+    astra-2.12.*)
+      echo "astra"
+      exit 0
+    ;;
     "-")
       >&2 echo "ERROR: Can't determine OS! No ID and VERSION_ID in /etc/os-release."
       exit 1
