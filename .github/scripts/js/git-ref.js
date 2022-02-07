@@ -9,7 +9,7 @@
  * @param {string} ref — A Git ref (refs/heads/* or refs/tags/*)
  * @returns {object}
  */
-module.exports.parseGitRef = (ref) => {
+const parseGitRef = (ref) => {
   let branchName = '';
   let tagName = '';
   let version = '';
@@ -66,8 +66,8 @@ module.exports.parseGitRef = (ref) => {
     isTag: !!tagName,
     isDeveloperTag,
   };
-}
-
+};
+module.exports.parseGitRef = parseGitRef;
 
 // vX.Y.Z
 const semVerReleaseTagNameFullMatch = /^(v\d+\.\d+)\.\d+$/
