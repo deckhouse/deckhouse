@@ -679,7 +679,20 @@ jobs:
         run: |
           ## Source: .gitlab/ci_templates/build.yml
           # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Build using deckhouse registry as primary and dev-registry as secondary.
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
+          # SOURCE_IMAGE_NAME is a name of image from werf.yaml.
+          # WERF_STAGE is a stage image name (from werf stage output).
+          # DESTINATION_IMAGE is an image name for docker push.
           function pull_push() {
             SOURCE_IMAGE_NAME=$1
             WERF_STAGE=$2
@@ -687,7 +700,7 @@ jobs:
             echo "  Pull '${SOURCE_IMAGE_NAME}' image as ${WERF_STAGE}."
             docker pull ${WERF_STAGE}
             echo "  Tag '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE};
+            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE}
             echo "  Push '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
             docker image push ${DESTINATION_IMAGE}
           }
@@ -709,12 +722,12 @@ jobs:
             echo "Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}"
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG};
-              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG};
+              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
             else
-              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG};
-              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG};
-            fi;
+              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+            fi
 
             echo "Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
             pull_push 'dev' $(werf stage image dev) ${DESTINATION_IMAGE}
@@ -723,8 +736,8 @@ jobs:
             pull_push 'dev/install' $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE}
 
             echo Remove local tags.
-            docker image rmi ${DESTINATION_IMAGE} || true;
-            docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
+            docker image rmi ${DESTINATION_IMAGE} || true
+            docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
           fi
 
 
@@ -737,27 +750,27 @@ jobs:
 
               echo "Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
               # Copy stages to deckhouse registry from dev registry.
-              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO;
+              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO
 
               echo "Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG};
+              DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG}
               pull_push 'dev' $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE}
 
               echo "Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG};
+              DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
               pull_push 'dev/install' $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
               echo "Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG};
+              DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
               pull_push 'release-channel-version' $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
 
               echo Remove local tags.
-              docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
-              docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
-              docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true;
+              docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
+              docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
+              docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty. No publishing."
-            fi;
+            fi
           fi
     # </template: build_template>
 
@@ -870,7 +883,20 @@ jobs:
         run: |
           ## Source: .gitlab/ci_templates/build.yml
           # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Build using deckhouse registry as primary and dev-registry as secondary.
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
+          # SOURCE_IMAGE_NAME is a name of image from werf.yaml.
+          # WERF_STAGE is a stage image name (from werf stage output).
+          # DESTINATION_IMAGE is an image name for docker push.
           function pull_push() {
             SOURCE_IMAGE_NAME=$1
             WERF_STAGE=$2
@@ -878,7 +904,7 @@ jobs:
             echo "  Pull '${SOURCE_IMAGE_NAME}' image as ${WERF_STAGE}."
             docker pull ${WERF_STAGE}
             echo "  Tag '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE};
+            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE}
             echo "  Push '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
             docker image push ${DESTINATION_IMAGE}
           }
@@ -900,12 +926,12 @@ jobs:
             echo "Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}"
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG};
-              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG};
+              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
             else
-              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG};
-              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG};
-            fi;
+              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+            fi
 
             echo "Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
             pull_push 'dev' $(werf stage image dev) ${DESTINATION_IMAGE}
@@ -914,8 +940,8 @@ jobs:
             pull_push 'dev/install' $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE}
 
             echo Remove local tags.
-            docker image rmi ${DESTINATION_IMAGE} || true;
-            docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
+            docker image rmi ${DESTINATION_IMAGE} || true
+            docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
           fi
 
 
@@ -928,27 +954,27 @@ jobs:
 
               echo "Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
               # Copy stages to deckhouse registry from dev registry.
-              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO;
+              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO
 
               echo "Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG};
+              DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG}
               pull_push 'dev' $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE}
 
               echo "Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG};
+              DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
               pull_push 'dev/install' $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
               echo "Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG};
+              DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
               pull_push 'release-channel-version' $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
 
               echo Remove local tags.
-              docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
-              docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
-              docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true;
+              docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
+              docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
+              docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty. No publishing."
-            fi;
+            fi
           fi
     # </template: build_template>
 
@@ -1061,7 +1087,20 @@ jobs:
         run: |
           ## Source: .gitlab/ci_templates/build.yml
           # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Build using deckhouse registry as primary and dev-registry as secondary.
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
+          # SOURCE_IMAGE_NAME is a name of image from werf.yaml.
+          # WERF_STAGE is a stage image name (from werf stage output).
+          # DESTINATION_IMAGE is an image name for docker push.
           function pull_push() {
             SOURCE_IMAGE_NAME=$1
             WERF_STAGE=$2
@@ -1069,7 +1108,7 @@ jobs:
             echo "  Pull '${SOURCE_IMAGE_NAME}' image as ${WERF_STAGE}."
             docker pull ${WERF_STAGE}
             echo "  Tag '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE};
+            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE}
             echo "  Push '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
             docker image push ${DESTINATION_IMAGE}
           }
@@ -1091,12 +1130,12 @@ jobs:
             echo "Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}"
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG};
-              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG};
+              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
             else
-              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG};
-              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG};
-            fi;
+              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+            fi
 
             echo "Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
             pull_push 'dev' $(werf stage image dev) ${DESTINATION_IMAGE}
@@ -1105,8 +1144,8 @@ jobs:
             pull_push 'dev/install' $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE}
 
             echo Remove local tags.
-            docker image rmi ${DESTINATION_IMAGE} || true;
-            docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
+            docker image rmi ${DESTINATION_IMAGE} || true
+            docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
           fi
 
 
@@ -1119,27 +1158,27 @@ jobs:
 
               echo "Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
               # Copy stages to deckhouse registry from dev registry.
-              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO;
+              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO
 
               echo "Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG};
+              DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG}
               pull_push 'dev' $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE}
 
               echo "Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG};
+              DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
               pull_push 'dev/install' $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
               echo "Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-              DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG};
+              DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
               pull_push 'release-channel-version' $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
 
               echo Remove local tags.
-              docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
-              docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
-              docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true;
+              docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
+              docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
+              docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty. No publishing."
-            fi;
+            fi
           fi
     # </template: build_template>
 
