@@ -57,10 +57,6 @@ func NewNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 	var markedForScaleDown bool
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == "DeletionCandidateOfClusterAutoscaler" {
-			markedForScaleDown = true
-			break
-		}
 		if taint.Key == "ToBeDeletedByClusterAutoscaler" {
 			markedForScaleDown = true
 			break
