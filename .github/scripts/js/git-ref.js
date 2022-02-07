@@ -96,7 +96,7 @@ const fullMatchReleaseTag = (input) => {
   }
   return input.match(semVerReleaseTagNameFullMatch)
 }
-module.exports.fullMatchReleaseTag = fullMatchReleaseBranch
+module.exports.fullMatchReleaseTag = fullMatchReleaseTag
 
 const fullMatchTestTag = (input) => {
   if (!input) {
