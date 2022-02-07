@@ -35,7 +35,8 @@ type UploadScript struct {
 	ScriptPath string
 	Args       []string
 
-	sudo bool
+	sudo  bool
+	chmod bool
 
 	stdoutHandler func(string)
 	stderrHandler func(string)
@@ -71,6 +72,11 @@ func (u *UploadScript) WithTimeout(timeout time.Duration) *UploadScript {
 	return u
 }
 
+func (u *UploadScript) WithSetExecuteModeBefore(f bool) *UploadScript {
+	u.chmod = f
+	return u
+}
+
 func (u *UploadScript) Execute() (stdout []byte, err error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
@@ -84,10 +90,24 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	}
 
 	var cmd *Command
+	var scriptFullPath string
 	if u.sudo {
-		cmd = NewCommand(u.Session, "/tmp/"+scriptName, u.Args...).Sudo()
+		scriptFullPath = "/tmp/" + scriptName
+		cmd = NewCommand(u.Session, scriptName, u.Args...).Sudo()
 	} else {
-		cmd = NewCommand(u.Session, "./"+scriptName, u.Args...).Cmd()
+		scriptFullPath = "./" + scriptName
+		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Cmd()
+	}
+
+	if u.chmod {
+		err = NewCommand(u.Session, fmt.Sprintf("chmod 755 %s", scriptFullPath), u.Args...).
+			WithStderrHandler(nil).
+			WithStdoutHandler(nil).
+			Run()
+
+		if err != nil {
+			return nil, fmt.Errorf("Cannot set execute mode for script: %v", err)
+		}
 	}
 
 	scriptCmd := cmd.CaptureStdout(nil)

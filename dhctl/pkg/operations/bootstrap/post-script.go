@@ -93,6 +93,7 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	cmd := e.sshClient.UploadScript(e.path).
 		WithStdoutHandler(stdoutHandler).
 		WithStderrHandler(stderrHandler).
+		WithSetExecuteModeBefore(true).
 		WithTimeout(e.timeout).
 		Sudo()
 
