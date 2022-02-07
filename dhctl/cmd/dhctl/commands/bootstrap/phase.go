@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -130,9 +131,9 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineKubeFlags(cmd)
 
 	runFunc := func() error {
-		var resourcesToCreate *config.Resources
+		var resourcesToCreate *template.Resources
 		if app.ResourcesPath != "" {
-			parsedResources, err := config.ParseResources(app.ResourcesPath)
+			parsedResources, err := template.ParseResources(app.ResourcesPath, nil)
 			if err != nil {
 				return err
 			}

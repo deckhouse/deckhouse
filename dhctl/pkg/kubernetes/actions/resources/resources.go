@@ -26,14 +26,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func CreateResources(kubeCl *client.KubernetesClient, resources *config.Resources) error {
+func CreateResources(kubeCl *client.KubernetesClient, resources *template.Resources) error {
 	for gvk := range resources.Items {
 		var resourcesList *metav1.APIResourceList
 		var err error
@@ -93,7 +93,7 @@ func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, 
 	return namespaced, nil
 }
 
-func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Resources, gvk schema.GroupVersionKind) error {
+func createSingleResource(kubeCl *client.KubernetesClient, resources *template.Resources, gvk schema.GroupVersionKind) error {
 	return retry.NewLoop(fmt.Sprintf("Create %s resources", gvk.String()), 25, 5*time.Second).Run(func() error {
 		gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
 		if err != nil {
@@ -142,7 +142,7 @@ func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Res
 	})
 }
 
-func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources *config.Resources) error {
+func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources *template.Resources) error {
 	timeout, err := time.ParseDuration(app.ResourcesTimeout)
 	if err != nil {
 		return fmt.Errorf("cannot parse timeout to create resources: %v", err)
