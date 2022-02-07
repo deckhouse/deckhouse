@@ -952,7 +952,7 @@ const startBuildAndTestWorkflowNoComment = async ({ github, context, core }) => 
 
   // Start 'release-build-and-test' workflow.
   console.log('Start workflow.');
-  response = await github.rest.actions.createWorkflowDispatch({
+  const response = await github.rest.actions.createWorkflowDispatch({
     owner: context.repo.owner,
     repo: context.repo.repo,
     workflow_id: 'build-and-test_release.yml',
