@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package template
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,13 +36,32 @@ type Resources struct {
 	Items map[schema.GroupVersionKind]unstructured.UnstructuredList
 }
 
-func ParseResources(path string) (*Resources, error) {
+func ParseResources(path string, data map[string]interface{}) (*Resources, error) {
 	fileContent, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading resources file: %v", err)
 	}
 
-	bigFileTmp := strings.TrimSpace(string(fileContent))
+	content := string(fileContent)
+
+	if data != nil {
+		t := template.New("resource_render").Funcs(FuncMap())
+		t, err := t.Parse(content)
+		if err != nil {
+			return nil, err
+		}
+
+		var tpl bytes.Buffer
+
+		err = t.Execute(&tpl, data)
+		if err != nil {
+			return nil, err
+		}
+
+		content = tpl.String()
+	}
+
+	bigFileTmp := strings.TrimSpace(content)
 	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
 
 	resources := Resources{}
