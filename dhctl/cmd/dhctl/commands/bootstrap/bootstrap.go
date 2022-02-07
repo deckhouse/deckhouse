@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -177,17 +178,6 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		// next parse and check resources
-		var resourcesToCreate *config.Resources
-		if app.ResourcesPath != "" {
-			parsedResources, err := config.ParseResources(app.ResourcesPath)
-			if err != nil {
-				return err
-			}
-
-			resourcesToCreate = parsedResources
-		}
-
 		// next init cache
 		cachePath := metaConfig.CachePath()
 		if err = cache.Init(cachePath); err != nil {
@@ -232,6 +222,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		var nodeIP string
 		var devicePath string
+		var resourcesTemplateData map[string]interface{}
+
 		if metaConfig.ClusterType == config.CloudClusterType {
 			err = log.Process("bootstrap", "Cloud infrastructure", func() error {
 				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
@@ -242,6 +234,16 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 				if err != nil {
 					return err
+				}
+
+				var cloudDiscoveryData map[string]interface{}
+				err = json.Unmarshal(baseOutputs.CloudDiscovery, &cloudDiscoveryData)
+				if err != nil {
+					return err
+				}
+
+				resourcesTemplateData = map[string]interface{}{
+					"cloudDiscovery": cloudDiscoveryData,
 				}
 
 				masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
@@ -286,6 +288,19 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 			_ = json.Unmarshal(metaConfig.ClusterConfig["static"], &static)
 			nodeIP = static.NodeIP
+		}
+
+		// next parse and check resources
+		// do it after bootstrap cloud because resources can be template
+		// and we want to fail immediately if template has errors
+		var resourcesToCreate *template.Resources
+		if app.ResourcesPath != "" {
+			parsedResources, err := template.ParseResources(app.ResourcesPath, resourcesTemplateData)
+			if err != nil {
+				return err
+			}
+
+			resourcesToCreate = parsedResources
 		}
 
 		if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {

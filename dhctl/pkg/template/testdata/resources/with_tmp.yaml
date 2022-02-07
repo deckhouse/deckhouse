@@ -1,0 +1,9 @@
+apiVersion: v1
+data:
+  key: value
+  fromCloudDiscovery: {{ index .cloudDiscovery.networkId "ru-central1-a" }}
+  sprigFuncAvailable: {{ sha256sum "1" }}
+kind: ConfigMap
+metadata:
+  name: some-cm
+  namespace: test-ns

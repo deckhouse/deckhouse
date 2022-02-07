@@ -54,7 +54,9 @@ func DefineDeckhouseFlags(cmd *kingpin.CmdClause) {
 }
 
 func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
-	cmd.Flag("resources", "Path to a file with declared Kubernetes resources in YAML format.").
+	cmd.Flag("resources", `Path to a file with declared Kubernetes resources in YAML format. It can be go-template file. Passed data contains next keys:
+  cloudDiscovery - the data discovered by applying Terrfarorm and getting its output. It depends on the cloud provider.
+`).
 		Envar(configEnvName("RESOURCES")).
 		StringVar(&ResourcesPath)
 	cmd.Flag("resources-timeout", "Timeout to create resources. Experimental. This feature may be deleted in the future.").
