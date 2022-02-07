@@ -38,6 +38,9 @@ type UploadScript struct {
 	sudo bool
 
 	stdoutHandler func(string)
+	stderrHandler func(string)
+
+	timeout time.Duration
 }
 
 func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *UploadScript {
@@ -55,6 +58,16 @@ func (u *UploadScript) Sudo() *UploadScript {
 
 func (u *UploadScript) WithStdoutHandler(handler func(string)) *UploadScript {
 	u.stdoutHandler = handler
+	return u
+}
+
+func (u *UploadScript) WithStderrHandler(handler func(string)) *UploadScript {
+	u.stderrHandler = handler
+	return u
+}
+
+func (u *UploadScript) WithTimeout(timeout time.Duration) *UploadScript {
+	u.timeout = timeout
 	return u
 }
 
@@ -80,6 +93,14 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	scriptCmd := cmd.CaptureStdout(nil)
 	if u.stdoutHandler != nil {
 		scriptCmd = scriptCmd.WithStdoutHandler(u.stdoutHandler)
+	}
+
+	if u.stderrHandler != nil {
+		scriptCmd = scriptCmd.WithStderrHandler(u.stderrHandler)
+	}
+
+	if u.timeout > 0 {
+		scriptCmd.WithTimeout(u.timeout)
 	}
 
 	err = scriptCmd.Run()

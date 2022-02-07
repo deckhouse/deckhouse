@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+
 	"github.com/google/uuid"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -168,6 +170,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineResourcesFlags(cmd, false)
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDontUsePublicImagesFlags(cmd)
+	app.DefinePostBootstrapScriptFlags(cmd)
 
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)
@@ -204,6 +207,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		printBanner()
+
+		bootstrapState := bootstrap.NewBootstrapState(stateCache)
 
 		clusterUUID, err := generateClusterUUID(stateCache)
 		if err != nil {
@@ -335,11 +340,22 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
+		if app.PostBootstrapScriptPath != "" {
+			postScriptExecutor := bootstrap.NewPostBootstrapScriptExecutor(sshClient, app.PostBootstrapScriptPath, bootstrapState).
+				WithErrorIfExecutionFail(app.PostBootstrapScriptExitIfFailed).
+				WithTimeout(app.PostBootstrapScriptTimeout)
+
+			if err := postScriptExecutor.Execute(); err != nil {
+				return err
+			}
+		}
+
 		_ = log.Process("bootstrap", "Clear cache", func() error {
 			cache.Global().CleanWithExceptions(
 				operations.MasterHostsCacheKey,
 				operations.ManifestCreatedInClusterCacheKey,
 				operations.BastionHostCacheKey,
+				bootstrap.PostBootstrapResultCacheKey,
 			)
 			log.WarnLn(`Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
 			return nil
