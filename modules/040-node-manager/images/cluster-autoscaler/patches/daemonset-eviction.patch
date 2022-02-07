@@ -1,5 +1,5 @@
 diff --git a/cluster-autoscaler/utils/drain/drain.go b/cluster-autoscaler/utils/drain/drain.go
-index 5704e7823..6284109e2 100644
+index 5704e7823..ad5a1e614 100644
 --- a/cluster-autoscaler/utils/drain/drain.go
 +++ b/cluster-autoscaler/utils/drain/drain.go
 @@ -18,6 +18,7 @@ package drain
@@ -31,12 +31,14 @@ index 5704e7823..6284109e2 100644
  			isDaemonSetPod = true
  			// don't have listener for other DaemonSet kind
  			// TODO: we should use a generic client for checking the reference.
-@@ -228,6 +243,8 @@ func GetPodsForDeletionOnNodeDrain(
+@@ -228,6 +243,10 @@ func GetPodsForDeletionOnNodeDrain(
  		}
  		pods = append(pods, pod)
  	}
 +
-+	fmt.Println(pods, daemonSetPods)
++	for _, ds := range daemonSetPods {
++		fmt.Println("Collected DS", ds.Namespace + "/" + ds.Name)
++	}
  	return pods, daemonSetPods, nil, nil
  }
  
