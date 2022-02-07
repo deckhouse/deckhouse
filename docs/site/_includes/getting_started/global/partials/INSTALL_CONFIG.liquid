@@ -18,7 +18,7 @@ The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enter
 > The installation must be performed from a **[personal computer](step2.html#installation-process)** with SSH access to the node, the **master node** of the future cluster.
 >{% endif %}
 {%- if page.platform_type == 'existing' %}
-> Ознакомьтесь предварительно с разделом *[Если что-то пошло не так](#if-something-went-wrong)*, возможно там описан случай для вашего провайдера. Обращайтесь к нему, если испытываете какие-то проблемы в процессе установки.
+> We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
 >{% endif %}
 > To learn more about the Deckhouse Platform release channels, please see the [relevant documentation](/en/documentation/v1/deckhouse-release-channels.html).
 
@@ -28,9 +28,9 @@ The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enter
 
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
-Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью указания `nodeSelector`/`tolerations` в параметре `configOverrides.deckhouse` конфигурации установки. Также, вы можете перечислить необходимые taint'ы узлов кластера в массиве `configOverrides.global.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие `toleration` своим компонентам.
+You can control on which nodes the Deckhouse core components will run by setting  `nodeSelector`/`tolerations` in the `configOverrides.deckhouse` parameter of the installation configuration. You can also specify cluster node taints in the `configOverrides.global.modules.placement.customTolerationKeys` array so that Deckhouse can automatically add the appropriate `toleration` to its components.
 
-> Пример указания `nodeSelector`/`tolerations` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> Below is an example of setting `nodeSelector`/`tolerations` for the `deckhouse` module and specifying tolerations for other Deckhouse components in the `customTolerationKeys` array (do not copy this example without adapting it to your configuration as the values will be different):
 > ```yaml
 > deckhouse:
 >   configOverrides:

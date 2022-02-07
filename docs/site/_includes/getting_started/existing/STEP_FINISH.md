@@ -9,26 +9,25 @@
 
 Now that you have installed and properly configured Deckhouse, let's look at what you can do with it.
 
-Внутрикластерная документация доступна по адресу [deckhouse.example.com](https://deckhouse.example.com)
+The in-cluster documentation is available at [deckhouse.example.com](https://deckhouse.example.com)
 
-Доступ к документации ограничен basic-аутентификацией (больше вариантов аутентификации можно получить включив модуль [user-auth](.
-./../documentation/v1/modules/150-user-authn/):
-- Логин — `admin`
-- Пароль — сгенерирован автоматически. Узнать его можно в ConfigMap `deckhouse` в секции конфигурации модуля `deckhouse-web`, например,
-  выполнив следующую команду:
+Access to the documentation is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](.
+./../documentation/v1/modules/150-user-authn/) module:
+- Login — `admin`
+- Password — generated automatically. It can be found in the `deckhouse` ConfigMap in the configuration section of the `deckhouse-web` module. Use the following command to get it:
   ```bash
   kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.deckhouseWeb}" | grep password
   ```
-  Пример вывода:
+  Sample output:
   ```
   $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.deckhouseWeb}" | grep password 
   password: UJvSB4UYTa3fnDOco6LF
   ```
 
-> Если адрес [deckhouse.example.com](https://deckhouse.example.com) недоступен, возможные следующие причины
-- проблема на уровне Ingress-контроллера
-- проблема с DNS
-- сетевые проблемы (фильтрация, маршрутизация...)
+>  The following problems may cause [deckhouse.example.com](https://deckhouse.example.com) to be unreachable:
+- Ingress controller-level issues;
+- DNS-related issues;
+- network problems (filtering, routing...).
 </div>
 
 <section class="cards-blocks">

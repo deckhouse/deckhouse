@@ -1,15 +1,15 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
 
 {% if page.platform_type == "existing" %}
-## Прежде чем вы начнете
+## Before you begin
 
-Если вы развернули **новый** кластер и хотите поставить в него Deckhouse, то рекомендуем вернуться на предыдущий шаг и использовать руководство по развертыванию кластера с помощью самого Deckhouse.
+If you want to install Deckhouse into a **new** cluster, we recommend going back to the previous step and sticking to the section that describes how to deploy a cluster using Deckhouse.
 
-Кластеры Kubernetes предлагаемые различными облачными провайдерами имеют свои особенности и различия, так же как и кластеры, развернутые вручную. Правильная стратегия установки Deckhouse в таких кластерах — установить Deckhouse в минимальной конфигурации, после чего включить необходимые модули.
+Kubernetes clusters have their own particularities and differences depending on the specific cloud provider, just like clusters deployed manually. The best strategy for installing Deckhouse in such clusters is to install the minimal Deckhouse configuration first, and then enable the necessary modules.
 
-Данное руководство предлагает установку Deckhouse в **минимальной** конфигурации, с включенным модулем [внутренней документации](../../documentation/v1/modules/810-deckhouse-web/) (для примера работы web-приложения) и модулем [cert-manager](../../documentation/v1/modules/101-cert-manager/).
+This guide covers installing Deckhouse in a **minimal** configuration, with the [internal documentation module](../../documentation/v1/modules/810-deckhouse-web/) (for a sample web application) and [cert-manager](../../documentation/v1/modules/101-cert-manager/) module enabled.
 
-После выполнения всех шагов данного руководства вам нужно будет самостоятельно включить интересующие вас модули. Воспользуйтесь [документацией](/documentation/), чтобы получить об этом необходимую информацию. Также, при возникновении вопросов вы можете попросить помощи [сообщества](https://deckhouse.io/ru/community/about.html).
+After completing all the steps in this guide, you will have to enable all the required modules manually. Please, refer to the [documentation](../../documentation/) to learn more or reach out to the Deckhouse [community](../../community/about.html).
 
 {% endif %}
 
@@ -21,18 +21,18 @@ You will need:
    The computer from which the installation will be performed.{% unless page.platform_type == "existing" %} It is only needed to run the Deckhouse installer, and will not be part of the cluster.{% endunless %}
 
    Requirements:
-   - HTTPS-access to the container registry `registry.deckhouse.io` (it is also possible to use a [third-party registry](/en/documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry));
+   - HTTPS-access to the container registry `registry.deckhouse.io` (it is also possible to use a [third-party registry](../../documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry));
 {%- if page.platform_type == "existing" %}
    - The kubectl command-line tool must be configured to communicate with your cluster.
 {%- else %}
    - SSH key access to the node, the **master node** of the future cluster.
 {%- endif %}
 {% if page.platform_type == "existing" %}
-1. **Существующий кластер Kubernetes**.
+1. **The existing Kubernetes cluster**.
 
-   У вас уже должен быть работающий кластер Kubernetes, подходящий под условия [поддерживаемых версий Kubernetes и ОС](../../documentation/v1/supported_versions.html).
+   You will need a running Kubernetes cluster with the [supported Kubernetes version and OS](../../documentation/v1/supported_versions.html).
 
-   В процессе установки инсталлятор Deckhouse, запущенный на **персональном компьютере** (см. п.1), подключится к кластеру и развернет Deckhouse.
+   During the installation, the Deckhouse installer running on the **personal computer** (see step 1) will connect to the cluster and deploy Deckhouse.
 {%- else %}
 1. **Master-node**.
 
@@ -40,36 +40,36 @@ You will need:
 {%- endif %}
 
 {% unless page.platform_type == "existing" %}
-    During the installation, the Deckhouse installer running on the **personal computer** (section 1) will connect to that host via SSH, install necessary packages, configure control plane Kubernetes and deploy Deckhouse. Installation **from a master node** is currently **not supported**.
+    During the installation, the Deckhouse installer running on the **personal computer** (section 1) will connect to that host via SSH, install necessary packages, configure control plane Kubernetes, and deploy Deckhouse. Note that **master node-based** installation is **not supported** at the moment.
 
    Requirements:
    - at least 4 CPU cores;
    - at least 8 GB of RAM;
    - at least 40 GB of disk space for the cluster and etcd data;
    - OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7;
-   - HTTPS-access to the container registry `registry.deckhouse.io` (it is also possible to use a [third-party registry](/en/documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry));
+   - HTTPS access to the `registry.deckhouse.io` container registry (it is also possible to use a [third-party registry](../../documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry));
    - SSH key access from the **personal computer** (section 1).
 
 1. Additional nodes (not required).
 {% if page.platform_type == 'cloud' %}
-   Depending on the purpose of the cluster and selected node layout in the next steps, additional nodes will be automatically ordered from the selected cloud provider.
+   Depending on the purpose of the cluster and chosen node layout in the following steps, additional nodes will be automatically provisioned from the selected cloud provider.
 {%- else %}
    Depending on the purpose of the cluster, you may need additional nodes, for example, dedicated nodes for monitoring, a load balancer, etc.
 {%- endif %}
 
-   If any node (node group) will have the monitoring role ([more details](/en/documentation/v1/#advanced-scheduling)) then the minimum requirements for such a node are as follows:
+   Below are the minimum requirements for any node (node group) with the monitoring role ([learn more](../../documentation/v1/#advanced-scheduling)):
    - at least 4 CPU cores;
    - at least 8 GB of RAM;
    - OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7;
-   - HTTPS-access to the container registry `registry.deckhouse.io` (it is also possible to use a [third-party registry](/en/documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry)).
+   - HTTPS access to the `registry.deckhouse.io` container registry (it is also possible to use a [third-party registry](/en/documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry)).
 {%- endunless %}
 
    > By default, the default storage class defined in the cluster is used as storage for system components (or `emptydir`, if it is not defined). You can specify the storage class using the global parameter [storageClass](/en/documentation/v1/deckhouse-configure-global.html#parameters).
 
 {% if include.presentation -%}
-The presentation below is an overview of the actions that will be required to install Deckhouse Platform. While it's totally fine to skip it, we recommend that you watch it to get a better understanding during the following steps.
+The presentation below is an overview of the actions that will be required to install Deckhouse Platform. While it's totally fine to skip it, we recommend that you watch it to better understand the following steps.
 
-Please also note, it's just a brief, rough overview. The actual actions and commands to be executed will be given during next steps.
+Note that it's only a brief, abstract overview. The specific actions and commands to execute will be given on the next steps.
 
 <iframe src="{{ include.presentation }}" frameborder="0" width="{{ include.width }}" height="{{ include.height }}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
 
@@ -79,4 +79,4 @@ Please also note, it's just a brief, rough overview. The actual actions and comm
 </p>
 {%- endif %}
 
-To start the process of installation of your Kubernetes cluster, please click the "Next" button below.
+To start the process of installing your Kubernetes cluster, click the "Next" button below.
