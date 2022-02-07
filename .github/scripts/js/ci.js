@@ -10,6 +10,15 @@ const {
   knownEditions,
   e2eDefaults
 } = require('./constants');
+
+const {
+  parseGitRef,
+  matchReleaseTag,
+  fullMatchReleaseTag,
+  fullMatchTestTag,
+  fullMatchReleaseBranch
+} = require('./git-ref');
+
 const { dumpError } = require('./error');
 
 /**
@@ -304,70 +313,49 @@ const checkLabel = async ({ github, context, core, labelType, labelSubject, onSu
 module.exports.checkLabel = checkLabel;
 
 /**
- * Check e2e/use labels to determine which cri/version job to run for provider.
- *
- * This method set 'true'/'false' outputs for each cri/version job.
+ * Set outputs to enable e2e jobs from workflow_dispatch inputs.
  *
  * @param {object} inputs
- * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
- * @param {string} inputs.provider - A slug of the provider.
- * @returns {Promise<void>}
  */
-module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
-  // Get labels from PR
+const setCRIAndVersionsFromInputs = ({ context, core }) => {
   const defaultCRI = e2eDefaults.criName.toLowerCase();
   const defaultVersion = e2eDefaults.kubernetesVersion.replace(/\./g, '_');
 
-  // Shortcut for release related runs (not pull requests).
-  if (!context.payload.inputs.pull_request_ref) {
-    let cri = [defaultCRI];
-    let ver = [defaultVersion];
+  let cri = [defaultCRI];
+  let ver = [defaultVersion];
 
-    if (!!context.payload.inputs.cri) {
-      const requested_cri = context.payload.inputs.cri.toLowerCase();
-      cri = requested_cri.split(',');
-    }
-    if (!!context.payload.inputs.ver) {
-      const requested_ver = context.payload.inputs.ver.replace(/\./g, '_');
-      ver = requested_ver.split(',');
-    }
-
-    core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}' and version='${context.payload.inputs.ver}'.`);
-
-    for (const out_cri of cri) {
-      for (const out_ver of ver) {
-        core.info(`run_${out_cri}_${out_ver}: true`);
-        core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
-      }
-    }
-    return
+  if (!!context.payload.inputs.cri) {
+    const requested_cri = context.payload.inputs.cri.toLowerCase();
+    cri = requested_cri.split(',');
+  }
+  if (!!context.payload.inputs.ver) {
+    const requested_ver = context.payload.inputs.ver.replace(/\./g, '_');
+    ver = requested_ver.split(',');
   }
 
-  // Request fresh info about the pull request.
-  let issueLabels = [];
-  let shouldRun = false;
-  await checkLabel({
-    github,
-    context,
-    core,
-    labelType: 'e2e',
-    labelSubject: provider,
-    onSuccess: ({ labels, hasLabel }) => {
-      issueLabels = labels;
-      shouldRun = hasLabel;
+  core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}' and version='${context.payload.inputs.ver}'.`);
+
+  for (const out_cri of cri) {
+    for (const out_ver of ver) {
+      core.info(`run_${out_cri}_${out_ver}: true`);
+      core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
     }
-  });
-
-  if (!shouldRun) {
-    console.log(`No e2e label for provider '${provider}'. Skip next jobs.`);
-    return;
   }
+};
 
+/**
+ * Set outputs to enable e2e jobs from issue labels.
+ *
+ * @param {object} inputs
+ * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {object[]} inputs.labels - Array for labels on pull request.
+ */
+const setCRIAndVersionsFromLabels = ({ core, labels }) => {
   let useLabels = [];
-  if (issueLabels) {
-    for (const label of issueLabels) {
+  if (labels) {
+    for (const label of labels) {
       if (label.name.startsWith('e2e/use')) {
         useLabels.push(label.name);
       }
@@ -390,6 +378,8 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
     }
   }
 
+  const defaultCRI = e2eDefaults.criName.toLowerCase();
+  const defaultVersion = e2eDefaults.kubernetesVersion.replace(/\./g, '_');
   if (ver.length === 0) {
     core.info(`No additional 'e2e/use/k8s' labels found. Will run e2e with default version=${defaultVersion}.`)
     ver = [defaultVersion];
@@ -405,6 +395,46 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
     }
   }
+};
+
+/**
+ * Check e2e/use labels to determine which cri/version job to run for provider.
+ *
+ * This method set 'true'/'false' outputs for each cri/version job.
+ *
+ * @param {object} inputs
+ * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
+ * @param {object} inputs.context - An object containing the context of the workflow run.
+ * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {string} inputs.provider - A slug of the provider.
+ * @returns {Promise<void>}
+ */
+module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
+  // Use workflow_dispatch inputs to enable e2e jobs if run for non-PR ref.
+  if (!context.payload.inputs.pull_request_ref) {
+    return setCRIAndVersionsFromInputs({context, core});
+  }
+
+  // Request labels on the pull request.
+  let issueLabels = [];
+  let shouldRun = false;
+  await checkLabel({
+    github,
+    context,
+    core,
+    labelType: 'e2e',
+    labelSubject: provider,
+    onSuccess: ({ labels, hasLabel }) => {
+      issueLabels = labels;
+      shouldRun = hasLabel;
+    }
+  });
+
+  if (!shouldRun) {
+    return core.info(`No e2e label for provider '${provider}'. Skip next jobs.`);
+  }
+
+  return setCRIAndVersionsFromLabels({core, labels: issueLabels});
 };
 
 /**
@@ -522,16 +552,19 @@ const detectSlashCommand = ({ comment }) => {
 
   if (parts[1]) {
     // Allow branches main and release-X.Y.
-    if (parts[1] === 'main' || /^release-\d+\.\d+$/.test(parts[1])) {
+    if (parts[1] === 'main' || fullMatchReleaseBranch(parts[1])) {
       workflow_ref = 'refs/heads/' + parts[1];
     }
     // Allow vX.Y.Z and test-vX.Y.Z* tags
-    if (/^(v\d+\.\d+\.\d+|test-v?\d+\.\d+\.\d+.*)$/.test(parts[1])) {
+    if (fullMatchReleaseTag(parts[1])) {
+      workflow_ref = 'refs/tags/' + parts[1];
+    }
+    if (fullMatchTestTag(parts[1])) {
       workflow_ref = 'refs/tags/' + parts[1];
     }
 
     if (workflow_ref) {
-      gitRefInfo = getGitRefInfo(workflow_ref)
+      gitRefInfo = parseGitRef(workflow_ref);
     } else {
       return {notFoundMsg: `git_ref ${parts[1]} not allowed. Only main, release-X.Y, vX.Y.Z or test-vX.Y.Z.`};
     }
@@ -685,7 +718,7 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
     }
   } else if (slashCommand.isDeploy || slashCommand.isSuspend) {
     // Extract tag name from milestone title for deploy and suspend commands.
-    const matches = milestoneTitle.match(/v\d+\.\d+\.\d+/);
+    const matches = matchReleaseTag(milestoneTitle);
     if (matches) {
       slashCommand.workflow_ref = `refs/tags/${matches[0]}`;
     } else {
@@ -897,11 +930,17 @@ const findAndRerunWorkflow = async ({ github, context, core, workflow_id }) => {
 module.exports.createReleaseIssueForMilestone = async ({ github, context, core }) => {
   const milestone = context.payload.milestone;
 
-  const found = milestone.title.match(/(v\d+\.\d+\.\d+)/);
-  if (!found) {
+  const matches = matchReleaseTag(milestone.title);
+  if (!matches) {
     return core.setFailed(`Milestone '${milestone.title}' not dedicated to release version in form of vX.Y.Z. Ignore creating release issue.'`);
   }
-  const milestoneVersion = found[1];
+  const milestoneVersion = matches[0];
+
+  const availableChannels = knownChannels.map(ch => ch.toLowerCase()).join(' | ');
+  const availableEditions = knownEditions.map(e => e.toLowerCase()).join(' | ');
+  const availableProviders = knownProviders.map(p => p.toLowerCase()).join(' | ');
+  const availableCRI = knownCRINames.map(cri => cri.toLowerCase()).join(' | ');
+  const availableKubernetesVersions = knownKubernetesVersions.join(' | ');
 
   // NOTE: non-breaking space after emoji.
   const issueBody = `:robot: A dedicated issue to run tests and deploy release [${milestoneVersion}](${milestone.html_url}).
@@ -914,19 +953,20 @@ module.exports.createReleaseIssueForMilestone = async ({ github, context, core }
 
 You can trigger release actions by commenting on this issue:
 
-- \`/deploy/<channel>\` will publish built images into the release channel.
-  - \`channel\` is one of \`alpha | beta | early-access | rock-solid | stable\`
+- \`/deploy/<channel>[/<editions>]\` will publish built images into the release channel.
+  - \`channel\` is one of \`${availableChannels}\`
+  - \`editions\` is a comma-separated list of editions \`${availableEditions}\`
 - \`/suspend/<channel>\` will suspend released version.
-  - \`channel\` is one of \`alpha | beta | early-access | rock-solid | stable\`
+  - \`channel\` is one of \`${availableChannels}\`
 - \`/e2e/run/<provider> git_ref\` will run e2e using provider and an \`install\` image built from git_ref.
-  - \`provider\` is one of \`aws | azure | gcp | yandex-cloud | openstack | vsphere | static\`
+  - \`provider\` is one of \`${availableProviders}\`
   - \`git_ref\` is a tag or branch: \`vX.Y.Z | test-X.Y.Z* | main | release-X.Y\`
 - \`/e2e/use/cri/<cri_name>\` specifies which CRI to use for e2e test.
-  - \`cri_name\` is one of \`docker | containerd\`
+  - \`cri_name\` is one of \`${availableCRI}\`
 - \`/e2e/use/k8s/<version>\` specifies which Kubernetes version to use for e2e test.
-  - \`version\` is one of \`1.19 | 1.20 | 1.21 | 1.22\`
-- \`/build git_ref\` will run build.
-  - \`git_ref\` is a tag or branch: \`vX.Y.Z | test-X.Y.Z* | main | release-X.Y\`
+  - \`version\` is one of \`${availableKubernetesVersions}\`
+- \`/build git_ref\` will run build for release related refs.
+  - \`git_ref\` is a tag or branch: \`vX.Y.Z | test-vX.Y.Z* | main | release-X.Y\`
 
 
 **Note 1:**
@@ -978,7 +1018,7 @@ const findMilestoneForGitRef = async ({ github, context, core, gitRefInfo }) => 
   const query = `
     query($owner:String!, $name:String!) {
       repository(owner:$owner, name:$name){
-        milestones(first:25, orderBy:{field:CREATED_AT, direction:DESC}, states:[OPEN]) {
+        milestones(first:100, orderBy:{field:CREATED_AT, direction:DESC}, states:[OPEN]) {
           edges {
             node {
               title
@@ -1013,7 +1053,7 @@ const findMilestoneForGitRef = async ({ github, context, core, gitRefInfo }) => 
   if (gitRefInfo.isMain) {
     // Get first milestone with appropriate title. It should be the latest milestone.
     for (const m of milestones) {
-      if (/^v\d+\.\d+\.\d+/.test(m.node.title)) {
+      if (matchReleaseTag(m.node.title)) {
         milestone = m.node;
         break;
       }
@@ -1142,7 +1182,7 @@ const startWorkflow = async ({ github, context, core, workflow_id, ref, inputs }
  * @returns {Promise<void>}
  */
 module.exports.runBuildForRelease = async ({ github, context, core }) => {
-  const gitRefInfo = getGitRefInfo(context.ref);
+  const gitRefInfo = parseGitRef(context.ref);
 
   // Run workflow without commenting on release issue.
   if (gitRefInfo.isDeveloperTag) {
@@ -1185,68 +1225,3 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
 
   return core.setFailed(`Git ref '${context.ref}' is not an auto-build tag or main branch. Ignore running build-and-test_release workflow.`);
 };
-
-/**
- * Parse the Git ref.
- *
- * @param {string} ref — A Git ref (refs/heads/* or refs/tags/*)
- * @returns {object}
- */
-const getGitRefInfo = (ref) => {
-  let branchName = '';
-  let tagName = '';
-  let version = '';
-  let majorMinor = '';
-  let description = '';
-  let isDeveloperTag = false;
-
-  if (ref.startsWith('refs/heads')) {
-    branchName = ref.replace('refs/heads/', '');
-    if (branchName === 'main') {
-      description = 'default branch';
-    }
-
-    const found = branchName.match(/^release-v?(\d+\.\d+)/);
-    if (found) {
-      description = 'release branch';
-      majorMinor = 'v'+found[1];
-    }
-  } else if (ref.startsWith('refs/tags/')) {
-    tagName = ref.replace('refs/tags/', '');
-
-    let found = tagName.match(/^((v[0-9]+\.[0-9]+\.)[0-9]+)$/);
-    if (found) {
-      version = found[1]; // vX.Y.Z
-      majorMinor = found[2]; // vX.Y.
-      description = 'release tag';
-    }
-
-    // test-v1.32.1-0 to test before pushing a "real" tag.
-    found = tagName.match(/^(test-v?([0-9]+\.[0-9]+\.)[0-9]+)/);
-    if (found) {
-      version = 'v'+found[1]; // vX.Y.Z
-      majorMinor = 'v'+found[2]; // vX.Y.
-      description = 'test tag';
-    }
-
-    // dev-my-feature or pr-255-test.0
-    if (/^(dev-|pr-)/.test(tagName)) {
-      isDeveloperTag = true;
-      description = 'developer tag';
-    }
-  }
-
-  return {
-    description,
-    branchName,
-    branchMajorMinor: branchName ? majorMinor : '',
-    isBranch: !!branchName,
-    isMain: branchName === 'main',
-    isReleaseBranch: branchName.startsWith('release-') && !!majorMinor,
-    tagName,
-    tagVersion: tagName ? version : '',
-    tagMajorMinor: tagName ? majorMinor : '',
-    isTag: !!tagName,
-    isDeveloperTag,
-  };
-}

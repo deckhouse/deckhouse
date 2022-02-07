@@ -112,7 +112,7 @@ check_e2e_labels:
 {!{-     $cri := $criName | toLower -}!}
 {!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower }!}
     {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
-{!{-   end -}!}
+{!{- end -}!}
 {!{- end }!}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
