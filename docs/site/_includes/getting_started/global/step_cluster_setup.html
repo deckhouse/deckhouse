@@ -15,10 +15,10 @@
     <span class="info invalid-message invalid-message-example-com">Please don't use the <code>example.com</code> domain name.</span>
     <span class="info">
       This template is used for system apps domains within the cluster, e.g., Grafana for <code>%s.domain.my</code> will be available as <code>grafana.domain.my</code>.<br />
-      This tutorial assumes the use of a public domain directed to a public cluster address.
-      This is necessary to obtain <a href="https://letsencrypt.org/">Let's Encrypt</a> certificates for Deckhouse services.
-      If using existing certificates (including Self-Signed), you need to change the <a href="/en/documentation/v1/deckhouse-configure-global.html#parameters">global settings</a> in the <code>modules.https</code> section.<br />
-      Если у вас нет возможности завести wildcard-записи DNS, для тестирования вы можете воспользоваться, например, сервисом <a href="https://nip.io/">nip.io</a> или аналогами.
+      This tutorial assumes the use of a public domain pointing to a public cluster address.
+      It is necessary to obtain <a href="https://letsencrypt.org/">Let's Encrypt</a> certificates for Deckhouse services.
+      If the existing certificates (including Self-Signed ones) are used, you need to change the <a href="/en/documentation/v1/deckhouse-configure-global.html#parameters">global settings</a> in the <code>modules.https</code> section.<br />
+      We recommend using the <a href="https://nip.io/">nip.io</a> service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
     </span>
   </div>
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
@@ -32,7 +32,7 @@
       name="prefix" placeholder="cloud-demo"
       autocomplete="off" />
       <span class="info">
-       This prefix is used for names of cluster objects created by Deckhouse (virtual machines, networks, security policies, etc.).
+       This prefix is used for naming cluster objects created by Deckhouse (virtual machines, networks, security policies, etc.).
     </span>
 </div>
   <div class="form__row">
@@ -55,7 +55,7 @@
 <!-- include getting_started/aws/STEP_PREP_CONF_RU.md -->
 ## Select layout
 
-Layout — the way how resources are located in the cloud. There are several pre-defined layouts.
+Layout is the way how resources are located in the cloud. There are several pre-defined layouts.
 
 <div class="tabs">
 {% for layout in site.data.getting_started.data.installTypes[page.platform_code].layouts %}
@@ -75,7 +75,7 @@ Layout — the way how resources are located in the cloud. There are several pre
 
 ## Select preset
 
-Preset — the structure of nodes in the cluster. There are several pre-defined presets.
+Preset is the structure of nodes in the cluster. There are several pre-defined presets.
 
 <div class="tabs">
 {% for preset in site.data.getting_started.data.presets %}
