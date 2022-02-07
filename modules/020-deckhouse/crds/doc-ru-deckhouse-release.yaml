@@ -41,10 +41,6 @@ spec:
           jsonPath: .status.phase
           type: string
           description: 'Показывает текущий статус релиза.'
-        - name: applyAfter
-          jsonPath: .spec.applyAfter
-          type: string
-          description: 'Релиз отложен до указанного времени.'
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

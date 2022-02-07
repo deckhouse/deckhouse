@@ -361,6 +361,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 		deckhousePod := snap[0].(deckhousePodInfo)
 		if !deckhousePod.Ready {
 			input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
+			updateStatusMsg(input, predictedRelease, "Waiting for Deckhouse pod to be ready.")
 			return
 		}
 	}
@@ -369,6 +370,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if predictedRelease.ApplyAfter != nil {
 		if du.now.Before(*predictedRelease.ApplyAfter) {
 			input.LogEntry.Infof("Release %s is postponed by canary process. Waiting", predictedRelease.Name)
+			updateStatusMsg(input, predictedRelease, fmt.Sprintf("Waiting for canary apply time: %s.", predictedRelease.ApplyAfter.Format(time.RFC822)))
 			return
 		}
 	}
@@ -377,6 +379,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if !predictedRelease.StatusApproved && !du.PredictedReleaseIsPatch() {
 		input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
 		input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup("d8_releases"))
+		updateStatusMsg(input, predictedRelease, "Waiting for manual approval.")
 		return
 	}
 
@@ -686,6 +689,14 @@ func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, r
 	}
 
 	return true
+}
+
+func updateStatusMsg(input *go_hook.HookInput, release *deckhouseRelease, msg string) {
+	st := statusPatch{
+		Message:  msg,
+		Approved: release.StatusApproved,
+	}
+	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
 }
 
 type byVersion []deckhouseRelease
