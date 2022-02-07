@@ -5,7 +5,7 @@ If you see this alert, it's probably because someone uses stale kubeconfig on ci
 
 To find who it is and where stale kubeconfig is located, you need to search in a kube-apiserver logs.
 ```
-kubectl -n kube-system logs -l component=kube-apiserver --tail=-1 --timestamps | grep "expire"
+kubectl -n kube-system logs -l component=kube-apiserver --tail=-1 --timestamps -c kube-apiserver | grep "expire"
 ```
   {{- else }}
 You need to use `kubeadm` to check control plane certificates.
