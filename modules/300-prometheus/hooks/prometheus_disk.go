@@ -241,12 +241,10 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-
-
 	for _, prom := range input.Snapshots["proms"] {
 		promName := prom.(PromFilter).Name
 
-		promNameForPath := strings.ToUpper(string(promName[0]))+promName[1:]
+		promNameForPath := strings.ToUpper(string(promName[0])) + promName[1:]
 
 		var diskSize int64  // GiB
 		var retention int64 // GiB
@@ -271,7 +269,6 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 			retention = diskSize * 8 / 10
 		}
 
-
 		diskSizePath := fmt.Sprintf("prometheus.internal.prometheus%s.diskSizeGigabytes", promNameForPath)
 		retentionPath := fmt.Sprintf("prometheus.internal.prometheus%s.retentionGigabytes", promNameForPath)
 
@@ -282,7 +279,6 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 
 	return nil
 }
-
 
 func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName string) (diskSize int64) {
 	var allowVolumeExpansion bool
@@ -313,7 +309,6 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 	var fsSize int64 // GiB
 	var fsUsed int   // %
 
-	// TODO max
 	pods := input.Snapshots["pods"]
 	for _, obj := range pods {
 		pod := obj.(PodFilter)
@@ -339,6 +334,7 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 
 		if newDiskSize <= diskResizeLimit {
 			diskSize = newDiskSize
+
 			patch := map[string]interface{}{
 				"spec": map[string]interface{}{
 					"resources": map[string]interface{}{
@@ -358,7 +354,7 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 
 		}
 	}
-	return 0
+	return
 }
 
 func isVolumeExpansionAllowed(input *go_hook.HookInput, scName string) bool {
@@ -448,5 +444,3 @@ func execToPodThroughAPI(dc dependency.Container, command, containerName, podNam
 
 	return stdout.String(), stderr.String(), nil
 }
-
-
