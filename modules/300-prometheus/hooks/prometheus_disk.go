@@ -221,6 +221,7 @@ func applyPromFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
+	input.LogEntry.Debugf("StorageClasses: %v", input.Snapshots["scs"])
 	podDeletionFlag := false
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaimFilter)
@@ -361,7 +362,6 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 
 func isVolumeExpansionAllowed(input *go_hook.HookInput, scName string) bool {
 	scs := input.Snapshots["scs"]
-	input.LogEntry.Debugf("StorageClasses: %v", scs)
 	for _, obj := range scs {
 		sc := obj.(StorageClassFilter)
 		if scName == sc.Name {
