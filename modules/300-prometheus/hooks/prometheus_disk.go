@@ -44,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "main",
-			Crontab: "*/15 * * * *",
+			Crontab: "*/10 * * * *",
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -251,14 +251,13 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 
 		if !snapshotsHas(input, "pvcs") {
 			effectiveStorageClass := input.Values.Get(fmt.Sprintf("prometheus.internal.prometheus%s.effectiveStorageClass", promNameForPath)).String()
-			// TODO
 			input.LogEntry.Infof("prometheus.internal.prometheus%s.effectiveStorageClass: %s", promNameForPath, effectiveStorageClass)
 			if effectiveStorageClass != "false" && isVolumeExpansionAllowed(input, effectiveStorageClass) {
-				diskSize = 15
-				retention = 10
+				diskSize = 25
+				retention = 22
 			} else {
 				diskSize = 30
-				retention = 25
+				retention = 27
 			}
 		} else {
 			newDiskSize := calcDiskSize(input, dc, promName)
@@ -266,7 +265,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 				diskSize = newDiskSize
 			}
 
-			retention = diskSize * 8 / 10
+			retention = diskSize * 9 / 10 // 90%
 		}
 
 		diskSizePath := fmt.Sprintf("prometheus.internal.prometheus%s.diskSizeGigabytes", promNameForPath)
@@ -329,7 +328,7 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 		diskSize = fsSize
 	}
 
-	if allowVolumeExpansion && fsUsed > 77 {
+	if allowVolumeExpansion && fsUsed > 80 {
 		newDiskSize := diskSize + 5
 
 		if newDiskSize <= diskResizeLimit {
