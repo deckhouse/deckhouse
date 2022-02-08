@@ -52,7 +52,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "scs",
 			ApiVersion: "storage.k8s.io/v1",
 			Kind:       "Storageclass",
-			FilterFunc: applyStorageclassFilter,
+			FilterFunc: applyStorageClassFilter,
 		},
 		{
 			Name:       "pvcs",
@@ -110,7 +110,7 @@ type StorageClassFilter struct {
 	AllowVolumeExpansion bool
 }
 
-func applyStorageclassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sc = &storagev1.StorageClass{}
 	err := sdk.FromUnstructured(obj, sc)
 	if err != nil {
@@ -329,6 +329,7 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 		diskSize = fsSize
 	}
 
+	input.LogEntry.Debugf("%s, allowVolumeExpansion: %t, fsUsed: %d", promName, allowVolumeExpansion, fsUsed)
 	if allowVolumeExpansion && fsUsed > 80 {
 		newDiskSize := diskSize + 5
 
@@ -348,6 +349,7 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 			for _, obj := range input.Snapshots["pvcs"] {
 				pvc := obj.(PersistentVolumeClaimFilter)
 				if pvc.PromName == promName {
+					input.LogEntry.Infof("PersistentVolumeClaim %s size will be changed from %dGB to %dGB", pvc.Name, pvc.RequestsStorage, diskSize)
 					input.PatchCollector.MergePatch(patch, "v1", "PersistentVolumeClaim", "d8-monitoring", pvc.Name)
 				}
 			}
