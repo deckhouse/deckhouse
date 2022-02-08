@@ -215,7 +215,7 @@ func applyPromFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	return PodFilter{
+	return PromFilter{
 		Name: prom.Name,
 	}, nil
 }
@@ -241,29 +241,21 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	isVolumeExpansionAllowed := func(scName string) bool {
-		scs := input.Snapshots["scs"]
-		for _, obj := range scs {
-			sc := obj.(StorageClassFilter)
-			if scName == sc.Name {
-				return sc.AllowVolumeExpansion
-			}
-		}
-		return false
-	}
 
-	proms := input.Snapshots["proms"]
-	for _, prom := range proms {
+
+	for _, prom := range input.Snapshots["proms"] {
 		promName := prom.(PromFilter).Name
+
+		promNameForPath := strings.ToUpper(string(promName[0]))+promName[1:]
 
 		var diskSize int64  // GiB
 		var retention int64 // GiB
 
-		if len(input.Snapshots["pvcs"]) == 0 {
-			effectiveStorageClass := input.Values.Get(fmt.Sprintf("prometheus.internal.prometheus%s.effectiveStorageClass", promName)).String()
+		if !snapshotsHas(input, "pvcs") {
+			effectiveStorageClass := input.Values.Get(fmt.Sprintf("prometheus.internal.prometheus%s.effectiveStorageClass", promNameForPath)).String()
 			// TODO
-			input.LogEntry.Infof("prometheus.internal.prometheus%s.effectiveStorageClass: %s", promName, effectiveStorageClass)
-			if effectiveStorageClass != "false" && isVolumeExpansionAllowed(effectiveStorageClass) {
+			input.LogEntry.Infof("prometheus.internal.prometheus%s.effectiveStorageClass: %s", promNameForPath, effectiveStorageClass)
+			if effectiveStorageClass != "false" && isVolumeExpansionAllowed(input, effectiveStorageClass) {
 				diskSize = 15
 				retention = 10
 			} else {
@@ -271,91 +263,17 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 				retention = 25
 			}
 		} else {
-			var fsSize int64 // GiB
-			var fsUsed int   // %
-
-			var allowVolumeExpansion bool
-
-			diskResizeLimit := input.ConfigValues.Get(fmt.Sprintf("prometheus.%sMaxDiskSizeGigabytes", promName)).Int()
-
-			// find maximum PVC size
-			pvcs := input.Snapshots["pvcs"]
-			for _, obj := range pvcs {
-				pvc := obj.(PersistentVolumeClaimFilter)
-
-				if pvc.PromName != promName {
-					continue
-				}
-
-				if diskSize == 0 {
-					diskSize = pvc.RequestsStorage
-					continue
-				}
-
-				if diskSize < pvc.RequestsStorage {
-					diskSize = pvc.RequestsStorage
-				}
-
-				allowVolumeExpansion = isVolumeExpansionAllowed(pvc.StorageClass)
+			newDiskSize := calcDiskSize(input, dc, promName)
+			if newDiskSize != 0 {
+				diskSize = newDiskSize
 			}
 
-			// TODO max
-			pods := input.Snapshots["pods"]
-			for _, obj := range pods {
-				pod := obj.(PodFilter)
-				if pod.PromName == promName && pod.PodScheduled && pod.ContainerReady {
-					containerName := "prometheus"
-					command := "df -PBG /prometheus/"
-					output, _, err := execToPodThroughAPI(dc, command, containerName, pod.Name, pod.Namespace)
-					if err != nil {
-						input.LogEntry.Warnf("%s: %s", pod.Name, err.Error())
-					} else {
-						for _, s := range strings.Split(output, "\n") {
-							if strings.Contains(s, "prometheus") {
-								fsSize, _ = strconv.ParseInt(strings.Fields(s)[1], 10, 64)
-								fsUsed, _ = strconv.Atoi(strings.Trim(strings.Fields(s)[4], "%"))
-								break
-							}
-						}
-					}
-				}
-			}
-
-			if diskSize < fsSize {
-				diskSize = fsSize
-			}
-
-			if allowVolumeExpansion && fsUsed > 77 {
-				newDiskSize := diskSize + 5
-
-				if newDiskSize <= diskResizeLimit {
-					diskSize = newDiskSize
-					patch := map[string]interface{}{
-						"spec": map[string]interface{}{
-							"resources": map[string]interface{}{
-								"requests": map[string]string{
-									"storage": fmt.Sprintf("%sGi", strconv.FormatInt(diskSize, 64)),
-								},
-							},
-						},
-					}
-
-					for _, obj := range input.Snapshots["pvcs"] {
-						pvc := obj.(PersistentVolumeClaimFilter)
-						if pvc.PromName == promName {
-							input.PatchCollector.MergePatch(patch, "v1", "PersistentVolumeClaim", "d8-monitoring", pvc.Name)
-						}
-					}
-
-				}
-			}
+			retention = diskSize * 8 / 10
 		}
 
-		// TODO
-		retention = diskSize * 8 / 10
 
-		diskSizePath := fmt.Sprintf("prometheus.internal.prometheus%s.diskSizeGigabytes", promName)
-		retentionPath := fmt.Sprintf("prometheus.internal.prometheus%s.retentionGigabytes", promName)
+		diskSizePath := fmt.Sprintf("prometheus.internal.prometheus%s.diskSizeGigabytes", promNameForPath)
+		retentionPath := fmt.Sprintf("prometheus.internal.prometheus%s.retentionGigabytes", promNameForPath)
 
 		input.Values.Set(diskSizePath, diskSize)
 		input.Values.Set(retentionPath, retention)
@@ -363,6 +281,122 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
+}
+
+
+func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName string) (diskSize int64) {
+	var allowVolumeExpansion bool
+
+	diskResizeLimit := input.ConfigValues.Get(fmt.Sprintf("prometheus.%sMaxDiskSizeGigabytes", promName)).Int()
+
+	// find maximum PVC size
+	pvcs := input.Snapshots["pvcs"]
+	for _, obj := range pvcs {
+		pvc := obj.(PersistentVolumeClaimFilter)
+
+		if pvc.PromName != promName {
+			continue
+		}
+
+		if diskSize == 0 {
+			diskSize = pvc.RequestsStorage
+			continue
+		}
+
+		if diskSize < pvc.RequestsStorage {
+			diskSize = pvc.RequestsStorage
+		}
+
+		allowVolumeExpansion = isVolumeExpansionAllowed(input, pvc.StorageClass)
+	}
+
+	var fsSize int64 // GiB
+	var fsUsed int   // %
+
+	// TODO max
+	pods := input.Snapshots["pods"]
+	for _, obj := range pods {
+		pod := obj.(PodFilter)
+		if pod.PromName == promName && pod.PodScheduled && pod.ContainerReady {
+			newFsSize, newFsUsed := getFsSizeAndUsed(input, dc, pod)
+
+			if newFsSize > fsSize {
+				fsSize = newFsSize
+			}
+
+			if newFsUsed > fsUsed {
+				fsUsed = newFsUsed
+			}
+		}
+	}
+
+	if diskSize < fsSize {
+		diskSize = fsSize
+	}
+
+	if allowVolumeExpansion && fsUsed > 77 {
+		newDiskSize := diskSize + 5
+
+		if newDiskSize <= diskResizeLimit {
+			diskSize = newDiskSize
+			patch := map[string]interface{}{
+				"spec": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"requests": map[string]string{
+							"storage": fmt.Sprintf("%sGi", strconv.FormatInt(diskSize, 64)),
+						},
+					},
+				},
+			}
+
+			for _, obj := range input.Snapshots["pvcs"] {
+				pvc := obj.(PersistentVolumeClaimFilter)
+				if pvc.PromName == promName {
+					input.PatchCollector.MergePatch(patch, "v1", "PersistentVolumeClaim", "d8-monitoring", pvc.Name)
+				}
+			}
+
+		}
+	}
+	return 0
+}
+
+func isVolumeExpansionAllowed(input *go_hook.HookInput, scName string) bool {
+	scs := input.Snapshots["scs"]
+	for _, obj := range scs {
+		sc := obj.(StorageClassFilter)
+		if scName == sc.Name {
+			return sc.AllowVolumeExpansion
+		}
+	}
+	return false
+}
+
+func snapshotsHas(input *go_hook.HookInput, snapshotName string) bool {
+	for name, _ := range input.Snapshots {
+		if name == snapshotName {
+			return true
+		}
+	}
+	return false
+}
+
+func getFsSizeAndUsed(input *go_hook.HookInput, dc dependency.Container, pod PodFilter) (fsSize int64, fsUsed int) {
+	containerName := "prometheus"
+	command := "df -PBG /prometheus/"
+	output, _, err := execToPodThroughAPI(dc, command, containerName, pod.Name, pod.Namespace)
+	if err != nil {
+		input.LogEntry.Warnf("%s: %s", pod.Name, err.Error())
+	} else {
+		for _, s := range strings.Split(output, "\n") {
+			if strings.Contains(s, "prometheus") {
+				fsSize, _ = strconv.ParseInt(strings.Fields(s)[1], 10, 64)
+				fsUsed, _ = strconv.Atoi(strings.Trim(strings.Fields(s)[4], "%"))
+				break
+			}
+		}
+	}
+	return
 }
 
 func execToPodThroughAPI(dc dependency.Container, command, containerName, podName, namespace string) (string, string, error) {
@@ -414,3 +448,5 @@ func execToPodThroughAPI(dc dependency.Container, command, containerName, podNam
 
 	return stdout.String(), stderr.String(), nil
 }
+
+
