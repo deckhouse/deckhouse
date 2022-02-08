@@ -62,11 +62,6 @@ func (u *UploadScript) WithStdoutHandler(handler func(string)) *UploadScript {
 	return u
 }
 
-func (u *UploadScript) WithStderrHandler(handler func(string)) *UploadScript {
-	u.stderrHandler = handler
-	return u
-}
-
 func (u *UploadScript) WithTimeout(timeout time.Duration) *UploadScript {
 	u.timeout = timeout
 	return u
@@ -93,19 +88,19 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	var scriptFullPath string
 	if u.sudo {
 		scriptFullPath = "/tmp/" + scriptName
-		cmd = NewCommand(u.Session, scriptName, u.Args...).Sudo()
+		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Sudo()
 	} else {
 		scriptFullPath = "./" + scriptName
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Cmd()
 	}
 
 	if u.chmod {
-		err = NewCommand(u.Session, fmt.Sprintf("chmod 755 %s", scriptFullPath), u.Args...).
+		chmodCmd := NewCommand(u.Session, fmt.Sprintf("chmod 755 %s", scriptFullPath), u.Args...).
+			Cmd().
 			WithStderrHandler(nil).
-			WithStdoutHandler(nil).
-			Run()
+			WithStdoutHandler(nil)
 
-		if err != nil {
+		if err := chmodCmd.Run(); err != nil {
 			return nil, fmt.Errorf("Cannot set execute mode for script: %v", err)
 		}
 	}
@@ -113,10 +108,6 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	scriptCmd := cmd.CaptureStdout(nil)
 	if u.stdoutHandler != nil {
 		scriptCmd = scriptCmd.WithStdoutHandler(u.stdoutHandler)
-	}
-
-	if u.stderrHandler != nil {
-		scriptCmd = scriptCmd.WithStderrHandler(u.stderrHandler)
 	}
 
 	if u.timeout > 0 {

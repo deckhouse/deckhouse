@@ -17,10 +17,8 @@ package bootstrap
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 )
@@ -52,47 +50,45 @@ func (e *PostBootstrapScriptExecutor) WithErrorIfExecutionFail(f bool) *PostBoot
 }
 
 func (e *PostBootstrapScriptExecutor) Execute() error {
-	var resultToSetState string
-	err := log.Process("bootstrap", "Execute post-bootstrap script", func() error {
+	return log.Process("bootstrap", "Execute post-bootstrap script", func() error {
 		var err error
-		resultToSetState, err = e.run()
+		resultToSetState, err := e.run()
 
-		return err
-	})
+		if err != nil {
+			msg := fmt.Sprintf("Post execution script was failed: %v", err)
+			if e.errorIfFail {
+				return errors.New(msg)
+			}
 
-	if err != nil {
-		msg := fmt.Sprintf("Post execution script was failed: %v", err)
-		if app.PostBootstrapScriptExitIfFailed {
-			return errors.New(msg)
+			log.ErrorF(msg)
+
+			return nil
 		}
 
-		log.ErrorF(msg)
+		err = e.state.SavePostBootstrapScriptResult(resultToSetState)
+		if err != nil {
+			log.ErrorF("Post bootstrap script result was not saved: %v", err)
+		}
 
 		return nil
-	}
-
-	log.InfoF("Post-bootstrap script result:%s", resultToSetState)
-
-	err = e.state.SavePostBootstrapScriptResult(resultToSetState)
-	if err != nil {
-		log.ErrorF("Post bootstrap script result was not saved: %v", err)
-	}
-
-	return nil
+	})
 }
 
 func (e *PostBootstrapScriptExecutor) run() (string, error) {
-	var stdout []string
+	//resultPattern := regexp.MustCompile("^Result of post-bootstrap script:(.+)$")
+	var result string
 	stdoutHandler := func(l string) {
-		stdout = append(stdout, l)
+		log.InfoLn(l)
+
+		//submatches := resultPattern.FindAllStringSubmatch(l, -1)
+		//fmt.Printf("%v", submatches)
+		//if len(submatches) > 0 && len(submatches[0]) > 1 {
+		//	result = submatches[0][1]
+		//}
 	}
 
-	stderrHandler := func(l string) {
-		log.InfoLn(l)
-	}
 	cmd := e.sshClient.UploadScript(e.path).
 		WithStdoutHandler(stdoutHandler).
-		WithStderrHandler(stderrHandler).
 		WithSetExecuteModeBefore(true).
 		WithTimeout(e.timeout).
 		Sudo()
@@ -102,5 +98,5 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 		return "", fmt.Errorf("run %s: %w", e.path, err)
 	}
 
-	return strings.Join(stdout, "\n"), nil
+	return result, nil
 }

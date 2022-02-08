@@ -59,9 +59,8 @@ func DefineDeckhouseFlags(cmd *kingpin.CmdClause) {
 
 func DefinePostBootstrapScriptFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("post-bootstrap-script-path", `Path to bash (or another interpreted language which installed on master node) script which will execute after bootstrap resources.
-Stderr of the script will be logged with Warning level.
-Stdout of the script will be logged with Info level with prefix 'Post-bootstrap script result:'.
-Also stdout will be wrote to state cache with key 'post-bootstrap-result' as is. It can be used in automation scripts.
+All output of the script will be logged with Info level with prefix 'Post-bootstrap script result:'.
+If you want save to state cache on key 'post-bootstrap-result' you need to out result with prefix 'Result of post-bootstrap script:' in one line.
 Experimental. This feature may be deleted in the future.`).
 		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_PATH")).
 		StringVar(&PostBootstrapScriptPath)
