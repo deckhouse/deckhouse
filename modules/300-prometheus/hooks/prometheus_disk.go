@@ -313,6 +313,7 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 		pod := obj.(PodFilter)
 		if pod.PromName == promName && pod.PodScheduled && pod.ContainerReady {
 			newFsSize, newFsUsed := getFsSizeAndUsed(input, dc, pod)
+			input.LogEntry.Debugf("%s, fsSize: %d, fsUsed: %d", pod.Name, newFsSize, newFsUsed)
 
 			if newFsSize > fsSize {
 				fsSize = newFsSize
