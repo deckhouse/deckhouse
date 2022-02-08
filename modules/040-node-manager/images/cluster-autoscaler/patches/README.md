@@ -4,6 +4,8 @@
 
 Forbid the cluster autoscaler to delete nodes if the minimal size of a NodeGroup is reached.
 
-## Scaling down
 
-There is a harmful condition that can prevent the scaling down of unhealthy machines. The patch gets rid of it.
+## Daemonset eviction
+
+Disable eviction for daemonset pods in d8-* namespaces. If you need to change this behavior add
+`"cluster-autoscaler.kubernetes.io/enable-ds-eviction": "true"` annotation for daemonset pod (not DaemonSet object!)

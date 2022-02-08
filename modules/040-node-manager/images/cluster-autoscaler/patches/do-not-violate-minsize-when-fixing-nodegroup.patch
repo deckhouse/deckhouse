@@ -1,5 +1,5 @@
 diff --git a/cluster-autoscaler/core/static_autoscaler.go b/cluster-autoscaler/core/static_autoscaler.go
-index 456ceae6a..d54c42faf 100644
+index 878936ed7..006353713 100644
 --- a/cluster-autoscaler/core/static_autoscaler.go
 +++ b/cluster-autoscaler/core/static_autoscaler.go
 @@ -568,7 +568,9 @@ func fixNodeGroupSize(context *context.AutoscalingContext, clusterStateRegistry
