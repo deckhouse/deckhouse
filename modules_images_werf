@@ -1,19 +1,21 @@
 #!/bin/bash
 
-set -o pipefail
-set -e
+set -euo pipefail
+
+# Remove after merge !!!
+export BASE_SCRATCH="registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
 
 function bp() {
   # Set env DECKHOUSE_PULL_MODULES_IMAGES_BEFORE_BUILD=true to pull every image used in modules
-  if [[  "${DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES}" == "true" ]]; then
+  if [[  "${DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES:-}" == "true" ]]; then
     pull
   fi
 
   # Always push images to "dev" repository.
-  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json
+  REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
   # Push images to "release" repository on git tag.
   if [[ -n "${GIT_TAG_NAME}" && -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-    REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
     werf build --config modules_images_werf.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO} --report-path images_tags_werf.json
   fi
 
@@ -37,7 +39,7 @@ function bp() {
 }
 
 function cleanup() {
-  werf cleanup --config modules_images_werf.yaml --without-kube
+  werf cleanup --config modules_images_werf.yaml --without-kube --dry-run
 }
 
 
@@ -67,13 +69,13 @@ EOF
 function setup_werf() {
   ci_type=$1
 
-  if [[ -n $DECKHOUSE_DEV_REGISTRY_PASSWORD ]] ; then
+  if [[ -n ${DECKHOUSE_DEV_REGISTRY_PASSWORD:-} ]] ; then
     echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
   fi
-  if [[ -n $DECKHOUSE_REGISTRY_PASSWORD ]] ; then
+  if [[ -n ${DECKHOUSE_REGISTRY_PASSWORD:-} ]] ; then
     echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
   fi
-  if [[ -n $DECKHOUSE_REGISTRY_READ_PASSWORD ]] ; then
+  if [[ -n ${DECKHOUSE_REGISTRY_READ_PASSWORD:-} ]] ; then
     echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   fi
 
@@ -101,7 +103,7 @@ function main() {
 
   ci_type=
   GIT_TAG_NAME=
-  if [[ -n $GITLAB_CI ]] ; then
+  if [[ -n ${GITLAB_CI:-} ]] ; then
     ci_type=gitlab
     export GIT_TAG_NAME=${CI_COMMIT_TAG}
   fi
