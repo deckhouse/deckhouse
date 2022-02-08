@@ -1,28 +1,28 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы и SSH-ключи доступа на **master-узлы**. Выполните на **[персональном компьютере](step2.html#процесс-установки)**:
+Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узлы**{% endif %}. Выполните на **[персональном компьютере](step2.html#процесс-установки)**:
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}
 ```text
  echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
-{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
+{% endif %}{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
 ```
 {% endsnippetcut %}
 {% else %}
 {% snippetcut %}
 ```shell
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
-{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
+{% endif %}{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
 {% endsnippetcut %}
 {% endif %}
 
 {%- if page.platform_type == "existing" %}
-Примечания:
+Примечание:
 - В kubeconfig необходимо смонтировать kubeconfig с доступом к Kubernetes API.
 {% endif %}
 
@@ -85,6 +85,15 @@ dhctl bootstrap-phase abort \
 {%- endif %}
 {%- endif %}
 
-По окончании установки произойдет возврат к командной строке.
+По окончании установки произойдёт возврат к командной строке.
 
 Почти все готово для полноценной работы Deckhouse Platform!
+
+<!-- Troubleshooting in existing cluster //-->
+{%- if page.platform_type == "existing" %}
+<h2 id="если-что-то-пошло-не-так">Если что-то пошло не так</h2>
+
+{%  include getting_started/existing/partials/TROUBLESHOOT_RU.liquid %}
+
+{% endif %}
+<!--  //-->

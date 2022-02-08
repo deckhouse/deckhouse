@@ -17,8 +17,36 @@ The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enter
 {%- if page.platform_type == 'baremetal' %}
 > The installation must be performed from a **[personal computer](step2.html#installation-process)** with SSH access to the node, the **master node** of the future cluster.
 >{% endif %}
+{%- if page.platform_type == 'existing' %}
+> We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
+>{% endif %}
 > To learn more about the Deckhouse Platform release channels, please see the [relevant documentation](/en/documentation/v1/deckhouse-release-channels.html).
 
 {% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/config.yml.{{ include.layout }}.{{ revision }}.inc" syntax="yaml" %}
 {% endsnippetcut %}
+
+{%- if page.platform_type == 'existing' %}
+{% offtopic title="Про nodeSelector, taints и tolerations..." %}
+You can control on which nodes the Deckhouse core components will run by setting  `nodeSelector`/`tolerations` in the `configOverrides.deckhouse` parameter of the installation configuration. You can also specify cluster node taints in the `configOverrides.global.modules.placement.customTolerationKeys` array so that Deckhouse can automatically add the appropriate `toleration` to its components.
+
+> Below is an example of setting `nodeSelector`/`tolerations` for the `deckhouse` module and specifying tolerations for other Deckhouse components in the `customTolerationKeys` array (do not copy this example without adapting it to your configuration as the values will be different):
+> ```yaml
+> deckhouse:
+>   configOverrides:
+>     # ...
+>     deckhouse:
+>       tolerations:
+>         - key: dedicated.deckhouse.io
+>           operator: Exists
+>     # ...
+>     global:
+>       modules:
+>         # ...
+>         placement:
+>           customTolerationKeys:
+>           - SystemLoad
+>           - app.kubernetes.io/instance
+> ```
+{% endofftopic %}
+{% endif %}

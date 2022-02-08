@@ -50,14 +50,14 @@ Point a DNS domain you specified in the "[Cluster Installation](./step3.html)" s
 <ul><li>If you have the DNS server and you can add a DNS records:
   <ul>
     <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
-      DNS</a> (e.g. - <code>%s.kube.my</code>), then add
+      DNS</a> (e.g., <code>%s.kube.my</code>), then add
       {%- if page.platform_code == 'aws' %} a corresponding wildcard CNAME record containing the hostname of load
       balancer (<code>BALANCER_HOSTNAME</code>)
       {%- else %} a corresponding wildcard A record containing the IP of load balancer (<code>BALANCER_IP</code>){%-
       endif -%}, you've discovered previously.
     </li>
     <li>If your cluster DNS name template is <strong>NOT</strong> a <a
-            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g. - <code>%s-kube.company.my</code>),
+            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>),
       then add А or CNAME records containing the IP of load balancer (<code>BALANCER_IP</code>), you've discovered
       previously, for the following Deckhouse service DNS names:
       <div class="highlight">
