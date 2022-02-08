@@ -24,14 +24,17 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
-      # Pick at most 1000 PRs with possible changes blocks
+      # Pick at most 1000 PRs with possible changes blocks;
+      # skip auto-generated PRs
       run: |
-        prs="$(gh pr list \
-          --repo '${{ github.repository }}' \
-          --search 'milestone:${{ steps.args.outputs.milestone_title }}' \
-          --state merged \
-          --limit 1000 \
-          --json number,url,title,body,state,milestone)"
+        prs=$(jq '[.[] | select(all( .labels[]; .name != "auto" )) | del(.labels) ]' <<< "$(
+          gh pr list \
+            --repo '${{ github.repository }}' \
+            --search 'milestone:${{ steps.args.outputs.milestone_title }}' \
+            --state merged \
+            --limit 1000 \
+            --json number,url,title,body,state,milestone,labels
+          )")
         echo "::set-output name=prs::${prs}"
 
     - name: Collect Changelog
