@@ -39,7 +39,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 	return base64.StdEncoding.EncodeToString([]byte(resultStr))
 }
 
-var _ = Describe("Module hooks :: control-plane-manager :: set_maxallowed", func() {
+var _ = Describe("Module hooks :: control-plane-manager :: update_cluster_kubernetes_version", func() {
 	const (
 		DeckhousePodIsReady = `
 ---
@@ -85,14 +85,17 @@ type: Opaque
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
-	Context("Deckhouse pod is not ready", func() {
+	Context("Kubernetes version from secret less than desired version, Deckhouse pod is not ready", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsNotReady))
+			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsNotReady + fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData("1.19"))))
 			f.RunHook()
 		})
 
-		It("Hook should run", func() {
+		It("Hook should run, kubernetes version should not change to desired", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+			data := secret.Field("data.cluster-configuration\\.yaml")
+			Expect(data.Str).To(Equal(d8ClusterConfigurationSecretData("1.19")))
 		})
 
 	})

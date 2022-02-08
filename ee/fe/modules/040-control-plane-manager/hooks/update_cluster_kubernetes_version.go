@@ -102,9 +102,24 @@ var (
 )
 
 func updateClusterKubernetesVersion(input *go_hook.HookInput) error {
+	var deckhousePodIsReady bool
 	// Check if Deckhouse pod is ready
 	podSnapshots := input.Snapshots["DeckhousePod"]
 	if len(podSnapshots) == 0 {
+		return nil
+	}
+
+	for _, podSnapshot := range podSnapshots {
+		if podSnapshot == nil {
+			continue
+		}
+		deckhousePodIsReady = podSnapshot.(bool)
+		if deckhousePodIsReady {
+			break
+		}
+	}
+
+	if !deckhousePodIsReady {
 		input.LogEntry.Info("deckhouse pod is not ready, skipping")
 		return nil
 	}
