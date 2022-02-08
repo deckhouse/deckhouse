@@ -331,7 +331,7 @@ ansible:
     command: go get github.com/go-delve/delve/cmd/dlv
 
   - raw: rm -rf /var/cache/apk/*
-    -
+
   install:
   - name: "Download go modules"
     command: go mod download
