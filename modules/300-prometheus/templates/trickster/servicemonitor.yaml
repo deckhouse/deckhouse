@@ -12,15 +12,9 @@ spec:
   endpoints:
   - port: https
     scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
-      cert:
-        secret:
-          name: prometheus-scraper-tls
-          key: tls.crt
-      keySecret:
-        name: prometheus-scraper-tls
-        key: tls.key
     honorLabels: true
     relabelings:
     - targetLabel: tier

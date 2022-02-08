@@ -10,15 +10,9 @@ spec:
   endpoints:
   - port: https-metrics
     scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
-      cert:
-        secret:
-          name: prometheus-scraper-tls
-          key: tls.crt
-      keySecret:
-        name: prometheus-scraper-tls
-        key: tls.key
     honorLabels: true
     relabelings:
     - regex: endpoint|namespace|pod|service
@@ -31,15 +25,9 @@ spec:
       replacement: cluster
   - port: https-metrics
     scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
-      cert:
-        secret:
-          name: prometheus-scraper-tls
-          key: tls.crt
-      keySecret:
-        name: prometheus-scraper-tls
-        key: tls.key
     path: /metrics/cadvisor
     honorLabels: true
     relabelings:
@@ -65,15 +53,9 @@ spec:
       action: labeldrop
   - port: https-metrics
     scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
-      cert:
-        secret:
-          name: prometheus-scraper-tls
-          key: tls.crt
-      keySecret:
-        name: prometheus-scraper-tls
-        key: tls.key
     path: /metrics/probes
     honorLabels: true
     relabelings:

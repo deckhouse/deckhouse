@@ -59,6 +59,12 @@ func ObjectBindingSubjectServiceAccountCheck(m utils.Module, object storage.Stor
 		if subject.Kind != "ServiceAccount" {
 			continue
 		}
+
+		// Prometheus service account has bindings across modules to scrape metrics.
+		if subject.Name == "prometheus" && subject.Namespace == "d8-monitoring" {
+			continue
+		}
+
 		if subject.Namespace == m.Namespace && !objectStore.Exists(storage.ResourceIndex{
 			Name: subject.Name, Kind: subject.Kind, Namespace: subject.Namespace,
 		}) {

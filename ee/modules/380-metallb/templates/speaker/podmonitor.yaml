@@ -11,15 +11,11 @@ spec:
   podMetricsEndpoints:
     - port: https-metrics
       scheme: https
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
       tlsConfig:
         insecureSkipVerify: true
-        cert:
-          secret:
-            name: prometheus-scraper-tls
-            key: tls.crt
-        keySecret:
-          name: prometheus-scraper-tls
-          key: tls.key
       relabelings:
         - regex: endpoint
           action: labeldrop

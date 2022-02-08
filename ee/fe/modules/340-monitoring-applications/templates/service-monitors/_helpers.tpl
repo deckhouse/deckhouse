@@ -76,15 +76,9 @@ spec:
     {{- include "basic_relabeling_for_schema" (list "http" $name) | nindent 4 }}
 
   - scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
-      cert:
-        secret:
-          name: prometheus-scraper-tls
-          key: tls.crt
-      keySecret:
-        name: prometheus-scraper-tls
-        key: tls.key
     relabelings:
     {{- include "basic_relabeling_for_schema" (list "https" $name) | nindent 4 }}
 
