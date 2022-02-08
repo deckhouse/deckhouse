@@ -26,7 +26,7 @@ Here are some common problems and ways to solve them. Should you run into diffic
 {% offtopic title="There is no Ingress controller in the cluster..." %}
 The `deckhouse-web` module, which provides a web interface to the cluster documentation, requires the Ingress controller to be active in the cluster. If there is no Ingress controller in your cluster, you can use the built-in [ingress-nginx](/en/documentation/v1/modules/402-ingress-nginx/) module:
 <ul>
-<li>Enable the module:
+  <li>Enable the module using <strong>one the following</strong> options:
 <ul>
     <li>At the Deckhouse installation step, add the following to the <code>deckhouse.configOverrides</code> section of the <code>config.yml</code> file:
 {% snippetcut selector="ingress-nginx-install-enable" %}
@@ -71,7 +71,7 @@ deckhouse:
 {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
 {% endsnippetcut %}</li>
-<li><p>Apply it using the command below:</p>
+<li><p>Once Deckhouse is installed, apply the file using the command below:</p>
 {% snippetcut %}
 ```shell
 kubectl create -f ingress-nginx-controller.yml

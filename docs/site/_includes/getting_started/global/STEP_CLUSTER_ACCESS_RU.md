@@ -51,14 +51,14 @@ echo "$BALANCER_IP"
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
     <ul>
       <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
-        DNS-шаблоном</a> (например - <code>%s.kube.my</code>), то добавьте
+        DNS-шаблоном</a> (например, <code>%s.kube.my</code>), то добавьте
         {%- if page.platform_code == 'aws' %} соответствующую wildcard CNAME-запись со значением адреса балансировщика (<code>BALANCER_HOSTNAME</code>)
         {%- else %} соответствующую wildcard A-запись со значением IP-адреса балансировщика (<code>BALANCER_IP</code>){%-
         endif -%}, который вы получили выше.
       </li>
       <li>
         Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
-              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например - <code>%s-kube.company.my</code>),
+              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>),
         то добавьте А или CNAME-записи со значением IP-адреса балансировщика (<code>BALANCER_IP</code>), который вы
         получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">

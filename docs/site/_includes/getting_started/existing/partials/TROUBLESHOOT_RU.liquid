@@ -26,7 +26,7 @@
 {% offtopic title="В кластере нет Ingress-контроллера..." %}
 Для работы модуля `deckhouse-web`, предоставляющего WEB-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/ru/documentation/v1/modules/402-ingress-nginx/) следующим способом:
 <ul>
-<li>Включите модуль:
+  <li>Включите модуль <strong>одним</strong> из следующих способов:
 <ul>
     <li>На этапе установки Deckhouse добавьте в файл <code>config.yml</code> в секцию <code>deckhouse.configOverrides</code>:
 {% snippetcut selector="ingress-nginx-install-enable" %}
@@ -71,7 +71,7 @@ deckhouse:
 {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
 {% endsnippetcut %}</li>
-<li><p>Примените его, выполнив на следующую команду:</p>
+<li><p>Примените его, после установки Deckhouse, выполнив следующую команду:</p>
 {% snippetcut %}
 ```shell
 kubectl create -f ingress-nginx-controller.yml

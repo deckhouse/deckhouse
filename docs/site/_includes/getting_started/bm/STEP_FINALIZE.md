@@ -44,10 +44,10 @@ kubectl create -f user.yml
   <ul><li>Discover public IP address of the node where the Ingress controller is running.</li>
   <li>If you have the DNS server and you can add a DNS records:
   <ul>
-    <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g. - <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.
+    <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.
     </li>
     <li>If your cluster DNS name template is <strong>NOT</strong> a <a
-            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g. - <code>%s-kube.company.my</code>), then add А or CNAME records containing the public IP, you've discovered previously, for the following Deckhouse service DNS names:
+            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>), then add А or CNAME records containing the public IP, you've discovered previously, for the following Deckhouse service DNS names:
           <div class="highlight">
 <pre class="highlight">
 <code example-hosts>dashboard.example.com
