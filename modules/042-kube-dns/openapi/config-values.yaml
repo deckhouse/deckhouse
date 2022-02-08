@@ -24,12 +24,18 @@ properties:
           type: string
           pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}$'
   stubZones:
+    x-examples:
+    -
+      - zone: example.com
+        upstreamNameservers: ['8.8.8.8']
+        cacheTTLSeconds: 3600
     description: |
       A list of additional zones CoreDNS should be authoritative for.
     type: array
     default: []
     items:
       type: object
+      required: ['zone', 'upstreamNameservers']
       properties:
         zone:
           description: |
@@ -38,12 +44,20 @@ properties:
           pattern: '^[0-9a-zA-Z\.-]+$'
           x-doc-example: consul.local
         upstreamNameservers:
+          mixLength: 1
           description: |
             A list of IP addresses of recursive DNS servers that CoreDNS will use to resolve domains in this zone.
           type: array
           items:
             type: string
             pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}(:[0-9]{1,})?$'
+        cacheTTLSeconds:
+          type: integer
+          default: 30
+          minimum: 1
+          maximum: 3600
+          description: |
+            Max TTL in seconds for NOERROR responses.
   enableLogs:
     description: |
       Enable CoreDNS logging.
