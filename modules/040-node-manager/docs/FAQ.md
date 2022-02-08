@@ -100,7 +100,7 @@ This is only needed if you have to move a static node from one cluster to anothe
    systemctl start containerd
    systemctl list-units --full --all | grep -q docker.service && systemctl start docker
    ```
-1. [Run](#how-do-i-automatically-add-a-static-node-to-a-cluster) the `bootstrap.sh` script.
+1. [Run](#how-do-i-add-a-static-node-to-a-cluster) the `bootstrap.sh` script.
 1. Turn on all the services:
    ```shell
    systemctl start kubelet.service

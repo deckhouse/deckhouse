@@ -99,7 +99,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<group_name>-
    systemctl start containerd
    systemctl list-units --full --all | grep -q docker.service && systemctl start docker
    ```
-1. [Запустить](#как-автоматически-добавить-статичный-узел-в-кластер) скрипт `bootstrap.sh`.
+1. [Запустить](#как-добавить-статичный-узел-в-кластер) скрипт `bootstrap.sh`.
 1. Включить все сервисы обратно:
    ```shell
    systemctl start kubelet.service
