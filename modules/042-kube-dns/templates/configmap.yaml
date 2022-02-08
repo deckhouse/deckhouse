@@ -41,7 +41,7 @@ data:
     {{- end }}
     {{ $zone.zone }} {
         errors
-        cache 30
+        cache {{ $zone.cacheSeconds | default "30" }}
         loop
         reload
         loadbalance

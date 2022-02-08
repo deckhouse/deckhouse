@@ -12,6 +12,11 @@ positive:
       - zone: consul.local
         upstreamNameservers:
         - 10.150.0.1
+    - stubZones:
+      - zone: consul.local
+        upstreamNameservers:
+          - 10.150.0.1
+        cacheTTLSeconds: 40
     - enableLogs: true
     - clusterDomainAliases:
       - foo.bar
@@ -37,6 +42,21 @@ negative:
     - enableLogs: 1
     - clusterDomainAliases:
       - foo?.bar
+    - stubZones:
+      - zone: consul.local:53
+        upstreamNameservers:
+        - 10.10.0.1
+        cacheTTLSeconds: 3800
+    - stubZones:
+      - zone: consul.local:53
+        upstreamNameservers:
+          - 10.10.0.1
+        cacheTTLSeconds: "abc"
+    - stubZones:
+      - zone: consul.local:53
+        upstreamNameservers: []
+    - stubZones:
+      - zone: consul.local:53
   values:
     - internal:
         enablePodAntiAffinity: 1
