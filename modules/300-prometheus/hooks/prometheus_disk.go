@@ -244,7 +244,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 	for _, prom := range input.Snapshots["proms"] {
 		promName := prom.(PromFilter).Name
 
-		promNameForPath := strings.ToUpper(string(promName[0])) + promName[1:]
+		promNameForPath := strings.ToUpper(promName[0:1]) + promName[1:]
 
 		var diskSize int64  // GiB
 		var retention int64 // GiB
@@ -361,6 +361,7 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 
 func isVolumeExpansionAllowed(input *go_hook.HookInput, scName string) bool {
 	scs := input.Snapshots["scs"]
+	input.LogEntry.Debugf("StorageClasses: %v", scs)
 	for _, obj := range scs {
 		sc := obj.(StorageClassFilter)
 		if scName == sc.Name {
