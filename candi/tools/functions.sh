@@ -36,7 +36,7 @@ function check_yq() {
       return 1
     fi
 
-    if [[ "$(yq --version | cut -d" " -f 3 | awk -F "." '{print $1}')" != "4" ]]; then
+    if ! yq --version | grep -q ".*4\.[0-9]*.*"; then
       >&2 echo "ERROR: yq version should be equal 4"
       return 1
     fi
