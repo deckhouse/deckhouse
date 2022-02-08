@@ -294,6 +294,8 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 			continue
 		}
 
+		allowVolumeExpansion = isVolumeExpansionAllowed(input, pvc.StorageClass)
+
 		if diskSize == 0 {
 			diskSize = pvc.RequestsStorage
 			continue
@@ -302,8 +304,6 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 		if diskSize < pvc.RequestsStorage {
 			diskSize = pvc.RequestsStorage
 		}
-
-		allowVolumeExpansion = isVolumeExpansionAllowed(input, pvc.StorageClass)
 	}
 
 	var fsSize int64 // GiB
