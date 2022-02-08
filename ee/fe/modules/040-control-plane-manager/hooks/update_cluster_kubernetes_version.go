@@ -64,7 +64,7 @@ var (
 			{
 				Name:                   "DeckhousePod",
 				WaitForSynchronization: pointer.BoolPtr(false),
-				ExecuteHookOnEvents:    pointer.BoolPtr(false),
+				ExecuteHookOnEvents:    pointer.BoolPtr(true),
 				ApiVersion:             "v1",
 				Kind:                   "Pod",
 				LabelSelector: &metav1.LabelSelector{
