@@ -396,7 +396,7 @@ git:
       - go_lib/**/*.go
       - modules/**/*.go
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
-{{ .Files.Get (printf "tools/build_includes/candi-providers-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 - artifact: libjq
   add: /libjq
@@ -597,7 +597,7 @@ git:
   to: /deckhouse
   includePaths:
   - candi
-{{ .Files.Get (printf "tools/build_includes/candi-providers-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 - artifact: dhctl
   add: /dhctl/bin/dhctl
