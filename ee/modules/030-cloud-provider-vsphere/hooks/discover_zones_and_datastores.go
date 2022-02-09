@@ -35,13 +35,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 }, dependency.WithExternalDependencies(doDiscover))
 
-func filter(arr []vsphere.ZonedDataStore, cond func(vsphere.ZonedDataStore) bool) (result []vsphere.ZonedDataStore) {
-	for i := range arr {
-		if cond(arr[i]) {
-			result = append(result, arr[i])
+func filter(arr []vsphere.ZonedDataStore, cond func(vsphere.ZonedDataStore) bool) []vsphere.ZonedDataStore {
+	result := arr[:0]
+	for _, x := range arr {
+		if cond(x) {
+	  		result = append(result, x)
 		}
 	}
-	return
+	return result
 }
 
 func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {

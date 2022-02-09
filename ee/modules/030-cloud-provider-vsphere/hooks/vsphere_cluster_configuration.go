@@ -20,7 +20,7 @@ import (
 
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
 
-	p := map[string]json.RawMessage{}
+	p := make(map[string]json.RawMessage)
 	if metaCfg != nil {
 		p = metaCfg.ProviderClusterConfig
 	}
