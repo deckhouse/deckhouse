@@ -99,17 +99,36 @@
     }
     &__actions {}
 
-    &__certificate {
+    &__certificate--block {
         position: absolute;
         left: 0;
         bottom: 220px;
-        display: flex;
-        align-items: center;
         width: fit-content;
         box-sizing: border-box;
+        z-index: 10;
+    }
+
+    &__certificate {
+        display: flex;
+        align-items: center;
         border: 2px solid $color-alt;
         border-left: none;
-        z-index: 10;
+
+        &--link {
+          text-decoration: none;
+        
+          &:hover {
+            & .product-intro__certificate {
+              background: #02003E;
+              border: 2px solid #02003E;
+              border-left: none;
+            }
+
+            & .product-intro__certificate--text {
+              color: #FFF;
+            }
+          }
+        }
 
         &--pic {
             height: 62px;
