@@ -40,6 +40,10 @@ docs:
   features:
     - description: Add documentation on using Harbor as a third-party registry.
       pull_request: https://github.com/deckhouse/deckhouse/pull/565
+docs,control-plane-manager:
+  fixes:
+    - description: Add instruction on how to add master nodes in a cloud cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/463
 documentation:
   features:
     - description: Redesign CR and configuration page
@@ -47,8 +51,6 @@ documentation:
   fixes:
     - description: Show examples from OpenAPI specs (module configuration and CR page) as YAML.
       pull_request: https://github.com/deckhouse/deckhouse/pull/617
-    - description: '[docs][control-plane-manager] Add instruction on how to add master nodes in a cloud cluster'
-      pull_request: https://github.com/deckhouse/deckhouse/pull/463
 istio:
   features:
     - description: Great module refactoring
