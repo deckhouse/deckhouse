@@ -188,6 +188,7 @@ metadata:
 # ===========
 # provisioner
 # ===========
+# Source https://github.com/kubernetes-csi/external-provisioner/blob/master/deploy/kubernetes/rbac.yaml
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -201,6 +202,9 @@ rules:
 - apiGroups: [""]
   resources: ["persistentvolumeclaims"]
   verbs: ["get", "list", "watch", "update"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
 - apiGroups: ["storage.k8s.io"]
   resources: ["storageclasses"]
   verbs: ["get", "list", "watch"]
@@ -218,9 +222,6 @@ rules:
   verbs: ["get", "list", "watch"]
 - apiGroups: [""]
   resources: ["nodes"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["secrets"]
   verbs: ["get", "list", "watch"]
 # Access to volumeattachments is only needed when the CSI driver
 # has the PUBLISH_UNPUBLISH_VOLUME controller capability.
@@ -293,6 +294,7 @@ roleRef:
 # ========
 # attacher
 # ========
+# Source https://github.com/kubernetes-csi/external-attacher/blob/master/deploy/kubernetes/rbac.yaml
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -356,6 +358,7 @@ roleRef:
 # =======
 # resizer
 # =======
+# Source https://github.com/kubernetes-csi/external-resizer/blob/master/deploy/kubernetes/rbac.yaml
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -417,5 +420,71 @@ subjects:
 roleRef:
   kind: Role
   name: csi:controller:external-resizer
+  apiGroup: rbac.authorization.k8s.io
+# ========
+# snapshotter
+# ========
+# Source https://github.com/kubernetes-csi/external-snapshotter/blob/master/deploy/kubernetes/csi-snapshotter/rbac-csi-snapshotter.yaml
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:csi:controller:external-snapshotter
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+- apiGroups: ["snapshot.storage.k8s.io"]
+  resources: ["volumesnapshotclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["snapshot.storage.k8s.io"]
+  resources: ["volumesnapshotcontents"]
+  verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
+- apiGroups: ["snapshot.storage.k8s.io"]
+  resources: ["volumesnapshotcontents/status"]
+  verbs: ["update", "patch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:csi:controller:external-snapshotter
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: csi
+  namespace: d8-{{ .Chart.Name }}
+roleRef:
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:csi:controller:external-snapshotter
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi:controller:external-snapshotter
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
+rules:
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "watch", "list", "delete", "update", "create"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi:controller:external-snapshotter
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: csi
+  namespace: d8-{{ .Chart.Name }}
+roleRef:
+  kind: Role
+  name: csi:controller:external-snapshotter
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
