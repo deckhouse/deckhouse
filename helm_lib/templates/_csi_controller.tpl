@@ -109,9 +109,7 @@ spec:
         - "--csi-address=/csi/csi.sock"
   {{- if $topologyEnabled }}
         - "--feature-gates=Topology=true"
-    {{- if not (eq $context.Chart.Name "linstor") }}
         - "--strict-topology"
-    {{- end }}
   {{- else }}
         - "--feature-gates=Topology=false"
   {{- end }}
@@ -123,9 +121,6 @@ spec:
   {{- if semverCompare ">= 1.21" $context.Values.global.discovery.kubernetesVersion }}
         - "--enable-capacity"
         - "--capacity-ownerref-level=2"
-  {{- end }}
-  {{- if eq $context.Chart.Name "linstor" }}
-        - "--extra-create-metadata"
   {{- end }}
         - "--worker-threads={{ $provisionerWorkers }}"
         volumeMounts:
@@ -157,9 +152,6 @@ spec:
         - "--timeout={{ $resizerTimeout }}"
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
-  {{- if eq $context.Chart.Name "linstor" }}
-        - "--handle-volume-inuse-error=false"
-  {{- end }}
         - "--leader-election=true"
         - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
         - "--workers={{ $resizerWorkers }}"
