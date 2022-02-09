@@ -307,6 +307,10 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		data[key] = t
 	}
 
+	if data["kubernetesVersion"] == "Automatic" {
+		data["kubernetesVersion"] = DefaultKubernetesVersion
+	}
+
 	result := make(map[string]interface{})
 	for key, value := range m.VersionMap {
 		result[key] = value
@@ -353,6 +357,10 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 			return nil, fmt.Errorf("cluster config unmarshal: %v", err)
 		}
 		data[key] = t
+	}
+
+	if data["kubernetesVersion"] == "Automatic" {
+		data["kubernetesVersion"] = DefaultKubernetesVersion
 	}
 
 	clusterBootstrap := map[string]interface{}{
