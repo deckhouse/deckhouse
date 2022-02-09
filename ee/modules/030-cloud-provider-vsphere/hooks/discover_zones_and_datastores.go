@@ -47,7 +47,7 @@ func filter(arr []vsphere.ZonedDataStore, cond func(vsphere.ZonedDataStore) bool
 func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 	configJSON, ok := input.Values.GetOk("cloudProviderVsphere.internal.providerClusterConfiguration")
 	if !ok {
-		return fmt.Errorf("no providerClusterConfiguration present, skipping discovery")
+		return fmt.Errorf("no providerClusterConfiguration present, discovery is not possible")
 	}
 
 	var c v1.VsphereProviderClusterConfiguration
