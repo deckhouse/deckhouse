@@ -1,18 +1,16 @@
-# Based on https://github.com/dexidp/dex/blob/v2.30.0/Dockerfile
+# Based on https://github.com/dexidp/dex/blob/v2.31.0/Dockerfile
 ARG BASE_GOLANG_16_ALPINE
 ARG BASE_ALPINE
 FROM $BASE_GOLANG_16_ALPINE as artifact
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
 WORKDIR /dex
-COPY patches/client-groups.patch patches/concurrent.patch patches/static-user-groups.patch patches/bitbucket-teams.patch /
-RUN wget https://github.com/dexidp/dex/archive/v2.30.0.tar.gz -O - | tar -xz --strip-components=1 \
+COPY patches/client-groups.patch patches/static-user-groups.patch /
+RUN wget https://github.com/dexidp/dex/archive/v2.31.0.tar.gz -O - | tar -xz --strip-components=1 \
   && git apply /client-groups.patch \
-  && git apply /concurrent.patch \
-  && git apply /static-user-groups.patch \
-  && git apply /bitbucket-teams.patch
+  && git apply /static-user-groups.patch
 RUN go build ./cmd/dex
 
-FROM ghcr.io/dexidp/dex@sha256:63fc6ee14bcf1868ebfba90885aec76597e0f27bc8e89d1fd238b1f2ee3dea6e as dex
+FROM ghcr.io/dexidp/dex@sha256:104e0ba05220915de6e5d122895658e671bd8a252dbb550d4d10b8245f691ad4 as dex
 
 FROM $BASE_ALPINE
 RUN apk add --no-cache --update ca-certificates openssl
@@ -25,13 +23,9 @@ COPY --from=dex /etc/dex/config.docker.yaml /etc/dex/
 COPY --from=dex /usr/local/src/dex/go.mod /usr/local/src/dex/go.sum /usr/local/src/dex/
 COPY --from=dex /usr/local/src/dex/api/v2/go.mod /usr/local/src/dex/api/v2/go.sum /usr/local/src/dex/api/v2/
 
-COPY --from=dex /usr/local/bin/gomplate /usr/local/bin/
-COPY --from=dex /entrypoint.sh /
-
 COPY --from=artifact /dex/dex /usr/local/bin/
 COPY --from=artifact /dex/web /web
 
 USER 1001:1001
 
-ENTRYPOINT ["/entrypoint.sh"]
 CMD ["dex", "serve", "/etc/dex/config.docker.yaml"]
