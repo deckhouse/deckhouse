@@ -23,12 +23,12 @@ var (
 	}
 )
 
-type VolumeAttachment struct {
+type volumeAttachment struct {
 	Name    string
 	Message string
 }
 
-func ApplyVolumeAttachmentFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyVolumeAttachmentFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	va := &storagev1.VolumeAttachment{}
 	err := sdk.FromUnstructured(obj, va)
 	if err != nil {
@@ -39,7 +39,7 @@ func ApplyVolumeAttachmentFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	if va.Status.DetachError != nil {
 		message = va.Status.DetachError.Message
 	}
-	return VolumeAttachment{Name: va.Name, Message: message}, nil
+	return volumeAttachment{Name: va.Name, Message: message}, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "finalizers",
 			ApiVersion:                   "storage.k8s.io/v1",
 			Kind:                         "VolumeAttachment",
-			FilterFunc:                   ApplyVolumeAttachmentFilter,
+			FilterFunc:                   applyVolumeAttachmentFilter,
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 		},
 	},
@@ -63,7 +63,7 @@ func handleVolumeAttachments(input *go_hook.HookInput) error {
 	}
 
 	for _, s := range snap {
-		va := s.(VolumeAttachment)
+		va := s.(volumeAttachment)
 		if va.Message != "rpc error: code = Unknown desc = No VM found" {
 			continue
 		}

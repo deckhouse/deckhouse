@@ -36,10 +36,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(doDiscover))
 
 func filter(arr []vsphere.ZonedDataStore, cond func(vsphere.ZonedDataStore) bool) []vsphere.ZonedDataStore {
-	result := arr[:0]
+	var result []vsphere.ZonedDataStore
 	for _, x := range arr {
 		if cond(x) {
-	  		result = append(result, x)
+			result = append(result, x)
 		}
 	}
 	return result
@@ -90,13 +90,17 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 		for _, e := range exclude.Array() {
 			excludes = append(excludes, e.String())
 		}
-		r := regexp.MustCompile(`^(` + strings.Join(excludes, "|") + `)$`)
 
-		storageClasses = filter(storageClasses, func(val vsphere.ZonedDataStore) bool {
-			matched := r.MatchString(val.Name)
-			return !matched
-		})
+		if len(excludes) > 0 {
+			r := regexp.MustCompile(`^(` + strings.Join(excludes, "|") + `)$`)
+
+			storageClasses = filter(storageClasses, func(val vsphere.ZonedDataStore) bool {
+				matched := r.MatchString(val.Name)
+				return !matched
+			})
+		}
 	}
+
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 
 	if v, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.default"); ok {
