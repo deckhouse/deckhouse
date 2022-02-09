@@ -148,7 +148,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-			cinderControllerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller")
+			cinderControllerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller")
 			cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
 			cinderNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-openstack", "csi-node")
 			cinderControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "csi")
@@ -311,7 +311,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-controller-manager").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller").Exists()).To(BeFalse())
 		})
 	})
 
@@ -326,7 +326,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		It("Everything must render properly and csi controller provisioner arg must have flag feature-gates=Topology=false", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			cinderControllerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller")
+			cinderControllerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller")
 			Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
 			Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=false`))
 		})

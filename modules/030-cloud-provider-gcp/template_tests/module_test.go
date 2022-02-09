@@ -149,7 +149,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:cloud-controller-manager")
 			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-gcp", "cloud-controller-manager")
 
-			pdCSISS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-gcp", "csi-controller")
+			pdCSISS := f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "csi-controller")
 			pdCSICSIDriver := f.KubernetesGlobalResource("CSIDriver", "pd.csi.storage.gke.io")
 			pdCSIDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-gcp", "csi-node")
 			pdCSIControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-gcp", "csi")
@@ -240,7 +240,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "cloud-controller-manager").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-gcp", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "csi-controller").Exists()).To(BeFalse())
 			})
 		})
 	})
