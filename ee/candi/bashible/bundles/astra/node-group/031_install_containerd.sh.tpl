@@ -1,16 +1,5 @@
 # Copyright 2021 Flant JSC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 {{- if eq .cri "Containerd" }}
 
@@ -49,15 +38,10 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
   bb-flag-set reboot
 fi
 
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
-  {{- $debianVersion := toString $key }}
-  {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
-if bb-is-debian-version? {{ $debianVersion }} ; then
-  desired_version={{ $value.containerd.desiredVersion | quote }}
-  allowed_versions_pattern={{ $value.containerd.allowedPattern | quote }}
+if bb-is-astra-version? 2.12.+; then
+  desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | quote }}
+  allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "allowedPattern" | quote }}
 fi
-  {{- end }}
-{{- end }}
 
 if [[ -z $desired_version ]]; then
   bb-log-error "Desired version must be set"
@@ -82,13 +66,9 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-{{- $debianName := dict "9" "Stretch" "10" "Buster" "11" "Bullseye" }}
-{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
-  {{- $debianVersion := toString $key }}
-  if bb-is-debian-version? {{ $debianVersion }} ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%s%s" ($value.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $debianName $debianVersion)) }}"
+  if bb-is-astra-version? 2.12.+ ; then
+    containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
   fi
-{{- end }}
 
   crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
 
