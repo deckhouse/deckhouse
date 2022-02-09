@@ -222,6 +222,8 @@ func applyPromFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 	input.LogEntry.Debugf("StorageClasses: %v", input.Snapshots["scs"])
+
+	// checking pvc status for FileSystemResizePending or Resizing and restarting the pod if needed
 	podDeletionFlag := false
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaimFilter)
@@ -250,6 +252,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 		var diskSize int64  // GiB
 		var retention int64 // GiB
 
+		// if there is no PVC, set the default values for diskSize and retention
 		if !snapshotsHas(input, "pvcs") {
 			effectiveStorageClass := input.Values.Get(fmt.Sprintf("prometheus.internal.prometheus%s.effectiveStorageClass", promNameForPath)).String()
 			input.LogEntry.Infof("prometheus.internal.prometheus%s.effectiveStorageClass: %s", promNameForPath, effectiveStorageClass)
@@ -260,10 +263,41 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 				diskSize = 30
 				retention = 27
 			}
+		//	otherwise, we calculate diskSize and retention
 		} else {
-			newDiskSize := calcDiskSize(input, dc, promName)
-			if newDiskSize != 0 {
-				diskSize = newDiskSize
+			diskResizeLimit := int64(300)
+			maxDiskSizeConfigPath := fmt.Sprintf("prometheus.%sMaxDiskSizeGigabytes", promName)
+			if input.ConfigValues.Exists(maxDiskSizeConfigPath) {
+				diskResizeLimit = input.ConfigValues.Get(maxDiskSizeConfigPath).Int()
+			}
+
+			desiredSize := calcDesiredSize(input, dc, promName)
+
+			if desiredSize <= diskResizeLimit {
+				diskSize = desiredSize
+			}
+
+			for _, obj := range input.Snapshots["pvcs"] {
+				pvc := obj.(PersistentVolumeClaimFilter)
+				if pvc.PromName == promName {
+					if pvc.RequestsStorage < diskSize {
+						patch := map[string]interface{}{
+							"spec": map[string]interface{}{
+								"resources": map[string]interface{}{
+									"requests": map[string]string{
+										"storage": fmt.Sprintf("%sGi", strconv.FormatInt(diskSize, 10)),
+									},
+								},
+							},
+						}
+						input.LogEntry.Infof("PersistentVolumeClaim %s size will be changed from %dGB to %dGB", pvc.Name, pvc.RequestsStorage, diskSize)
+						input.PatchCollector.MergePatch(patch, "v1", "PersistentVolumeClaim", "d8-monitoring", pvc.Name)
+						continue
+					}
+					if diskSize == 0 && pvc.RequestsStorage != 0 {
+						diskSize = pvc.RequestsStorage
+					}
+				}
 			}
 
 			retention = diskSize * 9 / 10 // 90%
@@ -280,10 +314,8 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName string) (diskSize int64) {
+func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName string) (diskSize int64) {
 	var allowVolumeExpansion bool
-
-	diskResizeLimit := input.ConfigValues.Get(fmt.Sprintf("prometheus.%sMaxDiskSizeGigabytes", promName)).Int()
 
 	// find maximum PVC size
 	pvcs := input.Snapshots["pvcs"]
@@ -306,22 +338,23 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 		}
 	}
 
+
+	// find maximum filesystem size and used space
 	var fsSize int64 // GiB
 	var fsUsed int   // %
-
 	pods := input.Snapshots["pods"]
 	for _, obj := range pods {
 		pod := obj.(PodFilter)
 		if pod.PromName == promName && pod.PodScheduled && pod.ContainerReady {
-			newFsSize, newFsUsed := getFsSizeAndUsed(input, dc, pod)
-			input.LogEntry.Debugf("%s, fsSize: %d, fsUsed: %d", pod.Name, newFsSize, newFsUsed)
+			podFsSize, podFsUsed := getFsSizeAndUsed(input, dc, pod)
+			input.LogEntry.Debugf("%s, fsSize: %d, fsUsed: %d", pod.Name, podFsSize, podFsUsed)
 
-			if newFsSize > fsSize {
-				fsSize = newFsSize
+			if podFsSize > fsSize {
+				fsSize = podFsSize
 			}
 
-			if newFsUsed > fsUsed {
-				fsUsed = newFsUsed
+			if podFsUsed > fsUsed {
+				fsUsed = podFsUsed
 			}
 		}
 	}
@@ -331,32 +364,11 @@ func calcDiskSize(input *go_hook.HookInput, dc dependency.Container, promName st
 	}
 
 	input.LogEntry.Debugf("%s, allowVolumeExpansion: %t, fsUsed: %d", promName, allowVolumeExpansion, fsUsed)
+
 	if allowVolumeExpansion && fsUsed > 80 {
-		newDiskSize := diskSize + 5
-
-		if newDiskSize <= diskResizeLimit {
-			diskSize = newDiskSize
-
-			patch := map[string]interface{}{
-				"spec": map[string]interface{}{
-					"resources": map[string]interface{}{
-						"requests": map[string]string{
-							"storage": fmt.Sprintf("%sGi", strconv.FormatInt(diskSize, 64)),
-						},
-					},
-				},
-			}
-
-			for _, obj := range input.Snapshots["pvcs"] {
-				pvc := obj.(PersistentVolumeClaimFilter)
-				if pvc.PromName == promName {
-					input.LogEntry.Infof("PersistentVolumeClaim %s size will be changed from %dGB to %dGB", pvc.Name, pvc.RequestsStorage, diskSize)
-					input.PatchCollector.MergePatch(patch, "v1", "PersistentVolumeClaim", "d8-monitoring", pvc.Name)
-				}
-			}
-
-		}
+		diskSize += 5
 	}
+
 	return
 }
 
