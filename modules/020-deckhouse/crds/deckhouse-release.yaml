@@ -29,7 +29,7 @@ spec:
               type: boolean
               default: false
               description: |
-                Flag for the manual deployment readiness.
+                Allows or disables manual updates.
 
                 Ignored if the module's update mode is set to `Auto` (`update.mode: Auto`).
             spec:
