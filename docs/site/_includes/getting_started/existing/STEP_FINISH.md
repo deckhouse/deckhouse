@@ -11,8 +11,7 @@ Now that you have installed and properly configured Deckhouse, let's look at wha
 
 The in-cluster documentation is available at [deckhouse.example.com](https://deckhouse.example.com)
 
-Access to the documentation is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](.
-./../documentation/v1/modules/150-user-authn/) module:
+Access to the documentation is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](../../documentation/v1/modules/150-user-authn/) module:
 - Login — `admin`
 - Password — generated automatically. It can be found in the `deckhouse` ConfigMap in the configuration section of the `deckhouse-web` module. Use the following command to get it:
   ```bash
@@ -86,8 +85,7 @@ Deploying your first application
 Setting up a CI/CD system
 </h3>
 <div class="cards-item__text" markdown="1">
-[Create](/en/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-and-granting-it-access)
-a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
+[Create](/en/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
 
 You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
 </div>
