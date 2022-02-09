@@ -4,7 +4,7 @@ title: "Managing control plane: FAQ"
 
 ## How do I add a master node?
 ### Static or hybrid cluster
-Adding a master node to a static or hybrid cluster has no difference from adding a regular node to a cluster. To do this, use the corresponding [instruction](../040-node-manager/faq.html#how-do-i-automatically-add-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in Ready status.
+Adding a master node to a static or hybrid cluster has no difference from adding a regular node to a cluster. To do this, use the corresponding [instruction](../040-node-manager/faq.html#how-do-i-add-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in Ready status.
 
 ### Cloud cluster
 > Make sure you have all the necessary quota limits, before adding nodes.
