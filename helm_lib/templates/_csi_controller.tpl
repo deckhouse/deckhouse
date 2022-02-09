@@ -8,6 +8,11 @@
   {{- $provisionerTimeout := $config.provisionerTimeout | default "600s" }}
   {{- $attacherTimeout := $config.attacherTimeout | default "600s" }}
   {{- $resizerTimeout := $config.resizerTimeout | default "600s" }}
+  {{- $snapshotterTimeout := $config.snapshotterTimeout | default "600s" }}
+  {{- $provisionerWorkers := $config.provisionerWorkers | default "10" }}
+  {{- $attacherWorkers := $config.attacherWorkers | default "10" }}
+  {{- $resizerWorkers := $config.resizerWorkers | default "10" }}
+  {{- $snapshotterWorkers := $config.snapshotterWorkers | default "10" }}
   {{- $topologyEnabled := true }}
   {{- if hasKey $config "topologyEnabled" }}
     {{- $topologyEnabled = $config.topologyEnabled }}
@@ -31,6 +36,14 @@
   {{- $resizerImageTag := index $context.Values.global.modulesImages.tags.common $resizerImageName }}
   {{- $resizerImage := printf "%s:%s" $context.Values.global.modulesImages.registry $resizerImageTag }}
 
+  {{- $snapshotterImageName := join "" (list "csiExternalSnapshotter" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
+  {{- $snapshotterImageTag := index $context.Values.global.modulesImages.tags.common $snapshotterImageName }}
+  {{- $snapshotterImage := printf "%s:%s" $context.Values.global.modulesImages.registry $snapshotterImageTag }}
+
+  {{- $livenessprobeImageName := join "" (list "csiLivenessprobe" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
+  {{- $livenessprobeImageTag := index $context.Values.global.modulesImages.tags.common $livenessprobeImageName }}
+  {{- $livenessprobeImage := printf "%s:%s" $context.Values.global.modulesImages.registry $livenessprobeImageTag }}
+
   {{- if $provisionerImageTag }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -43,7 +56,7 @@ metadata:
 spec:
   targetRef:
     apiVersion: "apps/v1"
-    kind: StatefulSet
+    kind: Deployment
     name: {{ $fullname }}
   updatePolicy:
     updateMode: "Auto"
@@ -61,7 +74,7 @@ spec:
     matchLabels:
       app: {{ $fullname }}
 ---
-kind: StatefulSet
+kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: {{ $fullname }}
@@ -72,7 +85,6 @@ spec:
   selector:
     matchLabels:
       app: {{ $fullname }}
-  serviceName: ""
   template:
     metadata:
       labels:
@@ -97,13 +109,25 @@ spec:
         - "--csi-address=/csi/csi.sock"
   {{- if $topologyEnabled }}
         - "--feature-gates=Topology=true"
+    {{- if not (eq $context.Chart.Name "linstor") }}
         - "--strict-topology"
+    {{- end }}
   {{- else }}
         - "--feature-gates=Topology=false"
   {{- end }}
   {{- if semverCompare ">= 1.19" $context.Values.global.discovery.kubernetesVersion }}
         - "--default-fstype=ext4"
   {{- end }}
+        - "--leader-election=true"
+        - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
+  {{- if semverCompare ">= 1.21" $context.Values.global.discovery.kubernetesVersion }}
+        - "--enable-capacity"
+        - "--capacity-ownerref-level=2"
+  {{- end }}
+  {{- if eq $context.Chart.Name "linstor" }}
+        - "--extra-create-metadata"
+  {{- end }}
+        - "--worker-threads={{ $provisionerWorkers }}"
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
@@ -117,6 +141,9 @@ spec:
         - "--timeout={{ $attacherTimeout }}"
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
+        - "--leader-election=true"
+        - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
+        - "--worker-threads={{ $attacherWorkers }}"
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
@@ -129,6 +156,39 @@ spec:
         args:
         - "--timeout={{ $resizerTimeout }}"
         - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+  {{- if eq $context.Chart.Name "linstor" }}
+        - "--handle-volume-inuse-error=false"
+  {{- end }}
+        - "--leader-election=true"
+        - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
+        - "--workers={{ $resizerWorkers }}"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+      - name: snapshotter
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ $snapshotterImage | quote }}
+        args:
+        - "--timeout={{ $snapshotterTimeout }}"
+        - "--v=5"
+        - "--csi-address=/csi/csi.sock"
+        - "--leader-election=true"
+        - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
+        - "--worker-threads={{ $snapshotterWorkers }}"
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+      - name: livenessprobe
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ $livenessprobeImage | quote }}
+        args:
         - "--csi-address=/csi/csi.sock"
         volumeMounts:
         - name: socket-dir
@@ -147,6 +207,10 @@ spec:
         env:
         {{- $additionalControllerEnvs | toYaml | nindent 8 }}
     {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9808
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
