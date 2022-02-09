@@ -52,6 +52,7 @@ spec:
         {{- if eq .Values.extendedMonitoring.events.severityLevel "OnlyWarnings" }}
         - "-kube.field-selector=type!=Normal"
         {{- end }}
+        - "-kube.omit-events-messages"
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
