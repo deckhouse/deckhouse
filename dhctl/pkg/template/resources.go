@@ -32,8 +32,13 @@ type KubernetesResourceVersion struct {
 	Kind       string `json:"kind"`
 }
 
+type Resource struct {
+	GVK    schema.GroupVersionKind
+	Object unstructured.Unstructured
+}
+
 type Resources struct {
-	Items map[schema.GroupVersionKind]unstructured.UnstructuredList
+	Items []*Resource
 }
 
 func ParseResources(path string, data map[string]interface{}) (*Resources, error) {
@@ -65,7 +70,6 @@ func ParseResources(path string, data map[string]interface{}) (*Resources, error
 	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
 
 	resources := Resources{}
-	resources.Items = make(map[schema.GroupVersionKind]unstructured.UnstructuredList)
 	for _, doc := range docs {
 		doc = strings.TrimSpace(doc)
 		if doc == "" {
@@ -80,13 +84,10 @@ func ParseResources(path string, data map[string]interface{}) (*Resources, error
 
 		gvk := schema.FromAPIVersionAndKind(kubernetesResource.GetAPIVersion(), kubernetesResource.GetKind())
 
-		list, ok := resources.Items[gvk]
-		if !ok {
-			list = unstructured.UnstructuredList{}
-		}
-
-		list.Items = append(list.Items, kubernetesResource)
-		resources.Items[gvk] = list
+		resources.Items = append(resources.Items, &Resource{
+			GVK:    gvk,
+			Object: kubernetesResource,
+		})
 	}
 
 	return &resources, nil

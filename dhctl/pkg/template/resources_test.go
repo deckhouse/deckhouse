@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	nsKind = schema.GroupVersionKind{Version: "v1", Kind: "Namespace"}
 	cmKind = schema.GroupVersionKind{Version: "v1", Kind: "ConfigMap"}
 )
 
@@ -37,31 +36,30 @@ func fromUnstructured(unstructuredObj unstructured.Unstructured, obj interface{}
 }
 
 func TestResourcesWithoutTemplateData(t *testing.T) {
-	t.Run("parse resources from multidocument without template data", func(t *testing.T) {
+	assertNs := func(t *testing.T, resources *Resources, indx int, name string) {
+		ns := v1.Namespace{}
+
+		fromUnstructured(resources.Items[indx].Object, &ns)
+		require.Equal(t, ns.Name, name)
+		require.Equal(t, resources.Items[indx].GVK, schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})
+	}
+
+	t.Run("parse resources from multidocument without template data in order", func(t *testing.T) {
 		resources, err := ParseResources("testdata/resources/without_tmp.yaml", nil)
 		require.NoError(t, err)
 
-		require.Contains(t, resources.Items, nsKind)
-		require.Len(t, resources.Items[nsKind].Items, 2)
+		require.Len(t, resources.Items, 3)
 
-		ns := v1.Namespace{}
-		fromUnstructured(resources.Items[nsKind].Items[0], &ns)
-
-		require.Equal(t, ns.Name, "test-ns")
-
-		fromUnstructured(resources.Items[nsKind].Items[1], &ns)
-		require.Equal(t, ns.Name, "another-ns")
-
-		require.Contains(t, resources.Items, cmKind)
-		require.Len(t, resources.Items[cmKind].Items, 1)
+		assertNs(t, resources, 0, "test-ns")
 
 		cm := v1.ConfigMap{}
-		fromUnstructured(resources.Items[cmKind].Items[0], &cm)
-
+		fromUnstructured(resources.Items[1].Object, &cm)
 		require.Equal(t, cm.Namespace, "test-ns")
 		require.Equal(t, cm.Name, "some-cm")
-
 		require.Contains(t, cm.Data["key"], "value")
+		require.Equal(t, resources.Items[1].GVK, cmKind)
+
+		assertNs(t, resources, 2, "another-ns")
 	})
 }
 
@@ -81,11 +79,10 @@ func TestResourcesWithTemplateData(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		require.Contains(t, resources.Items, cmKind)
-		require.Len(t, resources.Items[cmKind].Items, 1)
+		require.Len(t, resources.Items, 1)
 
 		cm := v1.ConfigMap{}
-		fromUnstructured(resources.Items[cmKind].Items[0], &cm)
+		fromUnstructured(resources.Items[0].Object, &cm)
 
 		require.Equal(t, cm.Namespace, "test-ns")
 		require.Equal(t, cm.Name, "some-cm")
@@ -93,6 +90,8 @@ func TestResourcesWithTemplateData(t *testing.T) {
 		require.Equal(t, cm.Data["key"], "value")
 		require.Equal(t, cm.Data["fromCloudDiscovery"], expectedValueFromCloudData)
 		require.Equal(t, cm.Data["sprigFuncAvailable"], "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b")
+
+		require.Equal(t, resources.Items[0].GVK, cmKind)
 	})
 }
 
