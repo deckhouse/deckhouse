@@ -47,12 +47,15 @@ spec:
                     This parameter does not change during the entire resource life.
                   example: '1001'
                   minimum: 1001
+                  x-doc-required: true
                 sshPublicKey:
                   type: string
                   description: 'Node user ssh public key.'
                   example: 'ssh-rsa AAABBB'
+                  x-doc-required: true
                 sshPublicKeys:
                   type: array
+                  x-doc-required: true
                   items:
                     type: string
                   description: 'Node user ssh public keys.'
