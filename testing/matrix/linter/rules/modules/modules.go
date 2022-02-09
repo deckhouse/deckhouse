@@ -33,7 +33,7 @@ const (
 	ChartConfigFilename  = "Chart.yaml"
 	ValuesConfigFilename = "values_matrix_test.yaml"
 
-	defaultDeckhouseModulesDir = "/deckhouse/modules"
+	defaultDeckhouseModulesDir = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/modules"
 
 	crdsDir    = "crds"
 	openapiDir = "openapi"
@@ -151,9 +151,9 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]utils.Module, error) {
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
 		possibleModulesPaths = []string{
-			"/deckhouse/modules",
-			"/deckhouse/ee/modules",
-			"/deckhouse/ee/fe/modules",
+			os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/modules",
+			os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/ee/modules",
+			os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/ee/fe/modules",
 		}
 	} else {
 		possibleModulesPaths = []string{modulesDir}

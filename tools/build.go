@@ -91,7 +91,7 @@ func writeSections(settings writeSettings) {
 	addNewFileEntry := func(file string) {
 		addEntries = append(addEntries, addEntry{
 			Add:               strings.TrimPrefix(file, workDir),
-			To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+			To:                filepath.Join(os.Getenv("DECKHOUSE_ROOT")+"/deckhouse", strings.TrimPrefix(file, prefix)),
 			ExcludePaths:      settings.ExcludePaths,
 			StageDependencies: settings.StageDependencies,
 		})

@@ -1,3 +1,4 @@
+//go:build validation
 // +build validation
 
 /*
@@ -76,7 +77,7 @@ func collectGoHooks() []string {
 		hookDirs = append(hookDirs, result...)
 	}
 
-	hookDirs = append(hookDirs, "/deckhouse/global-hooks")
+	hookDirs = append(hookDirs, os.Getenv("DECKHOUSE_ROOT")+"/deckhouse/global-hooks")
 
 	gohooks := make([]string, 0)
 

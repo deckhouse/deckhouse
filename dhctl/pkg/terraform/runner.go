@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
@@ -35,10 +36,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+var cloudProvidersDir = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi/cloud-providers/"
+
 const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
 	deckhousePlanSuffix         = "-dhctl.*.tfplan"
-	cloudProvidersDir           = "/deckhouse/candi/cloud-providers/"
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
 
 	terraformHasChangesExitCode = 2

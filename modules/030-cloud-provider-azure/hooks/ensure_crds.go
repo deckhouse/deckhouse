@@ -17,7 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"os"
+
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-azure/candi/openapi/instance_class.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook(os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/modules/030-cloud-provider-azure/candi/openapi/instance_class.yaml")

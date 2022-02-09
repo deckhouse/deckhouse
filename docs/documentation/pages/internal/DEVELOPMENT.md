@@ -621,7 +621,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/MODULE_NAME/crds/*.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook(os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/modules/MODULE_NAME/crds/*.yaml")
 ```
 
 If resources described via CRDs are used in other modules, you need to make a separate module for those CRDs.

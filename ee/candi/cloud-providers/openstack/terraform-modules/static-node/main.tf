@@ -7,7 +7,7 @@ locals {
 }
 
 module "security_groups" {
-  source = "/deckhouse/candi/cloud-providers/openstack/terraform-modules/security-groups"
+  source = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi/cloud-providers/openstack/terraform-modules/security-groups"
   security_group_names = local.security_group_names
 }
 

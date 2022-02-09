@@ -52,9 +52,9 @@ func GetAllOpenAPIDirs() ([]string, error) {
 	)
 
 	for _, possibleDir := range []string{
-		"/deckhouse/modules/*/openapi",
-		"/deckhouse/ee/modules/*/openapi",
-		"/deckhouse/ee/fe/modules/*/openapi",
+		os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/modules/*/openapi",
+		os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/ee/modules/*/openapi",
+		os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/ee/fe/modules/*/openapi",
 	} {
 		globDirs, err := filepath.Glob(possibleDir)
 		if err != nil {
@@ -64,7 +64,7 @@ func GetAllOpenAPIDirs() ([]string, error) {
 		openAPIDirs = append(openAPIDirs, globDirs...)
 	}
 
-	openAPIDirs = append(openAPIDirs, "/deckhouse/global-hooks/openapi")
+	openAPIDirs = append(openAPIDirs, os.Getenv("DECKHOUSE_ROOT")+"/deckhouse/global-hooks/openapi")
 	for _, openAPIDir := range openAPIDirs {
 		info, err := os.Stat(openAPIDir)
 		if err != nil {

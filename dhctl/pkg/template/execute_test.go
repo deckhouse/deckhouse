@@ -15,6 +15,7 @@
 package template
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -42,7 +43,7 @@ extraArgs: {}
 		t.Errorf("Loading templates error: %v", err)
 	}
 
-	_, err = RenderTemplatesDir("/deckhouse/candi/control-plane-kubeadm/", data)
+	_, err = RenderTemplatesDir(os.Getenv("DECKHOUSE_ROOT")+"/deckhouse/candi/control-plane-kubeadm/", data)
 	if err != nil {
 		t.Errorf("Rendering templates error: %v", err)
 	}

@@ -28,7 +28,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverDeckhouseEdition)
 
 func discoverDeckhouseEdition(input *go_hook.HookInput) error {
-	editionFile := "/deckhouse/edition"
+	editionFile := os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/edition"
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		editionFile = os.Getenv("D8_EDITION_TMP_FILE")
 	}

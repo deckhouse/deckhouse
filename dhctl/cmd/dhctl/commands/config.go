@@ -29,9 +29,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-const (
-	bashibleTemplateOpenAPI = "/deckhouse/candi/bashible/openapi.yaml"
-	kubeadmTemplateOpenAPI  = "/deckhouse/candi/control-plane-kubeadm/openapi.yaml"
+var (
+	bashibleTemplateOpenAPI = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi/bashible/openapi.yaml"
+	kubeadmTemplateOpenAPI  = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi/control-plane-kubeadm/openapi.yaml"
 )
 
 func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {

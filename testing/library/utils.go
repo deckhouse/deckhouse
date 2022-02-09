@@ -35,7 +35,11 @@ var tags map[string]map[string]string
 
 func init() {
 	tags = make(map[string]map[string]string)
-	for _, pattern := range []string{"/deckhouse/modules/*", "/deckhouse/ee/modules/*", "/deckhouse/ee/fe/modules/*"} {
+	for _, pattern := range []string{
+		os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/modules/*",
+		os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/ee/modules/*",
+		os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/ee/fe/modules/*",
+	} {
 		paths, err := filepath.Glob(pattern)
 		if err != nil {
 			panic(err)
@@ -108,7 +112,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	)
 
 	// 0. Get values from values-default.yaml
-	globalValuesRaw, err := ioutil.ReadFile(filepath.Join("/deckhouse", "modules", "values.yaml"))
+	globalValuesRaw, err := ioutil.ReadFile(filepath.Join(os.Getenv("DECKHOUSE_ROOT")+"/deckhouse", "modules", "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}

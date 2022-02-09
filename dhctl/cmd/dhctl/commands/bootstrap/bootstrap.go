@@ -17,6 +17,7 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/google/uuid"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -54,9 +55,9 @@ const cacheMessage = `Create cache %s:
 	If you want to continue, please delete the cache folder manually.
 `
 
-const (
-	versionMap     = "/deckhouse/candi/version_map.yml"
-	imagesTagsJSON = "/deckhouse/candi/images_tags.json"
+var (
+	versionMap     = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi/version_map.yml"
+	imagesTagsJSON = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi/images_tags.json"
 )
 
 func printBanner() {

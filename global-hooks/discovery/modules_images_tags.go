@@ -29,7 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoveryModulesImagesTags)
 
 func discoveryModulesImagesTags(input *go_hook.HookInput) error {
-	tagsFile := "/deckhouse/modules/images_tags.json"
+	tagsFile := os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/modules/images_tags.json"
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		tagsFile = os.Getenv("D8_TAGS_TMP_FILE")
 	}

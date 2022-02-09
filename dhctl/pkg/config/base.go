@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -31,8 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-const (
-	candiDir = "/deckhouse/candi"
+var (
+	candiDir = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi"
 )
 
 func numerateManifestLines(manifest []byte) string {

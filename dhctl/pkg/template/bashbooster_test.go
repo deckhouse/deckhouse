@@ -15,11 +15,12 @@
 package template
 
 import (
+	"os"
 	"testing"
 )
 
 func TestRenderBashBooster(t *testing.T) {
-	_, err := RenderBashBooster("/deckhouse/candi/bashible/bashbooster/")
+	_, err := RenderBashBooster(os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi/bashible/bashbooster/")
 	if err != nil {
 		t.Errorf("Rendering bash booster error: %v", err)
 	}

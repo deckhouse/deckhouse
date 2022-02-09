@@ -75,7 +75,7 @@ func GetAllHooks() ([]Hook, error) {
 		hookDirs = append(hookDirs, result...)
 	}
 
-	hookDirs = append(hookDirs, "/deckhouse/global-hooks")
+	hookDirs = append(hookDirs, os.Getenv("DECKHOUSE_ROOT")+"/deckhouse/global-hooks")
 
 	for _, dir := range hookDirs {
 		_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {

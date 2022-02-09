@@ -183,7 +183,7 @@ func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
 		return retry.NewSilentLoop("Get bundle", 3, 1*time.Second).Run(func() error {
 			// run detect bundle type
-			detectCmd := sshClient.UploadScript("/deckhouse/candi/bashible/detect_bundle.sh")
+			detectCmd := sshClient.UploadScript(os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi/bashible/detect_bundle.sh")
 			stdout, err := detectCmd.Execute()
 			if err != nil {
 				if ee, ok := err.(*exec.ExitError); ok {

@@ -16,6 +16,7 @@ package template
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -25,11 +26,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-const (
-	candiDir         = "/deckhouse/candi"
-	bashibleDir      = "/var/lib/bashible"
+var (
+	candiDir         = os.Getenv("DECKHOUSE_ROOT") + "/deckhouse/candi"
 	candiBashibleDir = candiDir + "/bashible"
-	stepsDir         = bashibleDir + "/bundle_steps"
+)
+
+const (
+	bashibleDir = "/var/lib/bashible"
+	stepsDir    = bashibleDir + "/bundle_steps"
 )
 
 type saveFromTo struct {
