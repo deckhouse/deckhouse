@@ -37,7 +37,7 @@ const (
 	modulesFileName            = "modules-%s.yaml"
 	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
 	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
-	cloudProvidersFileName     = "cloud-providers-%s.yaml"
+	candiFileName              = "candi-%s.yaml"
 )
 
 var workDir = cwd()
@@ -234,7 +234,7 @@ func executeEdition(edition string) {
 		})
 		writeSections(writeSettings{
 			Edition: edition,
-			SaveTo:  cloudProvidersFileName,
+			SaveTo:  candiFileName,
 		})
 		fallthrough
 	case "EE":
@@ -261,8 +261,8 @@ func executeEdition(edition string) {
 		writeSections(writeSettings{
 			Edition: edition,
 			Prefix:  "ee",
-			Dir:     "candi/cloud-providers",
-			SaveTo:  cloudProvidersFileName,
+			Dir:     "candi",
+			SaveTo:  candiFileName,
 		})
 	case "CE":
 		writeSections(writeSettings{
@@ -279,7 +279,7 @@ func executeEdition(edition string) {
 		})
 		writeSections(writeSettings{
 			Edition: edition,
-			SaveTo:  cloudProvidersFileName,
+			SaveTo:  candiFileName,
 		})
 	default:
 		log.Fatalf("Unknown Deckhouse edition %q", edition)

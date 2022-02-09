@@ -16,7 +16,7 @@ apiVersions:
         type: string
       bundle:
         type: string
-        enum: [ubuntu-lts, centos, debian]
+        enum: [ubuntu-lts, centos, debian, astra]
       kubernetesVersion:
         type: string
       cri:
@@ -75,7 +75,7 @@ apiVersions:
       bashible: &bashible
         type: object
         patternProperties:
-          "ubuntu|centos":
+          "ubuntu-lts|centos|debian|astra":
             type: object
             patternProperties:
               '^[0-9.]+$':
