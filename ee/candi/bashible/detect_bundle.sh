@@ -19,7 +19,7 @@ if [ -e /etc/os-release ]; then
       echo "debian"
       exit 0
     ;;
-    astra-2.12.*|astra-1.7.*)
+    astra-2.12.*|astra-1.7*)
       echo "astra"
       exit 0
     ;;
