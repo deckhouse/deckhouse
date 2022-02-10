@@ -68,13 +68,13 @@ metadata:
 		It("Should patch only required objects", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("DexAuthenticator", "d8-upmeter", "upmeter").Field("metadata.labels")).To(MatchJSON(`{"app.kubernetes.io/managed-by": "Helm"}`))
-			Expect(f.KubernetesResource("DexAuthenticator", "d8-upmeter", "upmeter").Field("metadata.annotations")).To(MatchJSON(`{"meta.helm.sh/release-name": "upmeter", "meta.helm.sh/release-namespace": "d8-upmeter"}`))
+			Expect(f.KubernetesResource("DexAuthenticator", "d8-upmeter", "upmeter").Field("metadata.annotations")).To(MatchJSON(`{"meta.helm.sh/release-name": "upmeter", "meta.helm.sh/release-namespace": "d8-system"}`))
 
 			Expect(f.KubernetesResource("DexAuthenticator", "test", "test").Field("metadata.labels").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("DexAuthenticator", "test", "test").Field("metadata.annotations").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("DexAuthenticator", "d8-upmeter", "status").Field("metadata.labels")).To(MatchJSON(`{"app.kubernetes.io/managed-by": "Helm"}`))
-			Expect(f.KubernetesResource("DexAuthenticator", "d8-upmeter", "status").Field("metadata.annotations")).To(MatchJSON(`{"meta.helm.sh/release-name": "upmeter", "meta.helm.sh/release-namespace": "d8-upmeter", "test": "test"}`))
+			Expect(f.KubernetesResource("DexAuthenticator", "d8-upmeter", "status").Field("metadata.annotations")).To(MatchJSON(`{"meta.helm.sh/release-name": "upmeter", "meta.helm.sh/release-namespace": "d8-system", "test": "test"}`))
 		})
 	})
 })

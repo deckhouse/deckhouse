@@ -52,7 +52,7 @@ func patchAnnotations(input *go_hook.HookInput, name, namespace, moduleName stri
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
 				"meta.helm.sh/release-name":      moduleName,
-				"meta.helm.sh/release-namespace": namespace,
+				"meta.helm.sh/release-namespace": "d8-system",
 			},
 			"labels": map[string]interface{}{
 				"app.kubernetes.io/managed-by": "Helm",
