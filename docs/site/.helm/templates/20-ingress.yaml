@@ -3,7 +3,7 @@
 {{- $_ := set . "VersionDNSNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" | replace "." "-dot-" ) }}
 {{- $host := .Values.global.url }}
 
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: main
@@ -40,9 +40,12 @@ spec:
     http:
       paths:
       - path: /
+        pathType: Prefix
         backend:
-          serviceName: backend
-          servicePort: http
+          service:
+            name: backend
+            port:
+              name: http
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
