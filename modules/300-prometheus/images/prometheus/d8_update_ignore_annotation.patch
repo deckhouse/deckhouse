@@ -1,0 +1,24 @@
+diff --git a/rules/manager.go b/rules/manager.go
+index 837a0741f..a3684df5c 100644
+--- a/rules/manager.go
++++ b/rules/manager.go
+@@ -15,6 +15,7 @@ package rules
+ 
+ import (
+ 	"context"
++	"fmt"
+ 	html_template "html/template"
+ 	"math"
+ 	"net/url"
+@@ -1054,6 +1055,11 @@ func (m *Manager) LoadGroups(
+ 
+ 			rules := make([]Rule, 0, len(rg.Rules))
+ 			for _, r := range rg.Rules {
++
++				if v, ok := r.Annotations["d8_ignore_on_update"]; ok && v == "true" {
++					r.Expr.Value = fmt.Sprintf("(%s) * (max(d8_is_updating) != 1)", r.Expr.Value)
++				}
++
+ 				expr, err := m.opts.GroupLoader.Parse(r.Expr.Value)
+ 				if err != nil {
+ 					return nil, []error{errors.Wrap(err, fn)}

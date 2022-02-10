@@ -88,6 +88,11 @@ type deckhousePodInfo struct {
 	Ready     bool   `json:"ready"`
 }
 
+const (
+	metricReleasesGroup = "d8_releases"
+	metricUpdatingGroup = "d8_updating"
+)
+
 func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	if !input.Values.Exists("deckhouse.releaseChannel") {
 		// dev upgrade - by tag
@@ -95,11 +100,21 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	// production upgrade
-	input.MetricsCollector.Expire("d8_releases")
+	input.MetricsCollector.Expire(metricReleasesGroup)
+
+	snap := input.Snapshots["deckhouse_pod"]
+	if len(snap) == 0 {
+		input.LogEntry.Warn("Deckhouse pod does not exist. Skipping upgrade")
+		return nil
+	}
+	deckhousePod := snap[0].(deckhousePodInfo)
+	if deckhousePod.Ready {
+		input.MetricsCollector.Expire(metricUpdatingGroup)
+	}
 
 	// initialize updater
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	updater := newDeckhouseUpdater(approvalMode)
+	updater := newDeckhouseUpdater(approvalMode, deckhousePod.Ready)
 
 	// fetch releases from snapshot and patch initial statuses
 	updater.FetchAndPrepareReleases(input)
@@ -304,6 +319,8 @@ type deckhouseUpdater struct {
 	skippedPatcheIndexes        []int
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
+
+	deckhousePodIsReady bool
 }
 type deckhouseRelease struct {
 	Name    string
@@ -320,7 +337,7 @@ type deckhouseRelease struct {
 	Phase          string
 }
 
-func newDeckhouseUpdater(mode string) *deckhouseUpdater {
+func newDeckhouseUpdater(mode string, podIsReady bool) *deckhouseUpdater {
 	return &deckhouseUpdater{
 		now:                         time.Now().UTC(),
 		inManualMode:                mode == "Manual",
@@ -328,6 +345,7 @@ func newDeckhouseUpdater(mode string) *deckhouseUpdater {
 		currentDeployedReleaseIndex: -1,
 		forcedReleaseIndex:          -1,
 		skippedPatcheIndexes:        make([]int, 0),
+		deckhousePodIsReady:         podIsReady,
 	}
 }
 
@@ -353,13 +371,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	// upgrade only when current release is ready.
 	// skip it for patches.
 	if !du.PredictedReleaseIsPatch() {
-		snap := input.Snapshots["deckhouse_pod"]
-		if len(snap) == 0 {
-			input.LogEntry.Warn("Deckhouse pod does not exist. Skipping upgrade")
-			return
-		}
-		deckhousePod := snap[0].(deckhousePodInfo)
-		if !deckhousePod.Ready {
+		if !du.deckhousePodIsReady {
 			input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
 			updateStatusMsg(input, predictedRelease, "Waiting for Deckhouse pod to be ready.")
 			return
@@ -378,7 +390,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	// check: release is approved or it's a patch
 	if !predictedRelease.StatusApproved && !du.PredictedReleaseIsPatch() {
 		input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
-		input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup("d8_releases"))
+		input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
 		updateStatusMsg(input, predictedRelease, "Waiting for manual approval.")
 		return
 	}
@@ -386,7 +398,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	// check: release requirements
 	passed := du.checkReleaseRequirements(input, predictedRelease)
 	if !passed {
-		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name}, metrics.WithGroup("d8_releases"))
+		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
 		input.LogEntry.Warningf("Release %s requirements are not met", predictedRelease.Name)
 		return
 	}
@@ -407,6 +419,7 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 		TransitionTime: du.now,
 	}
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", predictedRelease.Name, object_patch.WithSubresource("/status"))
+	input.MetricsCollector.Set("d8_is_updating", 1, map[string]string{"version": predictedRelease.Version.String()}, metrics.WithGroup(metricUpdatingGroup))
 	// patch deckhouse deployment is faster then set internal values and then upgrade by helm
 	// we can set "deckhouse.internal.currentReleaseImageName" value but lets left it this way
 	input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {

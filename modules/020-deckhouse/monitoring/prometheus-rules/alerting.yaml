@@ -1,5 +1,20 @@
 - name: d8.deckhouse.image
   rules:
+  - alert: D8DeckhouseIsNotOnReleaseChannelTest
+    expr: max(d8_deckhouse_is_not_on_release_channel) > 0
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      d8_ignore_on_update: "true"
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      description: |
+        Test alert.
+      summary: |
+        Test me.
   - alert: D8DeckhouseIsNotOnReleaseChannel
     expr: max(d8_deckhouse_is_not_on_release_channel) > 0
     labels:
