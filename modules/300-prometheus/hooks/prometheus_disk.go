@@ -233,6 +233,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 				pod := pObj.(PodFilter)
 				if podName == pod.Name && pod.PodScheduled {
 					input.LogEntry.Infof("PersistentVolumeClaim %s in FileSystemResizePending state, deletion pod %s to complete resize", pvc.Name, podName)
+					// "300-prometheus/hooks/prometheus_disk.go Module hook failed, requeue task to retry after delay. Failed count is 1. Error: 1 error occurred:\n\t* Delete object v1/Pod/d8-monitoring/prometheus-main-0: timed out waiting for the condition\n\n"
 					input.PatchCollector.Delete("v1", "Pod", "d8-monitoring", podName)
 					podDeletionFlag = true
 				}
@@ -252,6 +253,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 		var diskSize int64  // GiB
 		var retention int64 // GiB
 
+		// TODO: check for each prom
 		// if there is no PVC, set the default values for diskSize and retention
 		if !snapshotsHas(input, "pvcs") {
 			effectiveStorageClass := input.Values.Get(fmt.Sprintf("prometheus.internal.prometheus%s.effectiveStorageClass", promNameForPath)).String()
@@ -303,9 +305,13 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 			retention = diskSize * 9 / 10 // 90%
 		}
 
+
+
 		diskSizePath := fmt.Sprintf("prometheus.internal.prometheus%s.diskSizeGigabytes", promNameForPath)
 		retentionPath := fmt.Sprintf("prometheus.internal.prometheus%s.retentionGigabytes", promNameForPath)
 
+		input.LogEntry.Debugf("diskSizePath: %s, diskSize: %d", diskSizePath, diskSize)
+		
 		input.Values.Set(diskSizePath, diskSize)
 		input.Values.Set(retentionPath, retention)
 
