@@ -15,7 +15,10 @@
 package terraform
 
 import (
+	"os"
+	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -25,30 +28,43 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+func newTestRunner() *Runner {
+	return NewRunner("test-provider", "test-prefix", "test-layout", "test-step", &cache.DummyCache{})
+}
+
 func TestCheckPlanDestructiveChanges(t *testing.T) {
 	tests := []struct {
 		name        string
-		path        string
+		plan        string
 		destructive bool
 		err         error
 	}{
-		/*{
-			name:        "No Changes",
-			path:        "./mock/no_changes.tfplan",
+		{
+			name:        "Empty Changes",
+			plan:        "./mocks/checkplan/empty.json",
 			destructive: false,
 			err:         nil,
 		},
 		{
-			name:        "Has changes",
-			path:        "./mock/has_changes.tfplan",
+			name:        "Has destructive changes",
+			plan:        "./mocks/checkplan/destructively_changed.json",
 			destructive: true,
 			err:         nil,
-		},*/
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			code, err := checkPlanDestructiveChanges(tc.path)
+			data, err := os.ReadFile(tc.plan)
+			require.NoError(t, err)
+
+			executor := &fakeExecutor{data: map[string]fakeResponse{
+				"show": {code: 0, resp: data},
+			}}
+
+			runner := newTestRunner().withTerraformExecutor(executor)
+
+			code, err := runner.checkPlanDestructiveChanges("")
 			if tc.err != nil {
 				require.EqualError(t, err, tc.err.Error())
 			} else {
@@ -154,4 +170,43 @@ func TestCheckRunnerHandleChanges(t *testing.T) {
 			}
 		})
 	}
+}
+
+type sleepExecutor struct {
+	cancelCh chan struct{}
+}
+
+func (s *sleepExecutor) Output(_ ...string) ([]byte, error) {
+	return nil, nil
+}
+func (s *sleepExecutor) Exec(_ ...string) (int, error) {
+	ticker := time.NewTicker(time.Second)
+loop:
+	for {
+		select {
+		case <-ticker.C:
+			continue
+		case <-s.cancelCh:
+			break loop
+		}
+	}
+	return 0, nil
+}
+
+func (s *sleepExecutor) Stop() { close(s.cancelCh) }
+
+func TestConcurrentExec(t *testing.T) {
+	exec := sleepExecutor{cancelCh: make(chan struct{})}
+	defer exec.Stop()
+
+	runner := newTestRunner().withTerraformExecutor(&exec)
+
+	go func() {
+		_, _ = runner.execTerraform()
+	}()
+
+	runtime.Gosched()
+	_, err := runner.execTerraform()
+
+	require.Equal(t, "Terraform have been already executed.", err.Error())
 }
