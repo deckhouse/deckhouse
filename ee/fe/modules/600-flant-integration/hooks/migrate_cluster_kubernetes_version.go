@@ -44,8 +44,7 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 
 var (
 	_ = sdk.RegisterFunc(&go_hook.HookConfig{
-		OnStartup: &go_hook.OrderedConfig{Order: 20},
-		Queue:     "/modules/flant-integration",
+		Queue: "/modules/flant-integration",
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
 				Name:       "clusterConfiguration",
@@ -68,7 +67,7 @@ var (
 func migrateClusterKubernetesVersion(input *go_hook.HookInput) error {
 	currentConfig, ok := input.Snapshots["clusterConfiguration"]
 	if !ok || len(currentConfig) == 0 {
-		input.LogEntry.Info(`cannot find kube-system/d8-cluster-configuration secret, or cannot find "cluster-configuration.yaml" in data, skipping`)
+		input.LogEntry.Info(`cannot find kube-system/d8-cluster-configuration secret, skipping`)
 		return nil
 	}
 
