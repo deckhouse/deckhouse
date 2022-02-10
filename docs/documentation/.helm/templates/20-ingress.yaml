@@ -3,7 +3,7 @@
 {{- $_ := set . "VersionDNSNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" | replace "." "-dot-" ) }}
 {{- $host := .Values.global.url }}
 
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
@@ -35,10 +35,16 @@ spec:
     http:
       paths:
       - path: /ru/documentation/{{ .VersionURLNormalized }}
+        pathType: Prefix
         backend:
-          serviceName: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
-          servicePort: http
+          service:
+            name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
+            port:
+              name: http
       - path: /en/documentation/{{ .VersionURLNormalized }}
+        pathType: Prefix
         backend:
-          serviceName: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
-          servicePort: http
+          service:
+            name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
+            port:
+              name: http
