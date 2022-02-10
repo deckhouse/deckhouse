@@ -38,7 +38,7 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
   bb-flag-set reboot
 fi
 
-if bb-is-astra-version? 2.12.+; then
+if bb-is-astra-version? 2.12.+ || bb-is-astra-version? 1.7.+; then
   desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | quote }}
   allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "allowedPattern" | quote }}
 fi
@@ -66,7 +66,7 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-  if bb-is-astra-version? 2.12.+ ; then
+  if bb-is-astra-version? 2.12.+ || bb-is-astra-version? 1.7.+ ; then
     containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
   fi
 

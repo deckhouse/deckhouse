@@ -24,7 +24,7 @@ if [ -n "$metapackages" ]; then
   bb-apt-remove $metapackages
 fi
 
-if bb-is-astra-version? 2.12.+; then
+if bb-is-astra-version? 2.12.+ || bb-is-astra-version? 1.7.+; then
   desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "kernel" "astra" "desiredVersion" | quote }}
   allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "kernel" "astra" "allowedPattern" | quote }}
 fi
