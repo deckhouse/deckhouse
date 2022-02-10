@@ -76,28 +76,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/fe/modules/600-flant-integration/hooks/migrate_cluster_kubernetes_version.go
-  to: /deckhouse/modules/600-flant-integration/hooks/migrate_cluster_kubernetes_version.go
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/fe/modules/600-flant-integration/hooks/migrate_cluster_kubernetes_version_test.go
-  to: /deckhouse/modules/600-flant-integration/hooks/migrate_cluster_kubernetes_version_test.go
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/fe/modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
   excludePaths:

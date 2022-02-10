@@ -34,16 +34,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/600-flant-integration/hooks/migrate_cluster_kubernetes_version.go
-  to: /deckhouse/modules/600-flant-integration/hooks/migrate_cluster_kubernetes_version.go
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/fe/modules/600-flant-integration/hooks/migrate_cluster_kubernetes_version_test.go
-  to: /deckhouse/modules/600-flant-integration/hooks/migrate_cluster_kubernetes_version_test.go
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/fe/modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
   stageDependencies:
