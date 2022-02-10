@@ -74,7 +74,7 @@ type: Opaque
 	})
 	Context(fmt.Sprintf("Kubernetes version from secret is not `%s`, should not be changed", config.DefaultKubernetesVersion), func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData("1.100"))))
+			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData("1.22"))))
 			f.RunHook()
 		})
 
@@ -83,7 +83,7 @@ type: Opaque
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
 			data := secret.Field("data.cluster-configuration\\.yaml")
 			dataYaml, _ := base64.StdEncoding.DecodeString(data.String())
-			expected := d8ClusterConfigurationSecretData("1.100")
+			expected := d8ClusterConfigurationSecretData("1.22")
 			expectedYaml, _ := base64.StdEncoding.DecodeString(expected)
 			Expect(dataYaml).To(MatchYAML(expectedYaml))
 		})
