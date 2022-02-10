@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - description: Speed up reboot master node on cluster bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/800
+
