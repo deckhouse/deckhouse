@@ -2,6 +2,6 @@
 title: "Модуль deckhouse-web"
 ---
 
-Модуль создает web-интерфейс документации текущей версии.
+Этот модуль создает web-интерфейс с документацией текущей версии Deckhouse.
 
-По умолчанию web-интерфейс документации доступен по адресу 'deckhouse.', согласно значению глобального параметра [publicDomainTemplate](../../deckhouse-configure-global.html#параметры).
+По умолчанию web-интерфейс доступен по адресу `deckhouse.COMPANY.DOMEN`, где `COMPANY.DOMEN` — значение глобального параметра [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в конфигурации Deckhouse.
