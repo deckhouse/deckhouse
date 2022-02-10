@@ -4,13 +4,13 @@ package main
 import (
 	_ "github.com/flant/addon-operator/sdk"
 
-	_ "github.com/deckhouse/deckhouse/ee/fe/modules/040-control-plane-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/450-keepalived/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/450-network-gateway/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-openvpn/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/fe/modules/600-flant-integration/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/600-namespace-configurator/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/600-secret-copier/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"

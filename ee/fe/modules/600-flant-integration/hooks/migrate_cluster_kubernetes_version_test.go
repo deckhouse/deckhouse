@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -24,7 +25,7 @@ func d8ClusterConfigurationSecretData(version string) string {
 	var secretDataTemplate = `apiVersion: deckhouse.io/v1
 cloud:
   prefix: prefix
-  provider: cloudProvider
+  provider: OpenStack
 clusterDomain: cluster.local
 clusterType: Cloud
 defaultCRI: Containerd
@@ -40,36 +41,6 @@ serviceSubnetCIDR: 10.222.0.0/16
 }
 
 var _ = Describe("Module hooks :: control-plane-manager :: update_cluster_kubernetes_version", func() {
-	const (
-		DeckhousePodIsReady = `
----
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: deckhouse
-  name: deckhouse-pod
-  namespace: d8-system
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-`
-		DeckhousePodIsNotReady = `
----
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: deckhouse
-  name: deckhouse-pod
-  namespace: d8-system
-status:
-  conditions:
-  - status: "False"
-    type: Ready
-`
-	)
 
 	var secretTemplate = `
 ---
@@ -85,23 +56,9 @@ type: Opaque
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
-	Context("Kubernetes version from secret less than desired version, Deckhouse pod is not ready", func() {
+	Context(fmt.Sprintf("Kubernetes version from secret is `%s`, should be changed to `Automatic`", config.DefaultKubernetesVersion), func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsNotReady + fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData("1.19"))))
-			f.RunHook()
-		})
-
-		It("Hook should run, kubernetes version should not change to desired", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			secret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
-			data := secret.Field("data.cluster-configuration\\.yaml")
-			Expect(data.Str).To(Equal(d8ClusterConfigurationSecretData("1.19")))
-		})
-
-	})
-	Context("Kubernetes version from secret less than desired version, Deckhouse pod is ready", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsReady + fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData("1.19"))))
+			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData(config.DefaultKubernetesVersion))))
 			f.RunHook()
 		})
 
@@ -109,20 +66,26 @@ type: Opaque
 			Expect(f).To(ExecuteSuccessfully())
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
 			data := secret.Field("data.cluster-configuration\\.yaml")
-			Expect(data.Str).To(Equal(d8ClusterConfigurationSecretData(minimalKubernetesVersion)))
+			dataYaml, _ := base64.StdEncoding.DecodeString(data.String())
+			expected := d8ClusterConfigurationSecretData("Automatic")
+			expectedYaml, _ := base64.StdEncoding.DecodeString(expected)
+			Expect(dataYaml).To(MatchYAML(expectedYaml))
 		})
 	})
-	Context("Kubernetes version from secret more or equal to desired version, Deckhouse pod is ready", func() {
+	Context(fmt.Sprintf("Kubernetes version from secret is not `%s`, should not be changed", config.DefaultKubernetesVersion), func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(DeckhousePodIsReady + fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData("1.22"))))
+			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData("1.100"))))
 			f.RunHook()
 		})
 
-		It("Hook should run, kubernetes version should not change to desired", func() {
+		It("Hook should run, kubernetes version should not change", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
 			data := secret.Field("data.cluster-configuration\\.yaml")
-			Expect(data.Str).To(Equal(d8ClusterConfigurationSecretData("1.22")))
+			dataYaml, _ := base64.StdEncoding.DecodeString(data.String())
+			expected := d8ClusterConfigurationSecretData("1.100")
+			expectedYaml, _ := base64.StdEncoding.DecodeString(expected)
+			Expect(dataYaml).To(MatchYAML(expectedYaml))
 		})
 	})
 })
