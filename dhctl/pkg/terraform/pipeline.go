@@ -140,7 +140,7 @@ func CheckBaseInfrastructurePipeline(r *Runner, name string) (int, error) {
 			} `json:"output_changes"`
 		}
 
-		result, err := terraformCmd("show", "-json", r.planPath).Output()
+		result, err := r.terraformExecutor.Output("show", "-json", r.planPath)
 		if err != nil {
 			var ee *exec.ExitError
 			if ok := errors.As(err, &ee); ok {
