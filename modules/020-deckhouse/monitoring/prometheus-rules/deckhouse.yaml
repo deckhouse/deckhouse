@@ -8,6 +8,7 @@
       d8_module: deckhouse
       d8_component: deckhouse
     annotations:
+      d8_ignore_on_update: "true"
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "2m"
@@ -24,6 +25,7 @@
       d8_module: deckhouse
       d8_component: deckhouse
     annotations:
+      d8_ignore_on_update: "true"
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "10m"
@@ -40,6 +42,7 @@
       d8_module: deckhouse
       d8_component: deckhouse
     annotations:
+      d8_ignore_on_update: "true"
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "2m"
@@ -58,6 +61,7 @@
       d8_module: deckhouse
       d8_component: deckhouse
     annotations:
+      d8_ignore_on_update: "true"
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "10m"
@@ -77,6 +81,7 @@
       d8_module: deckhouse
       d8_component: deckhouse
     annotations:
+      d8_ignore_on_update: "true"
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "2m"
