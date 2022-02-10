@@ -69,6 +69,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<group_name>-
 1. Удалить директории и файлы:
    ```shell
    rm -rf /var/lib/bashible
+   rm -rf /var/cache/registrypackages
    rm -rf /etc/kubernetes
    rm -rf /var/lib/kubelet
    rm -rf /var/lib/docker

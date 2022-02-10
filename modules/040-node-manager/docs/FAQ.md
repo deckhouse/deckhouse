@@ -70,6 +70,7 @@ This is only needed if you have to move a static node from one cluster to anothe
 1. Delete all directories and files:
    ```shell
    rm -rf /var/lib/bashible
+   rm -rf /var/cache/registrypackages
    rm -rf /etc/kubernetes
    rm -rf /var/lib/kubelet
    rm -rf /var/lib/docker 
