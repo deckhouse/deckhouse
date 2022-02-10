@@ -142,7 +142,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			ccmClusterRoleBinding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:cloud-controller-manager")
 			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-aws", "cloud-controller-manager")
 
-			ebsControllerPluginStatefulSet := f.KubernetesResource("StatefulSet", "d8-cloud-provider-aws", "csi-controller")
+			ebsControllerPluginDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "csi-controller")
 			ebsCSIDriver := f.KubernetesGlobalResource("CSIDriver", "ebs.csi.aws.com")
 			ebsNodePluginDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-aws", "csi-node")
 			ebsControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-aws", "csi")
@@ -192,7 +192,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ccmClusterRole.Exists()).To(BeTrue())
 			Expect(ccmClusterRoleBinding.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
-			Expect(ebsControllerPluginStatefulSet.Exists()).To(BeTrue())
+			Expect(ebsControllerPluginDeployment.Exists()).To(BeTrue())
 			Expect(ebsCSIDriver.Exists()).To(BeTrue())
 			Expect(ebsNodePluginDaemonSet.Exists()).To(BeTrue())
 			Expect(ebsControllerSA.Exists()).To(BeTrue())
@@ -247,7 +247,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			It("CCM should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "cloud-controller-manager").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-aws", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "csi-controller").Exists()).To(BeFalse())
 			})
 		})
 	})

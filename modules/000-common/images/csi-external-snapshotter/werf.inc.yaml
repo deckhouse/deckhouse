@@ -1,0 +1,21 @@
+# Based on https://github.com/kubernetes-csi/external-snapshotter/blob/master/cmd/csi-snapshotter/Dockerfile
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.csi.snapshotter }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /
+    to: /
+    includePaths:
+      - csi-snapshotter
+    before: setup
+docker:
+  ENTRYPOINT: ["/csi-snapshotter"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+from: k8s.gcr.io/sig-storage/csi-snapshotter:{{ $value.csi.snapshotter }}
+  {{- end }}
+{{- end }}
