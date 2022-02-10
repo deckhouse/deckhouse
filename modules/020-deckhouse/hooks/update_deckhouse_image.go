@@ -104,7 +104,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	snap := input.Snapshots["deckhouse_pod"]
 	if len(snap) == 0 {
-		input.LogEntry.Warn("Deckhouse pod does not exist. Skipping upgrade")
+		input.LogEntry.Warn("Deckhouse pod does not exist. Skipping update")
 		return nil
 	}
 	deckhousePod := snap[0].(deckhousePodInfo)

@@ -1,5 +1,5 @@
 diff --git a/rules/manager.go b/rules/manager.go
-index 837a0741f..a3684df5c 100644
+index 837a0741f..5366ee086 100644
 --- a/rules/manager.go
 +++ b/rules/manager.go
 @@ -15,6 +15,7 @@ package rules
@@ -16,7 +16,7 @@ index 837a0741f..a3684df5c 100644
  			for _, r := range rg.Rules {
 +
 +				if v, ok := r.Annotations["d8_ignore_on_update"]; ok && v == "true" {
-+					r.Expr.Value = fmt.Sprintf("(%s) * (max(d8_is_updating) != 1)", r.Expr.Value)
++					r.Expr.Value = fmt.Sprintf("(%s) and ON() ((max(d8_is_updating) != 1) or ON() absent(d8_is_updating))", r.Expr.Value)
 +				}
 +
  				expr, err := m.opts.GroupLoader.Parse(r.Expr.Value)
