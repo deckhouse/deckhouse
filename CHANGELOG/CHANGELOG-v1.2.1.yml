@@ -1,0 +1,6 @@
+'111':
+  fixes:
+    - summary: '1111'
+      pull_request: https://api.github.com/repos/shvgn/deckhouse/issues/4
+      impact: '1111111'
+
