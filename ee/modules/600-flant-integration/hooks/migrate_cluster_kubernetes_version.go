@@ -19,10 +19,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-type ClusterConfigurationYaml struct {
-	Content []byte
-}
-
 func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
@@ -30,16 +26,12 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 		return nil, err
 	}
 
-	cc := &ClusterConfigurationYaml{}
-
 	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
 	if !ok {
 		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
 	}
 
-	cc.Content = ccYaml
-
-	return cc, err
+	return ccYaml, nil
 }
 
 var (
@@ -72,15 +64,16 @@ func migrateClusterKubernetesVersion(input *go_hook.HookInput) error {
 	}
 
 	// FilterResult is a YAML encoded as a JSON string. Unmarshal it.
-	configYamlBytes := currentConfig[0].(*ClusterConfigurationYaml)
+	configYamlBytes := currentConfig[0].([]byte)
 
 	var metaConfig *config.MetaConfig
-	metaConfig, err := config.ParseConfigFromData(string(configYamlBytes.Content))
+	metaConfig, err := config.ParseConfigFromData(string(configYamlBytes))
 	if err != nil {
 		return err
 	}
 
-	kubernetesVersionFromMetaConfig, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
+	var kubernetesVersionFromMetaConfig string
+	err = json.Unmarshal(metaConfig.ClusterConfig["kubernetesVersion"], &kubernetesVersionFromMetaConfig)
 	if err != nil {
 		return err
 	}
@@ -110,14 +103,4 @@ func migrateClusterKubernetesVersion(input *go_hook.HookInput) error {
 	input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", "d8-cluster-configuration")
 
 	return nil
-}
-
-func rawMessageToString(message json.RawMessage) (string, error) {
-	var result string
-	b, err := message.MarshalJSON()
-	if err != nil {
-		return result, err
-	}
-	err = json.Unmarshal(b, &result)
-	return result, err
 }
