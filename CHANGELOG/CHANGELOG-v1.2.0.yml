@@ -1,0 +1,14 @@
+'2222':
+  features:
+    - summary: '222'
+      pull_request: https://api.github.com/repos/shvgn/deckhouse/issues/3
+'333':
+  fixes:
+    - summary: '3333'
+      pull_request: https://api.github.com/repos/shvgn/deckhouse/issues/2
+      impact: '33333'
+markdown:
+  features:
+    - summary: mmmmm
+      pull_request: https://api.github.com/repos/shvgn/deckhouse/issues/5
+
