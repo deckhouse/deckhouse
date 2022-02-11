@@ -7,10 +7,6 @@ search: prometheus
 
 This module installs and configures the [Prometheus](https://prometheus.io/) monitoring system. Also, it configures metrics scraping for many typical applications and provides the basic set of Prometheus alerts and Grafana dashboards.
 
-The module installs two Prometheus instances:
-* **main** — the primary Prometheus instance that scrapes metrics every 30 seconds (you can change this value using the `scrapeInterval` parameter). It processes all the rules, sends alerts, and serves as the main data source.
-* **longterm** — the secondary Prometheus instance that scrapes the data of the main instance every 5 minutes (you can change this value using the `longtermScrapeInterval` parameter). It is used for long-term history storage and for displaying data for large periods.
-
 If a storage class supports automatic volume expansion (allowVolumeExpansion: true), it can automatically expand the volume if there is not enough disk space for Prometheus data. Otherwise, you will receive an alert that the volume space in Prometheus is running out.
 
 The [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/) module makes it possible to automatically request cpu and memory resources based on the utilization history when the Pod is recreated. Also, the Prometheus memory consumption is minimized by caching requests to it via trickster.
@@ -18,6 +14,7 @@ The [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/) module
 Both pulling and pushing of metrics are supported.
 
 ## Monitoring hardware resources
+
 Prometheus tracks hardware resources and displays the corresponding utilization graphs for:
 - CPU,
 - memory,
@@ -58,9 +55,11 @@ Deckhouse allows you to flexibly configure alerting for each namespace and assig
 - number of unavailable Pods in a `Deployment`, `StatefulSet`, `DaemonSet`.
 
 ## Alerts
+
 The Deckhouse monitoring also implements event notifications. The standard edition includes a large set of necessary alerts for monitoring the state of the cluster and its components. At the same time, you can add custom alerts.
 
 ### Sending alerts to external systems
+
 Deckhouse supports sending alerts using `Alertmanager`:
 - via the SMTP protocol;
 - to PagerDuty;
@@ -68,3 +67,28 @@ Deckhouse supports sending alerts using `Alertmanager`:
 - to Telegram;
 - via the Webhook mechanism;
 - and by any other means supported in alertmanager.
+
+## Included modules
+
+<img src="../../images/300-prometheus/prometheus_monitoring.svg">
+
+### Components installed by Deckhouse:
+
+| Name                        | Description                                                                                                                                                                                                                                            |
+|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **prometheus-main**         | The primary Prometheus instance that scrapes metrics every 30 seconds (you can change this value using the `scrapeInterval` parameter). It processes all the rules, sends alerts, and serves as the main data source.                                  |
+| **prometheus-longterm**     | The secondary Prometheus instance that scrapes the data of the main instance every 5 minutes (you can change this value using the `longtermScrapeInterval` parameter). It is used for long-term history storage and displaying data for large periods. |
+| **trickster**               | The caching proxy to avoid Prometheus overloading.                                                                                                                                                                                                     |
+| **grafana**                 | The managed observability platform with ready-to-use dashboards for all Deckhouse modules and popular applications. Grafana instances are highly available, stateless, and configured by CRDs.                                                         |
+| **metrics-adapter**         | The shim between Prometheus and Kubernetes metrics API. It enables HPA support in a Kubernetes cluster.                                                                                                                                                |
+| **vertical-pod-autoscaler** | An autoscaling tool to help size Pods for the optimal CPU and memory resources required by the Pods.                                                                                                                                                   |
+| **Various Exporters**       | Precooked exporters connected to Prometheus. The list includes exporters for all necessary metrics: kube-state-metrics, node-exporter, oomkills exporter, image availability exporter, and many more.                                                  |
+
+### External components:
+
+Deckhouse has interfaces to integrate with various popular solutions:
+
+| Name                           | Description                                                                                                                                      |
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Alertmanagers**              | Alertmanagers could be connected to Prometheus and Grafana and deployed to the Deckhouse cluster or out of it.                                   |
+| **Long-term metrics storages** | Utilizing remote write protocol, it is possible to send metrics from Deckhouse to plenty of storages, including Cortex, Thanos, VictoriaMetrics. |
