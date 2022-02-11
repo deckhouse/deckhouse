@@ -129,10 +129,8 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		if isUpdatingCMExists(input) {
 			deleteUpdatingCM(input)
 		}
-	} else {
-		if isUpdatingCMExists(input) {
-			input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
-		}
+	} else if isUpdatingCMExists(input) {
+		input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
 	}
 
 	// initialize updater
