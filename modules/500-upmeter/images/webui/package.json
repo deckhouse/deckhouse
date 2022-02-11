@@ -60,7 +60,7 @@
     "glob": "^7.1.6",
     "html-webpack-plugin": "^4.5.0",
     "mini-css-extract-plugin": "^1.1.2",
-    "node-sass": "4.13.1",
+    "node-sass": "7.0.0",
     "null-loader": "^4.0.1",
     "purgecss-webpack-plugin": "^3.0.0",
     "sass-loader": "8.0.2",
