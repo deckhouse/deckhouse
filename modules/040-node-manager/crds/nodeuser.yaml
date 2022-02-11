@@ -50,15 +50,19 @@ spec:
                   x-doc-required: true
                 sshPublicKey:
                   type: string
-                  description: 'Node user ssh public key.'
+                  description: |
+                    Node user SSH public key.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
                   example: 'ssh-rsa AAABBB'
-                  x-doc-required: true
                 sshPublicKeys:
                   type: array
-                  x-doc-required: true
                   items:
                     type: string
-                  description: 'Node user ssh public keys.'
+                  description: |
+                    Node user SSH public keys.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
                   example:
                     - [ 'ssh-rsa AAABBB', 'ssh-rsa BBBCCC' ]
                 passwordHash:
