@@ -53,6 +53,7 @@ data:
   bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | quote }}
   bpf-lb-algorithm: "maglev"
   enable-service-topology: "true"
+  netfilter-compatible-mode: "true"
 
   bpf-lb-maglev-hash-seed: {{ .Values.cniCilium.internal.maglevHash | quote }}
   enable-session-affinity: "true"
