@@ -137,7 +137,7 @@ bashible: &bashible
           allowedPattern: "4.18.0-"
 k8s:
   '1.19':
-    status: end-of-life
+    status: available
     patch: 16
     cniVersion: 0.8.7
     bashible: &bashible_k8s_ge_1_19
