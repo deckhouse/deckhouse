@@ -106,7 +106,7 @@ spec:
         args:
         - "--timeout={{ $provisionerTimeout }}"
         - "--v=5"
-        - "--csi-address=/csi/csi.sock"
+        - "--csi-address=$(ADDRESS)"
   {{- if $topologyEnabled }}
         - "--feature-gates=Topology=true"
         - "--strict-topology"
@@ -117,12 +117,20 @@ spec:
         - "--default-fstype=ext4"
   {{- end }}
         - "--leader-election=true"
-        - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
+        - "--leader-election-namespace=$(NAMESPACE)"
   {{- if semverCompare ">= 1.21" $context.Values.global.discovery.kubernetesVersion }}
         - "--enable-capacity"
         - "--capacity-ownerref-level=2"
   {{- end }}
         - "--worker-threads={{ $provisionerWorkers }}"
+        env:
+        - name: ADDRESS
+          value: /csi/csi.sock
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
@@ -135,10 +143,18 @@ spec:
         args:
         - "--timeout={{ $attacherTimeout }}"
         - "--v=5"
-        - "--csi-address=/csi/csi.sock"
+        - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
-        - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
+        - "--leader-election-namespace=$(NAMESPACE)"
         - "--worker-threads={{ $attacherWorkers }}"
+        env:
+        - name: ADDRESS
+          value: /csi/csi.sock
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
@@ -151,10 +167,18 @@ spec:
         args:
         - "--timeout={{ $resizerTimeout }}"
         - "--v=5"
-        - "--csi-address=/csi/csi.sock"
+        - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
-        - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
+        - "--leader-election-namespace=$(NAMESPACE)"
         - "--workers={{ $resizerWorkers }}"
+        env:
+        - name: ADDRESS
+          value: /csi/csi.sock
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
@@ -167,10 +191,18 @@ spec:
         args:
         - "--timeout={{ $snapshotterTimeout }}"
         - "--v=5"
-        - "--csi-address=/csi/csi.sock"
+        - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
-        - "--leader-election-namespace=d8-{{ $context.Chart.Name }}"
+        - "--leader-election-namespace=$(NAMESPACE)"
         - "--worker-threads={{ $snapshotterWorkers }}"
+        env:
+        - name: ADDRESS
+          value: /csi/csi.sock
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
@@ -181,7 +213,10 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $livenessprobeImage | quote }}
         args:
-        - "--csi-address=/csi/csi.sock"
+        - "--csi-address=$(ADDRESS)"
+        env:
+        - name: ADDRESS
+          value: /csi/csi.sock
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
