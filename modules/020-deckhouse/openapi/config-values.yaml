@@ -19,7 +19,7 @@ properties:
     type: string
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     description: |
-      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry) to it when such an opportunity appears).
+      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#change-the-release-channel) to it when such an opportunity appears).
 
       The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
@@ -42,8 +42,8 @@ properties:
           - `Auto` — all updates are applied automatically.
 
             Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
-          - `Manual` — to change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. 
-          
+          - `Manual` — to change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
+
             To confirm the update, edit [custom resource 'DeckhouseRelease'](https://deckhouse.io/en/documentation/v1/modules/020-deckhouse/cr.html), which corresponds to the version by setting the `approved' field to 'true'.
         enum:
           - 'Auto'
@@ -94,13 +94,13 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:

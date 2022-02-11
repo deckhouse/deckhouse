@@ -10,7 +10,7 @@ properties:
       - `Managed` — поставка для managed-кластеров от облачных провайдеров (например, Google Kubernetes Engine).
   releaseChannel:
     description: |
-      Желаемый канал обновлений Deckhouse ([переключение](https://deckhouse.io/ru/documentation/v1/deckhouse-faq.html#%D1%87%D1%82%D0%BE-%D0%BF%D1%80%D0%BE%D0%B8%D1%81%D1%85%D0%BE%D0%B4%D0%B8%D1%82-%D0%BF%D1%80%D0%B8-%D1%81%D0%BC%D0%B5%D0%BD%D0%B5-%D0%BA%D0%B0%D0%BD%D0%B0%D0%BB%D0%B0-%D0%BE%D0%B1%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B9) на него произойдёт при появлении такой возможности).
+      Желаемый канал обновлений Deckhouse ([переключение](https://deckhouse.io/ru/documentation/v1/deckhouse-faq.html#что-происходит-при-смене-канала-обновлений) на него произойдёт при появлении такой возможности).
 
       Порядок возрастания стабильности канала обновлений (от **наименее** стабильного, к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
@@ -23,7 +23,7 @@ properties:
 
             Обновления минорной версии Deckhouse (обновление релиза, например, с `v1.26.*` на `v1.27.*`) применяются с учетом заданных окон обновлений, либо, если окна обновлений не заданы, по мере появления обновлений на соответствующем канале обновлений;
           - `Manual` (ручной) — для обновления минорной версии Deckhouse в ручном режиме (обновление релиза, например, с `v1.26.*` на `v1.27.*`), необходимо подтверждение.
-          
+
             Для подтверждения обновления, в соответствующем [custom resource `DeckhouseRelease`](https://deckhouse.io/ru/documentation/v1/modules/020-deckhouse/cr.html) необходимо установить поле `approved` в `true`.
       windows:
         description: |
@@ -46,9 +46,9 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
 
-      Если ничего не указано или указано `false` — будет использоваться [автоматическое выделение узлов](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false` — `nodeSelector` будет определяться [автоматически](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
-      Если ничего не указано или указано `false` — будет использоваться [автоматическое выделение узлов](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false` — `tolerations` будет определяться [автоматически](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
