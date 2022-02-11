@@ -15,29 +15,12 @@
 package fs
 
 import (
-	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
-	"path/filepath"
-	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
-
-func getFileName() string {
-	// we silent gosec linter here
-	// because we do not need security random number
-	s := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(s) //nolint:gosec
-
-	rndSuf := strconv.FormatUint(r.Uint64(), 10)
-	fileName := fmt.Sprintf("dhctl-tst-touch-%s", rndSuf)
-
-	return filepath.Join(os.TempDir(), fileName)
-}
 
 func assertFileExistsWithContent(t *testing.T, fileName, expectContent string) {
 	_, err := os.Stat(fileName)
@@ -51,7 +34,7 @@ func assertFileExistsWithContent(t *testing.T, fileName, expectContent string) {
 
 func TestTouchFile(t *testing.T) {
 	t.Run("Creates file if it not exists with empty content", func(t *testing.T) {
-		fileName := getFileName()
+		fileName := RandomFileName()
 		_, err := os.Stat(fileName)
 		if err != nil && !os.IsNotExist(err) {
 			t.Fail()
@@ -71,7 +54,7 @@ func TestTouchFile(t *testing.T) {
 	})
 
 	t.Run("Does not rewrite file content if exists", func(t *testing.T) {
-		fileName := getFileName()
+		fileName := RandomFileName()
 
 		const content = "test content"
 		err := ioutil.WriteFile(fileName, []byte(content), 0o600)

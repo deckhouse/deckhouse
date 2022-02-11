@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -26,6 +27,45 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 )
+
+var kindOrderMap map[string]int
+
+var bootstrapKindsOrder = []string{
+	"Namespace",
+	"ResourceQuota",
+	"LimitRange",
+	"PodSecurityPolicy",
+	"Secret",
+	"ConfigMap",
+	"StorageClass",
+	"PersistentVolume",
+	"PersistentVolumeClaim",
+	"ServiceAccount",
+	"CustomResourceDefinition",
+	"ClusterRole",
+	"ClusterRoleBinding",
+	"Role",
+	"RoleBinding",
+	"Service",
+	"DaemonSet",
+	"Pod",
+	"ReplicationController",
+	"ReplicaSet",
+	"Deployment",
+	"StatefulSet",
+	"Job",
+	"CronJob",
+	"Ingress",
+	"APIService",
+}
+
+func init() {
+	kindOrderMap = make(map[string]int)
+
+	for i, k := range bootstrapKindsOrder {
+		kindOrderMap[k] = i + 1
+	}
+}
 
 type KubernetesResourceVersion struct {
 	APIVersion string `json:"apiVersion"`
@@ -37,11 +77,43 @@ type Resource struct {
 	Object unstructured.Unstructured
 }
 
-type Resources struct {
-	Items []*Resource
+type Resources []*Resource
+
+func (r Resources) Len() int {
+	return len(r)
 }
 
-func ParseResources(path string, data map[string]interface{}) (*Resources, error) {
+func (r Resources) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
+}
+
+func (r Resources) Less(i, j int) bool {
+	firstResource := r[i]
+	secondResource := r[j]
+	firstOrder, firstOk := kindOrderMap[firstResource.GVK.Kind]
+	secondOrder, secondOk := kindOrderMap[secondResource.GVK.Kind]
+	// if same kind (including unknown) sub sort alphanumeric
+	if firstOrder == secondOrder {
+		// if both are unknown save order
+		if !firstOk && !secondOk {
+			return false
+		}
+		// otherwise, sort by name
+		return firstResource.Object.GetName() < secondResource.Object.GetName()
+	}
+
+	// unknown kind is last
+	if !firstOk {
+		return false
+	}
+	if !secondOk {
+		return true
+	}
+	// sort different kinds
+	return firstOrder < secondOrder
+}
+
+func ParseResources(path string, data map[string]interface{}) (Resources, error) {
 	fileContent, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading resources file: %v", err)
@@ -66,10 +138,9 @@ func ParseResources(path string, data map[string]interface{}) (*Resources, error
 		content = tpl.String()
 	}
 
-	bigFileTmp := strings.TrimSpace(content)
-	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
+	docs := BigFileSplit(content)
 
-	resources := Resources{}
+	var resources Resources = make([]*Resource, 0, len(docs))
 	for _, doc := range docs {
 		doc = strings.TrimSpace(doc)
 		if doc == "" {
@@ -84,11 +155,18 @@ func ParseResources(path string, data map[string]interface{}) (*Resources, error
 
 		gvk := schema.FromAPIVersionAndKind(kubernetesResource.GetAPIVersion(), kubernetesResource.GetKind())
 
-		resources.Items = append(resources.Items, &Resource{
+		resources = append(resources, &Resource{
 			GVK:    gvk,
 			Object: kubernetesResource,
 		})
 	}
 
-	return &resources, nil
+	sort.Stable(resources)
+
+	return resources, nil
+}
+
+func BigFileSplit(content string) []string {
+	bigFileTmp := strings.TrimSpace(content)
+	return regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)
 }
