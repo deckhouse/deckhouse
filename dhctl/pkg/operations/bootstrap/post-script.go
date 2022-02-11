@@ -17,6 +17,7 @@ package bootstrap
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -74,17 +75,12 @@ func (e *PostBootstrapScriptExecutor) Execute() error {
 	})
 }
 
+var resultPattern = regexp.MustCompile("^Result of post-bootstrap script:(.+)$")
+
 func (e *PostBootstrapScriptExecutor) run() (string, error) {
-	//resultPattern := regexp.MustCompile("^Result of post-bootstrap script:(.+)$")
 	var result string
 	stdoutHandler := func(l string) {
 		log.InfoLn(l)
-
-		//submatches := resultPattern.FindAllStringSubmatch(l, -1)
-		//fmt.Printf("%v", submatches)
-		//if len(submatches) > 0 && len(submatches[0]) > 1 {
-		//	result = submatches[0][1]
-		//}
 	}
 
 	cmd := e.sshClient.UploadScript(e.path).
@@ -93,7 +89,12 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 		WithTimeout(e.timeout).
 		Sudo()
 
-	_, err := cmd.Execute()
+	out, err := cmd.Execute()
+
+	submatches := resultPattern.FindAllStringSubmatch(string(out), -1)
+	if len(submatches) > 0 && len(submatches[0]) > 1 {
+		result = submatches[0][1]
+	}
 	if err != nil {
 		return "", fmt.Errorf("run %s: %w", e.path, err)
 	}
