@@ -15,16 +15,16 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
     of "pr<PR_NUMBER>" for pull requests and deckouse Deployment uses this tag
     to auto update testing cluster on new commits.
     The Git tag is slugified in case it constains a plus sign.
+
 */}!}
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" -}!}
 {!{- $criNames := slice "Docker" "Containerd" -}!}
 {!{- $kubernetesVersions := slice "1.19" "1.20" "1.21" "1.22" -}!}
-{!{- $defaults := dict "criName" "Containerd" "kubernetesVersion" "1.21" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
-{!{-   $ctx := dict "provider" $provider "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions "defaults" $defaults }!}
+{!{-   $ctx := dict "provider" $provider "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions }!}
 {!{-   $outFile := printf "e2e-%s.yml" $provider }!}
 {!{-   $outPath := filepath.Join (getenv "OUTDIR") $outFile }!}
 {!{-   tmpl.Exec "e2e_workflow_template" $ctx | file.Write $outPath }!}
@@ -35,6 +35,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 {!{- define "e2e_workflow_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $workflowName := printf "e2e: %s" $ctx.providerName -}!}
+# <template: e2e_workflow_template>
 name: '{!{ $workflowName }!}'
 on:
   workflow_dispatch:
@@ -58,20 +59,18 @@ on:
         description: 'Git SHA for restoring artifacts from cache'
         required: false
       cri:
+        description: 'A comma-separated list of cri to test. Available: Docker and Containerd.'
         required: false
       ver:
+        description: 'A comma-separated list of versions to test. Available: from 1.19 to 1.22.'
         required: false
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 {!{ tmpl.Exec "image_versions_envs" | strings.Indent 2 }!}
 {!{ tmpl.Exec "terraform_versions_envs" | strings.Indent 2 }!}
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
-concurrency:
-  group: ${{ github.ref }}-${{ github.event.inputs.pull_request_ref }}-e2e-{!{ $ctx.provider }!}
-  cancel-in-progress: true
+# Note: no concurrency section for e2e workflows.
+# Usually you run e2e and wait until it ends.
 
 jobs:
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
@@ -84,7 +83,6 @@ jobs:
 {!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower -}!}
 {!{-     $cri := $criName | toLower -}!}
 {!{-     $criEnv := $cri | toUpper -}!}
-{!{-     $isDefault := and (eq $ctx.defaults.criName $criName) (eq $ctx.defaults.kubernetesVersion $kubernetesVersion) -}!}
 {!{-     $layout := "WithoutNAT" -}!}
 {!{-     if eq $ctx.provider "azure"  -}!}
 {!{-       $layout = "Standard" -}!}
@@ -95,11 +93,11 @@ jobs:
 {!{-     if eq $ctx.provider "static"  -}!}
 {!{-       $layout = "Static" -}!}
 {!{-     end -}!}
-{!{-     $jobCtx := coll.Merge $ctx (dict "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName "isDefault" $isDefault) }!}
+{!{-     $jobCtx := coll.Merge $ctx (dict "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName) }!}
 {!{     tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
 {!{-   end -}!}
-{!{- end -}!}
-
+{!{- end }!}
+# </template: e2e_workflow_template>
 {!{ end -}!}
 
 
@@ -110,6 +108,7 @@ jobs:
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}
+# <template: e2e_run_job_template>
 run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
   name: "{!{ $ctx.criName }!}, k8s {!{ $ctx.kubernetesVersion }!}"
   needs:
@@ -267,5 +266,5 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
         curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
           -H 'Content-Type: application/json' \
           -d "${alertData}"
-
+# </template: e2e_run_job_template>
 {!{ end -}!}

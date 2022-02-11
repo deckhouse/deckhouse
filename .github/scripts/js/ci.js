@@ -1,5 +1,24 @@
 //@ts-check
-const { knownLabels, labelsSrv, knownProviders, knownChannels } = require('./constants');
+const {
+  knownLabels,
+  knownSlashCommands,
+  labelsSrv,
+  knownProviders,
+  knownChannels,
+  knownCRINames,
+  knownKubernetesVersions,
+  knownEditions,
+  e2eDefaults
+} = require('./constants');
+
+const {
+  parseGitRef,
+  matchReleaseTag,
+  fullMatchReleaseTag,
+  fullMatchTestTag,
+  fullMatchReleaseBranch
+} = require('./git-ref');
+
 const { dumpError } = require('./error');
 
 /**
@@ -42,7 +61,7 @@ module.exports.updateCommentOnStart = async ({ github, context, core, name }) =>
   const newBody =
     response.data.body +
     `
-  :fast_forward:\u00a0Workflow \`${name}\` for \`${github_ref}\` [started](${build_url}).
+  :fast_forward:\u00a0\`${name}\` for \`${github_ref}\` [started](${build_url}).
 `;
 
   response = await github.rest.issues.updateComment({
@@ -294,6 +313,91 @@ const checkLabel = async ({ github, context, core, labelType, labelSubject, onSu
 module.exports.checkLabel = checkLabel;
 
 /**
+ * Set outputs to enable e2e jobs from workflow_dispatch inputs.
+ *
+ * @param {object} inputs
+ * @param {object} inputs.context - An object containing the context of the workflow run.
+ * @param {object} inputs.core - A reference to the '@actions/core' package.
+ */
+const setCRIAndVersionsFromInputs = ({ context, core }) => {
+  const defaultCRI = e2eDefaults.criName.toLowerCase();
+  const defaultVersion = e2eDefaults.kubernetesVersion.replace(/\./g, '_');
+
+  let cri = [defaultCRI];
+  let ver = [defaultVersion];
+
+  if (!!context.payload.inputs.cri) {
+    const requested_cri = context.payload.inputs.cri.toLowerCase();
+    cri = requested_cri.split(',');
+  }
+  if (!!context.payload.inputs.ver) {
+    const requested_ver = context.payload.inputs.ver.replace(/\./g, '_');
+    ver = requested_ver.split(',');
+  }
+
+  core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}' and version='${context.payload.inputs.ver}'.`);
+
+  for (const out_cri of cri) {
+    for (const out_ver of ver) {
+      core.info(`run_${out_cri}_${out_ver}: true`);
+      core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
+    }
+  }
+};
+
+/**
+ * Set outputs to enable e2e jobs from issue labels.
+ *
+ * @param {object} inputs
+ * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {object[]} inputs.labels - Array for labels on pull request.
+ */
+const setCRIAndVersionsFromLabels = ({ core, labels }) => {
+  let useLabels = [];
+  if (labels) {
+    for (const label of labels) {
+      if (label.name.startsWith('e2e/use')) {
+        useLabels.push(label.name);
+      }
+    }
+  }
+  core.info(`e2e/use labels: ${JSON.stringify(useLabels)}`);
+
+  let ver = [];
+  let cri = [];
+  for (const label of useLabels) {
+    for (const criName of knownCRINames) {
+      if (label.includes(criName.toLowerCase())) {
+        cri.push(criName.toLowerCase());
+      }
+    }
+    for (const kubernetesVersion of knownKubernetesVersions) {
+      if (label.includes(kubernetesVersion)) {
+        ver.push(kubernetesVersion.replace(/\./g, '_'));
+      }
+    }
+  }
+
+  const defaultCRI = e2eDefaults.criName.toLowerCase();
+  const defaultVersion = e2eDefaults.kubernetesVersion.replace(/\./g, '_');
+  if (ver.length === 0) {
+    core.info(`No additional 'e2e/use/k8s' labels found. Will run e2e with default version=${defaultVersion}.`)
+    ver = [defaultVersion];
+  }
+  if (cri.length === 0) {
+    core.info(`No additional 'e2e/use/cri' labels found. Will run e2e with default cri=${defaultCRI}.`);
+    cri = [defaultCRI];
+  }
+
+  for (const out_cri of cri) {
+    for (const out_ver of ver) {
+      core.info(`run_${out_cri}_${out_ver}: true`);
+      core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
+    }
+  }
+};
+
+/**
  * Check e2e/use labels to determine which cri/version job to run for provider.
  *
  * This method set 'true'/'false' outputs for each cri/version job.
@@ -303,29 +407,17 @@ module.exports.checkLabel = checkLabel;
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @param {string} inputs.provider - A slug of the provider.
- * @param {object} inputs.defaults - CRI type and Kubernetes version to use if no e2e/use labels set.
- * @param {string[]} inputs.criNames - Names of cri types available for e2e tests.
- * @param {string[]} inputs.kubernetesVersions - Names of Kubernetes versions available for e2e tests.
  * @returns {Promise<void>}
  */
-module.exports.checkE2ELabels = async ({ github, context, core, provider, defaults, criNames, kubernetesVersions }) => {
-  // Get labels from PR
-  let issueLabels = [];
-  let shouldRun = false;
-
-  if (context.eventName === 'workflow_dispatch' && !context.payload.inputs.issue_number) {
-    let cri = defaults.criName.toLowerCase();
-    let ver = defaults.kubernetesVersion.replace(/\./g, '_');
-    let source = 'default parameters'
-    if (!!context.payload.inputs.cri && !!context.payload.inputs.ver ) {
-      cri = context.payload.inputs.cri.toLowerCase();
-      ver = context.payload.inputs.ver.replace(/\./g, '_');
-      source = 'parameters from inputs';
-    }
-    core.setOutput(`run_${cri}_${ver}`, 'true');
-    return console.log(`workflow_dispatch without issue number. Will run e2e with ${source} cri=${cri} and version=${ver}.`);
+module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
+  // Use workflow_dispatch inputs to enable e2e jobs if run for non-PR ref.
+  if (!context.payload.inputs.pull_request_ref) {
+    return setCRIAndVersionsFromInputs({context, core});
   }
 
+  // Request labels on the pull request.
+  let issueLabels = [];
+  let shouldRun = false;
   await checkLabel({
     github,
     context,
@@ -339,67 +431,10 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider, defaul
   });
 
   if (!shouldRun) {
-    console.log(`No e2e label for provider '${provider}'. Skip next jobs.`);
-    return;
+    return core.info(`No e2e label for provider '${provider}'. Skip next jobs.`);
   }
 
-  let useLabels = [];
-  if (issueLabels) {
-    for (const label of issueLabels) {
-      if (label.name.startsWith('e2e/use')) {
-        useLabels.push(label.name);
-      }
-    }
-  }
-  console.log(`e2e/use labels: ${JSON.stringify(useLabels)}`);
-
-  if (useLabels.length === 0) {
-    const cri = defaults.criName.toLowerCase();
-    const ver = defaults.kubernetesVersion.replace(/\./g, '_');
-    core.setOutput(`run_${cri}_${ver}`, 'true');
-    return console.log(`No additional 'e2e/use/' labels found. Will run e2e with default cri=${cri} and version=${ver}.`);
-  }
-
-  let hasCriLabel = false;
-  let hasVerLabel = false;
-  for (const label of useLabels) {
-    if (label.startsWith('e2e/use/cri')) {
-      hasCriLabel = true;
-    }
-    if (label.startsWith('e2e/use/k8s')) {
-      hasVerLabel = true;
-    }
-  }
-
-  for (const criName of criNames) {
-    for (const kubernetesVersion of kubernetesVersions) {
-      const cri = criName.toLowerCase();
-      const ver = kubernetesVersion.replace(/\./g, '_');
-
-      let hasCri = false;
-      let hasVer = false;
-      for (const label of useLabels) {
-        if (label === `e2e/use/cri/${cri}`) {
-          hasCri = true;
-          // Use default kubernetes version if there is no e2e/use/k8s label.
-          if (!hasVerLabel && kubernetesVersion === defaults.kubernetesVersion) {
-            hasVer = true;
-          }
-        }
-        if (label === `e2e/use/k8s/${kubernetesVersion}`) {
-          hasVer = true;
-          // Use default CRI if there is no e2e/use/cri label.
-          if (!hasCriLabel && criName === defaults.criName) {
-            hasCri = true;
-          }
-        }
-      }
-
-      const shouldRun = hasCri && hasVer ? 'true' : 'false';
-      core.setOutput(`run_${cri}_${ver}`, shouldRun);
-      console.log(`run_${cri}_${ver}: ${hasCri} && ${hasVer} == ${shouldRun}`);
-    }
-  }
+  return setCRIAndVersionsFromLabels({core, labels: issueLabels});
 };
 
 /**
@@ -479,7 +514,169 @@ module.exports.checkValidationLabels = async ({ github, context, core }) => {
 };
 
 /**
- * Get all labels from release issue and determine a workflow to run next.
+ * Detect slash command in the comment.
+ * Commands are similar to labels:
+ *   /build release-1.30
+ *   /e2e/run/aws v1.31.0-alpha.0
+ *   /e2e/use/k8s/1.22
+ *   /e2e/use/k8s/1.19
+ *   /e2e/use/cri/docker
+ *   /e2e/use/cri/containerd
+ *   /deploy/web/stage v1.3.2
+ *   /deploy/alpha - to deploy all editions
+ *   /deploy/alpha/ce,ee,fe
+ *   /suspend/alpha
+ *
+ * @param {object} inputs
+ * @param {object} inputs.comment - A comment body.
+ * @returns {object}
+ */
+const detectSlashCommand = ({ comment }) => {
+  // Split comment to lines.
+  const lines = comment.split(/\r\n|\n|\r/).filter(l => l.startsWith('/'));
+  if (lines.length < 1) {
+    return {notFoundMsg: 'first line is not a slash command'}
+  }
+
+  // Search for user command in the first line of the comment.
+  // User command is a command and a tag name.
+  const parts = lines[0].split(/\s+/);
+
+  if ( ! /^\/[a-z\d_\-\/]+$/.test(parts[0])) {
+    return {notFoundMsg: 'not a slash command in the first line'};
+  }
+
+  const command = parts[0];
+  let gitRefInfo = null;
+  let workflow_ref = '';
+
+  if (parts[1]) {
+    // Allow branches main and release-X.Y.
+    if (parts[1] === 'main' || fullMatchReleaseBranch(parts[1])) {
+      workflow_ref = 'refs/heads/' + parts[1];
+    }
+    // Allow vX.Y.Z and test-vX.Y.Z* tags
+    if (fullMatchReleaseTag(parts[1])) {
+      workflow_ref = 'refs/tags/' + parts[1];
+    }
+    if (fullMatchTestTag(parts[1])) {
+      workflow_ref = 'refs/tags/' + parts[1];
+    }
+
+    if (workflow_ref) {
+      gitRefInfo = parseGitRef(workflow_ref);
+    } else {
+      return {notFoundMsg: `git_ref ${parts[1]} not allowed. Only main, release-X.Y, vX.Y.Z or test-vX.Y.Z.`};
+    }
+  }
+
+  let workflow_id = '';
+  let inputs = null;
+
+  // Detect /e2e/run/* commands and /e2e/use/* arguments.
+  const isE2E = knownLabels.e2e.some(l => command.startsWith('/'+l));
+  if (isE2E) {
+    for (const provider of knownProviders) {
+      if (command.includes(provider)) {
+        workflow_id = `e2e-${provider}.yml`;
+        break;
+      }
+    }
+
+    // Extract cri and ver from the rest lines or use defaults.
+    if (workflow_id) {
+      let ver = [];
+      let cri = [];
+      for (const line of lines) {
+        let useParts = line.split('/e2e/use/cri/');
+        if (useParts[1]) {
+          cri.push(useParts[1]);
+        }
+        useParts = line.split('/e2e/use/k8s/');
+        if (useParts[1]) {
+          ver.push(useParts[1]);
+        }
+      }
+
+      inputs = {
+        cri: cri.join(','),
+        ver: ver.join(','),
+      }
+    }
+  }
+
+  // Detect /deploy/* commands.
+  const isDeploy = knownSlashCommands.deploy.some(c => command.startsWith('/'+c));
+  if (isDeploy) {
+    for (const channel of knownChannels) {
+      if (command.includes('/'+channel)) {
+        workflow_id = `deploy-${channel}.yml`;
+        break;
+      }
+    }
+    // Extract editions if command consists of 3 parts: /deploy/alpha/ce,ee v1.3.2-alpha.0
+    const cmdParts = command.split('/');
+    if (workflow_id && cmdParts[3]) {
+      inputs = {
+        editions: cmdParts[3],
+      }
+    }
+  }
+
+  // Detect /suspend/* commands.
+  const isSuspend = knownSlashCommands.suspend.some(c => command.startsWith('/'+c));
+  if (isSuspend) {
+    for (const channel of knownChannels) {
+      if (command.includes(channel)) {
+        workflow_id = `suspend-${channel}.yml`;
+        break;
+      }
+    }
+  }
+
+  const isBuild = command === '/build';
+  if (isBuild) {
+    workflow_id = 'build-and-test_release.yml';
+  }
+
+  if (workflow_id === '') {
+    return {notFoundMsg: `workflow for '${command}' not found`};
+  }
+
+  return {
+    command,
+    gitRefInfo,
+    workflow_ref,
+    workflow_id,
+    inputs,
+    isSuspend,
+    isDeploy,
+    isE2E,
+    isBuild,
+  };
+};
+
+/**
+ * Set reaction to issue comment.
+ *
+ * @param {object} inputs
+ * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
+ * @param {object} inputs.context - An object containing the context of the workflow run.
+ * @param {object} inputs.comment_id - ID of the issue comment.
+ * @param {object} inputs.content - Reaction type: (+1, -1, rocket, confused, ...).
+ * @returns {Promise<void|*>}
+ */
+const reactToComment = async ({github, context, comment_id, content}) => {
+  return await github.rest.reactions.createForIssueComment({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    comment_id,
+    content,
+  });
+};
+
+/**
+ * Use issue comment to determine a workflow to run.
  *
  * @param {object} inputs
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
@@ -487,131 +684,86 @@ module.exports.checkValidationLabels = async ({ github, context, core }) => {
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @returns {Promise<void|*>}
  */
-module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) => {
+module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }) => {
   const event = context.payload;
-  const label = event.label.name;
-  const lowerLabel = label.toLowerCase();
+  const milestoneTitle = event.issue.milestone.title;
+  const comment_id = event.comment.id;
+  core.debug(`Event: ${JSON.stringify(event)}`);
 
-  console.log(`Event label name: ${label}`);
-  console.log(`Known labels: ${JSON.stringify(knownLabels, null, '  ')}`);
+  const slashCommand = detectSlashCommand({ comment: event.comment.body });
+  if (slashCommand.notFoundMsg) {
+    return core.info(`Ignore comment: ${slashCommand.notFoundMsg}.`);
+  }
 
-  let workflow_id = '';
+  core.info(`Command detected: ${JSON.stringify(slashCommand)}`);
 
-  if (knownLabels.e2e.includes(label)) {
-    for (const provider of knownProviders) {
-      if (label.includes(provider)) {
-        workflow_id = `e2e-${provider}.yml`;
-        break;
+  let failedMsg = '';
+
+  if (slashCommand.isE2E || slashCommand.isBuild) {
+    // Check if Git ref is allowed.
+    if (!slashCommand.gitRefInfo) {
+      failedMsg = `Command '${slashCommand.command}' requires an argument with a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y'.`
+    } else if (slashCommand.gitRefInfo.tagVersion) {
+      // Version in Git tag should relate to the milestone.
+      if (!milestoneTitle.includes(slashCommand.gitRefInfo.tagVersion)) {
+        failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${slashCommand.workflow_ref}.`
       }
-    }
-  }
-
-  if (knownLabels['deploy-web'].includes(label)) {
-    for (const webEnv of ['test', 'stage']) {
-      if (label.includes(webEnv)) {
-        workflow_id = `deploy-web-${webEnv}.yml`;
-        break;
+    } else if (slashCommand.gitRefInfo.isReleaseBranch) {
+      // Major.Minor in release branch should relate to the milestone.
+      if (!milestoneTitle.includes(slashCommand.gitRefInfo.branchMajorMinor)) {
+        failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${slashCommand.workflow_ref}.`
       }
+    } else if (!slashCommand.gitRefInfo.isMain) {
+      failedMsg = `Command '${slashCommand.command}' requires a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y', got ${slashCommand.workflow_ref}.`
+    }
+  } else if (slashCommand.isDeploy || slashCommand.isSuspend) {
+    // Extract tag name from milestone title for deploy and suspend commands.
+    const matches = matchReleaseTag(milestoneTitle);
+    if (matches) {
+      slashCommand.workflow_ref = `refs/tags/${matches[0]}`;
+    } else {
+      failedMsg = `Command '${slashCommand.command}' requires issue to relate to milestone with version in title. Got milestone '${event.issue.milestone.title}'.`
     }
   }
 
-  let isDeployChannel = false;
-  if (knownLabels.deploy.includes(label)) {
-    for (const channel of knownChannels) {
-      if (lowerLabel.includes(channel)) {
-        workflow_id = `deploy-${channel}.yml`;
-        isDeployChannel = true;
-        break;
-      }
-    }
+  // Git ref is malformed.
+  if (failedMsg) {
+    core.setFailed(failedMsg);
+    return await reactToComment({github, context, comment_id, content: 'confused'});
   }
 
-  // suspend release in a channel
-  if (knownLabels.suspend.includes(label)) {
-    for (const channel of knownChannels) {
-      if (lowerLabel.includes(channel)) {
-        workflow_id = `suspend-${channel}.yml`;
-        isDeployChannel = true;
-        break;
-      }
-    }
-  }
+  core.info(`Use ref '${slashCommand.workflow_ref}' for workflow.`);
 
-  if (knownLabels['skip-validation'].includes(label)) {
-    workflow_id = 'validation.yml';
-  }
+  // React with rocket!
+  await reactToComment({github, context, comment_id, content: 'rocket'});
 
-  if (workflow_id === '') {
-    return console.log(`Workflow for label "${event.label.name}" not found. Ignore it.`);
-  }
-
-  let hasProperLabel = false;
-  for (const label of event.issue.labels) {
-    if (label.name === knownLabels['issue-release']) {
-      hasProperLabel = true;
-    }
-  }
-  if (!hasProperLabel) {
-    return core.setFailed(`Issue #${event.issue.number} requires label 'issue/release' to run workflow for label '${label}'.`);
-  }
-
-  // Calculate ref for workflow:
-  // - search tag by issue.milestone.title
-  // - use refs/heads/main if no tag
-  // - use refs/tags/TAG if tag is found.
-  console.log(`Search for tag ${event.issue.milestone.title}`);
-  let ref = 'refs/heads/main';
-  try {
-    const response = await github.rest.git.getRef({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      ref: `tags/${event.issue.milestone.title}`
-    });
-    if (response && response.status == 200) {
-      ref = `refs/tags/${event.issue.milestone.title}`;
-    }
-    console.log(JSON.stringify(response));
-  } catch (error) {
-    console.log(`get tag error: ${dumpError(error)}`);
-  }
-
-  console.log(`Use ref=${ref}`);
-
-  // Return if workflow is deploy-channel but no tag is pushed.
-  if (!ref.startsWith('refs/tags/') && isDeployChannel) {
-    return core.setFailed(`Workflow for label ${label} requires a tag. ${event.issue.milestone.title} is not found.`);
-  }
-
-  // Add issue comment.
-  console.log('Add issue comment.');
+  // Add new issue comment and start the requested workflow.
+  core.info('Add issue comment to report workflow status.');
   let response = await github.rest.issues.createComment({
     owner: context.repo.owner,
     repo: context.repo.repo,
     issue_number: event.issue.number,
-    body: `Run workflow "${event.label.name}"...`
+    body: `Aye, aye, @${event.comment.user.login}. I've recognized your '${slashCommand.command}' command and started the workflow...\n`
   });
 
-  if (response.status < 200 || response.status >= 300) {
+  if (response.status !== 201) {
     return core.setFailed(`Cannot start workflow: ${JSON.stringify(response)}`);
   }
 
-  console.log(`Start workflow '${workflow_id}' with ref '${ref}'.`);
-  const issue_id = '' + event.issue.id;
-  const issue_number = '' + event.issue.number;
-  const comment_id = '' + response.data.id;
-  response = await github.rest.actions.createWorkflowDispatch({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    workflow_id: workflow_id,
-    ref: ref,
-    inputs: { issue_id, issue_number, comment_id }
-  });
+  const commentInfo = {
+    issue_id: '' + event.issue.id,
+    issue_number: '' + event.issue.number,
+    comment_id: '' + response.data.id,
+  };
 
-  if (response.status > 200 && response.status < 300) {
-    console.log('Workflow started successfully');
-  } else {
-    return core.setFailed(`Error calling dispatch. Response: ${JSON.stringify(response)}`);
-  }
+  return await startWorkflow({github, context, core,
+    workflow_id: slashCommand.workflow_id,
+    ref: slashCommand.workflow_ref,
+    inputs: {
+      ...commentInfo,
+      ...slashCommand.inputs
+    },
+  });
 };
 
 /**
@@ -687,38 +839,36 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       owner: context.repo.owner,
       repo: context.repo.repo,
       issue_number: prNumber,
-      body: `Run workflow "${label}"...`
+      body: `Running workflow "${label}"...\n`
     });
 
     if (response.status < 200 || response.status >= 300) {
       return core.setFailed(`Cannot start workflow: ${JSON.stringify(response)}`);
     }
 
-    const targetRepo = context.payload.repository.full_name;
-    const prRepo = context.payload.pull_request.head.repo.full_name;
-    const prRef = context.payload.pull_request.head.ref
-    const inputs = {
+    const commentInfo = {
       issue_id: '' + context.payload.pull_request.id,
       issue_number: '' + prNumber,
       comment_id: '' + response.data.id,
+    }
+
+    const targetRepo = context.payload.repository.full_name;
+    const prRepo = context.payload.pull_request.head.repo.full_name;
+    const prRef = context.payload.pull_request.head.ref
+    const prInfo = {
       ci_commit_ref_name: (prRepo === targetRepo) ? prRef : `pr${prNumber}`,
       pull_request_ref: ref,
       pull_request_sha: context.payload.pull_request.head.sha,
-    }
-    console.log(`Start workflow '${workflow_id}'. Inputs: ${JSON.stringify(inputs)}.`);
-    response = await github.rest.actions.createWorkflowDispatch({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      workflow_id: workflow_id,
-      ref: 'refs/heads/main',
-      inputs: inputs
-    });
+    };
 
-    if (response.status > 200 && response.status < 300) {
-      console.log('Workflow started successfully');
-    } else {
-      return core.setFailed(`Error calling dispatch. Response: ${JSON.stringify(response)}`);
-    }
+    return await startWorkflow({github, context, core,
+      workflow_id,
+      ref: 'refs/heads/main',
+      inputs: {
+        ...commentInfo,
+        ...prInfo
+      },
+    });
   }
 
 };
@@ -779,17 +929,70 @@ const findAndRerunWorkflow = async ({ github, context, core, workflow_id }) => {
  */
 module.exports.createReleaseIssueForMilestone = async ({ github, context, core }) => {
   const milestone = context.payload.milestone;
+
+  const matches = matchReleaseTag(milestone.title);
+  if (!matches) {
+    return core.setFailed(`Milestone '${milestone.title}' not dedicated to release version in form of vX.Y.Z. Ignore creating release issue.'`);
+  }
+  const milestoneVersion = matches[0];
+
+  const availableChannels = knownChannels.map(ch => ch.toLowerCase()).join(' | ');
+  const availableEditions = knownEditions.map(e => e.toLowerCase()).join(' | ');
+  const availableProviders = knownProviders.map(p => p.toLowerCase()).join(' | ');
+  const availableCRI = knownCRINames.map(cri => cri.toLowerCase()).join(' | ');
+  const availableKubernetesVersions = knownKubernetesVersions.join(' | ');
+
   // NOTE: non-breaking space after emoji.
-  const issueBody = `:point_right: Use this issue to test milestone [${milestone.title}](${milestone.html_url}) and deploy released tag.
-            :point_right: Use 'e2e/run/' labels to run default e2e test.
-            :point_right: Use 'e2e/use/' labels to run specific e2e test.
-            :point_right: Use 'deploy/' labels to deploy site and documentation.
-            :point_right: Use 'deploy/deckhouse/' labels to deploy to channels after creating tag.`;
+  const issueBody = `:robot: A dedicated issue to run tests and deploy release [${milestoneVersion}](${milestone.html_url}).
+
+---
+
+<details>
+<summary>Release issue commands and options</summary>
+<br />
+
+You can trigger release actions by commenting on this issue:
+
+- \`/deploy/<channel>[/<editions>]\` will publish built images into the release channel.
+  - \`channel\` is one of \`${availableChannels}\`
+  - \`editions\` is a comma-separated list of editions \`${availableEditions}\`
+- \`/suspend/<channel>\` will suspend released version.
+  - \`channel\` is one of \`${availableChannels}\`
+- \`/e2e/run/<provider> git_ref\` will run e2e using provider and an \`install\` image built from git_ref.
+  - \`provider\` is one of \`${availableProviders}\`
+  - \`git_ref\` is a tag or branch: \`vX.Y.Z | test-X.Y.Z* | main | release-X.Y\`
+- \`/e2e/use/cri/<cri_name>\` specifies which CRI to use for e2e test.
+  - \`cri_name\` is one of \`${availableCRI}\`
+- \`/e2e/use/k8s/<version>\` specifies which Kubernetes version to use for e2e test.
+  - \`version\` is one of \`${availableKubernetesVersions}\`
+- \`/build git_ref\` will run build for release related refs.
+  - \`git_ref\` is a tag or branch: \`vX.Y.Z | test-vX.Y.Z* | main | release-X.Y\`
+
+
+**Note 1:**
+A single command \`/e2e/run/<provider>\` will run e2e with default CRI 'containerd' and Kubernetes version '1.21'.
+Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kubernetes version. E.g.:
+
+\`\`\`
+/e2e/run/aws
+/e2e/use/cri/docker
+/e2e/use/cri/containerd
+/e2e/use/k8s/1.19
+/e2e/use/k8s/1.21
+
+This comment will run 4 e2e jobs on AWS with Docker and containerd
+and with Kubernetes version 1.19 and 1.21.
+\`\`\`
+
+**Note 2:**
+'deploy', 'suspend' and 'e2e' commands should run after 'build modules FE' and 'build FE' jobs are finished.
+
+</details>`;
 
   const response = await github.rest.issues.create({
     owner: context.repo.owner,
     repo: context.repo.repo,
-    title: `Release ${milestone.title}`,
+    title: `Release ${milestoneVersion}`,
     body: issueBody,
     milestone: milestone.number,
     labels: ['issue/release']
@@ -801,26 +1004,21 @@ module.exports.createReleaseIssueForMilestone = async ({ github, context, core }
 };
 
 /**
- * Find the recent milestone and it's "release" issue. Create new comment and
- * start build-and-test_release workflow with the ID of the created comment.
+ * Find the recent milestone related to the Git ref.
  *
  * @param {object} inputs
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
- * @returns {Promise<void>}
+ * @param {object} inputs.gitRefInfo - A Git ref info.
+ * @returns {object} - A milestone or an error message.
  */
-const startBuildAndTestWorkflow = async ({ github, context, core }) => {
-  const github_ref = context.ref;
-
-  // TODO Temporarily no comment for release-* branches.
-
-
-  // Find 10 recently created milestones.
+const findMilestoneForGitRef = async ({ github, context, core, gitRefInfo }) => {
+  // Find first 25 recently created milestones.
   const query = `
     query($owner:String!, $name:String!) {
       repository(owner:$owner, name:$name){
-        milestones(first:10, orderBy:{field:CREATED_AT, direction:DESC}, states:[OPEN]) {
+        milestones(first:100, orderBy:{field:CREATED_AT, direction:DESC}, states:[OPEN]) {
           edges {
             node {
               title
@@ -841,47 +1039,48 @@ const startBuildAndTestWorkflow = async ({ github, context, core }) => {
     result = await github.graphql(query, variables);
   } catch (error) {
     if (error.name === 'GraphqlResponseError') {
-      console.log('Request:', error.request);
-      return core.setFailed(error.message);
+      core.log('Request:', error.request);
+      return {notFoundMsg: error.message}
     } else {
       // handle non-GraphQL error
-      return core.setFailed(`List milestones failed: ${dumpError(error)}`);
+      return {notFoundMsg: `List milestones failed: ${dumpError(error)}`}
     }
   }
 
   // Find milestone with tag in title.
   const milestones = result.repository.milestones.edges;
   let milestone = null;
-  let tagName = '';
-  let branchName = '';
-  if (context.ref.startsWith('refs/heads/')) {
-    branchName = context.ref.replace('refs/heads/', '');
-    // Get first milestone with appropriate title.
+  if (gitRefInfo.isMain) {
+    // Get first milestone with appropriate title. It should be the latest milestone.
     for (const m of milestones) {
-      if (/^v\d+\.\d+\.\d+/.test(m.node.title)) {
+      if (matchReleaseTag(m.node.title)) {
+        milestone = m.node;
+        break;
+      }
+    }
+  } else if (gitRefInfo.tagVersion) {
+    for (const m of milestones) {
+      if (` ${m.node.title} `.includes(` ${gitRefInfo.tagVersion} `)) {
         milestone = m.node;
         break;
       }
     }
   }
-  if (context.ref.startsWith('refs/tags/')) {
-    // Get milestone with title equal to tag.
-    tagName = context.ref.replace('refs/tags/', '');
-    for (const m of milestones) {
-      if (` ${m.node.title} `.includes(` ${tagName} `)) {
-        milestone = m.node;
-        break;
-      }
-    }
-  }
-  if (!milestone) {
-    return core.setFailed(
-      `No appropriate milestone found. Create one and push or restart build with label. ${JSON.stringify(result)}`
-    );
-  }
-  console.log(`The milestone is '${milestone.title}' with number ${milestone.number}`);
 
-  // Milestone should has issue to comment. Find it by the specific label.
+  if (!milestone) {
+    core.info(`Milestones: ${JSON.stringify(result)}`);
+    return {notFoundMsg: `No related milestone found for ref '${context.ref}'. You should create milestone related to a tag and restart build.`}
+  }
+
+  core.info(`Found milestone related to ref '${context.ref}': '${milestone.title}' with number ${milestone.number}`);
+  return milestone;
+}
+
+/**
+ * Find first issue related to the milestone and labeled as release issue.
+ */
+const findReleaseIssueForMilestone = async ({ github, context, core, milestone }) => {
+  // Milestone should have release issue to comment. Find it by the specific label.
   let response = await github.rest.issues.listForRepo({
     owner: context.repo.owner,
     repo: context.repo.repo,
@@ -889,28 +1088,41 @@ const startBuildAndTestWorkflow = async ({ github, context, core }) => {
     state: 'open',
     labels: [knownLabels['issue-release']]
   });
-  if (response.status != 200 || response.data.length < 1) {
-    return core.setFailed(`List milestone issues failed: ${JSON.stringify(response)}`);
+  if (response.status !== 200 || response.data.length < 1) {
+    return {notFoundMsg: `List milestone issues failed: ${JSON.stringify(response)}`};
   }
 
-  const issue = response.data[0];
+  return response.data[0];
+}
 
+/**
+ * Add comment for build workflow.
+ *
+ * @param {object} args
+ * @param {object} args.github - A pre-authenticated octokit/rest.js client with pagination plugins.
+ * @param {object} args.context - An object containing the context of the workflow run.
+ * @param {object} args.core - A reference to the '@actions/core' package.
+ * @param {object} args.issue - A release issue object.
+ * @param {object} args.gitRefInfo - A Git ref info.
+ * @returns {Promise<void>}
+ */
+const addReleaseIssueComment = async ({ github, context, core, issue, gitRefInfo }) => {
   // Add issue comment.
   let comment_body = '';
-  if (tagName !== '') {
-    comment_body = `New tag '${tagName}' is created.`;
+  if (gitRefInfo.isTag) {
+    comment_body = `New tag '${gitRefInfo.tagName}' is created.`;
   }
-  if (branchName !== '') {
+  if (gitRefInfo.isBranch) {
     const commitMiniSHA = context.payload.head_commit.id.slice(0, 6);
     const commitUrl = context.payload.head_commit.url;
-    const header = `New commit [${commitMiniSHA}](${commitUrl}) in branch '${branchName}':`;
+    const header = `New commit [${commitMiniSHA}](${commitUrl}) in branch '${gitRefInfo.branchName}':`;
     // Format commit message.
     const mdCodeMarker = '```';
     const commitMsg = `${mdCodeMarker}\n${context.payload.head_commit.message}\n${mdCodeMarker}`;
     comment_body = `${header}\n${commitMsg}\n`;
   }
-  console.log('Add issue comment.');
-  response = await github.rest.issues.createComment({
+  core.info('Add issue comment.');
+  const response = await github.rest.issues.createComment({
     owner: context.repo.owner,
     repo: context.repo.repo,
     issue_number: issue.number,
@@ -921,51 +1133,47 @@ const startBuildAndTestWorkflow = async ({ github, context, core }) => {
     return core.setFailed(`Create issue comment failed: ${JSON.stringify(response)}`);
   }
 
-  // Start 'release-build-and-test' workflow.
-  console.log('Start workflow.');
-  const issue_id = '' + issue.id;
-  const issue_number = '' + issue.number;
-  const comment_id = '' + response.data.id;
-  response = await github.rest.actions.createWorkflowDispatch({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    workflow_id: 'build-and-test_release.yml',
-    ref: github_ref,
-    inputs: { issue_id, issue_number, comment_id }
-  });
-  if (response.status < 200 || response.status >= 300) {
-    return core.setFailed(`Error calling dispatch. Response: ${JSON.stringify(response)}`);
+  return {
+    issue_id: '' + issue.id,
+    issue_number: '' + issue.number,
+    comment_id: '' + response.data.id,
   }
-};
+}
 
 /**
- * Start build-and-test_release workflow.
+ * Start workflow using workflow_dispatch event.
  *
- * @param {object} inputs
- * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
- * @param {object} inputs.context - An object containing the context of the workflow run.
- * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {object} args
+ * @param {object} args.github - A pre-authenticated octokit/rest.js client with pagination plugins.
+ * @param {object} args.context - An object containing the context of the workflow run.
+ * @param {object} args.core - A reference to the '@actions/core' package.
+ * @param {object} args.workflow_id - A name of the workflow YAML file.
+ * @param {object} args.ref - A Git ref.
+ * @param {object} args.inputs - Inputs for the workflow_dispatch event.
  * @returns {Promise<void>}
  */
-const startBuildAndTestWorkflowNoComment = async ({ github, context, core }) => {
-  const github_ref = context.ref;
+const startWorkflow = async ({ github, context, core, workflow_id, ref, inputs }) => {
+  core.info(`Start workflow '${workflow_id}' using ref '${ref}' and inputs ${JSON.stringify(inputs)}.`);
 
-  // Start 'release-build-and-test' workflow.
-  console.log('Start workflow.');
   const response = await github.rest.actions.createWorkflowDispatch({
     owner: context.repo.owner,
     repo: context.repo.repo,
-    workflow_id: 'build-and-test_release.yml',
-    ref: github_ref,
-    inputs: {}
+    workflow_id,
+    ref,
+    inputs: inputs || {},
   });
-  if (response.status < 200 || response.status >= 300) {
-    return core.setFailed(`Error calling dispatch. Response: ${JSON.stringify(response)}`);
+
+  core.debug(`status: ${response.status}`);
+  core.debug(`workflow dispatch response: ${JSON.stringify(response)}`);
+
+  if (response.status !== 204) {
+    return core.setFailed(`Error starting workflow '${workflow_id}'. createWorkflowDispatch response: ${JSON.stringify(response)}`);
   }
+  return core.info(`Workflow '${workflow_id}' started successfully`);
 };
 
 /**
- * Start build-and-test_release workflow depending on context.ref.
+ * Start 'build-and-test_release.yml' workflow depending on context.ref.
  *
  * @param {object} inputs
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
@@ -973,40 +1181,47 @@ const startBuildAndTestWorkflowNoComment = async ({ github, context, core }) => 
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @returns {Promise<void>}
  */
-module.exports.runWorkflowForReleasePush = async ({ github, context, core }) => {
-  const isReleaseBranch = context.ref.startsWith('refs/heads/release-');
-  const isMain = context.ref === 'refs/heads/main';
-  const isTag = context.ref.startsWith('refs/tags/');
-  let tagName = '';
-  let tagSuffix = '';
-  let tagType = 'release';
-  if (isTag) {
-    const found = context.ref.match(/(v[0-9]+\.[0-9]+\.[0-9]+)([\-+][A-Za-z0-9\-+._])?/);
-    if (found) {
-      tagName = found[1];
-      if (found[2]) {
-        tagSuffix = found[2];
-        tagType = 'pre-release'
-      }
+module.exports.runBuildForRelease = async ({ github, context, core }) => {
+  const gitRefInfo = parseGitRef(context.ref);
+
+  // Run workflow without commenting on release issue.
+  if (gitRefInfo.isDeveloperTag) {
+    return await startWorkflow({github, context, core,
+      workflow_id: 'build-and-test_release.yml',
+      ref: context.ref});
+  }
+
+  if (gitRefInfo.isMain || gitRefInfo.tagVersion) {
+    // Add a comment on the release issue for main branch
+    // and tags with specified version:
+    // - find milestone
+    // - find release issue
+    // - add comment and start the workflow.
+    const milestone = await findMilestoneForGitRef({github, context, core,
+      gitRefInfo});
+    if (milestone.notFoundMsg) {
+      return core.setFailed(milestone.notFoundMsg);
     }
+
+    const releaseIssue = await findReleaseIssueForMilestone({github, context, core,
+      milestone});
+    if (releaseIssue.notFoundMsg) {
+      return core.setFailed(releaseIssue.notFoundMsg);
+    }
+
+    const commentInfo = await addReleaseIssueComment({github, context, core,
+      issue: releaseIssue, gitRefInfo});
+
+    core.info(`Start build-and-test for ${gitRefInfo.description} '${context.ref}'...`);
+
+    return await startWorkflow({github, context, core,
+      workflow_id: 'build-and-test_release.yml',
+      ref: context.ref,
+      inputs: {
+        ...commentInfo
+      }
+    });
   }
 
-  let description = '';
-  if (isReleaseBranch) {
-    description = 'release branch'
-  } else if (isMain) {
-    description = 'default branch'
-  } else if (isTag) {
-    description = `${tagType} tag`
-  }
-  console.log(`Start build-and-test for ${description} '${context.ref}'...`);
-
-  if (isReleaseBranch || (isTag && tagType === 'pre-release')) {
-    return await startBuildAndTestWorkflowNoComment({github, context, core});
-  }
-  if (isMain || (isTag && tagType === 'release')) {
-    return await startBuildAndTestWorkflow({github, context, core});
-  }
-
-  core.setFailed(`Cannot recognize ref '${context.ref}'. No workflow to start further.`);
+  return core.setFailed(`Git ref '${context.ref}' is not an auto-build tag or main branch. Ignore running build-and-test_release workflow.`);
 };

@@ -1,0 +1,64 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+name: Trigger slash command
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  trigger_for_release_issue:
+    name: Trigger workflow by comment
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.issue.labels.*.name, 'issue/release') &&
+      (github.event.comment.author_association == 'OWNER' ||
+       github.event.comment.author_association == 'MEMBER')
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+
+      # </template: checkout_step>
+      - name: Run workflow
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.runSlashCommandForReleaseIssue({github, context, core});
+
+  trigger_for_changelog:
+    name: Dispatch Changelog Event
+    runs-on: ubuntu-latest
+    if: |
+      github.event.issue.pull_request &&
+      github.event.issue.milestone.state == 'open' &&
+      contains(github.event.issue.labels.*.name, 'changelog') &&
+      contains(github.event.issue.labels.*.name, 'auto')
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+
+      # </template: checkout_step>
+      - name: Find milestone
+        id: milestone
+        uses: actions/github-script@v5.0.0
+        with:
+          result-encoding: json
+          script: |
+            const validate = require('./.github/scripts/js/changelog-command-validate.js')
+            return await validate({ github, core, context })
+
+      - name: Slash Command Dispatch
+        if: steps.milestone.outputs.result
+        uses: peter-evans/slash-command-dispatch@v2
+        with:
+          token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
+          commands: changelog
+          dispatch-type: repository
+          issue-type: pull-request

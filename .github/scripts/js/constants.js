@@ -19,28 +19,31 @@ const labels = {
   ],
   'issue-release': 'issue/release',
   'ok-to-test': 'status/ok-to-test',
-  deploy: [
-    'deploy/deckhouse/alpha',
-    'deploy/deckhouse/beta',
-    'deploy/deckhouse/early-access',
-    'deploy/deckhouse/stable',
-    'deploy/deckhouse/rock-solid'
-  ],
-  suspend: [
-    'suspend/deckhouse/alpha',
-    'suspend/deckhouse/beta',
-    'suspend/deckhouse/early-access',
-    'suspend/deckhouse/stable',
-    'suspend/deckhouse/rock-solid'
-  ],
   // prettier-ignore
   'deploy-web': [
     'deploy/web/test',
     'deploy/web/stage'
   ]
 };
-
 module.exports.knownLabels = labels;
+
+const slashCommands = {
+  deploy: [
+    'deploy/alpha',
+    'deploy/beta',
+    'deploy/early-access',
+    'deploy/stable',
+    'deploy/rock-solid'
+  ],
+  suspend: [
+    'suspend/alpha',
+    'suspend/beta',
+    'suspend/early-access',
+    'suspend/stable',
+    'suspend/rock-solid'
+  ],
+};
+module.exports.knownSlashCommands = slashCommands;
 
 module.exports.labelsSrv = {
   /**
@@ -87,3 +90,29 @@ const channels = [
 ];
 
 module.exports.knownChannels = channels;
+
+const criNames = [
+  'Containerd',
+  'Docker',
+];
+module.exports.knownCRINames = criNames;
+
+const kubernetesVersions = [
+  '1.19',
+  '1.20',
+  '1.21',
+  '1.22',
+];
+module.exports.knownKubernetesVersions = kubernetesVersions;
+
+module.exports.e2eDefaults = {
+  criName: 'Containerd',
+  kubernetesVersion: '1.21',
+}
+
+const editions = [
+  'CE',
+  'EE',
+  'FE'
+];
+module.exports.knownEditions = editions;
