@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func addDexAuthenticatorHelmLabelsToSecret(input *go_hook.HookInput) error {
 	patchAnnotations(input /* name */, "dashboard" /* namespace */, "d8-dashboard" /* module */, "dashboard")
-	patchAnnotations(input /* name */, "grafana" /* namespace */, "d8-monitoring" /* module */, "grafana")
+	patchAnnotations(input /* name */, "grafana" /* namespace */, "d8-monitoring" /* module */, "prometheus")
 	patchAnnotations(input /* name */, "deckhouse-web" /* namespace */, "d8-system" /* module */, "deckhouse-web")
 	patchAnnotations(input /* name */, "upmeter" /* namespace */, "d8-upmeter" /* module */, "upmeter")
 	patchAnnotations(input /* name */, "status" /* namespace */, "d8-upmeter" /* module */, "upmeter")
