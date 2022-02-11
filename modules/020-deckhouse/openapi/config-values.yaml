@@ -11,15 +11,15 @@ properties:
     enum: ["Default", "Minimal", "Managed"]
     description: |
       The Deckhouse bundle defines a set of modules enabled by default.
-      - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs (the current list is available [here](https://github.com/deckhouse/deckhouse/blob/main/modules/values-default.yaml)).
-      - `Minimal` — the minimum possible bundle option (includes a single module — this one).
-      - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
+      - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs (the current list is available [here](https://github.com/deckhouse/deckhouse/blob/main/modules/values-default.yaml));
+      - `Minimal` — the minimum possible bundle option (includes a single module — this one);
+      - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine);
     default: "Default"
   releaseChannel:
     type: string
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     description: |
-      Desirable Deckhouse release channel (Deckhouse will switch to it when such an opportunity appears).
+      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#change-the-release-channel) to it when such an opportunity appears).
 
       The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
@@ -39,12 +39,12 @@ properties:
         default: 'Auto'
         description: |
           Deckhouse minor version update mode (release change). **Does not affect patch version updates.**
-          - `Auto` — All updates are applied automatically.
+          - `Auto` — all updates are applied automatically.
 
-            Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel.
-          - `Manual` — To change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. 
-          
-            To confirm the update, edit [CR 'DeckhouseRelease'](https://deckhouse.io/en/documentation/v1/modules/020-deckhouse/cr.html), which corresponds to the version by setting the `approved' field to 'true'.
+            Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
+          - `Manual` — to change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
+
+            To confirm the update, edit [custom resource 'DeckhouseRelease'](https://deckhouse.io/en/documentation/v1/modules/020-deckhouse/cr.html), which corresponds to the version by setting the `approved' field to 'true'.
         enum:
           - 'Auto'
           - 'Manual'
@@ -94,13 +94,13 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:
