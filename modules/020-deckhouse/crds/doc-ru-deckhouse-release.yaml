@@ -8,15 +8,15 @@ spec:
           properties:
             approved:
               description: |
-                Флаг для разрешения ручного обновления.
+                Разрешает или запрещает ручное обновление.
 
-                Игнорируется, если в конфигурации модуля установлен режим обновления `Auto` (`update.mode: Auto`)
+                Игнорируется, если в конфигурации модуля установлен режим обновления `Auto` (`update.mode: Auto`).
             spec:
               properties:
                 version:
                   description: Версия Deckhouse.
                 applyAfter:
-                  description: Релиз является частью canary-release. Он отложен до указанного времени.
+                  description: Время, до которого отложено обновление, если релиз является частью canary-release.
                 requirements:
                   description: Требования для установки релиза.
             status:
