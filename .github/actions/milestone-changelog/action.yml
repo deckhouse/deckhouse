@@ -58,7 +58,7 @@ runs:
         patch_version="${{ steps.args.outputs.milestone_title }}"
         minor_version="$(echo "${patch_version}" | cut -d. -f1,2 | awk "{print $1$2}")"
 
-        filename="./CHANGELOG/CHANGELOG-${minor_version}.yml"
+        filename="./CHANGELOG/CHANGELOG-${minor_version}.md"
 
         prev_changes_filename="/tmp/prev_changes.md"
         if [[ -f "$filename" ]]; then
