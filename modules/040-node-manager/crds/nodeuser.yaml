@@ -49,13 +49,19 @@ spec:
                   minimum: 1001
                 sshPublicKey:
                   type: string
-                  description: 'Node user ssh public key.'
+                  description: |
+                    Node user SSH public key.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
                   example: 'ssh-rsa AAABBB'
                 sshPublicKeys:
                   type: array
                   items:
                     type: string
-                  description: 'Node user ssh public keys.'
+                  description: |
+                    Node user SSH public keys.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
                   example:
                     - [ 'ssh-rsa AAABBB', 'ssh-rsa BBBCCC' ]
                 passwordHash:
