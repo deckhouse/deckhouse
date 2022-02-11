@@ -77,6 +77,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			FilterFunc:                   filterDeckhouseRelease,
 		},
+		{
+			Name:       "updating_cm",
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-release-updating"},
+			},
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			FilterFunc:                   filterUpdatingCM,
+		},
 	},
 }, dependency.WithExternalDependencies(updateDeckhouse))
 
@@ -110,6 +126,11 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	deckhousePod := snap[0].(deckhousePodInfo)
 	if deckhousePod.Ready {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
+		deleteUpdatingCM(input)
+	} else {
+		if isUpdatingCMExists(input) {
+			input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
+		}
 	}
 
 	// initialize updater
@@ -195,6 +216,10 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		HasSuspendAnnotation: hasSuspendAnnotation,
 		HasForceAnnotation:   hasForceAnnotation,
 	}, nil
+}
+
+func filterUpdatingCM(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return unstructured.GetName(), nil
 }
 
 func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -419,7 +444,7 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 		TransitionTime: du.now,
 	}
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", predictedRelease.Name, object_patch.WithSubresource("/status"))
-	input.MetricsCollector.Set("d8_is_updating", 1, map[string]string{"version": predictedRelease.Version.String()}, metrics.WithGroup(metricUpdatingGroup))
+	createUpdatingCM(input, predictedRelease.Version.String())
 	// patch deckhouse deployment is faster then set internal values and then upgrade by helm
 	// we can set "deckhouse.internal.currentReleaseImageName" value but lets left it this way
 	input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -702,6 +727,36 @@ func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, r
 	}
 
 	return true
+}
+
+func createUpdatingCM(input *go_hook.HookInput, version string) {
+	cm := &corev1.ConfigMap{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "d8-release-updating",
+			Namespace: "d8-system",
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+			},
+		},
+		Data: map[string]string{
+			"version": version,
+		},
+	}
+
+	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+}
+
+func isUpdatingCMExists(input *go_hook.HookInput) bool {
+	snap := input.Snapshots["updating_cm"]
+	return len(snap) > 0
+}
+
+func deleteUpdatingCM(input *go_hook.HookInput) {
+	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "d8-release-updating", object_patch.InBackground())
 }
 
 func updateStatusMsg(input *go_hook.HookInput, release *deckhouseRelease, msg string) {
