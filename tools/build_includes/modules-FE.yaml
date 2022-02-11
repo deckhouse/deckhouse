@@ -27,6 +27,8 @@
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
 - add: /ee/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+- add: /ee/modules/040-node-manager/openapi/config-values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
 - add: /ee/modules/110-istio
   to: /deckhouse/modules/110-istio
 - add: /ee/modules/140-user-authz/templates/webhook

@@ -69,6 +69,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/040-node-manager/openapi/config-values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/110-istio
   to: /deckhouse/modules/110-istio
   stageDependencies:
