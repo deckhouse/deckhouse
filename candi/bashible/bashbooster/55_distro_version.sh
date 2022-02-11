@@ -25,7 +25,7 @@ bb-is-ubuntu-version?() {
 bb-is-centos-version?() {
   local CENTOS_VERSION=$1
   source /etc/os-release
-  if [[ "${VERSION_ID}" =~ ${CENTOS_VERSION}.* ]] ; then
+  if [[ "${VERSION_ID}" =~ ^${CENTOS_VERSION}.*$ ]] ; then
     return 0
   else
     return 1
