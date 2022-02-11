@@ -18,10 +18,14 @@ spec:
                     Неизменяемый в течение жизни ресурса параметр.
                 sshPublicKey:
                   description: |
-                    Публичный ssh ключ пользователя.
+                    Публичный SSH-ключ пользователя.
+
+                    **Обязательно** должен быть указан либо `sshPublicKey`, либо `sshPublicKeys`.
                 sshPublicKeys:
                   description: |
-                    Массив публичных ssh ключей пользователя.
+                    Массив публичных SSH-ключей пользователя.
+
+                    **Обязательно** должен быть указан либо `sshPublicKey`, либо `sshPublicKeys`.
                 passwordHash:
                   description: |
                     Хеш пароля пользователя.
