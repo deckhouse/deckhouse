@@ -132,7 +132,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineKubeFlags(cmd)
 
 	runFunc := func() error {
-		var resourcesToCreate *template.Resources
+		var resourcesToCreate template.Resources
 		if app.ResourcesPath != "" {
 			parsedResources, err := template.ParseResources(app.ResourcesPath, nil)
 			if err != nil {
@@ -142,7 +142,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			resourcesToCreate = parsedResources
 		}
 
-		if resourcesToCreate == nil || len(resourcesToCreate.Items) == 0 {
+		if resourcesToCreate == nil || len(resourcesToCreate) == 0 {
 			log.WarnLn("Resources to create were not found.")
 			return nil
 		}

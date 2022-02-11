@@ -80,10 +80,10 @@ type Creator struct {
 	resources []*template.Resource
 }
 
-func NewCreator(kubeCl *client.KubernetesClient, resources *template.Resources) *Creator {
+func NewCreator(kubeCl *client.KubernetesClient, resources template.Resources) *Creator {
 	return &Creator{
 		kubeCl:    kubeCl,
-		resources: resources.Items,
+		resources: resources,
 	}
 }
 
@@ -217,7 +217,7 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	})
 }
 
-func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources *template.Resources) error {
+func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources) error {
 	timeout, err := time.ParseDuration(app.ResourcesTimeout)
 	if err != nil {
 		return fmt.Errorf("cannot parse timeout to create resources: %v", err)

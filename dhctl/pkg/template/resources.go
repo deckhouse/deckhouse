@@ -140,6 +140,8 @@ func ParseResources(path string, data map[string]interface{}) (Resources, error)
 
 	docs := BigFileSplit(content)
 
+	// false-positive for `Consider preallocating `resources` (prealloc)`
+	//nolint:prealloc
 	var resources Resources = make([]*Resource, 0, len(docs))
 	for _, doc := range docs {
 		doc = strings.TrimSpace(doc)
