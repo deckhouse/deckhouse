@@ -8,6 +8,6 @@ bb-apt-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 
 bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl7800 }}"
 
-if bb-is-astra-version? 2.12.+; then
+if bb-is-astra-version? 2.12.+ || bb-is-astra-version? 1.7.+; then
   bb-rp-install "virt-what:{{ .images.registrypackages.virtWhatAstra1151Deb9u1 }}" "conntrack:{{ .images.registrypackages.conntrackAstra1462 }}"
 fi

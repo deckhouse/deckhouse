@@ -4,7 +4,7 @@
 bb-apt-install --force ca-certificates
 
 # Hack for Astra 2.12
-if bb-is-astra-version? 2.12.+ ; then
+if bb-is-astra-version? 2.12.+ || bb-is-astra-version? 1.7.+ ; then
   if grep -q "^mozilla\/DST_Root_CA_X3.crt$" /etc/ca-certificates.conf; then
     sed -i "/mozilla\/DST_Root_CA_X3.crt/d" /etc/ca-certificates.conf
     update-ca-certificates --fresh
