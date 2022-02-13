@@ -117,7 +117,7 @@ Next, you only need to add the data source to Grafana:
 * A **considerable disadvantage** of this method is the need to create an Ingress resource in the system namespace.
 Deckhouse does **not guarantee** the functionality of this connection method due to its regular updates.
 
-* This ingress resource can be used to access the Prometheus API not only from Grafana but for other integrations, e.g., the Prometheus federation.
+* This Ingress resource can be used to access the Prometheus API not only from Grafana but for other integrations, e.g., the Prometheus federation.
 
 ## Connecting an external app to Prometheus
 
