@@ -70,8 +70,8 @@ deckhouse: |
 
 In this mode, it will be necessary to confirm each minor Deckhouse updates (excluding patch versions).
 
-Manual confirmation of the update to the version `v1.26.0-alpha.6`:
+Manual confirmation of the update to the version `v1.26.0`:
 
 ```shell
-kubectl patch DeckhouseRelease v1-25-0 --type=merge -p='{"approved": true}'
+kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 ```
