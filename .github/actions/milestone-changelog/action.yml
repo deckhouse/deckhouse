@@ -19,7 +19,7 @@ runs:
 
     - name: Collect Changelog
       id: changelog
-      uses: deckhouse/changelog-action@v2.0.0
+      uses: deckhouse/changelog-action@main
       with:
         token: ${{ inputs.token }}
         milestone: ${{ steps.args.outputs.milestone_title }}
