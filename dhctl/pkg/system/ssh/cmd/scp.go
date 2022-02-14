@@ -78,7 +78,7 @@ func (s *SCP) WithPreserve(preserve bool) *SCP {
 
 func (s *SCP) SCP() *SCP {
 	// env := append(os.Environ(), s.Env...)
-	env := append(os.Environ(), s.Session.AuthSockEnv())
+	env := append(os.Environ(), s.Session.AgentSettings.AuthSockEnv())
 
 	args := []string{
 		// ssh args for bastion here

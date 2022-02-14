@@ -99,13 +99,19 @@ func main() {
 		}
 	}
 
-	testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap process.")
+	testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap and converge process.")
 	{
 		commands.DefineTestSSHConnectionCommand(testCmd)
 		commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
 		commands.DefineTestSCPCommand(testCmd)
 		commands.DefineTestUploadExecCommand(testCmd)
 		commands.DefineTestBundle(testCmd)
+
+		controlPlaneCmd := testCmd.Command("control-plane", "Commands to test control plane nodes.")
+		{
+			commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd)
+			commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd)
+		}
 	}
 
 	deckhouseCmd := testCmd.Command("deckhouse", "Install and uninstall deckhouse.")

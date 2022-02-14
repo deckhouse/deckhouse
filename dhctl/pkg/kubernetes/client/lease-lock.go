@@ -312,6 +312,7 @@ func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
   lastRenewTime: %v
   leaseDuration: %vs
   user: %s@%s
+  additionalInfo:
     %s
 `
 	return fmt.Sprintf(format,

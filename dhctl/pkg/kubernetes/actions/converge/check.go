@@ -202,10 +202,10 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 		}
 
 		nodeGroup := NodeGroupGroupOptions{
-			Name:     nodeGroupName,
-			Step:     step,
-			Replicas: replicas,
-			State:    nodeGroupState.State,
+			Name:            nodeGroupName,
+			Step:            step,
+			DesiredReplicas: replicas,
+			State:           nodeGroupState.State,
 		}
 
 		for name := range nodeGroupState.State {
