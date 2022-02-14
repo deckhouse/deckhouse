@@ -453,7 +453,7 @@ ansible:
         chdir: /dhctl
 ---
 image: dhctl-tests
-fromCacheVersion: "20220125"
+fromCacheVersion: "20220131"
 fromImage: base-for-go
 git:
 - add: /

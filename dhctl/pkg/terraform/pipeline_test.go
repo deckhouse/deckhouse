@@ -206,7 +206,7 @@ func TestDestroyPipeline(t *testing.T) {
 
 			err := DestroyPipeline(runner, "test")
 			if tc.expectedErr != nil {
-				require.EqualError(t, err, tc.expectedErr.Error())
+				require.Contains(t, err.Error(), tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err)
 			}
