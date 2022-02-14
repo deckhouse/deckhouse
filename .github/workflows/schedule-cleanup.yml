@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
 
 env:
+  WERF_DRY_RUN: "true"
 
   # <template: werf_envs>
   # Don't forget to update .gitlab-ci-simple.yml if necessary
