@@ -59,7 +59,7 @@ spec:
           - 'sh'
           - '-c'
           - |
-            MIN_MEMORY_BY_PERCENT_KiB="$(grep 'MemTotal' /proc/meminfo | awk -v percent=$MIN_MEMORY_PERCENT '{ printf("%d", $2*percent/100 }')"
+            MIN_MEMORY_BY_PERCENT_KiB="$(grep 'MemTotal' /proc/meminfo | awk -v percent=$MIN_MEMORY_PERCENT '{ printf("%d", $2*percent/100) }')"
             if [ "$MIN_MEMORY_BY_PERCENT_KiB" -lt "$MIN_MEMORY_KiB" ]; then
               MIN_MEMORY_KiB="$MIN_MEMORY_BY_PERCENT_KiB"
             fi
