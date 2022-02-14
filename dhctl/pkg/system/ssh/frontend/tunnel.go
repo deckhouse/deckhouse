@@ -104,8 +104,8 @@ func (t *Tunnel) Up() error {
 }
 
 func (t *Tunnel) HealthMonitor(errorOutCh chan<- error) {
-	defer log.DebugF("Tunnel health monitor stopped")
-	log.DebugF("Tunnel health monitor started")
+	defer log.DebugF("Tunnel health monitor stopped\n")
+	log.DebugF("Tunnel health monitor started\n")
 
 	t.stopCh = make(chan struct{}, 1)
 

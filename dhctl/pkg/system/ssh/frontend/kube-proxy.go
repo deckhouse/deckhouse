@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 )
 
-var LocalAPIPort = 22322
+const DefaultLocalAPIPort = 22322
 
 type KubeProxy struct {
 	Session *session.Session
@@ -43,7 +43,7 @@ func NewKubeProxy(sess *session.Session) *KubeProxy {
 	return &KubeProxy{
 		Session:   sess,
 		port:      "0",
-		localPort: LocalAPIPort,
+		localPort: DefaultLocalAPIPort,
 	}
 }
 
@@ -172,7 +172,7 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 	localPort = useLocalPort
 
 	if useLocalPort < 1 {
-		localPort = LocalAPIPort
+		localPort = DefaultLocalAPIPort
 		rewriteLocalPort = true
 	}
 
@@ -204,6 +204,7 @@ func (k *KubeProxy) upTunnel(kubeProxyPort string, useLocalPort int, tunnelError
 			}
 		} else {
 			go tun.HealthMonitor(tunnelErrorCh)
+			lastError = nil
 			break
 		}
 	}

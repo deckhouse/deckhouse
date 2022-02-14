@@ -41,6 +41,8 @@ const (
 	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
 	deployServicePortEnvVarName = "KUBERNETES_SERVICE_PORT"
 	deployTimeEnvVarFormat      = time.RFC3339
+
+	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
 )
 
 type DeckhouseDeploymentParams struct {
@@ -220,6 +222,22 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					Name: "kube",
 					VolumeSource: apiv1.VolumeSource{
 						EmptyDir: &apiv1.EmptyDirVolumeSource{Medium: apiv1.StorageMediumMemory},
+					},
+				},
+			},
+			Affinity: &apiv1.Affinity{
+				NodeAffinity: &apiv1.NodeAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: &apiv1.NodeSelector{
+						NodeSelectorTerms: []apiv1.NodeSelectorTerm{
+							{
+								MatchExpressions: []apiv1.NodeSelectorRequirement{
+									{
+										Key:      ConvergeLabel,
+										Operator: apiv1.NodeSelectorOpDoesNotExist,
+									},
+								},
+							},
+						},
 					},
 				},
 			},

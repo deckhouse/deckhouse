@@ -55,7 +55,14 @@ spec:
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry.yaml") . | sha256sum }}
     spec:
-      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: dhctl.deckhouse.io/node-for-converge
+                    operator: DoesNotExist
+{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
 {{- if .Values.deckhouse.nodeSelector }}
       nodeSelector:
         {{- .Values.deckhouse.nodeSelector | toYaml | nindent 8 }}

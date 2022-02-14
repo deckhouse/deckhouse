@@ -16,6 +16,7 @@ package commands
 
 import (
 	"fmt"
+	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -108,6 +109,8 @@ func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		inLockRunner := converge.NewInLockRunner(kubeCl, converge.AutoConvergerIdentity).
 			// never force lock
 			WithForceLock(false)
+
+		app.DeckhouseTimeout = 1 * time.Hour
 
 		runner := converge.NewRunner(kubeCl, inLockRunner).
 			WithChangeSettings(&terraform.ChangeActionSettings{

@@ -24,6 +24,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -91,6 +93,8 @@ type Runner struct {
 	// Even number - runner is in standby mode
 	terraformRunningCounter int32
 	terraformExecutor       Executor
+
+	hook InfraActionHook
 }
 
 func NewRunner(provider, prefix, layout, step string, stateCache state.Cache) *Runner {
@@ -140,6 +144,11 @@ func (r *Runner) WithConfirm(confirm func() *input.Confirmation) *Runner {
 
 func (r *Runner) WithStatePath(statePath string) *Runner {
 	r.statePath = statePath
+	return r
+}
+
+func (r *Runner) WithHook(h InfraActionHook) *Runner {
+	r.hook = h
 	return r
 }
 
@@ -293,26 +302,63 @@ func (r *Runner) stateName() string {
 	return fmt.Sprintf("%s.tfstate", r.name)
 }
 
-func (r *Runner) handleChanges() (bool, error) {
+func (r *Runner) getHook() InfraActionHook {
+	if r.hook == nil {
+		return &DummyHook{}
+	}
+
+	return r.hook
+}
+
+func (r *Runner) runBeforeActionAndWaitReady() error {
+	hook := r.getHook()
+
+	runPostAction, err := hook.BeforeAction()
+	if err != nil {
+		return err
+	}
+
+	if err := hook.IsReady(); err != nil {
+		var resErr *multierror.Error
+		resErr = multierror.Append(resErr, err)
+
+		if runPostAction {
+			err := hook.AfterAction()
+			if err != nil {
+				resErr = multierror.Append(resErr, err)
+			}
+		}
+
+		return resErr.ErrorOrNil()
+	}
+
+	return nil
+}
+
+func (r *Runner) isSkipChanges() (skip bool, err error) {
 	// first verify destructive change
 	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
 		return true, nil
 	}
 
-	//
-	if r.changeSettings.AutoApprove || r.changesInPlan == PlanHasNoChanges {
+	if r.changesInPlan == PlanHasNoChanges {
+		// if plan has not changes we will run apply
 		return false, nil
 	}
 
-	if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
-		if r.changeSettings.SkipChangesOnDeny {
-			return true, nil
+	if !r.changeSettings.AutoApprove {
+		if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
+			if r.changeSettings.SkipChangesOnDeny {
+				return true, nil
+			}
+			return false, ErrTerraformApplyAborted
 		}
-		return false, ErrTerraformApplyAborted
 	}
 
-	return false, nil
+	err = r.runBeforeActionAndWaitReady()
+
+	return false, err
 }
 
 func (r *Runner) Apply() error {
@@ -321,13 +367,7 @@ func (r *Runner) Apply() error {
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
-		err := r.stateSaver.Start(r)
-		if err != nil {
-			return err
-		}
-		defer r.stateSaver.Stop()
-
-		skip, err := r.handleChanges()
+		skip, err := r.isSkipChanges()
 		if err != nil {
 			return err
 		}
@@ -335,6 +375,12 @@ func (r *Runner) Apply() error {
 			log.InfoLn("Skip terraform apply.")
 			return nil
 		}
+
+		err = r.stateSaver.Start(r)
+		if err != nil {
+			return err
+		}
+		defer r.stateSaver.Stop()
 
 		args := []string{
 			"apply",
@@ -356,7 +402,15 @@ func (r *Runner) Apply() error {
 
 		_, err = r.execTerraform(args...)
 
-		return err
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, err)
+
+		// yes, do not check err from exec terraform
+		// always run post action if need
+		err = r.getHook().AfterAction()
+		errRes = multierror.Append(errRes, err)
+
+		return errRes.ErrorOrNil()
 	})
 }
 
@@ -449,6 +503,11 @@ func (r *Runner) Destroy() error {
 		}
 	}
 
+	err := r.runBeforeActionAndWaitReady()
+	if err != nil {
+		return err
+	}
+
 	return log.Process("default", "terraform destroy ...", func() error {
 		err := r.stateSaver.Start(r)
 		if err != nil {
@@ -465,11 +524,17 @@ func (r *Runner) Destroy() error {
 		}
 		args = append(args, r.workingDir)
 
-		if _, err = r.execTerraform(args...); err != nil {
-			return err
-		}
+		_, err = r.execTerraform(args...)
 
-		return nil
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, err)
+
+		// yes, do not check err from exec terraform
+		// always run post action if need
+		err = r.getHook().AfterAction()
+		errRes = multierror.Append(errRes, err)
+
+		return errRes.ErrorOrNil()
 	})
 }
 

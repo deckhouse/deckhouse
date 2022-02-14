@@ -18,10 +18,11 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 type Input struct {
-	PrivateKeys    []string
 	User           string
 	Port           string
 	BastionHost    string
@@ -31,11 +32,31 @@ type Input struct {
 	AvailableHosts []string
 }
 
+type AgentSettings struct {
+	PrivateKeys []string
+
+	// runtime
+	AuthSock string
+}
+
+func (s *AgentSettings) AuthSockEnv() string {
+	if s.AuthSock != "" {
+		return fmt.Sprintf("SSH_AUTH_SOCK=%s", s.AuthSock)
+	}
+	return ""
+}
+
+func (s *AgentSettings) Clone() *AgentSettings {
+	return &AgentSettings{
+		AuthSock:    s.AuthSock,
+		PrivateKeys: append(make([]string, 0), s.PrivateKeys...),
+	}
+}
+
 // TODO rename to Settings
 // Session is used to store ssh settings
 type Session struct {
 	// input
-	PrivateKeys []string
 	User        string
 	Port        string
 	BastionHost string
@@ -43,8 +64,7 @@ type Session struct {
 	BastionUser string
 	ExtraArgs   string
 
-	// runtime
-	AuthSock string
+	AgentSettings *AgentSettings
 
 	lock           sync.RWMutex
 	host           string
@@ -54,7 +74,6 @@ type Session struct {
 
 func NewSession(input Input) *Session {
 	s := &Session{
-		PrivateKeys: input.PrivateKeys,
 		User:        input.User,
 		Port:        input.Port,
 		BastionHost: input.BastionHost,
@@ -79,9 +98,11 @@ func (s *Session) ChoiceNewHost() {
 	defer s.lock.Unlock()
 	s.lock.Lock()
 
-	s.selectNewHost()
+	s.selectNewHost("")
 }
 
+// SetAvailableHosts
+// Set Available hosts. Current host can choice
 func (s *Session) SetAvailableHosts(hosts []string) {
 	defer s.lock.Unlock()
 	s.lock.Lock()
@@ -90,7 +111,28 @@ func (s *Session) SetAvailableHosts(hosts []string) {
 	copy(s.availableHosts, hosts)
 
 	s.resetUsedHosts()
-	s.selectNewHost()
+	s.selectNewHost("")
+}
+
+// ReplaceAvailableHosts
+// Set Available hosts and try save current host if it exists in cluster
+// return true if current host found in new hosts
+func (s *Session) ReplaceAvailableHosts(hosts []string) bool {
+	defer s.lock.Unlock()
+	s.lock.Lock()
+
+	s.availableHosts = make([]string, len(hosts))
+	copy(s.availableHosts, hosts)
+
+	s.resetUsedHosts()
+	return s.selectNewHost(s.host)
+}
+
+func (s *Session) AvailableHosts() []string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return append(make([]string, 0), s.availableHosts...)
 }
 
 func (s *Session) CountHosts() int {
@@ -110,16 +152,6 @@ func (s *Session) RemoteAddress() string {
 		addr = s.User + "@" + addr
 	}
 	return addr
-}
-
-func (s *Session) AuthSockEnv() string {
-	defer s.lock.RUnlock()
-	s.lock.RLock()
-
-	if s.AuthSock != "" {
-		return fmt.Sprintf("SSH_AUTH_SOCK=%s", s.AuthSock)
-	}
-	return ""
 }
 
 func (s *Session) String() string {
@@ -167,10 +199,11 @@ func (s *Session) Copy() *Session {
 	ses.BastionPort = s.BastionPort
 	ses.BastionUser = s.BastionUser
 	ses.ExtraArgs = s.ExtraArgs
-	ses.AuthSock = s.AuthSock
 	ses.host = s.host
 
-	ses.PrivateKeys = append(ses.PrivateKeys, s.PrivateKeys...)
+	if s.AgentSettings != nil {
+		ses.AgentSettings = s.AgentSettings.Clone()
+	}
 
 	ses.availableHosts = make([]string, len(s.availableHosts))
 	copy(ses.availableHosts, s.availableHosts)
@@ -186,19 +219,36 @@ func (s *Session) resetUsedHosts() {
 	copy(s.remainingHosts, s.availableHosts)
 }
 
-func (s *Session) selectNewHost() {
+// selectNewHost selects new host from available and updates remaining hosts
+// newHostForSet - if not empty - try to choose this host
+//				 - if host not found choose from remaining hosts
+// return true if newHostForSet found and set
+func (s *Session) selectNewHost(newHostForSet string) bool {
 	if len(s.availableHosts) == 0 {
 		s.host = ""
-		return
+		return false
+	}
+
+	hostIndx := 0
+	found := false
+
+	if newHostForSet != "" {
+		indx := stringsutil.Index(s.availableHosts, newHostForSet)
+		if indx >= 0 {
+			s.resetUsedHosts()
+			hostIndx = indx
+			found = true
+		}
 	}
 
 	if len(s.remainingHosts) == 0 {
 		s.resetUsedHosts()
 	}
 
-	indx := 0
-	host := s.remainingHosts[indx]
-	s.remainingHosts = append(s.remainingHosts[:indx], s.remainingHosts[indx+1:]...)
+	host := s.remainingHosts[hostIndx]
+	s.remainingHosts = append(s.remainingHosts[:hostIndx], s.remainingHosts[hostIndx+1:]...)
 
 	s.host = host
+
+	return found
 }

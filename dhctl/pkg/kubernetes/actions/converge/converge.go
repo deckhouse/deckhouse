@@ -25,10 +25,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -47,7 +50,9 @@ const (
 	PhaseAllNodes  = Phase("all-nodes")
 )
 
-var ErrConvergeInterrupted = errors.New("Interrupted.")
+var (
+	ErrConvergeInterrupted = errors.New("Interrupted.")
+)
 
 type Runner struct {
 	kubeCl         *client.KubernetesClient
@@ -173,11 +178,12 @@ func (r *Runner) converge() error {
 	}
 
 	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
-		controller := NewConvergeController(r.kubeCl, metaConfig, r.stateCache)
+		ngState := nodesState[nodeGroupName]
+		controller := NewConvergeController(r.kubeCl, metaConfig, nodeGroupName, ngState, r.stateCache)
 		controller.WithChangeSettings(r.changeSettings)
 		controller.WithExcludedNodes(r.excludedNodes)
 
-		if err := controller.Run(nodeGroupName, nodesState[nodeGroupName]); err != nil {
+		if err := controller.Run(); err != nil {
 			return err
 		}
 	}
@@ -240,7 +246,7 @@ func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroup
 	})
 }
 
-type Controller struct {
+type NodeGroupController struct {
 	client         *client.KubernetesClient
 	config         *config.MetaConfig
 	changeSettings *terraform.ChangeActionSettings
@@ -248,37 +254,116 @@ type Controller struct {
 	excludedNodes map[string]bool
 
 	stateCache dstate.Cache
+
+	nodeExternalIPs map[string]string
+	name            string
+	state           NodeGroupTerraformState
 }
 
 type NodeGroupGroupOptions struct {
-	Name        string
-	Step        string
-	CloudConfig string
-	Replicas    int
-	State       map[string][]byte
+	Name            string
+	Step            string
+	CloudConfig     string
+	DesiredReplicas int
+	State           map[string][]byte
 }
 
-func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, stateCache dstate.Cache) *Controller {
-	return &Controller{
+func (n *NodeGroupGroupOptions) CurReplicas() int {
+	return len(n.State)
+}
+
+func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, name string, state NodeGroupTerraformState, stateCache dstate.Cache) *NodeGroupController {
+	return &NodeGroupController{
 		client:         kubeCl,
 		config:         metaConfig,
 		changeSettings: &terraform.ChangeActionSettings{},
 		excludedNodes:  make(map[string]bool),
 		stateCache:     stateCache,
+
+		name:  name,
+		state: state,
 	}
 }
 
-func (c *Controller) WithChangeSettings(changeSettings *terraform.ChangeActionSettings) *Controller {
+func (c *NodeGroupController) WithChangeSettings(changeSettings *terraform.ChangeActionSettings) *NodeGroupController {
 	c.changeSettings = changeSettings
 	return c
 }
 
-func (c *Controller) WithExcludedNodes(nodesMap map[string]bool) *Controller {
+func (c *NodeGroupController) WithExcludedNodes(nodesMap map[string]bool) *NodeGroupController {
 	c.excludedNodes = nodesMap
 	return c
 }
 
-func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraformState) error {
+func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupGroupOptions, convergedNode string) (terraform.InfraActionHook, error) {
+	if c.name != MasterNodeGroupName {
+		// for not master node groups do not need readiness check
+		return &terraform.DummyHook{}, nil
+	}
+
+	// single master do no need readiness check
+	// it doesn't make sense
+	// but single master can converge for updating
+	if nodeGroup.CurReplicas() == 1 {
+		return &terraform.DummyHook{}, nil
+	}
+
+	if c.nodeExternalIPs == nil {
+		ips := make(map[string]string)
+		for nodeName, st := range nodeGroup.State {
+			r := terraform.NewRunnerFromConfig(c.config, "get-master-ip", c.stateCache).
+				WithState(st)
+
+			out, err := terraform.GetMasterNodeResult(r)
+			if err != nil {
+				return nil, err
+			}
+
+			ips[nodeName] = out.MasterIPForSSH
+		}
+
+		c.nodeExternalIPs = ips
+	}
+
+	if c.client.SSHClient != nil {
+		userPassedHosts := c.client.SSHClient.Settings.AvailableHosts()
+		setFromState, err := ssh.CheckSSHHosts(userPassedHosts, c.nodeExternalIPs, func(msg string) bool {
+			return input.NewConfirmation().WithMessage(msg).Ask()
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if setFromState {
+			hostnames := maputil.Values(c.nodeExternalIPs)
+			foundCurrentHostInNew := c.client.SSHClient.Settings.ReplaceAvailableHosts(hostnames)
+			if !foundCurrentHostInNew {
+				// we can not find current if we want to delete master
+				// in case, when we already connect to node for delete, we should reconnect to another node
+				log.InfoF("Need to restart kube proxy with new host %s ...\n", c.client.SSHClient.Settings.Host())
+				err := c.client.KubeProxy.Restart()
+				if err != nil {
+					return nil, err
+				}
+
+				log.InfoLn("Proxy was restarted")
+			}
+		}
+	}
+
+	nodesToCheck := maputil.ExcludeKeys(c.nodeExternalIPs, convergedNode)
+
+	h := controlplane.NewHook(c.client, nodesToCheck, c.config.UUID).
+		WithSourceCommandName("converge").
+		WithNodeToConverge(convergedNode)
+
+	return h, nil
+}
+
+func (c *NodeGroupController) Run() error {
+	nodeGroupName := c.name
+
 	replicas := getReplicasByNodeGroupName(c.config, nodeGroupName)
 	step := getStepByNodeGroupName(nodeGroupName)
 
@@ -287,98 +372,45 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraform
 		return err
 	}
 
-	nodeGroup := NodeGroupGroupOptions{
-		Name:        nodeGroupName,
-		Step:        step,
-		Replicas:    replicas,
-		CloudConfig: nodeCloudConfig,
-		State:       nodeGroupState.State,
+	nodeGroup := &NodeGroupGroupOptions{
+		Name:            nodeGroupName,
+		Step:            step,
+		DesiredReplicas: replicas,
+		CloudConfig:     nodeCloudConfig,
+		State:           c.state.State,
 	}
 
-	if replicas > len(nodeGroupState.State) {
+	if nodeGroup.DesiredReplicas > len(nodeGroup.State) {
 		err := log.Process("converge", fmt.Sprintf("Add Nodes to NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
-			return c.addNewNodesToGroup(&nodeGroup)
+			return c.addNewNodesToGroup(nodeGroup)
 		})
 		if err != nil {
 			return err
 		}
 	}
 
-	deleteNodesNames := make(map[string][]byte)
+	deleteNodesNames := c.getNodesToDelete(nodeGroup)
 
-	if replicas < len(nodeGroupState.State) {
-		count := len(nodeGroup.State)
-
-		// Descending order to delete nodes with bigger numbers first
-		// Need to use index instead of a name to prevent string sorting and decimals problem
-		keys := make([]string, 0, len(nodeGroup.State))
-		for k := range nodeGroup.State {
-			keys = append(keys, k)
-		}
-		sort.Sort(sort.Reverse(sort.StringSlice(keys)))
-
-		for _, name := range keys {
-			state := nodeGroup.State[name]
-
-			deleteNodesNames[name] = state
-			delete(nodeGroup.State, name)
-			count--
-
-			if count == nodeGroup.Replicas {
-				break
-			}
-		}
-	}
-
-	var allErrs *multierror.Error
-	if replicas != 0 {
-		for name := range nodeGroupState.State {
-			err := log.Process("converge", fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", name, nodeGroupName, replicas), func() error {
-				return c.updateNode(&nodeGroup, name)
-			})
-			if err != nil {
-				allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %v", name, err))
-			}
-		}
-	}
-
-	if err := allErrs.ErrorOrNil(); err != nil {
+	err = c.updateNodes(nodeGroup)
+	if err != nil {
 		return err
 	}
 
-	terraNodesExistInConfig := make(map[string]struct{}, len(c.config.GetTerraNodeGroups()))
-	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
-		terraNodesExistInConfig[terranodeGroup.Name] = struct{}{}
+	err = c.tryDeleteNodes(deleteNodesNames, nodeGroup)
+	if err != nil {
+		return err
 	}
 
-	needDeleteNodes := len(deleteNodesNames) > 0 && !c.changeSettings.AutoDismissDestructive
-	log.DebugLn("Need to delete nodes", needDeleteNodes)
-	if needDeleteNodes {
-		err := log.Process("converge", fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
-			if err := c.deleteRedundantNodes(&nodeGroup, nodeGroupState.Settings, deleteNodesNames); err != nil {
-				return err
-			}
-			if _, ok := terraNodesExistInConfig[nodeGroup.Name]; !ok && nodeGroup.Name != "master" {
-				if err := DeleteNodeGroup(c.client, nodeGroup.Name); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return c.tryDeleteNodeGroup(nodeGroup)
 }
 
-func (c *Controller) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error {
+func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error {
 	count := len(nodeGroup.State)
 	index := 0
 
 	var nodesToWait []string
 
-	for nodeGroup.Replicas > count {
+	for nodeGroup.DesiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, nodeGroup.Name, index)
 
 		if _, ok := nodeGroup.State[candidateName]; !ok {
@@ -400,7 +432,7 @@ func (c *Controller) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error 
 	return WaitForNodesListBecomeReady(c.client, nodesToWait)
 }
 
-func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName string) error {
+func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName string) error {
 	if _, ok := c.excludedNodes[nodeName]; ok {
 		log.InfoF("Skip update excluded node %v\n", nodeName)
 		return nil
@@ -413,13 +445,19 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 		return nil
 	}
 
+	checker, err := c.getNodeGroupReadinessChecker(nodeGroup, nodeName)
+	if err != nil {
+		return err
+	}
+
 	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 		WithSkipChangesOnDeny(true).
 		WithState(state).
 		WithName(nodeName).
 		WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive).
-		WithAutoApprove(c.changeSettings.AutoApprove)
+		WithAutoApprove(c.changeSettings.AutoApprove).
+		WithHook(checker)
 
 	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
 
@@ -462,7 +500,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 	return WaitForSingleNodeBecomeReady(c.client, nodeName)
 }
 
-func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, settings []byte, deleteNodesNames map[string][]byte) error {
+func (c *NodeGroupController) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, settings []byte, deleteNodesNames map[string][]byte) error {
 	if c.changeSettings.AutoDismissDestructive {
 		return nil
 	}
@@ -527,6 +565,125 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 		}
 	}
 	return allErrs.ErrorOrNil()
+}
+
+func (c *NodeGroupController) tryDeleteNodes(deleteNodesNames map[string][]byte, nodeGroup *NodeGroupGroupOptions) error {
+	if len(deleteNodesNames) == 0 {
+		log.DebugLn("No nodes to delete")
+		return nil
+	}
+
+	if c.changeSettings.AutoDismissDestructive {
+		log.DebugLn("Skip delete nodes because destructive operations are disabled")
+		return nil
+	}
+
+	if c.name == MasterNodeGroupName {
+		if nodeGroup.DesiredReplicas < 1 {
+			return fmt.Errorf(`Cannot delete ALL master nodes. If you want to remove cluster use 'dhctl destroy' command`)
+		}
+
+		needToQuorum := nodeGroup.CurReplicas()/2 + 1
+
+		noQuorum := nodeGroup.DesiredReplicas < needToQuorum
+		msg := fmt.Sprintf("Desired master replicas count (%d) can break cluster. Need minimum replicas (%d). Do you want to continue?", nodeGroup.DesiredReplicas, needToQuorum)
+		confirm := input.NewConfirmation().WithMessage(msg)
+		if noQuorum && !confirm.Ask() {
+			return fmt.Errorf("Skip delete master nodes")
+		}
+	}
+
+	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", c.name, nodeGroup.DesiredReplicas)
+	return log.Process("converge", title, func() error {
+		return c.deleteRedundantNodes(nodeGroup, c.state.Settings, deleteNodesNames)
+	})
+}
+
+func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
+	if c.changeSettings.AutoDismissDestructive {
+		log.DebugF("Skip delete %s node group because destructive operations are disabled\n", c.name)
+		return nil
+	}
+
+	if nodeGroup.Name == MasterNodeGroupName {
+		log.DebugLn("Skip delete master node group")
+		return nil
+	}
+
+	groupInConfig := false
+
+	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
+		if terranodeGroup.Name == c.name {
+			groupInConfig = true
+			break
+		}
+	}
+
+	if groupInConfig {
+		log.DebugF("Do not delete %s node group, because it present in config\n")
+		return nil
+	}
+
+	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
+		return DeleteNodeGroup(c.client, nodeGroup.Name)
+	})
+}
+
+func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) error {
+	replicas := nodeGroup.DesiredReplicas
+	if replicas == 0 {
+		return nil
+	}
+
+	var allErrs *multierror.Error
+
+	for nodeName := range nodeGroup.State {
+		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
+
+		err := log.Process("converge", processTitle, func() error {
+			return c.updateNode(nodeGroup, nodeName)
+		})
+
+		if err != nil {
+			if errors.Is(err, ssh.ErrNotEnoughMastersSSHHosts) {
+				return err
+			}
+
+			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %v", nodeName, err))
+		}
+	}
+
+	return allErrs.ErrorOrNil()
+}
+
+func (c *NodeGroupController) getNodesToDelete(nodeGroup *NodeGroupGroupOptions) map[string][]byte {
+	deleteNodesNames := make(map[string][]byte)
+
+	if nodeGroup.DesiredReplicas < len(nodeGroup.State) {
+		count := len(nodeGroup.State)
+
+		// Descending order to delete nodes with bigger numbers first
+		// Need to use index instead of a name to prevent string sorting and decimals problem
+		keys := make([]string, 0, len(nodeGroup.State))
+		for k := range nodeGroup.State {
+			keys = append(keys, k)
+		}
+		sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+
+		for _, name := range keys {
+			state := nodeGroup.State[name]
+
+			deleteNodesNames[name] = state
+			delete(nodeGroup.State, name)
+			count--
+
+			if count == nodeGroup.DesiredReplicas {
+				break
+			}
+		}
+	}
+
+	return deleteNodesNames
 }
 
 func GetMetaConfig(kubeCl *client.KubernetesClient) (*config.MetaConfig, error) {

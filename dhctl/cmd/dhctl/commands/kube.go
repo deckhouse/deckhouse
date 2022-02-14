@@ -15,18 +15,17 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -38,41 +37,32 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
-		if err != nil {
-			return err
-		}
-
 		doneCh := make(chan struct{})
 		tomb.RegisterOnShutdown("wait kubernetes-api-connection to stop", func() {
 			<-doneCh
 		})
 
-		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-		// auto init
-		err = kubeCl.Init(client.AppKubernetesInitParams())
-		if err != nil {
-			return fmt.Errorf("open kubernetes connection: %v", err)
+		checker := controlplane.NewKubeProxyChecker().
+			WithLogResult(true).
+			WithAskPassword(true).
+			WithInitParams(client.AppKubernetesInitParams())
+
+		proxyClose := func() {
+			log.InfoLn("Press Ctrl+C to close proxy connection.")
+			ch := make(chan struct{})
+			<-ch
 		}
 
-		list, err := kubeCl.CoreV1().Namespaces().List(context.TODO(), v1.ListOptions{})
+		// ip is empty because we want check via ssh-hosts passed via cm args
+		ready, err := checker.IsReady("")
 		if err != nil {
-			log.InfoF("list namespaces: %v", err)
-			if kubeCl.KubeProxy != nil {
-				log.InfoLn("Press Ctrl+C to close proxy connection.")
-				ch := make(chan struct{})
-				<-ch
-			}
-			return nil
+			proxyClose()
+			return err
 		}
 
-		if len(list.Items) > 0 {
-			log.InfoLn("Namespaces:")
-			for _, ns := range list.Items {
-				log.InfoF("  ns/%s\n", ns.Name)
-			}
-		} else {
-			log.InfoLn("No namespaces.")
+		if !ready {
+			proxyClose()
+			return fmt.Errorf("Proxy not ready")
 		}
 
 		TestCommandDelay()

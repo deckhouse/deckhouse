@@ -27,11 +27,11 @@ import (
 const SSHAddPath = "ssh-add"
 
 type SSHAdd struct {
-	Session *session.Session
+	AgentSettings *session.AgentSettings
 }
 
-func NewSSHAdd(sess *session.Session) *SSHAdd {
-	return &SSHAdd{Session: sess}
+func NewSSHAdd(sess *session.AgentSettings) *SSHAdd {
+	return &SSHAdd{AgentSettings: sess}
 }
 
 func (s *SSHAdd) KeyCmd(keyPath string) *exec.Cmd {
@@ -39,7 +39,7 @@ func (s *SSHAdd) KeyCmd(keyPath string) *exec.Cmd {
 		keyPath,
 	}
 	env := []string{
-		s.Session.AuthSockEnv(),
+		s.AgentSettings.AuthSockEnv(),
 	}
 	cmd := exec.Command(SSHAddPath, args...)
 	cmd.Env = append(os.Environ(), env...)
@@ -48,7 +48,7 @@ func (s *SSHAdd) KeyCmd(keyPath string) *exec.Cmd {
 
 func (s *SSHAdd) ListCmd() *exec.Cmd {
 	env := []string{
-		s.Session.AuthSockEnv(),
+		s.AgentSettings.AuthSockEnv(),
 	}
 	cmd := exec.Command(SSHAddPath, "-l")
 	cmd.Env = append(os.Environ(), env...)
@@ -62,7 +62,7 @@ func (s *SSHAdd) AddKeys(keys []string) error {
 			k,
 		}
 		env := []string{
-			s.Session.AuthSockEnv(),
+			s.AgentSettings.AuthSockEnv(),
 		}
 		cmd := exec.Command(SSHAddPath, args...)
 		cmd.Env = append(os.Environ(), env...)
@@ -81,7 +81,7 @@ func (s *SSHAdd) AddKeys(keys []string) error {
 	if app.IsDebug {
 		log.DebugLn("list added keys")
 		env := []string{
-			s.Session.AuthSockEnv(),
+			s.AgentSettings.AuthSockEnv(),
 		}
 		cmd := exec.Command(SSHAddPath, "-l")
 		cmd.Env = append(os.Environ(), env...)

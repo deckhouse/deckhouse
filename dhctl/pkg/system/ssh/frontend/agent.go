@@ -25,26 +25,26 @@ import (
 )
 
 type Agent struct {
-	Session *session.Session
+	AgentSettings *session.AgentSettings
 
 	Agent *cmd.SSHAgent
 }
 
-func NewAgent(sess *session.Session) *Agent {
-	return &Agent{Session: sess}
+func NewAgent(sess *session.AgentSettings) *Agent {
+	return &Agent{AgentSettings: sess}
 }
 
 func (a *Agent) Start() error {
-	if len(a.Session.PrivateKeys) == 0 {
+	if len(a.AgentSettings.PrivateKeys) == 0 {
 		a.Agent = &cmd.SSHAgent{
-			Session:  a.Session,
-			AuthSock: os.Getenv("SSH_AUTH_SOCK"),
+			AgentSettings: a.AgentSettings,
+			AuthSock:      os.Getenv("SSH_AUTH_SOCK"),
 		}
 		return nil
 	}
 
 	a.Agent = &cmd.SSHAgent{
-		Session: a.Session,
+		AgentSettings: a.AgentSettings,
 	}
 
 	log.DebugLn("agent: start ssh-agent")
@@ -64,9 +64,9 @@ func (a *Agent) Start() error {
 
 // TODO replace with x/crypto/ssh/agent ?
 func (a *Agent) AddKeys() error {
-	for _, k := range a.Session.PrivateKeys {
+	for _, k := range a.AgentSettings.PrivateKeys {
 		log.DebugF("add key %s\n", k)
-		sshAdd := cmd.NewSSHAdd(a.Session).KeyCmd(k)
+		sshAdd := cmd.NewSSHAdd(a.AgentSettings).KeyCmd(k)
 		output, err := sshAdd.CombinedOutput()
 		if err != nil {
 			werr := "signal: interrupt"
@@ -84,7 +84,7 @@ func (a *Agent) AddKeys() error {
 
 	if app.IsDebug {
 		log.DebugLn("list added keys")
-		listCmd := cmd.NewSSHAdd(a.Session).ListCmd()
+		listCmd := cmd.NewSSHAdd(a.AgentSettings).ListCmd()
 
 		output, err := listCmd.CombinedOutput()
 		if err != nil {
