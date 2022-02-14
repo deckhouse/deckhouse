@@ -20,6 +20,16 @@
 
 
 
+## v1.2.1
+
+### Fixes
+
+
+ - **[111]** 1111 [#4](https://api.github.com/repos/shvgn/deckhouse/issues/4)
+    1111111
+
+
+
 ## v1.2.0
 
 ### Features
