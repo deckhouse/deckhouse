@@ -19,11 +19,9 @@ RUN mkdir /prometheus && cd /prometheus \
 WORKDIR /prometheus/prometheus
 COPY sample_limit_annotation.patch ./
 COPY successfully_sent_metric.patch ./
-COPY d8_update_ignore_annotation.patch ./
 
 RUN patch -p1 < sample_limit_annotation.patch && \
   patch -p1 < successfully_sent_metric.patch && \
-  patch -p1 < d8_update_ignore_annotation.patch && \
   make build
 
 FROM $BASE_ALPINE
