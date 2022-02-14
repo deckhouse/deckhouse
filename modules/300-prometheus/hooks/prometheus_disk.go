@@ -28,7 +28,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,22 +85,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyPodFilter,
 		},
-		{
-			Name:       "proms",
-			ApiVersion: "monitoring.coreos.com/v1",
-			Kind:       "Prometheus",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-monitoring"},
-				},
-			},
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "prometheus",
-				},
-			},
-			FilterFunc: applyPromFilter,
-		},
+		//{
+		//	Name:       "proms",
+		//	ApiVersion: "monitoring.coreos.com/v1",
+		//	Kind:       "Prometheus",
+		//	NamespaceSelector: &types.NamespaceSelector{
+		//		NameSelector: &types.NameSelector{
+		//			MatchNames: []string{"d8-monitoring"},
+		//		},
+		//	},
+		//	LabelSelector: &metav1.LabelSelector{
+		//		MatchLabels: map[string]string{
+		//			"app": "prometheus",
+		//		},
+		//	},
+		//	FilterFunc: applyPromFilter,
+		//},
 	},
 }, dependency.WithExternalDependencies(prometheusDisk))
 
@@ -204,21 +203,21 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-type PromFilter struct {
-	Name string
-}
-
-func applyPromFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var prom = &monitoringv1.Prometheus{}
-	err := sdk.FromUnstructured(obj, prom)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
-	}
-
-	return PromFilter{
-		Name: prom.Name,
-	}, nil
-}
+//type PromFilter struct {
+//	Name string
+//}
+//
+//func applyPromFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+//	var prom = &monitoringv1.Prometheus{}
+//	err := sdk.FromUnstructured(obj, prom)
+//	if err != nil {
+//		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+//	}
+//
+//	return PromFilter{
+//		Name: prom.Name,
+//	}, nil
+//}
 
 func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 	input.LogEntry.Debugf("StorageClasses: %v", input.Snapshots["scs"])
@@ -245,8 +244,9 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	for _, prom := range input.Snapshots["proms"] {
-		promName := prom.(PromFilter).Name
+	//for _, prom := range input.Snapshots["proms"] {
+	proms := []string{"main", "longterm"}
+	for _, promName := range proms {
 
 		promNameForPath := strings.ToUpper(promName[0:1]) + promName[1:]
 
@@ -311,7 +311,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 		retentionPath := fmt.Sprintf("prometheus.internal.prometheus%s.retentionGigabytes", promNameForPath)
 
 		input.LogEntry.Debugf("diskSizePath: %s, diskSize: %d", diskSizePath, diskSize)
-		
+
 		input.Values.Set(diskSizePath, diskSize)
 		input.Values.Set(retentionPath, retention)
 
