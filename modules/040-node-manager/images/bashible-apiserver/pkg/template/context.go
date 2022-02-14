@@ -547,6 +547,9 @@ func (c *BashibleContext) AddNodeUserConfiguration(nu *NodeUser) {
 	for _, ngBundlePair := range ngBundlePairs {
 		if m, ok := c.contextBuilder.nodeUserConfigurations[ngBundlePair]; ok {
 			m = append(m, &nuc)
+			sort.Slice(m, func(i, j int) bool {
+				return m[i].Name < m[j].Name
+			})
 			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = m
 		} else {
 			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = []*UserConfiguration{&nuc}
