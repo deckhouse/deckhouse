@@ -35,7 +35,11 @@ function bp() {
       }
     )' images_tags_werf.json > modules/images_tags_${WERF_ENV}.json
 
-  rm images_tags_werf.json
+  set +u
+  if [ "x$MODULES_IMAGES_WERF_KEEP_REPORT" == "x" ] ; then
+    rm images_tags_werf.json
+  fi
+  set -u
 }
 
 function cleanup() {
