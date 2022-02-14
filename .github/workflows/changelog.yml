@@ -28,7 +28,7 @@ jobs:
     if: |
       (
         github.event.pull_request &&
-        !contains(github.event.issue.labels.*.name, 'changelog')
+        !contains(github.event.pull_request.labels.*.name, 'changelog')
       ) && (
         (
           github.event.pull_request.state == 'closed'         &&
