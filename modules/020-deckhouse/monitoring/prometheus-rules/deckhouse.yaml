@@ -347,3 +347,15 @@
         Edit Deckhouse config by running: `kubectl -n d8-system edit cm deckhouse`.
       summary: |
         Deckhouse config is invalid.
+
+  - alert: DeckhouseUpdating
+    expr: max (d8_is_updating) == 1
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Deckhouse is being updated.
