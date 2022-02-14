@@ -28,14 +28,16 @@ jobs:
     if: |
       (
         github.event.pull_request &&
-        github.event.pull_request.state == 'closed' &&
-        github.event.pull_request.merged &&
-        github.event.pull_request.milestone.state == 'open' &&
         !contains(github.event.issue.labels.*.name, 'changelog')
-      ) || (
-        (github.event.action == 'milestoned' || github.event.action == 'demilestoned') &&
-        github.event.issue.pull_request &&
-        !contains(github.event.issue.labels.*.name, 'changelog')
+      ) && (
+        (
+          github.event.pull_request.state == 'closed'         &&
+          github.event.pull_request.merged                    &&
+          github.event.pull_request.milestone.state == 'open'
+        ) || (
+          github.event.action == 'milestoned' ||
+          github.event.action == 'demilestoned'
+        )
       )
     steps:
       - name: Check PR
