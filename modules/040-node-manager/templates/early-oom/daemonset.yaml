@@ -54,12 +54,18 @@ spec:
       containers:
       - name: oom-killer
         image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.alpine }}"
+        # based on https://gist.github.com/stewartpark/14a5690afbf717be04857d2cda1d8620
         args:
           - 'sh'
           - '-c'
           - |
             while true; do
-              if [ "$(cat /proc/meminfo | grep 'MemAvailable' | awk '{ print $2 }')" -lt "$MIN_MEMORY_KB" ]; then
+              if [ "$(grep 'MemTotal' /proc/meminfo | awk '{ print $2 }')" -le "$MIN_TOTAL_MEMORY_KiB" ]; then
+                sleep 600
+                continue
+              fi
+
+              if [ "$(grep 'MemAvailable' /proc/meminfo | awk '{ print $2 }')" -lt "$MIN_MEMORY_KiB" ]; then
                 echo f > /host_proc/sysrq-trigger
                 echo "Kernel OOM killer invoked."
               fi
@@ -67,8 +73,10 @@ spec:
               sleep 10
             done
         env:
-          - name: 'MIN_MEMORY_KB'
-            value: '500000'
+          - name: 'MIN_MEMORY_KiB'
+            value: '524288'
+          - name: 'MIN_TOTAL_MEMORY_KiB'
+            value: '6291456'
         securityContext:
           privileged: true
         volumeMounts:
