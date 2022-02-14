@@ -17,29 +17,22 @@ runs:
         echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
         echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
 
-    # The gh utility has a shortcut to filter merged PRs by milestone, while it would require
-    # multiple calls in JS rest client
-    - name: Find Merged Pull Requsts
+    # Fetch merged PRs in milestone
+    - name: Find Merged Pull Requests
       id: merged_milestone
-      shell: bash
+      uses: actions/github-script@v5
+      with:
+        result-encoding: json
+        script: |
+          const fetch = require('./.github/scripts/js/changelog-find-pulls.js')
+          const prs = await fetch({ github, context }, { milestone: process.env.MILESTONE })
+          core.setOutput("prs", prs)
       env:
-        GITHUB_TOKEN: ${{ inputs.token }}
-      # Pick at most 1000 PRs with possible changes blocks;
-      # skip auto-generated PRs
-      run: |
-        prs="$(jq -c '[.[] | select(all( .labels[]; .name != "auto" )) | del(.labels) ]' <<< "$(
-          gh pr list \
-            --repo '${{ github.repository }}' \
-            --search 'milestone:${{ steps.args.outputs.milestone_title }}' \
-            --state merged \
-            --limit 1000 \
-            --json number,url,title,body,state,milestone,labels
-          )")"
-        echo "::set-output name=prs::${prs}"
+        MILESTONE: ${{ steps.args.outputs.milestone_title }}
 
     - name: Collect Changelog
       id: changelog
-      uses: deckhouse/changelog-action@main
+      uses: deckhouse/changelog-action@v1
       with:
         token: ${{ inputs.token }}
         pull_requests: ${{ steps.merged_milestone.outputs.prs }}
