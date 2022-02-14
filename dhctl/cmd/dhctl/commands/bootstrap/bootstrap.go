@@ -293,7 +293,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		// next parse and check resources
 		// do it after bootstrap cloud because resources can be template
 		// and we want to fail immediately if template has errors
-		var resourcesToCreate *template.Resources
+		var resourcesToCreate template.Resources
 		if app.ResourcesPath != "" {
 			parsedResources, err := template.ParseResources(app.ResourcesPath, resourcesTemplateData)
 			if err != nil {

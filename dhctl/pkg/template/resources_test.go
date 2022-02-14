@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	nsKind = schema.GroupVersionKind{Version: "v1", Kind: "Namespace"}
 	cmKind = schema.GroupVersionKind{Version: "v1", Kind: "ConfigMap"}
 )
 
@@ -36,32 +35,56 @@ func fromUnstructured(unstructuredObj unstructured.Unstructured, obj interface{}
 	}
 }
 
-func TestResourcesWithoutTemplateData(t *testing.T) {
-	t.Run("parse resources from multidocument without template data", func(t *testing.T) {
-		resources, err := ParseResources("testdata/resources/without_tmp.yaml", nil)
-		require.NoError(t, err)
+func TestResourcesOrder(t *testing.T) {
+	unknownAdditionalOrder := []string{
+		"ClusterAuthorizationRule",
+		"YandexInstanceClass",
+		"NodeGroup",
+	}
+	expectedLen := len(unknownAdditionalOrder) + len(bootstrapKindsOrder)
 
-		require.Contains(t, resources.Items, nsKind)
-		require.Len(t, resources.Items[nsKind].Items, 2)
+	resources, err := ParseResources("testdata/resources/order.yaml", nil)
+	require.NoError(t, err)
 
+	require.Len(t, resources, expectedLen)
+
+	t.Run("known resources should be located in begin and in order", func(t *testing.T) {
+		for i, kind := range bootstrapKindsOrder {
+			require.Equal(t, kind, resources[i].Object.GetKind())
+		}
+	})
+
+	t.Run("unknown resources should be located after known resources in order same in yaml", func(t *testing.T) {
+		for i, kind := range unknownAdditionalOrder {
+			indx := i + len(bootstrapKindsOrder)
+			require.Equal(t, kind, resources[indx].Object.GetKind())
+		}
+	})
+}
+
+func TestResourcesOrderWithSameKind(t *testing.T) {
+	assertNs := func(t *testing.T, resources Resources, indx int, name string) {
 		ns := v1.Namespace{}
-		fromUnstructured(resources.Items[nsKind].Items[0], &ns)
 
-		require.Equal(t, ns.Name, "test-ns")
+		fromUnstructured(resources[indx].Object, &ns)
+		require.Equal(t, ns.Name, name)
+		require.Equal(t, resources[indx].GVK, schema.GroupVersionKind{Version: "v1", Kind: "Namespace"})
+	}
 
-		fromUnstructured(resources.Items[nsKind].Items[1], &ns)
-		require.Equal(t, ns.Name, "another-ns")
+	resources, err := ParseResources("testdata/resources/same_kind_order.yaml", nil)
+	require.NoError(t, err)
 
-		require.Contains(t, resources.Items, cmKind)
-		require.Len(t, resources.Items[cmKind].Items, 1)
+	require.Len(t, resources, 5)
 
-		cm := v1.ConfigMap{}
-		fromUnstructured(resources.Items[cmKind].Items[0], &cm)
-
-		require.Equal(t, cm.Namespace, "test-ns")
-		require.Equal(t, cm.Name, "some-cm")
-
-		require.Contains(t, cm.Data["key"], "value")
+	t.Run("resources with same kind should sort on name alphanumeric order", func(t *testing.T) {
+		namesInOrder := []string{
+			"another",
+			"r-test",
+			"test-ns",
+		}
+		for i, name := range namesInOrder {
+			assertNs(t, resources, i, name)
+		}
 	})
 }
 
@@ -81,11 +104,10 @@ func TestResourcesWithTemplateData(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		require.Contains(t, resources.Items, cmKind)
-		require.Len(t, resources.Items[cmKind].Items, 1)
+		require.Len(t, resources, 1)
 
 		cm := v1.ConfigMap{}
-		fromUnstructured(resources.Items[cmKind].Items[0], &cm)
+		fromUnstructured(resources[0].Object, &cm)
 
 		require.Equal(t, cm.Namespace, "test-ns")
 		require.Equal(t, cm.Name, "some-cm")
@@ -93,6 +115,8 @@ func TestResourcesWithTemplateData(t *testing.T) {
 		require.Equal(t, cm.Data["key"], "value")
 		require.Equal(t, cm.Data["fromCloudDiscovery"], expectedValueFromCloudData)
 		require.Equal(t, cm.Data["sprigFuncAvailable"], "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b")
+
+		require.Equal(t, resources[0].GVK, cmKind)
 	})
 }
 
