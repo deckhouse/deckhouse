@@ -59,12 +59,12 @@ spec:
           - 'sh'
           - '-c'
           - |
-            while true; do
-              if [ "$(grep 'MemTotal' /proc/meminfo | awk '{ print $2 }')" -le "$MIN_TOTAL_MEMORY_KiB" ]; then
-                sleep 600
-                continue
-              fi
+            MIN_TOTAL_MEMORY_BY_PERCENT_KiB="$(grep 'MemTotal' /proc/meminfo | awk -v percent=$MIN_MEMORY_PERCENT '{ printf("%d", $2*percent/100 }')"
+            if [ "$MIN_TOTAL_MEMORY_BY_PERCENT_KiB" -lt "$MIN_TOTAL_MEMORY_KiB" ]; then
+              MIN_TOTAL_MEMORY_KiB="$MIN_TOTAL_MEMORY_BY_PERCENT_KiB"
+            fi
 
+            while true; do
               if [ "$(grep 'MemAvailable' /proc/meminfo | awk '{ print $2 }')" -lt "$MIN_MEMORY_KiB" ]; then
                 echo f > /host_proc/sysrq-trigger
                 echo "Kernel OOM killer invoked."
@@ -77,6 +77,8 @@ spec:
             value: '524288'
           - name: 'MIN_TOTAL_MEMORY_KiB'
             value: '6291456'
+          - name: 'MIN_MEMORY_PERCENT'
+            value: '5'
         securityContext:
           privileged: true
         volumeMounts:
