@@ -318,6 +318,10 @@ func (cb *ContextBuilder) getNodeUserConfigurations(nodeGroup string) []*UserCon
 	users = append(users, cb.nodeUserConfigurations[wildcardBundle]...)
 	users = append(users, cb.nodeUserConfigurations[totalWildcard]...)
 
+	sort.SliceStable(users, func(i, j int) bool {
+		return users[i].Name < users[j].Name
+	})
+
 	return users
 }
 
