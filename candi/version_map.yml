@@ -61,7 +61,7 @@ bashible: &bashible
           desiredVersion: "5.4.0-1029-gcp"
           allowedPattern: ""
   debian:
-    '9':
+    '9': &debian9
       docker:
         desiredVersion: "docker-ce=5:19.03.15~3-0~debian-stretch"
         allowedPattern: ""
@@ -135,6 +135,11 @@ bashible: &bashible
         generic:
           desiredVersion: "4.18.0-305.3.1.el8.x86_64"
           allowedPattern: "4.18.0-"
+  astra:
+    '1.7':
+      <<: *debian9
+    '2.12':
+      <<: *debian9
 k8s:
   '1.19':
     status: available
