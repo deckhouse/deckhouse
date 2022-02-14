@@ -25,12 +25,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 // NewTempStateCache creates new cache instance in tmp directory
 func NewTempStateCache(identity string) (*StateCache, error) {
-	cacheDir := filepath.Join(app.CacheDir, util.Sha256Encode(identity))
+	cacheDir := filepath.Join(app.CacheDir, stringsutil.Sha256Encode(identity))
 	return NewStateCache(cacheDir)
 }
 

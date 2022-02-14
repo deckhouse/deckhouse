@@ -24,15 +24,7 @@
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
 {!{- end }!}
 run: |
-  echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-  werfRunProg=$(cat <<'END_WERF_RUN'
-
-  # WERF_REPO should be set by caller.
-  type werf && source $(werf ci-env github --verbose --as-file)
-
-  echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'werf run' ...
-  Use environment:
+  echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'docker run', using environment:
     PREFIX=${PREFIX}
     TMPPATH=${TMPPATH}
     DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -44,10 +36,7 @@ run: |
     JOB_STATUS=${JOB_STATUS}
   "
 
-  git status
-
-  werf run dev/install --dev \
-  --docker-options=" \
+  docker run --rm \
     -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
     -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -84,12 +73,10 @@ run: |
     -v /etc/group:/etc/group:ro \
     -v /etc/passwd:/etc/passwd:ro \
     -v /etc/shadow:/etc/shadow:ro \
-    -w /deckhouse" -- \
+    -w /deckhouse \
+  ${INSTALL_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script }!} {!{ $script_arg }!}
-  END_WERF_RUN
-  )
-  # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-  bash <<<"$werfRunProg"
+
 # </template: e2e_run_template>
 {!{- end -}!}
 

@@ -360,8 +360,11 @@ func (c *BashibleContext) update() {
 			_, _ = errStr.WriteString(fmt.Sprintf("\t%s: %s\n", bundle, err))
 		}
 		klog.Warningf("bundles checksums have errors:\n%s", errStr.String())
+		_ = ioutil.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
 		return
 	}
+
+	_ = os.Remove("/tmp/context.error")
 
 	var res map[string]interface{}
 

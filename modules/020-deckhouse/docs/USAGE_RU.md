@@ -70,8 +70,8 @@ deckhouse: |
 
 В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse (без учёта patch-версий).
 
-Пример подтверждения обновления на версию `v1.26.0-alpha.6`:
+Пример подтверждения обновления на версию `v1.26.0`:
 
 ```shell
-kubectl patch DeckhouseRelease v1-26-0-alpha-6 --type=merge -p='{"approved": true}'
+kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 ```

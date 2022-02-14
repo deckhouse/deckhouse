@@ -2,6 +2,7 @@
 layout: sidebar
 ---
 <div class="docs">
+    {%- include warning-latest.html %}
     {%- if page.comparable and site.mode != 'local' %}
     <div class="btn-group compare">
         <a href='{{ page.url | prepend: "compare" | true_relative_url }}' class="btn btn_o" target="_blank">
@@ -12,6 +13,11 @@ layout: sidebar
         $(document).ready(function(){
             if (window.location.hostname.match(/flant.com|localhost/)) {
                 $('.compare').addClass('active');
+            }
+            // Shows warning the viewing documentation about unreleased version
+            if (window.location.pathname.indexOf('/latest/') !== -1) {
+              console.log("Latest");
+              $('#notice-latest-doc-version-block').addClass('active');
             }
         });
     </script>

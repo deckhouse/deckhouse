@@ -17,69 +17,36 @@ runs:
         echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
         echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
 
-    # Fetch merged PRs in milestone
-    - name: Find Merged Pull Requests
-      id: merged_milestone
-      uses: actions/github-script@v5
-      with:
-        result-encoding: json
-        script: |
-          const fetch = require('./.github/scripts/js/changelog-find-pulls.js')
-          const prs = await fetch({ github, context }, { milestone: process.env.MILESTONE })
-          core.setOutput("prs", prs)
-      env:
-        MILESTONE: ${{ steps.args.outputs.milestone_title }}
-
     - name: Collect Changelog
       id: changelog
-      uses: deckhouse/changelog-action@main
+      uses: deckhouse/changelog-action@v2
       with:
         token: ${{ inputs.token }}
-        pull_requests: ${{ steps.merged_milestone.outputs.prs }}
+        milestone: ${{ steps.args.outputs.milestone_title }}
+        repo: ${{ github.repository }}
 
-    ## Generate changes by section in YAML
+    # Patch-version YAML changelog
     - name: Write Changelog YAML
-      id: file_yaml
+      id: yaml_file
       shell: bash
       run: |
         mkdir -p ./CHANGELOG
         filename='./CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}.yml'
-        cat > "$filename" <<EOBODYINACTION
-        ${{ steps.changelog.outputs.yaml }}
-        EOBODYINACTION
+        cat > "$filename" <<EOF
+        ${{ steps.changelog.outputs.patch_yaml }}
+        EOF
 
-    ## Generate changelog for minor version branch in Markdown
+    # Cumulative markdown changelog
     - name: Write Changelog Markdown
-      id: file_md
+      id: md_file
       shell: bash
       run: |
-        new_changes="${{ steps.changelog.outputs.partial_markdown }}"
+        filename='./CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md'
+        cat > "$filename" <<EOF
+        ${{ steps.changelog.outputs.minor_markdown }}
+        EOF
 
-        patch_version="${{ steps.args.outputs.milestone_title }}"
-        minor_version="$(echo "${patch_version}" | cut -d. -f1,2 | awk "{print $1$2}")"
-
-        filename="./CHANGELOG/CHANGELOG-${minor_version}.md"
-
-        prev_changes_filename="/tmp/prev_changes.md"
-        if [[ -f "$filename" ]]; then
-          title_pattern="^# Changelog"
-          egrep -v "$title_pattern" "$filename" > "$prev_changes_filename"
-        fi
-
-        cat > "$filename" <<EOCHANGELOG
-        # Changelog ${minor_version}
-
-        ## ${patch_version}
-
-        $new_changes
-
-        EOCHANGELOG
-
-        if [[ -f "$prev_changes_filename" ]]; then
-          cat "$prev_changes_filename" >> "$filename"
-          rm "$prev_changes_filename"
-        fi
-
+    # Patch-version markdown changelog + marlfomed and impact digest
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3.10.1
       with:
