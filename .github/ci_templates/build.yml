@@ -7,12 +7,15 @@ steps:
 
   - name: Run go generate
     run: |
+      set -x
       GO_PKG_CACHE_DIR="$(
         find ~/.werf/shared_context/mounts/projects/deckhouse/ -maxdepth 1 -type d -regextype posix-extended -regex '.*/go-pkg-[0-9a-f]{8}' | head
       )"
 
       DOCKER_EXTRA_ARGS=""
-      test -d $GO_PKG_CACHE_DIR && DOCKER_EXTRA_ARGS="-v ${GO_PKG_CACHE_DIR}:/go/pkg"
+      if test -d $GO_PKG_CACHE_DIR; then
+        DOCKER_EXTRA_ARGS="-v ${GO_PKG_CACHE_DIR}:/go/pkg"
+      fi
 
       docker run -v $(pwd):/deckhouse $DOCKER_EXTRA_ARGS -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
       docker run -v $(pwd):/deckhouse $DOCKER_EXTRA_ARGS -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
