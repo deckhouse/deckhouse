@@ -314,7 +314,7 @@ apiVersions:
                 tcpAppProfileName:
                   type: string
                   description: |
-                    Name of application profile used for TCP connections. If not set, `defaultTcpAppProfileName` used.
+                    Name of application profile used for TCP connections. If not set, `defaultTcpAppProfileName` is used.
                 udpAppProfileName:
                   type: string
                   description: |
