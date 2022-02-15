@@ -24,7 +24,7 @@ var _ = external_auth.RegisterHook(external_auth.Settings{
 	ExternalAuthPath:            "upmeter.auth.status.externalAuthentication",
 	DexAuthenticatorEnabledPath: "upmeter.internal.deployStatusDexAuthenticator",
 	DexExternalAuth: external_auth.ExternalAuth{
-		AuthURL:       "status-dex-authenticator.d8-upmeter.svc.$CLUSTER_DOMAIN%/dex-authenticator/auth",
+		AuthURL:       "https://status-dex-authenticator.d8-upmeter.svc.%CLUSTER_DOMAIN%/dex-authenticator/auth",
 		AuthSignInURL: "https://$host/dex-authenticator/sign_in",
 	},
 })

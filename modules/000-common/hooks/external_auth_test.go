@@ -37,8 +37,19 @@ common:
   auth: {}
   internal: {}
 `)
+	Context("with disabled dex", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+			f.RunHook()
+		})
+		It("Should not add anything", func() {
+			Expect(f.ValuesGet("common.internal.deployDexAuthenticator").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("common.auth.externalAuthentication").Exists()).To(BeFalse())
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
 
-	Context("Fresh start Dex enabled", func() {
+	Context("fresh start Dex enabled", func() {
 		BeforeEach(func() {
 			f.RunHook()
 		})
@@ -61,18 +72,6 @@ common:
 				Expect(f.ValuesGet("common.auth.externalAuthentication").Exists()).To(BeFalse())
 				Expect(f).To(ExecuteSuccessfully())
 			})
-		})
-	})
-
-	Context("with disabled dex", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
-			f.RunHook()
-		})
-		It("Should not add anything", func() {
-			Expect(f.ValuesGet("common.internal.deployDexAuthenticator").Exists()).To(BeFalse())
-			Expect(f.ValuesGet("common.auth.externalAuthentication").Exists()).To(BeFalse())
-			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 

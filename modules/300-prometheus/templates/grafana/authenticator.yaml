@@ -13,8 +13,6 @@ spec:
   signOutURL: "/logout"
   {{- with .Values.prometheus.auth.allowedUserGroups }}
   allowedGroups:
-    {{- range $group := . }}
-    - {{ $group }}
-    {{- end }}
+  {{- . | toYaml | nindent 2 }}
   {{- end }}
 {{- end }}

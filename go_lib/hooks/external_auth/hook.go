@@ -55,7 +55,7 @@ func setExternalAuthValues(input *go_hook.HookInput, settings Settings) error {
 	configAuth, isExternalAuthInConfig := input.ConfigValues.GetOk(settings.ExternalAuthPath)
 
 	if !set.NewFromValues(input.Values, "global.enabledModules").Has("user-authn") {
-		if !externalAuthInConfig {
+		if !isExternalAuthInConfig {
 			input.Values.Remove(settings.ExternalAuthPath)
 		} else {
 			input.Values.Set(settings.ExternalAuthPath, configAuth.Value())
@@ -65,7 +65,7 @@ func setExternalAuthValues(input *go_hook.HookInput, settings Settings) error {
 		return nil
 	}
 
-	if !externalAuthInConfig {
+	if !isExternalAuthInConfig {
 		input.Values.Set(settings.ExternalAuthPath, ExternalAuth{
 			AuthURL:         settings.DexExternalAuth.AuthURLWithClusterDomain(input),
 			AuthSignInURL:   settings.DexExternalAuth.AuthSignInURL,

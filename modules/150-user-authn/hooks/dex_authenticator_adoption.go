@@ -29,13 +29,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, addDexAuthenticatorHelmLabelsToSecret)
 
 func addDexAuthenticatorHelmLabelsToSecret(input *go_hook.HookInput) error {
-	patchAnnotations(input /* name */, "dashboard" /* namespace */, "d8-dashboard" /* module */, "dashboard")
-	patchAnnotations(input /* name */, "grafana" /* namespace */, "d8-monitoring" /* module */, "prometheus")
-	patchAnnotations(input /* name */, "deckhouse-web" /* namespace */, "d8-system" /* module */, "deckhouse-web")
-	patchAnnotations(input /* name */, "upmeter" /* namespace */, "d8-upmeter" /* module */, "upmeter")
-	patchAnnotations(input /* name */, "status" /* namespace */, "d8-upmeter" /* module */, "upmeter")
-	patchAnnotations(input /* name */, "openvpn" /* namespace */, "d8-openvpn" /* module */, "openvpn")
-	patchAnnotations(input /* name */, "istio" /* namespace */, "d8-istio" /* module */, "istio")
+	patchAnnotations(input, "dashboard", "d8-dashboard", "dashboard")
+	patchAnnotations(input, "grafana", "d8-monitoring", "prometheus")
+	patchAnnotations(input, "deckhouse-web", "d8-system", "deckhouse-web")
+	patchAnnotations(input, "upmeter", "d8-upmeter", "upmeter")
+	patchAnnotations(input, "status", "d8-upmeter", "upmeter")
+	patchAnnotations(input, "openvpn", "d8-upmeter", "openvpn")
+	patchAnnotations(input, "istio", "d8-istio", "istio")
 
 	return nil
 }
