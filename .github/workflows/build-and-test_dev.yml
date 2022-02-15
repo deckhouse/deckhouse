@@ -280,7 +280,7 @@ jobs:
       - pull_request_info
 
     # <template: go_generate_template>
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: checkout_step>

@@ -1,6 +1,6 @@
 {!{ define "go_generate_template" }!}
 # <template: go_generate_template>
-runs-on: ubuntu-latest
+runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
