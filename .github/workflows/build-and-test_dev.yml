@@ -302,8 +302,14 @@ jobs:
 
       - name: Run go generate
         run: |
-          docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
-          docker run -v $(pwd):/deckhouse -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
+          DOCKER_EXTRA_ARGS=""
+          if -d ~/.werf/shared_context/mounts/projects/deckhouse/go-pkg-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]; then
+            PKG_CACHE_DIR=~/.werf/shared_context/mounts/projects/deckhouse/go-pkg-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]
+            DOCKER_EXTRA_ARGS="-v ${PKG_CACHE_DIR}:/go/pkg"
+          fi
+          set -x
+          docker run -v $(pwd):/deckhouse $DOCKER_EXTRA_ARGS -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
+          docker run -v $(pwd):/deckhouse $DOCKER_EXTRA_ARGS -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
 
       - name: Check generated code
         run: |
