@@ -56,7 +56,7 @@ require (
 )
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
-
+replace github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema => ./modules/040-node-manager/hooks/pkg/schema
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
 

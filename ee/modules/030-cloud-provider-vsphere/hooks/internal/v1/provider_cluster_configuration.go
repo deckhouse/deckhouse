@@ -6,7 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package v1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	nm "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
 )
 
 type VsphereProviderClusterConfiguration struct {
@@ -63,24 +63,6 @@ type VsphereNodeGroup struct {
 	Name          *string                        `json:"name,omitempty" yaml:"name,omitempty"`
 	Replicas      *int32                         `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	Zones         *[]string                      `json:"zones,omitempty" yaml:"zones,omitempty"`
-	NodeTemplate  *NodeTemplate                  `json:"nodeTemplate,omitempty" yaml:"nodeTemplate,omitempty"`
+	NodeTemplate  *nm.NodeTemplate               `json:"nodeTemplate,omitempty" yaml:"nodeTemplate,omitempty"`
 	InstanceClass *VsphereNodeGroupInstanceClass `json:"instanceClass,omitempty" yaml:"instanceClass,omitempty"`
-}
-
-// NodeTemplate copied from 040-node-manager/hooks/internal/v1/nodegroup.go
-type NodeTemplate struct {
-	// Annotations is an unstructured key value map that is used as default
-	// annotations for Nodes in NodeGroup.
-	// More info: http://kubernetes.io/docs/user-guide/annotations
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	// Map of string keys and values that is used as default
-	// labels for Nodes in NodeGroup.
-	// More info: http://kubernetes.io/docs/user-guide/labels
-	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// Default taints for Nodes in NodeGroup.
-	Taints *[]v1.Taint `json:"taints,omitempty"`
 }
