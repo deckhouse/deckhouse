@@ -318,7 +318,7 @@ apiVersions:
                 udpAppProfileName:
                   type: string
                   description: |
-                    Name of application profile used for UDP connections. If not set, `defaultUdpAppProfileName` used.
+                    Name of application profile used for UDP connections. If not set, `defaultUdpAppProfileName` is used.
     oneOf:
     - required: [layout]
       properties:
