@@ -30,7 +30,7 @@ metadata:
   namespace: d8-system
 data:
   global: |          # Вертикальная черта.
-    # глобальные настройки в формате YAML.
+    # Глобальные настройки в формате YAML.
     modules:
       publicDomainTemplate: "%s.kube.company.my"
   # Настройки модуля monitoring-ping в формате YAML.
@@ -50,13 +50,13 @@ data:
 kubectl -n d8-system edit cm/deckhouse
 ```
 
-После сохранения конфигурации Deckhouse, изменения применяются автоматически. 
+После сохранения конфигурации Deckhouse изменения применяются автоматически. 
 
 ### Настройка модуля
 
 > Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/) при работе с [модулями](https://github.com/flant/addon-operator/blob/main/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/HOOKS.md), [параметрами модулей](https://github.com/flant/addon-operator/blob/main/VALUES.md). Если вы хотите глубже понять архитектуру Deckhouse, познакомьтесь с проектом `addon-operator`. Будем признательны, если поставите проекту *звезду*.     
 
-Deckhouse работает только с включёнными модулями. В зависимости от используемого [варианта поставки](./modules/020-deckhouse/configuration.html#parameters-bundle) модули могут быть включены или выключены по умолчанию. Читайте подробнее, про явное [включение или отключение модуля](#включение-и-отключение-модуля).  
+Deckhouse работает только с включёнными модулями. В зависимости от используемого [варианта поставки](./modules/020-deckhouse/configuration.html#parameters-bundle) модули могут быть включены или выключены по умолчанию. Читайте подробнее про явное [включение или отключение модуля](#включение-и-отключение-модуля).
 
 Модуль настраивается в конфигурации Deckhouse в параметре с названием модуля в camelCase. Значением параметра передается multi-line-строка в формате YAML с настройками модуля.
 
