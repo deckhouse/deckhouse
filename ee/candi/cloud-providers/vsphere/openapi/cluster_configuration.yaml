@@ -299,7 +299,7 @@ apiVersions:
           loadBalancerClass:
             type: array
             description: |
-              Load Balancer Classes
+              Load Balancer Classes.
             items:
               required: [name, ipPoolName]
               properties:
