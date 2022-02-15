@@ -3,7 +3,7 @@ title: "The kube-dns module: FAQ"
 search: DNS, domain, clusterdomain
 ---
 
-## How do I replace the cluster domain without downtime?
+## How do I replace the cluster domain with minimal downtime?
 
 Add the new domain and save the old one:
 
