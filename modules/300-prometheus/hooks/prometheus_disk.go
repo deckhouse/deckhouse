@@ -20,12 +20,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/remotecommand"
 	"strconv"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -85,22 +86,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyPodFilter,
 		},
-		//{
-		//	Name:       "proms",
-		//	ApiVersion: "monitoring.coreos.com/v1",
-		//	Kind:       "Prometheus",
-		//	NamespaceSelector: &types.NamespaceSelector{
-		//		NameSelector: &types.NameSelector{
-		//			MatchNames: []string{"d8-monitoring"},
-		//		},
-		//	},
-		//	LabelSelector: &metav1.LabelSelector{
-		//		MatchLabels: map[string]string{
-		//			"app": "prometheus",
-		//		},
-		//	},
-		//	FilterFunc: applyPromFilter,
-		//},
 	},
 }, dependency.WithExternalDependencies(prometheusDisk))
 
@@ -203,25 +188,7 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-//type PromFilter struct {
-//	Name string
-//}
-//
-//func applyPromFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-//	var prom = &monitoringv1.Prometheus{}
-//	err := sdk.FromUnstructured(obj, prom)
-//	if err != nil {
-//		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
-//	}
-//
-//	return PromFilter{
-//		Name: prom.Name,
-//	}, nil
-//}
-
 func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
-	input.LogEntry.Debugf("StorageClasses: %v", input.Snapshots["scs"])
-
 	// checking pvc status for FileSystemResizePending or Resizing and restarting the pod if needed
 	podDeletionFlag := false
 	for _, obj := range input.Snapshots["pvcs"] {
@@ -244,7 +211,6 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	//for _, prom := range input.Snapshots["proms"] {
 	proms := []string{"main", "longterm"}
 	for _, promName := range proms {
 
@@ -255,7 +221,8 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 
 		// TODO: check for each prom
 		// if there is no PVC, set the default values for diskSize and retention
-		if !snapshotsHas(input, "pvcs") {
+
+		if len(input.Snapshots["pvcs"]) == 0 {
 			effectiveStorageClass := input.Values.Get(fmt.Sprintf("prometheus.internal.prometheus%s.effectiveStorageClass", promNameForPath)).String()
 			input.LogEntry.Infof("prometheus.internal.prometheus%s.effectiveStorageClass: %s", promNameForPath, effectiveStorageClass)
 			if effectiveStorageClass != "false" && isVolumeExpansionAllowed(input, effectiveStorageClass) {
@@ -265,7 +232,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 				diskSize = 30
 				retention = 27
 			}
-		//	otherwise, we calculate diskSize and retention
+			//	otherwise, we calculate diskSize and retention
 		} else {
 			diskResizeLimit := int64(300)
 			maxDiskSizeConfigPath := fmt.Sprintf("prometheus.%sMaxDiskSizeGigabytes", promName)
@@ -305,8 +272,6 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 			retention = diskSize * 9 / 10 // 90%
 		}
 
-
-
 		diskSizePath := fmt.Sprintf("prometheus.internal.prometheus%s.diskSizeGigabytes", promNameForPath)
 		retentionPath := fmt.Sprintf("prometheus.internal.prometheus%s.retentionGigabytes", promNameForPath)
 
@@ -344,7 +309,6 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 		}
 	}
 
-
 	// find maximum filesystem size and used space
 	var fsSize int64 // GiB
 	var fsUsed int   // %
@@ -354,6 +318,28 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 		if pod.PromName == promName && pod.PodScheduled && pod.ContainerReady {
 			podFsSize, podFsUsed := getFsSizeAndUsed(input, dc, pod)
 			input.LogEntry.Debugf("%s, fsSize: %d, fsUsed: %d", pod.Name, podFsSize, podFsUsed)
+
+			if podFsSize != 0 {
+				input.MetricsCollector.Set(
+					"d8_prometheus_fs_size",
+					float64(podFsSize),
+					map[string]string{
+						"namespace": pod.Namespace,
+						"pod_name":  pod.Name,
+					},
+					metrics.WithGroup("prometheus_disk_hook"),
+				)
+
+				input.MetricsCollector.Set(
+					"d8_prometheus_fs_used",
+					float64(podFsUsed),
+					map[string]string{
+						"namespace": pod.Namespace,
+						"pod_name":  pod.Name,
+					},
+					metrics.WithGroup("prometheus_disk_hook"),
+				)
+			}
 
 			if podFsSize > fsSize {
 				fsSize = podFsSize
@@ -384,15 +370,6 @@ func isVolumeExpansionAllowed(input *go_hook.HookInput, scName string) bool {
 		sc := obj.(StorageClassFilter)
 		if scName == sc.Name {
 			return sc.AllowVolumeExpansion
-		}
-	}
-	return false
-}
-
-func snapshotsHas(input *go_hook.HookInput, snapshotName string) bool {
-	for name, _ := range input.Snapshots {
-		if name == snapshotName {
-			return true
 		}
 	}
 	return false
