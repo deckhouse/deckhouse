@@ -736,8 +736,7 @@ args:
   {{- $_ := set $ctx "Env" $Root.Env }}
 ---
 {{ include "module_image_template" $ctx }}
-  {{- $ImageYamlMainfestList := (include "module_image_template" $ctx | regexReplaceAll "^---\s*$" "%D8-YAML-DELEMITER%" | splitList "%D8-YAML-DELEMITER%") }}
-  {{- range $ImageYamlMainfest := $ImageYamlMainfestList }}
+  {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
     {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
     {{- if $ImageManifest.image }}
       {{- $ModulesImagesIDList = append $ModulesImagesIDList $ImageManifest.image }}
