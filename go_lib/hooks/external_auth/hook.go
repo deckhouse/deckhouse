@@ -52,7 +52,7 @@ func RegisterHook(settings Settings) bool {
 }
 
 func setExternalAuthValues(input *go_hook.HookInput, settings Settings) error {
-	configAuth, externalAuthInConfig := input.ConfigValues.GetOk(settings.ExternalAuthPath)
+	configAuth, isExternalAuthInConfig := input.ConfigValues.GetOk(settings.ExternalAuthPath)
 
 	if !set.NewFromValues(input.Values, "global.enabledModules").Has("user-authn") {
 		if !externalAuthInConfig {

@@ -29,7 +29,7 @@ common:
   auth: {}
   internal: {}
 global:
-  enabledModules: ["user-authn"]
+  enabledModules: ["user-authn"] # Dex enabled
   discovery:
     clusterDomain: cluster.local
 `, `
@@ -44,7 +44,7 @@ common:
 		})
 
 		It("Add dex values to the external auth", func() {
-			Expect(f.ValuesGet("common.internal.deployDexAuthenticator").String()).To(Equal("true"))
+			Expect(f.ValuesGet("common.internal.deployDexAuthenticator").Bool()).To(BeTrue())
 			Expect(f.ValuesGet("common.auth.externalAuthentication.authURL").String()).To(Equal("https://test.cluster.local/test"))
 			Expect(f.ValuesGet("common.auth.externalAuthentication.authSignInURL").String()).To(Equal("https://test/sign_in"))
 			Expect(f).To(ExecuteSuccessfully())
