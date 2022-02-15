@@ -213,7 +213,7 @@ jobs:
       - name: Run go generate
         run: |
           DOCKER_EXTRA_ARGS=""
-          if -d ~/.werf/shared_context/mounts/projects/deckhouse/go-pkg-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]; then
+          if test -d ~/.werf/shared_context/mounts/projects/deckhouse/go-pkg-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]; then
             PKG_CACHE_DIR=~/.werf/shared_context/mounts/projects/deckhouse/go-pkg-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]
             DOCKER_EXTRA_ARGS="-v ${PKG_CACHE_DIR}:/go/pkg"
           fi
