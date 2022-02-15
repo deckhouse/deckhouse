@@ -375,7 +375,7 @@ func DefineExecPostBootstrapScript(parent *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		if err = cache.Init(sshClient.Check().String()); err != nil {
-			return fmt.Errorf("Can not init cache", err)
+			return fmt.Errorf("Can not init cache: %v", err)
 		}
 
 		bootstrapState := bootstrap.NewBootstrapState(cache.Global())

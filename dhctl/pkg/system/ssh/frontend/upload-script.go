@@ -39,7 +39,6 @@ type UploadScript struct {
 	chmod bool
 
 	stdoutHandler func(string)
-	stderrHandler func(string)
 
 	timeout time.Duration
 }
