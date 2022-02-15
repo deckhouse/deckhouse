@@ -1,5 +1,5 @@
 candi:
   fixes:
-    - description: Speed up reboot master node on cluster bootstrap.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/800
+    - summary: Speed up reboot master node on cluster bootstrap.
+      pull_request: https://api.github.com/repos/deckhouse/deckhouse/issues/800
 
