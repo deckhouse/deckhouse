@@ -458,7 +458,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - go_generate
     # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
     steps:

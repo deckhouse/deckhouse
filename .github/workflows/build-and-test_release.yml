@@ -832,7 +832,6 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-      - go_generate
     # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
@@ -901,7 +900,6 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-      - go_generate
     # <template: main_web_build_template>
     runs-on: [self-hosted, regular]
     steps:

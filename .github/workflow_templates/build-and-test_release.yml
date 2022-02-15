@@ -83,7 +83,6 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-      - go_generate
 {!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Doc web build") | strings.Indent 6 }!}
 
@@ -92,7 +91,6 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-      - go_generate
 {!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Main web build") | strings.Indent 6 }!}
 
