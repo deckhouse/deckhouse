@@ -747,7 +747,7 @@ args:
 image: images-tags
 from: {{ env "BASE_ALPINE" }}
 dependencies:
-{{- range $ImageID := $ModulesImagesIDList  }}
+{{- range $ImageID := $ModulesImagesIDList }}
   {{- $ModuleNameCamel := $ImageID | splitList "/" | first | camelcase | untitle }}
   {{- $ImageNameCamel  := $ImageID | splitList "/" | last  | camelcase | untitle }}
   - image: {{ $ImageID }}
