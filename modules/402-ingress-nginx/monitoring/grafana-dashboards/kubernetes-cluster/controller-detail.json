@@ -1278,7 +1278,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (controller, node) (rate(nginx_ingress_controller_nginx_process_requests_total{job=\"nginx-ingress-controller\", controller=~\"main\", app=~\".*\", node=~\".*\"}[$__rate_interval])) / sum by (controller, node) (rate(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", controller=~\"main\", app=~\".*\", node=~\".*\", state=\"handled\"}[$__rate_interval]))",
+          "expr": "sum by (controller, node) (rate(nginx_ingress_controller_nginx_process_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\".*\", node=~\".*\"}[$__rate_interval])) / sum by (controller, node) (rate(nginx_ingress_controller_nginx_process_connections_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\".*\", node=~\".*\", state=\"handled\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
