@@ -295,7 +295,7 @@ apiVersions:
           insecureFlag:
             type: boolean
             description: |
-              To be set to true if NSX-T uses locally signed cert without specifying a ca.
+              To be set to true if NSX-T uses locally signed cert without specifying a CA.
           loadBalancerClass:
             type: array
             description: |
