@@ -303,12 +303,11 @@ jobs:
       - name: Run go generate
         run: |
           GO_PKG_CACHE_DIR="$(
-            find ~/.werf/shared_context/mounts/projects/deckhouse/ -maxdepth 1 -type d -regextype posix-extended -regex '.*go-pkg-[0-9a-f]{8}' | head
+            find ~/.werf/shared_context/mounts/projects/deckhouse/ -maxdepth 1 -type d -regextype posix-extended -regex '.*/go-pkg-[0-9a-f]{8}' | head
           )"
 
           DOCKER_EXTRA_ARGS=""
           test -d $GO_PKG_CACHE_DIR && DOCKER_EXTRA_ARGS="-v ${GO_PKG_CACHE_DIR}:/go/pkg"
-          set -x
 
           docker run -v $(pwd):/deckhouse $DOCKER_EXTRA_ARGS -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
           docker run -v $(pwd):/deckhouse $DOCKER_EXTRA_ARGS -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
