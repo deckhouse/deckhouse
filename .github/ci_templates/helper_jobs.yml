@@ -101,7 +101,6 @@ pull_request_info:
   steps:
     - name: Check if allow to run tests
       id: check
-      #if: ${{ github.event_name == 'workflow_dispatch' }}
       if: ${{ startsWith(github.event_name, 'pull_request') }}
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:

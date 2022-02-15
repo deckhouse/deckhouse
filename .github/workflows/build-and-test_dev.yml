@@ -302,7 +302,6 @@ jobs:
 
       - name: Run go generate
         run: |
-          set -x
           GO_PKG_CACHE_DIR="$(
             find ~/.werf/shared_context/mounts/projects/deckhouse/ -maxdepth 1 -type d -regextype posix-extended -regex '.*/go-pkg-[0-9a-f]{8}' | head
           )"
