@@ -57,8 +57,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleVolumeAttachments)
 
 func handleVolumeAttachments(input *go_hook.HookInput) error {
-	snap, ok := input.Snapshots["finalizers"]
-	if !ok {
+	snap := input.Snapshots["finalizers"]
+	if len(snap) == 0 {
 		return nil
 	}
 
@@ -67,7 +67,16 @@ func handleVolumeAttachments(input *go_hook.HookInput) error {
 		if va.Message != "rpc error: code = Unknown desc = No VM found" {
 			continue
 		}
-		input.PatchCollector.MergePatch(removeFinalizersPatch, "storage.k8s.io/v1", "VolumeAttachment", "", va.Name)
+
+		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+			var v storagev1.VolumeAttachment
+			err := sdk.FromUnstructured(obj, &v)
+			if err != nil {
+				return nil, err
+			}
+			v.ObjectMeta.Finalizers = nil
+			return sdk.ToUnstructured(&v)
+		}, "storage.k8s.io/v1", "VolumeAttachment", "", va.Name)
 	}
 
 	return nil
