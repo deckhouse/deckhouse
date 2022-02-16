@@ -13,7 +13,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.4-0.20220121072209-d27b5b3473ac
 	github.com/flant/kube-client v0.0.6
-	github.com/flant/shell-operator v1.0.8-0.20220121071428-6b7bd04272e5
+	github.com/flant/shell-operator v1.0.8-0.20220216104046-a9456084fe19 // branch: speedup-binding-context-generator
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
