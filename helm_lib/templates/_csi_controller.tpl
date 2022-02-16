@@ -126,6 +126,11 @@ spec:
         env:
         - name: ADDRESS
           value: /csi/csi.sock
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
         - name: NAMESPACE
           valueFrom:
             fieldRef:
