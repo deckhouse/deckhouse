@@ -17,10 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"runtime"
 	"strings"
-
-	"github.com/onsi/ginkgo/config"
 )
 
 func JoinKubeResources(resources ...string) string {
@@ -30,9 +27,4 @@ func JoinKubeResources(resources ...string) string {
 func JoinKubeResourcesAndSet(f *HookExecutionConfig, resources ...string) {
 	resourcesJoined := JoinKubeResources(resources...)
 	f.BindingContexts.Set(f.KubeStateSet(resourcesJoined))
-}
-
-func SetGinkgoParallelNodes() {
-	config.GinkgoConfig.ParallelNode = runtime.NumCPU()
-	config.GinkgoConfig.ParallelTotal = config.GinkgoConfig.ParallelNode
 }

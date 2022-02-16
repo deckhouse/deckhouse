@@ -24,8 +24,6 @@ import (
 )
 
 func Test(t *testing.T) {
-	hooks.SetGinkgoParallelNodes()
-
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
