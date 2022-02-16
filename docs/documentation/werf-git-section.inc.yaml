@@ -6,6 +6,13 @@
     setup: ['**/*']
   excludePaths: ['*/docs/internal/','110-istio/crds','040-node-manager/crds/mcm.yaml']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+- add: /modules
+  to: /srv/jekyll-data/documentation/_data/bundles
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
 - add: /global-hooks/openapi
   to: /src/global
   owner: jekyll
