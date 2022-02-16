@@ -28,8 +28,11 @@ import (
 const (
 	ginkgoImport        = `. "github.com/onsi/ginkgo"`
 	gomegaImport        = `. "github.com/onsi/gomega"`
+	settingsImport      = `"github.com/deckhouse/deckhouse/testing/hooks"`
 	commonTestGoContent = `
 func Test(t *testing.T) {
+	hooks.SetGinkgoParallelNodes()
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
@@ -81,6 +84,12 @@ func commonTestGoForHooks(name, path string) errors.LintRuleError {
 	if !strings.Contains(string(contentBytes), ginkgoImport) {
 		errs = append(errs,
 			fmt.Sprintf("Module content of %q file does not contain:\n\t%s", commonTestPath, ginkgoImport),
+		)
+	}
+
+	if !strings.Contains(string(contentBytes), settingsImport) {
+		errs = append(errs,
+			fmt.Sprintf("Module content of %q file does not contain:\n\t%s", commonTestPath, settingsImport),
 		)
 	}
 
