@@ -36,16 +36,19 @@ var _ = Describe("Modules :: linstor :: hooks :: generate_certs ::", func() {
 
 	Context("HTTPS Certs :: Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.BindingContexts.Set(
+				f.KubeStateSet(``),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("New cert data must be generated and stored to values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.ca").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("linstor.internal.httpsClientCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.httpsClientCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.ca").Exists()).To(BeTrue())
 
@@ -54,7 +57,7 @@ var _ = Describe("Modules :: linstor :: hooks :: generate_certs ::", func() {
 			ok := certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.httpsClientCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsClientCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsClientCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			cert, err := x509.ParseCertificate(block.Bytes)
@@ -65,7 +68,7 @@ var _ = Describe("Modules :: linstor :: hooks :: generate_certs ::", func() {
 			ok = certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.crt").String()))
+			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			cert, err = x509.ParseCertificate(block.Bytes)
@@ -73,7 +76,7 @@ var _ = Describe("Modules :: linstor :: hooks :: generate_certs ::", func() {
 
 			// Additional checks for controller certificate
 			opts := x509.VerifyOptions{
-				DNSName: "linstor.d8-linstor.svc.mycluster.local",
+				DNSName: "linstor.d8-linstor.svc",
 				Roots:   certPool,
 			}
 			_, err = cert.Verify(opts)
@@ -91,7 +94,8 @@ var _ = Describe("Modules :: linstor :: hooks :: generate_certs ::", func() {
 
 	Context("HTTPS Certs :: One secret is missing", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -102,16 +106,18 @@ data:
   tls.crt: YQo= # a
   tls.key: Ygo= # b
   ca.crt:  Ywo= # c
-			`))
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("New cert data must be generated and stored to values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.ca").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("linstor.internal.httpsClientCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.httpsClientCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.ca").Exists()).To(BeTrue())
 
@@ -120,7 +126,7 @@ data:
 			ok := certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.httpsClientCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsClientCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsClientCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			_, err := x509.ParseCertificate(block.Bytes)
@@ -131,7 +137,7 @@ data:
 			ok = certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.crt").String()))
+			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			_, err = x509.ParseCertificate(block.Bytes)
@@ -143,7 +149,8 @@ data:
 
 	Context("HTTPS Certs :: Secrets are having different CA", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -164,16 +171,18 @@ data:
   tls.crt: YQo= # a
   tls.key: Ygo= # b
   ca.crt:  ZAo= # d
-			`))
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("New cert data must be generated and stored to values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.ca").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("linstor.internal.httpsClientCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.httpsClientCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.ca").Exists()).To(BeTrue())
 
@@ -182,7 +191,7 @@ data:
 			ok := certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.httpsClientCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsClientCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsClientCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			_, err := x509.ParseCertificate(block.Bytes)
@@ -193,7 +202,7 @@ data:
 			ok = certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.crt").String()))
+			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			_, err = x509.ParseCertificate(block.Bytes)
@@ -203,7 +212,8 @@ data:
 
 	Context("HTTPS Certs :: Secret Created", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -224,16 +234,18 @@ data:
   tls.crt: YQo= # a
   tls.key: Ygo= # b
   ca.crt:  Ywo= # c
-			`))
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("Cert data must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.cert").String()).To(Equal("a\n"))
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.key").String()).To(Equal("b\n"))
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.ca").String()).To(Equal("c\n"))
-			Expect(f.ValuesGet("linstor.internal.httpsClientCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("linstor.internal.httpsClientCert.cert").String()).To(Equal("a\n"))
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.key").String()).To(Equal("b\n"))
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.ca").String()).To(Equal("c\n"))
 		})
@@ -241,7 +253,8 @@ data:
 
 	Context("HTTPS Certs :: Before Helm", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -262,16 +275,18 @@ data:
   tls.crt: YQo= # a
   tls.key: Ygo= # b
   ca.crt:  Ywo= # c
-			`))
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("Cert data must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.cert").String()).To(Equal("a\n"))
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.key").String()).To(Equal("b\n"))
 			Expect(f.ValuesGet("linstor.internal.httpsControllerCert.ca").String()).To(Equal("c\n"))
-			Expect(f.ValuesGet("linstor.internal.httpsClientCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("linstor.internal.httpsClientCert.cert").String()).To(Equal("a\n"))
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.key").String()).To(Equal("b\n"))
 			Expect(f.ValuesGet("linstor.internal.httpsClientCert.ca").String()).To(Equal("c\n"))
 		})
@@ -279,16 +294,19 @@ data:
 
 	Context("SSL Certs :: Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.BindingContexts.Set(
+				f.KubeStateSet(``),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("New cert data must be generated and stored to values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.sslControllerCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.sslControllerCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.ca").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("linstor.internal.sslNodeCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.sslNodeCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.ca").Exists()).To(BeTrue())
 
@@ -297,7 +315,7 @@ data:
 			ok := certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.sslNodeCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.sslNodeCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.sslNodeCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			cert, err := x509.ParseCertificate(block.Bytes)
@@ -308,7 +326,7 @@ data:
 			ok = certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.sslControllerCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.sslControllerCert.crt").String()))
+			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.sslControllerCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			cert, err = x509.ParseCertificate(block.Bytes)
@@ -316,7 +334,7 @@ data:
 
 			// Additional checks for controller certificate
 			opts := x509.VerifyOptions{
-				DNSName: "linstor.d8-linstor.svc.mycluster.local",
+				DNSName: "linstor.d8-linstor.svc",
 				Roots:   certPool,
 			}
 			_, err = cert.Verify(opts)
@@ -334,7 +352,8 @@ data:
 
 	Context("SSL Certs :: One secret is missing", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -345,16 +364,18 @@ data:
   tls.crt: YQo= # a
   tls.key: Ygo= # b
   ca.crt:  Ywo= # c
-			`))
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("New cert data must be generated and stored to values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.sslControllerCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.sslControllerCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.ca").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("linstor.internal.sslNodeCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.sslNodeCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.ca").Exists()).To(BeTrue())
 
@@ -363,7 +384,7 @@ data:
 			ok := certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.sslNodeCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.sslNodeCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.sslNodeCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			_, err := x509.ParseCertificate(block.Bytes)
@@ -374,7 +395,7 @@ data:
 			ok = certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.sslControllerCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.sslControllerCert.crt").String()))
+			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.sslControllerCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			_, err = x509.ParseCertificate(block.Bytes)
@@ -386,7 +407,8 @@ data:
 
 	Context("HTTPS Certs :: Secrets are having different CA", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -407,16 +429,18 @@ data:
   tls.crt: YQo= # a
   tls.key: Ygo= # b
   ca.crt:  ZAo= # d
-			`))
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("New cert data must be generated and stored to values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.sslControllerCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.sslControllerCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.ca").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("linstor.internal.sslNodeCert.crt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("linstor.internal.sslNodeCert.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.ca").Exists()).To(BeTrue())
 
@@ -425,7 +449,7 @@ data:
 			ok := certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.sslNodeCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.sslNodeCert.crt").String()))
+			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.sslNodeCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			_, err := x509.ParseCertificate(block.Bytes)
@@ -436,7 +460,7 @@ data:
 			ok = certPool.AppendCertsFromPEM([]byte(f.ValuesGet("linstor.internal.sslControllerCert.ca").String()))
 			Expect(ok).To(BeTrue())
 
-			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.sslControllerCert.crt").String()))
+			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.sslControllerCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
 			_, err = x509.ParseCertificate(block.Bytes)
@@ -446,7 +470,8 @@ data:
 
 	Context("HTTPS Certs :: Secret Created", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -467,16 +492,18 @@ data:
   tls.crt: YQo= # a
   tls.key: Ygo= # b
   ca.crt:  Ywo= # c
-			`))
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("Cert data must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.sslControllerCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("linstor.internal.sslControllerCert.cert").String()).To(Equal("a\n"))
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.key").String()).To(Equal("b\n"))
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.ca").String()).To(Equal("c\n"))
-			Expect(f.ValuesGet("linstor.internal.sslNodeCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("linstor.internal.sslNodeCert.cert").String()).To(Equal("a\n"))
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.key").String()).To(Equal("b\n"))
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.ca").String()).To(Equal("c\n"))
 		})
@@ -484,7 +511,8 @@ data:
 
 	Context("HTTPS Certs :: Before Helm", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Secret
@@ -505,16 +533,18 @@ data:
   tls.crt: YQo= # a
   tls.key: Ygo= # b
   ca.crt:  Ywo= # c
-			`))
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
 			f.RunHook()
 		})
 
 		It("Cert data must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("linstor.internal.sslControllerCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("linstor.internal.sslControllerCert.cert").String()).To(Equal("a\n"))
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.key").String()).To(Equal("b\n"))
 			Expect(f.ValuesGet("linstor.internal.sslControllerCert.ca").String()).To(Equal("c\n"))
-			Expect(f.ValuesGet("linstor.internal.sslNodeCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("linstor.internal.sslNodeCert.cert").String()).To(Equal("a\n"))
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.key").String()).To(Equal("b\n"))
 			Expect(f.ValuesGet("linstor.internal.sslNodeCert.ca").String()).To(Equal("c\n"))
 		})

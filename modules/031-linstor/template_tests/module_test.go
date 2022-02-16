@@ -107,7 +107,7 @@ const (
         KoZIzj0EAwIDRwAwRAIgcNKc5Bt0Fd5z4jFL3LXyaQtQeinjYZiMcqLMrGv+NNoC
         IDJid8dT06cHhi8ltGgLZzXGw25qOu5oZSSJIRw6+QcZ
         -----END CERTIFICATE-----
-      crt: |
+      cert: |
         -----BEGIN CERTIFICATE-----
         MIIBsDCCAVWgAwIBAgIUR6gMYo0dyTWRiEKMnDYmAJeW7ZwwCgYIKoZIzj0EAwIw
         FTETMBEGA1UEAxMKbGluc3Rvci1jYTAeFw0yMjAyMDgxOTQwMDBaFw0yMzAyMDgx
@@ -138,7 +138,7 @@ const (
         KoZIzj0EAwIDRwAwRAIgcNKc5Bt0Fd5z4jFL3LXyaQtQeinjYZiMcqLMrGv+NNoC
         IDJid8dT06cHhi8ltGgLZzXGw25qOu5oZSSJIRw6+QcZ
         -----END CERTIFICATE-----
-      crt: |
+      cert: |
         -----BEGIN CERTIFICATE-----
         MIICITCCAcegAwIBAgIUCWlZHDz6YTg1qR9gCEfTZIxAs+owCgYIKoZIzj0EAwIw
         FTETMBEGA1UEAxMKbGluc3Rvci1jYTAeFw0yMjAyMDgxOTQwMDBaFw0yMzAyMDgx
@@ -171,7 +171,7 @@ const (
         KoZIzj0EAwIDSQAwRgIhALsDqkvxIZovYft7uQ26v2cRjelhOnErDq3lH0++3NHU
         AiEAmF+9IU2j0vU5pKalFBm78AkJSM+oh6nUU+Zsot/zOgQ=
         -----END CERTIFICATE-----
-      crt: |
+      cert: |
         -----BEGIN CERTIFICATE-----
         MIICIjCCAcegAwIBAgIUZxUW3TCFFR1EXLrRMlEog5pXrmUwCgYIKoZIzj0EAwIw
         FTETMBEGA1UEAxMKbGluc3Rvci1jYTAeFw0yMjAyMDgxOTQwMDBaFw0yMzAyMDgx
@@ -204,7 +204,7 @@ const (
         KoZIzj0EAwIDSQAwRgIhALsDqkvxIZovYft7uQ26v2cRjelhOnErDq3lH0++3NHU
         AiEAmF+9IU2j0vU5pKalFBm78AkJSM+oh6nUU+Zsot/zOgQ=
         -----END CERTIFICATE-----
-      crt: |
+      cert: |
         -----BEGIN CERTIFICATE-----
         MIIBrTCCAVOgAwIBAgIUTai7Qry7+PW/Tf3WQ70U67Bj6z8wCgYIKoZIzj0EAwIw
         FTETMBEGA1UEAxMKbGluc3Rvci1jYTAeFw0yMjAyMDgxOTQwMDBaFw0yMzAyMDgx

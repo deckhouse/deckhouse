@@ -120,7 +120,7 @@ COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /thin-send-recv_*.deb /packages/
 COPY --from=k8s-await-election-builder /k8s-await-election /usr/bin/k8s-await-election
 
-# Source: https://github.com/piraeusdatastore/piraeus/tree/master/dockerfiles/piraeus-server
+# Source https://github.com/piraeusdatastore/piraeus/blob/master/dockerfiles/piraeus-server/Dockerfile
 RUN { echo 'APT::Install-Recommends "false";' ; echo 'APT::Install-Suggests "false";' ; } > /etc/apt/apt.conf.d/99_piraeus
 RUN apt-get update && \
 	# Install useful utilities and general dependencies

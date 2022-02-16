@@ -15,11 +15,11 @@ properties:
         type: object
         default: {}
         x-required-for-helm:
-        - crt
+        - cert
         - key
         - ca
         properties:
-          crt:
+          cert:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
           key:
@@ -32,11 +32,11 @@ properties:
         type: object
         default: {}
         x-required-for-helm:
-        - crt
+        - cert
         - key
         - ca
         properties:
-          crt:
+          cert:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
           key:
@@ -49,11 +49,11 @@ properties:
         type: object
         default: {}
         x-required-for-helm:
-        - crt
+        - cert
         - key
         - ca
         properties:
-          crt:
+          cert:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
           key:
@@ -66,11 +66,11 @@ properties:
         type: object
         default: {}
         x-required-for-helm:
-        - crt
+        - cert
         - key
         - ca
         properties:
-          crt:
+          cert:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
           key:

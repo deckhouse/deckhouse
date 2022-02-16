@@ -36,24 +36,17 @@ import (
 
 const (
 	linstorNamespace             = "d8-linstor"
-	linstorServiceHost           = "linstor." + linstorNamespace + ".svc"
+	linstorServiceName           = "linstor"
+	linstorServiceHost           = linstorServiceName + "." + linstorNamespace + ".svc"
 	linstorHTTPSControllerSecret = "linstor-controller-https-cert"
 	linstorHTTPSClientSecret     = "linstor-client-https-cert"
 	linstorSSLControllerSecret   = "linstor-controller-ssl-cert"
 	linstorSSLNodeSecret         = "linstor-node-ssl-cert"
 
-	httpsControllerCertPath = "linstor.internal.httpsControllerCert.crt"
-	httpsControllerKeyPath  = "linstor.internal.httpsControllerCert.key"
-	httpsControllerCAPath   = "linstor.internal.httpsControllerCert.ca"
-	httpsClientCertPath     = "linstor.internal.httpsClientCert.crt"
-	httpsClientKeyPath      = "linstor.internal.httpsClientCert.key"
-	httpsClientCAPath       = "linstor.internal.httpsClientCert.ca"
-	sslControllerCertPath   = "linstor.internal.sslControllerCert.crt"
-	sslControllerKeyPath    = "linstor.internal.sslControllerCert.key"
-	sslControllerCAPath     = "linstor.internal.sslControllerCert.ca"
-	sslNodeCertPath         = "linstor.internal.sslNodeCert.crt"
-	sslNodeKeyPath          = "linstor.internal.sslNodeCert.key"
-	sslNodeCAPath           = "linstor.internal.sslNodeCert.ca"
+	httpsControllerCertPath = "linstor.internal.httpsControllerCert"
+	httpsClientCertPath     = "linstor.internal.httpsClientCert"
+	sslControllerCertPath   = "linstor.internal.sslControllerCert"
+	sslNodeCertPath         = "linstor.internal.sslNodeCert"
 )
 
 type LinstorCertSnapshot struct {
@@ -145,18 +138,19 @@ func generateHTTPSCertificates(input *go_hook.HookInput) error {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}
 
-		linstorServiceFQDN := fmt.Sprintf(
-			"%s.%s",
-			linstorServiceHost,
-			input.Values.Get("global.discovery.clusterDomain").String(),
-		)
+		// linstorServiceFQDN := fmt.Sprintf(
+		// 	"%s.%s",
+		// 	linstorServiceHost,
+		// 	input.Values.Get("global.discovery.clusterDomain").String(),
+		// )
 		controllerCert, err = certificate.GenerateSelfSignedCert(input.LogEntry,
 			"linstor-controller",
 			caCert,
 			certificate.WithSigningDefaultExpiry(87600*time.Hour),
 			certificate.WithSANs(
+				linstorServiceName,
 				linstorServiceHost,
-				linstorServiceFQDN,
+				// linstorServiceFQDN,
 				"localhost",
 				"::1",
 				"127.0.0.1",
@@ -175,12 +169,8 @@ func generateHTTPSCertificates(input *go_hook.HookInput) error {
 		}
 	}
 
-	input.Values.Set(httpsControllerCertPath, controllerCert.Cert)
-	input.Values.Set(httpsControllerKeyPath, controllerCert.Key)
-	input.Values.Set(httpsControllerCAPath, controllerCert.CA)
-	input.Values.Set(httpsClientCertPath, clientCert.Cert)
-	input.Values.Set(httpsClientKeyPath, clientCert.Key)
-	input.Values.Set(httpsClientCAPath, clientCert.CA)
+	input.Values.Set(httpsControllerCertPath, controllerCert)
+	input.Values.Set(httpsClientCertPath, clientCert)
 	return nil
 }
 
@@ -206,18 +196,19 @@ func generateSSLCertificates(input *go_hook.HookInput) error {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}
 
-		linstorServiceFQDN := fmt.Sprintf(
-			"%s.%s",
-			linstorServiceHost,
-			input.Values.Get("global.discovery.clusterDomain").String(),
-		)
+		// linstorServiceFQDN := fmt.Sprintf(
+		// 	"%s.%s",
+		// 	linstorServiceHost,
+		// 	input.Values.Get("global.discovery.clusterDomain").String(),
+		// )
 		controllerCert, err = certificate.GenerateSelfSignedCert(input.LogEntry,
 			"linstor-controller",
 			caCert,
 			certificate.WithSigningDefaultExpiry(87600*time.Hour),
 			certificate.WithSANs(
+				linstorServiceName,
 				linstorServiceHost,
-				linstorServiceFQDN,
+				// linstorServiceFQDN,
 				"localhost",
 				"::1",
 				"127.0.0.1",
@@ -236,11 +227,7 @@ func generateSSLCertificates(input *go_hook.HookInput) error {
 		}
 	}
 
-	input.Values.Set(sslControllerCertPath, controllerCert.Cert)
-	input.Values.Set(sslControllerKeyPath, controllerCert.Key)
-	input.Values.Set(sslControllerCAPath, controllerCert.CA)
-	input.Values.Set(sslNodeCertPath, nodeCert.Cert)
-	input.Values.Set(sslNodeKeyPath, nodeCert.Key)
-	input.Values.Set(sslNodeCAPath, nodeCert.CA)
+	input.Values.Set(sslControllerCertPath, controllerCert)
+	input.Values.Set(sslNodeCertPath, nodeCert)
 	return nil
 }

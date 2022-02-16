@@ -10,7 +10,7 @@ Briefly:
 
 for more details read the next section
 
-## What is actual perfomance and reliability of LINSTOR?
+## Performance and reliability notes and comparison to Ceph
 
 We take a practical view of the issue. A difference of several tens of percent - in practice it never matters. The difference is several times or more important. 
 - Sequential read and write do not matter, because on any technology they always run into the network (which is 10Gb/s, which is 1Gb/s). From a practical point of view, this indicator can be completely ignored.
@@ -23,12 +23,12 @@ We take a practical view of the issue. A difference of several tens of percent -
   - write - limited to half the network bandwidth (with two replicas, or ⅓ network bandwidth with three replicas) 
 - with a large number of clients (more than 10, with iodepth 64), ceph starts to fall behind more (up to 10 times) and consume much more CPU.
 
-The dry result - in practice, it doesn’t matter which twists to twist, only three factors affect: 
+All in all, in practice, it doesn’t matter how many knobs you have for tuning, only three factors are significant: 
 - **read locality** - if all reading is performed locally, then it works at the speed (throughput, iops, latency) of the local disk (the difference is practically insignificant)
 - **1 network hop when writing** - in drbd, the replication is performed by the “client”, and in ceph, by “server”, so ceph latency for writing always has at least x2 from drbd
 - **complexity of code** - latency of calculations on the datapath (how much assembler code is executed for each io operation), drbd+lvm is simpler than drbd+lvmthin, and much simpler than ceph-rbd. 
 
-## What to use in which situation? 
+## What to use in which situation?
 
 - By default, we use 2 replicas (the third one is diskless used for quorum, it is created automatically), this guarantees protection against split brain and a sufficient level of storage reliability.
     - You need to understand that when one of the replicas (replica A) is unavailable, data is written only to a single replica (replica B). It means that:

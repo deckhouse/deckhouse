@@ -61,7 +61,7 @@ kind: Role
 metadata:
   name: linstor-ha-controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-scheduler")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-ha-controller")) | nindent 2 }}
 rules:
   - apiGroups:
       - coordination.k8s.io
@@ -77,7 +77,7 @@ kind: RoleBinding
 metadata:
   name: linstor-ha-controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-scheduler")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-ha-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
