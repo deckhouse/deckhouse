@@ -2,18 +2,21 @@ ARG BASE_DEBIAN
 ARG BASE_GOLANG_17_BUSTER
 
 FROM $BASE_GOLANG_17_BUSTER as builder
-ARG LINSTOR_SCHEDULER_EXTENDER_GITREPO=https://github.com/piraeusdatastore/linstor-scheduler-extender
-ARG LINSTOR_SCHEDULER_EXTENDER_VERSION=0.2.0
+ARG LINSTOR_WAIT_UNTIL_VERSION=0.1.1
 
-RUN git clone ${LINSTOR_SCHEDULER_EXTENDER_GITREPO} /usr/local/go/linstor-scheduler-extender \
- && cd /usr/local/go/linstor-scheduler-extender \
- && git reset --hard v${LINSTOR_SCHEDULER_EXTENDER_VERSION} \
- && cd cmd/linstor-scheduler-extender \
- && go build -ldflags="-X github.com/piraeusdatastore/linstor-scheduler-extender/pkg/consts.Version=v${LINSTOR_SCHEDULER_EXTENDER_VERSION}" \
- && mv ./linstor-scheduler-extender /
+COPY . /usr/local/go/linstor-pools-importer
+RUN cd /usr/local/go/linstor-pools-importer \
+ && go build \
+ && mv ./linstor-pools-importer /
+
+RUN git clone https://github.com/LINBIT/linstor-wait-until /usr/local/go/linstor-wait-until \
+ && cd /usr/local/go/linstor-wait-until \
+ && git reset --hard v${LINSTOR_WAIT_UNTIL_VERSION} \
+ && go build \
+ && mv ./linstor-wait-until /
 
 FROM $BASE_DEBIAN
-COPY --from=builder /linstor-scheduler-extender /
+COPY --from=builder /linstor-pools-importer /linstor-wait-until /
 
 # needs a newer lvm, debian bug #932433
 RUN printf 'Package: *\nPin: release a=%s\nPin-Priority: %s\n\n' stable 700 testing 650 > /etc/apt/preferences \
@@ -26,4 +29,4 @@ RUN printf 'Package: *\nPin: release a=%s\nPin-Priority: %s\n\n' stable 700 test
  && sed -i 's/udev_rules.*=.*/udev_rules=0/ ; s/udev_sync.*=.*/udev_sync=0/ ; s/obtain_device_list_from_udev.*=.*/obtain_device_list_from_udev=0/' /etc/lvm/lvm.conf \
  && sed -i '/^devices {/a global_filter = [ "r|^/dev/drbd|" ]' /etc/lvm/lvm.conf
 
-ENTRYPOINT ["/linstor-scheduler-extender"]
+ENTRYPOINT ["/linstor-pools-importer"]
