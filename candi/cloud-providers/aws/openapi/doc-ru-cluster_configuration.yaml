@@ -2,6 +2,11 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     properties:
+      peeredVPCs:
+        description: |
+          Список AWS VPC ID для организации пиринга с сетью кластера.
+
+          Учетная запись должна иметь доступ ко всем VPC в списке. Также вы можете настроить соединение [вручную](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html), если доступа нет.
       masterNodeGroup:
         description: Спецификация для описания NodeGroup master-узлов.
         properties:
@@ -51,7 +56,7 @@ apiVersions:
           properties:
             name:
               description: |
-                Имя NodeGroup, будет использоваться для генерации имен узлов.
+                Имя NodeGroup. Используется для генерации имен узлов.
             replicas:
               description: |
                 Количество узлов.
@@ -61,39 +66,19 @@ apiVersions:
               properties:
                 labels:
                   description: |
-                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
 
-                    Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
-
-                    Формат — `key: value`.
-                  x-doc-example: |
-                    ```yaml
-                    labels:
-                      environment: production
-                      app: warp-drive-ai
-                    ```
+                    Если поменять лейблы в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
                 annotations:
                   description: |
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
-                  x-doc-example: |
-                    ```yaml
-                    annotations:
-                      ai.fleet.com/discombobulate: "true"
-                    ```
                 taints:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
                     **Внимание!** Доступны только поля `effect`, `key`, `values`.
-                  x-doc-example: |
-                    ```yaml
-                    taints:
-                    - effect: NoExecute
-                      key: ship-class
-                      value: frigate
-                    ```
             instanceClass:
               description: |
                 Частичное содержимое полей [AWSInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
@@ -109,14 +94,14 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
       withNAT:
         properties:
           bastionInstance:
             properties:
               zone:
                 description: |
-                  Зона в которой создавать bastion.
+                  Зона, в которой создавать bastion.
 
                   По умолчанию будет использоваться первая доступная зона в регионе или первая из списка глобального параметра `zones`.
               instanceClass:
@@ -152,13 +137,13 @@ apiVersions:
         description: |
           Подсеть, которая будет указана в созданном VPC.
 
-          **Обязательный параметр** если не указан параметр для развёртывания в уже созданном VPC `existingVPCID`.
+          **Обязательный параметр**, если не указан параметр для развёртывания в уже созданном VPC `existingVPCID`.
       nodeNetworkCIDR:
         description: |
           Подсеть, в которой будут работать узлы кластера.
 
-          * Диапазон должен быть частью или должен соответствовать диапазону адресов VPC.
-          * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе.
+          * Диапазон должен быть частью или должен соответствовать диапазону адресов VPC;
+          * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе;
           * Необязательный, но рекомендованный параметр. По умолчанию — соответствует целому диапазону адресов VPC.
 
           > Если при создании кластера создаётся новая VPC и не указан `vpcNetworkCIDR`, то VPC будет создана с диапазоном, указанным в `nodeNetworkCIDR`.
@@ -170,16 +155,16 @@ apiVersions:
         description: |
           ID существующего VPC, в котором будет развёрнута схема.
 
-          * **Обязательный параметр** если не указан `vpcNetworkCIDR`.
-          * **Важно!** Если в данной VPC уже есть Internet Gateway, деплой базовой инфраструктуры упадёт с ошибкой. На данный момент адоптнуть Internet Gateway нельзя.
+          * **Обязательный параметр**, если не указан `vpcNetworkCIDR`;
+          * **Важно!** Если в данной VPC уже есть Internet Gateway, деплой базовой инфраструктуры упадёт с ошибкой. На данный момент использовать уже существующий Internet Gateway нельзя.
       sshPublicKey:
         description: |
-          Публичный ключ для доступа на узлы
+          Публичный ключ для доступа на узлы.
       tags:
         description: |
           Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
 
-          Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+          Если поменять теги в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
           [Параметры подключения](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/environment.html) к API AWS.
@@ -195,4 +180,4 @@ apiVersions:
               Имя AWS региона, в котором будут заказываться инстансы.
       zones:
         description: |
-          Глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+          Глобальное ограничение набора зон, с которыми работает cloud provider.
