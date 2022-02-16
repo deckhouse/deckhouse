@@ -9,7 +9,7 @@ Deckhouse makes it possible to run the Kubernetes cluster on **any supported inf
 - on virtual or bare metal machines (including on-premises);
 - on a hybrid infrastructure.
 
-Deckhouse automatically configures and manages both the [cluster nodes]({{"/modules/040-node-manager/" | true_relative_url }} ) and the  [control plane]({{"/modules/040-control-plane-manager/" | true_relative_url }} ) components, keeping their configuration up-to-date (using Terraform tools).
+Deckhouse automatically configures and manages both the [cluster nodes](modules/040-node-manager/) and the  [control plane](modules/040-control-plane-manager/) components, keeping their configuration up-to-date (using Terraform tools).
 
 Deckhouse facilitates non-trivial operations with control-plane and cluster nodes, such as:
 
@@ -19,10 +19,10 @@ Deckhouse facilitates non-trivial operations with control-plane and cluster node
 
 All these tasks are based on smart and safe algorithms (the user can monitor/manage the ongoing processes).
 
-Also, Deckhouse takes care of the certificates used when working with the control plane. It automatically issues certificates, renews them and configures the kubectl.
+Also, Deckhouse configures kubelet and takes care of the certificates used when working with the control plane. It automatically issues certificates and renews them.
 
 Deckhouse replaces `kubeadm`'s `kube-proxy` resources (DaemonSets, ConfigMaps, RBAC) by their tailor-made analogs.
 
 A high level of integration between Deckhouse modules ensures effective monitoring and provides an acceptable level of security. For example, you can safely access the cluster's API server from a public IP address and use an external authentication provider.
 
-Docker images of all Deckhouse components (including `control plane`) are stored in a highly available and geo-distributed Docker registry. The latter is accessible from a limited set of IP addresses (to ease access from isolated environments).
+Images of all Deckhouse components (including `control plane`) are stored in a highly available and geo-distributed container registry. The latter is accessible from a limited set of IP addresses (to ease access from isolated environments).
