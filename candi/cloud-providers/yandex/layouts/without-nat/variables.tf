@@ -42,6 +42,7 @@ locals {
   prefix = var.clusterConfiguration.cloud.prefix
   existing_network_id = lookup(var.providerClusterConfiguration, "existingNetworkID", "")
   node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
+  existing_zone_to_subnet_id_map = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", null)
 
   dhcp_options = lookup(var.providerClusterConfiguration, "dhcpOptions", null)
   dhcp_domain_name = local.dhcp_options != null ? lookup(local.dhcp_options, "domainName", null) : null
