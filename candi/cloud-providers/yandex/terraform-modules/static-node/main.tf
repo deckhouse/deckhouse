@@ -13,9 +13,9 @@
 # limitations under the License.
 
 locals {
-  mapping = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", null)
+  mapping = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", {})
 
-  zone_to_subnet = local.mapping == null ? {
+  zone_to_subnet = length(local.mapping) == 0 ? {
     "ru-central1-a" = length(data.yandex_vpc_subnet.kube_a) > 0 ? data.yandex_vpc_subnet.kube_a[0] : object({})
     "ru-central1-b" = length(data.yandex_vpc_subnet.kube_b) > 0 ? data.yandex_vpc_subnet.kube_b[0] : object({})
     "ru-central1-c" = length(data.yandex_vpc_subnet.kube_c) > 0 ? data.yandex_vpc_subnet.kube_c[0] : object({})
@@ -39,17 +39,17 @@ data "yandex_vpc_subnet" "existing" {
 }
 
 data "yandex_vpc_subnet" "kube_a" {
-  count = local.mapping == null ? 1 : 0
+  count = length(local.mapping) == 0 ? 1 : 0
   name = "${local.prefix}-a"
 }
 
 data "yandex_vpc_subnet" "kube_b" {
-  count = local.mapping == null ? 1 : 0
+  count = length(local.mapping) == 0 ? 1 : 0
   name = "${local.prefix}-b"
 }
 
 data "yandex_vpc_subnet" "kube_c" {
-  count = local.mapping == null ? 1 : 0
+  count = length(local.mapping) == 0 ? 1 : 0
   name = "${local.prefix}-c"
 }
 

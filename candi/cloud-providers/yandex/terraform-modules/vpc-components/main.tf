@@ -13,7 +13,7 @@
 # limitations under the License.
 
 locals {
-  should_create_subnets = var.existing_zone_to_subnet_id_map == null ? true : false
+  should_create_subnets = length(var.existing_zone_to_subnet_id_map) == 0 ? true : false
 
   kube_a_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 0) : null
   kube_b_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 1) : null
