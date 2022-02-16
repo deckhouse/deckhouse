@@ -325,6 +325,10 @@ func (d *dummyCache) GetPreferredVersion(group string) (string, error) {
 	return "", fmt.Errorf("not found")
 }
 
+func (d *dummyCache) Check() error {
+	return nil
+}
+
 func TestWrapRegexpTest(t *testing.T) {
 	tc := []struct {
 		Name   string
