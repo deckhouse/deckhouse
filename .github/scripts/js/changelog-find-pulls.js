@@ -11,7 +11,7 @@ module.exports = async function ({ github, context }, { milestone }) {
 
   // Make JSON compact to pass it further as string
   return pulls.map((p) => ({
-    url: p.url,
+    url: p.html_url,
     number: p.number,
     title: p.title,
     body: p.body,
