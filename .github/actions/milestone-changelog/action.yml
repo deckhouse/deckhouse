@@ -17,13 +17,26 @@ runs:
         echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
         echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
 
+    # Fetch merged PRs in milestone
+    - name: Find Merged Pull Requests
+      id: merged_milestone
+      uses: actions/github-script@v5
+      with:
+        result-encoding: json
+        script: |
+          const fetch = require('./.github/scripts/js/changelog-find-pulls.js')
+          const prs = await fetch({ github, context }, { milestone: process.env.MILESTONE })
+          core.setOutput("prs", prs)
+      env:
+        MILESTONE: ${{ steps.args.outputs.milestone_title }}
+
     - name: Collect Changelog
       id: changelog
       uses: deckhouse/changelog-action@section-validation-config
       with:
         token: ${{ inputs.token }}
-        milestone: ${{ steps.args.outputs.milestone_title }}
-        repo: ${{ github.repository }}
+        pull_requests: ${{ steps.merged_milestone.outputs.prs }}
+        allowed_sections: "one,two:low"
 
     # Patch-version YAML changelog
     - name: Write Changelog YAML
