@@ -13,11 +13,28 @@
 # limitations under the License.
 
 locals {
-  kube_a_v4_cidr_block = cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 0)
-  kube_b_v4_cidr_block = cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 1)
-  kube_c_v4_cidr_block = cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 2)
+  should_create_subnets = var.existing_zone_to_subnet_id_map == null ? true : false
 
-  nat_instance_internal_address_calculated = var.should_create_nat_instance ? (var.nat_instance_internal_address == null ? cidrhost(local.kube_c_v4_cidr_block, 10) : var.nat_instance_internal_address) : null
+  kube_a_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 0) : null
+  kube_b_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 1) : null
+  kube_c_v4_cidr_block = local.should_create_subnets ? cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 2) : null
+
+  nat_instance_internal_address_calculated = var.should_create_nat_instance ? (var.nat_instance_internal_address == null ? (local.should_create_subnets ? cidrhost(local.kube_c_v4_cidr_block, 10) : cidrhost(data.yandex_vpc_subnet.kube_c[0].v4_cidr_blocks[0], 10)) : var.nat_instance_internal_address) : null
+}
+
+data "yandex_vpc_subnet" "kube_a" {
+  count          = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-a", null) == null) ? 0 : 1
+  subnet_id             = var.existing_zone_to_subnet_id_map.ru-central1-a
+}
+
+data "yandex_vpc_subnet" "kube_b" {
+  count          = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-b", null) == null) ? 0 : 1
+  subnet_id             = var.existing_zone_to_subnet_id_map.ru-central1-b
+}
+
+data "yandex_vpc_subnet" "kube_c" {
+  count          = local.should_create_subnets || (lookup(var.existing_zone_to_subnet_id_map, "ru-central1-c", null) == null) ? 0 : 1
+  subnet_id             = var.existing_zone_to_subnet_id_map.ru-central1-c
 }
 
 resource "yandex_vpc_route_table" "kube" {
@@ -42,6 +59,7 @@ resource "yandex_vpc_route_table" "kube" {
 }
 
 resource "yandex_vpc_subnet" "kube_a" {
+  count          = local.should_create_subnets ? 1 : 0
   name           = "${var.prefix}-a"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_a_v4_cidr_block]
@@ -66,6 +84,7 @@ resource "yandex_vpc_subnet" "kube_a" {
 }
 
 resource "yandex_vpc_subnet" "kube_b" {
+  count          = local.should_create_subnets ? 1 : 0
   name           = "${var.prefix}-b"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_b_v4_cidr_block]
@@ -90,6 +109,7 @@ resource "yandex_vpc_subnet" "kube_b" {
 }
 
 resource "yandex_vpc_subnet" "kube_c" {
+  count          = local.should_create_subnets ? 1 : 0
   name           = "${var.prefix}-c"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_c_v4_cidr_block]

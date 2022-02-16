@@ -18,7 +18,7 @@ data "yandex_compute_image" "nat_image" {
 }
 
 data "yandex_vpc_subnet" "internal_subnet" {
-  subnet_id = var.nat_instance_internal_subnet_id == null ? yandex_vpc_subnet.kube_c.id : var.nat_instance_internal_subnet_id
+  subnet_id = var.nat_instance_internal_subnet_id == null ? (local.should_create_subnets ? yandex_vpc_subnet.kube_c[0].id : data.yandex_vpc_subnet.kube_c[0].id) : var.nat_instance_internal_subnet_id
 }
 
 data "yandex_vpc_subnet" "external_subnet" {
@@ -27,7 +27,6 @@ data "yandex_vpc_subnet" "external_subnet" {
 }
 
 locals {
-
   internal_subnet_zone = data.yandex_vpc_subnet.internal_subnet.zone
   external_subnet_zone = var.nat_instance_external_subnet_id == null ? null : join("", data.yandex_vpc_subnet.external_subnet.*.zone) # https://github.com/hashicorp/terraform/issues/23222#issuecomment-547462883
   assign_external_ip_address = var.nat_instance_external_subnet_id == null ? true : false
@@ -104,6 +103,4 @@ resource "yandex_compute_instance" "nat_instance" {
   metadata = {
     user-data = local.user_data
   }
-
-  depends_on = [yandex_vpc_subnet.kube_c]
 }
