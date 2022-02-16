@@ -142,25 +142,30 @@ title: "Cloud provider — AWS: подготовка окружения"
 
 ## Настройка IAM через web-интерфейс
 
-Для того чтобы настроить IAM через web-интерфейс, необходимо выполнить следующие действия:
+Для того чтобы настроить IAM через web-интерфейс, сначала нужно создать новую Policy и применить к ней созданный ранее JSON-файл:
 
 1. Откройте `Identity and Access Management (IAM)`.
 1. Перейдите в раздел `Policies` и нажмите `Create Policy`.
 1. Выберите вкладку `JSON` и вставьте приведенную выше спецификацию.
-1. Нажмите `Next: Tags`.
-1. Нажмите `Next: Review`.
+1. Нажмите `Next: Tags`, затем `Next: Review`.
 1. Задайте название политики в поле `Name` (например, `D8CloudProviderAWS`).
 1. Нажмите `Create Policy`.
+
+Затем добавить нового пользователя:
+
 1. Перейдите в раздел `Users` IAM и нажмите `Add users`.
 1. Задайте имя в поле `User name` (например, `deckhouse`).
+
+И применить к нему созданную Policy:
+
 1. В разделе `Select AWS credential type`, выберите `Access key - Programmatic access`.
 1. Нажмите `Next: Permissions`.
 1. Выберите вкладку `Attach existing policies directly`.
 1. Введите в поле поиска (`Filter policies`) имя политики, указанное на предыдущих шагах (например, `D8CloudProviderAWS`), и в полученном списке отметьте checkbox напротив искомой политики.
-1. Нажмите `Next: Tags`.
-1. Нажмите `Next: Review`.
+1. Нажмите `Next: Tags`, затем `Next: Review`.
 1. Нажмите `Create user`.
-1. Сохраните полученные `Access key ID` и `Secret access key`.
+
+Сохраните полученные `Access key ID` и `Secret access key`.
 
 ## Настройка IAM через CLI
 

@@ -141,25 +141,30 @@ Below, you can find instructions on how to apply this policy.
 
 ## Configuring IAM via the web interface
 
-In order to configure IAM via the web interface, you need to perform the following steps:
+In order to configure IAM via the web interface, you first need to create a new Policy and apply the previously created JSON file to it:
 
 1. Open `Identity and Access Management (IAM)`.
 1. Open the `Policies` page and click `Create Policy`.
 1. Select the `JSON` tab and insert the policy.
-1. Click `Next: Tags`.
-1. Click `Next: Review`.
+1. Click `Next: Tags`, then `Next: Review`.
 1. Enter a policy name in the `Name` field (e.g., `D8CloudProviderAWS`).
 1. Click `Create Policy`.
+
+Then add a new user:
+
 1. Open the `Users` page of IAM and click `Add users`.
 1. Enter a name in the `User name` field (e.g., `deckhouse`).
+
+And apply the created Policy to it:
+
 1. Select `Access key - Programmatic access` in the `Select AWS credential type` area.
 1. Click `Next: Permissions`.
 1. Select the `Attach existing policies directly` tab.
 1. Search (use the `Filter policies` field) for the policy name entered above (e.g., `D8CloudProviderAWS`) and click the checkbox next to it.
-1. Click `Next: Tags`.
-1. Click `Next: Review`.
+1. Click `Next: Tags`, then `Next: Review`.
 1. Click `Create user`.
-1. Save credentials (`Access key ID` and `Secret access key`).
+
+Save credentials (`Access key ID` and `Secret access key`).
 
 ## Configuring IAM via the CLI
 
