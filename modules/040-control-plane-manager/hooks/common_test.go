@@ -26,7 +26,6 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 func Test(t *testing.T) {

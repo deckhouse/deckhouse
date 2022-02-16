@@ -19,8 +19,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 func Test(t *testing.T) {
