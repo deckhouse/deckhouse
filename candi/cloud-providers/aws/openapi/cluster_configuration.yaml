@@ -15,7 +15,7 @@ apiVersions:
       peeredVPCs:
         type: array
         description: |
-          A list of AWS VPC ids to peer with the cluster network.
+          A list of AWS VPC IDs to peer with the cluster network.
 
           The service account must have access to all the VPCs listed. You have to configure the peering connection [manually](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html) if no access is available.
         items:
@@ -120,8 +120,6 @@ apiVersions:
                     The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
-
-                    Format — `key: value`.
                   x-doc-example: |
                     ```yaml
                     labels:
@@ -332,7 +330,7 @@ apiVersions:
           type: string
         minItems: 1
         uniqueItems: true
-        description: The globally restricted set of zones that this Cloud Provider works with.
+        description: The globally restricted set of zones that this cloud provider works with.
     allOf:
     - oneOf:
       - required: [layout]

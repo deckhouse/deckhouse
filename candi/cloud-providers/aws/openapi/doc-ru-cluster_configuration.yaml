@@ -4,9 +4,9 @@ apiVersions:
     properties:
       peeredVPCs:
         description: |
-          Список идентификаторов AWS VPC для одноранговой связи с сетью кластера.
+          Список AWS VPC ID для организации пиринга с сетью кластера.
 
-          Учетная запись должна иметь доступ ко всем VPC в списке. Также вы можете настроить соединение [вручную](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html ), если доступа нет.
+          Учетная запись должна иметь доступ ко всем VPC в списке. Также вы можете настроить соединение [вручную](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html), если доступа нет.
       masterNodeGroup:
         description: Спецификация для описания NodeGroup master-узлов.
         properties:
@@ -56,7 +56,7 @@ apiVersions:
           properties:
             name:
               description: |
-                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+                Имя NodeGroup. Используется для генерации имен узлов.
             replicas:
               description: |
                 Количество узлов.
@@ -70,35 +70,15 @@ apiVersions:
 
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
 
-                    Если поменять теги в рабочем кластере, то после сборки и деплоя необходимо пересоздать все машины, чтобы теги применились.
-
-                    Формат — `key: value`.
-                  x-doc-example: |
-                    ```yaml
-                    labels:
-                      environment: production
-                      app: warp-drive-ai
-                    ```
+                    Если поменять лейблы в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
                 annotations:
                   description: |
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
-                  x-doc-example: |
-                    ```yaml
-                    annotations:
-                      ai.fleet.com/discombobulate: "true"
-                    ```
                 taints:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
                     **Внимание!** Доступны только поля `effect`, `key`, `values`.
-                  x-doc-example: |
-                    ```yaml
-                    taints:
-                    - effect: NoExecute
-                      key: ship-class
-                      value: frigate
-                    ```
             instanceClass:
               description: |
                 Частичное содержимое полей [AWSInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
@@ -184,7 +164,7 @@ apiVersions:
         description: |
           Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
 
-          Если поменять теги в рабочем кластере, то после сборки и деплоя необходимо пересоздать все машины, чтобы теги применились.
+          Если поменять теги в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
           [Параметры подключения](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/environment.html) к API AWS.
@@ -200,4 +180,4 @@ apiVersions:
               Имя AWS региона, в котором будут заказываться инстансы.
       zones:
         description: |
-          Глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+          Глобальное ограничение набора зон, с которыми работает cloud provider.
