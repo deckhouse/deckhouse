@@ -42,7 +42,7 @@ locals {
   prefix = var.clusterConfiguration.cloud.prefix
   existing_network_id = lookup(var.providerClusterConfiguration, "existingNetworkID", "")
   node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
-  existing_zone_to_subnet_id_map = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", null)
+  existing_zone_to_subnet_id_map = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", {})
   nat_instance_internal_subnet_id = lookup(var.providerClusterConfiguration.withNATInstance, "internalSubnetID", null)
   nat_instance_external_subnet_id = lookup(var.providerClusterConfiguration.withNATInstance, "externalSubnetID", null)
   nat_instance_external_address = lookup(var.providerClusterConfiguration.withNATInstance, "natInstanceExternalAddress", null)
