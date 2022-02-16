@@ -12,24 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "yandex_vpc_subnet" "kube_a" {
-  name = "${local.prefix}-a"
-}
-
-data "yandex_vpc_subnet" "kube_b" {
-  name = "${local.prefix}-b"
-}
-
-data "yandex_vpc_subnet" "kube_c" {
-  name = "${local.prefix}-c"
-}
-
 locals {
-  zone_to_subnet = {
-    "ru-central1-a" = data.yandex_vpc_subnet.kube_a
-    "ru-central1-b" = data.yandex_vpc_subnet.kube_b
-    "ru-central1-c" = data.yandex_vpc_subnet.kube_c
-  }
+  mapping = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", null)
+
+  zone_to_subnet = local.mapping == null ? {
+    "ru-central1-a" = length(data.yandex_vpc_subnet.kube_a) > 0 ? data.yandex_vpc_subnet.kube_a[0] : object({})
+    "ru-central1-b" = length(data.yandex_vpc_subnet.kube_b) > 0 ? data.yandex_vpc_subnet.kube_b[0] : object({})
+    "ru-central1-c" = length(data.yandex_vpc_subnet.kube_c) > 0 ? data.yandex_vpc_subnet.kube_c[0] : object({})
+  } : data.yandex_vpc_subnet.existing
 
   actual_zones    = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(local.zone_to_subnet), var.providerClusterConfiguration.zones)) : keys(local.zone_to_subnet)
   zones           = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
@@ -41,6 +31,26 @@ locals {
 
   external_subnet_id         = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
   assign_external_ip_address = (local.external_subnet_id == null) && (length(local.external_ip_addresses) > 0) ? true : false
+}
+
+data "yandex_vpc_subnet" "existing" {
+  for_each = local.mapping
+  subnet_id = each.value
+}
+
+data "yandex_vpc_subnet" "kube_a" {
+  count = local.mapping == null ? 1 : 0
+  name = "${local.prefix}-a"
+}
+
+data "yandex_vpc_subnet" "kube_b" {
+  count = local.mapping == null ? 1 : 0
+  name = "${local.prefix}-b"
+}
+
+data "yandex_vpc_subnet" "kube_c" {
+  count = local.mapping == null ? 1 : 0
+  name = "${local.prefix}-c"
 }
 
 resource "yandex_vpc_address" "addr" {

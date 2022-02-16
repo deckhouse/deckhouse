@@ -32,6 +32,12 @@ variable "network_id" {
 
 variable "node_network_cidr" {
   type = string
+  default = null
+}
+
+variable "existing_zone_to_subnet_id_map" {
+  type = map
+  default = null
 }
 
 variable "should_create_nat_instance" {
