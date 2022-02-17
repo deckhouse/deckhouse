@@ -2,9 +2,6 @@
 
 set -euo pipefail
 
-# Remove after merge !!!
-export BASE_SCRATCH="registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
-
 function bp() {
   # Set env DECKHOUSE_PULL_MODULES_IMAGES_BEFORE_BUILD=true to pull every image used in modules
   if [[  "${DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES:-}" == "true" ]]; then
@@ -13,10 +10,14 @@ function bp() {
 
   # Always push images to "dev" repository.
   REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
-  # Push images to "release" repository on git tag.
-  if [[ -n "${GIT_TAG_NAME}" && -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-    werf build --config modules_images_werf.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO} --report-path images_tags_werf.json
+  if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+    werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
+    # Push images to "release" repository on git tag.
+    if [[ -n "${GIT_TAG_NAME}" ]]; then
+      werf build --config modules_images_werf.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO} --report-path images_tags_werf.json
+    fi
+  else
+    werf build --config modules_images_werf.yaml --report-path images_tags_werf.json
   fi
 
   jq '
@@ -87,7 +88,7 @@ function setup_werf() {
   type werf && source $(werf ci-env $ci_type --config modules_images_werf.yaml --verbose --as-file)
 
   # There are 3 repositories, overwrite WERF_REPO to push to dev registry.
-  if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+  if [[ -n "${DEV_REGISTRY_PATH:-}" ]]; then
     export WERF_REPO="${DEV_REGISTRY_PATH}"
   fi
 }
@@ -105,9 +106,9 @@ function main() {
   GIT_TAG_NAME=
   if [[ -n ${GITLAB_CI:-} ]] ; then
     ci_type=gitlab
-    export GIT_TAG_NAME=${CI_COMMIT_TAG}
+    export GIT_TAG_NAME=${CI_COMMIT_TAG:-}
   fi
-  if [[ -n $GITHUB_REPOSITORY ]] ; then
+  if [[ -n ${GITHUB_REPOSITORY:-} ]] ; then
     ci_type=github
     gitTag=${GITHUB_REF#refs/tags/}
     if [[ ${GITHUB_REF} == ${gitTag} ]] ; then
