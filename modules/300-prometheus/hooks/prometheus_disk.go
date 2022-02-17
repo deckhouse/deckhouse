@@ -219,10 +219,16 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 		var diskSize int64  // GiB
 		var retention int64 // GiB
 
-		// TODO: check for each prom
-		// if there is no PVC, set the default values for diskSize and retention
+		pvcExists := false
+		for _, obj := range input.Snapshots["pvcs"] {
+			if obj.(PersistentVolumeClaimFilter).PromName == promName {
+				pvcExists = true
+				break
+			}
+		}
 
-		if len(input.Snapshots["pvcs"]) == 0 {
+		// if there is no PVC, set the default values for diskSize and retention
+		if !pvcExists {
 			effectiveStorageClass := input.Values.Get(fmt.Sprintf("prometheus.internal.prometheus%s.effectiveStorageClass", promNameForPath)).String()
 			input.LogEntry.Infof("prometheus.internal.prometheus%s.effectiveStorageClass: %s", promNameForPath, effectiveStorageClass)
 			if effectiveStorageClass != "false" && isVolumeExpansionAllowed(input, effectiveStorageClass) {
@@ -363,6 +369,7 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 
 	return
 }
+
 
 func isVolumeExpansionAllowed(input *go_hook.HookInput, scName string) bool {
 	scs := input.Snapshots["scs"]
