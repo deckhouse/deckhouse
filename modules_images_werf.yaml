@@ -67,6 +67,7 @@ args:
   BASE_SHELL_OPERATOR: {{ env "BASE_SHELL_OPERATOR" }}
   BASE_UBUNTU: {{ env "BASE_UBUNTU" }}
   BASE_JEKYLL: {{ env "BASE_JEKYLL" }}
+  BASE_SCRATCH: {{ env "BASE_SCRATCH" }}
 {{- else }}
 {{ tpl .ImageBuildData . }}
 {{- end }}

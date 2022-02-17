@@ -2,9 +2,6 @@
 
 set -euo pipefail
 
-# Remove after merge !!!
-export BASE_SCRATCH="registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
-
 function bp() {
   # Set env DECKHOUSE_PULL_MODULES_IMAGES_BEFORE_BUILD=true to pull every image used in modules
   if [[  "${DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES:-}" == "true" ]]; then
@@ -13,7 +10,7 @@ function bp() {
 
   # Always push images to "dev" repository.
   REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-  if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then 
+  if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
     werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
     # Push images to "release" repository on git tag.
     if [[ -n "${GIT_TAG_NAME}" ]]; then
