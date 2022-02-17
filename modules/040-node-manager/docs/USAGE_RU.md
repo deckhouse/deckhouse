@@ -90,3 +90,19 @@ spec:
     curl -L https://github.com/google/go-containerregistry/releases/download/v0.8.0/go-containerregistry_Linux_x86_64.tar.gz -o - | tar -zxvf - crane
     mv crane /usr/local/bin
 ```
+
+## Пример задания параметра sysctl
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: sysctl-tune.sh
+spec:
+  weight: 100
+  bundles:
+  - "*"
+  nodeGroups:
+  - "*"
+  content: |
+    sysctl -w vm.max_map_count=262144
