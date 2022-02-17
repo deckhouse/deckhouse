@@ -89,17 +89,24 @@ metadata:
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
   updateStrategy:
-  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
-    type: OnDelete
-  {{- else if $loadBalancer }}
+  {{- if $loadBalancer }}
     type: RollingUpdate
     {{- if semverCompare ">=1.21" $kubernetesVersion}}
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
+    {{- else }}
+    rollingUpdate:
+      maxUnavailable: 1
     {{- end }}
   {{- else }}
+    {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+    type: OnDelete
+    {{- else }}
     type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+    {{- end }}
   {{- end }}
   selector:
     matchLabels:
