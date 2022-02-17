@@ -387,3 +387,5 @@ done
 ```shell
 rm -f ~/.docker/config.json
 ```
+## How to add additional bashible step?
+Additional bashible steps are set by CR `NodeGroupConfiguration`.
