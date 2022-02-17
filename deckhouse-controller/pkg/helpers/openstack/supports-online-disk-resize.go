@@ -24,17 +24,18 @@ import (
 
 var onlineResizeMinVersion = semver.MustParse("3.42")
 
-func SupportsOnlineDiskResize() error {
+// IsSupportsOnlineDiskResize checks if openstack supports online resize, used as go lib
+func IsSupportsOnlineDiskResize() (bool, error) {
 	client, err := clientconfig.NewServiceClient("volume", nil)
 
 	allPages, err := apiversions.List(client).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to get API versions: %s", err)
+		return false, fmt.Errorf("unable to get API versions: %s", err)
 	}
 
 	allVersions, err := apiversions.ExtractAPIVersions(allPages)
 	if err != nil {
-		return fmt.Errorf("unable to extract API versions: %s", err)
+		return false, fmt.Errorf("unable to extract API versions: %s", err)
 	}
 
 	var currentVersion string
@@ -46,15 +47,27 @@ func SupportsOnlineDiskResize() error {
 	}
 
 	if currentVersion == "" {
-		return fmt.Errorf("cannot determine current API version for 3.0 block-storage")
+		return false, fmt.Errorf("cannot determine current API version for 3.0 block-storage")
 	}
 
 	currentVersionSemVer := semver.MustParse(currentVersion)
 
-	var stdout string
 	if currentVersionSemVer.GreaterThan(onlineResizeMinVersion) || currentVersionSemVer.Equal(onlineResizeMinVersion) {
-		stdout = "yes"
-	} else {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// SupportsOnlineDiskResize cli version of IsSupportsOnlineDiskResize
+func SupportsOnlineDiskResize() error {
+	isSupported, err := IsSupportsOnlineDiskResize()
+	if err != nil {
+		return err
+	}
+
+	stdout := "yes"
+	if !isSupported {
 		stdout = "no"
 	}
 

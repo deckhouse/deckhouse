@@ -1,0 +1,84 @@
+type: object
+properties:
+  connection:
+    type: object
+    description: TODO
+    properties:
+      authURL:
+        type: string
+        description: TODO
+      caCert:
+        type: string
+        description: TODO
+      domainName:
+        type: string
+        description: TODO
+      tenantName:
+        type: string
+        description: TODO
+      tenantID:
+        type: string
+        description: TODO
+      username:
+        type: string
+        description: TODO
+      password:
+        type: string
+        description: TODO
+      region:
+        type: string
+        description: TODO
+  internalNetworkNames:
+    type: array
+    description: TODO
+    items:
+      type: string
+  externalNetworkNames:
+    type: array
+    description: TODO
+    items:
+      type: string
+  additionalExternalNetworkNames:
+    type: array
+    description: TODO
+    items:
+      type: string
+  podNetworkMode:
+    type: string
+    description: TODO
+    enum: ["DirectRouting", "DirectRoutingWithPortSecurityEnabled", "VXLAN"]
+  instances:
+    type: object
+    properties:
+      sshKeyPairName:
+      securityGroups:
+      imageName:
+      mainNetwork:
+      additionalNetworks:
+  loadBalancer:
+    type: object
+    properties:
+      subnetID:
+        type: string
+      floatingNetworkID:
+        type: string
+  zones:
+    type: array
+    items:
+      type: string
+  tags:
+    type: array
+    items:
+      type: string
+  storageClass:
+    type: object
+    properties:
+      exclude:
+        type: array
+        items:
+          type: string
+      default:
+        type: string
+      topologyEnabled:
+        type: boolean
+        default: true

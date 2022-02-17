@@ -23,26 +23,36 @@ import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
-func GetVolumeTypes() error {
+// GetVolumeTypesArray extract volume types from go hooks
+func GetVolumeTypesArray() ([]string, error) {
 	client, err := clientconfig.NewServiceClient("volume", nil)
-
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	allPages, err := volumetypes.List(client, volumetypes.ListOpts{}).AllPages()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	volumeTypes, err := volumetypes.ExtractVolumeTypes(allPages)
 	if err != nil || len(volumeTypes) == 0 {
-		return fmt.Errorf("list of volume types is empty is empty, or an error was returned: %v", err)
+		return nil, fmt.Errorf("list of volume types is empty is empty, or an error was returned: %v", err)
 	}
 
 	var volumeTypesList []string
 	for _, vt := range volumeTypes {
 		volumeTypesList = append(volumeTypesList, vt.Name)
+	}
+
+	return volumeTypesList, nil
+}
+
+// GetVolumeTypes extract volume types from shell hooks
+func GetVolumeTypes() error {
+	volumeTypesList, err := GetVolumeTypesArray()
+	if err != nil {
+		return err
 	}
 
 	jsonList, err := json.Marshal(volumeTypesList)

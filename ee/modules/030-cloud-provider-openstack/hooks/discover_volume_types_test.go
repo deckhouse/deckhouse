@@ -12,7 +12,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-openstack :: hooks :: discover_volume_types ::", func() {
+var _ = FDescribe("Modules :: cloud-provider-openstack :: hooks :: discover_volume_types ::", func() {
 	const (
 		initValuesStringA = `
 cloudProviderOpenstack:
@@ -54,20 +54,20 @@ cloudProviderOpenstack:
 			Expect(f.ValuesGet("cloudProviderOpenstack.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
-	"name": "default",
-	"type": "__DEFAULT__"
-  },
-  {
-	"name": "some-foo",
-	"type": "some-foo"
-  },
-  {
 	"name": "bar",
 	"type": "bar"
   },
   {
+	"name": "default",
+	"type": "__DEFAULT__"
+  },
+  {
 	"name": "other-bar",
 	"type": "other-bar"
+  },
+  {
+	"name": "some-foo",
+	"type": "some-foo"
   }
 ]
 `))
