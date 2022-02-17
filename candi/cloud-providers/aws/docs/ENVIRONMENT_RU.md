@@ -6,7 +6,7 @@ title: "Cloud provider — AWS: подготовка окружения"
 
 ## JSON-спецификация Policy
 
-Инструкции, как применить этот JSON ниже.
+Сначала подготовьте JSON-файл с конфигурацией необходимых прав:
 
 <!-- The partial below is in the /docs/documentation/_includes/cloud-providers/aws/policy.json file -->
 ```json
@@ -138,99 +138,121 @@ title: "Cloud provider — AWS: подготовка окружения"
 }
 ```
 
-## Настройка IAM через веб-интерфейс
+Инструкции, как применить этот JSON-файл, ниже.
 
-* Откройте `Identity and Access Management (IAM)`
-* Перейдите в раздел `Policies` и нажмите `Create Policy`
-* Выберите вкладку `JSON` и вставьте приведенную выше спецификацию.
-* Нажмите `Next: Tags`
-* Нажмите `Next: Review`
-* Задайте название политики в поле `Name` (например, `D8CloudProviderAWS`)
-* Нажмите `Create Policy`
-* Перейдите в раздел `Users` IAM и нажмите `Add users`
-* Задайте имя в поле `User name` (например, `deckhouse`)
-* В разделе `Select AWS credential type`, выберите `Access key - Programmatic access`
-* Нажмите `Next: Permissions`
-* Выберите вкладку `Attach existing policies directly`
-* Введите в поле поиска (`Filter policies`) имя политики, указанное на предыдущих шагах (например, `D8CloudProviderAWS`), и в полученном списке отметьте checkbox напротив искомой политики
-* Нажмите `Next: Tags`
-* Нажмите `Next: Review`
-* Нажмите `Create user`
-* Сохраните полученные `Access key ID` и `Secret access key`
+## Настройка IAM через web-интерфейс
+
+Для того чтобы настроить IAM через web-интерфейс, сначала создайте новую Policy и примените к ней созданный ранее JSON-файл:
+
+1. Откройте `Identity and Access Management (IAM)`.
+1. Перейдите в раздел `Policies` и нажмите `Create Policy`.
+1. Выберите вкладку `JSON` и вставьте приведенную выше спецификацию.
+1. Нажмите `Next: Tags`, затем `Next: Review`.
+1. Задайте название политики в поле `Name` (например, `D8CloudProviderAWS`).
+1. Нажмите `Create Policy`.
+
+Затем добавьте нового пользователя:
+
+1. Перейдите в раздел `Users` IAM и нажмите `Add users`.
+1. Задайте имя в поле `User name` (например, `deckhouse`).
+
+И примените к нему созданную Policy:
+
+1. В разделе `Select AWS credential type`, выберите `Access key - Programmatic access`.
+1. Нажмите `Next: Permissions`.
+1. Выберите вкладку `Attach existing policies directly`.
+1. Введите в поле поиска (`Filter policies`) имя политики, указанное на предыдущих шагах (например, `D8CloudProviderAWS`), и в полученном списке отметьте checkbox напротив искомой политики.
+1. Нажмите `Next: Tags`, затем `Next: Review`.
+1. Нажмите `Create user`.
+
+Сохраните полученные `Access key ID` и `Secret access key`.
 
 ## Настройка IAM через CLI
 
-- При помощи следующей команды сохраните JSON-спецификацию в файл `policy.json`:
-{% offtopic title="Команда создания policy.json" %}
-```bash
+Также IAM можно настроить через интерфейс командной строки.
+
+Для этого при помощи следующей команды сохраните JSON-спецификацию в файл `policy.json`:
+
+```shell
 cat > policy.json << EOF
 <Policy JSON spec>
 EOF
 ```
-{% endofftopic %}
 
-- Создайте новую Policy с именем `D8CloudProviderAWS` и примечанием ARN, используя JSON-спецификацию из файла `policy.json`:
-  ```shell
-  aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
-  ```
+Затем создайте новую Policy с именем `D8CloudProviderAWS` и примечанием ARN, используя JSON-спецификацию из файла `policy.json`:
 
-  В ответ отобразится следующий текст:
-  ```yaml
-  {
-      "Policy": {
-          "PolicyName": "D8Policy",
-          "PolicyId": "AAA",
-          "Arn": "arn:aws:iam::123:policy/D8Policy",
-          "Path": "/",
-          "DefaultVersionId": "v1",
-          "AttachmentCount": 0,
-          "PermissionsBoundaryUsageCount": 0,
-          "IsAttachable": true,
-          "CreateDate": "2020-08-27T02:52:06+00:00",
-          "UpdateDate": "2020-08-27T02:52:06+00:00"
-      }
-  }
-  ```
-- Создайте нового пользователя:
-  ```shell
-  aws iam create-user --user-name deckhouse
-  ```
+```shell
+aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+```
 
-  В ответ отобразится следующий текст:
-  ```yaml
-  {
-      "User": {
-          "Path": "/",
-          "UserName": "deckhouse",
-          "UserId": "AAAXXX",
-          "Arn": "arn:aws:iam::123:user/deckhouse",
-          "CreateDate": "2020-08-27T03:05:42+00:00"
-      }
-  }
-  ```
-- Разрешите доступ к API и сохраните пару `AccessKeyId` + `SecretAccessKey`:
-  ```shell
-  aws iam create-access-key --user-name deckhouse
-  ```
+В ответ отобразится следующий текст:
 
-  В ответ отобразится следующий текст:
-  ```yaml
-  {
-      "AccessKey": {
-          "UserName": "deckhouse",
-          "AccessKeyId": "XXXYYY",
-          "Status": "Active",
-          "SecretAccessKey": "ZZZzzz",
-          "CreateDate": "2020-08-27T03:06:22+00:00"
-      }
-  }
-  ```
-- Объедините `User` и `Policy`:
-  ```shell
-  aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
-  ```
+```yaml
+{
+    "Policy": {
+        "PolicyName": "D8Policy",
+        "PolicyId": "AAA",
+        "Arn": "arn:aws:iam::123:policy/D8Policy",
+        "Path": "/",
+        "DefaultVersionId": "v1",
+        "AttachmentCount": 0,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "CreateDate": "2020-08-27T02:52:06+00:00",
+        "UpdateDate": "2020-08-27T02:52:06+00:00"
+    }
+}
+```
 
-## Настройка IAM через terraform
+Создайте нового пользователя:
+
+```shell
+aws iam create-user --user-name deckhouse
+```
+
+В ответ отобразится следующий текст:
+
+```yaml
+{
+    "User": {
+        "Path": "/",
+        "UserName": "deckhouse",
+        "UserId": "AAAXXX",
+        "Arn": "arn:aws:iam::123:user/deckhouse",
+        "CreateDate": "2020-08-27T03:05:42+00:00"
+    }
+}
+```
+
+Разрешите доступ к API и сохраните пару `AccessKeyId` + `SecretAccessKey`:
+
+```shell
+aws iam create-access-key --user-name deckhouse
+```
+
+В ответ отобразится следующий текст:
+
+```yaml
+{
+    "AccessKey": {
+        "UserName": "deckhouse",
+        "AccessKeyId": "XXXYYY",
+        "Status": "Active",
+        "SecretAccessKey": "ZZZzzz",
+        "CreateDate": "2020-08-27T03:06:22+00:00"
+    }
+}
+```
+
+Объедините `User` и `Policy`:
+
+```shell
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+```
+
+## Настройка IAM через Terraform
+
+Пример настройки IAM через Terraform:
 
 ```hcl
 resource "aws_iam_user" "user" {
