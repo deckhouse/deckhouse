@@ -6,6 +6,7 @@
 {{- $crdChecksum := toJson $crd | sha256sum }}
 {{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol")) }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
+{{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
 {{- $resourcesRequests := $crd.spec.resourcesRequests | default dict }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
@@ -90,6 +91,13 @@ spec:
   updateStrategy:
   {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
     type: OnDelete
+  {{- else if $loadBalancer }}
+    type: RollingUpdate
+    {{- if semverCompare ">=1.21" $kubernetesSemVer }}
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+    {{- end }}
   {{- else }}
     type: RollingUpdate
   {{- end }}
