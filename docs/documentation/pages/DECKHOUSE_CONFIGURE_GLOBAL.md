@@ -3,23 +3,12 @@ title: "Global configuration"
 permalink: en/deckhouse-configure-global.html
 ---
 
-## What do I need to configure?
+Глобальные настройки Deckhouse хранятся в параметре `global` [конфигурации Deckhouse](./#deckhouse-configuration).
 
-We recommend specifying template of the DNS records in the [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter and configuring DNS accordingly.
-
-Deckhouse creates Ingress resources for some modules based on the `publicDomainTemplate` parameter. Monitoring, authentication, and other Deckhouse functionality may not work without specifying the `publicDomainTemplate` parameter and DNS configuration.
-
+> В параметре [publicDomainTemplate](#parameters-modules-publicdomaintemplate) указывается шаблон, с учетом которого некоторые модули Deckhouse создают Ingress-ресурсы. Чтобы получить к ним доступ вы должны настроить ваш DNS, либо добавить DNS-записи локально (например в файле `/etc/hosts` для Linux).
+>
 > You can use the nip.io service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
-> 
-> Pay attention to some [configuration nuance](./#example-of-the-deckhouse-configmap). 
-
-The example of specifying a DNS template in the `publicDomainTemplate` parameter:
-
-```yaml
-global: |
-  modules:
-    publicDomainTemplate: "%s.kube.company.my"
-```
+> Pay attention to some [nuances](./#deckhouse-configuration) of ConfigMap `deckhouse`.
 
 ## Parameters
 

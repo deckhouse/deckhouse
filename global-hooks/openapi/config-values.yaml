@@ -6,7 +6,7 @@ properties:
     type: string
     default: null
     description: |
-      The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, ...).
+      The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
         * If not defined, components use `cluster.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `cluster.defaultStorageClass` isn't defined).
         * Use this parameter only in exceptional circumstances.
   highAvailability:
@@ -14,7 +14,7 @@ properties:
     description: |
       A global switch to enable the *high availability* mode for modules that support it.
 
-      If not defined, the `global.discovery.clusterControlPlaneIsHighlyAvailable` parameter is used to determine the value of the `highAvailability` parameter.
+      If not defined, the value is determined automatically.
     x-examples: [ true, false ]
   modules:
     description: |
@@ -36,8 +36,9 @@ properties:
         description: |
           The template with the `%s` key as the dynamic string parameter.
 
-          Deckhouse will use this template for creating DNS records.
-          The latter are necessary for the internal needs of Deckhouse and the operation of the modules.
+          Deckhouse modules use this template for creating Ingress resources.
+
+          E.g., if the template is `%s.kube.company.my`, the prometheus module will create an Ingress resource for the `grafana.kube.company.my` hosts to  access Grafana.
 
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
 
@@ -84,7 +85,7 @@ properties:
             type: string
             description: |
               The HTTPS usage mode:
-              * `Disabled` — in this mode, Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/));
+              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/));
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
               * `OnlyInURI` — Deckhouse modules use HTTP (in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS).
@@ -120,7 +121,7 @@ properties:
                 default: "false"
       resourcesRequests:
         description: |
-          The amount of resources (CPU and memory) allocated to Deckhouse components.
+          The amount of resources (CPU and memory) allocated to Deckhouse components running on each node of the cluster (usually these are DaemonSets, for example, `cni-flannel`, `monitoring-ping`).
 
           [More](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) about resource units in Kubernetes.
         type: object
@@ -132,7 +133,7 @@ properties:
             default: {}
             additionalProperties: false
             description: |
-              The amount of resources (CPU and memory) allocated to Deckhouse components running on every cluster node (usually DaemonSets)
+              The amount of resources (CPU and memory) allocated to Deckhouse components running on each node of the cluster.
             x-examples:
             - cpu: 100m
               memory: 150M
@@ -155,7 +156,7 @@ properties:
             type: object
             additionalProperties: false
             description: |
-              The amount of resources (CPU and memory) allocated to Deckhouse components runnig on the master nodes (including control plane components, if they are managed by Deckhouse).
+              The amount of resources (CPU and memory) allocated to Deckhouse components running on the master nodes (including control plane components, if they are managed by Deckhouse).
 
               **Caution!** Deckhouse does not manage control plane components in managed clusters, so all the specified resources are allocated to the Deckhouse components except the control plane.
             x-examples:
