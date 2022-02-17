@@ -81,7 +81,8 @@ status:
 
 	Context("Cluster with volumeattachment objects", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(properVolumeAttachment + brokenVolumeAttachment))
+			f.KubeStateSet(properVolumeAttachment + brokenVolumeAttachment)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
