@@ -6,7 +6,7 @@ To use the `cloud-provider` and `machine-controller-manager` modules, you must a
 
 ## JSON Policy
 
-First you need to prepare a JSON with the configuration of the necessary privileges:
+First, prepare a JSON file with the configuration of the necessary privileges:
 
 ```json
 {
@@ -141,7 +141,7 @@ Below, you can find instructions on how to apply this policy.
 
 ## Configuring IAM via the web interface
 
-In order to configure IAM via the web interface, you first need to create a new Policy and apply the previously created JSON file to it:
+In order to configure IAM via the web interface, first create a new Policy and apply the previously created JSON file to it:
 
 1. Open `Identity and Access Management (IAM)`.
 1. Open the `Policies` page and click `Create Policy`.
@@ -249,7 +249,7 @@ aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:po
 
 ## Configuring IAM via Terraform
 
-Below is an example of configuring IAM via Terraform:
+An example of configuring IAM via Terraform:
 
 ```hcl
 resource "aws_iam_user" "user" {

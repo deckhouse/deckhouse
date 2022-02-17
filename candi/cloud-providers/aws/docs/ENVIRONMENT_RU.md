@@ -6,7 +6,7 @@ title: "Cloud provider — AWS: подготовка окружения"
 
 ## JSON-спецификация Policy
 
-Сначала нужно подготовить JSON-файл с конфигурацией необходимых прав:
+Сначала подготовьте JSON-файл с конфигурацией необходимых прав:
 
 <!-- The partial below is in the /docs/documentation/_includes/cloud-providers/aws/policy.json file -->
 ```json
@@ -142,7 +142,7 @@ title: "Cloud provider — AWS: подготовка окружения"
 
 ## Настройка IAM через web-интерфейс
 
-Для того чтобы настроить IAM через web-интерфейс, сначала нужно создать новую Policy и применить к ней созданный ранее JSON-файл:
+Для того чтобы настроить IAM через web-интерфейс, сначала создайте новую Policy и примените к ней созданный ранее JSON-файл:
 
 1. Откройте `Identity and Access Management (IAM)`.
 1. Перейдите в раздел `Policies` и нажмите `Create Policy`.
@@ -151,12 +151,12 @@ title: "Cloud provider — AWS: подготовка окружения"
 1. Задайте название политики в поле `Name` (например, `D8CloudProviderAWS`).
 1. Нажмите `Create Policy`.
 
-Затем добавить нового пользователя:
+Затем добавьте нового пользователя:
 
 1. Перейдите в раздел `Users` IAM и нажмите `Add users`.
 1. Задайте имя в поле `User name` (например, `deckhouse`).
 
-И применить к нему созданную Policy:
+И примените к нему созданную Policy:
 
 1. В разделе `Select AWS credential type`, выберите `Access key - Programmatic access`.
 1. Нажмите `Next: Permissions`.
@@ -252,7 +252,7 @@ aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:po
 
 ## Настройка IAM через Terraform
 
-Ниже приведен пример настройки IAM через Terraform:
+Пример настройки IAM через Terraform:
 
 ```hcl
 resource "aws_iam_user" "user" {
