@@ -75,28 +75,27 @@ func (e *PostBootstrapScriptExecutor) Execute() error {
 	})
 }
 
-var resultPattern = regexp.MustCompile("^Result of post-bootstrap script:(.+)$")
+var resultPattern = regexp.MustCompile("(?m)^Result of post-bootstrap script:(.+)$")
 
 func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	var result string
-	stdoutHandler := func(l string) {
-		log.InfoLn(l)
-	}
-
 	cmd := e.sshClient.UploadScript(e.path).
-		WithStdoutHandler(stdoutHandler).
 		WithSetExecuteModeBefore(true).
 		WithTimeout(e.timeout).
 		Sudo()
 
 	out, err := cmd.Execute()
 
-	submatches := resultPattern.FindAllStringSubmatch(string(out), -1)
-	if len(submatches) > 0 && len(submatches[0]) > 1 {
-		result = submatches[0][1]
-	}
+	outStr := string(out)
+	log.InfoLn(outStr)
+
 	if err != nil {
 		return "", fmt.Errorf("run %s: %w", e.path, err)
+	}
+
+	submatches := resultPattern.FindAllStringSubmatch(outStr, -1)
+	if len(submatches) > 0 && len(submatches[0]) > 1 {
+		result = submatches[0][1]
 	}
 
 	return result, nil
