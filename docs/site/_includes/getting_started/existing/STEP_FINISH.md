@@ -54,7 +54,7 @@ Go to [grafana.example.com/prometheus/](https://grafana.example.com/prometheus/)
 Dashboard
 </h3>
 <div class="cards-item__text" markdown="1">
-The Kubernetes Dashboard is available at: [dashboard.example.com](https://dashboard.example.com)
+Enable the [dashboard](/{{ page.lang }}/documentation/v1/modules/500-dashboard/) module and get access to the Kubernetes Dashboard at: [dashboard.example.com](https://dashboard.example.com)
 </div>
 </div>
 
@@ -63,9 +63,9 @@ The Kubernetes Dashboard is available at: [dashboard.example.com](https://dashbo
 Status page
 </h3>
 <div class="cards-item__text" markdown="1">
-Visit [status.example.com](https://status.example.com) to get information about the overall status of Deckhouse and its components.
+Enable the [upmeter](/{{ page.lang }}/documentation/v1/modules/500-upmeter/) module and get information about the overall status of Deckhouse and its components at [status.example.com](https://status.example.com).
 
-The [upmeter.example.com](https://upmeter.example.com) page provides detailed SLA statistics for each component and time frame.
+At the [upmeter.example.com](https://upmeter.example.com) page you can get detailed SLA statistics for each component and time frame.
 </div>
 </div>
 
@@ -85,7 +85,7 @@ Deploying your first application
 Setting up a CI/CD system
 </h3>
 <div class="cards-item__text" markdown="1">
-[Create](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
+Enable the [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/) module and [create](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
 
 You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
 </div>
@@ -107,7 +107,7 @@ Create a `Service` and `Ingress` for your application.
 Monitoring your application
 </h3>
 <div class="cards-item__text" markdown="1">
-Add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
+Enable the [monitoring-custom](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/) module and add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
 
 For more information, see the `monitoring-custom` module's [documentation](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/).
 </div>
@@ -116,34 +116,6 @@ For more information, see the `monitoring-custom` module's [documentation](/{{ p
 </div>
 </div>
 </section>
-
-{% if page.platform_type == 'cloud' %}
-<section class="cards-blocks">
-<div class="cards-blocks__content container">
-<h2 class="cards-blocks__title text_h2">
-Other features
-</h2>
-<div class="cards-blocks__cards">
-
-<div class="cards-item cards-item_inverse" style="width: 100%">
-<h3 class="cards-item__title text_h3">
-Managing nodes
-</h3>
-<div class="cards-item__text" markdown="1">
-Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/{{ page.lang }}/documentation/v1/modules/040-node-manager/).
-
-You only need to make changes to `minReplicas` and `maxReplicas` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
-
-You need to create a new
-[InstanceClass](/{{ page.lang }}/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) and a
-[NodeGroup](/{{ page.lang }}/documentation/v1/modules/040-node-manager/cr.html#nodegroup) referring to it to create new groups.
-</div>
-</div>
-
-</div>
-</div>
-</section>
-{% endif %}
 
 <section class="cards-blocks">
 <div class="cards-blocks__content container">
@@ -161,9 +133,7 @@ external authentication mechanisms.
 Configuring DexProvider
 </h3>
 <div class="cards-item__text" markdown="1">
-You have to [configure](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) a
-`DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc., 
-will be authenticated using GitHub.
+You have to [configure](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) a `DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc., will be authenticated using GitHub.
 </div>
 </div>
 
@@ -181,8 +151,7 @@ You have to create a [DexAuthenticator](https://deckhouse.io/{{ page.lang }}/doc
 External authentication for the Kubernetes API
 </h3>
 <div class="cards-item__text" markdown="1">
-Configure
-[`publishAPI`](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api), download kubectl
+Configure [`publishAPI`](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api), download kubectl
 and create a `kubeconfig` file for external access to the API using the web interface available at `kubeconfig.example.com`.
 </div>
 </div>
