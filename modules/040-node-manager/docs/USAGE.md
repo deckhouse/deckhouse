@@ -69,3 +69,24 @@ spec:
         value: system
   nodeType: Static
 ```
+
+## An example of install crane on every node
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: add-crane.sh
+spec:
+  weight: 100
+  bundles:
+  - "*"
+  nodeGroups:
+  - "*"
+  content: |
+    if [ -x /usr/local/bin/crane ]; then
+      exit 0
+    fi
+    curl -L https://github.com/google/go-containerregistry/releases/download/v0.8.0/go-containerregistry_Linux_x86_64.tar.gz -o - | tar -zxvf - crane
+    mv crane /usr/local/bin
+```

@@ -392,3 +392,6 @@ done
 ```shell
 rm -f ~/.docker/config.json
 ```
+
+## Как добавить дополнительный шаг в bashible?
+Дополнительные шаги в bashible задаются при помощи CR `NodeGroupConfiguration`.
