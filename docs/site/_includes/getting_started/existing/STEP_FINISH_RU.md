@@ -91,7 +91,7 @@ Status page
 Направляем трафик на приложение
 </h3>
 <div class="cards-item__text" markdown="1">
-Ознакомьтесь с возможностями модуля [ingress-nginx](/{{ page.lang }}/documentation/v1/modules/140-user-authz/). 
+Ознакомьтесь с возможностями модуля [ingress-nginx](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx//). 
 
 Создайте `Service` и `Ingress` для вашего приложения.
 </div>
@@ -102,49 +102,13 @@ Status page
 Мониторинг приложения
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [monitoring-custom](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/) и добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
-Service.
+Включите модуль [monitoring-custom](/{{ page.lang }}/documentation/v1/modules/340-monitoring-custom/) и добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному Service.
 </div>
 </div>
 
 </div>
 </div>
 </section>
-
-{% if page.platform_type == 'cloud' %}
-<section class="cards-blocks">
-<div class="cards-blocks__content container">
-<h2 class="cards-blocks__title text_h2">
-Другие возможности
-</h2>
-<div class="cards-blocks__cards">
-
-<div class="cards-item cards-item_inverse" style="width: 100%">
-<h3 class="cards-item__title text_h3">
-Управление узлами
-</h3>
-<div class="cards-item__text" markdown="1">
-{% if page.platform_type == 'cloud' %}
-При создании кластера были созданы разные группы узлов. Чтобы увидеть их в кластере, выполните команду `kubectl get
-nodegroups`. Подробнее об этом в
-[документации](/{{ page.lang }}/documentation/v1/modules/040-node-manager/) по модулю управления узлами.
-
-Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minReplicas` и `maxReplicas`. При этом,
-если они не равны, — у вас автоматически заработает автоскейлинг.
-
-Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/{{ page.lang }}/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) и
-[NodeGroup](https://deckhouse.io/{{ page.lang }}/documentation/v1/modules/040-node-manager/cr.html#nodegroup), которая на него
-ссылается.
-{% else %}
-# TODO Bare metal!!!
-{% endif %}
-</div>
-</div>
-
-</div>
-</div>
-</section>
-{% endif %}
 
 <section class="cards-blocks">
 <div class="cards-blocks__content container">
@@ -162,9 +126,7 @@ nodegroups`. Подробнее об этом в
 Настройка DexProvider
 </h3>
 <div class="cards-item__text" markdown="1">
-Например, для включения аутентификации через GitHub можно включить модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) и [сконфигурировать](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) объект
-`DexProvider`. После создания `DexProvider`, при попытке доступа ко всем компонентам Deckhouse (Grafana, Dashboard и
-т.д.) потребуются аутентификации через GitHub
+Например, для включения аутентификации через GitHub можно включить модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) и [сконфигурировать](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) объект `DexProvider`. После создания `DexProvider`, при попытке доступа ко всем компонентам Deckhouse (Grafana, Dashboard и т.д.) потребуются аутентификации через GitHub.
 </div>
 </div>
 
@@ -173,8 +135,7 @@ nodegroups`. Подробнее об этом в
 Внешняя аутентификация для любого Ingress
 </h3>
 <div class="cards-item__text" markdown="1">
-Чтобы включить внешнюю аутентификацию для любого Ingress-ресурса, необходимо включить модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) и создать объект
-[DexAuthenticator](/{{ page.lang }}/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator).
+Чтобы включить внешнюю аутентификацию для любого Ingress-ресурса, необходимо включить модуль [user-authn](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) и создать объект [DexAuthenticator](/{{ page.lang }}/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator).
 </div>
 </div>
 
