@@ -17,6 +17,7 @@
 for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
   source $f
 done
+#qqq
 
 function __config__() {
   cat << EOF
