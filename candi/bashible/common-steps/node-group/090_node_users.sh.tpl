@@ -14,11 +14,9 @@
 
 {{- if eq .runType "Normal" }}
 
+
   {{- if .nodeUsers }}
-node_users_json="$(cat <<-END
-{{ .nodeUsers | toJson}}
-END
-)"
+node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
 
 # if reboot flag set due to disruption update (for example, in case of CRI change) we pass this step.
