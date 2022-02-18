@@ -72,7 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, manualControllerUpdate)
 
 type manualDSController struct {
-	Name       string
+	CRName     string
 	Generation int64
 }
 
@@ -80,7 +80,7 @@ type manualRolloutPod struct {
 	Name       string
 	Generation int64
 
-	DSControllerName string
+	CRName string
 
 	Ready bool
 }
@@ -101,13 +101,13 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 	snap = input.Snapshots["pods"]
 	for _, sn := range snap {
 		pod := sn.(manualRolloutPod)
-		podsMap[pod.DSControllerName] = append(podsMap[pod.DSControllerName], pod)
+		podsMap[pod.CRName] = append(podsMap[pod.CRName], pod)
 	}
 
 	for _, controller := range controllers {
 		allPodsReady := true
 		var podNameForDeletion string
-		for _, pod := range podsMap[controller.Name] {
+		for _, pod := range podsMap[controller.CRName] {
 			if !pod.Ready {
 				allPodsReady = false
 				break
@@ -130,7 +130,7 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 
 func filterManualDS(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return manualDSController{
-		Name:       obj.GetName(),
+		CRName:     obj.GetLabels()["name"],
 		Generation: obj.GetGeneration(),
 	}, nil
 }
@@ -161,9 +161,9 @@ func filterManualPod(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	}
 
 	return manualRolloutPod{
-		Name:             pod.Name,
-		Generation:       gen,
-		DSControllerName: pod.Labels["name"],
-		Ready:            podReady,
+		Name:       pod.Name,
+		Generation: gen,
+		CRName:     pod.Labels["name"],
+		Ready:      podReady,
 	}, nil
 }
