@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This is temporary hook, because daemonset controller sometime makes some trash with deleting pods
+// It could be removed, when all clusters will be upgraded to 1.21 version
+
 package hooks
 
 import (
@@ -118,10 +121,8 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 			}
 		}
 
-		if allPodsReady {
-			if podNameForDeletion != "" {
-				input.PatchCollector.Delete("v1", "Pod", "d8-ingress-nginx", podNameForDeletion)
-			}
+		if allPodsReady && podNameForDeletion != "" {
+			input.PatchCollector.Delete("v1", "Pod", "d8-ingress-nginx", podNameForDeletion)
 		}
 	}
 
