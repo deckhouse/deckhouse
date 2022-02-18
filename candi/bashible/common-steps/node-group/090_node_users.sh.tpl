@@ -28,14 +28,10 @@ fi
 # $1 - user_name, $2 - extra_groups, $3 - password_hash
 function modify_user() {
   local user_name="$1"
-  local extra_groups="$(sed "s/,/ /g"<<<"$2")"
+  local extra_groups="$2"
   local password_hash="$3"
 
-  for extra_group in $extra_groups; do
-    if ! id $user_name | grep -q "($extra_group)"; then
-        usermod -G "$extra_group" "$user_name"
-    fi
-  done
+  usermod -G "$extra_group" "$user_name"
 
   if ! grep -q -F "$password_hash" /etc/shadow; then
       usermod -p "$password_hash" "$user_name"
@@ -82,9 +78,7 @@ for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
   user_name="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .name' <<< "$node_users_json")"
   password_hash="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .spec.passwordHash' <<< "$node_users_json")"
   ssh_public_keys="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.sshPublicKeys[]?] + (if .spec.sshPublicKey then [.spec.sshPublicKey] else [] end) | join(",")' <<< "$node_users_json")"
-  extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudoGroup" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
-  # remove trailing comma
-  extra_groups="${extra_groups%,}"
+  extra_groups="$(jq --arg uid "$uid" --arg sudo_group "$sudo_group" -rc '.[] | select(.spec.uid==($uid | tonumber)) | [.spec.extraGroups[]?] + (if .spec.isSudoer then [$sudo_group] else [] end) | join(",")' <<< "$node_users_json")"
 
   # check for uid > 1000
   if [ $uid -le 1000 ]; then
