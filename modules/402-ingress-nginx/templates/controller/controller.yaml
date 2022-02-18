@@ -136,9 +136,6 @@ spec:
       labels:
         app: controller
         name: {{ $name }}
-        {{- if $isManualRollout }}
-        ingress-nginx-manual-update: "true"
-        {{- end }}
       {{- if include "is_istio_in_use" $context }}
       annotations:
         {{- if $crd.spec.enableIstioSidecar }}

@@ -63,8 +63,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"ingress-nginx-manual-update": "true",
-					"app":                         "controller",
+					"app": "controller",
 				},
 			},
 			FilterFunc: filterManualPod,
@@ -89,6 +88,9 @@ type manualRolloutPod struct {
 func manualControllerUpdate(input *go_hook.HookInput) error {
 	var controllers []manualDSController
 	snap := input.Snapshots["controllers"]
+	if len(snap) == 0 {
+		return nil
+	}
 	for _, sn := range snap {
 		controller := sn.(manualDSController)
 		controllers = append(controllers, controller)
