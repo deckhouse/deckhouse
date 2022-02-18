@@ -31,7 +31,7 @@ function modify_user() {
   local extra_groups="$2"
   local password_hash="$3"
 
-  usermod -G "$extra_group" "$user_name"
+  usermod -G "$extra_groups" "$user_name"
 
   if ! grep -q -F "$password_hash" /etc/shadow; then
       usermod -p "$password_hash" "$user_name"
