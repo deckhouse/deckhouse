@@ -34,7 +34,7 @@
     ]
   },
   "description": "MongoDB Prometheus Exporter Dashboard. \r\nWorks well with https://github.com/percona/mongodb_exporter\r\n\r\nIf you have the node_exporter running on the mongo instance, you will also get some useful alert panels related to disk io and cpu.",
-  "editable": true,
+  "editable": false,
   "gnetId": 2583,
   "graphTooltip": 1,
   "id": null,
