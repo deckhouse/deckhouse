@@ -13,8 +13,6 @@
 # limitations under the License.
 
 {{- if eq .runType "Normal" }}
-
-
   {{- if .nodeUsers }}
 node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
