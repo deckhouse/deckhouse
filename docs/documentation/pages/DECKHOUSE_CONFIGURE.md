@@ -3,18 +3,19 @@ title: "How to configure?"
 permalink: en/
 ---
 
-Deckhouse состоит из оператора Deckhouse и модулей. Модуль — набор helm-чартов, хуков, файлов и правил сборки компонентов модуля (компонентов Deckhouse).
+Deckhouse consists of a Deckhouse operator and modules. A module is a set of helm charts, hooks, files, and assembly rules for module components (Deckhouse components).
 
-Поведение Deckhouse настраивается с помощью:
-- [Глобальных настроек](deckhouse-configure-global.html#параметры), хранящихся в параметре `global` [конфигурации Deckhouse](#конфигурация-deckhouse);
-- Настроек модулей, хранящихся в [конфигурации Deckhouse](#конфигурация-deckhouse) и custom resource'ах (для некоторых модулей Deckhouse).
+You can configure Deckhouse using the:
+- [Global settings](deckhouse-configure-global.html#parameters) stored in the `global` parameters of the [Deckhouse configuration](#deckhouse-configuration);
+- Module settings stored in [Deckhouse configuration](#deckhouse-configuration) and custom resources (for some Deckhouse modules).
 
 ## Deckhouse configration
 
-Конфигурация Deckhouse хранится в ConfigMap `deckhouse` в пространстве имен `d8-system` и может содержать следующие параметры (ключи):
-- `global` —  содержит [глобальные настройки](deckhouse-configure-global.html) Deckhouse в виде multi-line-строки в формате YAML;
-- `<moduleName>` (где `<moduleName>` — название модуля Deckhouse в camelCase) — содержит [настройки модуля](#настройка-модуля) в виде multi-line-строки в формате YAML;
-- `<moduleName>Enabled` (где `<moduleName>` — название модуля Deckhouse в camelCase) — параметр позволяет явно [включить или отключить модуль](#включение-и-отключение-модуля).
+The Deckhouse configuration is stored in the `deckhouse` ConfigMap in the `d8-system` namespace and may contain the following parameters (keys):
+
+- `global` —  contains the [global Deckhouse settings](deckhouse-configure-global.html) as a multi-line string in YAML format;
+- `<moduleName>` (where `<moduleName>` is the name of the Deckhouse module in camelCase) — contains the [module settings](#configuring-the-module) as a multi-line string in YAML format;
+- `<moduleName>Enabled` (where `<moduleName>` is the name of the Deckhouse module in camelCase) — this one explicitly [enables or disables the module](#enabling-and-disabling-the-module).
 
 Use the following command to view the `deckhouse` ConfigMap:
 
@@ -53,17 +54,17 @@ Use the following command to edit the `deckhouse` ConfigMap:
 kubectl -n d8-system edit cm/deckhouse
 ```
 
-### Настройка модуля
+### Configuring the module
 
-> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/VALUES.md). Будем признательны, если поставите проекту *звезду*.
+> Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/VALUES.md). We would appreciate it if you *star* the project.
 
-Deckhouse only installs the modules that are enabled. Modules can be enabled or disabled by default, depending on the [bundle used](./modules/020-deckhouse/configuration.html#parameters-bundle). Читайте подробнее про явное [enabling and disabling the module](#enabling-and-disabling-the-module).
+Deckhouse only installs the modules that are enabled. Modules can be enabled or disabled by default, depending on the [bundle used](./modules/020-deckhouse/configuration.html#parameters-bundle). Learn more on how to explicitly [enable and disable the module](#enabling-and-disabling-the-module).
 
-Модуль настраивается в конфигурации Deckhouse в параметре с названием модуля в camelCase. Значением параметра передается multi-line-строка в формате YAML с настройками модуля.
+You can configure the module using the parameter with the module name in camelCase in the Deckhouse configuration. The parameter value is a multi-line YAML string with the module settings.
 
-Некоторые модули дополнительно настраиваются с помощью custom resource'ов. Воспользуйтесь поиском (наверху страницы) или найдите модуль в меню слева, чтобы получить документацию по его настройкам и используемым custom resource'ам.
+Some modules can also be configured using custom resources. Use the search bar at the top of the page or select a module in the left menu to see a detailed description of its settings and the custom resources used.
 
-Пример настройки параметров модуля `kube-dns`:
+Below is an example of the `kube-dns` module settings:
 ```yaml
 data:
   kubeDns: |
@@ -79,9 +80,9 @@ data:
 
 ## Enabling and disabling the module
 
-> Некоторые модули могут быть включены по умолчанию в зависимости от используемого [набора модулей](#module-bundles).
+> Depending on the [module set used](#module-bundles), some modules may be enabled by default.
 
-Для включения или отключения модуля необходимо добавить в ConfigMap `deckhouse` параметр `<moduleName>Enabled`, который может принимать одно из двух значений: `"true"` или `"false"` (кавычки обязательны), где `<moduleName>` — название модуля в camelCase.
+To enable/disable a module, add the `<moduleName>Enabled` parameter to the `deckhouse` ConfigMap with one of the following two values: `"true"` or `"false"` (note: quotation marks are mandatory), where `<moduleName>` is the name of the module in camelCase.
 
 Here is an example of enabling the `user-authn` module:
 ```yaml
@@ -91,9 +92,9 @@ data:
 
 ## Module bundles
 
-Deckhouse работает только с включёнными модулями.
+Deckhouse only works with the enabled modules.
 
-В зависимости от используемого [набора модулей](./modules/020-deckhouse/configuration.html#parameters-bundle) модули могут быть включены или выключены по умолчанию.
+Depending on the [module set used](./modules/020-deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
 {%- assign bundles = site.data.bundles | sort %}
 <table>
@@ -122,7 +123,7 @@ Deckhouse работает только с включёнными модулям
 
 ## Advanced scheduling
 
-Если в параметрах модуля не указаны явные значения `nodeSelector/tolerations`, то для всех модулей используется следующая стратегия:
+If no `nodeSelector/tolerations` are explicitly specified in the module parameters, the following strategy is used for all modules:
 1. If the `nodeSelector` module parameter is not set, then Deckhouse will try to calculate the `nodeSelector` automatically. Deckhouse looks for nodes with the specific labels in the cluster  (see the list below). If there are any, then the corresponding `nodeSelectors` are automatically applied to module resources;
 1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below);
 1. You can set both parameters to `false` to disable their automatic calculation.
@@ -131,7 +132,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
 - that involve running a DaemonSet on all cluster nodes (e.g., `cni-flannel`, `monitoring-ping`);
 - designed to run on master nodes (e.g., `prometheus-metrics-adapter` or some `vertical-pod-autoscaler` components).
 
-### Особенности автоматики, зависящие от типа модуля
+### Module features that depend on its type
 {% raw %}
 * The *monitoring*-related modules (operator-prometheus, prometheus and vertical-pod-autoscaler):
   * Deckhouse examines nodes to determine a nodeSelector in the following order:
