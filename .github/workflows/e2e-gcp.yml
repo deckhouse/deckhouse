@@ -328,9 +328,9 @@ jobs:
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
           fi
 
@@ -467,7 +467,6 @@ jobs:
         with:
           name: test_output_gcp_docker_1_19
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -669,9 +668,9 @@ jobs:
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
           fi
 
@@ -808,7 +807,6 @@ jobs:
         with:
           name: test_output_gcp_docker_1_20
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -1010,9 +1008,9 @@ jobs:
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
           fi
 
@@ -1149,7 +1147,6 @@ jobs:
         with:
           name: test_output_gcp_docker_1_21
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -1351,9 +1348,9 @@ jobs:
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
           fi
 
@@ -1490,7 +1487,6 @@ jobs:
         with:
           name: test_output_gcp_docker_1_22
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -1692,9 +1688,9 @@ jobs:
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
           fi
 
@@ -1831,7 +1827,6 @@ jobs:
         with:
           name: test_output_gcp_containerd_1_19
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -2033,9 +2028,9 @@ jobs:
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
           fi
 
@@ -2172,7 +2167,6 @@ jobs:
         with:
           name: test_output_gcp_containerd_1_20
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -2374,9 +2368,9 @@ jobs:
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
           fi
 
@@ -2513,7 +2507,6 @@ jobs:
         with:
           name: test_output_gcp_containerd_1_21
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -2715,9 +2708,9 @@ jobs:
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
           fi
 
@@ -2854,7 +2847,6 @@ jobs:
         with:
           name: test_output_gcp_containerd_1_22
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory

@@ -17,7 +17,7 @@
 set -Eeuo pipefail
 shopt -s failglob
 
-INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:main
+INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/install:main
 DEV_CONTAINER_NAME=dhctl-dev
 
 echo -e "\n#1 Run Docker Container\n==="

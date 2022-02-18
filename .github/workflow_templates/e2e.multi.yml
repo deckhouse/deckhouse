@@ -181,9 +181,9 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-            IMAGE_NAME=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+            IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
           else
-            IMAGE_NAME=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+            IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
           fi
         fi
 
@@ -246,7 +246,6 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
       with:
         name: test_output_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
         path: |
-          modules/images_tags_${{env.WERF_ENV}}.json
           testing/cloud_layouts/
 
     - name: Cleanup temp directory

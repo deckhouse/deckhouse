@@ -18,26 +18,3 @@
     variables:
     - $CLEANUP_SCHEDULE
   when: always
-
-.Cleanup modules registry template:
-  stage: cleanup_registry
-  script:
-  - ./modules_images_werf cleanup
-  only:
-    refs:
-    - schedules
-    variables:
-    - $CLEANUP_SCHEDULE
-  when: always
-
-.Cleanup modules images template:
-  stage: cleanup_builder
-  script:
-  - docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
-  - docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
-  only:
-    refs:
-    - schedules
-    variables:
-    - $CLEANUP_SCHEDULE
-  when: always

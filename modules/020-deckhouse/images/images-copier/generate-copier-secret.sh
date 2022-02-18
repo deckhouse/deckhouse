@@ -66,11 +66,6 @@ if [ -z "$image" ]; then
   print_help_and_exit 1
 fi
 
-if [[ "$image" =~ '/dev:' ]]; then
-  echo -e "Image is incorrect. Address should not ending with /dev\n"
-  print_help_and_exit 1
-fi
-
 schema="https"
 insecure_conf="false"
 if [ -n "$insecure_registry" ]; then

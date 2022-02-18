@@ -22,6 +22,9 @@ git:
   - go.mod
   - go.sum
   - main.go
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   beforeInstall:
   - apk add --no-cache make bash git mercurial patch rsync
