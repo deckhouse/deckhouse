@@ -21,6 +21,20 @@
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 
+{{- $manualInlets := list "LoadBalancer" "LoadBalancerWithProxyProtocol" "HostPort" "HostPortWithProxyProtocol" }}
+{{- $isManualRollout := false }}
+{{- if has $crd.spec.inlet $manualInlets }}
+  {{- if semverCompare ">=1.21" $kubernetesVersion}}
+    {{- if $loadBalancer }}
+      {{- $isManualRollout = false }}
+    {{- else }}
+      {{- $isManualRollout = true }}
+    {{- end }}
+  {{- else }}
+    {{- $isManualRollout = true }}
+  {{- end}}
+{{- end }}
+
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -83,27 +97,32 @@ metadata:
     ingress-nginx-safe-update: ""
     {{- end }}
   {{- end }}
+  {{- if $isManualRollout }}
+    ingress-nginx-manual-update: "true"
+  {{- end }}
   annotations:
     ingress-nginx-controller.deckhouse.io/controller-version: {{ $crd.spec.controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
   updateStrategy:
-  {{- if $loadBalancer }}
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+    {{- if not $failover }}
+    type: OnDelete
+    {{- else }}
     type: RollingUpdate
-    {{- if semverCompare ">=1.21" $kubernetesVersion}}
+    rollingUpdate:
+      maxUnavailable: 1
+    {{- end}}
+  {{- else if $isManualRollout }}
+    type: OnDelete
+  {{- else }}
+    type: RollingUpdate
+    {{- if and $loadBalancer (semverCompare ">=1.21" $kubernetesVersion) }}
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
     {{- else }}
-    rollingUpdate:
-      maxUnavailable: 1
-    {{- end }}
-  {{- else }}
-    {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
-    type: OnDelete
-    {{- else }}
-    type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
     {{- end }}
@@ -117,6 +136,9 @@ spec:
       labels:
         app: controller
         name: {{ $name }}
+        {{- if $isManualRollout }}
+        ingress-nginx-manual-update: "true"
+        {{- end }}
       {{- if include "is_istio_in_use" $context }}
       annotations:
         {{- if $crd.spec.enableIstioSidecar }}
