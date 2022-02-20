@@ -9,7 +9,7 @@ entries:
           url: /
         - title:
             en: Global configuration
-            ru: Глобальная конфигурация
+            ru: Глобальные настройки
           url: /deckhouse-configure-global.html
         - title:
             en: Release channels
