@@ -15,54 +15,59 @@ properties:
         properties:
           authURL:
             description: |
-              URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+              URL сервиса аутентификации.
+
+              Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
           authSignInURL:
             description: |
               URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
       password:
         description: |
-          Пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять).
+          Пароль для HTTP-авторизации пользователя `admin` (генерируется автоматически, но можно менять).
 
-          Используется если не включен параметр `externalAuthentication`.
+          Используется, если не включен параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
-          Массив групп, пользователям которых позволен доступ к просмотру документации.
-          Используется если включен модуль `user-authn` или параметр `externalAuthentication`.
-          **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
+          Массив групп, пользователям которых разрешен доступ к просмотру документации.
+
+          Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
+
+          **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках `DexProvider`.
   https:
     description: |
-      Выбираем, какой типа сертификата использовать для web-интерфейса документации.
+      Тип используемого сертификата.
+
       При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `Disabled` — в данном режиме доступ к web-интерфейсу документации будет только по HTTP.
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно clusterIssuer заданного в параметре `certManager.clusterIssuerName`.
-          - `CustomCertificate` — доступ по HTTPS, с использованием сертификата из namespace `d8-system`.
-          - `OnlyInURI` — web-интерфейс документации будет доступен по HTTP (подразумевая, что перед ним стоит внешний HTTPS-балансер, который терминирует HTTPS) и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`;
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`;
+          - `Disabled` — доступ только по HTTP;
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед web-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
       certManager:
-        description: "Настройки для certmanager"
+        description: "Настройки для certmanager."
         properties:
           clusterIssuerName:
             description: |
-              Указываем, какой ClusterIssuer использовать для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
-              По умолчанию `letsencrypt`.
+              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но возможно определить свои).
       customCertificate:
         description: Настройки для использования пользовательского сертификата.
         properties:
           secretName:
             description: |
-              Указываем имя secret'а в namespace `d8-system`, который будет использоваться для web-интерфейса документации (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-              По умолчанию `false`.
+              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса документации.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false` — `nodeSelector` будет определяться [автоматически](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     type: array
     description: |
       Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false` — `tolerations` будет определяться [автоматически](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
