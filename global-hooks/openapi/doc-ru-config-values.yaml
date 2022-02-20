@@ -83,7 +83,7 @@ properties:
             description: |
               Количество ресурсов (CPU и памяти), выделяемых для компонентов Deckhouse работающих на каждом master-узле (в том числе `control plane`, если `control plane` управляется Deckhouse).
 
-              **Внимание!** В случае managed-кластера Deckhouse не управляет компонентами `control plane`, поэтому все указанные в параметре `masterNode` ресурсы отдаются компонентам Deckhouse.
+              **Внимание!** В случае managed-кластера (Kubernetes as a Service) Deckhouse может не управлять компонентами `control plane`. В таких случаях все указанные в параметре `masterNode` ресурсы отдаются компонентам Deckhouse.
             properties:
               cpu:
                 description: |

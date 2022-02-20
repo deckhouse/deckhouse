@@ -85,9 +85,9 @@ properties:
             type: string
             description: |
               The HTTPS usage mode:
-              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/));
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
+              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/));
               * `OnlyInURI` — Deckhouse modules use HTTP (in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS).
             default: CertManager
             enum:
@@ -158,7 +158,7 @@ properties:
             description: |
               The amount of resources (CPU and memory) allocated to Deckhouse components running on the master nodes (including control plane components, if they are managed by Deckhouse).
 
-              **Caution!** Deckhouse does not manage control plane components in managed clusters, so all the specified resources are allocated to the Deckhouse components except the control plane.
+              **Caution!** Deckhouse may not manage control plane components in KaaS clusters (Kubernetes as a Service, managed Kubernetes service, etc.). In such cases, all the specified resources are allocated to the Deckhouse components except the control plane.
             x-examples:
             - cpu: "1"
               memory: 150Mi

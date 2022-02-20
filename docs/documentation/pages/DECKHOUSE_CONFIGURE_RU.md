@@ -42,8 +42,8 @@ data:
 ```
 
 Обратите внимание на несколько важных нюансов в конфигурации:
-* Символ `|` (вертикальная черта) обязательно должен быть указан, т.к. передаваемое значение — многострочная строка (multi-line string), а не объект;
-* Наименование модулей пишется в стиле *camelCase*, при котором несколько слов пишутся слитно без пробелов, при этом каждое слово внутри фразы пишется с прописной буквы.
+* Символ `|` (вертикальная черта) обязательно должен быть указан в параметрах настройки, т.к. передаваемое значение — многострочная строка (multi-line string), а не объект;
+* Наименование модулей пишется в стиле *camelCase*.
 
 Чтобы изменить конфигурацию Deckhouse отредактируйте ConfigMap `deckhouse`, например, следующим способом:
 ```shell
@@ -56,7 +56,7 @@ kubectl -n d8-system edit cm/deckhouse
 
 > При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/VALUES.md). Будем признательны, если поставите проекту *звезду*.
 
-Deckhouse работает только с включёнными модулями. В зависимости от используемого [варианта поставки](./modules/020-deckhouse/configuration.html#parameters-bundle) модули могут быть включены или выключены по умолчанию. Читайте подробнее про явное [включение или отключение модуля](#включение-и-отключение-модуля).
+Deckhouse работает только с включёнными модулями. В зависимости от используемого [набора модулей](#наборы-модулей) модули могут быть включены или выключены по умолчанию. Читайте подробнее про явное [включение или отключение модуля](#включение-и-отключение-модуля).
 
 Модуль настраивается в конфигурации Deckhouse в параметре с названием модуля в camelCase. Значением параметра передается multi-line-строка в формате YAML с настройками модуля.
 
@@ -90,14 +90,12 @@ data:
 
 ## Наборы модулей
 
-Deckhouse работает только с включёнными модулями.
-
-В зависимости от используемого [набора модулей](./modules/020-deckhouse/configuration.html#parameters-bundle) модули могут быть включены или выключены по умолчанию.
+В зависимости от используемого [набора модулей](./modules/020-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
 {%- assign bundles = site.data.bundles | sort %}
 <table>
 <thead>
-<tr><th>Название набора модулей</th><th>Список включенных по умолчанию модулей</th></tr></thead>
+<tr><th>Набор модулей (bundle)</th><th>Список включенных по умолчанию модулей</th></tr></thead>
 <tbody>
 {% for bundle in bundles %}
 <tr>
@@ -138,9 +136,9 @@ Deckhouse работает только с включёнными модулям
     * Наличие узла с лейблом `node-role.deckhouse.io/monitoring`;
     * Наличие узла с лейблом `node-role.deckhouse.io/system`;
   * Добавляемые toleration'ы (добавляются одновременно все):
-    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
 
-      (Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`);
+      Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`;
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}`;
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`;
 * Модули *frontend* (исключительно модуль `ingress-nginx`):
@@ -152,10 +150,12 @@ Deckhouse работает только с включёнными модулям
         * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`;
 * Все остальные модули:
     * Порядок поиска узлов (для определения `nodeSelector`):
-        * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME` (Например: `node-role.deckhouse.io/cert-manager`);
+        * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`;
+
+          Например: `node-role.deckhouse.io/cert-manager`;
         * Наличие узла с лейблом `node-role.deckhouse.io/system`;
     * Добавляемые toleration'ы (добавляются одновременно все):
-        * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` 
+        * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`; 
         
           Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`;
         * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.

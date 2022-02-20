@@ -9,7 +9,7 @@ You can configure Deckhouse using the:
 - [Global settings](deckhouse-configure-global.html#parameters) stored in the `global` parameters of the [Deckhouse configuration](#deckhouse-configuration);
 - Module settings stored in [Deckhouse configuration](#deckhouse-configuration) and custom resources (for some Deckhouse modules).
 
-## Deckhouse configration
+## Deckhouse configuration
 
 The Deckhouse configuration is stored in the `deckhouse` ConfigMap in the `d8-system` namespace and may contain the following parameters (keys):
 
@@ -31,21 +31,19 @@ metadata:
   namespace: d8-system
 data:
   global: |          # Note the vertical bar.
-    # Section of the YAML file with global settings
+    # Section of the YAML file with global settings.
     modules:
       publicDomainTemplate: "%s.kube.company.my"
-  #  monitoring-ping related section of the YAML file.
+  # monitoring-ping related section of the YAML file.
   monitoringPing: |
     externalTargets:
     - host: 8.8.8.8
-    config:
-      hsts: true
   # Disabling the dashboard module.
   dashboardEnabled: "false"
 ```
 
 Pay attention to the following:
-- The `|` sign — vertical bar glyph that must be specified, because the parameter being passed is a multi-line string, not an object;
+- The `|` sign — vertical bar glyph that must be specified when passing settings, because the parameter being passed is a multi-line string, not an object;
 - A module name is in *camelCase* style.
 
 Use the following command to edit the `deckhouse` ConfigMap:
@@ -58,7 +56,7 @@ kubectl -n d8-system edit cm/deckhouse
 
 > Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/VALUES.md). We would appreciate it if you *star* the project.
 
-Deckhouse only installs the modules that are enabled. Modules can be enabled or disabled by default, depending on the [bundle used](./modules/020-deckhouse/configuration.html#parameters-bundle). Learn more on how to explicitly [enable and disable the module](#enabling-and-disabling-the-module).
+Deckhouse only works with the enabled modules. Modules can be enabled or disabled by default, depending on the [bundle used](#module-bundles). Learn more on how to explicitly [enable and disable the module](#enabling-and-disabling-the-module).
 
 You can configure the module using the parameter with the module name in camelCase in the Deckhouse configuration. The parameter value is a multi-line YAML string with the module settings.
 
@@ -78,9 +76,9 @@ data:
     - 10.2.200.55
 ```
 
-## Enabling and disabling the module
+### Enabling and disabling the module
 
-> Depending on the [module set used](#module-bundles), some modules may be enabled by default.
+> Depending on the [bundle used](#module-bundles), some modules may be enabled by default.
 
 To enable/disable a module, add the `<moduleName>Enabled` parameter to the `deckhouse` ConfigMap with one of the following two values: `"true"` or `"false"` (note: quotation marks are mandatory), where `<moduleName>` is the name of the module in camelCase.
 
@@ -92,9 +90,7 @@ data:
 
 ## Module bundles
 
-Deckhouse only works with the enabled modules.
-
-Depending on the [module set used](./modules/020-deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
+Depending on the [bundle used](./modules/020-deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
 {%- assign bundles = site.data.bundles | sort %}
 <table>
@@ -142,7 +138,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
   * Tolerations to add (note that tolerations are added all at once):
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
 
-      (e.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}</code>);
+      E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}</code>;
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}</code>;
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>;
 * The *frontend*-related modules (nginx-ingress only):
@@ -154,13 +150,13 @@ You cannot set `nodeSelector` and `tolerations` for modules:
         * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}</code>;
 * Other modules:
     * Deckhouse examines nodes to determine a nodeSelector in the following order:
-        * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> 
+        * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster; 
         
-          (e.g., <code>node-role.deckhouse.io/cert-manager</code>) label is present in the cluster;
+          E.g., <code>node-role.deckhouse.io/cert-manager</code>);
         * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster;
     * Tolerations to add (note that tolerations are added all at once):
         * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code> 
         
-          (e.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}</code>);
+          E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}</code>;
         * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>;
 {% endraw %}
