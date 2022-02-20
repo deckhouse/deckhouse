@@ -25,7 +25,7 @@ fromCacheVersion: 20210713
 ansible:
   install:
     - shell: |
-        apk add rsync
+        apk add rsync jq
         gem update bundler
     - name: "Install Dependencies"
       shell: bundle install
@@ -36,6 +36,7 @@ ansible:
     - name: "Create modules.yml"
       shell: |
         ./modules_list.sh 1>_data/modules.yaml
+        cat modules_menu_skip  | cut -d\- -f 2-  | jq -nRc '[inputs] | map({"name":.}) | {module_names:.}' > _data/exclude.json
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
