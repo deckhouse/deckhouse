@@ -15,31 +15,36 @@ properties:
         properties:
           authURL:
             description: |
-              URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+              URL сервиса аутентификации.
+
+              Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
           authSignInURL:
             description: |
               URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
       password:
         description: |
-          Пароль для http-авторизации пользователя `admin` (генерируется автоматически, но можно менять).
+          Пароль для HTTP-авторизации пользователя `admin` (генерируется автоматически, но можно менять).
 
           Используется, если не включен параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
-          Массив групп, пользователям которых позволен доступ к просмотру документации.
+          Массив групп, пользователям которых разрешен доступ к просмотру документации.
+
           Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
-          **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
+
+          **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках `DexProvider`.
   https:
     description: |
-      Тип сертификата для web-интерфейса документации.
+      Тип используемого сертификата.
+
       При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `Disabled` — доступ только по HTTP;
           - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`;
           - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`;
+          - `Disabled` — доступ только по HTTP;
           - `OnlyInURI` — доступ по HTTP, подразумевая, что перед web-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
       certManager:
         description: "Настройки для certmanager."
@@ -52,7 +57,9 @@ properties:
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса документации (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса документации.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
