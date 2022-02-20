@@ -1,4 +1,4 @@
-# How to start documentation container locally?
+# Running a site with the documentation locally
 
 Don't forget to clone repo firstly.
 

@@ -5,21 +5,14 @@ lang: en
 
 ## Releases and versions
 
-- `Release`, `version` (noun) — a logically complete and announced program that is somewhat different from its previous (or later) [forms](#versioning).
-As a noun, both of these terms can be used interchangeably.
+- `Release`, `version` (noun) — a logically complete and announced program that is somewhat different from its previous (or later) [forms](#versioning). A [GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases). As a noun, both of these terms can be used interchangeably. 
 - The code within some branch that is not a part of a release is considered a dev version.
 - Release (verb) — the process of creating, announcing, and releasing a new form (version) of the program.
 *Do not confuse* it with changing the version within the release channel.
-- Release channel — the following release channels are available (from less to more stable): `alpha`, `beta`, `early-access`, `stable`, and `rock-solid` (see more below). For example, the phrase "early-access or above" means `early-access`, `stable`, and `rock-solid`.
-
-Versioning
-----------------
-We use the versioning scheme similar to the [semver](https://semver.org/) one.
-
-Examples:
-- `v1.24.0`, `v1.24.5` - these versions are distributed to early-access "or above" release channels.
-- `v1.24.10-beta`, `v1.24.32-beta.4` - these versions are distributed to beta "or below" release channels.
-- `v1.24.10-alpha`, `v1.24.32-alpha.4` - these versions are distributed to alpha "or below" release channels.
+- Release channel — the following release channels are available (from less to more stable): `alpha`, `beta`, `early-access`, `stable`, and `rock-solid` (see more below). For example, the phrase "early-access or above" means `early-access`, `stable`, and `rock-solid`. [More](https://deckhouse.io/en/documentation/v1/deckhouse-release-channels.html) about release channels on the site.
+- We use the versioning scheme similar to the [semver](https://semver.org/) one.
+- Patch release changing — the process of changing version on a release channel when increments only patch version number.   
+- Release changing — the process of changing version on a release channel when increments minor version number.   
 
 ## How to test the Deckhouse version
 The CI pipeline is configured to build an image based on each branch. This image is available at  `dev-registry.deckhouse.io/sys/deckhouse-oss:<prNUM>`.
@@ -33,112 +26,42 @@ If the digest for the tag in the registry does not match the one for the image i
 The new image is pulled from the registry when a new Deckhouse Pod is being created.
 
 ## The process of releasing new versions and changing versions in the release channels
-Getting information about the versions (releases) that are currently available in the release channels:
-- Issues and MRs included in a specific version can be found in the milestone with the version name.
-- Information about versions (releases) is posted in the `#deckhouse-releases` Slack channel; also, it is included in the description of the tag that corresponds to a specific version.
-- The code corresponding to a version currently active in the specific release channel can be found in the corresponding branch (`alpha`, `beta` etc.).
+### Changing release in the release channels
 
-### Releasing a version with **new** functionality/modifications and changing versions in the release channels
+> As a rule, release changing brings a version with **new** functionality/modifications
 
-Issues and MRs that will be a part of a new release are put in the ***current*** milestone.
+Periodicity and timing of updates in the release channels when a minor version changes:
+1. The Deckhouse team can switch version in the `Alpha` release channel at any time at its own discretion with any periodicity and without prior warning.
+1. The Deckhouse team can switch versions in the `Beta` release channel at any time at its own discretion with any periodicity and without prior warning but not earlier than the next day after changing the version on the `Alpha` release channel.
+1. The Deckhouse team can **only** switch versions in the `Early Access`, `Stable`, and `Rock Solid` release channels in the **8:30-10:00 UTC interval** only on certain days of the week:
+   1. `Rock Solid` — on Mondays, but not earlier than on the 13th day after switching to this version in the `Stable` channel.
+   1. `Stable` — on Tuesdays, but not earlier than on the 6th day after switching to this version in the `Early Access` channel.
+   1. `Early Access` — on Wednesdays, but not earlier than the day after switching to this version in the `Beta` channel.
 
-When the ***current*** milestone accumulates enough changes to release a new version, you need to do the following:
-1. Preparatory steps:
-    1. Define the `release version` in the `1.XX` format.
-    1. Create a milestone with a new release name, add to it all issues and MRs that will be included in a release (note that you need to create a new milestone and not rename the existing one).
-    1. In the Description field, enter a detailed description of the changes (it is primarily intended for DevOps teams so that they can get a sense of what changes the release introduces).
-    1. Create a release branch in the form `release-<release version>` (e.g., `release-1.24`) from the corresponding commit in `master`.
-    1. If necessary, cherry-pick commits that should be included in the release but are not present in the release branch.
-    1. Create the appropriate Russian and English posts in the Slack messenger (Add -> Post). Insert and format the content from the milestone description in the posts. Check the `Create a public link to share outside of Slack` checkbox.
-1. Releasing a version
-    1. Pre-deployment
-        1. Post a message to the `#deckhouse-releases` channel containing a link to an English-language post. The message must announce the new release and forthcoming version change in the `alpha` release channel. Make sure that all teams are aware of the forthcoming release.
-        1. Post the appropriate message to the client channels of projects affected by the deployment of a new version (#TODO description of the messaging process).
-        1. Deploy a new version to `alpha` using the `Alpha (pre-release)` job of the `Deploy` stage.
-        1. Check logs in a variety of clusters that use the `alpha` release channel.
-        1. If errors occurred when deploying to `alpha`:
-            1. Immediately notify the users about the problem in the announcement's thread (in the `#deckhouse-releases` Slack channel) while mentioning (@name) the L1 engineer on duty and the engineer of the team responsible for the cluster affected. Inform that R&D is dealing with the problem.
-            1. Create an issue (optional).
-            1. Make any necessary corrections using MRs and merge them into the branch.
-            1. Inform the users about the changes made using the `#deckhouse-releases` channel and notify the clients (#TODO description of the notification process) (we DO NOT summon anyone by mentioning).
-            1. Deploy a new version to `alpha` using the `Alpha (pre-release)` job of the `Deploy` stage.
-            1. Repeat the steps above until everything is fine.
-            1. Inform the clients that the deployment process is successful.
-        1. Wait until the next day.
-    1. Commiting a version
-        1. Create a `v<release version>-alpha` tag for the corresponding commit in the release branch (usually, the last commit). Copy the description from the release's milestone to the Release Notes section (you can delete the description in the milestone while including the link to the corresponding tag).
-        1. Deploy to the `alpha` by running the `alpha` job of the `Deploy` stage.
-1. Changing the version (release) to `beta`, `early-access`, `stable`, and `rock-solid`.
-    1. Inform the users in Slack.
-        1. `beta`: Create a `v<release version>-beta` tag, create a dedicated message in the `#deckhouse-releases` channel, and insert in it a link to the post in the appropriate language. Mention (@name) teams' engineers on duty. Post the appropriate message to the channels of clients whose clusters will be affected by the deployment.
-        1. `early-access`:
-            1. Create a `v<release version>` tag;
-            1. Two hours prior to the version change, create a separate message:
-               - in the `#deckhouse-releases` channel and list clusters in it; @mention the engineers on duty.
-               - post the appropriate message to the client channels of projects affected by the deployment of a new version (#TODO description of the messaging process).
-            1. Just before the version change, @mention the engineers on duty and the engineer responsible for the release, list the affected clusters (if there were changes in the past two hours).
-        1. `stable` and `rock-solid`:
-            1. One day prior to the version change, create a separate message:
-               - in the `#deckhouse-releases` channel and list clusters in it; do not @mention anyone.
-               - post the appropriate message to the client channels of projects affected by the deployment of a new version (#TODO description of the messaging process).
-            1. Just before the version change, @mention the teams involved and provide a list of servers.
-    1. Change the version in the corresponding release channel (`beta`, `early-access`, `stable`, or `rock-solid`) by running the job with the appropriate name in the `Deploy` stage.
-    1. Check logs on all updated clusters for errors in an orderly manner.
-    1. Post the success message to the client channels of projects affected by the deployment of a new version.
+### Releasing a patch-release version (containing hotfixes) and switching versions in the release channels
 
-Periodicity and timing of updates in the release channels:
-1. The R&D team can change `alpha` versions at any time at its own discretion with any periodicity and without prior warning.
-1. The R&D team can switch versions to `beta` at any time at its own discretion with any periodicity and without prior warning but not earlier than the next day after changing the `alpha` version.
-1. `Early-access`, `stable`, and `rock-solid` versions can **only** be changed in the **11:30-13:00 GMT+3 interval** only on certain days of the week:
-   1. `rock-solid` — on Tuesdays, but not earlier than on the 13th day after switching to this version in the `stable` channel.
-   1. `stable` — on Wednesdays, but not earlier than on the 6th day after switching to this version in the `early-access` channel.
-   1. `early-access` — on Thursdays, but not earlier than the day after switching to this version in the `beta` channel.
-
-### Releasing a version with **hotfixes** and switching versions in the release channels
-
-There can be several possibilities if a bug is detected in the release progressed to the `beta` channel (or above):
+There can be several possibilities if a bug is detected in the release progressed to the `Beta` channel (or above):
 1. The bug is in the new functionality:
-    1. The release in question contains only the new functionality (that no one uses yet) – in this case, switching versions is canceled (this release will not be advanced to more stable release channels), and the appropriate notification is posted in Slack. The bug will be fixed in the subsequent releases.
+    1. The release in question contains only the new functionality (that no one uses yet) – in this case, switching versions is canceled (this release will not be advanced to more stable release channels), and the appropriate notification is posted. The bug will be fixed in the subsequent releases.
     1. The release in question contains other urgently needed changes, or the new functionality is in high demand – in this case, the bug is fixed via hotfix releases.
 1. The bug is in the existing functionality: the bug is fixed via hotfix releases.
 
-Hotfix releases are not stand-alone releases but a set of fixes that are backported to all active releases ASAP (if necessary). After the hotfix is released, the main version stays the same but gets a corresponding suffix. Since these changes are backported to all active releases, they should be kept to the minimum necessary!
+Patch-releases are not stand-alone releases but a set of fixes that are backported to all active releases ASAP (if necessary). Since these changes are backported to all active releases, they should be kept to the minimum necessary!
 
-**If the bug is not urgent, you better be patient and wait until the fix is implemented as part of the standard release process. This is especially true for the `stable` and `rock-solid` release channels.**
+**If the bug is not urgent, you better be patient and wait until the fix is implemented as part of the standard release process. This is especially true for the `Stable` and `Rock Solid` release channels.**
 
-Releasing hotfixes and switching versions:
-1. Preparatory steps:
-    1. MRs with fixes must be labeled by a special `Type: Hotfix` label.
-    1. Define the `version of the hotfix release` in the format `v1.XX.YY` (where YY is the number of the hotfix release, starting from 1).
-    1. Create a milestone with a new hotfix release name, add to it all issues and MRs that will be included in a hotfix release (note that you need to create a new milestone and not rename the existing one).
-    1. In the Description field, enter a detailed description of the changes (it is primarily intended for DevOps teams so they can get a sense of what changes the release introduces; however, the clients can read it as well).
-    1. Create the appropriate Russian and English posts in the Slack messenger (Add -> Post), tacking into account the milestone description. Check the `Create a public link to share outside of Slack` checkbox.
-    1. Release a hotfix version (including pre-deploying and committing steps).
-1. For `beta`, `early-access`, `stable`, and `rock-solid` release channels, do the following:
-    1. Cherry-pick commits in MRs of the hotfix release and include them in the appropriate release branch.
-    1. Add a tag of the following format: `<hotfix release version>-alpha` (e.g., `v1.24.3-alpha`).
-    1. Post a message to the `#deckhouse-releases` channel containing a link to a post.
-    1. Switch the version in the regular way while creating the appropriate tags (e.g., `v1.24.3-alpha` -> `v1.24.3-beta` -> `v1.24.3-early-access`).
-    1. If, in turn, the hotfix release has some bugs/issues, add the '.XX' suffix to the tag corresponding to the release version. For example, if the tag of the hotfix release is `v1.24.3-beta`, then the new one will be `v1.24.3-beta.1`, etc.
-1. After the release is replaced with a new one in the `rock-solid` channel, its branch is deleted.
-
-Periodicity and timing of hotfix updates in the release channels **within the same global version**:
-1. The R&D team can change hotfix versions in the `alpha` channel at any time at its own discretion with any periodicity and without prior warning.
-1. For the `beta` and `early-access` channels, the R&D team can switch to a hotfix version at any time at its own discretion but not earlier than two hours after switching to this version in the `alpha` and `beta` channels, accordingly.
-1. For the `stable` and `rock-solid` channels, the switching to the hotfix version can be performed in the **13:00—14:00 GMT+3** interval on any day:
-   1. `stable` — not earlier than the next day after the switching in the `early-access` channel.
-   1. `rock-solid` — not earlier than on the 6th day after the switching in the `stable` channel.
+Periodicity and timing of patch-release updates in the release channels:
+1. The Deckhouse team can change patch-release versions in the `Alpha` channel at any time at its own discretion with any periodicity and without prior warning.
+1. For the `Beta` and `Early Access` channels, the Deckhouse team can switch to a patch-release version at any time at its own discretion but not earlier than two hours after switching to this version in the `Alpha` and `Beta` release channels, accordingly.
+1. For the `Stable` and `Rock Solid` channels, the switching to the patch-release version can be performed on any day:
+   1. `Stable`, `Rock Solid` — not earlier than the next day after the switching to this version in the `Early Access` and `Stable` release channels, accordingly.
 1. These rules may be breached if there is a **real need** to make urgent changes due to a critical bug/vulnerability (note that all actions **must be coordinated with the team leaders**).
 
 ### Canceling a scheduled version change
 
-1. If degradation of the previously existing functionality is discovered in the release (hotfix release), the planned upgrade to this version is suspended.
-1. If a new version (hotfix release) is released to fix the degradation, the version switching is performed according to the previous section. If the hotfix release turns out to be successful, it is propagated further to the release channels according to the channel stability level.
+1. If degradation of the previously existing functionality is discovered in the release (patch-release), the planned upgrade to this version is suspended.
+1. If a new version (patch-release) is released to fix the degradation, the version switching is performed according to the previous section. If the patch-release turns out to be successful, it is propagated further to the release channels according to the channel stability level.
 1. The current release is considered canceled if the necessary fixes are included in the next standard release (instead of the hotfix one). The switching to a canceled release is no longer performed in the release channels (there is no point in changing the version to the one known to result in degradation).
-1. The following actions must be performed for canceled releases:
-    1. In the release thread, post a notification that the release has been canceled, and the switching to this version is no longer performed in the release channels. 
-    1. Specify the approximate date of the next release (if known) that will succeed the release in question.
-    1. Please, include the phrase below in the message (including in fox) about the release of the next version:  "This release contains all changes made to the XXXXXXXXX version that was cancelled in the `<release channel name>`". If there are several releases, please, specify each one of them.
 
 Style Guide
 -----------
@@ -185,7 +108,7 @@ We recommend using the `app` and `component` labels.
     * `[link](../../module/010-some-module/configuration.html)`
     * `[link](../010-some-module/configuration.html)`
     * `[link]({{ "/module/020-some-module/configuration.html" | true_relative_url }})` (the filter will make a relative link from an absolute one when rendering the site) - a universal, but cumbersome method.
-* The documentation inside the module is stored in the `docs` folder as markdown files. An example: `/modules/050-some-module/docs/READme.md`
+* The documentation inside the module is stored in the `docs` folder as markdown files. An example: `/modules/050-some-module/docs/README.md`
 * Insert the YAML [front-matter](https://jekyllrb.com/docs/front-matter/) block In the header of the md file with the following data:
   * title - The title of the document
   * lang - Set it to `en` if the document is in English.
@@ -206,27 +129,7 @@ A list of `x-doc-` parameters:
 
 #### Running a site with the documentation locally
 
-0. Make sure that port 80 is available (or edit docker-compose.yml).
-
-1. Create a docker network:
-
-```shell
-docker network create deckhouse
-```
-
-2. Run the documentation container in a separate console ([werf](werf.io) must be installed):
-```shell
-cd docs/documentation
-source $(multiwerf use 1.2 alpha --as-file)
-werf compose up --follow --docker-compose-command-options='-d'
-```
-
-3. Run the container with the main part of the site in a separate container:
-```shell
-cd docs/site
-source $(multiwerf use 1.2 alpha --as-file)
-werf compose up --follow --docker-compose-command-options='-d'
-```
+See instructions [here](../../../site/LOCAL_DEV.md).
 
 ## Check-list for the new module
 ----------------------------
@@ -234,14 +137,14 @@ werf compose up --follow --docker-compose-command-options='-d'
 {% raw %}
 
 Bundle is the Deckhouse delivery edition. Possible values:
-* `Default` — includes the recommended set of modules required for proper cluster operation: monitoring, authorization control, networking, and other needs. The current list can be found [here](https://fox.flant.com/sys/deckhouse-oss/-/tree/master/modules/values-default.yaml).
+* `Default` — includes the recommended set of modules required for proper cluster operation: monitoring, authorization control, networking, and other needs. The current list can be found [here](/deckhouse/blob/main/modules/values-default.yaml).
 * `Minimal` — the minimum viable set of modules (only the `20-deckhouse` module is included).
 * `Managed` — a set of modules adapted for managed solutions of cloud providers. A list of supported providers:
    * Google Kubernetes Engine (GKE)
 
 To include your module in the specific bundle by default, add the following line to the appropriate `modules/values-${bundle}.yaml` file: `${mobdule_name}Enabled: true`.
 
-[Read more](https://github.com/flant/addon-operator/blob/master/LIFECYCLE.md#modules-discovery) about the algorithm for determining if the module should be enabled.
+[Read more](https://github.com/flant/addon-operator/blob/main/LIFECYCLE.md#modules-discovery) about the algorithm for determining if the module should be enabled.
 
 ### Helm
 
@@ -265,7 +168,7 @@ Thus, restarting modules does not result in the accumulation of unneeded copies 
 
 #### Module values
 
-Values for a specific module are declared in the global key with the module name. Click [here](https://github.com/flant/addon-operator/blob/master/VALUES.md) to read more about values for modules.
+Values for a specific module are declared in the global key with the module name. Click [here](https://github.com/flant/addon-operator/blob/main/VALUES.md) to read more about values for modules.
 
 #### Priority Class
 A special helper is implemented in `helm_lib` to facilitate setting the `priorityClassName` parameter.
@@ -381,7 +284,6 @@ The helper gets the global context and the desired strategy as the input to set 
 
 The helper **MUST** be used for all Deckhouse components (wherever possible) except for DaemonSets that are deployed to all cluster nodes (node-exporter, csi-node, flannel, etc.).
 
-
 #### The HA mode for the module
 
 The high availability (HA) mode protects crucial modules against possible downtime or failure.
@@ -450,28 +352,28 @@ Usage:
 
 ### Hooks
 
-For more information about hooks, their structure, and binding to events, see the [addon-operator documentation](https://github.com/flant/addon-operator/blob/master/HOOKS.md).
+For more information about hooks, their structure, and binding to events, see the [addon-operator documentation](https://github.com/flant/addon-operator/blob/main/HOOKS.md).
 
 In Deckhouse, **global hooks** are stored in the `/global-hooks` directory, **module hooks** are placed in the module's `/modules/MODULE/hooks` directory.
 
-You can pass information to the hook using environment variables with paths to files in /tmp. The hook's results are also returned via files. Click [here](https://github.com/flant/addon-operator/blob/master/VALUES.md) to read more about using parameters in hooks.
+You can pass information to the hook using environment variables with paths to files in /tmp. The hook's results are also returned via files. Click [here](https://github.com/flant/addon-operator/blob/main/VALUES.md) to read more about using parameters in hooks.
 
 ### Validating admission webhooks
 
-Validation hooks are similar to regular webhooks in their interfaces and running. They use the same shell framework. For more information about conversion webhooks, see the shell-operator [documentation](https://github.com/flant/shell-operator/blob/master/BINDING_VALIDATING.md).
+Validation hooks are similar to regular webhooks in their interfaces and running. They use the same shell framework. For more information about conversion webhooks, see the shell-operator [documentation](https://github.com/flant/shell-operator/blob/main/BINDING_VALIDATING.md).
 
 In Deckhouse, validating hooks are located in the module's `/modules/MODULE/webhooks/validation/` directory.
 
 ### Conversion webhooks
 
-Conversion webhooks are similar to regular hooks in their interfaces and running mechanism. They use the same shell framework. For more information about conversion webhooks, see the shell-operator [documentation](https://github.com/flant/shell-operator/blob/master/BINDING_CONVERSION.md).
+Conversion webhooks are similar to regular hooks in their interfaces and running mechanism. They use the same shell framework. For more information about conversion webhooks, see the shell-operator [documentation](https://github.com/flant/shell-operator/blob/main/BINDING_CONVERSION.md).
 
 In Deckhouse, conversion webhooks are located in the module's `/modules/MODULE/webhooks/conversion/` directory.
 
 #### kubectl
 
 We do not recommended using kubectl in hooks. It leads to a loss of idempotency since the hook depends on the cluster state in addition to the input parameters (that creates some difficulties during debugging/testing).
-* Use the [built-in shell-operator functionality](https://github.com/flant/shell-operator/blob/master/HOOKS.md#kubernetes) (it is fully integrated into Deckhouse) to track objects;
+* Use the [built-in shell-operator functionality](https://github.com/flant/addon-operator/blob/main/HOOKS.md#kubernetes) (it is fully integrated into Deckhouse) to track objects;
 * Use the shell_lib functionality (the `kubernetes::`-prefixed functions in particular: kubernetes::create_yaml, kubernetes::patch_jq, kubernetes::delete_if_exists, etc.) to create, edit, and delete objects.
 
 #### The "enabled" webhooks
@@ -504,7 +406,7 @@ function __main__() {
 }
 ```
 
-See the [documentation](https://github.com/flant/addon-operator/blob/master/LIFECYCLE.md#enabled-script) for more info.
+See the [documentation](https://github.com/flant/addon-operator/blob/main/LIFECYCLE.md#enabled-script) for more info.
 
 ### OpenAPI schemas for validating values
 
@@ -517,11 +419,11 @@ The OpenAPI value validation scheme is needed:
 
 The OpenAPI validating schemes are stored in the `$GLOBAL_HOOKS_DIR/openapi` directory for global values, and in the `$MODULES_DIR/<module-name>/openapi` for modules.
 
-Refer to the [addon-operator documentation](https://github.com/flant/addon-operator/blob/master/VALUES.md#validation) for more information about schema validation.
+Refer to the [addon-operator documentation](https://github.com/flant/addon-operator/blob/main/VALUES.md#validation) for more information about schema validation.
 
 The validation schemas have the OpenAPI Schema Object format. The detailed description of the format is available in the [documentation](http://json-schema.org/understanding-json-schema/).
 
-Note that `addon-operator` extends the schema format with additional properties. The additional information is available in the [documentation](https://github.com/flant/addon-operator/blob/master/VALUES.md#extending).
+Note that `addon-operator` extends the schema format with additional properties. The additional information is available in the [documentation](https://github.com/flant/addon-operator/blob/main/VALUES.md#extending).
 
 **Caution!!!** If the `additionalProperties` property is not defined, it will be set to `false` at all schema levels!!!
 
@@ -538,11 +440,11 @@ properties:
     description: |
       Work mode.
 ```
-* The `openapi/values.yaml` scheme validates combined values consisting of values from ConfigMap and values generated by hooks (learn more [here](https://github.com/flant/addon-operator/blob/master/VALUES.md#merged-values)).
+* The `openapi/values.yaml` scheme validates combined values consisting of values from ConfigMap and values generated by hooks (learn more [here](https://github.com/flant/addon-operator/blob/main/VALUES.md#merged-values)).
 
   * **Caution !!!** Note that the `openapi/values.yaml` scheme validates values generated by webhooks. Thus, the scheme will fire up an error when validating combined values since it does not have the description of the ConfigMap-derived values.
     The `x-extend` parameter extends the `openapi/values.yaml` schema with parameters of the `openapi/config-values.yaml` schema (as in the example below), thus avoiding duplicating them.
-    The `x-extend` parameter must be used in all cases. Learn more [here](https://github.com/flant/addon-operator/blob/master/VALUES.md#extending).
+    The `x-extend` parameter must be used in all cases. Learn more [here](https://github.com/flant/addon-operator/blob/main/VALUES.md#extending).
 
 An example:
 ```
@@ -591,7 +493,7 @@ Such an approach allows you to avoid the re-provisioning of PVs (and data loss) 
 
 Note that you cannot mutate the `volumeClaimTemplate`.  Thus, you must delete a statefulset (e.g., using a webhook) when changing the storageClass.
 
-You can find a relevant example in the [prometheus](https://fox.flant.com/sys/deckhouse-oss/-/tree/master/modules/300-prometheus/hooks/prometheus_storage_class_change) and [openvpn](https://fox.flant.com/sys/deckhouse-oss/-/tree/master/modules/500-openvpn/hooks/storage_class_change) modules' hooks.
+You can find a relevant example in the [prometheus](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/hooks/prometheus_storage_class_change) and [openvpn](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/500-openvpn/hooks/storage_class_change.go) modules' hooks.
 
 ### CRDs
 
@@ -650,7 +552,7 @@ Run the following command to learn more about them:
 ```bash
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller help
 ```
-(or read the [docs](https://github.com/flant/addon-operator/blob/master/RUNNING.md#debug)).
+(or read the [docs](https://github.com/flant/addon-operator/blob/main/RUNNING.md#debug)).
 
 ### A script for getting all the necessary debugging information
 
@@ -699,7 +601,7 @@ This script runs for about 2.5 minutes and generates a `.tar.gz` file that you n
 
 ### Prometheus metrics
 
-You can find a description and a list of available metrics [here](https://github.com/flant/addon-operator/blob/master/METRICS.md).
+You can find a description and a list of available metrics [here](https://github.com/flant/addon-operator/blob/main/METRICS.md).
 
 ### Browsing Deckhouse logs
 
@@ -768,10 +670,10 @@ NB: Both commands must be executed in the root directory of the repository.
 
 ### Running tests
 
-1. [Login](https://pult.flant.com/projects/dev-rnd/services/0d5280b0-9331-4cc2-ab2d-b2761b711324) to the docker registry to store werf stages:
+1. [Login](https://pult.flant.com/projects/dev-rnd/services/2c15f630-8072-43bc-a17b-61135fa88fcf) to the docker registry to store werf stages:
 
 ```
-docker login https://registry-stages.flant.com:5000/
+docker login https://dev-registry.deckhouse.io/
 ```
 
 2. Invoke the `./testing/run` script and pass to it the filename.
