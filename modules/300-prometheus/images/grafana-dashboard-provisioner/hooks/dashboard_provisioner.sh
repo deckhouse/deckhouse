@@ -18,7 +18,7 @@ for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
   source $f
 done
 #aaaaqqq
-#qqq
+#1241234qqq
 #qqq
 
 function __config__() {
