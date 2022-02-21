@@ -22,6 +22,20 @@
 
     {{- $definition = $definition | replace "__SCRAPE_INTERVAL__" (printf "%ds" ($context.Values.global.discovery.prometheusScrapeInterval | default 30)) | replace "__SCRAPE_INTERVAL_X_2__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 2)) | replace "__SCRAPE_INTERVAL_X_3__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 3)) | replace "__SCRAPE_INTERVAL_X_4__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 4)) }}
 
+{{/*    Patch expression based on `d8_ignore_on_update` annotation*/}}
+    {{ $definition = printf "Rules:\n%s" $definition }}
+    {{- $definitionStruct :=  ( $definition | fromYaml )}}
+    {{- range $rule := $definitionStruct.Rules }}
+      {{- range $dedicatedRule := $rule.rules }}
+        {{- if $dedicatedRule.annotations }}
+          {{- if (eq (get $dedicatedRule.annotations "d8_ignore_on_update") "true") }}
+            {{- $_ := set $dedicatedRule "expr" (printf "(%s) and ON() ((max(d8_is_updating) != 1) or ON() absent(d8_is_updating))" $dedicatedRule.expr) }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{ $definition = $definitionStruct.Rules | toYaml }}
+
     {{- $resourceName := (regexReplaceAllLiteral "\\.(yaml|tpl)$" $path "") }}
     {{- $resourceName = ($resourceName | replace " " "-" | replace "." "-" | replace "_" "-") }}
     {{- $resourceName = (slice ($resourceName | splitList "/") $folderNamesIndex | join "-") }}
