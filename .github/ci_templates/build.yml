@@ -2,7 +2,8 @@
 # <template: go_generate_template>
 runs-on: [self-hosted, regular]
 steps:
-  {!{ tmpl.Exec "checkout_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
 
   - name: Run go generate
@@ -22,6 +23,7 @@ steps:
 # <template: build_template>
 runs-on: [self-hosted, regular]
 steps:
+  {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}

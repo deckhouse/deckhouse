@@ -21,8 +21,22 @@ const {
 
 const { dumpError } = require('./error');
 
+const {
+  commentCommandRecognition,
+  commentLabelRecognition,
+  deleteBotComment,
+  WORKFLOW_START_MARKER,
+  deleteJobStartedComments,
+  commentJobStarted,
+  jobResult,
+  hasJobResult,
+  renderJobStatusOneLine,
+  renderJobStatusSeparate,
+  renderWorkflowStatusFinal, releaseIssueHeader
+} = require("./comments");
+
 /**
- * Update a comment in "release" issue when workflow is started.
+ * Update a comment in "release" issue or pull request when workflow is started.
  *
  * @param {object} inputs
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
@@ -34,7 +48,7 @@ const { dumpError } = require('./error');
 module.exports.updateCommentOnStart = async ({ github, context, core, name }) => {
   const repo_url = context.payload.repository.html_url;
   const run_id = context.runId;
-  const github_ref = context.ref;
+  const comment_ref = context.payload.inputs.pull_request_head_label || context.ref;
   const build_url = `${repo_url}/actions/runs/${run_id}`;
 
   const comment_id = context.payload.inputs.comment_id;
@@ -58,11 +72,7 @@ module.exports.updateCommentOnStart = async ({ github, context, core, name }) =>
     return core.setFailed(`comment is not accessible ${JSON.stringify(response)}`);
   }
 
-  const newBody =
-    response.data.body +
-    `
-  :fast_forward:\u00a0\`${name}\` for \`${github_ref}\` [started](${build_url}).
-`;
+  const newBody = `${response.data.body}\n  ${commentJobStarted(name, comment_ref, build_url)}\n`;
 
   response = await github.rest.issues.updateComment({
     owner: context.repo.owner,
@@ -79,23 +89,62 @@ module.exports.updateCommentOnStart = async ({ github, context, core, name }) =>
 };
 
 /**
- * Update a comment in "release" issue with status of job or workflow.
+ * Update a comment in "release" issue or pull request with status of the job or the workflow.
  *
+ * statusConfig values:
+ * "job" - get status from job context
+ * "workflow" - calculate workflow status from needs context
+ * "one-line" - Report job status as one line to form one huge multiline.
+ * "separate" - Report job statuses on separate lines.
+ * "no-skipped" - do not report skipped and cancelled jobs
+ * "final" - restore statuses from needs context, wrap comment with details and add summary status for the workflow.
+ * "restore-separate" - restore job statuses as separate lines
+ * "restore-one-line" - restore job statuses as one-line.
+ *
+ * Examples:
  * "job,inline" updates comment with job status and a name without extra newlines.
  * "job" updates comment with job status and a name with extra newlines.
- * "workflow" updates comment with statuses of all jobs in needs context with extra newlines.
+ * "workflow,final,no-skipped" add statuses of all jobs without skipped and canceled.
  *
  * @param {object} inputs
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
- * @param {string} inputs.statusSource - 'job,inline', 'job' or 'workflow'.
+ * @param {string} inputs.statusConfig - A comma-separated combination of 'job', 'workflow', 'one-line', 'separate', 'no-skipped' and 'final'.
  * @param {string} inputs.name - A name to use in the comment.
  * @param {object} inputs.needsContext - The needs context contains outputs from all jobs that are defined as a dependency of the current job.
  * @param {object} inputs.jobContext - The job context contains information about the currently running job.
+ * @param {object} inputs.stepsContext - The steps context contains information about previously executed steps.
+ * @param {object} inputs.jobNames - An object with each job names.
  * @returns {Promise<*>}
  */
-module.exports.updateCommentOnFinish = async ({ github, context, core, statusSource, name, needsContext, jobContext }) => {
+module.exports.updateCommentOnFinish = async ({
+  github,
+  context,
+  core,
+  statusConfig,
+  name,
+  needsContext,
+  jobContext,
+  stepsContext,
+  jobNames
+}) => {
+  const repo_url = context.payload.repository.html_url;
+  const run_id = context.runId;
+  const build_url = `${repo_url}/actions/runs/${run_id}`;
+  const ref = context.payload.inputs.pull_request_head_label || context.ref;
+
+  // Get started_at timestamp from step output or a separate job output.
+  let startedAt = null;
+  if (statusConfig.includes('job') && stepsContext['started_at'] && stepsContext['started_at'].outputs['started_at']) {
+    // Calculate workflow elapsed time using 'started_at' step.
+    startedAt = stepsContext['started_at'].outputs['started_at'];
+  }
+  if (statusConfig.includes('workflow') && needsContext['started_at'] && needsContext['started_at'].outputs['started_at']) {
+    // Calculate workflow elapsed time using 'started_at' job.
+    startedAt = needsContext['started_at'].outputs['started_at'];
+  }
+
   // Get comment
   const comment_id = context.payload.inputs.comment_id;
   const response = await github.rest.issues.getComment({
@@ -103,92 +152,128 @@ module.exports.updateCommentOnFinish = async ({ github, context, core, statusSou
     repo: context.repo.repo,
     comment_id: comment_id
   });
-  if (response.status != 200) {
-    console.log(`DEBUG getComment response: ${JSON.stringify(response)}`);
+  core.debug(`rest.issues.getComment response: ${JSON.stringify(response)}`);
+  if (response.status !== 200) {
     return core.setFailed(`comment is not accessible ${JSON.stringify(response)}`);
   }
-  const comment = response.data.body;
+  let comment = response.data.body;
 
-  // Final status is a passed job.status or a summary from 'needs' context for workflow.
-  let finalStatus = '';
-  let jobsComment = '';
+  // A string to append to comment.
+  let statusReport = '';
+  // Statuses of non-reported jobs.
+  let nonReportedJobs = '';
+  // Failed jobs count.
+  let failedInfo = '';
 
-  if (statusSource === 'job') {
-    finalStatus = jobContext.status;
+  // Update the comment with the status of the single job.
+  if (statusConfig.includes('job')) {
+    const status = jobContext.status;
+    core.info(`Status for job report is ${status}`);
+
+    if (statusConfig.includes(',one-line')) {
+      statusReport = renderJobStatusOneLine(status, name, startedAt);
+    } else if (statusConfig.includes(',separate')) {
+      statusReport = renderJobStatusSeparate(status, name, startedAt);
+    } else if (statusConfig.includes(',final')) {
+      statusReport = renderWorkflowStatusFinal(status, name, ref, build_url, startedAt);
+    }
   }
 
-  if (statusSource === 'workflow') {
-    // TODO (future) This is the last job, it can compare actual comment with needs object and restore lost comments.
-    console.log(`DEBUG Needs: ${JSON.stringify(needsContext)}`);
-
-    finalStatus = 'cancelled';
+  // Add a final workflow status and details about all jobs from the needs context.
+  if (statusConfig.includes('workflow')) {
+    let status = 'cancelled';
     let successCount = 0;
     let failureCount = 0;
-    for (const jobName in needsContext) {
-      if (!needsContext.hasOwnProperty(jobName)) {
+    for (const jobID in needsContext) {
+      if (!needsContext.hasOwnProperty(jobID)) {
         continue;
       }
-      if (needsContext[jobName].result === 'success') {
+      // Ignore helper jobs.
+      if (jobID === 'started_at' || jobID === 'git_info') {
+        continue;
+      }
+
+      let jobName = jobID;
+      if (jobNames && jobNames[jobID]) {
+        jobName = jobNames[jobID];
+      }
+      const jobResult = needsContext[jobID].result;
+
+      if (jobResult === 'success') {
         successCount++;
       }
-      if (needsContext[jobName].result === 'failure') {
+      if (jobResult === 'failure') {
         failureCount++;
       }
-      // Info about not started jobs.
-      if (needsContext[jobName].result === 'cancelled') {
-        jobsComment += `:ballot_box_with_check:\u00a0${jobName} cancelled.\n`;
+
+      // Info for not started job.
+      if ((jobResult === 'cancelled' || jobResult === 'skipped') && !statusConfig.includes(',no-skipped')) {
+        nonReportedJobs += renderJobStatusOneLine({ status: jobResult, name: jobName }) + `\n`;
       }
-      if (needsContext[jobName].result === 'skipped') {
-        jobsComment += `:ballot_box_with_check:\u00a0${jobName} skipped.\n`;
+
+      // Restore information for overridden job. Only result, no elapsed time here.
+      if ((jobResult === 'success' || jobResult === 'failure') && !hasJobResult(comment, jobName)) {
+        let jobReport = '';
+        if (statusConfig.includes(',restore-one-line')) {
+          jobReport = renderJobStatusOneLine(jobResult, jobName);
+        } else if (statusConfig.includes(',restore-separate')) {
+          jobReport = renderJobStatusSeparate(jobResult, jobName);
+        }
+        nonReportedJobs += jobReport + `\n`;
       }
     }
     if (successCount > 0) {
-      finalStatus = 'success';
+      status = 'success';
     }
     if (failureCount > 0) {
-      finalStatus = 'failure';
+      status = 'failure';
+      failedInfo = `${failureCount} job${failureCount > 1 ? 's' : ''} failed`;
+      core.setFailed(`Workflow ${name} failed: ${failedInfo}.`);
+      failedInfo = ` (${failedInfo})`;
     }
-    if (jobsComment !== '') {
-      jobsComment = '\n' + jobsComment;
-    }
+
+    core.info(`Status for workflow report is ${status}`);
+
+    statusReport = renderWorkflowStatusFinal(status, name, ref, build_url, startedAt);
   }
 
-  console.log(`Status is ${finalStatus}`);
+  if (statusConfig.includes(',final')) {
+    // Cleanup "Aye, aye" comment from the bot.
+    comment = deleteBotComment(comment);
+    // Split comment to save a header.
+    const parts = comment.split(WORKFLOW_START_MARKER);
+    if (parts[1]) {
+      // If non-empty jobs report present in comment, wrap it in a 'details' tag.
+      // Clean it from multiple lines with 'started' statuses.
+      const header = parts[0];
+      let jobsReport = parts[1];
+      jobsReport = deleteJobStartedComments(jobsReport);
+      jobsReport += `\n${nonReportedJobs || ''}`;
 
-  // Update comment.
-  let newBody = '';
-  if (statusSource.endsWith('inline')) {
-    let statusComment = `:white_check_mark: \`${name}\` success.`;
-    if (finalStatus === 'failure') {
-      statusComment = `:x: \`${name}\` failed.`;
+      // Wrap jobs report with 'details' tag if not empty.
+      let workflowDetails = `${failedInfo}`;
+      if (!/^\s*$/.test(jobsReport)) {
+        workflowDetails = `\n<details><summary>Workflow details${failedInfo}</summary>\n${jobsReport}</details>`;
+      }
+
+      comment = `${header}\n\n${statusReport}${workflowDetails}`;
+    } else {
+      // No split marker: wrap entire comment with 'details' tag.
+      comment = `${statusReport}\n\n<details><summary>Workflow details${failedInfo}</summary>${comment}\n${nonReportedJobs || ''}</details>`;
     }
-    if (finalStatus === 'cancelled') {
-      statusComment = `:ballot_box_with_check: \`${name}\` cancelled.`;
-    }
-    newBody = `${comment}\n${statusComment}`;
   } else {
-    let statusComment = `:green_circle:\u00a0\`${name}\` succeed.`;
-    if (finalStatus === 'failure') {
-      statusComment = `:red_circle:\u00a0\`${name}\` failed.`;
-    }
-    if (finalStatus === 'cancelled') {
-      statusComment = `:white_circle:\u00a0\`${name}\` cancelled.`;
-    }
-    if (finalStatus === 'skipped') {
-      statusComment = `:white_circle:\u00a0\`${name}\` skipped.`;
-    }
-    newBody = `${comment}${jobsComment}\n\n${statusComment}\n\n`;
+    comment = `${comment}\n${statusReport}`;
   }
 
   const updateResponse = await github.rest.issues.updateComment({
     owner: context.repo.owner,
     repo: context.repo.repo,
     comment_id: comment_id,
-    body: newBody
+    body: comment
   });
 
-  if (updateResponse.status != 200) {
-    console.log(`DEBUG updateComment response: ${JSON.stringify(updateResponse)}`);
+  core.debug(`updateComment response: ${JSON.stringify(updateResponse)}`);
+  if (updateResponse.status !== 200) {
     return core.setFailed(`comment is not accessible ${JSON.stringify(updateResponse)}`);
   }
 };
@@ -743,7 +828,7 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
     owner: context.repo.owner,
     repo: context.repo.repo,
     issue_number: event.issue.number,
-    body: `Aye, aye, @${event.comment.user.login}. I've recognized your '${slashCommand.command}' command and started the workflow...\n`
+    body: commentCommandRecognition(event.comment.user.login, slashCommand.command)
   });
 
   if (response.status !== 201) {
@@ -779,7 +864,7 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
 module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }) => {
   const event = context.payload;
   const label = event.label.name;
-  let command = {action: 'workflow_dispatch', workflows:[]};
+  let command = {action: 'run_workflow_dispatch', workflows:[]};
 
   console.log(`Event label name: '${label}'`);
   console.log(`Known labels: ${JSON.stringify(knownLabels, null, '  ')}`);
@@ -806,40 +891,46 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
 
   if (knownLabels['skip-validation'].includes(label)) {
     command.workflows = ['validation.yml'];
-    command.action = 'rerun';
+    command.action = 'rerun_workflow';
   }
 
   if (knownLabels['ok-to-test'] === label) {
     command.workflows = ['build-and-test_dev.yml', 'validation.yml'];
-    command.action = 'rerun';
+    command.action = 'rerun_workflow';
   }
 
   if (command.workflows.length === 0) {
     return console.log(`Workflow for label '${event.label.name}' and action '${event.action}' not found. Ignore it.`);
   }
 
-  if (command.action === 'rerun') {
-    console.log(`Label '${label}' was set on PR#${context.payload.pull_request.number}. Will retry workflows: '${JSON.stringify(command.workflows)}'.`);
+  if (command.action === 'rerun_workflow') {
+    core.info(
+      `Label '${label}' was set on PR#${context.payload.pull_request.number}. Will retry workflows: '${JSON.stringify(
+        command.workflows
+      )}'.`
+    );
     for (const workflow_id of command.workflows) {
-      await findAndRerunWorkflow({github, context, core, workflow_id});
+      await findAndRerunWorkflow({ github, context, core, workflow_id });
     }
   }
 
-  if (command.action === 'workflow_dispatch') {
+  if (command.action === 'run_workflow_dispatch') {
     const workflow_id = command.workflows[0];
-    console.log(`Label '${label}' was set on PR#${context.payload.pull_request.number}. Will start workflow '${workflow_id}'.`);
+    core.info(
+      `Label '${label}' was set on PR#${context.payload.pull_request.number}. Will start workflow '${workflow_id} via workflow_dispatch event'.`
+    );
 
     // workflow_dispatch requires a ref. In PRs from forks, we assign images with `prXXX` tags to
     // avoid clashes with inner branches.
-    const prNumber = context.payload.pull_request.number
+    const prNumber = context.payload.pull_request.number;
 
-    // Add comment to pull request.
-    console.log(`Add comment to pull request ${prNumber}.`);
+    // Add a comment to pull request.
+    core.info(`Add comment to pull request ${prNumber}.`);
     let response = await github.rest.issues.createComment({
       owner: context.repo.owner,
       repo: context.repo.repo,
       issue_number: prNumber,
-      body: `Running workflow "${label}"...\n`
+      body: commentLabelRecognition(context.payload.sender.login, label)
     });
 
     if (response.status < 200 || response.status >= 300) {
@@ -849,28 +940,31 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
     const commentInfo = {
       issue_id: '' + context.payload.pull_request.id,
       issue_number: '' + prNumber,
-      comment_id: '' + response.data.id,
-    }
+      comment_id: '' + response.data.id
+    };
 
     const targetRepo = context.payload.repository.full_name;
     const prRepo = context.payload.pull_request.head.repo.full_name;
-    const prRef = context.payload.pull_request.head.ref
+    const prRef = context.payload.pull_request.head.ref;
     const prInfo = {
-      ci_commit_ref_name: (prRepo === targetRepo) ? prRef : `pr${prNumber}`,
+      ci_commit_ref_name: prRepo === targetRepo ? prRef : `pr${prNumber}`,
       pull_request_ref: ref,
       pull_request_sha: context.payload.pull_request.head.sha,
+      pull_request_head_label: context.payload.pull_request.head.label
     };
 
-    return await startWorkflow({github, context, core,
+    return await startWorkflow({
+      github,
+      context,
+      core,
       workflow_id,
       ref: 'refs/heads/main',
       inputs: {
         ...commentInfo,
         ...prInfo
-      },
+      }
     });
   }
-
 };
 
 const findAndRerunWorkflow = async ({ github, context, core, workflow_id }) => {
@@ -1108,20 +1202,9 @@ const findReleaseIssueForMilestone = async ({ github, context, core, milestone }
  */
 const addReleaseIssueComment = async ({ github, context, core, issue, gitRefInfo }) => {
   // Add issue comment.
-  let comment_body = '';
-  if (gitRefInfo.isTag) {
-    comment_body = `New tag '${gitRefInfo.tagName}' is created.`;
-  }
-  if (gitRefInfo.isBranch) {
-    const commitMiniSHA = context.payload.head_commit.id.slice(0, 6);
-    const commitUrl = context.payload.head_commit.url;
-    const header = `New commit [${commitMiniSHA}](${commitUrl}) in branch '${gitRefInfo.branchName}':`;
-    // Format commit message.
-    const mdCodeMarker = '```';
-    const commitMsg = `${mdCodeMarker}\n${context.payload.head_commit.message}\n${mdCodeMarker}`;
-    comment_body = `${header}\n${commitMsg}\n`;
-  }
+  const comment_body = releaseIssueHeader(context, gitRefInfo);
   core.info('Add issue comment.');
+
   const response = await github.rest.issues.createComment({
     owner: context.repo.owner,
     repo: context.repo.repo,
@@ -1136,9 +1219,9 @@ const addReleaseIssueComment = async ({ github, context, core, issue, gitRefInfo
   return {
     issue_id: '' + issue.id,
     issue_number: '' + issue.number,
-    comment_id: '' + response.data.id,
-  }
-}
+    comment_id: '' + response.data.id
+  };
+};
 
 /**
  * Start workflow using workflow_dispatch event.
