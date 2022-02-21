@@ -8,6 +8,7 @@ config.conf: |
   featureGates:
     EndpointSliceTerminatingCondition: true
     ProxyTerminatingEndpoints: true
+    DaemonSetUpdateSurge: true
   {{- end }}
   nodePortAddresses: ["__node_address__"]
   clientConnection:

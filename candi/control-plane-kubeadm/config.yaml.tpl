@@ -33,7 +33,7 @@ apiServer:
 {{- end }}
     anonymous-auth: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
@@ -100,7 +100,7 @@ controllerManager:
     profiling: "false"
     terminated-pod-gc-threshold: "12500"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
@@ -127,7 +127,7 @@ scheduler:
   extraArgs:
     profiling: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
     bind-address: "127.0.0.1"
     port: "0"
