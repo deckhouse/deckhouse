@@ -380,22 +380,41 @@ const checkLabel = async ({ github, context, core, labelType, labelSubject, onSu
     console.log(`${isPR ? 'PR' : 'Issue'} #${issue_number} has no label '${shouldRunLabel}'. Skip next jobs.`);
     return;
   }
+
   // Remove label
-  console.log(`Requested label '${shouldRunLabel}' is present. Remove it now...`);
+  console.log(`Requested label '${shouldRunLabel}' is present.`);
+
+  await removeLabel({ github, context, core, issue_number, label: shouldRunLabel });
+
+  console.log(`Now proceed to next jobs.`);
+};
+module.exports.checkLabel = checkLabel;
+
+/**
+ * Remove label from issue and ignore error.
+ *
+ * @param {object} inputs
+ * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
+ * @param {object} inputs.context - An object containing the context of the workflow run.
+ * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {object} inputs.issue_number - Issue number.
+ * @param {object} inputs.label - Label name.
+ * @returns {Promise<void|*>}
+ */
+const removeLabel = async ({ github, context, core, issue_number, label }) => {
+  core.info(`Remove label '${label}' from issue ${issue_number}...`);
   try {
     await github.rest.issues.removeLabel({
       owner: context.repo.owner,
       repo: context.repo.repo,
       issue_number: issue_number,
-      name: shouldRunLabel
+      name: label
     });
-    console.log(`  Done.`);
+    core.info(`  Removed.`);
   } catch (e) {
-    console.log(`  It seems label was removed by another workflow. Ignore ${typeof e} error.`);
+    core.info(`  It seems label '${label}' was removed by another workflow. Ignore ${typeof e} error: ${e}.`);
   }
-  console.log(`Proceed to next jobs.`);
-};
-module.exports.checkLabel = checkLabel;
+}
 
 /**
  * Set outputs to enable e2e jobs from workflow_dispatch inputs.
@@ -866,9 +885,10 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
   const label = event.label.name;
   let command = {action: 'run_workflow_dispatch', workflows:[]};
 
-  console.log(`Event label name: '${label}'`);
-  console.log(`Known labels: ${JSON.stringify(knownLabels, null, '  ')}`);
-  console.log(`Git ref: '${ref}'`);
+  core.info(`Event label name: '${label}'`);
+  core.info(`Known labels: ${JSON.stringify(knownLabels, null, '  ')}`);
+  core.info(`Current labels: ${JSON.stringify(event.pull_request.labels)}`);
+  core.info(`Git ref: '${ref}'`);
 
   if (knownLabels.e2e.includes(label) && event.action === 'labeled') {
     for (const provider of knownProviders) {
@@ -897,6 +917,33 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
   if (knownLabels['ok-to-test'] === label) {
     command.workflows = ['build-and-test_dev.yml', 'validation.yml'];
     command.action = 'rerun_workflow';
+  }
+
+  // Rerun build workflow if edition label is added or all edition labels are removed.
+  if (knownLabels['edition'].includes(label)) {
+    const issue_number = context.issue.number;
+    const labels = event.pull_request.labels;
+
+    let hasEditionLabel = false;
+    for (const edition of knownLabels['edition']) {
+      if (labels.some((l) => l.name === edition)) {
+        hasEditionLabel = true;
+        break
+      }
+    }
+
+    if (event.action === 'labeled' || !hasEditionLabel) {
+      command.workflows = ['build-and-test_dev.yml'];
+      command.action = 'rerun_workflow';
+    }
+
+    // If edition/ce label is set, edition/ee label should be removed and vice versa.
+    if (event.action === 'labeled') {
+      const removeEditions = knownLabels['edition'].filter(l => l !== label);
+      for (const edition of removeEditions) {
+        await removeLabel({github, context, core, issue_number, label: edition});
+      }
+    }
   }
 
   if (command.workflows.length === 0) {
