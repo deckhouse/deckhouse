@@ -26,6 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -77,6 +78,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 type manualDSController struct {
 	CRName     string
 	Generation int64
+
+	DesiredPodCount int32
+	CurrentPodCount int32
 }
 
 type manualRolloutPod struct {
@@ -108,11 +112,18 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 	}
 
 	for _, controller := range controllers {
-		allPodsReady := true
+		podsReadyForUpdate := true
+
+		// check pod count to avoid race during creation a new pod
+		if controller.CurrentPodCount != controller.DesiredPodCount {
+			podsReadyForUpdate = false
+			continue
+		}
+
 		var podNameForDeletion string
 		for _, pod := range podsMap[controller.CRName] {
 			if !pod.Ready {
-				allPodsReady = false
+				podsReadyForUpdate = false
 				break
 			}
 
@@ -121,7 +132,7 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 			}
 		}
 
-		if allPodsReady && podNameForDeletion != "" {
+		if podsReadyForUpdate && podNameForDeletion != "" {
 			input.PatchCollector.Delete("v1", "Pod", "d8-ingress-nginx", podNameForDeletion)
 		}
 	}
@@ -130,9 +141,18 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 }
 
 func filterManualDS(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ds appsv1.DaemonSet
+
+	err := sdk.FromUnstructured(obj, &ds)
+	if err != nil {
+		return nil, err
+	}
+
 	return manualDSController{
-		CRName:     obj.GetLabels()["name"],
-		Generation: obj.GetGeneration(),
+		CRName:          ds.GetLabels()["name"],
+		Generation:      ds.GetGeneration(),
+		DesiredPodCount: ds.Status.DesiredNumberScheduled,
+		CurrentPodCount: ds.Status.CurrentNumberScheduled,
 	}, nil
 }
 
