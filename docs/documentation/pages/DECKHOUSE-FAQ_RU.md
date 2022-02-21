@@ -182,10 +182,11 @@ deckhouse: |
 ![Настройка Registry](images/registry/harbor/harbor1.png)
 
 * Создайте новый проект:
-  * `Projects -> New Project`.
-  * `Project Name` будет частью URL. Используйте любой, например, `d8s`.
-  * `Access Level`: `Public`.
-  * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге.
+  * `Projects -> New Project`;
+  * `Project Name` будет частью URL. Используйте любой, например, `d8s`;
+  * `Access Level`: `Public`;
+  * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге;
+  * `Projects -> Your project name -> Policy -> Action -> Delete` — Удалите создаваемую автоматически политику очистки образов страше 7 дней.
 
 ![Создание нового проекта](images/registry/harbor/harbor2.png)
 
@@ -233,19 +234,6 @@ chmod 700 d8-push.sh
 
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
 
-<<<<<<< HEAD
-* Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry;
-* Изменить Secret `d8-system/deckhouse-registry` (все параметры хранятся в кодировке Base64):
-  * Для корректной записи значений в секреты без используйте `echo -n 'value' | base64`
-  * Исправить `.dockerconfigjson` с учетом авторизации в новом registry;
-  * Исправить `address` на адрес нового registry (например, `registry.example.com`);
-  * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/fe`);
-  * При необходимости изменить `scheme` на `http` (если используется HTTP registry);
-  * Если registry использует самоподписные сертификаты, то изменить или добавить поле `ca`, куда внести корневой сертификат соответствующего сертификата registry;
-* Дождаться перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его;
-* Дождаться применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`;
-* Только если обновление Deckhouse через сторонний registry не планируется, то следует удалить `releaseChannel` из конфигмапа `d8-system/deckhouse`.
-=======
 * Измените поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry;
 * Скачайте скрипт на мастер-узел и запустите его с параметрами нового registry.
   * Пример запуска:
@@ -310,4 +298,3 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit stat
 1. Измените параметр `kubernetesVersion`.
 1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
 1. Дождитесь окончания обновления.  Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
->>>>>>> c72424d5c61eecac479da8c281ce9e63a65879cd

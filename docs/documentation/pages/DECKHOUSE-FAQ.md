@@ -178,10 +178,18 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
 ![Create a Registry](images/registry/harbor/harbor1.png)
 
 * Create a new Project:
+<<<<<<< HEAD
   * `Projects -> New Project`.
   * `Project Name` will be used in the URL. You can choose any name, for example, `d8s`.
   * `Access Level`: `Public`.
   * `Proxy Cache` — enable and choose the Registry, created in the previous step.
+=======
+  * `Projects -> New Project`;
+  * `Project Name` will be used in the URL. You can choose any name, for example, `d8s`;
+  * `Access Level`: `Public`;
+  * `Proxy Cache` — enable and choose the Registry, created in the previous step;
+  * `Projects -> Your project name -> Policy -> Action -> Delete` — Delete automatically created cleanup policy, that removes images older than 7 days.
+>>>>>>> 072019ef0 (remove harbor cleanup job)
 
 ![Create a new Project](images/registry/harbor/harbor2.png)
 
