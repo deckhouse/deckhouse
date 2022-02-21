@@ -48,7 +48,8 @@ You will need:
    - at least 40 GB of disk space for the cluster and etcd data;
    - OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7;
    - HTTPS access to the `registry.deckhouse.io` container registry (it is also possible to use a [third-party registry](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry));
-   - SSH key access from the **personal computer** (section 1).
+   - SSH key access from the **personal computer** (section 1);
+   - container runtime packages, such as containerd or docker, should not be installed on the node.
 
 1. Additional nodes (not required).
 {% if page.platform_type == 'cloud' %}
