@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: Check PR
         id: pr
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             // 'demilestoned' should also be checked if used as trigger

@@ -23,7 +23,7 @@ jobs:
 
       # </template: checkout_step>
       - name: Run workflow
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
@@ -47,7 +47,7 @@ jobs:
       # </template: checkout_step>
       - name: Find milestone
         id: milestone
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6
         with:
           result-encoding: json
           script: |
