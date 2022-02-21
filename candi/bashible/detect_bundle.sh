@@ -1,5 +1,4 @@
 #!/bin/bash
-{{- /*
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,20 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-*/}}
 if [ -e /etc/os-release ]; then
   . /etc/os-release
   bundleName="${ID}-${VERSION_ID}"
   case $bundleName in
-    centos-7|rhel-7.*)
-      echo "centos-7"
+    centos-7|rhel-7.*|centos-8|rhel-8.*)
+      echo "centos"
       exit 0
     ;;
     ubuntu-16.04|ubuntu-18.04|ubuntu-20.04)
       echo "ubuntu-lts"
       exit 0
     ;;
-    debian-9|debian-10|debian-11|astra-2.12.*)
+    debian-9|debian-10|debian-11)
       echo "debian"
       exit 0
     ;;

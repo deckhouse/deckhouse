@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.4-0.20220121072209-d27b5b3473ac
+	github.com/flant/addon-operator v1.0.4-0.20220208071927-1b4e2c72f3db
 	github.com/flant/kube-client v0.0.6
 	github.com/flant/shell-operator v1.0.8-0.20220121071428-6b7bd04272e5
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -28,8 +28,8 @@ require (
 	github.com/imdario/mergo v0.3.11
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.17.0
+	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/gomega v1.18.1
 	github.com/otiai10/copy v1.0.2
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
@@ -56,7 +56,6 @@ require (
 )
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
-
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
 
@@ -64,3 +63,4 @@ replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v
 replace k8s.io/client-go => k8s.io/client-go v0.19.11
 
 replace k8s.io/api => k8s.io/api v0.19.11
+//

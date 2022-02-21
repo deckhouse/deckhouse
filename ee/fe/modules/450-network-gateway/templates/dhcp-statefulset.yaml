@@ -59,7 +59,7 @@ spec:
       - name: init
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         command: ['/prepare-config.py']
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}"
         volumeMounts:
         - name: dhcp-config
           mountPath: /etc/dnsmasq.d
@@ -71,7 +71,7 @@ spec:
       containers:
       - name: dhcp
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_BIND_SERVICE" "NET_RAW")) | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}"
         command: ['dnsmasq', '-dK', '--dhcp-leasefile=/var/lib/dnsmasq/dhcp.leases']
         volumeMounts:
         - name: dhcp-config

@@ -113,6 +113,7 @@ title: "Cloud provider — VMware vSphere: настройки провайдер
   * Опциональный параметр. По умолчанию `true`.
 * `region` — тэг, прикреплённый к vSphere Datacenter, в котором будут происходить все операции: заказ VirtualMachines, размещение их дисков на datastore, подключение к network.
 * `baseResourcePool` — относительный (от vSphere Cluster) путь до существующего родительского `resourcePool` для всех создаваемых (в каждой зоне) `resourcePool`'ов.
+* `useNestedResourcePool` - создавать вложенный пул (`true`) или использовать основной пул (`false`). По-умолчанию - `true`.
 * `sshPublicKey` — публичный ключ для доступа на узлы.
 * `externalNetworkNames` — имена сетей (не полный путь, а просто имя), подключённые к VirtualMachines, и используемые vsphere-cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
   * Формат — массив строк. Например,
@@ -137,3 +138,51 @@ title: "Cloud provider — VMware vSphere: настройки провайдер
 * `zones` — ограничение набора зон, в которых разрешено создавать узлы.
   * Обязательный параметр.
   * Формат — массив строк.
+
+* `nsxt` - Дополнительная секция в конфиге модуля для поддержки LoadBalancers в Vsphere черезе NSX-T.
+
+  * `defaultIpPoolName` - имя дефолтного ip pool, который используется если в SVC не установлена аннотация `loadbalancer.vmware.io/class`.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `defaultTcpAppProfileName` - имя дефолтного профиля, используемого для TCP соединений в NSX-T.
+    * Формат - строка;
+    * Опциональный параметр; по умолчанию `default-tcp-lb-app-profile`;
+  * `defaultUdpAppProfileName` - имя дефолтного профиля, используемого для UDP соединений в NSX-T.
+    * Формат - строка;
+    * Опциональный параметр; по умолчанию `default-udp-lb-app-profile`;
+  * `size` - размер сервиса LoadBalancer.
+    * Формат - строка, допустимые значения - `SMALL`, `MEDIUM`, `LARGE`, `XLARGE`;
+    * Опциональный параметр; по умолчанию `MEDIUM`;
+  * `tier1GatewayPath` - путь к политике NSX-T tier1 gateway.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `host` — адрес NSX-T.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `user` — имя пользователя NSX-T.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `password` — пароль пользователя NSX-T.
+    * Формат - строка;
+    * Обязательный параметр;
+  * `insecureFlag` — должен быть установлен в `true` если NSX-T использует самоподписанный сертификат.
+    * Формат — bool;
+    * Опциональный параметр;
+
+  * `loadBalancerClass` - дополнительная секция, определяющая Load Balancer Classes (чтобы использовать Class, установите аннотацию `loadbalancer.vmware.io/class: <class name>` на SVC).
+    * Формат - массив;
+
+    * `name` - имя Load Balancer Class для установки аннотации `loadbalancer.vmware.io/class: <class name>` в SVC.
+      * Формат - строка;
+      * Обязательный параметр;
+    * `ipPoolName` - имя ip pool'а.
+      * Формат - строка;
+      * Обязательный параметр;
+    * `tcpAppProfileName` - имя профиля по умолчанию, используемого для TCP соединений.
+      * Формат - строка;
+      * Опциональный параметр; если не установлен, используется `defaultTcpAppProfileName`;
+    * `udpAppProfileName` - имя профиля по умолчанию, используемого для UDP соединений.
+      * Формат - строка;
+      * Опциональный параметр; если не установлен, используется `defaultUdpAppProfileName`;
+
+Дополнительная информация - [Vsphere Cloud Load Balancers](https://github.com/kubernetes/cloud-provider-vsphere/tree/master/pkg/cloudprovider/vsphere/loadbalancer).

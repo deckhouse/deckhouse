@@ -147,7 +147,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com")
-			csiControllerSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-yandex", "csi-controller")
+			csiControllerSS := f.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "csi-controller")
 			csiNodeDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-yandex", "csi-node")
 			csiControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "csi")
 			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:csi:controller:external-provisioner")
@@ -238,7 +238,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "cloud-controller-manager").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-yandex", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "csi-controller").Exists()).To(BeFalse())
 			})
 		})
 	})

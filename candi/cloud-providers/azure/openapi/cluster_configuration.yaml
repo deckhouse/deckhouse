@@ -79,6 +79,7 @@ apiVersions:
               A list of zones where master nodes can be created.
 
               You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
               ```shell
               az vm list-skus -l westeurope -o table
               ```
@@ -98,7 +99,8 @@ apiVersions:
                 description: |
                   The type of instances to provision.
 
-                  You can view a list of available types for the specific region using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  Getting a list of available types for the specific region using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
                   ```shell
                   az vm list-sizes --location westeurope -o table
                   ```
@@ -110,9 +112,11 @@ apiVersions:
 
                   More information about virtual machine images can be found in the [official documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
 
-                  You can get the latest version of an image using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
-                  - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`
-                  - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`
+                  Getting the urn with [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (column #4):
+                  ```shell
+                  az vm image list --location westeurope --publisher Canonical --all --sku 20_04-lts -o table
+                  az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
+                  ```
 
                   **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
@@ -136,8 +140,9 @@ apiVersions:
                   The type of the volume to create.
 
                   You can view a list of available volume types using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
                   ```shell
-                  az vm list-skus -l westeurope --zone`
+                  az vm list-skus -l westeurope --zone
                   ```
                 example: StandardSSD_LRS
                 type: string
@@ -172,6 +177,7 @@ apiVersions:
                 A list of zones where static nodes can be created;
 
                 You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
                 ```shell
                 az vm list-skus -l westeurope -o table
                 ```
@@ -261,7 +267,10 @@ apiVersions:
         properties:
           location:
             description: |
-              The name of the region to create all the resources.
+              The name of the geo location to create all the resources. Getting available locations from [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              ```shell
+              az account list-locations -o table
+              ```
             type: string
           subscriptionId:
             description: |

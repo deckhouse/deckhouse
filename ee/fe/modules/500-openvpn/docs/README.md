@@ -10,7 +10,7 @@ Using the web interface, you can:
 - cancel certificate revocation;
 - get a ready-to-use custom configuration file.
 
-The web interface is integrated with the [user-authn](../../modules/150-user-authn/) module, allowing you to manage user access to this web interface.
+The web interface is integrated with the [user-authn](../150-user-authn/) module, allowing you to manage user access to this web interface.
 
 ## Exposing the VPN service
 Generally, one or more external IP addresses are used for a connection. The following connection methods are supported:

@@ -6,6 +6,6 @@ output "cloud_discovery_data" {
     "apiVersion" = "deckhouse.io/v1"
     "kind" = "VsphereCloudDiscoveryData"
     "vmFolderPath" = vsphere_folder.main.path
-    "resourcePoolPath" = local.base_resource_pool != "" ? join("/", [local.base_resource_pool, local.prefix]) : local.prefix
+    "resourcePoolPath" = local.use_nested_resource_pool == true ? (local.base_resource_pool != "" ? join("/", [local.base_resource_pool, local.prefix]) : local.prefix) : ""
   }
 }

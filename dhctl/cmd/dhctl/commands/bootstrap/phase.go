@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -43,6 +44,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineDeckhouseFlags(cmd)
+	app.DefineDeckhouseInstallFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
@@ -55,6 +57,9 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
+		installConfig.KubeadmBootstrap = app.KubeadmBootstrap
+		installConfig.MasterNodeSelector = app.MasterNodeSelector
+
 		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
@@ -66,10 +71,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 				return err
 			}
 
-			if err := operations.InstallDeckhouse(kubeCl, installConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
-				return err
-			}
-			return nil
+			return operations.InstallDeckhouse(kubeCl, installConfig, metaConfig.MasterNodeGroupManifest())
 		})
 	}
 
@@ -130,9 +132,9 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineKubeFlags(cmd)
 
 	runFunc := func() error {
-		var resourcesToCreate *config.Resources
+		var resourcesToCreate template.Resources
 		if app.ResourcesPath != "" {
-			parsedResources, err := config.ParseResources(app.ResourcesPath)
+			parsedResources, err := template.ParseResources(app.ResourcesPath, nil)
 			if err != nil {
 				return err
 			}
@@ -140,7 +142,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			resourcesToCreate = parsedResources
 		}
 
-		if resourcesToCreate == nil || len(resourcesToCreate.Items) == 0 {
+		if resourcesToCreate == nil || len(resourcesToCreate) == 0 {
 			log.WarnLn("Resources to create were not found.")
 			return nil
 		}

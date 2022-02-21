@@ -5,6 +5,22 @@ apiVersions:
     type: object
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: ClusterConfiguration
+      podSubnetNodeCIDRPrefix: "24"
+      podSubnetCIDR: 10.244.0.0/16
+      serviceSubnetCIDR: 192.168.0.0/16
+      kubernetesVersion: "1.21"
+      clusterDomain: test
+      clusterType: "Cloud"
+      cloud:
+        prefix: test
+        provider: Yandex
+      packagesProxy:
+        uri: https://example.com
+        username: user
+        password: passwd
     properties:
       apiVersion:
         type: string
@@ -56,6 +72,7 @@ apiVersions:
         - "1.20"
         - "1.21"
         - "1.22"
+        - "Automatic"
       packagesProxy:
         type: object
         additionalProperties: false

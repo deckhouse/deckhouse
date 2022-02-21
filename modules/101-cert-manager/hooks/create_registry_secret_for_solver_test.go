@@ -129,7 +129,7 @@ metadata:
 
 func setState(f *HookExecutionConfig, ch ...string) {
 	rs := strings.Join(ch, "\n---")
-	f.BindingContexts.Set(f.KubeStateSet(rs))
+	f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(rs, 0))
 }
 
 func assertRegistrySecretAndSAExists(f *HookExecutionConfig, dockerCfgContent string, nss ...string) {
@@ -448,7 +448,6 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 					genTestLegacyChallengeManifest(chNameAnother, ns2),
 					genTestLegacyChallengeManifest(chNameAnother, ns3),
 				)
-
 				f.RunHook()
 
 				Expect(f).To(ExecuteSuccessfully())

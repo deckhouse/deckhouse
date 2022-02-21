@@ -30,7 +30,9 @@ import (
 
 func ApplyLintRules(module utils.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
 	var v struct {
-		Global struct{ EnabledModules []string }
+		Global struct {
+			EnabledModules []string `yaml:"enabledModules"`
+		} `yaml:"global"`
 	}
 	err := yaml.Unmarshal([]byte(values), &v)
 	if err != nil {

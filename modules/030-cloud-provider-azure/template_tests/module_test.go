@@ -136,7 +136,7 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:cloud-controller-manager")
 			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-azure", "cloud-controller-manager")
 
-			azureCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-azure", "csi-controller")
+			azureCongrollerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-azure", "csi-controller")
 			azureCSIDriver := f.KubernetesGlobalResource("CSIDriver", "disk.csi.azure.com")
 			azureNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-azure", "csi-node")
 			azureControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-azure", "csi")
@@ -218,7 +218,7 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 
 			It("CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-azure", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-azure", "csi-controller").Exists()).To(BeFalse())
 			})
 		})
 	})

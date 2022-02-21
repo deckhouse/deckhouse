@@ -169,7 +169,6 @@ spec:
         host: reviews.prod.svc.cluster.local
         subset: testv1 # ссылка на subset из DestinationRule
       weight: 25
-  - route:
     - destination:
         host: reviews.prod.svc.cluster.local
         subset: testv3
@@ -202,13 +201,13 @@ spec:
 ## Ingress
 
 Для работы с Ingress требуется подготовить:
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](../../modules/402-ingress-nginx/). Данный контроллер сможет обслуживать толко Istio-окружение!
+* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](../../modules/402-ingress-nginx/).
 * Ingress, который ссылается на Service. Обязательные аннотации для Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Сайдкар istio-proxy перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: productpage
@@ -222,9 +221,12 @@ spec:
       http:
         paths:
         - path: /
+          pathType: Prefix
           backend:
-            serviceName: productpage
-            servicePort: 9080
+            service:
+              name: productpage
+              port:
+                number: 9080
 ```
 ```yaml
 apiVersion: v1

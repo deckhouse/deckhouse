@@ -1,10 +1,28 @@
 - name: vector-agent
   rules:
   - alert: D8VectorAgentNotScheduledOnNode
+    # The second part of this query counts how many nodes that allowed to not contain a daemonset pod are in the cluster.
+    # Alert will be fired if there are more nodes without vector pods than allowed.
     expr: |
-      max by (node) (kube_node_info)
-      unless
-      max by (node) (up{job="vector-agent"})
+      (
+        (
+          max by (node) (kube_node_info)
+          unless
+          max by (node) (up{job="vector-agent"})
+        )
+        *
+        scalar(
+          (
+            sum(
+              max by (node) (kube_node_info)
+              unless
+              max by (node) (up{job="vector-agent"})
+            )
+            >
+            sum(kube_node_info) - sum(kube_daemonset_status_desired_number_scheduled{daemonset="vector-agent", namespace="d8-log-shipper"})
+          ) or vector(0)
+        )
+      ) > 0
     for: 15m
     labels:
       severity_level: "7"

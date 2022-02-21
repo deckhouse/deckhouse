@@ -16,15 +16,17 @@ package ssh
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
+var ErrNotEnoughMastersSSHHosts = fmt.Errorf("Master ssh hosts fix canceled.")
+
 func NewClientFromFlags() *Client {
 	settings := session.NewSession(session.Input{
-		PrivateKeys:    app.SSHPrivateKeys,
 		AvailableHosts: app.SSHHosts,
 		User:           app.SSHUser,
 		Port:           app.SSHPort,
@@ -76,4 +78,57 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 	}
 
 	return sshClient, nil
+}
+
+func CheckSSHHosts(userPassedHosts []string, nodesToCheck map[string]string, runConfirm func(string) bool) (bool, error) {
+	nodesForOutput := make([]string, 0)
+	knownHosts := make(map[string]struct{})
+
+	for nodeName, host := range nodesToCheck {
+		s := fmt.Sprintf("%s | %s", nodeName, host)
+		nodesForOutput = append(nodesForOutput, s)
+		knownHosts[host] = struct{}{}
+	}
+
+	msg := ""
+
+	switch {
+	case len(userPassedHosts) < len(nodesToCheck):
+		msg = "Not enough master ssh hosts."
+	case len(userPassedHosts) > len(nodesToCheck):
+		msg = "Too many master ssh hosts. Maybe you want to delete nodes, but pass hosts for delete via ssh-host?"
+	default:
+		var notKnownHosts []string
+		for _, host := range userPassedHosts {
+			if _, ok := knownHosts[host]; !ok {
+				notKnownHosts = append(notKnownHosts, host)
+			}
+		}
+
+		if len(notKnownHosts) > 0 {
+			msg = "Found unknown ssh hosts. Maybe you want to delete nodes, but pass hosts for delete via ssh-host?"
+		}
+	}
+
+	if msg != "" {
+		msg := fmt.Sprintf(`Warning! %s
+If you lose connection to master, converge may not be finished.
+You passed:
+%v
+
+Known master hosts from state:
+%v
+
+Do you want set hosts from terraform state?
+Choose 'N' if you want to fix hosts in the command line argument
+`, msg, userPassedHosts, strings.Join(nodesForOutput, "\n"))
+
+		if runConfirm(msg) {
+			return true, nil
+		}
+
+		return false, ErrNotEnoughMastersSSHHosts
+	}
+
+	return false, nil
 }

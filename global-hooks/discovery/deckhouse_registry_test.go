@@ -48,7 +48,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.example.com/developers/deckhouse/dev:dashboard-spare-domain-fix
+        image: registry.example.com/developers/deckhouse:dashboard-spare-domain-fix
 ---
 apiVersion: v1
 kind: Secret
@@ -71,7 +71,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.example.com/developers/deckhouse/dev:dashboard-spare-domain-fix@sha256:abcdefg
+        image: registry.example.com/developers/deckhouse:dashboard-spare-domain-fix@sha256:abcdefg
 ---
 apiVersion: v1
 kind: Secret
@@ -94,7 +94,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.example.com/developers/deckhouse/dev:dashboard-spare-domain-fix
+        image: registry.example.com/developers/deckhouse:dashboard-spare-domain-fix
 `
 		stateDeployAndSecretWithRegistryParamsSchemeAndCA = `
 ---
@@ -108,7 +108,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.example.com:8080/developers/deckhouse/dev:dashboard-spare-domain-fix
+        image: registry.example.com:8080/developers/deckhouse:dashboard-spare-domain-fix
 ---
 apiVersion: v1
 kind: Secret
@@ -133,7 +133,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.example.com:8080/developers/deckhouse/dev:dashboard-spare-domain-fix
+        image: registry.example.com:8080/developers/deckhouse:dashboard-spare-domain-fix
 ---
 apiVersion: v1
 kind: Secret
@@ -159,7 +159,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.example.com:8080/developers/deckhouse/dev:dashboard-spare-domain-fix
+        image: registry.example.com:8080/developers/deckhouse:dashboard-spare-domain-fix
 ---
 apiVersion: v1
 kind: Secret

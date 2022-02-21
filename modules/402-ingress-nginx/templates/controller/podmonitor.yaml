@@ -11,15 +11,11 @@ spec:
   - port: https-metrics
     scheme: https
     path: /controller/metrics
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
     tlsConfig:
       insecureSkipVerify: true
-      cert:
-        secret:
-          name: prometheus-scraper-tls
-          key: tls.crt
-      keySecret:
-        name: prometheus-scraper-tls
-        key: tls.key
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
@@ -43,15 +39,11 @@ spec:
   - port: https-metrics
     scheme: https
     path: /protobuf/metrics
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
     tlsConfig:
       insecureSkipVerify: true
-      cert:
-        secret:
-          name: prometheus-scraper-tls
-          key: tls.crt
-      keySecret:
-        name: prometheus-scraper-tls
-        key: tls.key
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop

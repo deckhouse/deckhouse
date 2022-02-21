@@ -60,6 +60,9 @@
   {{- if hasKey .Values.controlPlaneManager.apiserver "certSANs" }}
     {{ $_ := set $tpl_context.apiserver "certSANs" .Values.controlPlaneManager.apiserver.certSANs }}
   {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "admissionPlugins" }}
+    {{ $_ := set $tpl_context.apiserver "admissionPlugins" .Values.controlPlaneManager.apiserver.admissionPlugins }}
+  {{- end }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
@@ -90,6 +93,10 @@ extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "w
   {{- if $tpl_context.apiserver.auditPolicy }}
 extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- end }}
+
+extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
+extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
+extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" $tpl_context | b64enc }}
 {{- end }}
 ---
 apiVersion: v1
@@ -157,7 +164,7 @@ spec:
       containers:
       - name: control-plane-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}"
         volumeMounts:
         - mountPath: /var/lib/etcd
           name: etcd
@@ -199,7 +206,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
 {{- range $name, $imageTag := $images }}
       - name: image-holder-{{ $name | kebabcase }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $imageTag }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $imageTag }}"
         command:
         - /pause
 {{- end }}

@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/jwt"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/openstack"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/unit"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/vsphere"
 	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 )
 
@@ -67,14 +66,6 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		supportsOnlineDiskResize := openstackCommand.Command("supports-online-disk-resize", "Check whether block-storage API support online resize.")
 		supportsOnlineDiskResize.Action(func(c *kingpin.ParseContext) error {
 			return openstack.SupportsOnlineDiskResize()
-		})
-	}
-
-	{
-		vsphereCommand := helpersCommand.Command("vsphere", "VSphere helpers.")
-		vsphereGetZonesDatastores := vsphereCommand.Command("get-zones-datastores", "Get zones datastores.")
-		vsphereGetZonesDatastores.Action(func(c *kingpin.ParseContext) error {
-			return vsphere.GetZonesDatastores()
 		})
 	}
 

@@ -6,9 +6,6 @@ Outputs:
   ci_commit_branch - used as CI_COMMIT_BRANCH to publish images for main branch and dev images.
   ci_commit_ref_name - used as image tag to run e2e and deploy-web, and for release-channel-version image.
   github_sha - used as a key for caching images_tags_*.json file.
-  ci_pipeline_created_at - used for release-channel-version image (deprecated).
-
-TODO delete `ci_pipeline_created_at` everywhere in CI since it is useless.
 
 See:
 - https://docs.github.com/en/actions/learn-github-actions/environment-variables
@@ -33,8 +30,6 @@ git_info:
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
-          core.setOutput('ci_pipeline_created_at', new Date().toISOString())
-
           const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
 
           let githubBranch = '';
@@ -42,27 +37,17 @@ git_info:
           let githubSHA = '';
           let refName = '';
           let refSlug = '';
-          if (context.eventName === "workflow_dispatch") {
+          if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
             // workflow_dispatch run for pull request should have input 'pull_request_ref'.
             // Note: value in inputs.pull_request_ref is for pull_request_info job.
-            if (context.payload.inputs.pull_request_ref) {
-              refName       = context.payload.inputs.ci_commit_ref_name
-              githubBranch  = refName
-              githubSHA     = context.payload.inputs.pull_request_sha
-              // Extract pull request number from 'refs/pull/<NUM>/merge'
-              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
-              refSlug       = `pr${prNum}`;
-              core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
-            } else {
-              refName       = GITHUB_REF_NAME
-              githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
-              githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
-              githubSHA     = context.sha
-              // refName is 'main' or tag name, so slug is not necessary.
-              refSlug       = refName
-              core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
-            }
-          } else {
+            refName       = context.payload.inputs.ci_commit_ref_name
+            githubBranch  = refName
+            githubSHA     = context.payload.inputs.pull_request_sha
+            // Extract pull request number from 'refs/pull/<NUM>/merge'
+            const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
+            refSlug       = `pr${prNum}`;
+            core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+          } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
             // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
             const targetRepo = context.payload.repository.full_name;
             const prRepo = context.payload.pull_request.head.repo.full_name
@@ -73,6 +58,15 @@ git_info:
             githubBranch = refName
             githubSHA = context.payload.pull_request.head.sha
             core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+          } else {
+            // Events: workflow_dispatch without pull_request_ref, schedule, push...
+            refName       = GITHUB_REF_NAME
+            githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+            githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+            githubSHA     = context.sha
+            // refName is 'main' or tag name, so slugification is not necessary.
+            refSlug       = refName
+            core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
           }
 
           core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
@@ -102,21 +96,15 @@ pull_request_info:
   runs-on: ubuntu-latest
   outputs:
     ref: ${{ steps.ref.outputs.ref }}
-  # Skip the CI for automation PRs, e.g. changelog
-  if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+  # Skip if PR from deckhouse-BOaTswain, e.g. changelog PRs.
+  if: ${{ ! startsWith(github.event_name, 'pull_request') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
   steps:
     - name: Check if allow to run tests
       id: check
+      if: ${{ startsWith(github.event_name, 'pull_request') }}
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
-          // Assume workflow_dispatch is safe to run.
-          // TODO add owner, repo, sha to inputs to check them here.
-          if (context.eventName === 'workflow_dispatch') {
-            core.info(`workflow_dispatch detected, set should_run to 'true'`);
-            return core.setOutput('should_run', 'true');
-          }
-
           if (!context.payload.pull_request) {
             return core.setFailed(`Unknown event, no pull request context. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
           }
@@ -169,6 +157,7 @@ pull_request_info:
 
     # Checkhout the head commit of the PR branch.
     - name: Checkout PR head commit
+      if: ${{ startsWith(github.event_name, 'pull_request') }}
       uses: {!{ index (ds "actions") "actions/checkout" }!}
       with:
         ref: "refs/pull/${{ github.event.number }}/head"
@@ -176,7 +165,7 @@ pull_request_info:
     # Detect dangerous changes in external PR.
     - name: Check for dangerous changes
       uses: {!{ index (ds "actions") "dorny/paths-filter" }!}
-      if: github.event.pull_request.head.repo.full_name != github.repository
+      if: ${{ startsWith(github.event_name, 'pull_request') && github.event.pull_request.head.repo.full_name != github.repository }}
       id: changes
       with:
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
@@ -205,7 +194,13 @@ pull_request_info:
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
-          const ref = `refs/pull/${ context.issue.number }/head`
+          let ref = context.ref;
+          if (context.eventName.startsWith('pull_request')) {
+            ref = `refs/pull/${ context.issue.number }/head`
+          }
+          if (context.eventName === 'workflow_dispatch' &&  context.payload.inputs && context.payload.inputs.pull_request_ref) {
+            ref = context.payload.inputs.pull_request_ref;
+          }
           core.info(`ref: '${ref}'`)
           core.setOutput('ref', ref)
 # </template: pull_request_info>

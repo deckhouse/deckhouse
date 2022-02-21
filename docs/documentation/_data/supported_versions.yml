@@ -1,17 +1,28 @@
 osDistributions:
-  ubuntu: Ubuntu
-  centos: CentOS
+  ubuntu:
+    name: Ubuntu
+  centos:
+    name: CentOS
+  debian:
+    name: Debian
+  astra:
+    name: Astra Linux
+    versions:
+      '1.7':
+        name: Special Edition
+      '2.12':
+        name: Common Edition
 
 k8s_statuses:
   end-of-life:
     en: Version with limited support, which is unavailable for new installations.
-    ru: Версия с ограниченной поддержкой, не доступная для новых инсталляций.
+    ru: Версия с ограниченной поддержкой, недоступная для новых установок.
   intermediate:
     en: An intermediate version that is only available to perform rolling Kubernetes updates.
     ru: Промежуточная версия, доступная только для плавных обновлений Kubernetes.
   available:
     en: Production-ready fully supported version.
-    ru: Поддерживаемая версия, готовая для использования в продуктивных окружениях.
+    ru: Поддерживаемая версия, готовая для использования в production-окружениях.
   preview:
     en: Early access version, which is not suitable for production environments.
-    ru: Версия с ранним доступом, которая не подходит для использования в продуктивных окружениях.
+    ru: Версия с ранним доступом, которая не подходит для использования в production-окружениях.

@@ -32,7 +32,7 @@ spec:
       labels:
         app: kubeconfig-generator
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/kubeconfig-generator/configmap.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/kubeconfig-generator/config.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
@@ -43,8 +43,11 @@ spec:
       - name: deckhouse-registry
       volumes:
       - name: config
-        configMap:
-          name: kubeconfig-generator
+        secret:
+          secretName: kubeconfig-generator
+          items:
+          - key: config.yaml
+            path: config.yaml
       {{- if .Values.userAuthn.internal.discoveredDexClusterIP }}
       hostAliases:
         - ip: {{ .Values.userAuthn.internal.discoveredDexClusterIP }}
@@ -54,7 +57,7 @@ spec:
       containers:
       - name: kubeconfig-generator
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.userAuthn.kubeconfigGenerator }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.userAuthn.kubeconfigGenerator }}"
         command:
         - "/app/bin/dex-k8s-authenticator"
         - "--config=config.yaml"

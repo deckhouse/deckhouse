@@ -138,7 +138,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - image: {{ $context.Values.global.modulesImages.registry }}:{{ pluck (printf "controller%s" ($crd.spec.controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}
+      - image: "{{ $context.Values.global.modulesImages.registry }}:{{ pluck (printf "controller%s" ($crd.spec.controllerVersion | replace "." "")) $context.Values.global.modulesImages.tags.ingressNginx | first }}"
         name: controller
         env:
         - name: POD_NAME
@@ -288,7 +288,7 @@ spec:
         - mountPath: /etc/nginx/webhook-ssl/
           name: webhook-cert
           readOnly: true
-      - image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.ingressNginx.protobufExporter }}
+      - image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.ingressNginx.protobufExporter }}"
         name: protobuf-exporter
         resources:
           requests:
@@ -296,7 +296,7 @@ spec:
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: kube-rbac-proxy
-        image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10354"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"

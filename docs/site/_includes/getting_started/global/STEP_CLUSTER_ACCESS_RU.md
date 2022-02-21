@@ -9,7 +9,7 @@ Deckhouse только что завершил процесс установки
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-Вы можете запускать kubectl на master-узле от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/ru/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) к Kubernetes API позже.
+Вы можете запускать kubectl на master-узле от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/{{ page.lang }}/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) к Kubernetes API позже.
 {% snippetcut %}
 ```shell
 sudo -i
@@ -18,7 +18,7 @@ kubectl get nodes
 {% endsnippetcut %}
 
 # Доступ к кластеру через NGINX Ingress
-[IngressNginxController](/en/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
+[IngressNginxController](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
 Теперь осталось настроить доступ к веб-интерфейсам компонентов, которые уже установлены в кластере, таким как Grafana, Prometheus, Dashboard и так далее.
 LoadBalancer уже создан и вам остаётся только направить DNS-домен на него.
 В первую очередь необходимо подключиться к master-узлу, как это описано [выше](#доступ-к-кластеру-через-kubernetes-api).
@@ -51,14 +51,14 @@ echo "$BALANCER_IP"
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
     <ul>
       <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
-        DNS-шаблоном</a> (например - <code>%s.kube.my</code>), то добавьте
+        DNS-шаблоном</a> (например, <code>%s.kube.my</code>), то добавьте
         {%- if page.platform_code == 'aws' %} соответствующую wildcard CNAME-запись со значением адреса балансировщика (<code>BALANCER_HOSTNAME</code>)
         {%- else %} соответствующую wildcard A-запись со значением IP-адреса балансировщика (<code>BALANCER_IP</code>){%-
         endif -%}, который вы получили выше.
       </li>
       <li>
         Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
-              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например - <code>%s-kube.company.my</code>),
+              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>),
         то добавьте А или CNAME-записи со значением IP-адреса балансировщика (<code>BALANCER_IP</code>), который вы
         получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">

@@ -82,7 +82,7 @@ clusterConfiguration:
 const nodeManagerConfigValues = `
 allowedBundles:
   - "ubuntu-lts"
-  - "centos-7"
+  - "centos"
   - "debian"
 allowedKubernetesVersions:
   - "1.19"

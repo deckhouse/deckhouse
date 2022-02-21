@@ -8,7 +8,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
 2. There are applications which must be deployed — cloud-controller-manager, csi.
-3. There is list of datastores in values.yaml. StorageClass must be created for every datastore. Datastore mentioned in value `.storageClass.default` must be annotated as default.
+3. StorageClass must be created for every internal.storageClasses. One mentioned in value `.storageClass.default` must be annotated as default.
 
 */
 
@@ -81,23 +81,28 @@ const moduleValuesA = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      server: myhost
-      username: myuname
-      password: myPaSsWd
-      insecure: true
-      regionTagCategory: myregtagcat
-      zoneTagCategory: myzonetagcat
-      region: myreg
-      sshKey: mysshkey1
-      vmFolderPath: dev/test
-      datacenter: X1
-      zones: ["aaa", "bbb"]
-      masterInstanceClass:
-        datastore: dev/lun_1
-        mainNetwork: k8s-msk/test_187
-        memory: 8192
-        numCPUs: 4
-        template: dev/golden_image
+      vsphereDiscoveryData:
+        datacenter: X1
+        zones: ["aaa", "bbb"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        masterNodeGroup:
+          instanceClass:
+            datastore: dev/lun_1
+            mainNetwork: k8s-msk/test_187
+            memory: 8192
+            numCPUs: 4
+            template: dev/golden_image
+          replicas: 1
 `
 
 const moduleValuesB = `
@@ -114,21 +119,114 @@ const moduleValuesB = `
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
       compatibilityFlag: ""
-      server: myhost
-      username: myuname
-      password: myPaSsWd
-      insecure: true
-      regionTagCategory: myregtagcat
-      zoneTagCategory: myzonetagcat
-      region: myreg
-      sshKey: mysshkey1
-      vmFolderPath: dev/test
-      datacenter: X1
-      zones: ["aaa", "bbb"]
-      masterInstanceClass: null
-      defaultResourcePoolPath: kubernetes-dev
-      externalNetworkNames: ["aaa", "bbb"]
-      internalNetworkNames: ["ccc", "ddd"]
+      vsphereDiscoveryData:
+        zones: ["aaa", "bbb"]
+        datacenter: X1
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        externalNetworkNames: ["aaa", "bbb"]
+        internalNetworkNames: ["ccc", "ddd"]
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
+`
+
+const moduleValuesC = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      vsphereDiscoveryData:
+        zones: ["aaa", "bbb"]
+        datacenter: X1
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        externalNetworkNames: ["aaa", "bbb"]
+        internalNetworkNames: ["ccc", "ddd"]
+        nsxt:
+          defaultIpPoolName: main
+          defaultTcpAppProfileName: default-tcp-lb-app-profile
+          defaultUdpAppProfileName: default-udp-lb-app-profile
+          size: SMALL
+          tier1GatewayPath: /host/tier1
+          user: user
+          password: password
+          host: 1.2.3.4
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
+`
+
+const moduleValuesD = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      vsphereDiscoveryData:
+        zones: ["aaa", "bbb"]
+        datacenter: X1
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        externalNetworkNames: ["aaa", "bbb"]
+        internalNetworkNames: ["ccc", "ddd"]
+        nsxt:
+          defaultIpPoolName: main
+          size: SMALL
+          defaultTcpAppProfileName: default-tcp-lb-app-profile
+          defaultUdpAppProfileName: default-udp-lb-app-profile
+          tier1GatewayPath: /host/tier1
+          user: user
+          password: password
+          host: 1.2.3.4
+          loadBalancerClass:
+          - name: class1
+            ipPoolName: pool2
+            tcpAppProfileName: profile1
+      providerDiscoveryData:
+        resourcePoolPath: kubernetes-dev
 `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
@@ -149,7 +247,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-			csiCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-vsphere", "csi-controller")
+			csiCongrollerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "csi-controller")
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.vsphere.vmware.com")
 			csiNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vsphere", "csi-node")
 			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "csi")
@@ -306,7 +404,7 @@ labels:
 			It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "cloud-controller-manager").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-vsphere", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "csi-controller").Exists()).To(BeFalse())
 
 			})
 		})
@@ -333,6 +431,115 @@ labels:
 			Expect(scMydsname2.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
+`))
+		})
+	})
+
+	Context("Vsphere with NSX-T specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			Expect(ccmSecret.Exists()).To(BeTrue())
+
+			cloudConfig, _ := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(cloudConfig).To(MatchYAML(`
+global:
+  user: "myuname"
+  password: "myPaSsWd"
+  insecureFlag: true
+
+vcenter:
+  main:
+    server: "myhost"
+    datacenters:
+      - "X1"
+    externalNetworkNames:
+      - aaa
+      - bbb
+    internalNetworkNames:
+      - ccc
+      - ddd
+    vmFolderPath: dev/test
+
+labels:
+  region: "myregtagcat"
+  zone: "myzonetagcat"
+
+loadBalancer:
+  ipPoolName: main
+  size: SMALL
+  snatDisabled: true
+  tcpAppProfileName: default-tcp-lb-app-profile
+  tier1GatewayPath: /host/tier1
+  udpAppProfileName: default-udp-lb-app-profile
+nsxt:
+  host: 1.2.3.4
+  password: password
+  user: user
+`))
+		})
+	})
+
+	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			Expect(ccmSecret.Exists()).To(BeTrue())
+
+			cloudConfig, _ := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(cloudConfig).To(MatchYAML(`
+global:
+  insecureFlag: true
+  password: myPaSsWd
+  user: myuname
+labels:
+  region: myregtagcat
+  zone: myzonetagcat
+
+loadBalancer:
+  ipPoolName: main
+  size: SMALL
+  snatDisabled: true
+  tcpAppProfileName: default-tcp-lb-app-profile
+  tier1GatewayPath: /host/tier1
+  udpAppProfileName: default-udp-lb-app-profile
+
+loadBalancerClass:
+  class1:
+    ipPoolName: pool2
+    tcpAppProfileName: profile1
+
+nsxt:
+  host: 1.2.3.4
+  password: password
+  user: user
+
+vcenter:
+  main:
+    datacenters:
+    - X1
+    externalNetworkNames:
+    - aaa
+    - bbb
+    internalNetworkNames:
+    - ccc
+    - ddd
+    server: myhost
+    vmFolderPath: dev/test
 `))
 		})
 	})

@@ -30,6 +30,9 @@ var (
 
 	ForceAbortFromCache             = false
 	DontUsePublicControlPlaneImages = false
+
+	KubeadmBootstrap   = false
+	MasterNodeSelector = false
 )
 
 func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
@@ -51,7 +54,9 @@ func DefineDeckhouseFlags(cmd *kingpin.CmdClause) {
 }
 
 func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
-	cmd.Flag("resources", "Path to a file with declared Kubernetes resources in YAML format.").
+	cmd.Flag("resources", `Path to a file with declared Kubernetes resources in YAML format. It can be go-template file. Passed data contains next keys:
+  cloudDiscovery - the data discovered by applying Terrfarorm and getting its output. It depends on the cloud provider.
+`).
 		Envar(configEnvName("RESOURCES")).
 		StringVar(&ResourcesPath)
 	cmd.Flag("resources-timeout", "Timeout to create resources. Experimental. This feature may be deleted in the future.").
@@ -78,4 +83,15 @@ func DefineDontUsePublicImagesFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("DONT_USE_PUBLIC_CONTROL_PLANE_IMAGES")).
 		Default("false").
 		BoolVar(&DontUsePublicControlPlaneImages)
+}
+
+func DefineDeckhouseInstallFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("kubeadm-bootstrap", "Use default Kubernetes API server host and port for Kubeadm installations to install Deckhouse.").
+		Envar(configEnvName("KUBEADM_BOOTSTRAP")).
+		Default("false").
+		BoolVar(&KubeadmBootstrap)
+	cmd.Flag("master-node-selector", "Schedule Deckhouse on master nodes.").
+		Envar(configEnvName("MASTER_NODE_SELECTOR")).
+		Default("false").
+		BoolVar(&MasterNodeSelector)
 }

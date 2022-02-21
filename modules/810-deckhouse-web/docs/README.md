@@ -2,6 +2,10 @@
 title: "The deckhouse-web module"
 ---
 
-The module creates a documentation web UI for the DH version currently used in the cluster.
+The module creates a documentation web UI for the Deckhouse version currently used in a cluster.
 
-By default, the documentation web UI is available at ' deckhouse.' (according to the value of the [publicDomainTemplate](../../deckhouse-configure-global.html#parameters) global parameter).
+This can be useful, for example, when Deckhouse works in a network with limited Internet access.
+
+The documentation web UI address is formed as follows: the key `%s` of the [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) global Deckhouse configuration parameter is replaced by `deckhouse`.
+
+For example, if `publicDomainTemplate` is set as `%s-kube.company.my`, then the documentation web interface will be available at `deckhouse-kube.company.my`.

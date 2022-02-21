@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"time"
 
+	"user-authz-webhook/cache"
 	"user-authz-webhook/web/hook"
 )
 
@@ -55,15 +56,14 @@ func buildTLSConfig() (*tls.Config, error) {
 }
 
 type Server struct {
+	cache   cache.Cache
 	handler *hook.Handler
 	logger  *log.Logger
 }
 
-func NewServer(logger *log.Logger) *Server {
-	return &Server{
-		logger:  logger,
-		handler: hook.NewHandler(logger),
-	}
+func NewServer(l *log.Logger) *Server {
+	c := cache.NewNamespacedDiscoveryCache(l)
+	return &Server{logger: l, cache: c, handler: hook.NewHandler(l, c)}
 }
 
 func (s *Server) prepareHTTPServer() (*http.Server, error) {
@@ -71,8 +71,15 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 
 	router.Handle("/", s.handler)
 	router.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Ok."))
+		err := s.cache.Check()
+		if err == nil {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Ok."))
+			return
+		}
+
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	})
 
 	tlsCfg, err := buildTLSConfig()

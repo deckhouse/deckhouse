@@ -77,6 +77,7 @@ module Jekyll
     def format_attribute(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil)
         result = Array.new()
         exampleObject = nil
+        lang = @context.registers[:page]["lang"]
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
         if parent.has_key?('required') && parent['required'].include?(name)
@@ -123,7 +124,7 @@ module Jekyll
         if attributes.has_key?('x-doc-versionType')
           case attributes['x-doc-versionType']
           when "ee"
-            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['ee']['ru'].capitalize + '**'))
+            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['ee'][lang].capitalize + '**'))
           when "experimental"
             result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['experimental'][lang].capitalize + '**'))
           end
@@ -212,7 +213,11 @@ module Jekyll
                         elsif exampleObject.is_a?(Hash)
                             exampleContent = %Q(```yaml\n#{{name => exampleObject}.to_yaml.delete_prefix("---\n")}```)
                         elsif exampleObjectIsArrayOfExamples and (exampleObject.length == 1)
-                            exampleContent = %Q(```yaml\n#{{name => exampleObject[0]}.to_yaml.delete_prefix("---\n")}```)
+                            if exampleObject[0].class.to_s == "String" and exampleObject[0] =~ /\`\`\`|\n/
+                                exampleContent = "#{exampleObject[0]}"
+                            else
+                                exampleContent = %Q(```yaml\n#{{name => exampleObject[0]}.to_yaml.delete_prefix("---\n")}```)
+                            end
                         elsif exampleObjectIsArrayOfExamples and (exampleObject.length > 1)
                             exampleObject.each do | value |
                                 if value == nil then continue end

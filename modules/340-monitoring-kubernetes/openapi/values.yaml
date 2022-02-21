@@ -19,9 +19,9 @@ properties:
             type: string
             default: "115"
             description: Internal CPU value for VPA. Calculated from number of nodes
-            x-examples: ["115", "130", "160"]
+            x-examples: ["115", "160"]
           kubeStateMetricsMaxMemory:
             type: string
             default: "180Mi"
             description: Internal Memory value for VPA. Calculated from number of nodes
-            x-examples: ["210Mi", "270Mi", "300Mi"]
+            x-examples: ["210Mi", "300Mi"]

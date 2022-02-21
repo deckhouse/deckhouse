@@ -2,6 +2,7 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
+# <template: e2e_workflow_template>
 name: 'e2e: Azure'
 on:
   workflow_dispatch:
@@ -25,8 +26,10 @@ on:
         description: 'Git SHA for restoring artifacts from cache'
         required: false
       cri:
+        description: 'A comma-separated list of cri to test. Available: Docker and Containerd.'
         required: false
       ver:
+        description: 'A comma-separated list of versions to test. Available: from 1.19 to 1.22.'
         required: false
 env:
 
@@ -64,6 +67,7 @@ env:
   BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555"
   BASE_NODE_16_ALPINE: "registry.deckhouse.io/base_images/node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
   BASE_PYTHON_ALPINE: "registry.deckhouse.io/base_images/python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
+  BASE_SCRATCH: "registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
   BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/flant/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
   BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
 
@@ -88,12 +92,8 @@ env:
   TF_YANDEX_TYPE: yandex
   TF_YANDEX_VERSION: 0.45.1
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
-concurrency:
-  group: ${{ github.ref }}-${{ github.event.inputs.pull_request_ref }}-e2e-azure
-  cancel-in-progress: true
+# Note: no concurrency section for e2e workflows.
+# Usually you run e2e and wait until it ends.
 
 jobs:
 
@@ -117,8 +117,6 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            core.setOutput('ci_pipeline_created_at', new Date().toISOString())
-
             const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
 
             let githubBranch = '';
@@ -126,27 +124,17 @@ jobs:
             let githubSHA = '';
             let refName = '';
             let refSlug = '';
-            if (context.eventName === "workflow_dispatch") {
+            if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
               // workflow_dispatch run for pull request should have input 'pull_request_ref'.
               // Note: value in inputs.pull_request_ref is for pull_request_info job.
-              if (context.payload.inputs.pull_request_ref) {
-                refName       = context.payload.inputs.ci_commit_ref_name
-                githubBranch  = refName
-                githubSHA     = context.payload.inputs.pull_request_sha
-                // Extract pull request number from 'refs/pull/<NUM>/merge'
-                const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
-                refSlug       = `pr${prNum}`;
-                core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
-              } else {
-                refName       = GITHUB_REF_NAME
-                githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
-                githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
-                githubSHA     = context.sha
-                // refName is 'main' or tag name, so slug is not necessary.
-                refSlug       = refName
-                core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
-              }
-            } else {
+              refName       = context.payload.inputs.ci_commit_ref_name
+              githubBranch  = refName
+              githubSHA     = context.payload.inputs.pull_request_sha
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
+              refSlug       = `pr${prNum}`;
+              core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+            } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
               const targetRepo = context.payload.repository.full_name;
               const prRepo = context.payload.pull_request.head.repo.full_name
@@ -157,6 +145,15 @@ jobs:
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+            } else {
+              // Events: workflow_dispatch without pull_request_ref, schedule, push...
+              refName       = GITHUB_REF_NAME
+              githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+              githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+              githubSHA     = context.sha
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = refName
+              core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
             }
 
             core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
@@ -200,15 +197,13 @@ jobs:
         with:
           script: |
             const provider = 'azure';
-            const defaults = {"criName":"Containerd","kubernetesVersion":"1.21"};
-            const criNames = ["Docker","Containerd"];
-            const kubernetesVersions = ["1.19","1.20","1.21","1.22"];
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.checkE2ELabels({github, context, core, provider, defaults, criNames, kubernetesVersions});
+            return await ci.checkE2ELabels({github, context, core, provider});
   # </template: check_e2e_labels_job>
 
 
+  # <template: e2e_run_job_template>
   run_docker_1_19:
     name: "Docker, k8s 1.19"
     needs:
@@ -223,45 +218,6 @@ jobs:
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Setup
-        id: setup
-        run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
-          # Calculate unique prefix for e2e test.
-          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
-
-          # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
-          fi
-          echo "::set-output name=tmppath::${tmppath}"
-
-          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-          fi
-          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-          fi
-          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
-
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -284,20 +240,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
-
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -335,6 +277,78 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+          ## Deckhouse 'install' image name
+          ## Source: ci_templates/build.yml
+
+          IMAGE_NAME=
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            # Use it as image tag.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+
+            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+            else
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+            fi
+          fi
+
+          if [[ -n $CI_COMMIT_TAG ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            else
+              echo "DECKHOUSE_REGISTRY_HOST is empty."
+              exit 1
+            fi
+          fi
+
+          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+
+          echo "Pull dev/install image."
+          docker pull "${IMAGE_NAME}"
+
       - name: "Run e2e test: Azure/Docker/1.19"
         env:
           PROVIDER: Azure
@@ -350,21 +364,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh run-test' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -376,10 +383,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -400,16 +404,14 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Azure
@@ -425,21 +427,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh cleanup' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -451,10 +446,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -475,20 +467,18 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_azure_docker_1_19
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -563,8 +553,9 @@ jobs:
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
+  # </template: e2e_run_job_template>
 
-
+  # <template: e2e_run_job_template>
   run_docker_1_20:
     name: "Docker, k8s 1.20"
     needs:
@@ -579,45 +570,6 @@ jobs:
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Setup
-        id: setup
-        run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
-          # Calculate unique prefix for e2e test.
-          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
-
-          # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
-          fi
-          echo "::set-output name=tmppath::${tmppath}"
-
-          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-          fi
-          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-          fi
-          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
-
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -640,20 +592,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
-
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -691,6 +629,78 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+          ## Deckhouse 'install' image name
+          ## Source: ci_templates/build.yml
+
+          IMAGE_NAME=
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            # Use it as image tag.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+
+            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+            else
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+            fi
+          fi
+
+          if [[ -n $CI_COMMIT_TAG ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            else
+              echo "DECKHOUSE_REGISTRY_HOST is empty."
+              exit 1
+            fi
+          fi
+
+          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+
+          echo "Pull dev/install image."
+          docker pull "${IMAGE_NAME}"
+
       - name: "Run e2e test: Azure/Docker/1.20"
         env:
           PROVIDER: Azure
@@ -706,21 +716,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh run-test' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -732,10 +735,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -756,16 +756,14 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Azure
@@ -781,21 +779,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh cleanup' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -807,10 +798,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -831,20 +819,18 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_azure_docker_1_20
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -919,8 +905,9 @@ jobs:
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
+  # </template: e2e_run_job_template>
 
-
+  # <template: e2e_run_job_template>
   run_docker_1_21:
     name: "Docker, k8s 1.21"
     needs:
@@ -935,45 +922,6 @@ jobs:
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Setup
-        id: setup
-        run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
-          # Calculate unique prefix for e2e test.
-          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
-
-          # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
-          fi
-          echo "::set-output name=tmppath::${tmppath}"
-
-          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-          fi
-          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-          fi
-          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
-
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -995,20 +943,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
 
       # <template: login_dev_registry_step>
       - name: Login to dev registry
@@ -1047,6 +981,78 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+          ## Deckhouse 'install' image name
+          ## Source: ci_templates/build.yml
+
+          IMAGE_NAME=
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            # Use it as image tag.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+
+            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+            else
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+            fi
+          fi
+
+          if [[ -n $CI_COMMIT_TAG ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            else
+              echo "DECKHOUSE_REGISTRY_HOST is empty."
+              exit 1
+            fi
+          fi
+
+          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+
+          echo "Pull dev/install image."
+          docker pull "${IMAGE_NAME}"
+
       - name: "Run e2e test: Azure/Docker/1.21"
         env:
           PROVIDER: Azure
@@ -1062,21 +1068,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh run-test' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -1088,10 +1087,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1112,16 +1108,14 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Azure
@@ -1137,21 +1131,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh cleanup' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -1163,10 +1150,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1187,20 +1171,18 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_azure_docker_1_21
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -1275,8 +1257,9 @@ jobs:
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
+  # </template: e2e_run_job_template>
 
-
+  # <template: e2e_run_job_template>
   run_docker_1_22:
     name: "Docker, k8s 1.22"
     needs:
@@ -1291,45 +1274,6 @@ jobs:
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Setup
-        id: setup
-        run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
-          # Calculate unique prefix for e2e test.
-          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
-
-          # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
-          fi
-          echo "::set-output name=tmppath::${tmppath}"
-
-          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-          fi
-          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-          fi
-          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
-
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -1351,20 +1295,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
 
       # <template: login_dev_registry_step>
       - name: Login to dev registry
@@ -1403,6 +1333,78 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+          ## Deckhouse 'install' image name
+          ## Source: ci_templates/build.yml
+
+          IMAGE_NAME=
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            # Use it as image tag.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+
+            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+            else
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+            fi
+          fi
+
+          if [[ -n $CI_COMMIT_TAG ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            else
+              echo "DECKHOUSE_REGISTRY_HOST is empty."
+              exit 1
+            fi
+          fi
+
+          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+
+          echo "Pull dev/install image."
+          docker pull "${IMAGE_NAME}"
+
       - name: "Run e2e test: Azure/Docker/1.22"
         env:
           PROVIDER: Azure
@@ -1418,21 +1420,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh run-test' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -1444,10 +1439,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1468,16 +1460,14 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Azure
@@ -1493,21 +1483,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh cleanup' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -1519,10 +1502,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1543,20 +1523,18 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_azure_docker_1_22
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -1631,8 +1609,9 @@ jobs:
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
+  # </template: e2e_run_job_template>
 
-
+  # <template: e2e_run_job_template>
   run_containerd_1_19:
     name: "Containerd, k8s 1.19"
     needs:
@@ -1647,45 +1626,6 @@ jobs:
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Setup
-        id: setup
-        run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
-          # Calculate unique prefix for e2e test.
-          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
-
-          # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
-          fi
-          echo "::set-output name=tmppath::${tmppath}"
-
-          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-          fi
-          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-          fi
-          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
-
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -1707,20 +1647,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
 
       # <template: login_dev_registry_step>
       - name: Login to dev registry
@@ -1759,6 +1685,78 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+          ## Deckhouse 'install' image name
+          ## Source: ci_templates/build.yml
+
+          IMAGE_NAME=
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            # Use it as image tag.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+
+            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+            else
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+            fi
+          fi
+
+          if [[ -n $CI_COMMIT_TAG ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            else
+              echo "DECKHOUSE_REGISTRY_HOST is empty."
+              exit 1
+            fi
+          fi
+
+          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+
+          echo "Pull dev/install image."
+          docker pull "${IMAGE_NAME}"
+
       - name: "Run e2e test: Azure/Containerd/1.19"
         env:
           PROVIDER: Azure
@@ -1774,21 +1772,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh run-test' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -1800,10 +1791,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1824,16 +1812,14 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Azure
@@ -1849,21 +1835,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh cleanup' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -1875,10 +1854,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1899,20 +1875,18 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_azure_containerd_1_19
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -1987,8 +1961,9 @@ jobs:
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
+  # </template: e2e_run_job_template>
 
-
+  # <template: e2e_run_job_template>
   run_containerd_1_20:
     name: "Containerd, k8s 1.20"
     needs:
@@ -2003,45 +1978,6 @@ jobs:
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Setup
-        id: setup
-        run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
-          # Calculate unique prefix for e2e test.
-          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
-
-          # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
-          fi
-          echo "::set-output name=tmppath::${tmppath}"
-
-          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-          fi
-          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-          fi
-          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
-
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -2063,20 +1999,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
 
       # <template: login_dev_registry_step>
       - name: Login to dev registry
@@ -2115,6 +2037,78 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+          ## Deckhouse 'install' image name
+          ## Source: ci_templates/build.yml
+
+          IMAGE_NAME=
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            # Use it as image tag.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+
+            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+            else
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+            fi
+          fi
+
+          if [[ -n $CI_COMMIT_TAG ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            else
+              echo "DECKHOUSE_REGISTRY_HOST is empty."
+              exit 1
+            fi
+          fi
+
+          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+
+          echo "Pull dev/install image."
+          docker pull "${IMAGE_NAME}"
+
       - name: "Run e2e test: Azure/Containerd/1.20"
         env:
           PROVIDER: Azure
@@ -2130,21 +2124,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh run-test' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -2156,10 +2143,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2180,16 +2164,14 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Azure
@@ -2205,21 +2187,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh cleanup' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -2231,10 +2206,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2255,20 +2227,18 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_azure_containerd_1_20
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -2343,8 +2313,9 @@ jobs:
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
+  # </template: e2e_run_job_template>
 
-
+  # <template: e2e_run_job_template>
   run_containerd_1_21:
     name: "Containerd, k8s 1.21"
     needs:
@@ -2359,45 +2330,6 @@ jobs:
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Setup
-        id: setup
-        run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
-          # Calculate unique prefix for e2e test.
-          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
-
-          # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
-          fi
-          echo "::set-output name=tmppath::${tmppath}"
-
-          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-          fi
-          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-          fi
-          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
-
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -2419,20 +2351,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
 
       # <template: login_dev_registry_step>
       - name: Login to dev registry
@@ -2471,6 +2389,78 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+          ## Deckhouse 'install' image name
+          ## Source: ci_templates/build.yml
+
+          IMAGE_NAME=
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            # Use it as image tag.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+
+            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+            else
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+            fi
+          fi
+
+          if [[ -n $CI_COMMIT_TAG ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            else
+              echo "DECKHOUSE_REGISTRY_HOST is empty."
+              exit 1
+            fi
+          fi
+
+          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+
+          echo "Pull dev/install image."
+          docker pull "${IMAGE_NAME}"
+
       - name: "Run e2e test: Azure/Containerd/1.21"
         env:
           PROVIDER: Azure
@@ -2486,21 +2476,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh run-test' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -2512,10 +2495,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2536,16 +2516,14 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Azure
@@ -2561,21 +2539,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh cleanup' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -2587,10 +2558,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2611,20 +2579,18 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_azure_containerd_1_21
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -2699,8 +2665,9 @@ jobs:
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
+  # </template: e2e_run_job_template>
 
-
+  # <template: e2e_run_job_template>
   run_containerd_1_22:
     name: "Containerd, k8s 1.22"
     needs:
@@ -2715,45 +2682,6 @@ jobs:
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Setup
-        id: setup
-        run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
-          # Calculate unique prefix for e2e test.
-          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
-
-          # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
-          fi
-          echo "::set-output name=tmppath::${tmppath}"
-
-          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-          fi
-          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-          fi
-          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
-
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
@@ -2775,20 +2703,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
 
       # <template: login_dev_registry_step>
       - name: Login to dev registry
@@ -2827,6 +2741,78 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        run: |
+          # Random delay to sparse 'update comment' steps in time.
+          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+          echo Delay for $delay
+          sleep $delay
+
+          # Calculate unique prefix for e2e test.
+          prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+          echo "::set-output name=prefix::${prefix}"
+          echo "prefix=${prefix}"
+
+          # Create tmppath for test script.
+          tmppath=/mnt/cloud-layouts/layouts/${prefix}
+          if [[ -d "${tmppath}" ]] ; then
+            echo "Temporary dir already exists: ${tmppath}. ERROR!"
+            ls -la ${tmppath}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${tmppath}."
+            mkdir -p "${tmppath}"
+          fi
+          echo "::set-output name=tmppath::${tmppath}"
+
+          CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
+          CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
+
+          if [[ -n "${CI_COMMIT_TAG}" ]] ; then
+            CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
+          fi
+          if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
+            CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
+            echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
+          fi
+          echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
+
+          ## Deckhouse 'install' image name
+          ## Source: ci_templates/build.yml
+
+          IMAGE_NAME=
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            # Use it as image tag.
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+
+            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+              IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+            else
+              IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+            fi
+          fi
+
+          if [[ -n $CI_COMMIT_TAG ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            else
+              echo "DECKHOUSE_REGISTRY_HOST is empty."
+              exit 1
+            fi
+          fi
+
+          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+
+          echo "Pull dev/install image."
+          docker pull "${IMAGE_NAME}"
+
       - name: "Run e2e test: Azure/Containerd/1.22"
         env:
           PROVIDER: Azure
@@ -2842,21 +2828,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh run-test' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -2868,10 +2847,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2892,16 +2868,14 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Cleanup bootstrapped cluster
-        if: ${{ always() }}
+        if: always()
         env:
           JOB_STATUS: ${{ job.status }}
           PROVIDER: Azure
@@ -2917,21 +2891,14 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
           TMPPATH: ${{ steps.setup.outputs.tmppath}}
           PREFIX: ${{ steps.setup.outputs.prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
         # <template: e2e_run_template>
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
           LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
         run: |
-          echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-
-          werfRunProg=$(cat <<'END_WERF_RUN'
-
-          # WERF_REPO should be set by caller.
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          echo "Execute 'script.sh cleanup' via 'werf run' ...
-          Use environment:
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             PREFIX=${PREFIX}
             TMPPATH=${TMPPATH}
             DEV_BRANCH=${CI_COMMIT_REF_SLUG}
@@ -2943,10 +2910,7 @@ jobs:
             JOB_STATUS=${JOB_STATUS}
           "
 
-          git status
-
-          werf run dev/install --dev \
-          --docker-options=" \
+          docker run --rm \
             -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
             -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2967,20 +2931,18 @@ jobs:
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/shadow:/etc/shadow:ro \
-            -w /deckhouse" -- \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
-          END_WERF_RUN
-          )
-          # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
-          bash <<<"$werfRunProg"
+
         # </template: e2e_run_template>
 
       - name: Save test results
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test_output
+          name: test_output_azure_containerd_1_22
           path: |
-            modules/images_tags_${{env.WERF_ENV}}.json
             testing/cloud_layouts/
 
       - name: Cleanup temp directory
@@ -3055,4 +3017,6 @@ jobs:
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
+  # </template: e2e_run_job_template>
 
+# </template: e2e_workflow_template>

@@ -351,7 +351,7 @@ local function fill_buffer()
     for status in gmatch(ngx.var.upstream_status, "[%d]+") do
       -- responses (for each backend)
       n = n + 1
-      _increment("c19#" .. backend_key .. "#" .. backends[n] .. "#" .. sub(status, 1, 1), 19)
+      _increment("c19#" .. backend_key .. "#" .. backends[n] .. "#" .. sub(status, 1, 1) .. "xx", 19)
     end
 
     n = 0

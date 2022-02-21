@@ -76,15 +76,26 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 	}
 
 	if ok && len(currentConfig) > 0 {
-		var err error
-
 		// FilterResult is a YAML encoded as a JSON string. Unmarshal it.
 		configYamlBytes := currentConfig[0].(*ClusterConfigurationYaml)
 
 		var metaConfig *config.MetaConfig
-		metaConfig, err = config.ParseConfigFromData(string(configYamlBytes.Content))
+		metaConfig, err := config.ParseConfigFromData(string(configYamlBytes.Content))
 		if err != nil {
 			return err
+		}
+
+		kubernetesVersionFromMetaConfig, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
+		if err != nil {
+			return err
+		}
+
+		if kubernetesVersionFromMetaConfig == "Automatic" {
+			b, err := json.Marshal(config.DefaultKubernetesVersion)
+			if err != nil {
+				return err
+			}
+			metaConfig.ClusterConfig["kubernetesVersion"] = b
 		}
 
 		input.Values.Set("global.clusterConfiguration", metaConfig.ClusterConfig)
@@ -150,4 +161,14 @@ func maxNodesAmountMetric(input *go_hook.HookInput, podSubnetCIDR json.RawMessag
 
 	input.MetricsCollector.Set("d8_max_nodes_amount_by_pod_cidr", float64(maxNodesAmount), nil)
 	return nil
+}
+
+func rawMessageToString(message json.RawMessage) (string, error) {
+	var result string
+	b, err := message.MarshalJSON()
+	if err != nil {
+		return result, err
+	}
+	err = json.Unmarshal(b, &result)
+	return result, err
 }

@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -43,7 +43,7 @@ spec:
       containers:
       - name: metadata-exporter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataExporter }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataExporter }}"
         imagePullPolicy: IfNotPresent
         env:
         - name: CLUSTER_UUID
@@ -92,7 +92,7 @@ spec:
           mountPath: /metadata/
       - name: metadata-discovery
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataDiscovery }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataDiscovery }}"
         imagePullPolicy: IfNotPresent
         env:
         - name: DEBUG_UNIX_SOCKET

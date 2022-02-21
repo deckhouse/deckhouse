@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if bb-is-debian-version? 9 || bb-is-astra-version? 2.12.+ ; then
+if bb-is-debian-version? 9 ; then
   bb-rp-install "nginx:{{ .images.registrypackages.nginxDebian1180Stretch }}"
 fi
 if bb-is-debian-version? 10 ; then

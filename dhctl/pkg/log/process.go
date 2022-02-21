@@ -21,22 +21,56 @@ import (
 	"github.com/flant/logboek"
 )
 
-type prettyProcessLogger struct{}
+type processStack struct {
+	activeProcesses []*logProcessDescriptor
+}
+
+func (s *processStack) push(p *logProcessDescriptor) {
+	s.activeProcesses = append(s.activeProcesses, p)
+}
+
+func (s *processStack) pop() *logProcessDescriptor {
+	procIndx := len(s.activeProcesses) - 1
+	if procIndx < 0 {
+		return nil
+	}
+
+	logProcess := s.activeProcesses[procIndx]
+	s.activeProcesses = s.activeProcesses[:procIndx]
+
+	return logProcess
+}
+
+type prettyProcessLogger struct {
+	processes *processStack
+}
 
 func newPrettyProcessLogger() *prettyProcessLogger {
-	return &prettyProcessLogger{}
+	return &prettyProcessLogger{
+		processes: &processStack{},
+	}
 }
 
 func (l *prettyProcessLogger) LogProcessStart(msg string) {
+	// we do not need to store message and date, because logboek store it itself
+	// we use stack for prevent panic from logboek
+	l.processes.push(&logProcessDescriptor{})
+
 	logboek.LogProcessStart(msg, BoldStartOptions())
 }
 
 func (l *prettyProcessLogger) LogProcessFail() {
-	logboek.LogProcessFail(BoldFailOptions())
+	p := l.processes.pop()
+	if p != nil {
+		logboek.LogProcessFail(BoldFailOptions())
+	}
 }
 
 func (l *prettyProcessLogger) LogProcessEnd() {
-	logboek.LogProcessEnd(BoldEndOptions())
+	p := l.processes.pop()
+	if p != nil {
+		logboek.LogProcessEnd(BoldEndOptions())
+	}
 }
 
 type logProcessDescriptor struct {
@@ -49,12 +83,15 @@ func (d *logProcessDescriptor) formatTime() string {
 }
 
 type wrappedProcessLogger struct {
-	logger          Logger
-	activeProcesses []*logProcessDescriptor
+	logger    Logger
+	processes *processStack
 }
 
 func newWrappedProcessLogger(logger Logger) *wrappedProcessLogger {
-	return &wrappedProcessLogger{logger: logger}
+	return &wrappedProcessLogger{
+		logger:    logger,
+		processes: &processStack{},
+	}
 }
 
 func (l *wrappedProcessLogger) LogProcessStart(msg string) {
@@ -63,12 +100,13 @@ func (l *wrappedProcessLogger) LogProcessStart(msg string) {
 		Msg:       msg,
 	}
 
-	l.activeProcesses = append(l.activeProcesses, p)
+	l.processes.push(p)
+
 	l.logger.LogInfoLn(msg)
 }
 
 func (l *wrappedProcessLogger) LogProcessEnd() {
-	p := l.popProcess()
+	p := l.processes.pop()
 
 	msg := "SUCCESS"
 	if p != nil {
@@ -79,7 +117,7 @@ func (l *wrappedProcessLogger) LogProcessEnd() {
 }
 
 func (l *wrappedProcessLogger) LogProcessFail() {
-	p := l.popProcess()
+	p := l.processes.pop()
 
 	msg := "FAILED"
 	if p != nil {
@@ -87,16 +125,4 @@ func (l *wrappedProcessLogger) LogProcessFail() {
 	}
 
 	l.logger.LogErrorLn(msg)
-}
-
-func (l *wrappedProcessLogger) popProcess() *logProcessDescriptor {
-	procIndx := len(l.activeProcesses) - 1
-	if procIndx < 0 {
-		return nil
-	}
-
-	logProcess := l.activeProcesses[procIndx]
-	l.activeProcesses = l.activeProcesses[:procIndx]
-
-	return logProcess
 }

@@ -1,0 +1,97 @@
+<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
+<script type="text/javascript" src='{{ assets["getting-started-install.js"].digest_path }}'></script>
+<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
+
+<span style="display: none" id="platform_code">{{page.platform_code}}</span>
+
+{% unless page.ee_only == true -%}
+{% if page.lang == 'ru' %}
+#### Выберите редакцию Deckhouse Platform
+{% else %}
+#### Select the Deckhouse Platform revision
+{% endif %}
+<div class="tabs">
+    {%- for revision in site.data.getting_started.data.global.revisions %}
+    {% for layout in site.data.getting_started.data.installTypes[page.platform_code].layouts %}
+        <a id='tab_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}', 'dhctl-revision', '{{ revision }}');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');" >
+        {{ site.data.i18n[revision] }}
+        </a>
+    {% endfor %}
+    {%- endfor %}
+</div>
+{%- endunless %}
+
+{%- for revision in site.data.getting_started.data.global.revisions %}
+{% for layout in site.data.getting_started.data.installTypes[page.platform_code].layouts %}
+{%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
+{% assign layoutCode = '' | append: layout[0] %}
+<div id='block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" {% if layout[1].recommended %}recommended-layout{% endif %} markdown="1">
+    {% if page.lang == 'ru' %}
+    {% include getting_started/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
+    {% else %}
+    {% include getting_started/global/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
+    {% endif %}
+</div>
+{% endfor %}
+{%- endfor %}
+
+{% if page.platform_type == 'cloud' %}
+{%- for preset in site.data.getting_started.data.presets %}
+<div id='block_preset_{{ preset[0] }}' class="tabs__content tabs__content_preset" {% if preset[1].recommended %}recommended-preset{% endif %} markdown="1">
+{% if page.lang == 'ru' %}
+Описание ресурсов для набора узлов **"{{ preset[1].name[page.lang] }}"**.
+{% else %}
+Resources for the **"{{ preset[1].name[page.lang] }}"** preset.
+{% endif %}
+
+{% snippetcut name="resources.yml" selector="resources-yml" %}
+{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/resources.yml.{{ preset[0] }}.inc" syntax="yaml" %}
+{% endsnippetcut %}
+</div>
+{%- endfor %}
+{% endif %}
+
+{%- for revision in site.data.getting_started.data.global.revisions %}
+{%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
+<div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
+{% if page.lang == 'ru' %}
+{% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
+{% else %}
+{% include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
+{% endif %}
+</div>
+{% endfor %}
+
+<script>
+$(document).ready(function() {
+  generate_password(true);
+  replace_snippet_password();
+  sessionStorage.setItem('dhctl-revision','{% if page.ee_only == true %}ee{% else %}ce{% endif %}');
+
+  let layout = sessionStorage.getItem('dhctl-layout') ? sessionStorage.getItem('dhctl-layout').toLowerCase(): null;
+  let preset = sessionStorage.getItem('dhctl-preset') ? sessionStorage.getItem('dhctl-preset').toLowerCase(): null;
+
+  if (!layout) {
+      let recommendedLayout = $('[recommended-layout]').first().attr('id');
+      layout = recommendedLayout ?  recommendedLayout.split('_')[1] : null;
+  }
+
+  $('.tabs__content_revision').filter(function () {
+      return (this.id.match('block_' + layout + '_.+') === null);
+  }).removeClass('active');
+
+  $('.tabs__btn_revision').filter(function () {
+      return (this.id.match('tab_' + layout + '_.+') === null);
+  }).removeClass('active').css("display", "none");
+
+  // Show preset tab
+  if ( preset && preset.length > 0 ) {
+      $('#block_preset_' + preset).addClass('active');
+  } else {
+      $('[recommended-preset]').first().addClass('active');
+  }
+
+});
+</script>

@@ -61,7 +61,7 @@ spec:
       containers:
         - name: openstack-cloud-controller-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.cloudProviderOpenstack $ccmImageName }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.cloudProviderOpenstack $ccmImageName }}"
           args:
           - --leader-elect=true
           - --cluster-cidr={{ .Values.global.discovery.podSubnet }}

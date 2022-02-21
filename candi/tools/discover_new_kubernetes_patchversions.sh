@@ -42,21 +42,8 @@ function update_version_map() {
   fi
 }
 
-# Updates registry images to new patch versions
-function update_registry_images() {
-  for R in dev-registry.deckhouse.io registry-write.deckhouse.io; do
-    export REGISTRY="${R}"
-    for DISTRO in ubuntu centos7; do
-      for SCRIPT in kubeadm kubectl kubelet; do
-        /deckhouse/candi/tools/registrypackages/${DISTRO}/${SCRIPT}.sh
-      done
-    done
-  done
-}
-
 check_requirements
 
-REGISTRY_PACKAGES_NEEDS_UPDATE=false
 TMPDIR="$(mktemp -du)"
 mkdir -p "${TMPDIR}"
 cd "${TMPDIR}"
@@ -67,15 +54,10 @@ for VERSION in $(yq e /deckhouse/candi/version_map.yml -j | jq -r '.k8s | keys[]
     NEW_FULL_VERSION="$(curl -s "https://raw.githubusercontent.com/kubernetes/kubernetes/master/CHANGELOG/CHANGELOG-${VERSION}.md" | grep '## Downloads for v' | head -n 1 | grep -Eo "${VERSION}.[0-9]+")"
     NEW_PATCH="$(awk -F "." '{print $3}' <<< "${NEW_FULL_VERSION}")"
     if [[ "${NEW_PATCH}" -ne "${PATCH}" ]]; then
-      REGISTRY_PACKAGES_NEEDS_UPDATE=true
       echo "New kubernetes patch version ${NEW_PATCH} found for ${VERSION}"
       update_version_map "${VERSION}" "${NEW_PATCH}"
     fi
   done
 done
-
-if ${REGISTRY_PACKAGES_NEEDS_UPDATE}; then
-  update_registry_images
-fi
 
 cd -

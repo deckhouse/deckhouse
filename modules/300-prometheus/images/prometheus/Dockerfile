@@ -2,6 +2,8 @@ ARG BASE_GOLANG_BUSTER
 ARG BASE_ALPINE
 FROM $BASE_GOLANG_BUSTER as artifact
 
+ENV PROMETHEUS_VERSION=v2.28.0
+
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - &&  \
   apt install -y nodejs && \
   npm update -g npm && \
@@ -13,7 +15,7 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - &&  \
   apt install -y make bash git patch ca-certificates openssl openssh-client
 
 RUN mkdir /prometheus && cd /prometheus \
-  && git clone -b "v2.28.0" --single-branch https://github.com/prometheus/prometheus
+  && git clone -b "${PROMETHEUS_VERSION}" --single-branch https://github.com/prometheus/prometheus
 WORKDIR /prometheus/prometheus
 COPY sample_limit_annotation.patch ./
 COPY successfully_sent_metric.patch ./

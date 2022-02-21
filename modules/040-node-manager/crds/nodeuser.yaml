@@ -47,15 +47,22 @@ spec:
                     This parameter does not change during the entire resource life.
                   example: '1001'
                   minimum: 1001
+                  x-doc-required: true
                 sshPublicKey:
                   type: string
-                  description: 'Node user ssh public key.'
+                  description: |
+                    Node user SSH public key.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
                   example: 'ssh-rsa AAABBB'
                 sshPublicKeys:
                   type: array
                   items:
                     type: string
-                  description: 'Node user ssh public keys.'
+                  description: |
+                    Node user SSH public keys.
+
+                    Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
                   example:
                     - [ 'ssh-rsa AAABBB', 'ssh-rsa BBBCCC' ]
                 passwordHash:

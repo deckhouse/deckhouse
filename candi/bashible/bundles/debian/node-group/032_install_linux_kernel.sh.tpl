@@ -46,11 +46,6 @@ fi
     {{- end }}
   {{- end }}
 {{- end }}
-if bb-is-astra-version? 2.12.+; then
-  desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "kernel" "astra" "desiredVersion" | quote }}
-  allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "kernel" "astra" "allowedPattern" | quote }}
-fi
-
 
 if [ -f /var/lib/bashible/kernel_version_config_by_cloud_provider ]; then
   source /var/lib/bashible/kernel_version_config_by_cloud_provider

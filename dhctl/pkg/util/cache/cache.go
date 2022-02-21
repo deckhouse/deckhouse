@@ -25,12 +25,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 // NewTempStateCache creates new cache instance in tmp directory
 func NewTempStateCache(identity string) (*StateCache, error) {
-	cacheDir := filepath.Join(app.CacheDir, util.Sha256Encode(identity))
+	cacheDir := filepath.Join(app.CacheDir, stringsutil.Sha256Encode(identity))
 	return NewStateCache(cacheDir)
 }
 
@@ -107,7 +107,6 @@ func (s *StateCache) CleanWithExceptions(excludeKeys ...string) {
 		keysToRemove = append(keysToRemove, key)
 		return nil
 	})
-
 	if err != nil {
 		log.WarnF("Can't getting keys to remove: %s ...\n", err)
 		return

@@ -43,7 +43,7 @@ spec:
       containers:
         - name: cert-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.legacyCertManagerController }}
+          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.legacyCertManagerController }}"
           args:
           - --v=1
           - --cluster-resource-namespace=$(POD_NAMESPACE)
@@ -72,7 +72,7 @@ spec:
                 fieldPath: metadata.namespace
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
+          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
           args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9403"
           - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"

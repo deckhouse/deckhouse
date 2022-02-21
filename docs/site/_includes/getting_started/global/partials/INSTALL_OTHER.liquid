@@ -1,36 +1,36 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container, as well as SSH keys for access to the master nodes. Run on the **[personal computer](step2.html#installation-process)**:
+Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %}, as well as SSH keys for access to the master nodes{% endif %}. Run on the **[personal computer](step2.html#installation-process)**:
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}
 ```text
  echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
-{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
+{% endif %}{% if page.platform_type == "existing" or page.platform_code == "kind" %} -v "$HOME/.kube/config:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
 ```
 {% endsnippetcut %}
 {% else %}
 {% snippetcut %}
 ```shell
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
-{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
+{% endif %}{% if page.platform_type == "existing" or page.platform_code == "kind" %} -v "$HOME/.kube/config:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
 {% endsnippetcut %}
 {% endif %}
 
-{%- if page.platform_type == "existing" %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %}
 Notes:
-- Kubeconfig with access to Kubernetes API must be used in kubeconfig mount.
+- Kubectl configuration file with access to Kubernetes API must be mount as the /kubeconfig file in the container.
 {% endif %}
 
 Now, to initiate the process of installation, you need to execute inside the container:
 
 {% snippetcut %}
 ```shell
-{%- if page.platform_type == "existing" %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %}
 dhctl bootstrap-phase install-deckhouse \
   --kubeconfig=/kubeconfig \
   --config=/config.yml
@@ -87,4 +87,41 @@ dhctl bootstrap-phase abort \
 
 After the installation is complete, you will be returned to the command line.
 
+{%- if page.platform_code == "kind" %}
+
+It remains to create the Ingress controller configuration. Create the `ingress-nginx-controller` file.yml with the following content:
+{% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
+{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
+{% endsnippetcut %}
+<p>Apply the file using the command below:</p>
+{% snippetcut %}
+```shell
+kubectl create -f ingress-nginx-controller.yml
+```
+{% endsnippetcut %}
+
+It may take about a minute to start the Ingress controller.
+
+To check the status of the Ingress Controller Pod, run the following command:
+{% snippetcut %}
+```shell
+kubectl -n d8-ingress-nginx get po
+```
+{% endsnippetcut %}
+
+Wait for the Ingress controller Pod to switch to `Ready` state.
+
+You have installed Deckhouse Platform in `kind`!
+{%- else %}
+
 Almost everything is ready for a fully-fledged Deckhouse Platform to work!
+{%- endif %}
+
+<!-- Troubleshooting in existing cluster //-->
+{%- if page.platform_type == "existing" %}
+<h2 id="if-something-went-wrong">If something went wrong</h2>
+
+{%  include getting_started/existing/partials/TROUBLESHOOT.liquid %}
+
+{% endif %}
+<!--  //-->

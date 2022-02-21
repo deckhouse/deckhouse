@@ -44,8 +44,8 @@ metadata:
 spec:
   url: https://victoriametrics-test.domain.com/api/v1/write
   basicAuth:
-    username: blahblah
-    password: dddddddd
+    username: username
+    password: password
   writeRelabelConfigs:
   - sourceLabels: [__name__]
     action: keep
@@ -87,10 +87,10 @@ spec:
       paths:
       - backend:
           service:
-            name: trickster
+            name: prometheus
             port:
               name: https
-        path: /trickster/main
+        path: /
         pathType: ImplementationSpecific
   tls:
   - hosts:
@@ -108,7 +108,7 @@ data:
 ```
 Next, you only need to add the data source to Grafana:
 
-**Set `https://prometheus-api.<cluster-domain>/trickster/main/` as the URL**.
+**Set `https://prometheus-api.<cluster-domain>` as the URL**.
 
 <img src="../../images/300-prometheus/prometheus_connect_settings.png" height="500">
 
@@ -116,6 +116,8 @@ Next, you only need to add the data source to Grafana:
 
 * A **considerable disadvantage** of this method is the need to create an Ingress resource in the system namespace.
 Deckhouse does **not guarantee** the functionality of this connection method due to its regular updates.
+
+* This Ingress resource can be used to access the Prometheus API not only from Grafana but for other integrations, e.g., the Prometheus federation.
 
 ## Connecting an external app to Prometheus
 

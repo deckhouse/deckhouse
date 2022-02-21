@@ -1,7 +1,6 @@
 positive:
   configValues:
     - kubeall:
-        team: test
         host: test.control-plane
       metrics: false
       madisonAuthKey: false

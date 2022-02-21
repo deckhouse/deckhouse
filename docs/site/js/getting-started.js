@@ -195,8 +195,8 @@ function update_license_parameters(newtoken = '') {
     }
 }
 
-function generate_password() {
-    if (sessionStorage.getItem("dhctl-user-password-hash") === null || sessionStorage.getItem("dhctl-user-password") === null) {
+function generate_password(force = false) {
+    if ( force || sessionStorage.getItem("dhctl-user-password-hash") === null || sessionStorage.getItem("dhctl-user-password") === null) {
         var bcrypt = dcodeIO.bcrypt;
         var salt = bcrypt.genSaltSync(10);
         var password = Math.random().toString(36).slice(-10);

@@ -73,12 +73,6 @@ if bb-is-debian-version? {{ $debianVersion }} ; then
 fi
   {{- end }}
 {{- end }}
-if bb-is-astra-version? 2.12.+; then
-  desired_version_docker={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "desiredVersion" | quote }}
-  allowed_versions_docker_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "allowedPattern" | quote }}
-  desired_version_containerd={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "desiredVersion" | quote }}
-  allowed_versions_containerd_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "allowedPattern" | quote }}
-fi
 
 if [[ -z $desired_version_docker || -z $desired_version_containerd ]]; then
   bb-log-error "Desired version must be set"
@@ -110,9 +104,6 @@ if [[ "$should_install_containerd" == true ]]; then
     containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%s%s" ($value.docker.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $debianName $debianVersion)) }}"
   fi
 {{- end }}
-  if bb-is-astra-version? 2.12.+; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
-  fi
 
   bb-rp-install "containerd-io:${containerd_tag}"
 fi
@@ -142,9 +133,6 @@ if [[ "$should_install_docker" == true ]]; then
     docker_tag="{{- index $.images.registrypackages (printf "dockerDebian%s" ($value.docker.desiredVersion | replace "docker-ce=" "" | replace "." "_" | replace ":" "_" | replace "~" "_" | camelcase)) }}"
   fi
 {{- end }}
-  if bb-is-astra-version? 2.12.+; then
-    docker_tag="{{- index $.images.registrypackages (printf "dockerDebian%s" (index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "desiredVersion" | replace "docker-ce=" "" | replace "." "_" | replace ":" "_" | replace "~" "_" | camelcase)) }}"
-  fi
 
   bb-rp-install "docker-ce:${docker_tag}"
 fi

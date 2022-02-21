@@ -37,7 +37,7 @@ const (
 	modulesFileName            = "modules-%s.yaml"
 	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
 	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
-	cloudProvidersFileName     = "cloud-providers-%s.yaml"
+	candiFileName              = "candi-%s.yaml"
 )
 
 var workDir = cwd()
@@ -51,6 +51,27 @@ var defaultModulesExcludes = []string{
 	".namespace",
 	"values_matrix_test.yaml",
 	".build.yaml",
+}
+
+var nothingButGoHooksExcludes = []string{
+	"images",
+	"templates",
+	"charts",
+	"crds",
+	"docs",
+	"monitoring",
+	"openapi",
+	"oss.yaml",
+	"packer",
+	"cloud-instance-manager",
+	"values_matrix_test.yaml",
+	"values.yaml",
+	".helmignore",
+	"candi",
+	"Chart.yaml",
+	".namespace",
+	"**/*_test.go",
+	"**/*.sh",
 }
 
 var stageDependencies = map[string][]string{
@@ -231,10 +252,11 @@ func executeEdition(edition string) {
 			Dir:               "modules",
 			SaveTo:            modulesWithDependencies,
 			StageDependencies: stageDependencies,
+			ExcludePaths:      nothingButGoHooksExcludes,
 		})
 		writeSections(writeSettings{
 			Edition: edition,
-			SaveTo:  cloudProvidersFileName,
+			SaveTo:  candiFileName,
 		})
 		fallthrough
 	case "EE":
@@ -257,12 +279,13 @@ func executeEdition(edition string) {
 			Dir:               "modules",
 			SaveTo:            modulesWithDependencies,
 			StageDependencies: stageDependencies,
+			ExcludePaths:      nothingButGoHooksExcludes,
 		})
 		writeSections(writeSettings{
 			Edition: edition,
 			Prefix:  "ee",
-			Dir:     "candi/cloud-providers",
-			SaveTo:  cloudProvidersFileName,
+			Dir:     "candi",
+			SaveTo:  candiFileName,
 		})
 	case "CE":
 		writeSections(writeSettings{
@@ -279,7 +302,7 @@ func executeEdition(edition string) {
 		})
 		writeSections(writeSettings{
 			Edition: edition,
-			SaveTo:  cloudProvidersFileName,
+			SaveTo:  candiFileName,
 		})
 	default:
 		log.Fatalf("Unknown Deckhouse edition %q", edition)

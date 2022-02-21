@@ -15,16 +15,16 @@
 package terraform
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
-	"syscall"
+	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -85,20 +85,28 @@ type Runner struct {
 
 	stateSaver *StateSaver
 
-	cmd     *exec.Cmd
 	confirm func() *input.Confirmation
 	stopped bool
+
+	// Atomic flag to check weather terraform is running. Do not manually change its values.
+	// Odd number - terraform is running
+	// Even number - runner is in standby mode
+	terraformRunningCounter int32
+	terraformExecutor       Executor
+
+	hook InfraActionHook
 }
 
 func NewRunner(provider, prefix, layout, step string, stateCache state.Cache) *Runner {
 	r := &Runner{
-		prefix:         prefix,
-		step:           step,
-		name:           step,
-		workingDir:     buildTerraformPath(provider, layout, step),
-		confirm:        input.NewConfirmation,
-		stateCache:     stateCache,
-		changeSettings: ChangeActionSettings{},
+		prefix:            prefix,
+		step:              step,
+		name:              step,
+		workingDir:        buildTerraformPath(provider, layout, step),
+		confirm:           input.NewConfirmation,
+		stateCache:        stateCache,
+		changeSettings:    ChangeActionSettings{},
+		terraformExecutor: &CMDExecutor{},
 	}
 
 	var destinations []SaverDestination
@@ -136,6 +144,11 @@ func (r *Runner) WithConfirm(confirm func() *input.Confirmation) *Runner {
 
 func (r *Runner) WithStatePath(statePath string) *Runner {
 	r.statePath = statePath
+	return r
+}
+
+func (r *Runner) WithHook(h InfraActionHook) *Runner {
+	r.hook = h
 	return r
 }
 
@@ -198,6 +211,19 @@ func (r *Runner) WithSkipChangesOnDeny(flag bool) *Runner {
 func (r *Runner) WithAdditionalStateSaverDestination(destinations ...SaverDestination) *Runner {
 	r.stateSaver.addDestinations(destinations...)
 	return r
+}
+
+func (r *Runner) withTerraformExecutor(t Executor) *Runner {
+	r.terraformExecutor = t
+	return r
+}
+
+func (r *Runner) switchTerraformIsRunning() {
+	atomic.AddInt32(&r.terraformRunningCounter, 1)
+}
+
+func (r *Runner) checkTerraformIsRunning() bool {
+	return (r.terraformRunningCounter % 2) > 0
 }
 
 func (r *Runner) Init() error {
@@ -276,26 +302,63 @@ func (r *Runner) stateName() string {
 	return fmt.Sprintf("%s.tfstate", r.name)
 }
 
-func (r *Runner) handleChanges() (bool, error) {
+func (r *Runner) getHook() InfraActionHook {
+	if r.hook == nil {
+		return &DummyHook{}
+	}
+
+	return r.hook
+}
+
+func (r *Runner) runBeforeActionAndWaitReady() error {
+	hook := r.getHook()
+
+	runPostAction, err := hook.BeforeAction()
+	if err != nil {
+		return err
+	}
+
+	if err := hook.IsReady(); err != nil {
+		var resErr *multierror.Error
+		resErr = multierror.Append(resErr, err)
+
+		if runPostAction {
+			err := hook.AfterAction()
+			if err != nil {
+				resErr = multierror.Append(resErr, err)
+			}
+		}
+
+		return resErr.ErrorOrNil()
+	}
+
+	return nil
+}
+
+func (r *Runner) isSkipChanges() (skip bool, err error) {
 	// first verify destructive change
 	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
 		return true, nil
 	}
 
-	//
-	if r.changeSettings.AutoApprove || r.changesInPlan == PlanHasNoChanges {
+	if r.changesInPlan == PlanHasNoChanges {
+		// if plan has not changes we will run apply
 		return false, nil
 	}
 
-	if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
-		if r.changeSettings.SkipChangesOnDeny {
-			return true, nil
+	if !r.changeSettings.AutoApprove {
+		if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
+			if r.changeSettings.SkipChangesOnDeny {
+				return true, nil
+			}
+			return false, ErrTerraformApplyAborted
 		}
-		return false, ErrTerraformApplyAborted
 	}
 
-	return false, nil
+	err = r.runBeforeActionAndWaitReady()
+
+	return false, err
 }
 
 func (r *Runner) Apply() error {
@@ -304,13 +367,7 @@ func (r *Runner) Apply() error {
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
-		err := r.stateSaver.Start(r)
-		if err != nil {
-			return err
-		}
-		defer r.stateSaver.Stop()
-
-		skip, err := r.handleChanges()
+		skip, err := r.isSkipChanges()
 		if err != nil {
 			return err
 		}
@@ -318,6 +375,12 @@ func (r *Runner) Apply() error {
 			log.InfoLn("Skip terraform apply.")
 			return nil
 		}
+
+		err = r.stateSaver.Start(r)
+		if err != nil {
+			return err
+		}
+		defer r.stateSaver.Stop()
 
 		args := []string{
 			"apply",
@@ -339,7 +402,15 @@ func (r *Runner) Apply() error {
 
 		_, err = r.execTerraform(args...)
 
-		return err
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, err)
+
+		// yes, do not check err from exec terraform
+		// always run post action if need
+		err = r.getHook().AfterAction()
+		errRes = multierror.Append(errRes, err)
+
+		return errRes.ErrorOrNil()
 	})
 }
 
@@ -369,7 +440,7 @@ func (r *Runner) Plan() error {
 		exitCode, err := r.execTerraform(args...)
 		if exitCode == terraformHasChangesExitCode {
 			r.changesInPlan = PlanHasChanges
-			hasDestructiveChanges, err := checkPlanDestructiveChanges(tmpFile.Name())
+			hasDestructiveChanges, err := r.checkPlanDestructiveChanges(tmpFile.Name())
 			if err != nil {
 				return err
 			}
@@ -401,7 +472,7 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 	}
 	args = append(args, output)
 
-	result, err := terraformCmd(args...).Output()
+	result, err := r.terraformExecutor.Output(args...)
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
@@ -432,8 +503,11 @@ func (r *Runner) Destroy() error {
 		}
 	}
 
-	// TODO: why is this line here?
-	// r.stopped = true
+	err := r.runBeforeActionAndWaitReady()
+	if err != nil {
+		return err
+	}
+
 	return log.Process("default", "terraform destroy ...", func() error {
 		err := r.stateSaver.Start(r)
 		if err != nil {
@@ -450,11 +524,17 @@ func (r *Runner) Destroy() error {
 		}
 		args = append(args, r.workingDir)
 
-		if _, err = r.execTerraform(args...); err != nil {
-			return err
-		}
+		_, err = r.execTerraform(args...)
 
-		return nil
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, err)
+
+		// yes, do not check err from exec terraform
+		// always run post action if need
+		err = r.getHook().AfterAction()
+		errRes = multierror.Append(errRes, err)
+
+		return errRes.ErrorOrNil()
 	})
 }
 
@@ -488,19 +568,13 @@ func (r *Runner) getState() ([]byte, error) {
 // Stop interrupts the current runner command and sets
 // a flag to prevent executions of next runner commands.
 func (r *Runner) Stop() {
-	if r.cmd != nil && !r.stopped {
-		log.DebugF("Runner Stop is called for %s. Interrupt terraform process by pid: %d\n", r.name, r.cmd.Process.Pid)
-		// 1. Terraform exits immediately on SIGTERM, so SIGINT is used here
-		//    to interrupt it gracefully even when main process caught the SIGTERM.
-		// 2. Negative pid is used to send signal to the process group
-		//    started by "Setpgid: true" to prevent double signaling
-		//    from shell and from us.
-		//    See also pkg/system/ssh/cmd/ssh.go
-		_ = syscall.Kill(-r.cmd.Process.Pid, syscall.SIGINT)
+	if r.checkTerraformIsRunning() && !r.stopped {
+		log.DebugF("Runner Stop is called for %s.\n", r.name)
+		r.terraformExecutor.Stop()
 	}
 	r.stopped = true
 	// Wait until the running terraform command stops.
-	for r.cmd != nil {
+	for r.checkTerraformIsRunning() {
 		time.Sleep(50 * time.Millisecond)
 	}
 	// Wait until the StateSaver saves the Secret for Apply and Destroy commands.
@@ -510,94 +584,27 @@ func (r *Runner) Stop() {
 }
 
 func (r *Runner) execTerraform(args ...string) (int, error) {
-	r.cmd = terraformCmd(args...)
-	// Start terraform as a leader of the new process group to prevent
-	// os.Interrupt (SIGINT) signal from the shell when Ctrl-C is pressed.
-	r.cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+	if r.checkTerraformIsRunning() {
+		return 0, fmt.Errorf("Terraform have been already executed.")
 	}
 
-	stdout, err := r.cmd.StdoutPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stdout pipe: %v", err)
-	}
+	r.switchTerraformIsRunning()
+	defer r.switchTerraformIsRunning()
 
-	stderr, err := r.cmd.StderrPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stderr pipe: %v", err)
-	}
-
-	log.DebugLn(r.cmd.String())
-	err = r.cmd.Start()
-	if err != nil {
-		log.ErrorLn(err)
-		return r.cmd.ProcessState.ExitCode(), err
-	}
-
-	var errBuf bytes.Buffer
-	waitCh := make(chan error)
-	go func() {
-		e := bufio.NewScanner(stderr)
-		for e.Scan() {
-			if app.IsDebug {
-				log.DebugLn(e.Text())
-			} else {
-				errBuf.WriteString(e.Text() + "\n")
-			}
-		}
-
-		waitCh <- r.cmd.Wait()
-	}()
-
-	s := bufio.NewScanner(stdout)
-	for s.Scan() {
-		log.InfoLn(s.Text())
-	}
-
-	err = <-waitCh
+	exitCode, err := r.terraformExecutor.Exec(args...)
 	log.InfoF("Terraform runner %q process exited.\n", r.step)
 
-	exitCode := r.cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
-	if err != nil && exitCode != terraformHasChangesExitCode {
-		log.ErrorLn(err)
-		err = fmt.Errorf(errBuf.String())
-		if app.IsDebug {
-			err = fmt.Errorf("terraform has failed in DEBUG mode, search in the output above for an error")
-		}
-	}
-	r.cmd = nil
-
-	if exitCode == 0 {
-		err = nil
-	}
 	return exitCode, err
 }
 
-func buildTerraformPath(provider, layout, step string) string {
-	return filepath.Join(cloudProvidersDir, provider, "layouts", layout, step)
-}
-
-func terraformCmd(args ...string) *exec.Cmd {
-	cmd := exec.Command("terraform", args...)
-	cmd.Env = append(
-		cmd.Env,
-		"TF_IN_AUTOMATION=yes", "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
-	)
-	if app.IsDebug {
-		// Debug mode is deprecated, however trace produces more useless information
-		cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
-	}
-	return cmd
-}
-
-func checkPlanDestructiveChanges(planFile string) (bool, error) {
+func (r *Runner) checkPlanDestructiveChanges(planFile string) (bool, error) {
 	args := []string{
 		"show",
 		"-json",
 		planFile,
 	}
 
-	result, err := terraformCmd(args...).Output()
+	result, err := r.terraformExecutor.Output(args...)
 	if err != nil {
 		var ee *exec.ExitError
 		if ok := errors.As(err, &ee); ok {
@@ -628,4 +635,8 @@ func checkPlanDestructiveChanges(planFile string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func buildTerraformPath(provider, layout, step string) string {
+	return filepath.Join(cloudProvidersDir, provider, "layouts", layout, step)
 }

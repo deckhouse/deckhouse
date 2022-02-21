@@ -33,6 +33,7 @@ const (
 type Cache interface {
 	Get(string, string) (bool, error)
 	GetPreferredVersion(group string) (string, error)
+	Check() error
 }
 
 var _ Cache = (*NamespacedDiscoveryCache)(nil)
@@ -100,6 +101,20 @@ func NewNamespacedDiscoveryCache(logger *log.Logger) *NamespacedDiscoveryCache {
 	}
 	c.initClient()
 	return c
+}
+
+func (c *NamespacedDiscoveryCache) Check() error {
+	return Retry(func() (bool, error) {
+		req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+"/version", nil)
+		if err != nil {
+			return false, fmt.Errorf("check Kubernetes API create request: %w", err)
+		}
+
+		if _, err := c.execRequest(req, "check API", nil); err != nil {
+			return true, err
+		}
+		return false, nil
+	})
 }
 
 func (c *NamespacedDiscoveryCache) initClient() {
@@ -298,12 +313,13 @@ func (c *NamespacedDiscoveryCache) execRequest(req *http.Request, logTag string,
 	}
 
 	if resp.StatusCode/100 > 2 {
-		return "", fmt.Errorf("%s: kube response error: %s", logTag, respBody)
+		return "", fmt.Errorf("%s: kube response error: %d %s", logTag, resp.StatusCode, respBody)
 	}
 
-	err = json.Unmarshal(respBody, result)
-	if err != nil {
-		return "", fmt.Errorf("%s: do not unmarshal response: %w", logTag, err)
+	if result != nil {
+		if err := json.Unmarshal(respBody, result); err != nil {
+			return "", fmt.Errorf("%s: do not unmarshal response: %w", logTag, err)
+		}
 	}
 
 	return string(respBody), nil

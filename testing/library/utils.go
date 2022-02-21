@@ -29,31 +29,55 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
-
-	"github.com/deckhouse/deckhouse/testing/library/git"
 )
+
+var tags map[string]map[string]string
+
+func init() {
+	tags = make(map[string]map[string]string)
+	for _, pattern := range []string{"/deckhouse/modules/*", "/deckhouse/ee/modules/*", "/deckhouse/ee/fe/modules/*"} {
+		paths, err := filepath.Glob(pattern)
+		if err != nil {
+			panic(err)
+		}
+
+		for _, path := range paths {
+			info, err := os.Stat(path)
+			if err != nil {
+				panic(err)
+			}
+			if !info.IsDir() {
+				continue
+			}
+
+			parts := strings.SplitN(info.Name(), "-", 2)
+			tags[strcase.ToLowerCamel(parts[1])] = make(map[string]string)
+		}
+	}
+}
 
 func GetModulesImagesTags(modulePath string) (map[string]map[string]string, error) {
 	var (
-		tags      map[string]map[string]string
-		searchGit bool
+		modulesTags map[string]map[string]string
+		search      bool
 	)
 
-	fi, err := os.Stat(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
-	if err != nil || fi.Size() == 0 {
-		searchGit = true
+	if fi, err := os.Stat(filepath.Join(filepath.Dir(modulePath), "images_tags.json")); err != nil || fi.Size() == 0 {
+		search = true
 	}
 
-	if searchGit {
-		tags, err = getModulesImagesTagsFromGit(modulePath)
+	if search {
+		modulesTags = tags
 	} else {
-		tags, err = getModulesImagesTagsFromLocalPath(modulePath)
-	}
-	if err != nil {
-		return nil, err
+		var err error
+
+		modulesTags, err = getModulesImagesTagsFromLocalPath(modulePath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return tags, err
+	return modulesTags, nil
 }
 
 func getModulesImagesTagsFromLocalPath(modulePath string) (map[string]map[string]string, error) {
@@ -66,29 +90,6 @@ func getModulesImagesTagsFromLocalPath(modulePath string) (map[string]map[string
 	err = json.Unmarshal(imageTagsRaw, &tags)
 	if err != nil {
 		return nil, err
-	}
-
-	return tags, nil
-}
-
-func getModulesImagesTagsFromGit(modulePath string) (map[string]map[string]string, error) {
-	tags := make(map[string]map[string]string)
-
-	for _, path := range []string{modulePath, filepath.Join(filepath.Dir(modulePath), "000-common")} {
-		imageTags, err := git.ListTreeObjects(filepath.Join(path, "images"))
-		if err != nil {
-			return nil, err
-		}
-
-		_, moduleDir := filepath.Split(path)
-		moduleDirClean := string([]byte(moduleDir)[4:])
-		moduleName := strcase.ToLowerCamel(moduleDirClean)
-		tags[moduleName] = make(map[string]string)
-
-		for _, tag := range imageTags {
-			fileName := strcase.ToLowerCamel(tag.File)
-			tags[moduleName][fileName] = tag.Object
-		}
 	}
 
 	return tags, nil

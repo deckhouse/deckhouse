@@ -86,14 +86,20 @@ if [[ "$should_install_containerd" == true ]]; then
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
   {{- $ubuntuVersion := toString $key }}
   if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdUbuntu%s%s" ($value.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $ubuntuName $ubuntuVersion)) }}"
+    containerd_tag="{{- index $.images.registrypackages (printf "containerdUbuntu%s%s" ($value.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "_" | replace "-" "_" | camelcase) (index $ubuntuName $ubuntuVersion)) }}"
   fi
 {{- end }}
 
   crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
-  containerd_fe_tag="{{ index .images.registrypackages "containerdFe146" | toString }}"
 
-  bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}" "containerd-flant-edition:${containerd_fe_tag}"
+  bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}"
+fi
+
+# Upgrade containerd-flant-edition if needed
+containerd_fe_tag="{{ index .images.registrypackages "containerdFe146" | toString }}"
+if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
+  systemctl stop containerd.service
+  bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
 
   mkdir -p /etc/systemd/system/containerd.service.d
   bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF

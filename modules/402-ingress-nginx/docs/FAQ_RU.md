@@ -162,7 +162,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 Подробнее о том, как работает аутентификация по сертификатам, можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs).
 
 
-## Как настроить работу через MetalLB с доступом только из внутренней сети
+## Как настроить работу через MetalLB с доступом только из внутренней сети?
 
 Пример MetalLB с доступом только из внутренней сети
 ```yaml
@@ -178,7 +178,7 @@ spec:
     - 192.168.0.0/24
 ```
 
-## Как добавить дополнительные поля для логирования в nginx-controller
+## Как добавить дополнительные поля для логирования в nginx-controller?
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -190,3 +190,15 @@ spec:
   additionalLogFields:
     my-cookie: "$cookie_MY_COOKIE"
 ```
+
+## Как включить HorizontalPodAutoscaling для IngressNginxController?
+
+> **Важно!** Режим HPA возможен только для контроллеров с inlet: `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
+
+HPA выставляется с помощью аттрибутов `minReplicas` и `maxReplicas` в [IngressNginxController CR](cr.html#ingressnginxcontroller).
+
+При этом создается deployment `hpa-scaler` и HPA resource, который следит за предварительно созданной метрикой `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`.
+
+При CPU utilization > 50% HPA закажет новую реплику для `hpa-scaler` (в рамках minReplicas и maxReplicas).
+
+`hpa-scaler` deployment обладает HardPodAntiAffinity, поэтому он попытается заказать себе новый узел (если это возможно в рамках своей NodeGroup), куда автоматически будет размещен еще один ingress-controller.

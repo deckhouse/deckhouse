@@ -246,6 +246,50 @@ installTypes:
           ru: Куда двигаться дальше?
           en: What can I do next?
         template: getting_started/global/STEP_FINISH.md
+  vsphere:
+    ee_only: true
+    type: cloud
+    name:
+      en: VMware vSphere
+      ru: VMware vSphere
+    pages_title:
+      en: "Deckhouse Platform on VMware vSphere"
+      ru: "Deckhouse Platform на VMware vSphere"
+    layouts:
+      standard:
+        name: Standard
+        recommended: true
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: A brief overview of installation
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Подготовка окружения
+          en: Preparing environment
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step6:
+        name:
+          ru: Получаем доступ к кластеру
+          en: Getting access to the cluster
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step7:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
   yandex:
     layouts:
       without_nat:
@@ -293,6 +337,77 @@ installTypes:
           ru: Куда двигаться дальше?
           en: What can I do next?
         template: getting_started/global/STEP_FINISH.md
+  existing:
+    layouts:
+      default:
+        name: Default
+        recommended: true
+    pages_title:
+      en: "Deckhouse Platform in existing cluster"
+      ru: "Deckhouse Platform в существующем кластере"
+    type: existing
+    name:
+      en: Existing cluster
+      ru: Существующий кластер
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: A brief overview of installation
+        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          ru: Завершение установки
+          en: Finishing installation
+        template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
+      step6:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
+  kind:
+    layouts:
+      default:
+        name: Default
+        recommended: true
+    pages_title:
+      en: "Deckhouse Platform in kind"
+      ru: "Deckhouse Platform в kind"
+    type: special
+    name:
+      en: Using kind
+      ru: Используя kind
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: A brief overview of installation
+        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Подготовка к установке
+          en: Preparing to install
+        template: getting_started/<INSTALL_CODE>/STEP_PREPARE.md
+      step4:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
   bm:
     layouts:
       default:
@@ -315,7 +430,7 @@ installTypes:
         name:
           ru: Настройка кластера
           en: Setting up cluster
-        template: getting_started/<INSTALL_CODE>/step_cluster_setup.html
+        template: getting_started/global/step_cluster_setup.html
       step4:
         name:
           ru: Установка
@@ -325,89 +440,8 @@ installTypes:
         name:
           ru: Завершение установки
           en: Finishing installation
-        template: getting_started/<INSTALL_CODE>/STEP_FINALIZE_BM.md
+        template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
       step6:
-        name:
-          ru: Куда двигаться дальше?
-          en: What can I do next?
-        template: getting_started/global/STEP_FINISH.md
-  existing:
-    wip: true
-    layouts:
-      standard:
-        name: Standard
-        recommended: true
-      without_nat:
-        name: WithoutNAT
-    pages_title:
-      en: "Deckhouse Platform in existing cluster"
-      ru: "Deckhouse Platform в существующем кластере"
-    type: existing
-    name:
-      en: Existing cluster
-      ru: Существующий кластер
-    steps:
-      step2:
-        name:
-          ru: Как будет происходить установка?
-          en: A brief overview of installation
-      step3:
-        name:
-          ru: Настройка кластера
-          en: Setting up cluster
-      step4:
-        name:
-          ru: Установка
-          en: Installation
-      step5:
-        name:
-          ru: Получаем доступ к кластеру
-          en: Getting access to the cluster
-      step6:
-        name:
-          ru: Куда двигаться дальше?
-          en: What can I do next?
-        template: getting_started/global/STEP_FINISH.md
-  vsphere:
-    ee_only: true
-    type: cloud
-    name:
-      en: VMware vSphere
-      ru: VMware vSphere
-    pages_title:
-      en: "Deckhouse Platform on VMware vSphere"
-      ru: "Deckhouse Platform на VMware vSphere"
-    layouts:
-      standard:
-        name: Standard
-        recommended: true
-    steps:
-      step2:
-        name:
-          ru: Как будет происходить установка?
-          en: A brief overview of installation
-        template: getting_started/global/STEP_INSTALL_SCHEMA.md
-      step3:
-        name:
-          ru: Настройка кластера
-          en: Setting up cluster
-        template: getting_started/global/step_cluster_setup.html
-      step4:
-        name:
-          ru: Подготовка окружения
-          en: Preparing environment
-        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step5:
-        name:
-          ru: Установка
-          en: Installation
-        template: getting_started/global/STEP_INSTALL.md
-      step6:
-        name:
-          ru: Получаем доступ к кластеру
-          en: Getting access to the cluster
-        template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step7:
         name:
           ru: Куда двигаться дальше?
           en: What can I do next?

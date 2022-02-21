@@ -17,4 +17,3 @@ apiVersions:
         minLength: 1
       resourcePoolPath:
         type: string
-        minLength: 1

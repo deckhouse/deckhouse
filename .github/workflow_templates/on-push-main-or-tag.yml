@@ -1,17 +1,29 @@
 name: Run build on push to main or tag
 
+#  Start build when new commits are pushed in main branch or new tags are pushed.
+#
+#  Variations:
+#  1. Default branch and tags with v* and test-* prefixes:
+#    - Search for related milestone and issue labeled with issue/release.
+#    - Add new comment to the release issue.
+#    - Build workflow will update comment with report its status to.
+#  2. Tags with dev- or pr- prefixes:
+#    - Related milestone, so just run build workflow.
+#  3. Other tags and branches:
+#    - No auto build by this workflow.
+#    - Build workflow can be triggered manually using ui or by running curl.
+
 on:
   push:
     branches:
       - 'main'
-      - 'release-*'
     tags:
       - 'v*'
+      - 'test-*'
+      - 'dev-*'
+      - 'pr-*'
 
 jobs:
-  # Find latest milestone, find issue with 'issue/release' label.
-  # Create comment "Start build, validation and tests"
-  # use issue_id, issue_number and comment_id to start a build workflow.
   start_release_build_workflow:
     name: Start build for release
     runs-on: ubuntu-latest
@@ -23,4 +35,4 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.runWorkflowForReleasePush({ github, context, core })
+            return await ci.runBuildForRelease({ github, context, core })

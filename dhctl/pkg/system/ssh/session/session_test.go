@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 func TestCreatingNewSShSession(t *testing.T) {
@@ -130,7 +130,7 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 			ses.ChoiceNewHost()
 		}
 
-		remainedHosts := util.ExcludeElementFromSlice(availableHosts, ses.host)
+		remainedHosts := stringsutil.ExcludeElementFromSlice(availableHosts, ses.host)
 		var expectedRemainedHosts []string
 		expectedRemainedHosts = append(expectedRemainedHosts, remainedHosts...)
 
@@ -141,4 +141,97 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 			require.Contains(t, ses.remainingHosts, h)
 		}
 	})
+}
+
+func TestSession_ReplaceAvailableHosts(t *testing.T) {
+	const oldHost = "a"
+	const newHost = "b"
+
+	oldHostsList := []string{oldHost}
+	newHostsList := []string{newHost}
+
+	tests := []struct {
+		name        string
+		hostsForSet []string
+		oldHosts    []string
+		returns     bool
+		assert      func(t *testing.T, s *Session)
+	}{
+		{
+			name:        "Replace available hosts sets new host",
+			hostsForSet: newHostsList,
+			oldHosts:    oldHostsList,
+			returns:     false,
+			assert: func(t *testing.T, s *Session) {
+				require.Equal(t, s.host, newHost)
+			},
+		},
+
+		{
+			name:        "Replace available sets new available list",
+			hostsForSet: newHostsList,
+			oldHosts:    oldHostsList,
+			returns:     false,
+			assert: func(t *testing.T, s *Session) {
+				require.Equal(t, s.availableHosts, newHostsList)
+			},
+		},
+
+		{
+			name:        "Set available hosts choices host from remainingHosts (not contains host in remainingHosts)",
+			hostsForSet: newHostsList,
+			oldHosts:    oldHostsList,
+			returns:     false,
+			assert: func(t *testing.T, s *Session) {
+				require.NotContains(t, s.remainingHosts, oldHost)
+				require.NotContains(t, s.remainingHosts, newHost)
+			},
+		},
+
+		{
+			name:        "Replace available hosts choices current host if current host exists in new hosts",
+			oldHosts:    []string{"a", "b", "c"},
+			hostsForSet: []string{"d", "a", "e"},
+			returns:     true,
+			assert: func(t *testing.T, s *Session) {
+				require.Equal(t, s.Host(), "a")
+				require.Equal(t, s.remainingHosts, []string{"d", "e"})
+			},
+		},
+
+		{
+			name:        "Replace available hosts choices current host if current host exists in new hosts and first element",
+			oldHosts:    []string{"a", "b", "c"},
+			hostsForSet: []string{"a", "d", "e"},
+			returns:     true,
+			assert: func(t *testing.T, s *Session) {
+				require.Equal(t, s.Host(), "a")
+				require.Equal(t, s.remainingHosts, []string{"d", "e"})
+			},
+		},
+
+		{
+			name:        "Replace available hosts choices current host if current host exists in new hosts and last element",
+			oldHosts:    []string{"a", "b", "c"},
+			hostsForSet: []string{"d", "e", "a"},
+			returns:     true,
+			assert: func(t *testing.T, s *Session) {
+				require.Equal(t, s.Host(), "a")
+				require.Equal(t, s.remainingHosts, []string{"d", "e"})
+			},
+		},
+	}
+
+	for _, tst := range tests {
+		t.Run(tst.name, func(t *testing.T) {
+			s := NewSession(Input{
+				AvailableHosts: tst.oldHosts,
+			})
+
+			ret := s.ReplaceAvailableHosts(tst.hostsForSet)
+
+			require.Equal(t, ret, tst.returns)
+			tst.assert(t, s)
+		})
+	}
 }

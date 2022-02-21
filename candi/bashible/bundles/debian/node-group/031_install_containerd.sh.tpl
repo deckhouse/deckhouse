@@ -58,10 +58,6 @@ if bb-is-debian-version? {{ $debianVersion }} ; then
 fi
   {{- end }}
 {{- end }}
-if bb-is-astra-version? 2.12.+; then
-  desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | quote }}
-  allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "allowedPattern" | quote }}
-fi
 
 if [[ -z $desired_version ]]; then
   bb-log-error "Desired version must be set"
@@ -93,14 +89,17 @@ if [[ "$should_install_containerd" == true ]]; then
     containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%s%s" ($value.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $debianName $debianVersion)) }}"
   fi
 {{- end }}
-  if bb-is-astra-version? 2.12.+ ; then
-    containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
-  fi
 
   crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
-  containerd_fe_tag="{{ index .images.registrypackages "containerdFe146" | toString }}"
 
-  bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}" "containerd-flant-edition:${containerd_fe_tag}"
+  bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}"
+fi
+
+# Upgrade containerd-flant-edition if needed
+containerd_fe_tag="{{ index .images.registrypackages "containerdFe146" | toString }}"
+if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
+  systemctl stop containerd.service
+  bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
 
   mkdir -p /etc/systemd/system/containerd.service.d
   bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF

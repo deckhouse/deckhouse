@@ -90,9 +90,13 @@ spec:
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
-        - "--csi-address=/csi/csi.sock"
-        - "--kubelet-registration-path=/var/lib/kubelet/csi-plugins/{{ $driverFQDN }}/csi.sock"
+        - "--csi-address=$(CSI_ENDPOINT)"
+        - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
         env:
+        - name: CSI_ENDPOINT
+          value: "/csi/csi.sock"
+        - name: DRIVER_REG_SOCK_PATH
+          value: "/var/lib/kubelet/csi-plugins/{{ $driverFQDN }}/csi.sock"
         - name: KUBE_NODE_NAME
           valueFrom:
             fieldRef:

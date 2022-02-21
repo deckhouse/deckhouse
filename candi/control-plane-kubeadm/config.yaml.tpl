@@ -27,6 +27,8 @@ apiServer:
 {{- end }}
   extraArgs:
 {{- if ne .runType "ClusterBootstrap" }}
+    enable-admission-plugins: "EventRateLimit,ExtendedResourceToleration{{ if .apiserver.admissionPlugins }},{{ .apiserver.admissionPlugins | join "," }}{{ end }}"
+    admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
@@ -34,6 +36,9 @@ apiServer:
     anonymous-auth: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
+{{- end }}
+{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
+    feature-gates: "TTLAfterFinished=true"
 {{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
@@ -102,6 +107,9 @@ controllerManager:
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- end }}
+{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
+    feature-gates: "TTLAfterFinished=true"
+{{- end }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
     port: "0"
@@ -125,9 +133,15 @@ scheduler:
     readOnly: true
     pathType: DirectoryOrCreate
   extraArgs:
+{{- if ne .runType "ClusterBootstrap" }}
+    config: "/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml"
+{{- end }}
     profiling: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
+{{- end }}
+{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
+    feature-gates: "DefaultPodTopologySpread=true"
 {{- end }}
     bind-address: "127.0.0.1"
     port: "0"

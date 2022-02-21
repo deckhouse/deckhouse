@@ -53,13 +53,15 @@ type Config struct {
 	NodesTerraformState   map[string][]byte
 	CloudDiscovery        []byte
 	DeckhouseConfig       map[string]interface{}
+
+	KubeadmBootstrap   bool
+	MasterNodeSelector bool
 }
 
 func (c *Config) GetImage() string {
-	registryNameTemplate := "%s%s/dev:%s"
+	registryNameTemplate := "%s%s:%s"
 	tag := c.DevBranch
 	if c.ReleaseChannel != "" {
-		registryNameTemplate = "%s%s:%s"
 		tag = strcase.ToKebab(c.ReleaseChannel)
 	}
 	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
@@ -84,10 +86,10 @@ func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *C
 		// It helps to reduce wait time on bootstrap process restarting,
 		// and prevents a race condition when deckhouse's Pod is scheduled
 		// on the non-approved node, so the bootstrap process never finishes.
-		deployTime := manifests.GetDeckhouseDeployTime(currentManifestInCluster)
 		params := deckhouseDeploymentParamsFromCfg(cfg)
-		params.DeployTime = deployTime
-		resDeployment = manifests.ParametrizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
+		params.DeployTime = manifests.GetDeckhouseDeployTime(currentManifestInCluster)
+
+		resDeployment = manifests.ParameterizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
 
 		return nil
 	})
@@ -350,6 +352,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 }
 
 func WaitForReadiness(kubeCl *client.KubernetesClient) error {
+	return WaitForReadinessNotOnNode(kubeCl, "")
+}
+
+func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode string) error {
 	return log.Process("default", "Waiting for Deckhouse to become Ready", func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), app.DeckhouseTimeout)
 		defer cancel()
@@ -358,7 +364,11 @@ func WaitForReadiness(kubeCl *client.KubernetesClient) error {
 			case <-ctx.Done():
 				return ErrTimedOut
 			default:
-				ok, err := NewLogPrinter(kubeCl).WaitPodBecomeReady().Print(ctx)
+				ok, err := NewLogPrinter(kubeCl).
+					WaitPodBecomeReady().
+					WithExcludeNode(excludeNode).
+					Print(ctx)
+
 				if err != nil {
 					if errors.Is(err, ErrTimedOut) {
 						return err
@@ -385,10 +395,12 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) err
 
 func deckhouseDeploymentParamsFromCfg(cfg *Config) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:         cfg.GetImage(),
-		LogLevel:         cfg.LogLevel,
-		Bundle:           cfg.Bundle,
-		IsSecureRegistry: cfg.IsRegistryAccessRequired(),
+		Registry:           cfg.GetImage(),
+		LogLevel:           cfg.LogLevel,
+		Bundle:             cfg.Bundle,
+		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
+		KubeadmBootstrap:   cfg.KubeadmBootstrap,
+		MasterNodeSelector: cfg.MasterNodeSelector,
 	}
 }
 

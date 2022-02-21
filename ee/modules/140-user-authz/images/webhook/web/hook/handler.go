@@ -42,10 +42,10 @@ type Handler struct {
 	directory map[string]map[string]DirectoryEntry
 }
 
-func NewHandler(logger *log.Logger) *Handler {
+func NewHandler(logger *log.Logger, discoveryCache cache.Cache) *Handler {
 	return &Handler{
 		logger: logger,
-		cache:  cache.NewNamespacedDiscoveryCache(logger),
+		cache:  discoveryCache,
 	}
 }
 

@@ -55,7 +55,7 @@ spec:
       containers:
       - name: nginx
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.flantIntegration.madisonProxy }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.flantIntegration.madisonProxy }}"
         env:
         - name: MADISON_BACKEND
           value: {{ . }}

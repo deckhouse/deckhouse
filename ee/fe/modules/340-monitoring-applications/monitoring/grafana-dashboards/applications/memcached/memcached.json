@@ -34,7 +34,7 @@
     ]
   },
   "description": "Monitors Kubernetes Memcached Pods. Shows memory usage, hit rate, evicts and reclaims rate, items in cache, network stats, commands rate. Requires Memcached Exporter for Prometheus.",
-  "editable": true,
+  "editable": false,
   "gnetId": 37,
   "graphTooltip": 0,
   "id": null,

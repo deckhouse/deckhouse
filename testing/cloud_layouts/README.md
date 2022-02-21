@@ -10,7 +10,7 @@ docker run \
   -v /deckhouse:/deckhouse \
   -v "$PWD/testing/cloud_layouts:/deckhouse/testing/cloud_layouts" \
   -v "$PWD/layouts-tests-tmp:/tmp" \
-  -w /deckhouse dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:master
+  -w /deckhouse dev-registry.deckhouse.io/sys/deckhouse-oss/install:master
 ```
 ```bash
 dhctl destroy \

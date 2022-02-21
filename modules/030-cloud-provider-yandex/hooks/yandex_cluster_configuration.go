@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -24,7 +26,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData unstructured.Unstructured) error {
+var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
+	if !secretFound {
+		return fmt.Errorf("kube-system/d8-provider-cluster-configuration secret not found")
+	}
 	input.Values.Set("cloudProviderYandex.internal.providerClusterConfiguration", metaCfg.ProviderClusterConfig)
 	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", providerDiscoveryData.Object)
 

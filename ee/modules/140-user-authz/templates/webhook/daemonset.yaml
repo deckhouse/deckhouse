@@ -55,7 +55,7 @@ spec:
       containers:
       - name: webhook
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.userAuthz.webhook }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.userAuthz.webhook }}"
         volumeMounts:
         - mountPath: /etc/user-authz-webhook/
           name: user-authz-webhook-config
@@ -74,6 +74,11 @@ spec:
             - --key
             - /etc/ssl/user-authz-webhook/webhook-server.key
             - https://127.0.0.1:40443/healthz
+          # Wait for one minute before restarting the container to avoid crashloopbackoofs in case if apiserver restarts
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 6
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

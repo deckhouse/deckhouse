@@ -15,6 +15,7 @@
 package converge
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -77,7 +79,6 @@ func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (fu
 	localIdentity := getLocalConvergeLockIdentity(identity)
 	lockConfig := GetLockLeaseConfig(localIdentity)
 	unlockConverge, err := lockLease(kubeCl, lockConfig, false)
-
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +92,20 @@ func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (fu
 }
 
 func GetLockLeaseConfig(identity string) *client.LeaseLockConfig {
+	additionalInfo := ""
+	if app.SSHUser != "" {
+		info := struct {
+			SSHUser string `json:"ssh_user,omitempty"`
+		}{
+			SSHUser: app.SSHUser,
+		}
+
+		infoStr, err := json.Marshal(info)
+		if err == nil {
+			additionalInfo = string(infoStr)
+		}
+	}
+
 	return &client.LeaseLockConfig{
 		Name:                 "d8-converge-lock",
 		Identity:             identity,
@@ -98,6 +113,7 @@ func GetLockLeaseConfig(identity string) *client.LeaseLockConfig {
 		LeaseDurationSeconds: 300,
 		RenewEverySeconds:    180,
 		RetryWaitDuration:    3 * time.Second,
+		AdditionalUserInfo:   additionalInfo,
 		OnRenewError: func(renewErr error) {
 			log.WarnF("Lease renew was failed. Send SIGINT and shutdown: %v\n", renewErr)
 			p, err := os.FindProcess(os.Getpid())

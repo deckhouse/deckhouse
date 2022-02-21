@@ -28,13 +28,13 @@ properties:
     type: array
     default:
       - "ubuntu-lts"
-      - "centos-7"
+      - "centos"
       - "debian"
     x-examples:
       - ["ubuntu-lts"]
     items:
       type: string
-      enum: [ubuntu-lts, centos-7, debian]
+      enum: [ubuntu-lts, centos, debian]
     description: |
       Names of available bashible OS bundles to reduce helm release size.
 

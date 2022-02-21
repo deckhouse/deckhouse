@@ -1,0 +1,14 @@
+candi:
+  features:
+    - summary: Support Astra Linux 1.7
+      pull_request: https://api.github.com/repos/deckhouse/deckhouse/issues/847
+  fixes:
+    - summary: Proper work with astra bundle in EE/FE.
+      pull_request: https://api.github.com/repos/deckhouse/deckhouse/issues/868
+    - summary: Fix centos distro version detection
+      pull_request: https://api.github.com/repos/deckhouse/deckhouse/issues/857
+ingress-nginx:
+  fixes:
+    - summary: Fix handled request query on a dashboard.
+      pull_request: https://api.github.com/repos/deckhouse/deckhouse/issues/871
+

@@ -1,3 +1,4 @@
+
 module Jekyll
   module CustomFilters
     def true_relative_url(path)
@@ -16,6 +17,12 @@ module Jekyll
 
     def endswith(text, query)
       return text.end_with? query
+    end
+
+    def camel_to_snake_case(text)
+      return text.to_s.gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2').
+                         gsub(/([a-z\d])([A-Z])/,'\1_\2').
+                         tr("-", "_").downcase
     end
 
     def startswith(text, query)

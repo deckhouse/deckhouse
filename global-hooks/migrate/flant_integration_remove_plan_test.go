@@ -198,4 +198,53 @@ metrics:
 `))
 		})
 	})
+
+	Context("Only plan", func() {
+		const (
+			cmDeckhouse = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deckhouse
+  namespace: d8-system
+data:
+  anotherModule: |
+    yes: no
+  flantIntegration: |
+    plan: "Silver"
+`
+		)
+
+		var cm v1.ConfigMap
+		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
+
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+
+		BeforeEach(func() {
+			f.KubeStateSet("")
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				ConfigMaps("d8-system").
+				Create(context.TODO(), &cm, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("Hook does not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook stores empty object when no fields left", func() {
+			resCm, err := dependency.TestDC.K8sClient.CoreV1().
+				ConfigMaps("d8-system").
+				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+
+			Expect(err).To(BeNil())
+			Expect(resCm.Data["flantIntegration"]).To(MatchYAML(`{}`))
+		})
+	})
 })

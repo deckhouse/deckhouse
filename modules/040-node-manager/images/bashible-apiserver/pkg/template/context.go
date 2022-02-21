@@ -360,8 +360,11 @@ func (c *BashibleContext) update() {
 			_, _ = errStr.WriteString(fmt.Sprintf("\t%s: %s\n", bundle, err))
 		}
 		klog.Warningf("bundles checksums have errors:\n%s", errStr.String())
+		_ = ioutil.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
 		return
 	}
+
+	_ = os.Remove("/tmp/context.error")
 
 	var res map[string]interface{}
 
@@ -384,6 +387,10 @@ func (c *BashibleContext) update() {
 func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
+
+	// TODO remove after 1.31 release !!!
+	// This replace is needed to first bsahible converge after change bundle name from centos-7 to centos
+	contextKey = strings.ReplaceAll(contextKey, "centos-7", "centos")
 
 	raw, ok := c.data[contextKey]
 	if !ok {

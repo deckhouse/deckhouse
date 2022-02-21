@@ -61,7 +61,7 @@ bashible: &bashible
           desiredVersion: "5.4.0-1029-gcp"
           allowedPattern: ""
   debian:
-    '9':
+    '9': &debian9
       docker:
         desiredVersion: "docker-ce=5:19.03.15~3-0~debian-stretch"
         allowedPattern: ""
@@ -121,9 +121,28 @@ bashible: &bashible
         generic:
           desiredVersion: "3.10.0-1127.el7.x86_64"
           allowedPattern: "3.10.0-1127|3.10.0-1160"
+    '8':
+      docker:
+        desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
+          allowedPattern: "containerd.io-1.[1234]"
+      containerd:
+        desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
+        allowedPattern: "containerd.io-1.[1234]"
+      kernel:
+        generic:
+          desiredVersion: "4.18.0-305.3.1.el8.x86_64"
+          allowedPattern: "4.18.0-"
+  astra:
+    '1.7':
+      <<: *debian9
+    '2.12':
+      <<: *debian9
 k8s:
   '1.19':
-    status: end-of-life
+    status: available
     patch: 16
     cniVersion: 0.8.7
     bashible: &bashible_k8s_ge_1_19
@@ -174,7 +193,7 @@ k8s:
       kubeProxy: sha256:092f9526686d27964d17be772c42cde086690209cc8aea10c49991456eb879c2
   '1.20':
     status: available
-    patch: 14
+    patch: 15
     cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -194,11 +213,11 @@ k8s:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:f47e67e53dca3c2a715a85617cbea768a7c69ebbd41556c0b228ce13434c5fc0
-      kubeProxy: sha256:df40eaf6eaa87aa748974e102fad6865bfaa01747561e4d01a701ae69e7c785d
+      kubeScheduler: sha256:5f7c88f2101781780737c9c396e218c92ccc1c7895dda2cb499d2c5096ab8708
+      kubeProxy: sha256:4b6c25521c58d7b7968b85f1f7dd9db30719b3565af97250442f5df91aece29d
   '1.21':
     status: available
-    patch: 8
+    patch: 9
     cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -210,20 +229,21 @@ k8s:
       gcp: 133826d967b2852f8bb8aa177d5f11cb1adb1f01
     csi:
       openstack: v1.21.0
-      provisioner: v2.1.0@sha256:20c828075d1e36f679d6a91e905b0927141eef5e15be0c9a1ca4a6a0ed9313d2
-      attacher: v3.1.0@sha256:50c3cfd458fc8e0bf3c8c521eac39172009382fc66dc5044a330d137c6ed0b09
-      resizer: v1.1.0@sha256:7a5ba58a44e0d749e0767e4e37315bcf6a61f33ce3185c1991848af4db0fb70a
-      registrar: v2.1.0@sha256:a61d309da54641db41fb8f35718f744e9f730d4d0384f8c4b186ddc9f06cbd5f
+      provisioner: v3.1.0@sha256:122bfb8c1edabb3c0edd63f06523e6940d958d19b3957dc7b1d6f81e9f1f6119
+      attacher: v3.4.0@sha256:8b9c313c05f54fb04f8d430896f5f5904b6cb157df261501b29adc04d2b2dc7b
+      resizer: v1.4.0@sha256:9ebbf9f023e7b41ccee3d52afe39a89e3ddacdbb69269d583abfc25847cfd9e4
+      registrar: v2.4.0@sha256:fc39de92284cc45240417f48549ee1c98da7baef7d0290bc29b232756dfce7c0
+      snapshotter: v5.0.1@sha256:89e900a160a986a1a7a4eba7f5259e510398fa87ca9b8a729e7dec59e04c7709
+      livenessprobe: v2.5.0@sha256:44d8275b3f145bc290fd57cb00de2d713b5e72d2e827d8c5555f8ddb40bf3f02
     controlPlane:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:415afb38d7d610177753f1bd62fd6ef1bf3eec85cc17e100735775d7b7de1ccf
-      # kubeProxy: sha256 digest isn't needed because this component is compiled from source for that version of kubernetes
-      kubeProxy: sha256:ed16fc3467873e99ad90389160330b57eed80ad71faec5bba154059ced8dd6f8
+      kubeScheduler: sha256:31ebcab7f51507a73b1a88dbcb43d02e884f779c62ff5b14532af90a522fa996
+      # kubeProxy: sha256 digest isn't needed for this version of kubernetes because this component is compiled as a module image with a special patch
   '1.22':
     status: available
-    patch: 5
+    patch: 6
     cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -235,13 +255,15 @@ k8s:
       gcp: 133826d967b2852f8bb8aa177d5f11cb1adb1f01
     csi:
       openstack: v1.22.0
-      provisioner: v3.0.0@sha256:6477988532358148d2e98f7c747db4e9250bbc7ad2664bf666348abf9ee1f5aa
-      attacher: v3.3.0@sha256:80dec81b679a733fda448be92a2331150d99095947d04003ecff3dbd7f2a476a
-      resizer: v1.3.0@sha256:6e0546563b18872b0aa0cad7255a26bb9a87cb879b7fc3e2383c867ef4f706fb
+      provisioner: v3.1.0@sha256:122bfb8c1edabb3c0edd63f06523e6940d958d19b3957dc7b1d6f81e9f1f6119
+      attacher: v3.4.0@sha256:8b9c313c05f54fb04f8d430896f5f5904b6cb157df261501b29adc04d2b2dc7b
+      resizer: v1.4.0@sha256:9ebbf9f023e7b41ccee3d52afe39a89e3ddacdbb69269d583abfc25847cfd9e4
       registrar: v2.4.0@sha256:fc39de92284cc45240417f48549ee1c98da7baef7d0290bc29b232756dfce7c0
+      snapshotter: v5.0.1@sha256:89e900a160a986a1a7a4eba7f5259e510398fa87ca9b8a729e7dec59e04c7709
+      livenessprobe: v2.5.0@sha256:44d8275b3f145bc290fd57cb00de2d713b5e72d2e827d8c5555f8ddb40bf3f02
     controlPlane:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:35e7fb6d7e570caa10f9545c46f7c5d852c7c23781efa933d97d1c12dbcd877b
-      kubeProxy: sha256:7cd096e334df4bdad417fe91616d34d9f0a134af9aed19db12083e39d60e76a5
+      kubeScheduler: sha256:58dd4da94cdc086d48719c874236fb79eafe594f165741397e250a55502a5619
+      kubeProxy: sha256:6ee41c1801aa21f619bc41f19af873631922c397e001f7757745474d9f92bca9

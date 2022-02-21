@@ -49,14 +49,14 @@ locals {
   zones           = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
   zone            = element(local.zones, var.nodeIndex)
 
+  use_nested_resource_pool = lookup(var.providerClusterConfiguration, "useNestedResourcePool", true)
   base_resource_pool    = trim(lookup(var.providerClusterConfiguration, "baseResourcePool", ""), "/")
-  default_resource_pool = join("/", local.base_resource_pool != "" ? [local.base_resource_pool, local.prefix] : [local.prefix])
+  default_resource_pool = local.use_nested_resource_pool == true ? join("/", local.base_resource_pool != "" ? [local.base_resource_pool, local.prefix] : [local.prefix]) : ""
 
   resource_pool = lookup(local.instance_class, "resourcePool", local.default_resource_pool)
 
   additionalNetworks = lookup(local.instance_class, "additionalNetworks", [])
   main_ip_addresses  = lookup(local.instance_class, "mainNetworkIPAddresses", [])
-
 
   runtime_options               = lookup(local.instance_class, "runtimeOptions", {})
   calculated_memory_reservation = lookup(local.runtime_options, "memoryReservation", 80)

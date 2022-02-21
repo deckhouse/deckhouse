@@ -74,7 +74,7 @@ fi
 cat > /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf << END
 {{- if eq .bundle "ubuntu-lts" }}
 user www-data;
-{{- else if eq .bundle "centos-7" }}
+{{- else if eq .bundle "centos" }}
 user nginx;
 {{- end }}
 

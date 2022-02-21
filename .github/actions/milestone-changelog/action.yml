@@ -17,29 +17,97 @@ runs:
         echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
         echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
 
-    # The gh utility has a shortcut to filter merged PRs by milestone, while it would require
-    # multiple calls in JS rest client
-    - name: Find Merged Pull Requsts
+    # Fetch merged PRs in milestone
+    - name: Find Merged Pull Requests
       id: merged_milestone
-      shell: bash
+      uses: actions/github-script@v5
+      with:
+        result-encoding: json
+        script: |
+          const fetch = require('./.github/scripts/js/changelog-find-pulls.js')
+          const prs = await fetch({ github, context }, { milestone: process.env.MILESTONE })
+          core.setOutput("prs", prs)
       env:
-        GITHUB_TOKEN: ${{ inputs.token }}
-      # Pick at most 1000 PRs with possible changes blocks
-      run: |
-        prs="$(gh pr list \
-          --repo '${{ github.repository }}' \
-          --search 'milestone:${{ steps.args.outputs.milestone_title }}' \
-          --state merged \
-          --limit 1000 \
-          --json number,url,title,body,state,milestone)"
-        echo "::set-output name=prs::${prs}"
+        MILESTONE: ${{ steps.args.outputs.milestone_title }}
 
     - name: Collect Changelog
       id: changelog
-      uses: deckhouse/changelog-action@main
+      uses: deckhouse/changelog-action@v1
       with:
         token: ${{ inputs.token }}
         pull_requests: ${{ steps.merged_milestone.outputs.prs }}
+        # section:forced_impact_level
+        allowed_sections: |
+          ci:low
+          testing:low
+          tools:low
+          go_lib
+          helm_lib
+          jq_lib
+          shell_lib
+          basic-auth
+          candi
+          cert-manager
+          chrony
+          cloud-provider-aws
+          cloud-provider-azure
+          cloud-provider-gcp
+          cloud-provider-openstack
+          cloud-provider-vsphere
+          cloud-provider-yandex
+          cni-flannel
+          cni-simple-bridge
+          common
+          control-plane-manager
+          dashboard
+          deckhouse
+          deckhouse-controller
+          deckhouse-web
+          descheduler
+          dhctl
+          docs
+          extended-monitoring
+          flant-integration
+          global-hooks
+          helm
+          ingress-nginx
+          istio
+          keepalived
+          kube-dns
+          kube-proxy
+          local-path-provisioner
+          log-shipper
+          metallb
+          monitoring-applications
+          monitoring-custom
+          monitoring-kubernetes
+          monitoring-kubernetes-control-plane
+          monitoring-ping
+          namespace-configurator
+          network-gateway
+          network-policy-engine
+          node-local-dns
+          node-manager
+          okmeter
+          openvpn
+          operator-prometheus
+          operator-prometheus-crd
+          pod-reloader
+          priority-class
+          prometheus
+          prometheus-crd
+          prometheus-metrics-adapter
+          prometheus-pushgateway
+          registrypackages
+          secret-copier
+          terraform-manager
+          upmeter
+          user-authn
+          user-authn-crd
+          user-authz
+          vertical-pod-autoscaler
+          vertical-pod-autoscaler-crd
+
 
     - name: Write Changelog File
       id: file

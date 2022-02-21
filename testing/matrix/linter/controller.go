@@ -18,7 +18,6 @@ package linter
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"runtime"
@@ -150,35 +149,30 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 		lintError = fmt.Errorf("helm chart render: %v", err)
 		return
 	}
-
-	// Catch panic if cannot unmarshal the doc
-	// Decode method of yaml package is preferable because of lower resource consumption
-	var lastTest string
-	defer func() {
-		if r := recover(); r != nil {
-			lintError = fmt.Errorf(
-				manifestErrorMessage,
-				"panic during unmarshalling (probably because of yaml file is invalid)",
-				lastTest,
-			)
-		}
-	}()
-
 	for path, bigFile := range files {
-		lastTest = bigFile
-		dec := yaml.NewDecoder(strings.NewReader(bigFile))
-		for {
-			var node map[string]interface{}
-			if err := dec.Decode(&node); err == io.EOF {
-				break
+		bigFileTmp := strings.TrimSpace(bigFile)
+
+		// Naive implementation to avoid using regex here
+		docs := strings.Split(bigFileTmp, "---")
+		for _, d := range docs {
+			if d == "" {
+				continue
 			}
+			d = strings.TrimSpace(d)
+
+			var node map[string]interface{}
+			err := yaml.Unmarshal([]byte(d), &node)
+			if err != nil {
+				return fmt.Errorf(manifestErrorMessage, err, numerateManifestLines(d))
+			}
+
 			if node == nil {
 				continue
 			}
 
-			if err := objectStore.Put(path, node); err != nil {
-				lintError = fmt.Errorf("helm chart object already exists: %v", err)
-				return
+			err = objectStore.Put(path, node)
+			if err != nil {
+				return fmt.Errorf("helm chart object already exists: %v", err)
 			}
 		}
 	}
@@ -234,14 +228,18 @@ const (
 	manifestErrorMessage = `manifest unmarshal: %v
 
 --- Manifest:
-%s`
+%s
+`
 	testsSuccessfulMessage = `
-%sModule %s - %v test cases passed!`
+%sModule %s - %v test cases passed!
+
+`
 	testsErrorMessage = `test #%v failed:
 --- Error:
 %s
 
 --- Values:
 %s
+
 `
 )

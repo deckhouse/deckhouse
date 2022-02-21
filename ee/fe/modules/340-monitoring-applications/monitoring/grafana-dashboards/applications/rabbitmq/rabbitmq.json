@@ -13,7 +13,7 @@
     ]
   },
   "description": "A RabbitMQ Management Overview",
-  "editable": true,
+  "editable": false,
   "gnetId": 10991,
   "graphTooltip": 1,
   "iteration": 1609156918146,

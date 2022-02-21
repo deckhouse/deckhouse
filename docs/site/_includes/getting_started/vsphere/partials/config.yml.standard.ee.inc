@@ -95,14 +95,20 @@ zones:
 # [<en>] public SSH key for accessing cloud nodes
 # [<ru>] публичная часть SSH-ключа для доступа к узлам облака
 sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
-# [<en>] name of External Network which has access to the Internet.
-# [<en>] it must contain a DHCP server
+# [<en>] name of External Network which has access to the Internet
+# [<en>] ip addresses from External Network sets as ExternalIP of Node object
+# [<en>] optional parameter
 # [<ru>] имя External Network, у которой есть доступ в Интернет
-# [<ru>] в ней должен быть DHCP сервер
+# [<ru>] ip адреса из External Network проставляются как ExternalIP объекта Node
+# [<ru>] опциональный параметр
 externalNetworkNames:
 - *!CHANGE_NETWORK_NAME*
 # [<en>] name of Internal Network that will be used for traffic between nodes
+# [<en>] ip addresses from Internal Network sets as InternalIP of Node object
+# [<en>] optional parameter
 # [<ru>] имя Internal Network, которая будет использоваться для трафика между нодами, в данном примере идентично externalNetworkNames
+# [<ru>] ip адреса из Internal Network проставляются как InternalIP объекта Node
+# [<ru>] опциональный параметр
 internalNetworkNames:
 - *!CHANGE_NETWORK_NAME*
 # [<en>] address space of the cluster's nodes
@@ -124,10 +130,12 @@ masterNodeGroup:
     # [<ru>] имя образа, созданного в шаге "Сборка образа виртуальных машин"
     template: *!CHANGE_TEMPLATE_NAME*
     datastore: *!CHANGE_DATASTORE_NAME*
-    # [<en>] should be the same as externalNetworkNames
-    # [<ru>] идентично externalNetworkNames
+    # [<en>] main network connected to node
+    # [<ru>] основная сеть подключенная к узлу
     mainNetwork: *!CHANGE_NETWORK_NAME*
-    # [<en>] should be the same as internalNetworkNames
-    # [<ru>] идентично internalNetworkNames
+    # [<en>] additional networks connected to node
+    # [<en>] optional parameter
+    # [<ru>] дополнительные сети, подключенные к узлу
+    # [<ru>] опциональный параметр
     additionalNetworks:
     - *!CHANGE_NETWORK_NAME*

@@ -47,7 +47,7 @@ spec:
       containers:
       - name: prometheus-metrics-adapter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.k8sPrometheusAdapter }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.k8sPrometheusAdapter }}"
         args:
         - --secure-port=6443
         - --tls-cert-file=/var/run/adapter-cert/tls.crt
@@ -79,7 +79,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       - name: prometheus-reverse-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.prometheusReverseProxy }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.prometheusReverseProxy }}"
         env:
         - name: PROMETHEUS_URL
           value: "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"

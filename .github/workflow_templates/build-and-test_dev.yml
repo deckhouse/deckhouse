@@ -26,13 +26,6 @@ jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
-  build_modules_images_fe:
-    name: Build Modules Images FE
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "build_modules_images_template" $ctx | strings.Indent 4 }!}
-
   go_generate:
     name: Go Generate
     needs:
@@ -45,9 +38,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
       - go_generate
-{!{ tmpl.Exec "build_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   doc_web_build:
     name: Doc web build
@@ -55,7 +47,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
 {!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
 
   main_web_build:
@@ -64,7 +55,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
 {!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
 
   tests:
@@ -72,7 +62,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "unit") | strings.Indent 4 }!}
 
@@ -81,7 +70,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 
@@ -90,7 +78,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "dhctl") | strings.Indent 4 }!}
 
@@ -99,7 +86,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint") | strings.Indent 4 }!}
 
@@ -108,7 +94,6 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases") | strings.Indent 4 }!}
 
@@ -127,6 +112,5 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_modules_images_fe
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators") | strings.Indent 4 }!}

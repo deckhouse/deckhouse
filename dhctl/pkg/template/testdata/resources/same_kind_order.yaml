@@ -1,0 +1,34 @@
+apiVersion: v1
+data:
+  key: value
+kind: ConfigMap
+metadata:
+  name: second
+  namespace: test-ns
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-ns
+
+---
+apiVersion: v1
+data:
+  key: value
+kind: ConfigMap
+metadata:
+  name: another
+  namespace: test-ns
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: another
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: r-test
+
+---

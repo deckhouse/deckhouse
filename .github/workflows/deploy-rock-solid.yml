@@ -40,12 +40,7 @@ env:
   # </template: werf_envs>
   DEPLOY_CHANNEL: rock-solid
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
-concurrency:
-  group: ${{ github.ref }}-deploy-channel-rock-solid
-  cancel-in-progress: true
+# Note: no concurrency section for deploy workflows.
 
 jobs:
 
@@ -69,8 +64,6 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            core.setOutput('ci_pipeline_created_at', new Date().toISOString())
-
             const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
 
             let githubBranch = '';
@@ -78,27 +71,17 @@ jobs:
             let githubSHA = '';
             let refName = '';
             let refSlug = '';
-            if (context.eventName === "workflow_dispatch") {
+            if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
               // workflow_dispatch run for pull request should have input 'pull_request_ref'.
               // Note: value in inputs.pull_request_ref is for pull_request_info job.
-              if (context.payload.inputs.pull_request_ref) {
-                refName       = context.payload.inputs.ci_commit_ref_name
-                githubBranch  = refName
-                githubSHA     = context.payload.inputs.pull_request_sha
-                // Extract pull request number from 'refs/pull/<NUM>/merge'
-                const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
-                refSlug       = `pr${prNum}`;
-                core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
-              } else {
-                refName       = GITHUB_REF_NAME
-                githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
-                githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
-                githubSHA     = context.sha
-                // refName is 'main' or tag name, so slug is not necessary.
-                refSlug       = refName
-                core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
-              }
-            } else {
+              refName       = context.payload.inputs.ci_commit_ref_name
+              githubBranch  = refName
+              githubSHA     = context.payload.inputs.pull_request_sha
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
+              refSlug       = `pr${prNum}`;
+              core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+            } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
               const targetRepo = context.payload.repository.full_name;
               const prRepo = context.payload.pull_request.head.repo.full_name
@@ -109,6 +92,15 @@ jobs:
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+            } else {
+              // Events: workflow_dispatch without pull_request_ref, schedule, push...
+              refName       = GITHUB_REF_NAME
+              githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+              githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+              githubSHA     = context.sha
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = refName
+              core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
             }
 
             core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
@@ -125,40 +117,12 @@ jobs:
 
   # </template: git_info_job>
 
-  # <template: check_label_job>
-  check_label:
-    name: Check label
-    runs-on: ubuntu-latest
-    outputs:
-      should_run: ${{ steps.check_label.outputs.should_run }}
-      labels: ${{ steps.check_label.outputs.labels }}
-    steps:
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-
-      # </template: checkout_step>
-      - id: check_label
-        name: Check labels on push
-        uses: actions/github-script@v5.0.0
-        with:
-          script: |
-            const labelType = 'deploy';
-            const labelSubject = 'rock-solid';
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.checkLabel({github, context, core, labelType, labelSubject});
-  # </template: check_label_job>
-
   run_deploy:
     name: Deploy deckhouse to rock-solid channel
     environment:
       name: rock-solid
     needs:
-      - check_label
       - git_info
-    if: needs.check_label.outputs.should_run == 'true'
     runs-on: [self-hosted, regular]
     steps:
 
@@ -182,20 +146,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
 
       # <template: login_dev_registry_step>
       - name: Login to dev registry

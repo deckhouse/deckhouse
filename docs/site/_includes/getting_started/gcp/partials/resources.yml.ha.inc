@@ -89,9 +89,11 @@ spec:
   # [<en>] user e-mail
   # [<ru>] e-mail пользователя
   email: admin@example.com
-  # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
-  # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
+  # [<en>] this is a hash of the password <GENERATED_PASSWORD>, generated  now
+  # [<en>] generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2
+  # [<ru>] это хэш пароля <GENERATED_PASSWORD>, сгенерированного сейчас
+  # [<ru>] сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить

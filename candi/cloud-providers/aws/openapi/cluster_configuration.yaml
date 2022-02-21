@@ -15,7 +15,7 @@ apiVersions:
       peeredVPCs:
         type: array
         description: |
-          A list of AWS VPC ids to peer with the cluster network.
+          A list of AWS VPC IDs to peer with the cluster network.
 
           The service account must have access to all the VPCs listed. You have to configure the peering connection [manually](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html) if no access is available.
         items:
@@ -120,8 +120,6 @@ apiVersions:
                     The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
-
-                    Format — `key: value`.
                   x-doc-example: |
                     ```yaml
                     labels:
@@ -280,7 +278,7 @@ apiVersions:
 
           * The IP range must overlap or match the VPC address range;
           * The IP range will be evenly split into subnets, one per Availability Zone in your region;
-          * An optional but recommended parameter. By default, it corresponds to the whole range of VPC addresses;
+          * An optional but recommended parameter. By default, it corresponds to the whole range of VPC addresses.
 
           > If a new VPC is created along with a new cluster and no `vpcNetworkCIDR` is provided, then the range from  `nodeNetworkCIDR` is used for the VPC.
           > Thus, the entire VPC is allocated for the cluster networks, and you will not be able to add other resources to this VPC.
@@ -292,7 +290,7 @@ apiVersions:
         description: |
           ID of the existing VPC to use for deploying.
 
-          * **A mandatory parameter** if the `vpcNetworkCIDR` is omitted.
+          * **A mandatory parameter** if the `vpcNetworkCIDR` is omitted;
           * **Caution!** If there is an Internet Gateway in the target VPC, the deployment of the basic infrastructure will fail with an error. Currently, an Internet Gateway cannot be adopted.
       sshPublicKey:
         type: string
@@ -332,7 +330,7 @@ apiVersions:
           type: string
         minItems: 1
         uniqueItems: true
-        description: The globally restricted set of zones that this Cloud Provider works with.
+        description: The globally restricted set of zones that this cloud provider works with.
     allOf:
     - oneOf:
       - required: [layout]

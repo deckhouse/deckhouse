@@ -21,7 +21,8 @@ Bashible consists of small bash scripts, that are called `steps`.
 * The decision to include a step in the bundle is based on a bashible bundle name and a cloud provider name.
    * bashible bundle - bundle which is based on the operating system:
        * ubuntu-lts
-       * centos-7
+       * centos
+       * debian
    * cloud-provider - supported cloud providers:
        * aws
        * azure

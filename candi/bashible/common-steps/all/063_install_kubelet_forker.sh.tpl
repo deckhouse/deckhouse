@@ -18,6 +18,11 @@ bb-sync-file /usr/local/bin/d8-kubelet-forker - << "EOF"
 #!/bin/bash
 set -e
 
+# Start sysctl-tuner to set appropriate values to system variables before kubelet start
+if [ -x /usr/local/bin/sysctl-tuner ]; then
+  /usr/local/bin/sysctl-tuner
+fi
+
 $@ &
 CHILDREN_PID="$!"
 
