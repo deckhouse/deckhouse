@@ -35,7 +35,7 @@ apiServer:
 {{- end }}
     anonymous-auth: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "TTLAfterFinished=true"
@@ -105,7 +105,7 @@ controllerManager:
     profiling: "false"
     terminated-pod-gc-threshold: "12500"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "TTLAfterFinished=true"
@@ -138,7 +138,7 @@ scheduler:
 {{- end }}
     profiling: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "DefaultPodTopologySpread=true"
