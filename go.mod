@@ -48,14 +48,15 @@ require (
 	helm.sh/helm/v3 v3.5.1
 	k8s.io/api v0.21.4
 	k8s.io/apiextensions-apiserver v0.20.5
-	k8s.io/apimachinery v0.21.4
+	k8s.io/apimachinery v0.23.4
 	k8s.io/apiserver v0.20.5
 	k8s.io/client-go v0.21.4
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	k8s.io/utils v0.0.0-20211116205334-6203023598ed
 	sigs.k8s.io/yaml v1.3.0
 )
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
+
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
 
@@ -63,4 +64,5 @@ replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v
 replace k8s.io/client-go => k8s.io/client-go v0.19.11
 
 replace k8s.io/api => k8s.io/api v0.19.11
+
 //
