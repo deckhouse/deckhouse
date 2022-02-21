@@ -158,7 +158,8 @@ deckhouse: |
   * `Projects -> New Project`;
   * `Project Name` будет частью URL. Используйте любой, например, `d8s`;
   * `Access Level`: `Public`;
-  * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге.
+  * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге;
+  * `Projects -> Your project name -> Policy -> Action -> Delete` — Удалите создаваемую автоматически политику очистки образов страше 7 дней.
 
 ![](images/registry/harbor/harbor2.png)
 
@@ -170,6 +171,7 @@ deckhouse: |
 
 * Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry;
 * Изменить Secret `d8-system/deckhouse-registry` (все параметры хранятся в кодировке Base64):
+  * Для корректной записи значений в секреты без используйте `echo -n 'value' | base64`
   * Исправить `.dockerconfigjson` с учетом авторизации в новом registry;
   * Исправить `address` на адрес нового registry (например, `registry.example.com`);
   * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/fe`);

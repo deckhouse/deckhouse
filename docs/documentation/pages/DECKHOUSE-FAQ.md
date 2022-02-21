@@ -154,7 +154,8 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
   * `Projects -> New Project`;
   * `Project Name` will be used in the URL. You can choose any name, for example, `d8s`;
   * `Access Level`: `Public`;
-  * `Proxy Cache` — enable and choose the Registry, created in the previous step.
+  * `Proxy Cache` — enable and choose the Registry, created in the previous step;
+  * `Projects -> Your project name -> Policy -> Action -> Delete` — Delete automatically created cleanup policy, that removes images older than 7 days.
 
 ![](images/registry/harbor/harbor2.png)
 
@@ -166,6 +167,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
 * Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry;
 * Edit the `d8-system/deckhouse-registry` secret (note that all parameters are Base64-encoded):
+  * To correctly write values to secrets without use: `echo -n 'value' | base64`;
   * Insert third-party registry credentials into `.dockerconfigjson`;
   * Replace `address` with the third-party registry's host address (e.g., `registry.example.com`);
   * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/fe`);
