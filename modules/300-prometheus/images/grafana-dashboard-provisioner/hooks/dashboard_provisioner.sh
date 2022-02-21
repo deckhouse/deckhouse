@@ -20,7 +20,6 @@ done
 #qqq
 #qqq
 #qqq
-#qqq
 
 function __config__() {
   cat << EOF
