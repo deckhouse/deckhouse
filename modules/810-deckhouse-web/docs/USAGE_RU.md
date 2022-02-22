@@ -20,4 +20,3 @@ deckhouseWeb: |
     authResponseHeaders: "Authorization"
 ```
 
-Также можно настроить дополнительные параметры, подробнее о них [в следующей главе](./configuration.html).
