@@ -4,6 +4,8 @@ title: "Модуль deckhouse-web: примеры конфигурации"
 
 ## Пример конфигурации модуля
 
+Ниже представлен простой пример конфигурации модуля:
+
 ```yaml
 deckhouseWeb: |
   nodeSelector:
@@ -17,3 +19,4 @@ deckhouseWeb: |
     authSignInURL: "https://<applicationDomain>/sign-in"
     authResponseHeaders: "Authorization"
 ```
+
