@@ -19,5 +19,3 @@ deckhouseWeb: |
     authSignInURL: "https://<applicationDomain>/sign-in"
     authResponseHeaders: "Authorization"
 ```
-
-You can also configure additional parameters. More information about this [in the next chapter](./configuration.html).
