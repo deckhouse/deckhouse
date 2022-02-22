@@ -4,6 +4,8 @@ title: "The deckhouse-web module: usage"
 
 ## An example of the module configuration
 
+Below is a simple example of the module configuration:
+
 ```yaml
 deckhouseWeb: |
   nodeSelector:
