@@ -19,6 +19,7 @@ for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
 done
 #aaaaqqq
 #1241234qqq
+#1241234qqq
 #werwerqqq
 
 function __config__() {

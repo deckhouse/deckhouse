@@ -422,7 +422,7 @@ jobs:
           werf build \
             --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
             --parallel=true --parallel-tasks-limit=5 \
-            --report-path images_tags_werf.json
+            --report-path images_tags_werf.json --debug
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
