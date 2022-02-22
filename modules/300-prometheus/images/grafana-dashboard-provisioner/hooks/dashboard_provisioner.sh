@@ -19,7 +19,7 @@ for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
 done
 #aaaaqqq
 #1241234qqq
-#qqq
+#werwerqqq
 
 function __config__() {
   cat << EOF

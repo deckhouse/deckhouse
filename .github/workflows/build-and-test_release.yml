@@ -351,10 +351,11 @@ jobs:
           # This build put stages to "dev" registry.
           # If "dev" registry is empty, stages are copied from FE cache.
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+          export WERF_DEBUG_DOCKER_REGISTRY_API=1
           werf build \
             --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
             --parallel=true --parallel-tasks-limit=5 \
-            --report-path images_tags_werf.json --debug
+            --report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -561,10 +562,11 @@ jobs:
           # This build put stages to "dev" registry.
           # If "dev" registry is empty, stages are copied from FE cache.
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+          export WERF_DEBUG_DOCKER_REGISTRY_API=1
           werf build \
             --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
             --parallel=true --parallel-tasks-limit=5 \
-            --report-path images_tags_werf.json --debug
+            --report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -771,10 +773,11 @@ jobs:
           # This build put stages to "dev" registry.
           # If "dev" registry is empty, stages are copied from FE cache.
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+          export WERF_DEBUG_DOCKER_REGISTRY_API=1
           werf build \
             --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
             --parallel=true --parallel-tasks-limit=5 \
-            --report-path images_tags_werf.json --debug
+            --report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
