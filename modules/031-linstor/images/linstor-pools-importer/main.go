@@ -190,8 +190,8 @@ func main() {
 // Makes loop over storage pool candidates, retruns channel of changed ones
 func runCandidatesLoop(ctx context.Context, f func() ([]StoragePoolCandidate, error), delay time.Duration) <-chan StoragePoolCandidate {
 	ch := make(chan StoragePoolCandidate)
-	var oldCandidates []StoragePoolCandidate
 	go func() {
+		var oldCandidates []StoragePoolCandidate
 		for {
 			select {
 			case <-ctx.Done():
@@ -216,8 +216,8 @@ func runCandidatesLoop(ctx context.Context, f func() ([]StoragePoolCandidate, er
 					ch <- candidate
 				}
 				oldCandidates = candidates
-				time.Sleep(delay)
 			}
+			time.Sleep(delay)
 		}
 	}()
 	return ch
