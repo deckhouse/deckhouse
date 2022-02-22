@@ -108,7 +108,6 @@ properties:
               The name of the secret in the `d8-system` namespace to use with the documentation web UI.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
-            default: "false"
   nodeSelector:
     type: object
     additionalProperties:
