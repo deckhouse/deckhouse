@@ -65,8 +65,10 @@ spec:
               name: madison-proxy
               key: auth-key
         {{- $madisonScheme := "https" }}
-        {{- if $.Values.global.modules.proxy.httpProxy }}
-          {{ - $madisonScheme = "http" }}
+        {{- if $.Values.global.modules.proxy }}
+          {{- if $.Values.global.modules.proxy.httpProxy }}
+            {{- $madisonScheme = "http" }}
+          {{- end }}
         {{- end }}
         - name: MADISON_SCHEME
           value: {{ $madisonScheme | quote }}
