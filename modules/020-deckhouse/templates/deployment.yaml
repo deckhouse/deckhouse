@@ -126,6 +126,7 @@ spec:
               value: /tmp/shell-operator-debug.socket
             - name: HISTFILE
               value: /tmp/.bash_history
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
           ports:
             - containerPort: 9650
               name: self
