@@ -57,6 +57,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterManualDS,
 		},
 		{
+			Name:                         "revisions",
+			ApiVersion:                   "apps/v1",
+			Kind:                         "ControllerRevision",
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-ingress-nginx"},
+				},
+			},
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "controller",
+				},
+			},
+			FilterFunc: filterControllerRevision,
+		},
+		{
 			Name:                         "pods",
 			ApiVersion:                   "v1",
 			Kind:                         "Pod",
@@ -76,9 +93,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, manualControllerUpdate)
 
+type manualControllerRevision struct {
+	CRName   string
+	Revision int64
+}
 type manualDSController struct {
-	CRName     string
-	Generation int64
+	CRName string
 
 	DesiredPodCount int32
 	CurrentPodCount int32
@@ -104,6 +124,19 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 		controllers = append(controllers, controller)
 	}
 
+	revisionMap := make(map[string]int64, len(controllers))
+	snap = input.Snapshots["revisions"]
+	for _, srev := range snap {
+		rev := srev.(manualControllerRevision)
+		if prev, ok := revisionMap[rev.CRName]; ok {
+			if rev.Revision > prev {
+				revisionMap[rev.CRName] = rev.Revision
+			}
+		} else {
+			revisionMap[rev.CRName] = rev.Revision
+		}
+	}
+
 	// by ds controller name
 	podsMap := make(map[string][]manualRolloutPod)
 	snap = input.Snapshots["pods"]
@@ -127,8 +160,13 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 				podsReadyForUpdate = false
 				break
 			}
+			dsRevision, ok := revisionMap[controller.CRName]
+			if !ok {
+				podsReadyForUpdate = false
+				break
+			}
 
-			if pod.Generation != controller.Generation {
+			if pod.Generation != dsRevision {
 				podNameForDeletion = pod.Name
 			}
 		}
@@ -151,9 +189,22 @@ func filterManualDS(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 
 	return manualDSController{
 		CRName:          ds.GetLabels()["name"],
-		Generation:      ds.GetGeneration(),
 		DesiredPodCount: ds.Status.DesiredNumberScheduled,
 		CurrentPodCount: ds.Status.CurrentNumberScheduled,
+	}, nil
+}
+
+func filterControllerRevision(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var cr appsv1.ControllerRevision
+
+	err := sdk.FromUnstructured(obj, &cr)
+	if err != nil {
+		return nil, err
+	}
+
+	return manualControllerRevision{
+		CRName:   cr.GetLabels()["name"],
+		Revision: cr.Revision,
 	}, nil
 }
 
