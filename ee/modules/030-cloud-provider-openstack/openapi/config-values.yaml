@@ -67,8 +67,8 @@ properties:
     items:
       type: string
   tags:
-    type: array
-    items:
+    type: object
+    additionalProperties:
       type: string
   storageClass:
     type: object
