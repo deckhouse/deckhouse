@@ -64,6 +64,12 @@ spec:
             secretKeyRef:
               name: madison-proxy
               key: auth-key
+        {{- $madisonScheme := "https" }}
+        {{- if $.Values.global.modules.proxy.httpProxy }}
+          {{ - $madisonScheme = "http" }}
+        {{- end }}
+        - name: MADISON_SCHEME
+          value: {{ $madisonScheme | quote }}
         ports:
         - containerPort: 8080
           name: http

@@ -190,10 +190,12 @@ properties:
         properties:
           httpProxy:
             type: string
+            pattern: '^[a-z0-9\-\.]+:[0-9]+$'
             description: |
               HTTP proxy URL.
           httpsProxy:
             type: string
+            pattern: '^[a-z0-9\-\.]+:[0-9]+$'
             description: |
               HTTPS proxy URL.
           noProxy:
@@ -202,11 +204,12 @@ properties:
             type: array
             items:
               type: string
+              pattern: '^[a-z0-9\-\./]+$'
         x-emamples:
         - httpProxy: 1.2.3.4:80
         - httpsProxy: 1.2.3.4:443
         - {}
         - httpProxy: 1.2.3.4:80
-          noProxy: ["127.0.0.1", "example.com"]
+          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
         - httpsProxy: 1.2.3.4:80
-          noProxy: ["127.0.0.1", "example.com"]
+          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
