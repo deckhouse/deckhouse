@@ -63,6 +63,16 @@ status:
   currentNumberScheduled: 1
   desiredNumberScheduled: 1
 ---
+apiVersion: apps/v1
+kind: ControllerRevision
+metadata:
+  labels:
+    app: controller
+    name: main
+  name: controller-main-f45878d89
+  namespace: d8-ingress-nginx
+revision: 1
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -170,6 +180,26 @@ spec:
 status:
   currentNumberScheduled: 3
   desiredNumberScheduled: 3
+---
+apiVersion: apps/v1
+kind: ControllerRevision
+metadata:
+  labels:
+    app: controller
+    name: main
+  name: controller-main-f45878d88
+  namespace: d8-ingress-nginx
+revision: 1
+---
+apiVersion: apps/v1
+kind: ControllerRevision
+metadata:
+  labels:
+    app: controller
+    name: main
+  name: controller-main-f45878d89
+  namespace: d8-ingress-nginx
+revision: 2
 ---
 apiVersion: v1
 kind: Pod
@@ -279,6 +309,16 @@ status:
   currentNumberScheduled: 3
   desiredNumberScheduled: 3
 ---
+apiVersion: apps/v1
+kind: ControllerRevision
+metadata:
+  labels:
+    app: controller
+    name: main
+  name: controller-main-f45878d89
+  namespace: d8-ingress-nginx
+revision: 2
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -385,6 +425,16 @@ spec:
 status:
   currentNumberScheduled: 3
   desiredNumberScheduled: 3
+---
+apiVersion: apps/v1
+kind: ControllerRevision
+metadata:
+  labels:
+    app: controller
+    name: main
+  name: controller-main-f45878d89
+  namespace: d8-ingress-nginx
+revision: 2
 ---
 apiVersion: v1
 kind: Pod
@@ -493,6 +543,16 @@ spec:
 status:
   currentNumberScheduled: 1
   desiredNumberScheduled: 3
+---
+apiVersion: apps/v1
+kind: ControllerRevision
+metadata:
+  labels:
+    app: controller
+    name: main
+  name: controller-main-f45878d89
+  namespace: d8-ingress-nginx
+revision: 2
 ---
 apiVersion: v1
 kind: Pod
