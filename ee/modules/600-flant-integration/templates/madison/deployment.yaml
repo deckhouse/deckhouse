@@ -58,23 +58,23 @@ spec:
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.flantIntegration.madisonProxy }}"
         env:
         - name: MADISON_BACKEND
-          value: {{ . }}
+          value: {{ printf "%s:443" . }}
+        - name: MADISON_SCHEME
+          value: "https"
         - name: MADISON_AUTH_KEY
           valueFrom:
             secretKeyRef:
               name: madison-proxy
               key: auth-key
+        {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
         ports:
         - containerPort: 8080
           name: http
           protocol: TCP
-        - containerPort: 10253
-          name: healthz
-          protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 10253
+            port: 8080
             scheme: HTTP
           initialDelaySeconds: 10
           timeoutSeconds: 5

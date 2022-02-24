@@ -179,3 +179,39 @@ properties:
                     * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
                 type: string
                 pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+      proxy:
+        additionalProperties: false
+        description: |
+          Global proxy setup for modules.
+        type: object
+        properties:
+          httpProxy:
+            type: string
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
+            description: |
+              HTTP proxy URL.
+          httpsProxy:
+            type: string
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
+            description: |
+              HTTPS proxy URL.
+          noProxy:
+            description: |
+              List of no proxy IP and domain entries.
+            type: array
+            items:
+              type: string
+              pattern: '^[a-z0-9\-\./]+$'
+        x-emamples:
+        - httpProxy: http://1.2.3.4:80
+        - httpsProxy: https://1.2.3.4:443
+        - httpProxy: http://1.2.3.4:80
+          httpsProxy: https://1.2.3.4:443
+        - {}
+        - httpProxy: http://1.2.3.4:80
+          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
+        - httpsProxy: https://1.2.3.4:443
+          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
+        - httpProxy: http://1.2.3.4:80
+          httpsProxy: https://1.2.3.4:80
+          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
