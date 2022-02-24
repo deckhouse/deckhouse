@@ -1,14 +1,15 @@
 ARG BASE_DEBIAN
 
 FROM $BASE_DEBIAN as builder
-ARG DRBD_VERSION=9.1.5
+ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
+ARG DRBD_VERSION=9.1.6
 
 RUN apt-get update \
  && apt-get install -y make git \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/LINBIT/drbd /drbd \
+RUN git clone ${DRBD_GITREPO} /drbd \
  && cd /drbd \
  && git reset --hard drbd-${DRBD_VERSION} \
  && make tarball \
@@ -19,7 +20,6 @@ RUN git clone https://github.com/LINBIT/drbd /drbd \
 ARG BASE_DEBIAN
 
 FROM $BASE_DEBIAN
-ARG DRBD_VERSION=9.1.5
 
 RUN apt-get update \
  && apt-get install -y kmod gnupg wget make gcc patch curl \

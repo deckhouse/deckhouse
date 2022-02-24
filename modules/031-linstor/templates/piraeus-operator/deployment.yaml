@@ -73,6 +73,12 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+        - name: backup-dir
+          mountPath: /run/linstor-backups
+      volumes:
+      - name: backup-dir
+        emptyDir: {}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

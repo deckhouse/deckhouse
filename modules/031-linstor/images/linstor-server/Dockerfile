@@ -3,7 +3,8 @@ ARG BASE_GOLANG_17_BUSTER
 
 FROM $BASE_DEBIAN as linstor-builder
 
-ARG LINSTOR_VERSION=1.17.0
+ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
+ARG LINSTOR_VERSION=1.18.0-rc.3
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -11,14 +12,14 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/LINBIT/linstor-server.git /linstor-server
+RUN git clone ${LINSTOR_GITREPO} /linstor-server
 WORKDIR /linstor-server
 RUN git checkout v${LINSTOR_VERSION}
 
 RUN make debrelease \
  && rm -rf /root/.gradle/caches/ \
- && mv linstor-server-${LINSTOR_VERSION}.tar.gz /linstor-server_${LINSTOR_VERSION}.orig.tar.gz \
- && tar -C / -xvf /linstor-server_${LINSTOR_VERSION}.orig.tar.gz
+ && mv linstor-server-${LINSTOR_VERSION}.tar.gz /linstor-server_$(echo ${LINSTOR_VERSION} | tr '-' '~').orig.tar.gz \
+ && tar -C / -xvf /linstor-server_$(echo ${LINSTOR_VERSION} | tr '-' '~').orig.tar.gz
 
 WORKDIR /linstor-server-${LINSTOR_VERSION}
 RUN dpkg-buildpackage -us -uc
@@ -27,8 +28,10 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_DEBIAN as client-builder
 
-ARG API_VERSION=1.12.0
-ARG CLIENT_VERSION=1.12.0
+ARG API_GITREPO=https://github.com/LINBIT/linstor-api-py
+ARG API_VERSION=1.13.0
+ARG CLIENT_GITREPO=https://github.com/LINBIT/linstor-client
+ARG CLIENT_VERSION=1.13.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -36,7 +39,7 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --recurse-submodules https://github.com/LINBIT/linstor-api-py /linstor-api-py
+RUN git clone --recurse-submodules ${API_GITREPO} /linstor-api-py
 WORKDIR /linstor-api-py
 RUN git checkout v${API_VERSION} \
  && make debrelease \
@@ -48,7 +51,7 @@ RUN dpkg-buildpackage -us -uc
 RUN rm -rf /linstor-api-py \
  && mv /python-linstor-${API_VERSION} /linstor-api-py
 
-RUN git clone https://github.com/LINBIT/linstor-client /linstor-client
+RUN git clone ${CLIENT_GITREPO} /linstor-client
 WORKDIR /linstor-client
 RUN git checkout v${CLIENT_VERSION} \
  && make debrelease \
@@ -61,9 +64,10 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_GOLANG_17_BUSTER as k8s-await-election-builder
 
+ARG K8S_AWAIT_ELECTION_GITREPO=https://github.com/LINBIT/k8s-await-election
 ARG K8S_AWAIT_ELECTION_VERSION=0.3.1
 
-RUN git clone https://github.com/LINBIT/k8s-await-election/ /usr/local/go/k8s-await-election/ \
+RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
  && cd /usr/local/go/k8s-await-election \
  && git reset --hard v${K8S_AWAIT_ELECTION_VERSION} \
  && make \
@@ -73,7 +77,8 @@ RUN git clone https://github.com/LINBIT/k8s-await-election/ /usr/local/go/k8s-aw
 
 FROM $BASE_DEBIAN as utils-builder
 
-ARG UTILS_VERSION=9.18.2
+ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
+ARG UTILS_VERSION=9.20.2
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -81,7 +86,7 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --recurse-submodules https://github.com/LINBIT/drbd-utils /drbd-utils
+RUN git clone --recurse-submodules ${UTILS_GITREPO} /drbd-utils
 WORKDIR /drbd-utils
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen
@@ -99,9 +104,10 @@ RUN git checkout v${UTILS_VERSION} \
 WORKDIR /drbd-utils-${UTILS_VERSION}
 RUN dpkg-buildpackage -us -uc
 
-ARG THIN_SEND_RECV_VERSION=1.0
+ARG THIN_SEND_RECV_GITREPO=https://github.com/LINBIT/thin-send-recv
+ARG THIN_SEND_RECV_VERSION=1.0.1
 
-RUN git clone --recurse-submodules https://github.com/LINBIT/thin-send-recv /thin-send-recv
+RUN git clone --recurse-submodules ${THIN_SEND_RECV_GITREPO} /thin-send-recv
 WORKDIR /thin-send-recv
 RUN git checkout v${THIN_SEND_RECV_VERSION} \
  && make debrelease \

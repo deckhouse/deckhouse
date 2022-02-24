@@ -2,6 +2,7 @@ ARG BASE_DEBIAN
 
 FROM $BASE_DEBIAN as utils-builder
 
+ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
 ARG UTILS_VERSION=9.20.2
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -10,7 +11,7 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --recurse-submodules https://github.com/LINBIT/drbd-utils /drbd-utils
+RUN git clone --recurse-submodules ${UTILS_GITREPO} /drbd-utils
 WORKDIR /drbd-utils
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen
@@ -32,6 +33,7 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_DEBIAN as reactor-builder
 
+ARG REACTOR_GITREPO=https://github.com/LINBIT/drbd-reactor
 ARG REACTOR_VERSION=0.5.3
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -40,7 +42,7 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN git clone --recurse-submodules https://github.com/LINBIT/drbd-reactor /drbd-reactor
+RUN git clone --recurse-submodules ${REACTOR_GITREPO} /drbd-reactor
 WORKDIR /drbd-reactor
 RUN git checkout v${REACTOR_VERSION} \
  && install /dev/null /usr/local/bin/lbvers.py \
