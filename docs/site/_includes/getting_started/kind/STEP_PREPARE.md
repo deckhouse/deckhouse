@@ -1,5 +1,7 @@
 Install [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation), if it is not already installed.
 
+> This guide provides a minimal `kind` cluster configuration required for a Deckhouse installation. The configuration includes installing a single-node Kubernetes cluster and exporting two ports required for a cluster Ingress controller. You can use your cluster configuration in `kind`, [increase](https://kind.sigs.k8s.io/docs/user/configuration/#nodes) the number of nodes or [configure](https://kind.sigs.k8s.io/docs/user/local-registry/) a local container registry. 
+
 Create a cluster configuration file for kind:
 {% snippetcut selector="create-kind-cfg" %}
 ```shell

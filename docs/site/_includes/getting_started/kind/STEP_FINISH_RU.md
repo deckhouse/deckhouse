@@ -7,29 +7,29 @@
 <div markdown="1">
 ## Все установлено, настроено и работает!
 
-Рассмотрим дальнейшие возможности Deckhouse, открывающиеся сразу после установки.
+Давайте посмотрим что доступно в модуле [monitoring](/{{ page.lang }}/documentation/v1/modules/300-prometheus/):
 
-Grafana доступна по адресу [grafana-127-0-0-1.nip.io](http://grafana-127-0-0-1.nip.io).
+- **Grafana** доступна по адресу [grafana-127-0-0-1.nip.io](http://grafana-127-0-0-1.nip.io).
 
-Доступ к Grafana ограничен basic-аутентификацией (больше вариантов аутентификации можно получить, включив модуль [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/):
-- Логин — `admin`;
-- Пароль — сгенерирован автоматически. Узнать его можно в ConfigMap `deckhouse` в секции конфигурации модуля `prometheus`, например, выполнив следующую команду:
-  ```bash
-  kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password
-  ```
-  Пример вывода:
-  ```
-  $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password 
-  password: UJvSB4UYTa3fnDOco6LF
-  ```
-
-Изучите Grafana дэшборды, поставляемые с Deckhouse.
-
-Доступ к Prometheus напрямую: [grafana-127-0-0-1.nip.io/prometheus/](http://grafana-127-0-0-1.nip.io/prometheus/)
-
-[Подробнее](/{{ page.lang }}/documentation/v1/modules/300-prometheus/) о модуле `monitoring`.
+  Доступ к Grafana ограничен basic-аутентификацией (больше вариантов аутентификации можно получить, включив модуль [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/):
+  - Логин — `admin`;
+  - Пароль — сгенерирован автоматически. Узнать его можно в ConfigMap `deckhouse` в секции конфигурации модуля `prometheus`, например, выполнив следующую команду:
+    ```bash
+    kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password
+    ```
+    Пример вывода:
+    ```
+    $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password 
+    password: UJvSB4UYTa3fnDOco6LF
+    ```
   
+  Изучите дэшборды Grafana, поставляемые с Deckhouse.
+
+- **Prometheus** доступен по адресу: [grafana-127-0-0-1.nip.io/prometheus/](http://grafana-127-0-0-1.nip.io/prometheus/)
+
 </div>
+
+Deckhouse, развернутый в кластере kind, вполне пригоден для ознакомления с остальными возможностями, которые понадобятся для полноценных production-окружений. Далее, информация о таких возможностях Deckhouse.
 
 <section class="cards-blocks">
 
@@ -55,7 +55,7 @@ Dashboard
 Status page
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [upmeter](/{{ page.lang }}/documentation/v1/modules/500-upmeter/) и узнайте общий статус Deckhouse и его компонентов по адресу [status-127-0-0-1.nip.io](http://status-127-0-0-1.nip.io), а также контролируйте соблюдение SLA с детализацией по каждому компоненту и временному периоду по адресу [upmeter-127-0-0-1.nip.io](http://upmeter-127-0-0-1.nip.io).
+Включите модуль [upmeter](/{{ page.lang }}/documentation/v1/modules/500-upmeter/) чтобы видеть общий статус Deckhouse по адресу [status-127-0-0-1.nip.io](http://status-127-0-0-1.nip.io), а также чтобы получать данные о доступности компонентов Deckhouse по адресу [upmeter-127-0-0-1.nip.io](http://upmeter-127-0-0-1.nip.io).
 </div>
 </div>
 
@@ -70,6 +70,10 @@ Status page
 <h2 class="cards-blocks__title text_h2">
 Деплой первого приложения
 </h2>
+<div markdown="1">
+Deckhouse делает проще настройку доступа CI/CD-системы в кластер для развертывания вашего приложения, позволяет обеспечить его мониторинг по вашим метрикам.
+</div>
+
 <div class="cards-blocks__cards">
 
 <div class="cards-item cards-item_inverse">
