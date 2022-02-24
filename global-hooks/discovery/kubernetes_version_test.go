@@ -32,7 +32,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: kubernetes_version ::", func() {
+var _ = FDescribe("Global hooks :: kubernetes_version ::", func() {
+	versionHTTPClient = dependency.TestDC.GetHTTPClient()
 	const (
 		initValuesString           = `{"global": {"enabledModules": ["control-plane-manager"],"modulesImages": {}, "discovery":{}}}`
 		globalValuesWithoutCPMYaml = `
