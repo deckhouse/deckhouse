@@ -10,11 +10,9 @@
 - name: HTTPS_PROXY
   value: {{ $context.Values.global.modules.proxy.httpsProxy | quote }}
     {{- end }}
-    {{- $noProxy := list "${KUBERNETES_SERVICE_HOST}" }}
-    {{- $noProxy = append $noProxy $context.Values.global.modules.proxy.noProxy }}
-    {{- $noProxy = append $noProxy "169.254.169.254" }}
+    {{- $noProxy := list "${KUBERNETES_SERVICE_HOST}" "169.254.169.254" $context.Values.global.clusterConfiguration.clusterDomain }}
     {{- $noProxy = append $noProxy $context.Values.global.clusterConfiguration.clusterDomain }}
 - name: NO_PROXY
-  value: "{{ $noProxy | join "," | quote }}
+  value: {{ $noProxy | join "," | quote }}
   {{- end }}
 {{- end }}
