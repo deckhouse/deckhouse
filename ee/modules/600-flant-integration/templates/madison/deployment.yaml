@@ -30,12 +30,12 @@ spec:
   selector:
     matchLabels:
       app: madison-proxy
-      madison-backend: {{ . }}
+      madison-backend: {{ . | replace ":" "_" }}
   template:
     metadata:
       labels:
         app: madison-proxy
-        madison-backend: {{ . }}
+        madison-backend: {{ . | replace ":" "_" }}
       annotations:
         checksum/key: {{ include (print $.Template.BasePath "/madison/secret.yaml") $ | sha256sum }}
     spec:
