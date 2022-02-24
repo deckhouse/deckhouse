@@ -25,6 +25,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -133,7 +134,7 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 		}
 
 		if podsReadyForUpdate && podNameForDeletion != "" {
-			input.PatchCollector.Delete("v1", "Pod", "d8-ingress-nginx", podNameForDeletion)
+			input.PatchCollector.Delete("v1", "Pod", "d8-ingress-nginx", podNameForDeletion, object_patch.InBackground())
 		}
 	}
 
