@@ -180,13 +180,10 @@ properties:
                 type: string
                 pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
       proxy:
+        additionalProperties: false
         oneOf:
-        - properties:
-            httpProxy:
-              type: string
-        - properties:
-            httpsProxy:
-              type: string
+        - required: ["httpProxy"]
+        - required: ["httpsProxy"]
         description: |
           Global proxy setup for modules.
         type: object
