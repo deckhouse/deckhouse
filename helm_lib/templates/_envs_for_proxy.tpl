@@ -10,10 +10,10 @@
 - name: HTTPS_PROXY
   value: {{ $context.Values.global.modules.proxy.httpsProxy | quote }}
     {{- end }}
-    {{- $noProxy := $context.Values.global.modules.proxy.noProxy - }}
+    {{- $noProxy := $context.Values.global.modules.proxy.noProxy }}
     {{-  $noProxy = append $noProxy "10.223.0.1" }}
     {{-  $noProxy = append $noProxy "169.254.169.254" }}
-    {{-  $noProxy = append $noProxy $content.Values.global.clusterConfiguration.clusterDomain }}
+    {{-  $noProxy = append $noProxy $context.Values.global.clusterConfiguration.clusterDomain }}
 - name: NO_PROXY
   value: {{ $noProxy | join "," | quote }}
   {{- end }}
