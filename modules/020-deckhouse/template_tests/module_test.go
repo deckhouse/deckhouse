@@ -34,6 +34,15 @@ const (
 	globalValues = `
 deckhouseVersion: test
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "operator-prometheus-crd"]
+clusterConfiguration:
+  apiVersion: deckhouse.io/v1
+  kind: ClusterConfiguration
+  clusterDomain: cluster.local
+  clusterType: Static
+  kubernetesVersion: "1.21"
+  podSubnetCIDR: 10.111.0.0/16
+  podSubnetNodeCIDRPrefix: "24"
+  serviceSubnetCIDR: 10.222.0.0/16
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
@@ -51,6 +60,11 @@ modulesImages:
       webhookHandler: hash
 modules:
   placement: {}
+  proxy:
+    httpProxy: "http://1.2.3.4:80"
+    httpsProxy: "https://1.2.3.4:443"
+    noProxy:
+    - example.com
 `
 
 	moduleValuesForMasterNode = `

@@ -130,6 +130,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         volumeMounts:
         - name: agent-data
           mountPath: /data/agent
