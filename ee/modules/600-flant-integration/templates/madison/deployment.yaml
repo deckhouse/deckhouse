@@ -64,6 +64,8 @@ spec:
             secretKeyRef:
               name: madison-proxy
               key: auth-key
+        # - name: NGINX_CONFIG_TEMPLATE
+        #   value: /etc/nginx/madison.tmpl    <-- default value
         ports:
         - containerPort: 8080
           name: http
