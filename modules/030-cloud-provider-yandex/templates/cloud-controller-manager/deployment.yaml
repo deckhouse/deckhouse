@@ -107,6 +107,7 @@ spec:
               value: {{ join "," .Values.cloudProviderYandex.additionalExternalNetworkIDs | quote }}
             - name: YANDEX_CLOUD_ROUTE_TABLE_ID
               value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID | required ".Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID is required" | quote }}
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
           volumeMounts:
           - mountPath: /tmp
             name: tmp

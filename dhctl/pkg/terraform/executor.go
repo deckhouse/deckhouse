@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
@@ -42,6 +43,13 @@ func terraformCmd(args ...string) *exec.Cmd {
 		// Debug mode is deprecated, however trace produces more useless information
 		cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
 	}
+
+	cmd.Env = append(
+		cmd.Env,
+		fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")),
+		fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
+		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),
+	)
 	return cmd
 }
 

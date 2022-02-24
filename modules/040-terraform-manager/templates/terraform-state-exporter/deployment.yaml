@@ -68,6 +68,7 @@ spec:
         env:
         - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
           value: "true"
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

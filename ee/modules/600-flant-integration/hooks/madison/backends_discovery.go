@@ -6,8 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package madison
 
 import (
-	"bytes"
+	"fmt"
 	"net"
+	"net/url"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -28,25 +29,45 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func backendsHandler(input *go_hook.HookInput) error {
 	const (
-		backendsPath   = "flantIntegration.internal.madison.backends"
-		licenseKeyPath = "flantIntegration.internal.licenseKey"
+		backendsPath       = "flantIntegration.internal.madison.backends"
+		licenseKeyPath     = "flantIntegration.internal.licenseKey"
+		httpProxyConfPath  = "global.modules.proxy.httpProxy"
+		httpsProxyConfPath = "global.modules.proxy.httpsProxy"
 	)
+
+	madisonHost := "https://madison-direct.flant.com:443"
 
 	if input.Values.Get(licenseKeyPath).String() == "" {
 		input.Values.Remove(backendsPath)
 		return nil
 	}
 
-	addresses, err := net.LookupIP("madison-direct.flant.com")
+	// check if proxy settings is present
+	if p := input.ConfigValues.Get(httpProxyConfPath).String(); p != "" {
+		madisonHost = fmt.Sprintf("http://%s", p)
+	}
+	if p := input.ConfigValues.Get(httpsProxyConfPath).String(); p != "" {
+		madisonHost = fmt.Sprintf("https://%s", p)
+	}
+
+	u, err := url.Parse(madisonHost)
 	if err != nil {
 		return err
 	}
 
-	// always keep ip address in the same order to prevent rollouts
-	sort.Slice(addresses, func(i, j int) bool {
-		return bytes.Compare(addresses[i], addresses[j]) < 0
-	})
+	addresses, err := net.LookupIP(u.Hostname())
+	if err != nil {
+		return err
+	}
 
-	input.Values.Set(backendsPath, addresses)
+	addressesWithPorts := make([]string, 0, len(addresses))
+	for _, v := range addresses {
+		addressesWithPorts = append(addressesWithPorts, fmt.Sprintf("%s:%s", v.String(), u.Port()))
+	}
+
+	// always keep ip address in the same order to prevent rollouts
+	sort.Strings(addressesWithPorts)
+
+	input.Values.Set(backendsPath, addressesWithPorts)
 	return nil
 }
