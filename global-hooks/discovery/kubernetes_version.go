@@ -261,8 +261,11 @@ func k8sVersions(input *go_hook.HookInput) error {
 		if versionHTTPClient != nil {
 			return
 		}
+		contentCA, _ := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
 		versionHTTPClient = d8http.NewClient(
 			d8http.WithTLSServerName("kubernetes.default.svc"),
+			d8http.WithAdditionalCACerts([][]byte{contentCA}),
 		)
 	})
 
