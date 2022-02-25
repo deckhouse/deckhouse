@@ -64,6 +64,10 @@ func NewClient(options ...Option) Client {
 		tlsConf.RootCAs = caPool
 	}
 
+	if opts.tlsServerName != "" {
+		tlsConf.ServerName = opts.tlsServerName
+	}
+
 	tr := &http.Transport{
 		TLSClientConfig:       tlsConf,
 		IdleConnTimeout:       5 * time.Minute,
@@ -83,6 +87,7 @@ type httpOptions struct {
 	timeout         time.Duration
 	insecure        bool
 	additionalTLSCA [][]byte
+	tlsServerName   string
 }
 
 type Option func(options *httpOptions)
@@ -104,6 +109,12 @@ func WithInsecureSkipVerify() Option {
 func WithAdditionalCACerts(certs [][]byte) Option {
 	return func(options *httpOptions) {
 		options.additionalTLSCA = append(options.additionalTLSCA, certs...)
+	}
+}
+
+func WithTLSServerName(name string) Option {
+	return func(options *httpOptions) {
+		options.tlsServerName = name
 	}
 }
 
