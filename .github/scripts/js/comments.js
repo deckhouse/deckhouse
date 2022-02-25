@@ -37,7 +37,7 @@ module.exports.releaseIssueHeader = (context, gitRefInfo) => {
 }
 
 module.exports.commentJobStarted = (jobName, ref, buildUrl) => {
-  return `:fast_forward:\u00a0\`${jobName}\` for \`${ref}\` [started](${buildUrl}).;`
+  return `:fast_forward:\u00a0\`${jobName}\` for \`${ref}\` [started](${buildUrl}).`
 }
 
 module.exports.deleteJobStartedComments = (jobsReport) => {
