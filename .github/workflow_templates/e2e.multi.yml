@@ -156,7 +156,6 @@ jobs:
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
 
@@ -165,6 +164,9 @@ jobs:
       env:
         DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
+        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+        CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
       run: |
         # Random delay to sparse 'update comment' steps in time.
         delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
@@ -190,50 +192,37 @@ jobs:
         fi
         echo "::set-output name=tmppath::${tmppath}"
 
-        CI_COMMIT_TAG="${{needs.git_info.outputs.ci_commit_tag}}"
-        CI_COMMIT_BRANCH="${{needs.git_info.outputs.ci_commit_branch}}"
-
-        if [[ -n "${CI_COMMIT_TAG}" ]] ; then
-          CI_COMMIT_REF_SLUG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-          echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_TAG}"
-        fi
-        if [[ -n "${CI_COMMIT_BRANCH}" ]] ; then
-          CI_COMMIT_REF_SLUG="${{needs.git_info.outputs.ci_commit_ref_slug}}"
-          echo "Deckhouse Deployment will use docker tag '${CI_COMMIT_REF_SLUG}' to test branch ${CI_COMMIT_BRANCH}"
-        fi
-        echo "::set-output name=ci_commit_ref_slug::${CI_COMMIT_REF_SLUG}"
-
         ## Deckhouse 'install' image name
         ## Source: ci_templates/build.yml
+
+        # Use dev-registry for Git branches.
+        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+        # Use rw-registry for Git tags.
+        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+        if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+          # Use Github Container Registry for test repositories.
+          BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+          SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+        fi
 
         IMAGE_NAME=
         if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-          # Use it as image tag.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}
-
-          if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-            IMAGE_NAME=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
-          else
-            IMAGE_NAME=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
-          fi
+          IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
+          echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
         fi
-
         if [[ -n $CI_COMMIT_TAG ]] ; then
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
-          else
-            echo "DECKHOUSE_REGISTRY_HOST is empty."
-            exit 1
-          fi
+          IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
         fi
 
         echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
         # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-        echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
-        echo "Pull 'dev/install' image"
+        echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
+        echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
         docker pull "${IMAGE_NAME}"
 
     - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
@@ -247,7 +236,7 @@ jobs:
         WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
         CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
         CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-        CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
+        CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         TMPPATH: ${{ steps.setup.outputs.tmppath}}
         PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -267,7 +256,7 @@ jobs:
         WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
         CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
         CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-        CI_COMMIT_REF_SLUG: ${{steps.setup.outputs.ci_commit_ref_slug}}
+        CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         TMPPATH: ${{ steps.setup.outputs.tmppath}}
         PREFIX: ${{ steps.setup.outputs.prefix}}
@@ -296,8 +285,15 @@ jobs:
 
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
 
+    - name: Check alerting credentials
+      id: check_alerting
+      env:
+        KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+      run: |
+        if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
     - name: Alert on fail in default branch
-      if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+      if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
       env:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}

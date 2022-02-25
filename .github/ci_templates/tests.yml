@@ -47,26 +47,33 @@ docker_options: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
 # <template: tests_template>
 {!{- $ctx       := index . 0 }!}
 {!{- $args_name := index . 1 }!}
-{!{- $buildType := index . 2 }!}
+{!{- $build_job := index . 2 }!}
 {!{- $args_tmpl := printf "%s_run_args" $args_name }!}
 {!{- $default   := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
 {!{- $run       := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
 runs-on: [self-hosted, regular]
 steps:
-{!{ tmpl.Exec "started_at_output"             $ctx | strings.Indent 2 }!}
-{!{ tmpl.Exec "checkout_full_step"            $ctx | strings.Indent 2 }!}
-{!{ tmpl.Exec "login_dev_registry_step"       $ctx | strings.Indent 2 }!}
-{!{ tmpl.Exec "login_readonly_registry_step"  $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run tests
     env:
-      DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+      TESTS_IMAGE_NAME: ${{needs.{!{$build_job}!}.outputs.tests_image_name}}
     run: |
-{!{ if eq $buildType "release" }!}
-      TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
-{!{ else }!}
-      TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
-{!{ end }!}
-      docker run --pull always {!{ $run.docker_options }!} ${TESTS_IMAGE_URL} {!{ $run.args }!}
+      if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+        echo "TESTS_IMAGE_NAME is empty"
+        exit 1
+      fi
+
+      # Base64 decode image name.
+      TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d)
+
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+      docker pull ${TESTS_IMAGE_NAME}
+      echo "⚓️ 🏎 [$(date -u)] Run tests..."
+      docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
 # </template: tests_template>
 {!{- end -}!}

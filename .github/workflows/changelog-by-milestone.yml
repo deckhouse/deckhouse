@@ -27,14 +27,14 @@ jobs:
             const number = context.issue.number
 
             if (!context.payload.issue.pull_request) {
-              core.notice(`Issue #${number} is not a pull request`)
+              core.notice(`Issue #${number} is not a pull request. Skip changelog regeneration.`)
               return "skip"
             }
 
             if (context.payload.action !== 'milestoned' && context.payload.action !== 'demilestoned') {
               // we support only milestoned because of race condition when milestone is changed
               // core.notice(`The PR #${number} payload action is not "milestoned" or "demilestoned", it is "${context.eventName}"`)
-              core.notice(`The PR #${number} payload action is not "milestoned", it is "${context.payload.action}"`)
+              core.notice(`The PR #${number} payload action is not "milestoned", it is "${context.payload.action}". Skip changelog regeneration.`)
               return "skip"
             }
 
@@ -45,7 +45,7 @@ jobs:
             });
 
             if (!pr) {
-              core.notice(`Issue #${number} is not a pull request`)
+              core.notice(`Issue #${number} is not a pull request. Skip changelog regeneration.`)
               return "skip"
             }
 
@@ -56,16 +56,16 @@ jobs:
             }
 
             if (pr.state !== 'closed') {
-              core.notice(`The PR #${number} is open (not closed)`)
+              core.notice(`The PR #${number} is open (not closed). Skip changelog regeneration.`)
               return "skip"
             }
 
             if (!pr.merged) {
-              core.notice(`The PR #${number} is not merged`)
+              core.notice(`The PR #${number} is not merged. Skip changelog regeneration.`)
               return "skip"
             }
 
-            core.notice('OK to re-generate changelogs')
+            core.notice('OK to regenerate changelogs')
             return "ok"
     outputs:
       ok: ${{ steps.pr.outputs.result }}

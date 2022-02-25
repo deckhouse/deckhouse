@@ -4,13 +4,50 @@ on:
     types: [created]
 
 jobs:
+  conditions:
+    name: Check conditions
+    runs-on: ubuntu-latest
+    outputs:
+      trigger_for_release_issue: ${{steps.check.outputs.trigger_for_release_issue}}
+      trigger_for_changelog: ${{steps.check.outputs.trigger_for_changelog}}
+    steps:
+      - name: Check conditions for release issue
+        id: check
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          script: |
+            // Check for release issue.
+            const isReleaseIssue = context.payload.issue.labels.some((l) => l.name === 'issue/release');
+            const isPrivate = context.payload.repository.private;
+            const authorAssociation = context.payload.comment.author_association;
+            // Check for changelog PR.
+            const isPR = !!context.payload.issue.pull_request;
+            const milestoneState = context.payload.issue.milestone.state;
+            const hasChangelogLabel = context.payload.issue.labels.some((l) => l.name === 'changelog');
+            const hasAutoLabel = context.payload.issue.labels.some((l) => l.name === 'auto');
+            core.info(`Is release issue?       ${isReleaseIssue}`)
+            core.info(`Private repo?           ${isPrivate}`)
+            core.info(`Author association:     ${authorAssociation}`)
+            core.info(`Is PR?                  ${isPR}`)
+            core.info(`Milestone state:        ${milestoneState}`)
+            core.info(`Has 'changelog' label?  ${hasChangelogLabel}`)
+            core.info(`Has 'auto' label?       ${hasAutoLabel}`)
+
+            if (isReleaseIssue && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
+              return core.setOutput('trigger_for_release_issue', 'true');
+            }
+
+            if (isPR && milestoneState === 'open' && hasChangelogLabel && hasAutoLabel) {
+              return core.setOutput('trigger_for_changelog', 'true');
+            }
+
+
   trigger_for_release_issue:
     name: Trigger workflow by comment
     runs-on: ubuntu-latest
-    if: |
-      contains(github.event.issue.labels.*.name, 'issue/release') &&
-      (github.event.comment.author_association == 'OWNER' ||
-       github.event.comment.author_association == 'MEMBER')
+    needs:
+      - conditions
+    if: ${{needs.conditions.outputs.trigger_for_release_issue == 'true'}}
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Run workflow
@@ -24,11 +61,9 @@ jobs:
   trigger_for_changelog:
     name: Dispatch Changelog Event
     runs-on: ubuntu-latest
-    if: |
-      github.event.issue.pull_request &&
-      github.event.issue.milestone.state == 'open' &&
-      contains(github.event.issue.labels.*.name, 'changelog') &&
-      contains(github.event.issue.labels.*.name, 'auto')
+    needs:
+      - conditions
+    if: ${{needs.conditions.outputs.trigger_for_changelog == 'true'}}
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Find milestone
