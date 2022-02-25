@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -80,7 +81,10 @@ func readyHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func newMadisonProxy(madisonScheme, madisonBackend, madisonAuthKey string) http.Handler {
+	transport := http.DefaultTransport
+	transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	return &httputil.ReverseProxy{
+		Transport: transport,
 		Director: func(req *http.Request) {
 			req.URL.Scheme = madisonScheme
 			req.URL.Host = madisonBackend
