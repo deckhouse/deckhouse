@@ -97,6 +97,12 @@ properties:
             description: Вывод логов.
           path:
             description: Путь к директории. Действует только в случае `output=file`.
+      encryptingAtRestEnabled:
+        description: |
+          Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+          Генерирует secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрации.
+          > **Важно!**  Этот режим нельзя отключить!!!
+
   etcd:
     description: |
       Параметры `etcd`.
