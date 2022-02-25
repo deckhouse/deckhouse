@@ -115,7 +115,7 @@ function __on_conversion::alpha2_to_v1() {
           if . == "Cloud" then "CloudEphemeral"
             elif . == "Static" then "Static"
             elif . == "Hybrid" then
-              if ($config | .nodeGroups += [{"name": "master"}] | .nodeGroups[] | select($ngName == .name) // false) then
+              if ($config | .nodeGroups += [{"name": "master"}] | .nodeGroups[] | select($ngName == .name)) // false then
                 "CloudPermanent"
               else
                 "CloudStatic"
