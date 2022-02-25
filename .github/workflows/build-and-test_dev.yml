@@ -336,6 +336,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -385,6 +386,7 @@ jobs:
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -395,6 +397,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -405,6 +408,7 @@ jobs:
       # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
@@ -415,6 +419,7 @@ jobs:
       # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.FLANT_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
@@ -437,8 +442,10 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+          ENABLE_PUSH_SEMVER_TAGS: ${{secrets.ENABLE_PUSH_SEMVER_TAGS}}
         run: |
           ## Source: .gitlab/ci_templates/build.yml
+
           # Put tags on produced images and push to dev and release repositories.
           #
           # There are 2 modes: "dev" and "release".
@@ -469,13 +476,33 @@ jobs:
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
-          # This build put stages to "dev" registry.
-          # If "dev" registry is empty, stages are copied from FE cache.
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          werf build \
-            --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
-            --parallel=true --parallel-tasks-limit=5 \
-            --report-path images_tags_werf.json
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          # Registry path to publish images for Git branches.
+          BRANCH_REGISTRY_PATH=
+          # Registry path to publish images for Git tags.
+          SEMVER_REGISTRY_PATH=
+
+          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # Build using dev-registry as primary repo and prod registry as secondary.
+            # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod repo.
+            werf build \
+              --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+              --parallel=true --parallel-tasks-limit=5 \
+              --report-path images_tags_werf.json
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          else
+            # DECKHOUSE_REGISTRY_HOST — this is not the main repo.
+            # Build using dev-registry as a single primary repo and push to Github Container Registry.
+            werf build \
+              --parallel=true --parallel-tasks-limit=5 \
+              --report-path images_tags_werf.json
+            BRANCH_REGISTRY_PATH="ghcr.io/${GITHUB_REPOSITORY}/dev"
+            SEMVER_REGISTRY_PATH="ghcr.io/${GITHUB_REPOSITORY}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+          fi
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -485,15 +512,9 @@ jobs:
 
             echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
-            if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
-              DESTINATION_TESTS_IMAGE=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
-            else
-              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
-              DESTINATION_TESTS_IMAGE=${CI_REGISTRY_IMAGE}/tests:${IMAGE_TAG}
-            fi
+            DESTINATION_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
+            DESTINATION_INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+            DESTINATION_TESTS_IMAGE=${BRANCH_REGISTRY_PATH}/tests:${IMAGE_TAG}
 
             echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
             DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
@@ -547,6 +568,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -557,6 +579,7 @@ jobs:
       # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.FLANT_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
@@ -603,6 +626,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -613,6 +637,7 @@ jobs:
       # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.FLANT_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
@@ -660,6 +685,7 @@ jobs:
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -670,6 +696,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -717,6 +744,7 @@ jobs:
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -727,6 +755,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -774,6 +803,7 @@ jobs:
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -784,6 +814,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -831,6 +862,7 @@ jobs:
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -841,6 +873,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -888,6 +921,7 @@ jobs:
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -898,6 +932,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -946,6 +981,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -956,6 +992,7 @@ jobs:
       # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.FLANT_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
@@ -1068,6 +1105,7 @@ jobs:
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -1078,6 +1116,7 @@ jobs:
       # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
+        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
