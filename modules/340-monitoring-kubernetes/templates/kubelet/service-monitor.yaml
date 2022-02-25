@@ -8,6 +8,7 @@ metadata:
 spec:
   jobLabel: k8s-app
   endpoints:
+  # API metrics
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -29,6 +30,7 @@ spec:
       replacement: kubelet
     - targetLabel: tier
       replacement: cluster
+  # CRI metrics
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -52,6 +54,13 @@ spec:
     - targetLabel: tier
       replacement: cluster
     metricRelabelings:
+    # For Containerd metrics, the `container` label is empty for pause containers, but Docker sets the POD value.
+    # This relabeling rule is required to keep both CRI metrics in sync.
+    - sourceLabels: [image, name, container]
+      regex: '(.+);(.+);'
+      action: replace
+      targetLabel: container
+      replacement: "POD"
     - sourceLabels: [namespace]
       regex: '^$'
       action: drop
@@ -63,6 +72,7 @@ spec:
       action: drop
     - regex: container_name|pod_name|id|image|name
       action: labeldrop
+  # Probes metrics
   - port: https-metrics
     scheme: https
     tlsConfig:
