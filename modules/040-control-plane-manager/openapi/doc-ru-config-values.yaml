@@ -90,6 +90,13 @@ properties:
       basicAuditPolicyEnabled:
         description: |
           Применять базовые политики аудита Deckhouse.
+      auditPolicy:
+        description: Параметры аудита
+        properties:
+          output:
+            description: Вывод логов.
+          path:
+            description: Путь к директории. Действует только в случае `output=file`.
   etcd:
     description: |
       Параметры `etcd`.

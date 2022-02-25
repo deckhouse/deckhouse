@@ -31,15 +31,15 @@ properties:
             burst: 100
             cacheSize: 2000
         x-examples:
-          - [ "AlwaysPullImages", "NamespaceAutoProvision" ]
+          - ["AlwaysPullImages", "NamespaceAutoProvision"]
         items:
           type: string
           enum:
-          - AlwaysPullImages
-          - NamespaceAutoProvision
-          - OwnerReferencesPermissionEnforcement
-          - PodNodeSelector
-          - PodTolerationRestriction
+            - AlwaysPullImages
+            - NamespaceAutoProvision
+            - OwnerReferencesPermissionEnforcement
+            - PodNodeSelector
+            - PodTolerationRestriction
       bindToWildcard:
         type: boolean
         default: false
@@ -62,7 +62,7 @@ properties:
           * *current_hostname*
           * *hostIP*
         x-examples:
-          - [ "my-site.com", "192.168.67.76" ]
+          - ["my-site.com", "192.168.67.76"]
         items:
           type: string
           pattern: '^[0-9a-zA-Z\.-]+$'
@@ -83,8 +83,8 @@ properties:
             description: |
               OIDC provider network address alias.
             x-examples:
-            - "1.2.3.4"
-            - ""
+              - "1.2.3.4"
+              - ""
           oidcCA:
             type: string
             description: |
@@ -146,13 +146,36 @@ properties:
       auditPolicyEnabled:
         type: boolean
         default: false
+        # FIXME doc content
         description: |
-          Enforce [additional audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
+          Set the [audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
       basicAuditPolicyEnabled:
         type: boolean
         default: true
         description: |
           Enforce basic Deckhouse audit policies.
+      auditLog:
+        type: object
+        default:
+          output: File
+        description: Audit policy settings
+        required:
+          - output
+        properties:
+          output:
+            type: string
+            description: Audit logs target stream.
+            default: File
+            enum:
+              - File
+              - Stdout
+          path:
+            type: string
+            description: Directory path for logs if the output is "File", otherwise ignored.
+            # Avoid trailing slash
+            pattern: ^[a-zA-Z0-9_/.-]+[a-zA-Z0-9_.-]$
+            default: /var/log/kube-audit
+
   etcd:
     type: object
     description: |
