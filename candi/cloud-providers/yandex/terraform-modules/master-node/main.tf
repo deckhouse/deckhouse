@@ -13,7 +13,7 @@
 # limitations under the License.
 
 locals {
-  mapping = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", null)
+  mapping = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", {})
 
   zone_to_subnet = local.mapping == null ? {
     "ru-central1-a" = length(data.yandex_vpc_subnet.kube_a) > 0 ? data.yandex_vpc_subnet.kube_a[0] : object({})
