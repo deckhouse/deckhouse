@@ -234,4 +234,5 @@ protectKernelDefaults: true
 containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" }}
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 {{- end }}
+allowedUnsafeSysctls:  ["net.*"]
 EOF
