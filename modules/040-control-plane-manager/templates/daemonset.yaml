@@ -74,7 +74,7 @@
 {{- $_ := set $tpl_context "arguments" .Values.controlPlaneManager.internal.arguments }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "secretEncryptionKey" }}
-{{- $_ := set $tpl_context "secretEncryptionKey" .Values.controlPlaneManager.internal.secretEncryptionKey }}
+{{- $_ := set $tpl_context.apiserver "secretEncryptionKey" .Values.controlPlaneManager.internal.secretEncryptionKey }}
 {{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
@@ -100,8 +100,8 @@ extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "w
 extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- end }}
 
-  {{- if $tpl_context.secretEncryptionKey }}
-secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" (dict "secretEncryptionKey" $tpl_context.secretEncryptionKey) }}
+  {{- if $tpl_context.apiserver.secretEncryptionKey }}
+secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" (dict "secretEncryptionKey" $tpl_context.apiserver.secretEncryptionKey) }}
   {{- end }}
 
 extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
