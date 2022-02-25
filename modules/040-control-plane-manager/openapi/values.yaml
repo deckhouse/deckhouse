@@ -25,6 +25,10 @@ properties:
         type: integer
       auditPolicy:
         type: string
+      secretEncryptionKey:
+        type: string
+        minLength: 44
+        maxLength: 44
       arguments:
         type: object
         properties:
@@ -38,4 +42,3 @@ properties:
             type: [integer, string]
           nodeStatusUpdateFrequency:
             type: [integer, string]
-

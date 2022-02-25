@@ -17,6 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -95,4 +97,34 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 			Expect(s.Field("data.arguments\\.json").String()).To(Equal("eyJkZWZhdWx0VW5yZWFjaGFibGVUb2xlcmF0aW9uU2Vjb25kcyI6MTUsIm5vZGVNb25pdG9yR3JhY2VQZXJpb2QiOiIxNXMiLCJub2RlTW9uaXRvclBlcmlvZCI6IjJzIiwibm9kZVN0YXR1c1VwZGF0ZUZyZXF1ZW5jeSI6IjRzIiwicG9kRXZpY3Rpb25UaW1lb3V0IjoiMTVzIn0="))
 		})
 	})
+
+	Context("With secretEncryptionKey", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("controlPlaneManager.internal.secretEncryptionKey", `ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCD`)
+			f.HelmRender()
+		})
+
+		It("should render correctly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			Expect(s.Exists()).To(BeTrue())
+			data, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-secret-encryption-config\\.yaml").String())
+			Expect(err).To(BeNil())
+			Expect(data).To(MatchYAML(`
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources:
+    - secrets
+    providers:
+    - aescbc:
+        keys:
+        - name: secretbox
+          secret: ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCD
+    - identity: {}
+`))
+		})
+	})
+
 })
