@@ -25,7 +25,6 @@ CLUSTER_PKI_DIR=/pki
 CONFIG_DIR=/config
 ROOTFS_DIR=
 MAX_RETRIES=42
-secret_encryption_config_file_path="$ROOTFS_DIR/etc/kubernetes/deckhouse/secret-encryption-config.yaml"
 
 >&2 echo "Setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node..."
 attempt=0
@@ -328,11 +327,7 @@ function converge_component() {
   esac
 
   if [[ "$component" != "etcd" ]] ; then
-    if [[ "$component" == "apiserver" && -f "$secret_encryption_config_file_path" ]]; then
-      kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/" --apiserver-extra-args "encryption-provider-config=$secret_encryption_config_file_path"
-    else
       kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
-    fi
   else
     kubeadm_cmd="$kubeadm_binary init phase etcd local --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
     kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
