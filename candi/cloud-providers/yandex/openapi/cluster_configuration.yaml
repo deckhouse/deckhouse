@@ -209,6 +209,18 @@ apiVersions:
           This subnet will be split into **three** equal parts.
 
           They will serve as a basis for subnets in three Yandex.Cloud zones.
+      existingZoneToSubnetIDMap:
+        type: object
+        description: |
+          One or more pre-existing subnets mapped to respective zone.
+
+              ```yaml
+              ru-central1-a: e2lu8r1tbbtryhdpa9ro
+              ru-central1-b: e2lu8r1tbbtryhdpa9ro
+              ru-central1-c: e2lu8r1tbbtryhdpa9ro
+              ```
+        additionalProperties:
+          type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
       labels:
         description: |
