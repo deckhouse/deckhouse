@@ -24,9 +24,9 @@ import (
 )
 
 var _ = Describe("Modules :: controlPlaneManager :: hooks :: ensure_secret_encryption_key ::", func() {
-	f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal":{}}}`, ``)
+	f := HookExecutionConfigInit(`{"controlPlaneManager":{"apiserver":{"encryptingAtRestEnabled":true}, "internal":{}}}`, ``)
 
-	Context("Empty cluster", func() {
+	Context("Empty cluster, encryptingAtRestEnabled = true", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
@@ -36,7 +36,7 @@ var _ = Describe("Modules :: controlPlaneManager :: hooks :: ensure_secret_encry
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("Must create a ConfigMap with hash and set a value", func() {
+		It("Must create a Secret with hash and set a value", func() {
 			secret := f.KubernetesResource("Secret", kubeSystemNS, secretEncryptionKeySecretName)
 			Expect(secret.Exists()).To(BeTrue())
 
@@ -44,4 +44,24 @@ var _ = Describe("Modules :: controlPlaneManager :: hooks :: ensure_secret_encry
 			Expect(f.ValuesGet(secretEncryptionKeyValuePath).String()).To(HaveLen(44))
 		})
 	})
+
+	g := HookExecutionConfigInit(`{"controlPlaneManager":{"internal":{}}}`, ``)
+
+	Context("Empty cluster, encryptingAtRestEnabled = false", func() {
+		BeforeEach(func() {
+			g.BindingContexts.Set(g.KubeStateSet(``))
+			g.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(g).To(ExecuteSuccessfully())
+		})
+
+		It("Must not create a Secret with hash", func() {
+			secret := g.KubernetesResource("Secret", kubeSystemNS, secretEncryptionKeySecretName)
+			Expect(secret.Exists()).To(BeFalse())
+			Expect(f.ValuesGet(secretEncryptionKeyValuePath).Exists()).To(BeFalse())
+		})
+	})
+
 })

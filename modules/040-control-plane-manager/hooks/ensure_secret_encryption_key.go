@@ -35,10 +35,11 @@ import (
 type SecretEncryptionKey []byte
 
 const (
-	secretEncryptionKeySecretName = "d8-secret-encryption-key"
-	secretEncryptionKeySecretKey  = "secretEncryptionKey"
-	secretEncryptionKeyValuePath  = "controlPlaneManager.internal.secretEncryptionKey"
-	kubeSystemNS                  = "kube-system"
+	secretEncryptionKeySecretName          = "d8-secret-encryption-key"
+	secretEncryptionKeySecretKey           = "secretEncryptionKey"
+	secretEncryptionKeyValuePath           = "controlPlaneManager.internal.secretEncryptionKey"
+	secretEncryptionEnabledConfigValuePath = "controlPlaneManager.apiserver.encryptingAtRestEnabled"
+	kubeSystemNS                           = "kube-system"
 )
 
 var (
@@ -92,6 +93,10 @@ func ensureEncryptionSecretKey(input *go_hook.HookInput) error {
 	}
 
 	if len(secretKey) == 0 {
+		if !input.Values.Get(secretEncryptionEnabledConfigValuePath).Bool() {
+			return nil
+		}
+
 		key, err := generateSecretEncryptionKey()
 		if err != nil {
 			return err
