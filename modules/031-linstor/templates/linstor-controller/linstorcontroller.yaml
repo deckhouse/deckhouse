@@ -62,5 +62,9 @@ spec:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
   replicas: 1
   additionalEnv: []
-  additionalProperties: {}
+  additionalProperties:
+    Autoplacer/Weights/MaxFreeSpace: "0"
+    Autoplacer/Weights/MinReservedSpace: "1"
+    Autoplacer/Weights/MinRscCount: "0"
+    Autoplacer/Weights/MaxThroughput: "0"
   logLevel: info
