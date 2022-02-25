@@ -10,89 +10,69 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks/internal/v1"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-provider-cluster-configuration"},
-			},
-			FilterFunc: filterClusterConfigurationSecret,
-		},
-	},
-}, handleProviderConfiguration)
 
-func handleProviderConfiguration(input *go_hook.HookInput) error {
-	snap := input.Snapshots["secret"]
-	var conf clusterConfiguration
-	if len(snap) == 0 {
-		conf = clusterConfiguration{
-			DiscoveryData:         []byte("{}"),
-			ProviderConfiguration: []byte("{}"),
-		}
-	} else {
-		conf = snap[0].(clusterConfiguration)
+var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
+	p := make(map[string]json.RawMessage)
+	if metaCfg != nil {
+		p = metaCfg.ProviderClusterConfig
 	}
 
-	//   values::unset cloudProviderOpenstack.internal.connection
-	//  provider='{}'
-	//  tags='{}'
-	//  provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
-	//  if [[ "$provider_cluster_configuration_yaml" != "null" ]]; then
-	//    provider_cluster_configuration=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfiguration')
-	//    provider=$(echo "$provider_cluster_configuration" | jq '.provider | . //= {}')
-	//    tags=$(echo "$provider_cluster_configuration" | jq '.tags | . //= {}')
-	//  fi
-	//
-	//  provider_discovery_data=$(echo "$1" | jq -r '
-	//    if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={
-	//      "instances": {},
-	//      "loadBalancer": {}
-	//    } end | .provider_discovery_data')
-
-	input.Values.Remove("cloudProviderOpenstack.internal.connection")
-
-}
-
-func filterClusterConfigurationSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sec corev1.Secret
-
-	err := sdk.FromUnstructured(obj, &sec)
+	var providerClusterConfiguration v1.OpenstackProviderClusterConfiguration
+	err := convertJSONRawMessageToStruct(p, &providerClusterConfiguration)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	discoveryData := sec.Data["cloud-provider-discovery-data.json"]
-	providerConf := sec.Data["cloud-provider-cluster-configuration.yaml"]
-
-	if len(discoveryData) == 0 {
-		discoveryData = json.RawMessage("{}")
+	var moduleConfiguration v1.OpenstackModuleConfiguration
+	err = json.Unmarshal([]byte(input.Values.Get("cloudProviderOpenstack").String()), &moduleConfiguration)
+	if err != nil {
+		return err
 	}
 
-	if len(providerConf) == 0 {
-		providerConf = []byte("{}")
-	}
+	overrideValues(&providerClusterConfiguration, &moduleConfiguration)
+	input.Values.Set("cloudProviderOpenstack.internal.providerClusterConfiguration", providerClusterConfiguration)
 
-	return clusterConfiguration{
-		ProviderConfiguration: providerConf,
-		DiscoveryData:         discoveryData,
-	}, nil
+	var discoveryData v1.OpenstackCloudDiscoveryData
+	if providerDiscoveryData != nil {
+		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
+		if err != nil {
+			return err
+		}
+	}
+	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
+
+	return nil
+})
+
+func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
+	b, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(b, out)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-type clusterConfiguration struct {
-	DiscoveryData         []byte
-	ProviderConfiguration []byte
+func overrideValues(p *v1.OpenstackProviderClusterConfiguration, m *v1.OpenstackModuleConfiguration) {
+	if len(m.Zones) > 0 {
+		p.Zones = m.Zones
+	}
+
+	if len(m.AdditionalExternalNetworkNames) > 0 {
+		p
+	}
+
+	m.Connection
+
+	m.
 }
