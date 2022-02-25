@@ -33,7 +33,13 @@ jobs:
         env:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          ENABLE_REGISTRY_CLEANUP: ${{secrets.ENABLE_REGISTRY_CLEANUP}}
         run: |
+          if [[ ${ENABLE_REGISTRY_CLEANUP} != "true" ]] ; then
+            echo "⚓️ [$(date -u)] ENABLE_REGISTRY_CLEANUP is not 'true', skip running 'werf cleanup'."
+            exit 0
+          fi
+
           export WERF_REPO=${DEV_REGISTRY_PATH}
           type werf && source $(werf ci-env github --config werf_cleanup.yaml --verbose --as-file)
           werf cleanup --config werf_cleanup.yaml --without-kube
