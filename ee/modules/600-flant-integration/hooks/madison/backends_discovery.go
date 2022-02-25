@@ -68,6 +68,11 @@ func backendsHandler(input *go_hook.HookInput) error {
 	// always keep ip address in the same order to prevent rollouts
 	sort.Strings(addressesWithPorts)
 
+	// give only first 3 records
+	if len(addressesWithPorts) > 3 {
+		addressesWithPorts = addressesWithPorts[:3]
+	}
+
 	input.Values.Set(backendsPath, addressesWithPorts)
 	return nil
 }
