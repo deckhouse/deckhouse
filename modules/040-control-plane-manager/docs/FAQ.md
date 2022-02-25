@@ -10,7 +10,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 > Make sure you have all the necessary quota limits, before adding nodes.
 
 To add one or more master nodes to a cloud cluster, follow these steps:
-- Determine the Deckhouse version and edition used in the cluster by running the following command on the master node or a host with configured kubectl access to the cluster: 
+- Determine the Deckhouse version and edition used in the cluster by running the following command on the master node or a host with configured kubectl access to the cluster:
   ```shell
   kubectl -n d8-system get deployment deckhouse \
   -o jsonpath='version-{.metadata.annotations.core\.deckhouse\.io\/version}, edition-{.metadata.annotations.core\.deckhouse\.io\/edition}' \
@@ -26,7 +26,7 @@ To add one or more master nodes to a cloud cluster, follow these steps:
   ```shell
   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ee/install:v1.28.0 bash
   ```
-  
+
   > Change the container registry address if necessary (e.g, if you use an internal container registry).
 
 - Run the following command inside the installer container (use the `--ssh-bastion-*` parameters if using a bastion host):
@@ -62,7 +62,7 @@ All the other actions are performed automatically. Wait until the master nodes a
       ```
 
    * If the deletion may result in etcd losing its quorum (the 2 -> 1 mirgation), stop kubelet on the node (without stopping the etcd container):
-        
+
       ```shell
       systemctl stop kubelet
       systemctl stop bashible.timer
@@ -150,6 +150,29 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
     ```bash
     kubectl -n kube-system create secret generic audit-policy --from-file=./audit-policy.yaml
     ```
+### How to omit Deckhouse built-in policy rules?
+
+Set `apiserver.basicAuditPolicyEnabled` to `false`.
+
+```yaml
+controlPlaneManager: |
+  apiserver:
+    auditPolicyEnabled: true
+    basicAuditPolicyEnabled: false
+```
+
+### How stream audit log to stdout instead of files?
+
+Set `apiserver.auditLog.output` to `stdout`.
+
+```yaml
+controlPlaneManager: |
+  apiserver:
+    auditPolicyEnabled: true
+    auditLog:
+      output: Stdout
+
+```
 
 ### How to deal with the audit log?
 There must be some `log scraper` on master nodes  *([log-shipper](../460-log-shipper/cr.html#clusterloggingconfig), promtail, filebeat)* that will monitor the log file:
@@ -161,7 +184,7 @@ The following fixed parameters of log rotation are in use:
 - The maximum disk space is limited to `1000 Mb`;
 - Logs older than `7 days` will be deleted.
 
-Depending on the `Policy` settings and the number of requests to the **apiserver**, the amount of logs collected may be high. Thus, in some cases, logs can only be kept for less than 30 minutes. 
+Depending on the `Policy` settings and the number of requests to the **apiserver**, the amount of logs collected may be high. Thus, in some cases, logs can only be kept for less than 30 minutes.
 
 ### Cautionary note
 > ⚠️ Note that the current implementation of this feature isn't safe and may lead to a temporary failure of the **control-plane**.
@@ -183,7 +206,7 @@ kubectl -n kube-system delete secret audit-policy
 
 By default, a node is marked as unavailable if it does not report its state for 40 seconds. After another 5 minutes, its Pods will be rescheduled to other nodes. Thus, the overall application unavailability lasts approximately 6 minutes.
 
-In specific cases, if an application cannot run in multiple instances, there is a way to lower its unavailability time: 
+In specific cases, if an application cannot run in multiple instances, there is a way to lower its unavailability time:
 
 1. Reduce the period required for the node to become `Unreachable` if the connection to it is lost by setting the `nodeMonitorGracePeriodSeconds` parameter.
 1. Set a lower timeout for evicting Pods on a failed node using the `failedNodePodEvictionTimeoutSeconds` parameter.
@@ -197,6 +220,6 @@ In specific cases, if an application cannot run in multiple instances, there is 
 In this case, if the connection to the node is lost, the applications will be restarted in about 1 minute.
 
 ### Cautionary note
-Both these parameters directly impact the CPU and memory resources consumed by the `control plane`. By lowering timeouts, we force system components to send statuses more frequently and check the resource state more often. 
+Both these parameters directly impact the CPU and memory resources consumed by the `control plane`. By lowering timeouts, we force system components to send statuses more frequently and check the resource state more often.
 
-When deciding on the appropriate threshold values, consider resources consumed by the control nodes (graphs can help you with this). Note that the lower parameters are, the more resources you may need to allocate to these nodes.     
+When deciding on the appropriate threshold values, consider resources consumed by the control nodes (graphs can help you with this). Note that the lower parameters are, the more resources you may need to allocate to these nodes.

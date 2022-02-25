@@ -72,11 +72,11 @@ The upgrade of a **minor version** of any control plane component is performed i
 
 Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/) can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy). As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.
 
-By default, in a cluster with Deckhouse, a basic policy is created for logging events: 
+By default, in a cluster with Deckhouse, a basic policy is created for logging events:
 - related to the creation, deletion, and changing of resources;
 - committed from the names of ServiceAccounts from the "system" Namespace `kube-system`, `d8-*`;
 - committed with resources in the "system" Namespace `kube-system`, `d8-*`.
 
 A basic policy can be disabled by setting the [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) flag to `false`.
 
-You can find how to set up additional policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
+You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).

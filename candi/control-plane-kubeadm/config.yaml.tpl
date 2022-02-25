@@ -19,11 +19,13 @@ apiServer:
     readOnly: true
     pathType: DirectoryOrCreate
 {{- if .apiserver.auditPolicy }}
+  {{- if eq .apiserver.auditLog.output "File" }}
   - name: "kube-audit-log"
-    hostPath: "/var/log/kube-audit"
-    mountPath: "/var/log/kube-audit"
+    hostPath: "{{ .apiserver.auditLog.path }}"
+    mountPath: "{{ .apiserver.auditLog.path }}"
     readOnly: false
     pathType: DirectoryOrCreate
+  {{- end }}
 {{- end }}
   extraArgs:
     api-audiences: https://kubernetes.default.svc{{ if .apiserver.saTokenAPIAudiences }},{{ .apiserver.saTokenAPIAudiences | join "," }}{{ end }}
@@ -81,12 +83,16 @@ apiServer:
   {{- end -}}
   {{- if .apiserver.auditPolicy }}
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
-    audit-log-path: /var/log/kube-audit/audit.log
     audit-log-format: json
+    {{- if eq .apiserver.auditLog.output "File" }}
+    audit-log-path: "{{ .apiserver.auditLog.path }}/audit.log"
     audit-log-truncate-enabled: "true"
     audit-log-maxage: "7"
     audit-log-maxsize: "100"
     audit-log-maxbackup: "10"
+    {{- else }}
+    audit-log-path: "-"
+    {{- end }}
   {{- end }}
     profiling: "false"
     request-timeout: "300s"
