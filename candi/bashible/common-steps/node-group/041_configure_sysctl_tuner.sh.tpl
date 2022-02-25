@@ -15,7 +15,6 @@
 bb-event-on 'sysctl-tuner-service-changed' '_enable_sysctl_tuner_service'
 function _enable_sysctl_tuner_service() {
   systemctl daemon-reload
-  systemctl restart sysctl-tuner.timer
   systemctl enable sysctl-tuner.timer
 }
 
@@ -102,3 +101,5 @@ Description=Sysctl Tuner
 EnvironmentFile=/etc/environment
 ExecStart=/usr/local/bin/sysctl-tuner
 EOF
+
+systemctl stop sysctl-tuner.timer
