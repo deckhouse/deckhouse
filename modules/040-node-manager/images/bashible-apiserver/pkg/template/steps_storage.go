@@ -251,7 +251,7 @@ func (s *StepsStorage) readTemplates(baseDir string, templates map[string][]byte
 }
 
 func (s *StepsStorage) AddNodeGroupConfiguration(nc *NodeGroupConfiguration) {
-	name := fmt.Sprintf("%d_%s", nc.Spec.Weight, nc.Name)
+	name := fmt.Sprintf("%03d_%s", nc.Spec.Weight, nc.Name)
 	ngBundlePairs := generateNgBundlePairs(nc.Spec.NodeGroups, nc.Spec.Bundles)
 
 	sc := nodeConfigurationScript{
