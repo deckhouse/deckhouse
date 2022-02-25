@@ -25,8 +25,7 @@ CLUSTER_PKI_DIR=/pki
 CONFIG_DIR=/config
 ROOTFS_DIR=
 MAX_RETRIES=42
-secret_encryption_config_file_name="extra-file-secret-encryption-config.yaml"
-secret_encryption_config_file_path="$ROOTFS_DIR/etc/kubernetes/deckhouse/$secret_encryption_config_file_name"
+secret_encryption_config_file_path="$ROOTFS_DIR/etc/kubernetes/deckhouse/secret-encryption-config.yaml"
 
 >&2 echo "Setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node..."
 attempt=0
@@ -164,11 +163,6 @@ function install_files_if_changed() {
   # install src files
   installed_files=()
   for file in "$src_prefix"* ; do
-    if [[ "$file" == "*$secret_encryption_config_file_name" && ! -e "$secret_encryption_config_file_path" ]]; then
-      cp "$file" "$secret_encryption_config_file_path"
-
-      continue
-    fi
     dst_file_name=${file#"${src_prefix}"}
     # shellcheck disable=SC2068
     $install_cmd "$file" "$dst_dir/$dst_file_name" $@

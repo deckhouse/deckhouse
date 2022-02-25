@@ -109,7 +109,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 			Expect(s.Exists()).To(BeTrue())
-			data, err := base64.StdEncoding.DecodeString(s.Field("data.secret-encryption-config\\.yaml").String())
+			data, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-secret-encryption-config\\.yaml").String())
 			Expect(err).To(BeNil())
 			Expect(data).To(MatchYAML(`
 apiVersion: apiserver.config.k8s.io/v1
