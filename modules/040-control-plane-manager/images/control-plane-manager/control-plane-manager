@@ -25,7 +25,7 @@ CLUSTER_PKI_DIR=/pki
 CONFIG_DIR=/config
 ROOTFS_DIR=
 MAX_RETRIES=42
-secret_encryption_config_file_name="secret-encryption-config.yaml"
+secret_encryption_config_file_name="extra-file-secret-encryption-config.yaml"
 secret_encryption_config_file_path="$ROOTFS_DIR/etc/kubernetes/deckhouse/$secret_encryption_config_file_name"
 
 >&2 echo "Setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node..."
