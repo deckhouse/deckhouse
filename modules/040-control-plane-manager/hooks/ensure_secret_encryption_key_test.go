@@ -26,7 +26,7 @@ import (
 var _ = Describe("Modules :: controlPlaneManager :: hooks :: ensure_secret_encryption_key ::", func() {
 	f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal":{}}}`, ``)
 
-	FContext("Empty cluster", func() {
+	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()

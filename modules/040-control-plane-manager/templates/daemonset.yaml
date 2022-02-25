@@ -100,7 +100,7 @@ extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "w
 extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- end }}
 
-  {{- if $tpl_context.apiserver.secretEncryptionKey }}
+  {{- if $tpl_context.secretEncryptionKey }}
 secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" (dict "secretEncryptionKey" $tpl_context.apiserver.secretEncryptionKey) }}
   {{- end }}
 
