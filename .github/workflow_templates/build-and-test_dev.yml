@@ -26,6 +26,36 @@ jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
+  enable_fe:
+    if: ${{ needs.pull_request_info.outputs.edition == 'FE' }}
+    name: Enable FE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_ee:
+    if: ${{ needs.pull_request_info.outputs.edition == 'EE' }}
+    name: Enable EE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_ce:
+    if: ${{ needs.pull_request_info.outputs.edition == 'CE' }}
+    name: Enable CE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
   go_generate:
     name: Go Generate
     needs:
@@ -33,12 +63,14 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 
-  build_fe:
-    name: Build FE
+  build_deckhouse:
+    name: Build Deckhouse
     needs:
       - git_info
       - pull_request_info
       - go_generate
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   doc_web_build:
@@ -62,7 +94,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "unit") | strings.Indent 4 }!}
 
   matrix_tests:
@@ -70,7 +102,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 
   dhctl_tests:
@@ -78,7 +110,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "dhctl") | strings.Indent 4 }!}
 
   golangci_lint:
@@ -86,7 +118,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint") | strings.Indent 4 }!}
 
   openapi_test_cases:
@@ -94,7 +126,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases") | strings.Indent 4 }!}
 
   web_links_test:
@@ -112,5 +144,5 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators") | strings.Indent 4 }!}

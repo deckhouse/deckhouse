@@ -404,7 +404,7 @@ jobs:
             # Use it as image tag.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
+            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
               DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
@@ -631,7 +631,7 @@ jobs:
             # Use it as image tag.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
+            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
               DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
@@ -858,7 +858,7 @@ jobs:
             # Use it as image tag.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
+            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
               DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}

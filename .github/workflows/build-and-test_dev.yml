@@ -87,6 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ref: ${{ steps.ref.outputs.ref }}
+      edition: ${{ steps.check.outputs.edition }}
     # Skip if PR from deckhouse-BOaTswain, e.g. changelog PRs.
     if: ${{ ! startsWith(github.event_name, 'pull_request') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
@@ -122,6 +123,8 @@ jobs:
               return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
             }
 
+            core.info(`Labels: ${JSON.stringify(response.data[0].labels)}`);
+
             const prRepo = context.payload.pull_request.head.repo.full_name;
             const targetRepo = context.payload.repository.full_name;
             const isInternal = prRepo === targetRepo;
@@ -145,6 +148,12 @@ jobs:
                 return core.setFailed(`PR#${context.payload.pull_request.number} without label 'status/ok-to-test' is ignored.`);
               }
             }
+
+            const isEE = response.data[0].labels.some((l) => l.name === 'edition/ee');
+            const isCE = response.data[0].labels.some((l) => l.name === 'edition/ce');
+            const edition = isCE ? 'CE' : (isEE ? 'EE' : process.env.WERF_ENV);
+            core.info(`PR has 'edition/*'?   ${isCE || isEE} (${edition})`);
+            core.setOutput('edition', edition);
 
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
@@ -269,6 +278,36 @@ jobs:
 
   # </template: git_info_job>
 
+  enable_fe:
+    if: ${{ needs.pull_request_info.outputs.edition == 'FE' }}
+    name: Enable FE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_ee:
+    if: ${{ needs.pull_request_info.outputs.edition == 'EE' }}
+    name: Enable EE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_ce:
+    if: ${{ needs.pull_request_info.outputs.edition == 'CE' }}
+    name: Enable CE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
   go_generate:
     name: Go Generate
     needs:
@@ -315,12 +354,14 @@ jobs:
     # </template: go_generate_template>
 
 
-  build_fe:
-    name: Build FE
+  build_deckhouse:
+    name: Build Deckhouse
     needs:
       - git_info
       - pull_request_info
       - go_generate
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
     # <template: build_template>
     runs-on: [self-hosted, regular]
     steps:
@@ -442,7 +483,7 @@ jobs:
             # Use it as image tag.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
+            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
               DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
@@ -587,7 +628,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -648,7 +689,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -709,7 +750,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -770,7 +811,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -831,7 +872,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -1015,7 +1056,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
