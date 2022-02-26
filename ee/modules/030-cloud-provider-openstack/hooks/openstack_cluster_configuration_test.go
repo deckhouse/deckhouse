@@ -115,7 +115,6 @@ cloudProviderOpenstack:
 }
 `
 
-		//, , , additionalNetworks, securityGroups
 		stateACloudDiscoveryDataWithoutLoadbalancers = `
 {
   "apiVersion":"deckhouse.io/v1",
