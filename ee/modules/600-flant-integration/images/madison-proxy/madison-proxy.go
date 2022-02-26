@@ -35,7 +35,7 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 
 	log.Infof("%s", string(dump))
 	if res != nil {
-		log.Infof("responce: %s", res.Status)
+		log.Infof("response: %s", res.Status)
 	}
 	return
 }
