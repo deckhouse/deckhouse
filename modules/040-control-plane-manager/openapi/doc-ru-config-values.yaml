@@ -3,6 +3,13 @@ properties:
     description: |
       Параметры `kube-apiserver`.
     properties:
+      serviceAccount:
+        description: |
+          Настройки выпуска ServiceAccounts.
+        properties:
+          additionalAPIAudiences:
+            description: |
+              Список API audiences, которые следует добавить при создании токенов ServiceAccount.
       admissionPlugins:
         description: |
           Включить дополнительные [admission plugin'ы](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).

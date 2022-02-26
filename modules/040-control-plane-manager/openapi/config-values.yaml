@@ -6,6 +6,21 @@ properties:
     description: |
       `kube-apiserver` parameters.
     properties:
+      serviceAccount:
+        type: object
+        default: {}
+        x-examples:
+          - {}
+          - additionalAPIAudiences: [ "istio-ca" ]
+        description: |
+          ServiceAccount issuing settings.
+        properties:
+          additionalAPIAudiences:
+            type: array
+            description: |
+              A list of API audiences to add when provisioning ServiceAccount tokens.
+            items:
+              type: string
       admissionPlugins:
         type: array
         description: |
