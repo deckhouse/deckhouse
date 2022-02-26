@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -18,25 +19,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const logFormat = `request:%s %s %s, status:%s, body:%s`
+
 // This type implements the http.RoundTripper interface
 type LoggingRoundTripper struct {
 	Proxied http.RoundTripper
 }
 
 func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
-	// Do "before sending requests" actions here.
-	log.Printf("Sending request to %v\n", req.URL)
+	var reqBody []byte
 
 	// Send the request, get the response (or the error)
 	res, e = lrt.Proxied.RoundTrip(req)
 
-	// Handle the result.
-	if e != nil {
-		log.Printf("Error: %v", e)
-	} else {
-		log.Printf("Received %v response\n", res.Status)
+	if req.Body != nil {
+		var err error
+		reqBody, err = io.ReadAll(req.Body)
+		if err != nil {
+			log.Error(err)
+		}
 	}
-
+	log.Infof(logFormat, req.Method, req.URL, req.Proto, res.Status, string(reqBody))
 	return
 }
 
@@ -111,6 +114,9 @@ func newMadisonProxy(madisonScheme, madisonBackend, madisonAuthKey string) http.
 			req.URL.Host = madisonBackend
 			if req.URL.Path == "/api/v1/alerts" || req.URL.Path == "/api/v2/alerts" {
 				req.URL.Path = "/api/events/prometheus/" + madisonAuthKey
+			}
+			if req.URL.Path == "/readyz" {
+				req.URL.Path = "/healthz"
 			}
 			req.Host = madisonHost
 			req.Header.Set("Host", madisonHost)
