@@ -61,7 +61,8 @@ modulesImages:
 modules:
   placement: {}
   proxy:
-    httpsProxy: "1.2.3.4:80"
+    httpProxy: "http://1.2.3.4:80"
+    httpsProxy: "https://1.2.3.4:443"
     noProxy:
     - example.com
 `

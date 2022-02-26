@@ -41,13 +41,22 @@ positive:
     # various proxy settings
     - modules:
         proxy:
-          httpProxy: 1.2.3.4:80
+          httpProxy: http://1.2.3.4:80
     - modules:
         proxy:
-          httpsProxy: 1.2.3.4:443
+          httpsProxy: https://1.2.3.4:443
     - modules:
         proxy:
-          httpProxy: 1.2.3.4:80
+          httpProxy: http://1.2.3.4:80
+          noProxy: ["127.0.0.1", "example.com"]
+    - modules:
+        proxy:
+          httpsProxy: https://1.2.3.4:443
+          noProxy: ["127.0.0.1", "example.com"]
+    - modules:
+        proxy:
+          httpProxy: http://1.2.3.4:80
+          httpsProxy: https://1.2.3.4:443
           noProxy: ["127.0.0.1", "example.com"]
   values:
     # all-in
