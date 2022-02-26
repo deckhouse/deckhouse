@@ -8,7 +8,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -27,19 +26,15 @@ type LoggingRoundTripper struct {
 }
 
 func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
-	var reqBody []byte
-
+	dump, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		log.Error(err)
+	}
 	// Send the request, get the response (or the error)
 	res, e = lrt.Proxied.RoundTrip(req)
 
-	if req.Body != nil {
-		var err error
-		reqBody, err = io.ReadAll(req.Body)
-		if err != nil {
-			log.Error(err)
-		}
-	}
-	log.Infof(logFormat, req.Method, req.URL, req.Proto, res.Status, string(reqBody))
+	log.Infof("%s", string(dump))
+	log.Infof("responce: %s", res.Status)
 	return
 }
 
