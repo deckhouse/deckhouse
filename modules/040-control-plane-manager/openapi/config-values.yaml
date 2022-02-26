@@ -11,11 +11,11 @@ properties:
         default: {}
         x-examples:
           - {}
-          - additionalTokenAPIAudiences: [ "istio-ca" ]
+          - additionalAPIAudiences: [ "istio-ca" ]
         description: |
           ServiceAccount issuing settings.
         properties:
-          additionalTokenAPIAudiences:
+          additionalAPIAudiences:
             type: array
             description: |
               A list of API audiences to add when provisioning ServiceAccount tokens.
