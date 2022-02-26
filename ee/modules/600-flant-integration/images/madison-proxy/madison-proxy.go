@@ -26,7 +26,7 @@ type LoggingRoundTripper struct {
 }
 
 func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
-	dump, err := httputil.DumpRequest(req, true)
+	dump, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
 		log.Error(err)
 	}
