@@ -69,6 +69,9 @@
   {{- if hasKey .Values.controlPlaneManager.apiserver "auditLog" }}
     {{ $_ := set $tpl_context.apiserver "auditLog" .Values.controlPlaneManager.apiserver.auditLog }}
   {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "serviceAccount" }}
+    {{ $_ := set $tpl_context.apiserver "serviceAccount" .Values.controlPlaneManager.apiserver.serviceAccount }}
+  {{- end }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
