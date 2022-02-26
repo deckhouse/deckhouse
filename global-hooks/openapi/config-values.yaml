@@ -181,21 +181,18 @@ properties:
                 pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
       proxy:
         additionalProperties: false
-        oneOf:
-        - required: ["httpProxy"]
-        - required: ["httpsProxy"]
         description: |
           Global proxy setup for modules.
         type: object
         properties:
           httpProxy:
             type: string
-            pattern: '^[a-z0-9\-\.]+:[0-9]+$'
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
               HTTP proxy URL.
           httpsProxy:
             type: string
-            pattern: '^[a-z0-9\-\.]+:[0-9]+$'
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
               HTTPS proxy URL.
           noProxy:
@@ -206,10 +203,15 @@ properties:
               type: string
               pattern: '^[a-z0-9\-\./]+$'
         x-emamples:
-        - httpProxy: 1.2.3.4:80
-        - httpsProxy: 1.2.3.4:443
+        - httpProxy: http://1.2.3.4:80
+        - httpsProxy: https://1.2.3.4:443
+        - httpProxy: http://1.2.3.4:80
+          httpsProxy: https://1.2.3.4:443
         - {}
-        - httpProxy: 1.2.3.4:80
+        - httpProxy: http://1.2.3.4:80
           noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
-        - httpsProxy: 1.2.3.4:80
+        - httpsProxy: https://1.2.3.4:443
+          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
+        - httpProxy: http://1.2.3.4:80
+          httpsProxy: https://1.2.3.4:80
           noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]

@@ -15,7 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/motemen/go-loghttp/global"
 	log "github.com/sirupsen/logrus"
 )
 
