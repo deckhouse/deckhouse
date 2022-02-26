@@ -38,7 +38,7 @@ const (
 	secretEncryptionKeySecretName          = "d8-secret-encryption-key"
 	secretEncryptionKeySecretKey           = "secretEncryptionKey"
 	secretEncryptionKeyValuePath           = "controlPlaneManager.internal.secretEncryptionKey"
-	secretEncryptionEnabledConfigValuePath = "controlPlaneManager.apiserver.encryptingAtRestEnabled"
+	secretEncryptionEnabledConfigValuePath = "controlPlaneManager.apiserver.encryptionEnabled"
 	kubeSystemNS                           = "kube-system"
 )
 

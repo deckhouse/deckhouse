@@ -171,7 +171,7 @@ properties:
             # Avoid trailing slash
             pattern: ^[a-zA-Z0-9_/.-]+[a-zA-Z0-9_.-]$
             default: /var/log/kube-audit
-      encryptingAtRestEnabled:
+      encryptionEnabled:
         type: boolean
         default: false
         description: |

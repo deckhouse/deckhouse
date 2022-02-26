@@ -24,9 +24,9 @@ import (
 )
 
 var _ = Describe("Modules :: controlPlaneManager :: hooks :: ensure_secret_encryption_key ::", func() {
-	f := HookExecutionConfigInit(`{"controlPlaneManager":{"apiserver":{"encryptingAtRestEnabled":true}, "internal":{}}}`, ``)
+	f := HookExecutionConfigInit(`{"controlPlaneManager":{"apiserver":{"encryptionEnabled":true}, "internal":{}}}`, ``)
 
-	Context("Empty cluster, encryptingAtRestEnabled = true", func() {
+	Context("Empty cluster, encryptionEnabled = true", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
@@ -47,7 +47,7 @@ var _ = Describe("Modules :: controlPlaneManager :: hooks :: ensure_secret_encry
 
 	g := HookExecutionConfigInit(`{"controlPlaneManager":{"internal":{}}}`, ``)
 
-	Context("Empty cluster, encryptingAtRestEnabled = false", func() {
+	Context("Empty cluster, encryptionEnabled = false", func() {
 		BeforeEach(func() {
 			g.BindingContexts.Set(g.KubeStateSet(``))
 			g.RunHook()
