@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/motemen/go-loghttp/global"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -88,7 +89,9 @@ func newMadisonProxy(madisonScheme, madisonBackend, madisonAuthKey string) http.
 		Director: func(req *http.Request) {
 			req.URL.Scheme = madisonScheme
 			req.URL.Host = madisonBackend
-			req.URL.Path = "/api/events/prometheus/" + madisonAuthKey
+			if req.URL.Path == "/api/v1/alerts" || req.URL.Path == "/api/v2/alerts" {
+				req.URL.Path = "/api/events/prometheus/" + madisonAuthKey
+			}
 			req.Host = madisonHost
 			req.Header.Set("Host", madisonHost)
 		},
