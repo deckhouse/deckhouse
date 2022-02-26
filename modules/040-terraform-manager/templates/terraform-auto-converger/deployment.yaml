@@ -59,7 +59,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         livenessProbe:
           httpGet:
             path: /healthz

@@ -9,7 +9,7 @@ server {
 upstream madison {
   keepalive 16;
 
-  server ${MADISON_BACKEND} max_fails=0;
+  server ${MADISON_BACKEND}:443 max_fails=0;
 }
 
 server {
@@ -33,6 +33,6 @@ server {
     proxy_ssl_server_name on;
     proxy_ssl_name madison.flant.com;
     proxy_set_header Host madison.flant.com;
-    proxy_pass ${MADISON_SCHEME}://madison;
+    proxy_pass https://madison;
   }
 }

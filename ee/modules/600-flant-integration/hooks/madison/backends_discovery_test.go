@@ -24,58 +24,33 @@ var _ = Describe("Flant integration :: hooks :: madison backends discovery ::", 
   }
 }`
 
-		initConfigValuesString          = `{}`
-		initConfigValuesWithProxyString = `
-{
-  "global": {
-    "modules": {
-      "proxy": {
-        "httpProxy": "1.2.3.4:8080"
-      }
-    }
-  }
-}`
+		initConfigValuesString = `{}`
 	)
-	a := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 	Context("Project is active", func() {
 		BeforeEach(func() {
-			a.BindingContexts.Set(a.GenerateScheduleContext("*/10 * * * *"))
-			a.RunHook()
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
+			f.RunHook()
 		})
 
 		It("values must be present", func() {
 			Skip("Do not run madison backend test on CI, mock it first")
 
-			Expect(a.ValuesGet("flantIntegration.internal.madison.backends").String()).
-				To(MatchOrderedJSON(`["54.38.235.70:443","54.38.235.72:443","54.38.235.73:443"]`))
+			Expect(f.ValuesGet("flantIntegration.internal.madison.backends").String()).
+				To(MatchOrderedJSON(`["54.38.235.70","54.38.235.72","54.38.235.73"]`))
 		})
 	})
 
 	Context("No setup key", func() {
 		BeforeEach(func() {
-			a.ValuesDelete("flantIntegration.internal.licenseKey")
-			a.BindingContexts.Set(a.GenerateScheduleContext("*/10 * * * *"))
-			a.RunHook()
+			f.ValuesDelete("flantIntegration.internal.licenseKey")
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
+			f.RunHook()
 		})
 
 		It("values must be absent", func() {
-			Expect(a.ValuesGet("flantIntegration.internal.madison.backends").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("flantIntegration.internal.madison.backends").Exists()).To(BeFalse())
 		})
 	})
-
-	b := HookExecutionConfigInit(initValuesString, initConfigValuesWithProxyString)
-
-	Context("Project is active, httpProxy is set", func() {
-		BeforeEach(func() {
-			b.BindingContexts.Set(b.GenerateScheduleContext("*/10 * * * *"))
-			b.RunHook()
-		})
-
-		It("values must be present", func() {
-			Expect(b.ValuesGet("flantIntegration.internal.madison.backends").String()).
-				To(MatchOrderedJSON(`["1.2.3.4:8080"]`))
-		})
-	})
-
 })
