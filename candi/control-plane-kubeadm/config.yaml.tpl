@@ -28,10 +28,12 @@ apiServer:
   {{- end }}
 {{- end }}
   extraArgs:
-    api-audiences: https://kubernetes.default.svc{{ if .apiserver.saTokenAPIAudiences }},{{ .apiserver.saTokenAPIAudiences | join "," }}{{ end }}
-    service-account-issuer: https://kubernetes.default.svc
+{{- if .apiserver.serviceAccount }}
+    api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
+    service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
     service-account-key-file: /etc/kubernetes/pki/sa.pub
     service-account-signing-key-file: /etc/kubernetes/pki/sa.key
+{{- end }}
 {{- if ne .runType "ClusterBootstrap" }}
     enable-admission-plugins: "EventRateLimit,ExtendedResourceToleration{{ if .apiserver.admissionPlugins }},{{ .apiserver.admissionPlugins | join "," }}{{ end }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
@@ -41,7 +43,7 @@ apiServer:
 {{- end }}
     anonymous-auth: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "TTLAfterFinished=true"
@@ -118,7 +120,7 @@ controllerManager:
     profiling: "false"
     terminated-pod-gc-threshold: "12500"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "TTLAfterFinished=true"
@@ -151,7 +153,7 @@ scheduler:
 {{- end }}
     profiling: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "DefaultPodTopologySpread=true"
