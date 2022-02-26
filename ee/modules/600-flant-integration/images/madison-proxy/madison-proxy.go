@@ -18,6 +18,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// This type implements the http.RoundTripper interface
+type LoggingRoundTripper struct {
+	Proxied http.RoundTripper
+}
+
+func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
+	// Do "before sending requests" actions here.
+	log.Printf("Sending request to %v\n", req.URL)
+
+	// Send the request, get the response (or the error)
+	res, e = lrt.Proxied.RoundTrip(req)
+
+	// Handle the result.
+	if e != nil {
+		log.Printf("Error: %v", e)
+	} else {
+		log.Printf("Received %v response\n", res.Status)
+	}
+
+	return
+}
+
 var (
 	listenHost  = "0.0.0.0"
 	listenPort  = "8080"
@@ -42,7 +64,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/readyz", readyHandler)
 	mux.HandleFunc("/healthz", readyHandler)
 	mux.HandleFunc("/", proxy.ServeHTTP)
 
@@ -84,7 +105,7 @@ func newMadisonProxy(madisonScheme, madisonBackend, madisonAuthKey string) http.
 	transport := http.DefaultTransport
 	transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	return &httputil.ReverseProxy{
-		Transport: transport,
+		Transport: LoggingRoundTripper{transport},
 		Director: func(req *http.Request) {
 			req.URL.Scheme = madisonScheme
 			req.URL.Host = madisonBackend
