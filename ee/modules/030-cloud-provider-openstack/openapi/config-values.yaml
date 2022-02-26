@@ -51,10 +51,24 @@ properties:
     type: object
     properties:
       sshKeyPairName:
+        type: string
+        description: TODO
       securityGroups:
+        type: array
+        description: TODO
+        items:
+          type: string
       imageName:
+        type: string
+        description: TODO
       mainNetwork:
+        type: string
+        description: TODO
       additionalNetworks:
+        type: array
+        description: TODO
+        items:
+          type: string
   loadBalancer:
     type: object
     properties:
@@ -64,14 +78,17 @@ properties:
         type: string
   zones:
     type: array
+    description: TODO
     items:
       type: string
   tags:
     type: object
+    description: TODO
     additionalProperties:
       type: string
   storageClass:
     type: object
+    description: TODO
     properties:
       exclude:
         type: array

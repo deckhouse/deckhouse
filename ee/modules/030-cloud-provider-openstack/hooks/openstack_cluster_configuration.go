@@ -17,7 +17,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
 	p := make(map[string]json.RawMessage)
 	if metaCfg != nil {
@@ -36,9 +35,6 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 		return err
 	}
 
-	overrideValues(&providerClusterConfiguration, &moduleConfiguration)
-	input.Values.Set("cloudProviderOpenstack.internal.providerClusterConfiguration", providerClusterConfiguration)
-
 	var discoveryData v1.OpenstackCloudDiscoveryData
 	if providerDiscoveryData != nil {
 		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
@@ -46,7 +42,38 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 			return err
 		}
 	}
-	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
+	providerClusterConfiguration.PatchWithModuleConfig(moduleConfiguration)
+	discoveryData.PathWithDiscoveryData(moduleConfiguration)
+
+	//   connection=$(echo "$cloudProviderOpenstack" | jq -r --argjson provider "$provider" '.connection //= $provider | .connection')
+	//  values::set cloudProviderOpenstack.internal.connection "$connection"
+	input.Values.Set("cloudProviderOpenstack.internal.connection", providerClusterConfiguration.Provider)
+
+	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.internalNetworkNames //= $data.internalNetworkNames | .internalNetworkNames | . //= [] | unique')
+	//  values::set cloudProviderOpenstack.internal.internalNetworkNames "$i"
+	input.Values.Set("cloudProviderOpenstack.internal.internalNetworkNames", discoveryData.InternalNetworkNames)
+
+	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.externalNetworkNames //= $data.externalNetworkNames | .externalNetworkNames + .additionalExternalNetworkNames | . //= [] | unique')
+	//  values::set cloudProviderOpenstack.internal.externalNetworkNames "$i"
+	input.Values.Set("cloudProviderOpenstack.internal.externalNetworkNames", discoveryData.ExternalNetworkNames)
+
+	//
+	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.zones //= $data.zones | .zones | . //= [] | unique')
+	//  values::set cloudProviderOpenstack.internal.zones "$i"
+	input.Values.Set("cloudProviderOpenstack.internal.zones", discoveryData.Zones)
+
+	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if (.instances == null or .instances == {}) then $data.instances else .instances end | . //= {}')
+	//  values::set cloudProviderOpenstack.internal.instances "$i"
+	input.Values.Set("cloudProviderOpenstack.internal.instances", discoveryData.Instances)
+	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .podNetworkMode == null then $data.podNetworkMode else .podNetworkMode end')
+	//  values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
+	input.Values.Set("cloudProviderOpenstack.internal.podNetworkMode", discoveryData.PodNetworkMode)
+	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if (.loadBalancer == null or .loadBalancer == {}) then $data.loadBalancer else .loadBalancer end | . //= {}')
+	//  values::set cloudProviderOpenstack.internal.loadBalancer "$i"
+	input.Values.Set("cloudProviderOpenstack.internal.loadBalancer", discoveryData.LoadBalancer)
+	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson tags "$tags" '.tags //= $tags | .tags')
+	//  values::set cloudProviderOpenstack.internal.tags "$i"
+	input.Values.Set("cloudProviderOpenstack.internal.tags", providerClusterConfiguration.Tags)
 
 	return nil
 })
@@ -61,18 +88,4 @@ func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{
 		return err
 	}
 	return nil
-}
-
-func overrideValues(p *v1.OpenstackProviderClusterConfiguration, m *v1.OpenstackModuleConfiguration) {
-	if len(m.Zones) > 0 {
-		p.Zones = m.Zones
-	}
-
-	if len(m.AdditionalExternalNetworkNames) > 0 {
-		p
-	}
-
-	m.Connection
-
-	m.
 }

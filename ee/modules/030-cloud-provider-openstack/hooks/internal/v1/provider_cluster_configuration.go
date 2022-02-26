@@ -20,14 +20,7 @@ type OpenstackProviderClusterConfiguration struct {
 		VolumeTypeMap map[string]string      `json:"volumeTypeMap,omitempty" yaml:"volumeTypeMap,omitempty"`
 		InstanceClass OpenstackInstanceClass `json:"instanceClass,omitempty" yaml:"instanceClass,omitempty"`
 	} `json:"masterNodeGroup,omitempty" yaml:"masterNodeGroup,omitempty"`
-	Provider struct {
-		AuthURL    string `json:"authURL,omitempty" yaml:"authURL,omitempty"`
-		DomainName string `json:"domainName,omitempty" yaml:"domainName,omitempty"`
-		TenantName string `json:"tenantName,omitempty" yaml:"tenantName,omitempty"`
-		Username   string `json:"username,omitempty" yaml:"username,omitempty"`
-		Password   string `json:"password,omitempty" yaml:"password,omitempty"`
-		Region     string `json:"region,omitempty" yaml:"region,omitempty"`
-	} `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Provider provider `json:"provider,omitempty" yaml:"provider,omitempty"`
 
 	Layout   string `json:"layout,omitempty" yaml:"layout,omitempty"`
 	Standard struct {
@@ -74,4 +67,58 @@ type OpenstackProviderClusterConfiguration struct {
 			FloatingIPPools              []string `json:"floatingIPPools,omitempty" yaml:"floatingIPPools,omitempty"`
 		} `json:"instanceClass,omitempty" yaml:"instanceClass,omitempty"`
 	} `json:"nodeGroups,omitempty" yaml:"nodeGroups,omitempty"`
+}
+
+func (cc *OpenstackProviderClusterConfiguration) PatchWithModuleConfig(module OpenstackModuleConfiguration) {
+	if module.Connection != nil && !module.Connection.IsEmpty() {
+		cc.Provider = *module.Connection
+	}
+
+	if len(module.Tags) > 0 {
+		cc.Tags = module.Tags
+	}
+
+	if len(cc.Tags) == 0 {
+		cc.Tags = make(map[string]string)
+	}
+}
+
+type provider struct {
+	AuthURL    string `json:"authURL,omitempty" yaml:"authURL,omitempty"`
+	CACert     string `json:"caCert,omitempty" yaml:"caCert,omitempty"`
+	DomainName string `json:"domainName,omitempty" yaml:"domainName,omitempty"`
+	TenantName string `json:"tenantName,omitempty" yaml:"tenantName,omitempty"`
+	TenantID   string `json:"tenantID,omitempty" yaml:"tenantID,omitempty"`
+	Username   string `json:"username,omitempty" yaml:"username,omitempty"`
+	Password   string `json:"password,omitempty" yaml:"password,omitempty"`
+	Region     string `json:"region,omitempty" yaml:"region,omitempty"`
+}
+
+func (p provider) IsEmpty() bool {
+	if p.AuthURL != "" {
+		return false
+	}
+	if p.CACert != "" {
+		return false
+	}
+	if p.DomainName != "" {
+		return false
+	}
+	if p.TenantName != "" {
+		return false
+	}
+	if p.TenantID != "" {
+		return false
+	}
+	if p.Username != "" {
+		return false
+	}
+	if p.Password != "" {
+		return false
+	}
+	if p.Region != "" {
+		return false
+	}
+
+	return true
 }

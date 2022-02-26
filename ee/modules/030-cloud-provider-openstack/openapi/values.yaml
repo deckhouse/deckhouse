@@ -6,11 +6,80 @@ properties:
     type: object
     default: {}
     properties:
+      connection:
+        type: object
+        properties:
+          authURL:
+            type: string
+          caCert:
+            type: string
+          domainName:
+            type: string
+          tenantName:
+            type: string
+          tenantID:
+            type: string
+          username:
+            type: string
+          password:
+            type: string
+          region:
+            type: string
+      internalNetworkNames:
+        type: array
+        default: []
+        items:
+          type: string
+      externalNetworkNames:
+        type: array
+        default: []
+        items:
+          type: string
+      zones:
+        type: array
+        default: []
+        items:
+          type: string
       instances:
         type: object
         default: {}
-    zones:
-      type: array
-      default: []
-      items:
+        properties:
+          sshKeyPairName:
+            type: string
+          securityGroups:
+            type: array
+            items:
+              type: string
+          imageName:
+            type: string
+          mainNetwork:
+            type: string
+          additionalNetworks:
+            type: array
+            items:
+              type: string
+      podNetworkMode:
+        type: string
+      loadBalancer:
+        type: object
+        default: {}
+        properties:
+          subnetID:
+            type: string
+          floatingNetworkID:
+            type: string
+      tags:
+        type: object
+        additionalProperties:
+          type: string
+      storageClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+            name:
+              type: string
+      defaultStorageClass:
         type: string
