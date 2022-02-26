@@ -1,6 +1,5 @@
 {{- if .Values.flantIntegration.madisonAuthKey }}
   {{- range $.Values.flantIntegration.internal.madison.backends }}
-   {{- $madisonLabel := . | replace ":" "_" }}
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -8,7 +7,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: madison-proxy-{{ . | sha256sum }}
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "madison-proxy" "madison-backend" $madisonLabel )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "madison-proxy" "madison-backend" .)) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -23,7 +22,7 @@ kind: Deployment
 metadata:
   name: madison-proxy-{{ . | sha256sum }}
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "madison-proxy" "madison-backend" $madisonLabel )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "madison-proxy" "madison-backend" .)) | nindent 2 }}
 spec:
   replicas: 1
   strategy:
@@ -31,12 +30,12 @@ spec:
   selector:
     matchLabels:
       app: madison-proxy
-      madison-backend: {{ $madisonLabel }}
+      madison-backend: {{ . }}
   template:
     metadata:
       labels:
         app: madison-proxy
-        madison-backend: {{ $madisonLabel }}
+        madison-backend: {{ . }}
       annotations:
         checksum/key: {{ include (print $.Template.BasePath "/madison/secret.yaml") $ | sha256sum }}
     spec:
@@ -54,31 +53,23 @@ spec:
                   app: madison-proxy
               topologyKey: kubernetes.io/hostname
       containers:
-      - name: proxy
+      - name: nginx
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.flantIntegration.madisonProxy }}"
         env:
         - name: MADISON_BACKEND
-          value: {{ . }}
+          value: {{ print "%s:443" . }}
+        - name: MADISON_SCHEME
+          value: "https"
         - name: MADISON_AUTH_KEY
           valueFrom:
             secretKeyRef:
               name: madison-proxy
               key: auth-key
-        {{- $madisonScheme := "https" }}
-        {{- if $.Values.global.modules.proxy }}
-          {{- if $.Values.global.modules.proxy.httpProxy }}
-            {{- $madisonScheme = "http" }}
-          {{- end }}
-        {{- end }}
-        - name: MADISON_SCHEME
-          value: {{ $madisonScheme | quote }}
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - containerPort: 8080
           name: http
-          protocol: TCP
-        - containerPort: 10253
-          name: healthz
           protocol: TCP
         livenessProbe:
           httpGet:
