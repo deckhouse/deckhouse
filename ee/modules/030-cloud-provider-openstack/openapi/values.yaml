@@ -83,3 +83,5 @@ properties:
               type: string
       defaultStorageClass:
         type: string
+      supportsOnlineDiskResize:
+        type: boolean
