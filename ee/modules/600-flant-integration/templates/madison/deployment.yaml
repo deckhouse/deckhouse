@@ -58,7 +58,7 @@ spec:
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.flantIntegration.madisonProxy }}"
         env:
         - name: MADISON_BACKEND
-          value: {{ print "%s:443" . }}
+          value: {{ printf "%s:443" . }}
         - name: MADISON_SCHEME
           value: "https"
         - name: MADISON_AUTH_KEY
@@ -66,7 +66,7 @@ spec:
             secretKeyRef:
               name: madison-proxy
               key: auth-key
-        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+        {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
         ports:
         - containerPort: 8080
           name: http
