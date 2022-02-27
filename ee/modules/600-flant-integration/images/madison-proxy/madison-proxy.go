@@ -108,7 +108,7 @@ func main() {
 			log.Info("Shutting down.")
 			return
 		}
-		log.Error(err)
+		log.Fatal(err)
 	}()
 
 	// Block to wait for a signal
