@@ -16,14 +16,16 @@ import (
 )
 
 func TestProxy(t *testing.T) {
-	madisonKey := "testkey"
-	madisonBackend := "192.168.1.1:8080"
-	madisonScheme := "http"
-
+	c := config{
+		MadisonAuthKey: "testkey",
+		MadisonBackend: "192.168.1.1:8080",
+		MadisonScheme:  "http",
+		MadisonHost:    "madison.flant.com",
+	}
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, rs *http.Request) {
 		w.Header().Set("X-Echo-Host", rs.Host)
 		switch rs.URL.String() {
-		case "/api/events/prometheus/" + madisonKey:
+		case "/api/events/prometheus/" + c.MadisonAuthKey:
 			w.WriteHeader(http.StatusOK)
 			return
 
@@ -34,13 +36,13 @@ func TestProxy(t *testing.T) {
 	}))
 	defer backend.Close()
 	u, _ := url.Parse(backend.URL)
-	madisonBackend = strings.TrimPrefix(u.String(), "http://")
+	c.MadisonBackend = strings.TrimPrefix(u.String(), "http://")
 
 	t.Run("check v1 route", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/alerts", nil)
 		rw := httptest.NewRecorder()
 
-		router := newMadisonProxy(madisonScheme, madisonBackend, madisonKey)
+		router := newMadisonProxy(c)
 		router.ServeHTTP(rw, req)
 		assert.Equal(t, http.StatusOK, rw.Result().StatusCode)
 		assert.Equal(t, "madison.flant.com", rw.Result().Header.Get("X-Echo-Host"))
@@ -50,7 +52,7 @@ func TestProxy(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v2/alerts", nil)
 		rw := httptest.NewRecorder()
 
-		router := newMadisonProxy(madisonScheme, madisonBackend, madisonKey)
+		router := newMadisonProxy(c)
 		router.ServeHTTP(rw, req)
 		assert.Equal(t, http.StatusOK, rw.Result().StatusCode)
 		assert.Equal(t, "madison.flant.com", rw.Result().Header.Get("X-Echo-Host"))

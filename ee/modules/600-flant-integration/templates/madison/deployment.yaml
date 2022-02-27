@@ -59,8 +59,6 @@ spec:
         env:
         - name: MADISON_BACKEND
           value: {{ printf "%s:443" . }}
-        - name: MADISON_SCHEME
-          value: "https"
         - name: MADISON_AUTH_KEY
           valueFrom:
             secretKeyRef:

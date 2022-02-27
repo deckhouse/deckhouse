@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -17,8 +18,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-const logFormat = `request:%s %s %s, status:%s, body:%s`
 
 // This type implements the http.RoundTripper interface
 type LoggingRoundTripper struct {
@@ -40,27 +39,59 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 	return
 }
 
-var (
-	listenHost  = "0.0.0.0"
-	listenPort  = "8080"
-	madisonHost = "madison.flant.com"
-)
+type config struct {
+	ListenHost     string
+	ListenPort     string
+	MadisonHost    string
+	MadisonScheme  string
+	MadisonBackend string
+	MadisonAuthKey string
+}
+
+func (c *config) getEnvConfig() error {
+	c.ListenHost = os.Getenv("LISTEN_HOST")
+	if c.ListenHost == "" {
+		c.ListenHost = "0.0.0.0"
+	}
+
+	c.ListenPort = os.Getenv("LISTEN_PORT")
+	if c.ListenPort == "" {
+		c.ListenPort = "8080"
+	}
+
+	c.MadisonHost = os.Getenv("MADISON_HOST")
+	if c.MadisonHost == "" {
+		c.MadisonHost = "madison.flant.com"
+	}
+
+	c.MadisonScheme = os.Getenv("MADISON_SCHEME")
+	if c.MadisonScheme == "" {
+		c.MadisonScheme = "https"
+	}
+
+	c.MadisonBackend = os.Getenv("MADISON_BACKEND")
+	if c.MadisonBackend == "" {
+		return errors.New("MADISON_BACKEND is not set")
+	}
+
+	c.MadisonAuthKey = os.Getenv("MADISON_AUTH_KEY")
+	if c.MadisonAuthKey == "" {
+		return errors.New("MADISON_AUTH_KEY is not set")
+	}
+	return nil
+}
 
 func main() {
-	madisonScheme := os.Getenv("MADISON_SCHEME")
-	if madisonScheme == "" {
-		log.Fatal("MADISON_SCHEME is not set")
-	}
-	madisonBackend := os.Getenv("MADISON_BACKEND")
-	if madisonBackend == "" {
-		log.Fatal("MADISON_BACKEND is not set")
-	}
-	madisonKey := os.Getenv("MADISON_AUTH_KEY")
-	if madisonKey == "" {
-		log.Fatal("MADISON_AUTH_KEY is not set")
+
+	log.SetFormatter(&log.JSONFormatter{})
+
+	var config config
+	err := config.getEnvConfig()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	proxy := newMadisonProxy(madisonScheme, madisonBackend, madisonKey)
+	proxy := newMadisonProxy(config)
 
 	mux := http.NewServeMux()
 
@@ -68,7 +99,7 @@ func main() {
 	mux.HandleFunc("/", proxy.ServeHTTP)
 
 	s := &http.Server{
-		Addr:    listenHost + ":" + listenPort,
+		Addr:    config.ListenHost + ":" + config.ListenPort,
 		Handler: mux,
 	}
 	go func() {
@@ -91,7 +122,7 @@ func main() {
 	defer cancel()
 
 	log.Info("Got signal ", sig)
-	err := s.Shutdown(ctx)
+	err = s.Shutdown(ctx)
 	if err != nil {
 		log.Error(err)
 	}
@@ -101,22 +132,26 @@ func readyHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func newMadisonProxy(madisonScheme, madisonBackend, madisonAuthKey string) http.Handler {
+func newMadisonProxy(c config) http.Handler {
 	transport := http.DefaultTransport
 	transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	return &httputil.ReverseProxy{
 		Transport: LoggingRoundTripper{transport},
 		Director: func(req *http.Request) {
-			req.URL.Scheme = madisonScheme
-			req.URL.Host = madisonBackend
-			if req.URL.Path == "/api/v1/alerts" || req.URL.Path == "/api/v2/alerts" {
-				req.URL.Path = "/api/events/prometheus/" + madisonAuthKey
-			}
-			if req.URL.Path == "/readyz" {
+			req.URL.Scheme = c.MadisonScheme
+			req.URL.Host = c.MadisonBackend
+
+			switch req.URL.Path {
+			case "/api/v1/alerts", "/api/v2/alerts":
+				req.URL.Path = "/api/events/prometheus/" + c.MadisonAuthKey
+			case "/readyz":
 				req.URL.Path = "/healthz"
+			default:
+				log.Fatalf("path %q is not allowed", req.URL.Path)
 			}
-			req.Host = madisonHost
-			req.Header.Set("Host", madisonHost)
+
+			req.Host = c.MadisonHost
+			req.Header.Set("Host", c.MadisonHost)
 		},
 	}
 }
