@@ -234,4 +234,5 @@ protectKernelDefaults: true
 containerLogMaxSize: 50Mi
 containerLogMaxFiles: 4
 {{- end }}
+allowedUnsafeSysctls:  ["net.*"]
 EOF
