@@ -263,6 +263,12 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 			Namespace:    "d8-log-shipper",
 			GenerateName: "d8-log-shipper-config-",
 		},
+		Regarding: corev1.ObjectReference{
+			Kind:       secret.Kind,
+			Name:       secret.Name,
+			Namespace:  secret.Namespace,
+			APIVersion: secret.APIVersion,
+		},
 		Reason:              "LogShipperConfigCreateUpdate",
 		Note:                "Config file has been created or updated.",
 		Type:                corev1.EventTypeNormal,
