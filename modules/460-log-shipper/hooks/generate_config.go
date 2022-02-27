@@ -26,7 +26,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -254,26 +253,25 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 
 	input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
 
-	event := &eventsv1.Event{
+	event := &corev1.Event{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Event",
 			APIVersion: "events.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    "d8-log-shipper",
-			GenerateName: "d8-log-shipper-config-",
+			Namespace:    secret.Namespace,
+			GenerateName: secret.Name + "-",
 		},
-		Regarding: corev1.ObjectReference{
+		InvolvedObject: corev1.ObjectReference{
 			Kind:       secret.Kind,
 			Name:       secret.Name,
 			Namespace:  secret.Namespace,
 			APIVersion: secret.APIVersion,
 		},
 		Reason:              "LogShipperConfigCreateUpdate",
-		Note:                "Config file has been created or updated.",
+		Message:             "Config file has been created or updated.",
 		Type:                corev1.EventTypeNormal,
 		EventTime:           metav1.MicroTime{Time: time.Now()},
-		Action:              "Binding",
 		ReportingInstance:   "deckhouse",
 		ReportingController: "deckhouse",
 	}
