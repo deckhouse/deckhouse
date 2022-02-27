@@ -66,3 +66,4 @@ replace k8s.io/client-go => k8s.io/client-go v0.19.11
 replace k8s.io/api => k8s.io/api v0.19.11
 
 //
+replace github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks/internal/v1 => ./ee/modules/030-cloud-provider-openstack/hooks/internal/v1
