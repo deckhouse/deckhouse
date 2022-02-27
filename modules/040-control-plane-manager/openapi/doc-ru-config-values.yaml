@@ -3,9 +3,13 @@ properties:
     description: |
       Параметры `kube-apiserver`.
     properties:
-      saTokenAPIAudiences:
+      serviceAccount:
         description: |
-          Список api audiences, которые следует использовать при создании ServiceAccount Tokens
+          Настройки выпуска ServiceAccounts.
+        properties:
+          additionalAPIAudiences:
+            description: |
+              Список API audiences, которые следует добавить при создании токенов ServiceAccount.
       admissionPlugins:
         description: |
           Включить дополнительные [admission plugin'ы](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
@@ -14,13 +18,18 @@ properties:
           1. ExtendedResourceToleration
           2. EventRateLimit с конфигурацией:
 
-          apiVersion: eventratelimit.admission.k8s.io/v1alpha1
-          kind: Configuration
-          limits:
-          - type: Namespace
-            qps: 50
-            burst: 100
-            cacheSize: 2000
+              ```yaml
+              apiVersion: eventratelimit.admission.k8s.io/v1alpha1
+              kind: Configuration
+              limits:
+              - type: Namespace
+                qps: 50
+                burst: 100
+                cacheSize: 2000
+              ```
+
+          `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на Namespaces.
+
       bindToWildcard:
         description: |
           Cлушать ли на `0.0.0.0`.
@@ -97,7 +106,7 @@ properties:
             description: Вывод логов.
           path:
             description: Путь к директории. Действует только в случае `output=file`.
-      encryptingAtRestEnabled:
+      encryptionEnabled:
         description: |
           Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
           Генерирует secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрации.

@@ -6,14 +6,21 @@ properties:
     description: |
       `kube-apiserver` parameters.
     properties:
-      saTokenAPIAudiences:
-        type: array
-        description: |
-          A list of api audiences to use when provisioning ServiceAccount Tokens
+      serviceAccount:
+        type: object
+        default: {}
         x-examples:
-          - [ "foo", "istio-ca" ]
-        items:
-          type: string
+          - {}
+          - additionalAPIAudiences: [ "istio-ca" ]
+        description: |
+          ServiceAccount issuing settings.
+        properties:
+          additionalAPIAudiences:
+            type: array
+            description: |
+              A list of API audiences to add when provisioning ServiceAccount tokens.
+            items:
+              type: string
       admissionPlugins:
         type: array
         description: |
@@ -23,13 +30,17 @@ properties:
           1. ExtendedResourceToleration
           2. EventRateLimit with the following config:
 
-          apiVersion: eventratelimit.admission.k8s.io/v1alpha1
-          kind: Configuration
-          limits:
-          - type: Namespace
-            qps: 50
-            burst: 100
-            cacheSize: 2000
+              ```yaml
+              apiVersion: eventratelimit.admission.k8s.io/v1alpha1
+              kind: Configuration
+              limits:
+              - type: Namespace
+                qps: 50
+                burst: 100
+                cacheSize: 2000
+              ```
+
+          Note that `PodNodeSelector` [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
         x-examples:
           - ["AlwaysPullImages", "NamespaceAutoProvision"]
         items:
@@ -175,7 +186,7 @@ properties:
             # Avoid trailing slash
             pattern: ^[a-zA-Z0-9_/.-]+[a-zA-Z0-9_.-]$
             default: /var/log/kube-audit
-      encryptingAtRestEnabled:
+      encryptionEnabled:
         type: boolean
         default: false
         description: |
