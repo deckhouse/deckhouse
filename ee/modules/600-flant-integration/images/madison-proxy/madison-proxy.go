@@ -147,7 +147,7 @@ func newMadisonProxy(c config) http.Handler {
 			case "/readyz":
 				req.URL.Path = "/healthz"
 			default:
-				log.Fatalf("path %q is not allowed", req.URL.Path)
+				log.Errorf("path %q is not allowed", req.URL.Path)
 			}
 
 			req.Host = c.MadisonHost
