@@ -57,6 +57,11 @@ properties:
     type: string
     description: |
       Client license key.
+  grafanaAlertsToMadisonEnabled:
+    type: bool
+    default: false
+    description: |
+      In addition to Prometheus, also send all Grafana alerts to Madison.
   logs:
     oneOf:
       - type: object
