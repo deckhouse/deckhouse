@@ -116,7 +116,6 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
 {!{ tmpl.Exec "tests_template" (slice $ctx "unit" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests) | strings.Indent 6 }!}
 
@@ -126,7 +125,6 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
 {!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.matrix_tests) | strings.Indent 6 }!}
 
@@ -136,7 +134,6 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
 {!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.dhctl_tests) | strings.Indent 6 }!}
 
@@ -146,7 +143,6 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
 {!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.golangci_lint) | strings.Indent 6 }!}
 
@@ -156,7 +152,6 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.openapi_test_cases) | strings.Indent 6 }!}
 
@@ -167,7 +162,6 @@ jobs:
       - git_info
       - doc_web_build
       - main_web_build
-    continue-on-error: true
 {!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.web_links_test) | strings.Indent 6 }!}
 
@@ -177,7 +171,6 @@ jobs:
     needs:
       - git_info
       - build_fe
-    continue-on-error: true
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.validators) | strings.Indent 6 }!}
 
@@ -189,7 +182,6 @@ jobs:
       - git_info
       - doc_web_build
       - main_web_build
-    continue-on-error: true
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
     runs-on: [self-hosted, regular]
     steps:
@@ -208,7 +200,6 @@ jobs:
     needs:
       - git_info
       - doc_web_build
-    continue-on-error: true
     if: ${{ needs.git_info.outputs.ci_commit_tag != '' }}
     runs-on: [self-hosted, regular]
     steps:

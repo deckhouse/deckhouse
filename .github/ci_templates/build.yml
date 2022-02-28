@@ -26,9 +26,7 @@ steps:
   {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_flant_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
 
   - name: Build and push deckhouse images
@@ -55,19 +53,21 @@ steps:
       # - Build using deckhouse registry as primary and dev-registry as secondary.
       # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
-      # SRC is a name of image from werf.yaml.
-      # WERF_STAGE is a stage image name (from werf stage output).
+      # SRC_NAME is a name of image from werf.yaml.
+      # SRC is a source image name (stage name from werf build report).
       # DST is an image name for docker push.
-      function pull_push() {
-        SRC=$1
-        WERF_STAGE=$2
+      function pull_push_rmi() {
+        SRC_NAME=$1
+        SRC=$2
         DST=$3
-        echo "⚓️ 💫 [$(date -u)] Pull '${SRC}' image as ${WERF_STAGE}."
-        docker pull ${WERF_STAGE}
-        echo "⚓️ 💫 [$(date -u)] Tag '${SRC}' image as ${DST}."
-        docker image tag ${WERF_STAGE} ${DST}
-        echo "⚓️ 💫 [$(date -u)] Push '${SRC}' image as ${DST}."
+        echo "⚓️ 💫 [$(date -u)] Pull '${SRC_NAME}' image as ${SRC}."
+        docker pull ${SRC}
+        echo "⚓️ 💫 [$(date -u)] Tag '${SRC_NAME}' image as ${DST}."
+        docker image tag ${SRC} ${DST}
+        echo "⚓️ 💫 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
         docker image push ${DST}
+        echo "⚓️ [$(date -u)] Remove local tag for '${SRC_NAME}'."
+        docker image rmi ${DST} || true;
       }
 
       if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
@@ -82,8 +82,8 @@ steps:
       SEMVER_REGISTRY_PATH=
 
       if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-        # Build using dev-registry as primary repo and prod registry as secondary.
-        # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod repo.
+        # Build using dev-registry as primary repo and prod registry as secondary (ro) repo.
+        # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod registry.
         werf build \
           --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
           --parallel=true --parallel-tasks-limit=5 \
@@ -96,8 +96,8 @@ steps:
         werf build \
           --parallel=true --parallel-tasks-limit=5 \
           --report-path images_tags_werf.json
-        BRANCH_REGISTRY_PATH="ghcr.io/${GITHUB_REPOSITORY}/dev"
-        SEMVER_REGISTRY_PATH="ghcr.io/${GITHUB_REPOSITORY}"
+        BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+        SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
         echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
       fi
 
@@ -115,20 +115,15 @@ steps:
 
         echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
         DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-        pull_push 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
+        pull_push_rmi 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
 
         echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
         DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-        pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
+        pull_push_rmi 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
         echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
         TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
         pull_push 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
-
-        echo "⚓️ [$(date -u)] Remove local tags."
-        docker image rmi ${DESTINATION_IMAGE} || true
-        docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
-        docker image rmi ${DESTINATION_TESTS_IMAGE} || true
       fi
 
 {!{ if eq $buildType "release" }!}
@@ -147,32 +142,27 @@ steps:
             --parallel=true --parallel-tasks-limit=5 \
             --report-path images_tags_werf.json
         fi
+        # Note: do not run second werf build for test repo, as it has no secondary repo.
 
         echo "⚓️ [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
         DECKHOUSE_DESTINATION_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}
         DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-        pull_push 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
+        pull_push_rmi 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
 
         echo "⚓️ [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
         DECKHOUSE_DESTINATION_INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
         DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-        pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+        pull_push_rmi 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
         echo "⚓️ [$(date -u)] Publish 'tests' image to deckhouse registry using tag ${IMAGE_TAG} ..."
         DECKHOUSE_DESTINATION_TESTS_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
         TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-        pull_push 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
+        pull_push_rmi 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
 
         echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
         DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
         RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
-        pull_push 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
-
-        echo "⚓️ [$(date -u)] Remove local tags."
-        docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
-        docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
-        docker image rmi ${DECKHOUSE_DESTINATION_TESTS_IMAGE} || true
-        docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
+        pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
 
         rm -f images_tags_werf.json
       fi

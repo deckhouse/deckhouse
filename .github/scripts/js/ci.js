@@ -208,7 +208,7 @@ module.exports.updateCommentOnFinish = async ({
 
       // Info for not started job.
       if ((jobResult === 'cancelled' || jobResult === 'skipped') && !statusConfig.includes(',no-skipped')) {
-        nonReportedJobs += renderJobStatusOneLine({ status: jobResult, name: jobName }) + `\n`;
+        nonReportedJobs += renderJobStatusOneLine(jobResult, jobName) + `\n`;
       }
 
       // Restore information for overridden job. Only result, no elapsed time here.

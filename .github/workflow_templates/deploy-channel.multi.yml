@@ -57,7 +57,6 @@ jobs:
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
 
       - name: Filter editions
@@ -132,8 +131,6 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
             docker image rmi ${DST} || true;
           }
 
-          echo Publish {!{ $werfEnv }!} edition.
-
           # Some precautions.
           if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
             echo "DEV_REGISTRY_PATH is not set!"
@@ -148,15 +145,15 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
           #   1. Edition and channel.
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix: ${REGISTRY_SUFFIX}"
           RELEASE_CHANNEL={!{ $channel }!}
-          echo "Release channel: ${RELEASE_CHANNEL}"
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing Deckhouse images for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
 
           #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
           PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            PROD_REGISTRY_PATH="ghcr.io/${GITHUB_REPOSITORY}"
-            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
           fi
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry

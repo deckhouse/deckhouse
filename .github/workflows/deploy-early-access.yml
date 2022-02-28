@@ -35,6 +35,8 @@ env:
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in Github.
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
+  # Registry for additional repositories used for testing Github Actions workflows.
+  GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
   # </template: werf_envs>
@@ -156,9 +158,15 @@ jobs:
       # </template: update_comment_on_start>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
-        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'yes' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -166,25 +174,28 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
       # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -247,8 +258,6 @@ jobs:
             docker image rmi ${DST} || true;
           }
 
-          echo Publish CE edition.
-
           # Some precautions.
           if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
             echo "DEV_REGISTRY_PATH is not set!"
@@ -263,15 +272,15 @@ jobs:
           #   1. Edition and channel.
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix: ${REGISTRY_SUFFIX}"
           RELEASE_CHANNEL=early-access
-          echo "Release channel: ${RELEASE_CHANNEL}"
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing Deckhouse images for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
 
           #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
           PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            PROD_REGISTRY_PATH="ghcr.io/${GITHUB_REPOSITORY}"
-            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
           fi
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
@@ -361,8 +370,6 @@ jobs:
             docker image rmi ${DST} || true;
           }
 
-          echo Publish EE edition.
-
           # Some precautions.
           if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
             echo "DEV_REGISTRY_PATH is not set!"
@@ -377,15 +384,15 @@ jobs:
           #   1. Edition and channel.
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix: ${REGISTRY_SUFFIX}"
           RELEASE_CHANNEL=early-access
-          echo "Release channel: ${RELEASE_CHANNEL}"
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing Deckhouse images for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
 
           #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
           PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            PROD_REGISTRY_PATH="ghcr.io/${GITHUB_REPOSITORY}"
-            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
           fi
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
@@ -475,8 +482,6 @@ jobs:
             docker image rmi ${DST} || true;
           }
 
-          echo Publish FE edition.
-
           # Some precautions.
           if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
             echo "DEV_REGISTRY_PATH is not set!"
@@ -491,15 +496,15 @@ jobs:
           #   1. Edition and channel.
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix: ${REGISTRY_SUFFIX}"
           RELEASE_CHANNEL=early-access
-          echo "Release channel: ${RELEASE_CHANNEL}"
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing Deckhouse images for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
 
           #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
           PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            PROD_REGISTRY_PATH="ghcr.io/${GITHUB_REPOSITORY}"
-            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
           fi
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry

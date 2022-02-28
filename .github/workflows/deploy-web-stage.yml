@@ -44,6 +44,8 @@ env:
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in Github.
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
+  # Registry for additional repositories used for testing Github Actions workflows.
+  GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
   # </template: werf_envs>
@@ -237,9 +239,15 @@ jobs:
       # </template: update_comment_on_start>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
-        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'yes' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -248,9 +256,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
-        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -259,9 +273,15 @@ jobs:
       # </template: login_readonly_registry_step>
 
       # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
-        if: ${{ secrets.FLANT_REGISTRY_HOST }}
+        if: ${{ steps.check_flant_registry.outputs.has_credentials == 'yes' }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}

@@ -54,7 +54,6 @@ jobs:
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
 
 {!{/*
@@ -87,36 +86,36 @@ Destination registries:
           #   1. Edition and channel.
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix - ${REGISTRY_SUFFIX}"
           RELEASE_CHANNEL={!{ $channel }!}
-          echo "Release channel - ${RELEASE_CHANNEL}"
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing suspend image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
 
           #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
-          PROD_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
           if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            PROD_REGISTRY_PATH=ghcr.io/${GITHUB_REPOSITORY}
-            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          RELEASE_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
           echo "{\"version\": \"$CI_COMMIT_REF_NAME\", \"suspend\": true}" > version.json
           cat <<EOF >Dockerfile
           FROM spotify/scratch
           COPY version.json version.json
           EOF
-          docker build . -t ${PROD_RELEASE_VERSION_IMAGE}
+          docker build . -t ${RELEASE_VERSION_IMAGE}
 
           if [[ ${ENABLE_PUSH_FOR_SUSPEND_CHANNELS} == "true" ]] ; then
-            docker image push ${PROD_RELEASE_VERSION_IMAGE}
+            docker image push ${RELEASE_VERSION_IMAGE}
           else
-            echo "⚓️ [$(date -u)] No ENABLE_PUSH_FOR_SUSPEND_CHANNELS=true, skip running 'docker image push ${PROD_RELEASE_VERSION_IMAGE}'."
+            echo "⚓️ [$(date -u)] No ENABLE_PUSH_FOR_SUSPEND_CHANNELS=true, skip running 'docker image push ${RELEASE_VERSION_IMAGE}'."
            fi
-          echo "Delete local 'release-channel' image ${PROD_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${PROD_RELEASE_VERSION_IMAGE} || true
+          echo "Delete local 'release-channel' image ${RELEASE_VERSION_IMAGE}"
+          docker image rmi ${RELEASE_VERSION_IMAGE} || true
 
-          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          echo "Release version image: ${RELEASE_VERSION_IMAGE}"
 {!{- end }!}
 
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,final" $workflowName) | strings.Indent 6 }!}

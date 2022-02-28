@@ -32,6 +32,8 @@ env:
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in Github.
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
+  # Registry for additional repositories used for testing Github Actions workflows.
+  GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
   # </template: werf_envs>
@@ -153,9 +155,15 @@ jobs:
       # </template: update_comment_on_start>
 
       # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
-        if: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'yes' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -163,25 +171,28 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        if: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
       # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -208,36 +219,36 @@ jobs:
           #   1. Edition and channel.
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix - ${REGISTRY_SUFFIX}"
           RELEASE_CHANNEL=early-access
-          echo "Release channel - ${RELEASE_CHANNEL}"
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing suspend image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
 
           #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
-          PROD_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
           if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            PROD_REGISTRY_PATH=ghcr.io/${GITHUB_REPOSITORY}
-            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          RELEASE_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
           echo "{\"version\": \"$CI_COMMIT_REF_NAME\", \"suspend\": true}" > version.json
           cat <<EOF >Dockerfile
           FROM spotify/scratch
           COPY version.json version.json
           EOF
-          docker build . -t ${PROD_RELEASE_VERSION_IMAGE}
+          docker build . -t ${RELEASE_VERSION_IMAGE}
 
           if [[ ${ENABLE_PUSH_FOR_SUSPEND_CHANNELS} == "true" ]] ; then
-            docker image push ${PROD_RELEASE_VERSION_IMAGE}
+            docker image push ${RELEASE_VERSION_IMAGE}
           else
-            echo "⚓️ [$(date -u)] No ENABLE_PUSH_FOR_SUSPEND_CHANNELS=true, skip running 'docker image push ${PROD_RELEASE_VERSION_IMAGE}'."
+            echo "⚓️ [$(date -u)] No ENABLE_PUSH_FOR_SUSPEND_CHANNELS=true, skip running 'docker image push ${RELEASE_VERSION_IMAGE}'."
            fi
-          echo "Delete local 'release-channel' image ${PROD_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${PROD_RELEASE_VERSION_IMAGE} || true
+          echo "Delete local 'release-channel' image ${RELEASE_VERSION_IMAGE}"
+          docker image rmi ${RELEASE_VERSION_IMAGE} || true
 
-          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          echo "Release version image: ${RELEASE_VERSION_IMAGE}"
       - name: Publish release images for EE
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -259,36 +270,36 @@ jobs:
           #   1. Edition and channel.
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix - ${REGISTRY_SUFFIX}"
           RELEASE_CHANNEL=early-access
-          echo "Release channel - ${RELEASE_CHANNEL}"
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing suspend image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
 
           #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
-          PROD_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
           if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            PROD_REGISTRY_PATH=ghcr.io/${GITHUB_REPOSITORY}
-            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          RELEASE_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
           echo "{\"version\": \"$CI_COMMIT_REF_NAME\", \"suspend\": true}" > version.json
           cat <<EOF >Dockerfile
           FROM spotify/scratch
           COPY version.json version.json
           EOF
-          docker build . -t ${PROD_RELEASE_VERSION_IMAGE}
+          docker build . -t ${RELEASE_VERSION_IMAGE}
 
           if [[ ${ENABLE_PUSH_FOR_SUSPEND_CHANNELS} == "true" ]] ; then
-            docker image push ${PROD_RELEASE_VERSION_IMAGE}
+            docker image push ${RELEASE_VERSION_IMAGE}
           else
-            echo "⚓️ [$(date -u)] No ENABLE_PUSH_FOR_SUSPEND_CHANNELS=true, skip running 'docker image push ${PROD_RELEASE_VERSION_IMAGE}'."
+            echo "⚓️ [$(date -u)] No ENABLE_PUSH_FOR_SUSPEND_CHANNELS=true, skip running 'docker image push ${RELEASE_VERSION_IMAGE}'."
            fi
-          echo "Delete local 'release-channel' image ${PROD_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${PROD_RELEASE_VERSION_IMAGE} || true
+          echo "Delete local 'release-channel' image ${RELEASE_VERSION_IMAGE}"
+          docker image rmi ${RELEASE_VERSION_IMAGE} || true
 
-          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          echo "Release version image: ${RELEASE_VERSION_IMAGE}"
       - name: Publish release images for FE
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -310,36 +321,36 @@ jobs:
           #   1. Edition and channel.
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-          echo "Registry suffix - ${REGISTRY_SUFFIX}"
           RELEASE_CHANNEL=early-access
-          echo "Release channel - ${RELEASE_CHANNEL}"
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing suspend image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
 
           #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
-          PROD_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
           if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            PROD_REGISTRY_PATH=ghcr.io/${GITHUB_REPOSITORY}
-            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
           fi
 
           #   3. Build and publish release-channel image to prod registry.
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          RELEASE_VERSION_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
           echo "{\"version\": \"$CI_COMMIT_REF_NAME\", \"suspend\": true}" > version.json
           cat <<EOF >Dockerfile
           FROM spotify/scratch
           COPY version.json version.json
           EOF
-          docker build . -t ${PROD_RELEASE_VERSION_IMAGE}
+          docker build . -t ${RELEASE_VERSION_IMAGE}
 
           if [[ ${ENABLE_PUSH_FOR_SUSPEND_CHANNELS} == "true" ]] ; then
-            docker image push ${PROD_RELEASE_VERSION_IMAGE}
+            docker image push ${RELEASE_VERSION_IMAGE}
           else
-            echo "⚓️ [$(date -u)] No ENABLE_PUSH_FOR_SUSPEND_CHANNELS=true, skip running 'docker image push ${PROD_RELEASE_VERSION_IMAGE}'."
+            echo "⚓️ [$(date -u)] No ENABLE_PUSH_FOR_SUSPEND_CHANNELS=true, skip running 'docker image push ${RELEASE_VERSION_IMAGE}'."
            fi
-          echo "Delete local 'release-channel' image ${PROD_RELEASE_VERSION_IMAGE}"
-          docker image rmi ${PROD_RELEASE_VERSION_IMAGE} || true
+          echo "Delete local 'release-channel' image ${RELEASE_VERSION_IMAGE}"
+          docker image rmi ${RELEASE_VERSION_IMAGE} || true
 
-          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          echo "Release version image: ${RELEASE_VERSION_IMAGE}"
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
