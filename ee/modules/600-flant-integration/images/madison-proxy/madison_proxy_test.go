@@ -57,4 +57,14 @@ func TestProxy(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rw.Result().StatusCode)
 		assert.Equal(t, "madison.flant.com", rw.Result().Header.Get("X-Echo-Host"))
 	})
+
+	t.Run("check another yet route", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/anotheryetroute", nil)
+		rw := httptest.NewRecorder()
+
+		router := newMadisonProxy(c)
+		router.ServeHTTP(rw, req)
+		assert.Equal(t, http.StatusBadGateway, rw.Result().StatusCode)
+	})
+
 }

@@ -28,15 +28,6 @@ type LoggingRoundTripper struct {
 
 func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
 
-	switch {
-	case strings.Contains(req.URL.Path, "/api/events/prometheus"):
-		// Do nothing
-	case req.URL.Path == "/healthz":
-		// Do nothing
-	default:
-		return nil, errors.New(fmt.Sprintf("path %q is not allowed ", req.URL.Path))
-	}
-
 	dump, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
 		log.Error(err)
@@ -48,6 +39,26 @@ func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response,
 	if res != nil {
 		log.Infof("response: %s", res.Status)
 	}
+	return
+}
+
+type PathCheckRoundTripper struct {
+	Proxied http.RoundTripper
+}
+
+func (prt PathCheckRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
+
+	switch {
+	case strings.Contains(req.URL.Path, "/api/events/prometheus"):
+		// Do nothing
+	case req.URL.Path == "/healthz":
+		// Do nothing
+	default:
+		return nil, errors.New(fmt.Sprintf("path %q is not allowed ", req.URL.Path))
+	}
+
+	res, e = prt.Proxied.RoundTrip(req)
+
 	return
 }
 
@@ -155,7 +166,7 @@ func newMadisonProxy(c config) http.Handler {
 	transport := http.DefaultTransport
 	transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	return &httputil.ReverseProxy{
-		Transport: LoggingRoundTripper{transport},
+		Transport: PathCheckRoundTripper{LoggingRoundTripper{transport}},
 		Director: func(req *http.Request) {
 			req.URL.Scheme = c.MadisonScheme
 			req.URL.Host = c.MadisonBackend
