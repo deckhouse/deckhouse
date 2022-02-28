@@ -395,8 +395,8 @@ installTypes:
         template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
       step3:
         name:
-          ru: Подготовка к установке
-          en: Preparing to install
+          ru: Подготовка кластера
+          en: Preparing cluster
         template: getting_started/<INSTALL_CODE>/STEP_PREPARE.md
       step4:
         name:

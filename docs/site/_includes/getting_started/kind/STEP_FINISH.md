@@ -7,31 +7,33 @@
 <div markdown="1">
 ## Congratulations, your Deckhouse platform is up and running!
 
-Now that you have installed and properly configured Deckhouse, let's look at what you can do with it.
+Let's see what is available in the [monitoring](/{{ page.lang }}/documentation/v1/modules/300-prometheus/) module.
 
-Grafana is available at [grafana-127-0-0-1.nip.io](http://grafana-127-0-0-1.nip.io).
+- **Grafana** is available at [grafana-127-0-0-1.nip.io](http://grafana-127-0-0-1.nip.io).
 
-Access to Grafana is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) module:
-- Login — `admin`;
-- Password — generated automatically. It can be found in the `deckhouse` ConfigMap in the configuration section of the `prometheus` module. Use the following command to get it:
-  ```bash
-  kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password
-  ```
-  Sample output:
-  ```
-  $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password 
-  password: UJvSB4UYTa3fnDOco6LF
-  ```
+  Access to Grafana is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) module:
+  - Login — `admin`;
+  - Password — generated automatically. It can be found in the `deckhouse` ConfigMap in the configuration section of the `prometheus` module. Use the following command to get it:
+    ```bash
+    kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password
+    ```
+    Sample output:
+    ```
+    $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password 
+    password: UJvSB4UYTa3fnDOco6LF
+    ```
+  
+  Explore Grafana dashboards bundled with Deckhouse.
 
-Explore Grafana dashboards bundled with Deckhouse.
-
-Go to [grafana-127-0-0-1.nip.io/prometheus/](http://grafana-127-0-0-1.nip.io/prometheus/) to access Prometheus directly.
-
-[Learn more](/{{ page.lang }}/documentation/v1/modules/300-prometheus/) about the `monitoring` module.
+- **Prometheus** is available at [grafana-127-0-0-1.nip.io/prometheus/](http://grafana-127-0-0-1.nip.io/prometheus/).
 
 </div>
 
+Deckhouse, deployed in the kind cluster, is suitable for getting acquainted with other features that might need for production environments.
+Read further about such Deckhouse features.
+
 <section class="cards-blocks">
+
 <div class="cards-blocks__content container">
 <h2 class="cards-blocks__title text_h2">
 Essentials
@@ -71,6 +73,10 @@ At the [upmeter-127-0-0-1.nip.io](http://upmeter-127-0-0-1.nip.io) page you can 
 <h2 class="cards-blocks__title text_h2">
 Deploying your first application
 </h2>
+<div markdown="1">
+Deckhouse makes it easier to set up CI/CD system access to a cluster to deploy your application and allows your application to be monitored by custom metrics.
+</div>
+
 <div class="cards-blocks__cards">
 
 <div class="cards-item cards-item_inverse">

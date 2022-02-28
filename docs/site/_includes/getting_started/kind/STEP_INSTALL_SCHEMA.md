@@ -6,10 +6,8 @@ Please note that some features, such as [node management](/{{ page.lang }}/docum
 
 This guide covers installing Deckhouse in a **minimal** configuration, with Grafana based [monitoring](/{{ page.lang }}/documentation/v1/modules/300-prometheus//) enabled. To simplify, the [nip.io ](https://nip.io ) service is used for working with DNS.
 
-After completing all the steps in this guide, you will have to enable all the required modules manually. Please, refer to the [documentation](/{{ page.lang }}/documentation/v1/) to learn more or reach out to the Deckhouse [community](/en/community/about.html).
+After completing all the steps in this guide, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/{{ page.lang }}/documentation/v1/) to learn more or reach out to the Deckhouse [community](/en/community/about.html).
 
 ## Installation process
 
 You will need a personal computer of sufficient power with macOS, Windows or Linux and with Internet access. A Kubernetes cluster will be deployed on this computer, and Deckhouse will be installed into a cluster. 
-
-To start the process of installing your Kubernetes cluster, click the "Next" button below.
