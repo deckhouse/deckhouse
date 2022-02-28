@@ -77,3 +77,5 @@ data:
   enable-remote-node-identity: "true"
 
   bpf-map-dynamic-size-ratio: "0.005"
+
+  enable-icmp-rules: "true"
