@@ -353,11 +353,16 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	return hec
 }
 
-func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeState string, desiredQuantity int) hookcontext.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeState string, _ int) hookcontext.GeneratedBindingContexts {
+	// The method is deprecated
+	return hec.KubeStateSet(newKubeState)
+}
+
+func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.GeneratedBindingContexts {
 	var contexts hookcontext.GeneratedBindingContexts
 	var err error
 	if !hec.IsKubeStateInited {
-		hec.BindingContextController, err = hookcontext.NewBindingContextController(hec.hookConfig, hec.fakeClusterVersion)
+		hec.BindingContextController = hookcontext.NewBindingContextController(hec.hookConfig, hec.fakeClusterVersion)
 		if err != nil {
 			panic(err)
 		}
@@ -393,21 +398,13 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 		}
 		hec.IsKubeStateInited = true
 	} else {
-		if desiredQuantity > 0 {
-			contexts, err = hec.BindingContextController.ChangeStateAndWaitForBindingContexts(desiredQuantity, newKubeState)
-		} else {
-			contexts, err = hec.BindingContextController.ChangeState(newKubeState)
-		}
+		contexts, err = hec.BindingContextController.ChangeState(newKubeState)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	return contexts
-}
-
-func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.GeneratedBindingContexts {
-	return hec.KubeStateSetAndWaitForBindingContexts(newKubeState, 0)
 }
 
 // GenerateOnStartupContext returns binding context for OnStartup.
