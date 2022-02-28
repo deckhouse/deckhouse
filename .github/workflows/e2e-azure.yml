@@ -317,7 +317,7 @@ jobs:
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-${CRI}-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
           echo "::set-output name=prefix::${prefix}"
           echo "prefix=${prefix}"
 
@@ -687,7 +687,7 @@ jobs:
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-${CRI}-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
           echo "::set-output name=prefix::${prefix}"
           echo "prefix=${prefix}"
 
@@ -1057,7 +1057,7 @@ jobs:
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-${CRI}-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
           echo "::set-output name=prefix::${prefix}"
           echo "prefix=${prefix}"
 
@@ -1427,7 +1427,7 @@ jobs:
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-${CRI}-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
           echo "::set-output name=prefix::${prefix}"
           echo "prefix=${prefix}"
 
@@ -1797,7 +1797,7 @@ jobs:
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-${CRI}-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
           echo "::set-output name=prefix::${prefix}"
           echo "prefix=${prefix}"
 
@@ -2167,7 +2167,7 @@ jobs:
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-${CRI}-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
           echo "::set-output name=prefix::${prefix}"
           echo "prefix=${prefix}"
 
@@ -2537,7 +2537,7 @@ jobs:
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-${CRI}-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
           echo "::set-output name=prefix::${prefix}"
           echo "prefix=${prefix}"
 
@@ -2907,7 +2907,7 @@ jobs:
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-${CRI}-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
           echo "::set-output name=prefix::${prefix}"
           echo "prefix=${prefix}"
 
