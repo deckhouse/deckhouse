@@ -4,6 +4,9 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
+  push:
+    branches:
+      - ci-tests-docker-run
   pull_request_target:
      types:
       - opened
@@ -95,7 +98,9 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "unit") | strings.Indent 4 }!}
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "dev") | strings.Indent 4 }!}
 
   matrix_tests:
     name: Matrix tests
@@ -103,7 +108,9 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "matrix") | strings.Indent 4 }!}
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "dev") | strings.Indent 4 }!}
 
   dhctl_tests:
     name: Dhctl Tests
@@ -111,7 +118,9 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl") | strings.Indent 4 }!}
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "dev") | strings.Indent 4 }!}
 
   golangci_lint:
     name: GolangCI Lint
@@ -119,7 +128,9 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint") | strings.Indent 4 }!}
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "dev") | strings.Indent 4 }!}
 
   openapi_test_cases:
     name: OpenAPI Test Cases
@@ -127,7 +138,9 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases") | strings.Indent 4 }!}
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "dev") | strings.Indent 4 }!}
 
   web_links_test:
     name: Web links test
@@ -145,4 +158,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators") | strings.Indent 4 }!}
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "dev") | strings.Indent 4 }!}

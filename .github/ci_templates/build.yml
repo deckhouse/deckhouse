@@ -90,9 +90,11 @@ steps:
         if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
           DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
           DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+          DESTINATION_TESTS_IMAGE=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
         else
           DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
           DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+          DESTINATION_TESTS_IMAGE=${CI_REGISTRY_IMAGE}/tests:${IMAGE_TAG}
         fi
 
         echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
@@ -103,9 +105,14 @@ steps:
         DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
         pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
+        echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
+        TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+        pull_push 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
+
         echo "⚓️ [$(date -u)] Remove local tags."
         docker image rmi ${DESTINATION_IMAGE} || true
         docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
+        docker image rmi ${DESTINATION_TESTS_IMAGE} || true
       fi
       rm -f images_tags_werf.json
 
@@ -135,6 +142,11 @@ steps:
           DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
           pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
+          echo "⚓️ [$(date -u)] Publish 'tests' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+          DECKHOUSE_DESTINATION_TESTS_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
+          TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          pull_push 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
+
           echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
           DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
           RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
@@ -143,6 +155,7 @@ steps:
           echo "⚓️ [$(date -u)] Remove local tags."
           docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
           docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
+          docker image rmi ${DECKHOUSE_DESTINATION_TESTS_IMAGE} || true
           docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
 
           rm -f images_tags_werf.json
