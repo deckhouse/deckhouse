@@ -7,6 +7,7 @@ toc: false
 {::options parse_block_html="false" /}
 {% asset releases.css %}
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
+<script type="text/javascript" src='{{ assets["release-info.js"].digest_path | true_relative_url }}'></script>
 
 <div class="page__container page_releases">
 
@@ -43,3 +44,9 @@ We use <b>five release channels</b>.
 {::options parse_block_html="true" /}
 
 Deckhouse can "soft" switch between release channels using the [deckhouse](modules/002-deckhouse/) module: it is enough to specify the desired release channel in the [configuration](modules/002-deckhouse/configuration.html#parameters-releasechannel).
+
+{%- unless site.mode == "local" %}
+<h2 class="releases-page__table--title">Releases</h2>
+<div class="releases-page__table--wrap"></div>
+<a class="releases-page__deployments" href="https://github.com/deckhouse/deckhouse/deployments/">Deployments on Github</a>
+{%- endunless%}
