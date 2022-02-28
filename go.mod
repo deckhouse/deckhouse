@@ -57,6 +57,8 @@ require (
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 
+replace github.com/flant/addon-operator => github.com/name212/addon-operator v1.0.4-0.20220228132112-53b1ab98e8e9
+
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
 
