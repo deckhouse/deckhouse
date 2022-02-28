@@ -1,10 +1,13 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
+{% if page.platform_code == "bm-private" %}
+  <script type="text/javascript" src='{{ assets["getting-started-private.js"].digest_path }}'></script>
+{% endif %}
 <script type="text/javascript" src='{{ assets["getting-started-install.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
 <span style="display: none" id="platform_code">{{page.platform_code}}</span>
 
-{% unless page.ee_only == true -%}
+{% unless page.ee_only == true or page.platform_code == "bm-private" -%}
 {% if page.lang == 'ru' %}
 #### Выберите редакцию Deckhouse Platform
 {% else %}

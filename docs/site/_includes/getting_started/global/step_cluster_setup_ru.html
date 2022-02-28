@@ -49,6 +49,108 @@
     </span>
   </div>
 {%- endunless %}
+{%- if page.platform_code == 'bm-private' %}
+<div markdown="1">
+## Укажите параметры APT/YUM proxy-сервера (при необходимости)
+
+Если в вашей сети для скачивания APT или YUM-пакетов используется proxy-сервер, укажите его параметры. Оставьте поля пустыми, если proxy-сервер не используется и на узлах есть прямой доступ в интернет.
+</div>
+  <div class="form__row">
+    <label class="label" title="Укажите адрес APT/YUM proxy-сервера">
+      Адрес APT/YUM proxy-сервера, например <code>https://proxy.company.my</code>
+    </label>
+    <input
+      class="textfield"
+      type="text" id="PackagesProxyURI"
+      name="PackagesProxyURI" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+       Используется для скачивания APT/YUM-пакетов при настройке узла.
+    </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Укажите имя, для авторизации на APT/YUM proxy-сервере">
+      Имя для авторизации на proxy-сервере (при необходимости)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="PackagesProxyUsername"
+      name="PackagesProxyUsername" placeholder=""
+      autocomplete="off" />
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Укажите пароль, для авторизации на APT/YUM proxy-сервере">
+      Пароль для авторизации на proxy-сервере (при необходимости)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="PackagesProxyPassword"
+      name="PackagesProxyPassword" placeholder=""
+      autocomplete="off" />
+  </div>
+<div markdown="1">
+## Укажите параметры хранилища образов
+
+Укажите параметры подключения к хранилищу образов и расположение образов Deckhouse. Это также может быть проксирующий registry.
+
+> При необходимости ознакомьтесь с информацией об [особенностях настройки registry](../../documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry).
+
+</div>
+
+  <div class="form__row">
+    <label class="label" title="Корневой адрес для образов">
+      Корневой адрес для образов (например, <code>registry.company.my/deckhouse/</code>)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryImagesRepo"
+      name="registryImagesRepo" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+       По указанному адресу и пути должны быть доступны образы Deckhouse необходимой вам редакции (CE или EE).
+    </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Права доступа к стороннему registry">
+      Права доступа к стороннему registry <strong>в Base64</strong>
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryDockerCfg"
+      name="registryDockerCfg" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+      Строка авторизации из файла конфигурации Docker-клиента (по умолчанию — <code>~/.docker/config.json</code>), закодированная в Base64.<br />Подробнее про этот параметр читайте <a href="https://deckhouse.io/ru/documentation/v1/deckhouse-faq.html#подготовка-конфигурации">в документации</a>.
+    </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Укажите адрес APT/YUM proxy-сервера">
+      Хранилище использует протокол <code>HTTP</code>
+    </label>
+    <input
+      type="checkbox" id="registryScheme"
+      name="registryScheme" />
+    <span class="info">
+       Отметьте, если ваше хранилище работает по протоколу HTTP, а не HTTPS.
+    </span>
+  </div>
+
+  <div class="form__row registryca-block" >
+    <label class="label" title="Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты)">
+      Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryCA"
+      name="registryCA" placeholder=""
+      autocomplete="off" />
+  </div>
+
+{% endif %}
 </div>
 
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
