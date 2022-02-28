@@ -16,6 +16,7 @@ spec:
     targetPort: http
   selector:
     app: madison-proxy
+  {{- if and (.Values.global.enabledModules | has "prometheus-crd") (.Values.global.enabledModules | has "prometheus") }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -28,4 +29,20 @@ spec:
     service:
       namespace: d8-monitoring
       name: madison-proxy
+    {{- if .Values.flantIntegration.grafanaAlertsToMadisonEnabled }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: GrafanaAlertsChannel
+metadata:
+  name: madison-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "madison-proxy")) | nindent 2 }}
+spec:
+  description: "Channel to send alerts to Polk. Auto-created by flant-integration module."
+  type: PrometheusAlertManager
+  # TODO: think about disable default from config
+  isDefault: true
+  alertManager:
+    address: {{ printf "http://madison-proxy.d8-monitoring.svc.%s:8080" .Values.global.discovery.clusterDomain | quote }}
+    {{- end }}
+  {{- end }}
 {{- end }}
