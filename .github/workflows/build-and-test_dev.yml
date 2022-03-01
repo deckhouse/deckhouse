@@ -5,8 +5,7 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  #pull_request_target:
-  pull_request:
+  pull_request_target:
      types:
       - opened
       - synchronize
@@ -77,8 +76,7 @@ env:
 # Note: Concurrency is currently in beta and subject to change.
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  #group: ${{ github.event.number }}-dev
-  group: ${{ github.event.number }}-dev-qqq
+  group: ${{ github.event.number }}-dev
   cancel-in-progress: true
 
 jobs:
