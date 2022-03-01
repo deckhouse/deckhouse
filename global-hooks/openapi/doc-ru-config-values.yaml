@@ -11,7 +11,7 @@ properties:
 
       Если значение не указано, то оно определяется автоматически.
   modules:
-    description:
+    description: |
       Общие параметры модулей Deckhouse.
     properties:
       ingressClass:
@@ -95,3 +95,17 @@ properties:
                   Объем памяти, выделяемый на каждом master-узле, **дополнительно** к указанному в параметре `everyNode.memory`:
                     * Для кластера, управляемого Deckhouse, значение по умолчанию определяется автоматически по формуле: `.status.allocatable.memory` минимального master-узла (но не более `8Gi`) минус значение, указанное в параметре `everyNode.memory`;
                     * Для managed-кластера значение по умолчанию: `1Gi` минус значение, указанное в параметре `everyNode.memory`.
+
+      proxy:
+        description: |
+          Глобальная настройка proxy для модулей.
+        properties:
+          httpProxy:
+            description: |
+              URL для HTTP proxy.
+          httpsProxy:
+            description: |
+              URL для HTTPS proxy.
+          noProxy:
+            description: |
+              Список IP и доменных имен для которых проксирование не применяется.
