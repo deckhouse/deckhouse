@@ -74,6 +74,8 @@ const globalValues = `
 `
 
 const moduleValues = `
+  storageClass:
+    topologyEnabled: true
   internal:
     storageClasses:
       - name: fastssd
