@@ -63,8 +63,7 @@ steps:
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
     run: |
 {!{ if eq $buildType "release" }!}
-      REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-      TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${CI_COMMIT_REF_SLUG}
+      TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 {!{ else }!}
       TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
 {!{ end }!}

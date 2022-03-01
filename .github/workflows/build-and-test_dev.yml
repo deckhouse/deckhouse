@@ -637,8 +637,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -696,8 +694,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -755,8 +751,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -814,8 +808,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -873,8 +865,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -1055,8 +1045,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]

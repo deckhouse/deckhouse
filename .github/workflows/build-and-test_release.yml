@@ -1172,8 +1172,6 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-    env:
-      WERF_ENV: "FE"
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -1219,8 +1217,7 @@ jobs:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
 
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${CI_COMMIT_REF_SLUG}
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
     # </template: tests_template>
@@ -1262,8 +1259,6 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-    env:
-      WERF_ENV: "FE"
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -1309,8 +1304,7 @@ jobs:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
 
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${CI_COMMIT_REF_SLUG}
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test ./testing/matrix/ -v
     # </template: tests_template>
@@ -1352,8 +1346,6 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-    env:
-      WERF_ENV: "FE"
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -1399,8 +1391,7 @@ jobs:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
 
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${CI_COMMIT_REF_SLUG}
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} make ci
     # </template: tests_template>
@@ -1442,8 +1433,6 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-    env:
-      WERF_ENV: "FE"
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -1489,8 +1478,7 @@ jobs:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
 
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${CI_COMMIT_REF_SLUG}
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} sh -c "go generate tools/register.go && golangci-lint run"
     # </template: tests_template>
@@ -1532,8 +1520,6 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-    env:
-      WERF_ENV: "FE"
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -1579,8 +1565,7 @@ jobs:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
 
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${CI_COMMIT_REF_SLUG}
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
@@ -1774,8 +1759,6 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-    env:
-      WERF_ENV: "FE"
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -1821,8 +1804,7 @@ jobs:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
 
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${CI_COMMIT_REF_SLUG}
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>

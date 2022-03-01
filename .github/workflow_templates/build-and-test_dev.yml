@@ -96,8 +96,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "tests_template" (slice $ctx "unit" "dev") | strings.Indent 4 }!}
 
   matrix_tests:
@@ -106,8 +104,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "dev") | strings.Indent 4 }!}
 
   dhctl_tests:
@@ -116,8 +112,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "dev") | strings.Indent 4 }!}
 
   golangci_lint:
@@ -126,8 +120,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "dev") | strings.Indent 4 }!}
 
   openapi_test_cases:
@@ -136,8 +128,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "dev") | strings.Indent 4 }!}
 
   web_links_test:
@@ -156,6 +146,4 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-    env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "dev") | strings.Indent 4 }!}
