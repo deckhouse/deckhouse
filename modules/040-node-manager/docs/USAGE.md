@@ -70,25 +70,25 @@ spec:
   nodeType: Static
 ```
 
-## An example of install crane on every node
+## An example of install cert-manager plugin for kubectl on master nodes
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: add-crane.sh
+  name: add-cert-manager-plugin.sh
 spec:
   weight: 100
   bundles:
   - "*"
   nodeGroups:
-  - "*"
+  - "master"
   content: |
     if [ -x /usr/local/bin/crane ]; then
       exit 0
     fi
-    curl -L https://github.com/google/go-containerregistry/releases/download/v0.8.0/go-containerregistry_Linux_x86_64.tar.gz -o - | tar -zxvf - crane
-    mv crane /usr/local/bin
+    curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/kubectl-cert_manager-linux-amd64.tar.gz -o - | tar -zxvf - kubectl-cert_manager
+    mv kubectl-cert_manager /usr/local/bin
 ```
 
 ## An example of tune sysctl parameter
