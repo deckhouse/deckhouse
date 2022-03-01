@@ -5,10 +5,8 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  push:
-    branches:
-      - ci-tests-docker-run
-  pull_request_target:
+  #pull_request_target:
+  pull_request:
      types:
       - opened
       - synchronize
@@ -684,15 +682,10 @@ jobs:
       - name: Run tests
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         run: |
 
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
     # </template: tests_template>
@@ -748,15 +741,10 @@ jobs:
       - name: Run tests
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         run: |
 
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test ./testing/matrix/ -v
     # </template: tests_template>
@@ -812,15 +800,10 @@ jobs:
       - name: Run tests
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         run: |
 
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} make ci
     # </template: tests_template>
@@ -876,15 +859,10 @@ jobs:
       - name: Run tests
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         run: |
 
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} sh -c "go generate tools/register.go && golangci-lint run"
     # </template: tests_template>
@@ -940,15 +918,10 @@ jobs:
       - name: Run tests
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         run: |
 
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
@@ -1127,15 +1100,10 @@ jobs:
       - name: Run tests
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         run: |
 
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}
-          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
 
           docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
