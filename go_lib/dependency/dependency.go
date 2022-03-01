@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
 )
 
 // Container with external dependencies
@@ -42,6 +43,7 @@ type Container interface {
 	GetK8sClient(options ...k8s.Option) (k8s.Client, error)
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
 	GetRegistryClient(repo string, options ...cr.Option) (cr.Client, error)
+	GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error)
 }
 
 var (
@@ -60,9 +62,10 @@ func NewDependencyContainer() Container {
 }
 
 type dependencyContainer struct {
-	etcdClient etcd.Client
-	k8sClient  k8s.Client
-	crClient   cr.Client
+	etcdClient    etcd.Client
+	k8sClient     k8s.Client
+	crClient      cr.Client
+	vsphereClient vsphere.Client
 
 	m             sync.RWMutex
 	isTestEnv     *bool
@@ -179,6 +182,20 @@ func (dc *dependencyContainer) GetRegistryClient(repo string, options ...cr.Opti
 	return client, nil
 }
 
+func (dc *dependencyContainer) GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error) {
+	if dc.isTestEnvironment() {
+		return TestDC.GetVsphereClient(config)
+	}
+
+	client, err := vsphere.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	dc.vsphereClient = client
+	return client, nil
+}
+
 // WithExternalDependencies decorate function with external dependencies
 func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) error) func(input *go_hook.HookInput) error {
 	return func(input *go_hook.HookInput) error {
@@ -190,10 +207,11 @@ func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) err
 type mockedDependencyContainer struct {
 	ctrl *minimock.Controller // maybe we need it somewhere in tests
 
-	HTTPClient *http.ClientMock
-	EtcdClient *etcd.ClientMock
-	K8sClient  k8s.Client
-	CRClient   *cr.ClientMock
+	HTTPClient    *http.ClientMock
+	EtcdClient    *etcd.ClientMock
+	K8sClient     k8s.Client
+	CRClient      *cr.ClientMock
+	VsphereClient *vsphere.ClientMock
 }
 
 func (mdc *mockedDependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
@@ -227,6 +245,13 @@ func (mdc *mockedDependencyContainer) GetRegistryClient(string, ...cr.Option) (c
 	return nil, fmt.Errorf("no CR client")
 }
 
+func (mdc *mockedDependencyContainer) GetVsphereClient(config *vsphere.ProviderClusterConfiguration) (vsphere.Client, error) {
+	if mdc.VsphereClient != nil {
+		return mdc.VsphereClient, nil
+	}
+	return nil, fmt.Errorf("no Vsphere client")
+}
+
 // SetK8sVersion change FakeCluster versions. KubeClient returns with resources of specified version
 func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
 	cli := fake.NewFakeCluster(ver).Client
@@ -239,9 +264,10 @@ func newMockedContainer() *mockedDependencyContainer {
 	return &mockedDependencyContainer{
 		ctrl: ctrl,
 
-		HTTPClient: http.NewClientMock(ctrl),
-		EtcdClient: etcd.NewClientMock(ctrl),
-		K8sClient:  fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client,
-		CRClient:   cr.NewClientMock(ctrl),
+		HTTPClient:    http.NewClientMock(ctrl),
+		EtcdClient:    etcd.NewClientMock(ctrl),
+		K8sClient:     fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client,
+		CRClient:      cr.NewClientMock(ctrl),
+		VsphereClient: vsphere.NewClientMock(ctrl),
 	}
 }

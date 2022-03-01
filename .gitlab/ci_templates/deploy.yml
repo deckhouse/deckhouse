@@ -92,8 +92,6 @@
     echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
     echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
 
-  dependencies:
-    - "Build Modules Images"
   when: manual
   except:
     - schedules

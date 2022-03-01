@@ -74,6 +74,11 @@ spec:
             - --key
             - /etc/ssl/user-authz-webhook/webhook-server.key
             - https://127.0.0.1:40443/healthz
+          # Wait for one minute before restarting the container to avoid crashloopbackoofs in case if apiserver restarts
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 6
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

@@ -34,7 +34,7 @@
     ]
   },
   "description": "Basic rabbitmq host stats: Node Stats, Exchanges, Channels, Consumers,  Connections, Queues, Messages, Messages per Queue, Memory, File Descriptors, Sockets.",
-  "editable": true,
+  "editable": false,
   "gnetId": 2121,
   "graphTooltip": 0,
   "id": null,

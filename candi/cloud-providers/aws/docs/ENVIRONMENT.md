@@ -6,7 +6,7 @@ To use the `cloud-provider` and `machine-controller-manager` modules, you must a
 
 ## JSON Policy
 
-Below, you can find instructions on how to apply this policy.
+First, prepare a JSON file with the configuration of the necessary privileges:
 
 ```json
 {
@@ -137,99 +137,119 @@ Below, you can find instructions on how to apply this policy.
 }
 ```
 
+Below, you can find instructions on how to apply this policy.
+
 ## Configuring IAM via the web interface
 
-* Open `Identity and Access Management (IAM)`
-* Open the `Policies` page and click `Create Policy`
-* Select the `JSON` tab and insert the policy
-* Click `Next: Tags`
-* Click `Next: Review`
-* Enter a policy name in the `Name` field (e.g., `D8CloudProviderAWS`)
-* Click `Create Policy`
-* Open the `Users` page of IAM and click `Add users`
-* Enter a name in the `User name` field (e.g., `deckhouse`)
-* Select `Access key - Programmatic access` in the `Select AWS credential type` area 
-* Click `Next: Permissions`
-* Select the `Attach existing policies directly` tab
-* Search (use the `Filter policies` field) for the policy name entered above (e.g., `D8CloudProviderAWS`) and click the checkbox next to it
-* Click `Next: Tags`
-* Click `Next: Review`
-* Click `Create user`
-* Save credentials (`Access key ID` and `Secret access key`)
+In order to configure IAM via the web interface, first create a new Policy and apply the previously created JSON file to it:
+
+1. Open `Identity and Access Management (IAM)`.
+1. Open the `Policies` page and click `Create Policy`.
+1. Select the `JSON` tab and insert the policy.
+1. Click `Next: Tags`, then `Next: Review`.
+1. Enter a policy name in the `Name` field (e.g., `D8CloudProviderAWS`).
+1. Click `Create Policy`.
+
+Then add a new user:
+
+1. Open the `Users` page of IAM and click `Add users`.
+1. Enter a name in the `User name` field (e.g., `deckhouse`).
+
+And apply the created Policy to it:
+
+1. Select `Access key - Programmatic access` in the `Select AWS credential type` area.
+1. Click `Next: Permissions`.
+1. Select the `Attach existing policies directly` tab.
+1. Search (use the `Filter policies` field) for the policy name entered above (e.g., `D8CloudProviderAWS`) and click the checkbox next to it.
+1. Click `Next: Tags`, then `Next: Review`.
+1. Click `Create user`.
+
+Save credentials (`Access key ID` and `Secret access key`).
 
 ## Configuring IAM via the CLI
 
-- Create the `JSON specification` using the following command.
-{% offtopic title="Command to create policy.json" %}
+Create the `JSON specification` using the following command.
+
 ```bash
 cat > policy.json << EOF
 <Policy JSON spec>
 EOF
 ```
-{% endofftopic %}
 
-- Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name and the ARN identifier:
-  ```shell
-  aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
-  ```
+Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name and the ARN identifier:
 
-  You will see the following:
-  ```yaml
-  {
-      "Policy": {
-          "PolicyName": "D8Policy",
-          "PolicyId": "AAA",
-          "Arn": "arn:aws:iam::123:policy/D8Policy",
-          "Path": "/",
-          "DefaultVersionId": "v1",
-          "AttachmentCount": 0,
-          "PermissionsBoundaryUsageCount": 0,
-          "IsAttachable": true,
-          "CreateDate": "2020-08-27T02:52:06+00:00",
-          "UpdateDate": "2020-08-27T02:52:06+00:00"
-      }
-  }
-  ```
-- Create a new user:
-  ```shell
-  aws iam create-user --user-name deckhouse
-  ```
+```shell
+aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+```
 
-  You will see the following:
-  ```yaml
-  {
-      "User": {
-          "Path": "/",
-          "UserName": "deckhouse",
-          "UserId": "AAAXXX",
-          "Arn": "arn:aws:iam::123:user/deckhouse",
-          "CreateDate": "2020-08-27T03:05:42+00:00"
-      }
-  }
-  ```
-- You need to allow access to the API and remember your `AccessKeyId` + `SecretAccessKey` values:
-  ```shell
-  aws iam create-access-key --user-name deckhouse
-  ```
+You will see the following:
 
-  You will see the following:
-  ```yaml
-  {
-      "AccessKey": {
-          "UserName": "deckhouse",
-          "AccessKeyId": "XXXYYY",
-          "Status": "Active",
-          "SecretAccessKey": "ZZZzzz",
-          "CreateDate": "2020-08-27T03:06:22+00:00"
-      }
-  }
-  ```
-- Attach the specified `Policy` to the specified `User`:
-  ```shell
-  aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
-  ```
+```yaml
+{
+    "Policy": {
+        "PolicyName": "D8Policy",
+        "PolicyId": "AAA",
+        "Arn": "arn:aws:iam::123:policy/D8Policy",
+        "Path": "/",
+        "DefaultVersionId": "v1",
+        "AttachmentCount": 0,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "CreateDate": "2020-08-27T02:52:06+00:00",
+        "UpdateDate": "2020-08-27T02:52:06+00:00"
+    }
+}
+```
+
+Create a new user:
+
+```shell
+aws iam create-user --user-name deckhouse
+```
+
+You will see the following:
+
+```yaml
+{
+    "User": {
+        "Path": "/",
+        "UserName": "deckhouse",
+        "UserId": "AAAXXX",
+        "Arn": "arn:aws:iam::123:user/deckhouse",
+        "CreateDate": "2020-08-27T03:05:42+00:00"
+    }
+}
+```
+
+You need to allow access to the API and remember your `AccessKeyId` + `SecretAccessKey` values:
+
+```shell
+aws iam create-access-key --user-name deckhouse
+```
+
+You will see the following:
+
+```yaml
+{
+    "AccessKey": {
+        "UserName": "deckhouse",
+        "AccessKeyId": "XXXYYY",
+        "Status": "Active",
+        "SecretAccessKey": "ZZZzzz",
+        "CreateDate": "2020-08-27T03:06:22+00:00"
+    }
+}
+```
+
+Attach the specified `Policy` to the specified `User`:
+
+```shell
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+```
 
 ## Configuring IAM via Terraform
+
+An example of configuring IAM via Terraform:
 
 ```hcl
 resource "aws_iam_user" "user" {

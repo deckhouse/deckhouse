@@ -58,7 +58,6 @@ jobs:
     steps:
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
-{!{ tmpl.Exec "restore_images_tags_json_from_cache_or_fail" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 6 }!}

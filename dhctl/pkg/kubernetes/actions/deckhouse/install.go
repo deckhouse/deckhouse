@@ -59,10 +59,9 @@ type Config struct {
 }
 
 func (c *Config) GetImage() string {
-	registryNameTemplate := "%s%s/dev:%s"
+	registryNameTemplate := "%s%s:%s"
 	tag := c.DevBranch
 	if c.ReleaseChannel != "" {
-		registryNameTemplate = "%s%s:%s"
 		tag = strcase.ToKebab(c.ReleaseChannel)
 	}
 	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)

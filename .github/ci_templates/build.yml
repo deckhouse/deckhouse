@@ -1,54 +1,19 @@
 {!{ define "go_generate_template" }!}
 # <template: go_generate_template>
-runs-on: ubuntu-latest
+runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
 
   - name: Run go generate
     run: |
-      docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
-      docker run -v $(pwd):/deckhouse -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
+      docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
+      docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
 
   - name: Check generated code
     run: |
       git diff --exit-code
 # </template: go_generate_template>
-{!{ end }!}
-
-{!{ define "build_modules_images_template" }!}
-# <template: build_modules_images_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 2 }!}
-
-  - name: Build and push modules images
-    env:
-      CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-      DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-      REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-      REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
-    run: |
-      #export WERF_REPO="${DEV_REGISTRY_PATH}"
-      #type werf && source $(werf ci-env github --verbose --as-file)
-
-      ./modules_images_werf bp
-
-  #- name: Build and push modules images
-  #  if: always()
-  #  run: |
-  #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
-  #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
-  #      rm -rf $WERF_DOCKER_CONFIG
-  #    fi
-
-  {!{ tmpl.Exec "save_images_tags_json_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "save_images_tags_json_to_cache_step" . | strings.Indent 2 }!}
-# </template: build_modules_images_template>
 {!{ end }!}
 
 {!{ define "build_template" }!}
@@ -63,7 +28,6 @@ steps:
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_flant_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "restore_images_tags_json_step" $ctx | strings.Indent 2 }!}
 
   - name: Build and push deckhouse images
     env:
@@ -87,19 +51,19 @@ steps:
       # - Build using deckhouse registry as primary and dev-registry as secondary.
       # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
-      # SOURCE_IMAGE_NAME is a name of image from werf.yaml.
+      # SRC is a name of image from werf.yaml.
       # WERF_STAGE is a stage image name (from werf stage output).
-      # DESTINATION_IMAGE is an image name for docker push.
+      # DST is an image name for docker push.
       function pull_push() {
-        SOURCE_IMAGE_NAME=$1
+        SRC=$1
         WERF_STAGE=$2
-        DESTINATION_IMAGE=$3
-        echo "  Pull '${SOURCE_IMAGE_NAME}' image as ${WERF_STAGE}."
+        DST=$3
+        echo "⚓️ 💫 [$(date -u)] Pull '${SRC}' image as ${WERF_STAGE}."
         docker pull ${WERF_STAGE}
-        echo "  Tag '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-        docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE}
-        echo "  Push '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-        docker image push ${DESTINATION_IMAGE}
+        echo "⚓️ 💫 [$(date -u)] Tag '${SRC}' image as ${DST}."
+        docker image tag ${WERF_STAGE} ${DST}
+        echo "⚓️ 💫 [$(date -u)] Push '${SRC}' image as ${DST}."
+        docker image push ${DST}
       }
 
       if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
@@ -108,7 +72,10 @@ steps:
       # This build put stages to "dev" registry.
       # If "dev" registry is empty, stages are copied from FE cache.
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-      werf build --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
+      werf build \
+        --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+        --parallel=true --parallel-tasks-limit=5 \
+        --report-path images_tags_werf.json
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -116,26 +83,29 @@ steps:
         # Use it as image tag.
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-        echo "Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}"
+        echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
 
         if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-          DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG}
-          DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+          DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
+          DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
         else
-          DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG}
-          DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+          DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
+          DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
         fi
 
-        echo "Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-        pull_push 'dev' $(werf stage image dev) ${DESTINATION_IMAGE}
+        echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
+        DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+        pull_push 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
 
-        echo "Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-        pull_push 'dev/install' $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE}
+        echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
+        DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+        pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
-        echo Remove local tags.
+        echo "⚓️ [$(date -u)] Remove local tags."
         docker image rmi ${DESTINATION_IMAGE} || true
         docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
       fi
+      rm -f images_tags_werf.json
 
 {!{ if eq $buildType "release" }!}
       # Publish images for Git tag.
@@ -145,28 +115,37 @@ steps:
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
-          echo "Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+          echo "⚓️ [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
           # Copy stages to deckhouse registry from dev registry.
-          werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO
+          werf build \
+            --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+            --secondary-repo $WERF_REPO \
+            --parallel=true --parallel-tasks-limit=5 \
+            --report-path images_tags_werf.json
 
-          echo "Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+          echo "⚓️ [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
           DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG}
-          pull_push 'dev' $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE}
+          DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+          pull_push 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
 
-          echo "Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+          echo "⚓️ [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
           DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
-          pull_push 'dev/install' $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+          DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+          pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
-          echo "Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+          echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
           DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
-          pull_push 'release-channel-version' $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
+          RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
+          pull_push 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
 
-          echo Remove local tags.
+          echo "⚓️ [$(date -u)] Remove local tags."
           docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
           docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
           docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
+
+          rm -f images_tags_werf.json
         else
-          echo "DECKHOUSE_REGISTRY_HOST is empty. No publishing."
+          echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. No publishing."
         fi
       fi
 {!{- end }!}

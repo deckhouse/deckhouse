@@ -1,5 +1,5 @@
 .Go Generate template:
-  stage: build_modules_images
+  stage: go_generate
   script:
   - docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_16_ALPINE} go generate .
   - docker run -v $(pwd):/deckhouse -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_16_ALPINE} go generate .
@@ -14,26 +14,6 @@
       - stable
       - rock-solid
   interruptible: true
-
-.Build Modules Images template:
-  stage: build_modules_images
-  script:
-  - ./modules_images_werf bp
-  except:
-    variables:
-    - $CI_PIPELINE_SOURCE == "schedule" && $CLOUD_LAYOUTS_SCHEDULE != "1"
-    refs:
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
-  interruptible: true
-  artifacts:
-    when: always
-    paths:
-    - modules/images_tags_${WERF_ENV}.json
-    expire_in: 30 days
 
 .Build template:
   stage: build
@@ -86,11 +66,11 @@
     fi
   - if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
       if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-        DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${CI_COMMIT_BRANCH};
-        DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${CI_COMMIT_BRANCH};
+        DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${CI_COMMIT_BRANCH};
+        DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${CI_COMMIT_BRANCH};
       else
-        DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_BRANCH};
-        DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${CI_COMMIT_BRANCH};
+        DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_BRANCH};
+        DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_BRANCH};
       fi;
       docker image tag $(werf stage image dev) ${DESTINATION_IMAGE};
       docker image tag $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE};

@@ -17,12 +17,12 @@ limitations under the License.
 package v1
 
 import (
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	nm "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
 )
 
 // +genclient
@@ -71,7 +71,7 @@ type NodeGroupSpec struct {
 	CloudInstances CloudInstances `json:"cloudInstances,omitempty"`
 
 	// Default labels, annotations and taints for Nodes in NodeGroup. Optional.
-	NodeTemplate NodeTemplate `json:"nodeTemplate,omitempty"`
+	NodeTemplate nm.NodeTemplate `json:"nodeTemplate,omitempty"`
 
 	// Chaos monkey settings. Optional.
 	Chaos Chaos `json:"chaos,omitempty"`
@@ -195,27 +195,6 @@ type ClassReference struct {
 
 func (c ClassReference) IsEmpty() bool {
 	return c.Kind == "" && c.Name == ""
-}
-
-type NodeTemplate struct {
-	// Annotations is an unstructured key value map that is used as default
-	// annotations for Nodes in NodeGroup.
-	// More info: http://kubernetes.io/docs/user-guide/annotations
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	// Map of string keys and values that is used as default
-	// labels for Nodes in NodeGroup.
-	// More info: http://kubernetes.io/docs/user-guide/labels
-	// +optional
-	Labels map[string]string `json:"labels"`
-
-	// Default taints for Nodes in NodeGroup.
-	Taints []v1.Taint `json:"taints,omitempty"`
-}
-
-func (n NodeTemplate) IsEmpty() bool {
-	return n.Annotations == nil && n.Labels == nil && n.Taints == nil
 }
 
 // Chaos is a chaos-monkey settings.

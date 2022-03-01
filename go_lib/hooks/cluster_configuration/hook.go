@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-type Handler func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData unstructured.Unstructured) error
+type Handler func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error
 
 func RegisterHook(handler Handler) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
@@ -66,30 +66,34 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 }
 
 func clusterConfiguration(input *go_hook.HookInput, handler Handler) error {
+	var (
+		metaCfg               *config.MetaConfig
+		providerDiscoveryData *unstructured.Unstructured
+		secretFound           bool
+	)
+
 	snap := input.Snapshots["provider_cluster_configuration"]
-	if len(snap) == 0 {
-		return fmt.Errorf("kube-system/d8-provider-cluster-configuration secret not found")
+	if len(snap) > 0 {
+		secretFound = true
+		secret := snap[0].(*v1.Secret)
+		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
+			m, err := config.ParseConfigFromData(string(clusterConfigurationYAML))
+			if err != nil {
+				return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
+			}
+			metaCfg = m
+		}
+		if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {
+			err := json.Unmarshal(discoveryDataJSON, &providerDiscoveryData)
+			if err != nil {
+				return fmt.Errorf("cannot unmarshal cloud-provider-discovery-data.json key: %v", err)
+			}
+			_, err = config.ValidateDiscoveryData(&discoveryDataJSON)
+			if err != nil {
+				return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
+			}
+		}
 	}
 
-	secret := snap[0].(*v1.Secret)
-
-	clusterConfigurationYAML := secret.Data["cloud-provider-cluster-configuration.yaml"]
-	metaCfg, err := config.ParseConfigFromData(string(clusterConfigurationYAML))
-	if err != nil {
-		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
-	}
-
-	discoveryDataJSON := secret.Data["cloud-provider-discovery-data.json"]
-	var providerDiscoveryData unstructured.Unstructured
-	err = json.Unmarshal(discoveryDataJSON, &providerDiscoveryData)
-	if err != nil {
-		return fmt.Errorf("cannot unmarshal cloud-provider-discovery-data.json key: %v", err)
-	}
-
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON)
-	if err != nil {
-		return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
-	}
-
-	return handler(input, metaCfg, providerDiscoveryData)
+	return handler(input, metaCfg, providerDiscoveryData, secretFound)
 }

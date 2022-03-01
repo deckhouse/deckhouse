@@ -21,6 +21,14 @@ cloudProviderVsphere: |
   internalNetworkNames:
   - KUBE-3
   - devops-internal
+  nsxt:
+    defaultIpPoolName: "External IP Pool"
+    tier1GatewayPath: flant_tier1
+    user: guestuser1
+    password: pass
+    host: 1.2.3.4
+    insecureFlag: true
+    size: SMALL
 ```
 
 

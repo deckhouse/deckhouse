@@ -185,364 +185,13 @@ jobs:
 
       # </template: update_comment_on_start>
 
-  build_modules_images_fe:
-    name: Build Modules Images FE
-    needs:
-      - git_info
-      - comment_on_start
-
-    # <template: build_modules_images_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Build and push modules images
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
-        run: |
-          #export WERF_REPO="${DEV_REGISTRY_PATH}"
-          #type werf && source $(werf ci-env github --verbose --as-file)
-
-          ./modules_images_werf bp
-
-      #- name: Build and push modules images
-      #  if: always()
-      #  run: |
-      #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
-      #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
-      #      rm -rf $WERF_DOCKER_CONFIG
-      #    fi
-
-
-      # <template: save_images_tags_json_step>
-      - name: Save images_tags file
-        uses: actions/upload-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-      # </template: save_images_tags_json_step>
-
-      # <template: save_images_tags_json_to_cache_step>
-      - name: Save images_tags file
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      # </template: save_images_tags_json_to_cache_step>
-    # </template: build_modules_images_template>
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusSource = 'job,inline';
-            const name = 'Build Modules Images FE';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
-      # </template: update_comment_on_finish>
-
-  build_modules_images_ee:
-    name: Build Modules Images EE
-    needs:
-      - git_info
-      - comment_on_start
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
-    env:
-      WERF_ENV: "EE"
-
-    # <template: build_modules_images_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Build and push modules images
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
-        run: |
-          #export WERF_REPO="${DEV_REGISTRY_PATH}"
-          #type werf && source $(werf ci-env github --verbose --as-file)
-
-          ./modules_images_werf bp
-
-      #- name: Build and push modules images
-      #  if: always()
-      #  run: |
-      #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
-      #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
-      #      rm -rf $WERF_DOCKER_CONFIG
-      #    fi
-
-
-      # <template: save_images_tags_json_step>
-      - name: Save images_tags file
-        uses: actions/upload-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-      # </template: save_images_tags_json_step>
-
-      # <template: save_images_tags_json_to_cache_step>
-      - name: Save images_tags file
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      # </template: save_images_tags_json_to_cache_step>
-    # </template: build_modules_images_template>
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusSource = 'job,inline';
-            const name = 'Build Modules Images EE';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
-      # </template: update_comment_on_finish>
-
-  build_modules_images_ce:
-    name: Build Modules Images CE
-    needs:
-      - git_info
-      - comment_on_start
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
-    env:
-      WERF_ENV: "CE"
-
-    # <template: build_modules_images_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Login to dev registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      # <template: login_rw_registry_step>
-      - name: Login to rw registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-      # </template: werf_install_step>
-
-      - name: Build and push modules images
-        env:
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
-        run: |
-          #export WERF_REPO="${DEV_REGISTRY_PATH}"
-          #type werf && source $(werf ci-env github --verbose --as-file)
-
-          ./modules_images_werf bp
-
-      #- name: Build and push modules images
-      #  if: always()
-      #  run: |
-      #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
-      #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
-      #      rm -rf $WERF_DOCKER_CONFIG
-      #    fi
-
-
-      # <template: save_images_tags_json_step>
-      - name: Save images_tags file
-        uses: actions/upload-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-      # </template: save_images_tags_json_step>
-
-      # <template: save_images_tags_json_to_cache_step>
-      - name: Save images_tags file
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      # </template: save_images_tags_json_to_cache_step>
-    # </template: build_modules_images_template>
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusSource = 'job,inline';
-            const name = 'Build Modules Images CE';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
-      # </template: update_comment_on_finish>
-
   go_generate:
     name: Go Generate
     needs:
       - git_info
 
     # <template: go_generate_template>
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: checkout_step>
@@ -563,8 +212,8 @@ jobs:
 
       - name: Run go generate
         run: |
-          docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
-          docker run -v $(pwd):/deckhouse -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
+          docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
+          docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
 
       - name: Check generated code
         run: |
@@ -598,7 +247,6 @@ jobs:
     name: Build FE
     needs:
       - git_info
-      - build_modules_images_fe
       - go_generate
     env:
       WERF_ENV: "FE"
@@ -660,14 +308,6 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
-
       - name: Build and push deckhouse images
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -690,19 +330,19 @@ jobs:
           # - Build using deckhouse registry as primary and dev-registry as secondary.
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
-          # SOURCE_IMAGE_NAME is a name of image from werf.yaml.
+          # SRC is a name of image from werf.yaml.
           # WERF_STAGE is a stage image name (from werf stage output).
-          # DESTINATION_IMAGE is an image name for docker push.
+          # DST is an image name for docker push.
           function pull_push() {
-            SOURCE_IMAGE_NAME=$1
+            SRC=$1
             WERF_STAGE=$2
-            DESTINATION_IMAGE=$3
-            echo "  Pull '${SOURCE_IMAGE_NAME}' image as ${WERF_STAGE}."
+            DST=$3
+            echo "⚓️ 💫 [$(date -u)] Pull '${SRC}' image as ${WERF_STAGE}."
             docker pull ${WERF_STAGE}
-            echo "  Tag '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE}
-            echo "  Push '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image push ${DESTINATION_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Tag '${SRC}' image as ${DST}."
+            docker image tag ${WERF_STAGE} ${DST}
+            echo "⚓️ 💫 [$(date -u)] Push '${SRC}' image as ${DST}."
+            docker image push ${DST}
           }
 
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
@@ -711,7 +351,10 @@ jobs:
           # This build put stages to "dev" registry.
           # If "dev" registry is empty, stages are copied from FE cache.
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          werf build --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
+          werf build \
+            --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+            --parallel=true --parallel-tasks-limit=5 \
+            --report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -719,26 +362,29 @@ jobs:
             # Use it as image tag.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-            echo "Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}"
+            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
 
-            echo "Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-            pull_push 'dev' $(werf stage image dev) ${DESTINATION_IMAGE}
+            echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
+            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            pull_push 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
 
-            echo "Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-            pull_push 'dev/install' $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE}
+            echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
+            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
-            echo Remove local tags.
+            echo "⚓️ [$(date -u)] Remove local tags."
             docker image rmi ${DESTINATION_IMAGE} || true
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
           fi
+          rm -f images_tags_werf.json
 
 
           # Publish images for Git tag.
@@ -748,28 +394,37 @@ jobs:
               # Slugify doesn't change a tag with safe-only characters.
               IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
-              echo "Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+              echo "⚓️ [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
               # Copy stages to deckhouse registry from dev registry.
-              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO
+              werf build \
+                --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+                --secondary-repo $WERF_REPO \
+                --parallel=true --parallel-tasks-limit=5 \
+                --report-path images_tags_werf.json
 
-              echo "Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG}
-              pull_push 'dev' $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE}
+              DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+              pull_push 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
 
-              echo "Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
-              pull_push 'dev/install' $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+              DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+              pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
-              echo "Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
-              pull_push 'release-channel-version' $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
+              RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
+              pull_push 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
 
-              echo Remove local tags.
+              echo "⚓️ [$(date -u)] Remove local tags."
               docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
               docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
               docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
+
+              rm -f images_tags_werf.json
             else
-              echo "DECKHOUSE_REGISTRY_HOST is empty. No publishing."
+              echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. No publishing."
             fi
           fi
     # </template: build_template>
@@ -801,7 +456,6 @@ jobs:
     name: Build EE
     needs:
       - git_info
-      - build_modules_images_ee
       - go_generate
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
@@ -864,14 +518,6 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
-
       - name: Build and push deckhouse images
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -894,19 +540,19 @@ jobs:
           # - Build using deckhouse registry as primary and dev-registry as secondary.
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
-          # SOURCE_IMAGE_NAME is a name of image from werf.yaml.
+          # SRC is a name of image from werf.yaml.
           # WERF_STAGE is a stage image name (from werf stage output).
-          # DESTINATION_IMAGE is an image name for docker push.
+          # DST is an image name for docker push.
           function pull_push() {
-            SOURCE_IMAGE_NAME=$1
+            SRC=$1
             WERF_STAGE=$2
-            DESTINATION_IMAGE=$3
-            echo "  Pull '${SOURCE_IMAGE_NAME}' image as ${WERF_STAGE}."
+            DST=$3
+            echo "⚓️ 💫 [$(date -u)] Pull '${SRC}' image as ${WERF_STAGE}."
             docker pull ${WERF_STAGE}
-            echo "  Tag '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE}
-            echo "  Push '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image push ${DESTINATION_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Tag '${SRC}' image as ${DST}."
+            docker image tag ${WERF_STAGE} ${DST}
+            echo "⚓️ 💫 [$(date -u)] Push '${SRC}' image as ${DST}."
+            docker image push ${DST}
           }
 
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
@@ -915,7 +561,10 @@ jobs:
           # This build put stages to "dev" registry.
           # If "dev" registry is empty, stages are copied from FE cache.
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          werf build --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
+          werf build \
+            --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+            --parallel=true --parallel-tasks-limit=5 \
+            --report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -923,26 +572,29 @@ jobs:
             # Use it as image tag.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-            echo "Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}"
+            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
 
-            echo "Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-            pull_push 'dev' $(werf stage image dev) ${DESTINATION_IMAGE}
+            echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
+            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            pull_push 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
 
-            echo "Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-            pull_push 'dev/install' $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE}
+            echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
+            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
-            echo Remove local tags.
+            echo "⚓️ [$(date -u)] Remove local tags."
             docker image rmi ${DESTINATION_IMAGE} || true
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
           fi
+          rm -f images_tags_werf.json
 
 
           # Publish images for Git tag.
@@ -952,28 +604,37 @@ jobs:
               # Slugify doesn't change a tag with safe-only characters.
               IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
-              echo "Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+              echo "⚓️ [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
               # Copy stages to deckhouse registry from dev registry.
-              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO
+              werf build \
+                --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+                --secondary-repo $WERF_REPO \
+                --parallel=true --parallel-tasks-limit=5 \
+                --report-path images_tags_werf.json
 
-              echo "Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG}
-              pull_push 'dev' $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE}
+              DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+              pull_push 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
 
-              echo "Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
-              pull_push 'dev/install' $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+              DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+              pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
-              echo "Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
-              pull_push 'release-channel-version' $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
+              RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
+              pull_push 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
 
-              echo Remove local tags.
+              echo "⚓️ [$(date -u)] Remove local tags."
               docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
               docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
               docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
+
+              rm -f images_tags_werf.json
             else
-              echo "DECKHOUSE_REGISTRY_HOST is empty. No publishing."
+              echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. No publishing."
             fi
           fi
     # </template: build_template>
@@ -1005,7 +666,6 @@ jobs:
     name: Build CE
     needs:
       - git_info
-      - build_modules_images_ce
       - go_generate
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     env:
@@ -1068,14 +728,6 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
-
       - name: Build and push deckhouse images
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -1098,19 +750,19 @@ jobs:
           # - Build using deckhouse registry as primary and dev-registry as secondary.
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
-          # SOURCE_IMAGE_NAME is a name of image from werf.yaml.
+          # SRC is a name of image from werf.yaml.
           # WERF_STAGE is a stage image name (from werf stage output).
-          # DESTINATION_IMAGE is an image name for docker push.
+          # DST is an image name for docker push.
           function pull_push() {
-            SOURCE_IMAGE_NAME=$1
+            SRC=$1
             WERF_STAGE=$2
-            DESTINATION_IMAGE=$3
-            echo "  Pull '${SOURCE_IMAGE_NAME}' image as ${WERF_STAGE}."
+            DST=$3
+            echo "⚓️ 💫 [$(date -u)] Pull '${SRC}' image as ${WERF_STAGE}."
             docker pull ${WERF_STAGE}
-            echo "  Tag '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image tag ${WERF_STAGE} ${DESTINATION_IMAGE}
-            echo "  Push '${SOURCE_IMAGE_NAME}' image as ${DESTINATION_IMAGE}."
-            docker image push ${DESTINATION_IMAGE}
+            echo "⚓️ 💫 [$(date -u)] Tag '${SRC}' image as ${DST}."
+            docker image tag ${WERF_STAGE} ${DST}
+            echo "⚓️ 💫 [$(date -u)] Push '${SRC}' image as ${DST}."
+            docker image push ${DST}
           }
 
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
@@ -1119,7 +771,10 @@ jobs:
           # This build put stages to "dev" registry.
           # If "dev" registry is empty, stages are copied from FE cache.
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          werf build --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}
+          werf build \
+            --secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+            --parallel=true --parallel-tasks-limit=5 \
+            --report-path images_tags_werf.json
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1127,26 +782,29 @@ jobs:
             # Use it as image tag.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-            echo "Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}"
+            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${IMAGE_TAG}
+              DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
             else
-              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${IMAGE_TAG}
-              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${IMAGE_TAG}
+              DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
+              DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
             fi
 
-            echo "Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-            pull_push 'dev' $(werf stage image dev) ${DESTINATION_IMAGE}
+            echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
+            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            pull_push 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
 
-            echo "Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-            pull_push 'dev/install' $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE}
+            echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
+            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
-            echo Remove local tags.
+            echo "⚓️ [$(date -u)] Remove local tags."
             docker image rmi ${DESTINATION_IMAGE} || true
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
           fi
+          rm -f images_tags_werf.json
 
 
           # Publish images for Git tag.
@@ -1156,28 +814,37 @@ jobs:
               # Slugify doesn't change a tag with safe-only characters.
               IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
-              echo "Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+              echo "⚓️ [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
               # Copy stages to deckhouse registry from dev registry.
-              werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO
+              werf build \
+                --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} \
+                --secondary-repo $WERF_REPO \
+                --parallel=true --parallel-tasks-limit=5 \
+                --report-path images_tags_werf.json
 
-              echo "Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${IMAGE_TAG}
-              pull_push 'dev' $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE}
+              DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+              pull_push 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
 
-              echo "Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
-              pull_push 'dev/install' $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+              DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+              pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
-              echo "Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
-              pull_push 'release-channel-version' $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
+              RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
+              pull_push 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
 
-              echo Remove local tags.
+              echo "⚓️ [$(date -u)] Remove local tags."
               docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
               docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
               docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
+
+              rm -f images_tags_werf.json
             else
-              echo "DECKHOUSE_REGISTRY_HOST is empty. No publishing."
+              echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. No publishing."
             fi
           fi
     # </template: build_template>
@@ -1210,7 +877,6 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-      - build_modules_images_fe
     # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
@@ -1279,7 +945,6 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-      - build_modules_images_fe
     # <template: main_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
@@ -1347,7 +1012,6 @@ jobs:
     name: Tests
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1381,14 +1045,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1397,7 +1053,7 @@ jobs:
           args: 'go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...'
         env:
           WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse'
+          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
           WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
@@ -1430,7 +1086,6 @@ jobs:
     name: Matrix tests
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1464,14 +1119,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1480,7 +1127,7 @@ jobs:
           args: 'go test ./testing/matrix/ -v'
         env:
           WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse'
+          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
           WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
@@ -1513,7 +1160,6 @@ jobs:
     name: Dhctl Tests
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1547,14 +1193,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1563,7 +1201,7 @@ jobs:
           args: 'make ci'
         env:
           WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse/dhctl'
+          WERF_DOCKER_OPTIONS: '-w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
           WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
@@ -1596,7 +1234,6 @@ jobs:
     name: GolangCI Lint
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1630,14 +1267,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1646,7 +1275,7 @@ jobs:
           args: 'sh -c "go generate tools/register.go && golangci-lint run"'
         env:
           WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color"'
+          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
           WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
@@ -1679,7 +1308,6 @@ jobs:
     name: OpenAPI Test Cases
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1713,14 +1341,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1729,7 +1349,7 @@ jobs:
           args: 'ginkgo -vet=off ./testing/openapi_cases/'
         env:
           WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse'
+          WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
           WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
@@ -1897,7 +1517,6 @@ jobs:
     name: Validators
     needs:
       - git_info
-      - build_modules_images_fe
       - build_fe
     continue-on-error: true
 
@@ -1931,14 +1550,6 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-
-      # <template: restore_images_tags_json_step>
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json_${{env.WERF_ENV}}
-          path: modules
-      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -1947,7 +1558,7 @@ jobs:
           args: 'go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
         env:
           WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse'
+          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
           WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
@@ -2162,9 +1773,6 @@ jobs:
     name: Update comment on finish
     needs:
       - git_info
-      - build_modules_images_fe
-      - build_modules_images_ee
-      - build_modules_images_ce
       - go_generate
       - build_fe
       - build_ee

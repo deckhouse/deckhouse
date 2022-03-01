@@ -13,7 +13,7 @@
     ]
   },
   "description": "Dashboard for chrony or OpenNTPD.",
-  "editable": true,
+  "editable": false,
   "gnetId": 7496,
   "graphTooltip": 0,
   "iteration": 1557844573805,

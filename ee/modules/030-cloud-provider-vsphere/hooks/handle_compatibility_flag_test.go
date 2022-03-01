@@ -23,7 +23,7 @@ cloudProviderVsphere:
 		initConfigValues = `
 cloudProviderVsphere: {}
 `
-		manualDefaultStorageClass = `
+		manualStorageClass = `
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -63,42 +63,47 @@ provisioner: csi.vsphere.vmware.com
 
 	Context("Fresh cluster without StorageClasses", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
 		It("Should run", func() {
 			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("cloudProviderVsphere.internal.compatibilityFlag").String()).To(Equal("none"))
 		})
 	})
 
 	Context("Cluster with manual default StorageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(manualDefaultStorageClass))
+			f.BindingContexts.Set(f.KubeStateSet(manualStorageClass))
 			f.RunHook()
 		})
 
-		It("Hook must not fail, storage class should be present", func() {
+		It("Hook must not fail, manual storage class should be present", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			scManual := f.KubernetesGlobalResource("StorageClass", "vsphere-main")
+			Expect(scManual.Exists()).To(BeTrue())
 		})
 	})
 
 	Context("Cluster with StorageClasses", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(manualDefaultStorageClass + moduleStorageClass))
+			f.BindingContexts.Set(f.KubeStateSet(manualStorageClass + moduleStorageClass))
 
 			f.RunHook()
 		})
 
-		It("Hook must not fail, storage class should be present, but should not be default", func() {
+		It("Hook must not fail, manual and module storage class should be present, but legacy one should be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			scManual := f.KubernetesGlobalResource("StorageClass", "vsphere-main")
 			Expect(scManual.Exists()).To(BeTrue())
 
-			scLeegacyModule := f.KubernetesGlobalResource("StorageClass", "test-lun001-02baf966-legacy")
-			Expect(scLeegacyModule.Exists()).To(BeFalse())
+			scLegacyModule := f.KubernetesGlobalResource("StorageClass", "test-lun001-02baf966-legacy")
+			Expect(scLegacyModule.Exists()).To(BeFalse())
 
 			scModule := f.KubernetesGlobalResource("StorageClass", "test-lun001-02baf966")
 			Expect(scModule.Exists()).To(BeTrue())

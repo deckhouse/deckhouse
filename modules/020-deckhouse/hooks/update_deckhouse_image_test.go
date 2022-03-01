@@ -415,7 +415,7 @@ metadata:
 spec:
   containers:
     - name: deckhouse
-      image: dev-registry.deckhouse.io/sys/deckhouse-oss/dev:test-me
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:test-me
 status:
   containerStatuses:
     - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
@@ -434,7 +434,7 @@ metadata:
 spec:
   containers:
     - name: deckhouse
-      image: dev-registry.deckhouse.io/sys/deckhouse-oss/dev:test-me
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:test-me
 status:
   containerStatuses:
     - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
@@ -541,7 +541,7 @@ metadata:
 spec:
   containers:
     - name: deckhouse
-      image: dev-registry.deckhouse.io/sys/deckhouse-oss/dev:1-26-2
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:1-26-2
 status:
   containerStatuses:
     - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3

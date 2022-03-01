@@ -76,6 +76,10 @@ spec:
                 fieldPath: status.hostIP
           - name: SKIP_NODE_DELETION
             value: "1"
+        {{- if .Values.cloudProviderVsphere.internal.providerClusterConfiguration.nsxt }}
+          - name: ENABLE_ALPHA_NSXT_LB
+            value: "1"
+        {{- end }}
           ports:
           - name: https
             containerPort: 10471

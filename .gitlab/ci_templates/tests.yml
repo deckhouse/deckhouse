@@ -24,7 +24,6 @@
   - rock-solid
   needs:
   - "Build"
-  - "Build Modules Images"
   interruptible: true
 
 .Go Validators template:
@@ -53,7 +52,6 @@
     - rock-solid
   needs:
     - "Build"
-    - "Build Modules Images"
   interruptible: true
 
 .Tests template:
@@ -82,7 +80,6 @@
   - rock-solid
   needs:
   - "Build"
-  - "Build Modules Images"
   interruptible: true
 
 .No Cyrillic Validation template:
@@ -100,7 +97,6 @@
   - rock-solid
   needs:
   - "Build"
-  - "Build Modules Images"
   interruptible: true
 
 .Content Validation template:
@@ -117,7 +113,6 @@
   - rock-solid
   needs:
   - "Build"
-  - "Build Modules Images"
   interruptible: true
 
 .Copyright Validation template:
@@ -134,7 +129,6 @@
   - rock-solid
   needs:
   - "Build"
-  - "Build Modules Images"
   interruptible: true
 
 .Web links test:
@@ -210,7 +204,6 @@
   - rock-solid
   needs:
   - "Build"
-  - "Build Modules Images"
 
 .GolangCI Lint template:
   stage: testing
@@ -238,7 +231,6 @@
   - rock-solid
   needs:
   - "Build"
-  - "Build Modules Images"
 
 .OpenAPI Test Cases template:
   stage: testing
@@ -266,5 +258,4 @@
   - rock-solid
   needs:
   - "Build"
-  - "Build Modules Images"
   interruptible: true

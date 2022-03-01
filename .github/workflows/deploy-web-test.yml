@@ -225,20 +225,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
-
       # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0

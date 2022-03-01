@@ -1,6 +1,6 @@
 ---
 title: "The prometheus-metrics-adapter module: usage"
-search: autoscaler, HorizontalPodAutoscaler 
+search: autoscaler, HorizontalPodAutoscaler
 ---
 
 Below, only HPAs of the [apiVersion: autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#horizontalpodautoscalerspec-v2beta2-autoscaling) type (supported from Kubernetes v1.12 onward) are considered.
@@ -45,33 +45,39 @@ metadata:
   name: app-hpa
   namespace: app-prod
 spec:
-  # what is being scaled?
+  # The targets of scaling (link to a Deployment or StatefulSet).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: app
-  # "min and max values
+  # Min and max values for replication.
   minReplicas: 1
   maxReplicas: 10
-  behavior:                           # if short-term spikes of CPU usage are regular for the application,
-    scaleUp:                          # you can postpone the scaling decision to be sure if it is necessary
-      stabilizationWindowSeconds: 300 # (by default, scaling up occurs immediately)
+  behavior:
+    # If short-term spikes of CPU usage are regular for the application,
+    # you can postpone the scaling decision to be sure if it is necessary.
+    # By default, scaling up occurs immediately.
+    scaleUp:
+      stabilizationWindowSeconds: 300
   metrics:
-  # scaling based on CPU and Memory consumption
+  # Scaling based on CPU and Memory consumption.
   - type: Resource
     resource:
       name: cpu
       target:
-        # scale up if the average CPU utilization by all the Pods in scaleTargetRef exceeds the specified value
-        type: Utilization      # for type: Resource metrics only the type: Utilization parameter is available
-        averageUtilization: 70 # scale up if all the Deployment's Pods have requested 1 CPU core and consumed more than 700m on average
+        # Scale up if the average CPU utilization by all the Pods in scaleTargetRef exceeds the specified value.
+        # For type: Resource metrics only the type: Utilization parameter is available.
+        type: Utilization
+        # Scale up if all the Deployment's Pods have requested 1 CPU core and consumed more than 700m on average.
+        averageUtilization: 70
   - type: Resource
     resource:
       name: memory
       target:
-        # scale up if the average Memory utilization by all the Pods in scaleTargetRef exceeds the specified value
+        # Scale up if the average Memory utilization by all the Pods in scaleTargetRef exceeds the specified value.
         type: Utilization
-        averageUtilization: 80 # scale up if all the Deployment's Pods have requested 1 GB and consumed more than 800MB on average
+        # Scale up if all the Deployment's Pods have requested 1GB and consumed more than 800MB on average.
+        averageUtilization: 80
 ```
 {% endraw %}
 
@@ -111,24 +117,30 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  scaleTargetRef:       # the targets of scaling (link to a deployment or statefulset).
+  # The targets of scaling (link to a deployment or statefulset).
+  scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: myapp
   minReplicas: 1
   maxReplicas: 2
-  metrics:              # What metrics to use for scaling. We use custom metrics of the Object type.
+  # What metrics to use for scaling. We use custom metrics of the Object type.
+  metrics:
   - type: Object
     object:
-      describedObject:  # Some object that has metrics in Prometheus.
+      # Some object that has metrics in Prometheus.
+      describedObject:
         apiVersion: extensions/v1beta1
         kind: Ingress
         name: myingress
       metric:
-        name: mymetric  # The metric registered using IngressMetric or ClusterIngressMetric CRs.
+        # The metric registered using IngressMetric or ClusterIngressMetric CRs.
+        name: mymetric
       target:
-        type: Value     # Only `type: Value` can be used for metrics of the Object type.
-        value: 10       # Scale up if the value of our custom metric is greater than 10
+        # Only `type: Value` can be used for metrics of the Object type.
+        type: Value
+        # Scale up if the value of our custom metric is greater than 10.
+        value: 10
 ```
 {% endraw %}
 
@@ -154,6 +166,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+  # The targets of scaling (link to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -197,6 +210,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+  # The targets of scaling (link to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -237,20 +251,26 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  scaleTargetRef:       # Choosing what to scale
+  # The targets of scaling (link to a deployment or statefulset).
+  scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: mybackend
   minReplicas: 1
   maxReplicas: 5
   metrics:
-  - type: Pods # HPA must go through all the Pods in the Deployment and collect metrics from them.
-    pods:      # You do not need to specify descripedObject (in contrast to type: Object).
+  # HPA must go through all the Pods in the Deployment and collect metrics from them.
+  - type: Pods
+    # You do not need to specify descripedObject (in contrast to type: Object).
+    pods:
       metric:
-        name: php-fpm-active-workers # We registered this custom metric using the PodMetric CR.
+        # Custom metric, registered using the PodMetric CR.
+        name: php-fpm-active-workers
       target:
-        type: AverageValue # For type: Pods metrics, the AverageValue can only be used.
-        averageValue: 5   # Scale up if the average metric value for all the Pods of the myworker Deployment is greater than 5.
+        # For type: Pods metrics, the AverageValue can only be used.
+        type: AverageValue
+        # Scale up if the average metric value for all the Pods of the myworker Deployment is greater than 5.
+        averageValue: 5
 ```
 {% endraw %}
 
@@ -264,13 +284,15 @@ kind: PodMetric
 metadata:
   name: php-fpm-active-worker
 spec:
-  query: round(sum by(<<.GroupBy>>) (phpfpm_processes_total{state="active",<<.LabelMatchers>>}) / sum by(<<.GroupBy>>) (phpfpm_processes_total{<<.LabelMatchers>>}) * 100) # Percentage of active php-fpm workers. The round() function rounds the percentage.
+  # Percentage of active php-fpm workers. The round() function rounds the percentage.
+  query: round(sum by(<<.GroupBy>>) (phpfpm_processes_total{state="active",<<.LabelMatchers>>}) / sum by(<<.GroupBy>>) (phpfpm_processes_total{<<.LabelMatchers>>}) * 100)
 ---
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2
 metadata:
   name: {{ .Chart.Name }}-hpa
 spec:
+  # The targets of scaling (link to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1beta1
     kind: Deployment
@@ -284,7 +306,8 @@ spec:
         name: php-fpm-active-worker
       target:
         type: AverageValue
-        averageValue: 80 # Scale up if, on average, 80% of workers in the deployment are running at full capacity 
+        # Scale up if, on average, 80% of workers in the deployment are running at full capacity.
+        averageValue: 80
 ```
 {% endraw %}
 
@@ -301,13 +324,17 @@ An example of `CustomPrometheusRules`:
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
-  name: prometheus-metrics-adapter-mymetric # The recommended template for naming your CustomPrometheusRules.
+  # The recommended template for naming your CustomPrometheusRules.
+  name: prometheus-metrics-adapter-mymetric
 spec:
   groups:
-  - name: prometheus-metrics-adapter.mymetric # recommended template
+    # Recommended template for the name key.
+  - name: prometheus-metrics-adapter.mymetric
     rules:
-    - record: kube_adapter_metric_mymetric # the name of the new metric. Pay attention! The 'kube_adapter_metric_' prefix is required.
-      expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress) # The results of this request will be passed to the final metric; there is no reason to include excess labels into it.
+    # The name of the new metric. Pay attention! The 'kube_adapter_metric_' prefix is required.
+    - record: kube_adapter_metric_mymetric
+      # The results of this request will be passed to the final metric; there is no reason to include excess labels into it.
+      expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
 {% endraw %}
 
@@ -323,24 +350,30 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
-  scaleTargetRef:       # the targets of scaling (link to a deployment or statefulset).
+  # The targets of scaling (link to a deployment or statefulset).
+  scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: myapp
   minReplicas: 1
   maxReplicas: 2
-  metrics:              # What metrics to use for scaling. We use external metrics.
+  # Use external metrics for scaling.
+  metrics:
   - type: External
     external:
       metric:
-        name: mymetric  # The metric that we registered by creating a metric in Prometheus's kube_adapter_metric_mymetric but without 'kube_adapter_metric_' prefix
+        # The metric that we registered by creating a metric in Prometheus's kube_adapter_metric_mymetric but without 'kube_adapter_metric_' prefix.
+        name: mymetric
         selector:
-          matchLabels:  # For external metrics, you can and should specify matching labels.
+          # For external metrics, you can and should specify matching labels.
+          matchLabels:
             namespace: mynamespace
             ingress: myingress
       target:
-        type: Value     # Only `type: Value` can be used for metrics of the External type.
-        value: 10       # Scale up if the value of our metric is greater than 10.
+        # Only `type: Value` can be used for metrics of the External type.
+        type: Value
+        # Scale up if the value of our metric is greater than 10.
+        value: 10
 ```
 {% endraw %}
 
@@ -355,11 +388,15 @@ Suppose there is a `send_forum_message` queue in Amazon SQS. Then, suppose, we w
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
-  name: prometheus-metrics-adapter-sqs-messages-visible # the recommended name — prometheus-metrics-adapter-<metric name>
-  namespace: d8-monitoring # Pay attention!
+  # The recommended name — prometheus-metrics-adapter-<metric name>.
+  name: prometheus-metrics-adapter-sqs-messages-visible
+  # Pay attention!
+  namespace: d8-monitoring
   labels:
-    prometheus: main # Pay attention!
-    component: rules # Pay attention!
+    # Pay attention!
+    prometheus: main
+    # Pay attention!
+    component: rules
 spec:
   groups:
   - name: prometheus-metrics-adapter.sqs_messages_visible # the recommended template
@@ -373,6 +410,7 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+  # The targets of scaling (link to a deployment or statefulset).
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -383,7 +421,8 @@ spec:
   - type: External
     external:
       metric:
-        name: sqs_messages_visible # Must match CustomPrometheusRules record name without 'kube_adapter_metric_' prefix.
+        # Must match CustomPrometheusRules record name without 'kube_adapter_metric_' prefix.
+        name: sqs_messages_visible
         selector:
           matchLabels:
             queue: send_forum_messages

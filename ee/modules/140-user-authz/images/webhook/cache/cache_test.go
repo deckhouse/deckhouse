@@ -174,6 +174,31 @@ func TestCacheStale(t *testing.T) {
 	}
 }
 
+func TestCacheCheck(t *testing.T) {
+	server := newErrorServer()
+
+	cache := NamespacedDiscoveryCache{}
+
+	cache.client = server.Client()
+	cache.kubernetesAPIAddress = server.URL
+
+	expectedErr := "check API: kube response error: 500 ERROR: exceeded retry limit"
+
+	err := cache.Check()
+	if err.Error() != expectedErr {
+		t.Fatalf("%q received, expected %q", err.Error(), expectedErr)
+	}
+
+	server = newTestServer()
+	cache.client = server.Client()
+	cache.kubernetesAPIAddress = server.URL
+
+	err = cache.Check()
+	if err != nil {
+		t.Fatalf("%q received, expected nil", err.Error())
+	}
+}
+
 func newTestCache() *NamespacedDiscoveryCache {
 	server := newTestServer()
 
@@ -225,6 +250,14 @@ func newPreferredVersionTestServer() *httptest.Server {
 	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.Write([]byte(preferredVersionResponse))
+	}))
+}
+
+func newErrorServer() *httptest.Server {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte("ERROR"))
 	}))
 }
 

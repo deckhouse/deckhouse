@@ -22,7 +22,7 @@ Examples:
 - `v1.24.10-alpha`, `v1.24.32-alpha.4` - these versions are distributed to alpha "or below" release channels.
 
 ## How to test the Deckhouse version
-The CI pipeline is configured to build an image based on each branch. This image is available at  `dev-registry.deckhouse.io/sys/deckhouse-oss/dev:<BRANCH>`.
+The CI pipeline is configured to build an image based on each branch. This image is available at  `dev-registry.deckhouse.io/sys/deckhouse-oss:<prNUM>`.
 All you need to do to test the new dev version is to change the image in the Deckhouse deployment.
 
 ## Auto-updates
