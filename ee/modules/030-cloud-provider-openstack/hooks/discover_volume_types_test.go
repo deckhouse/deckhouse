@@ -12,7 +12,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: cloud-provider-openstack :: hooks :: discover_volume_types ::", func() {
+var _ = Describe("Modules :: cloud-provider-openstack :: hooks :: discover_volume_types ::", func() {
 	const (
 		initValuesStringA = `
 cloudProviderOpenstack:
