@@ -10,6 +10,8 @@ RUN wget https://github.com/dexidp/dex/archive/v2.31.0.tar.gz -O - | tar -xz --s
   && git apply /static-user-groups.patch
 RUN go build ./cmd/dex
 
+FROM dexidp/dex:v2.30.0 as dex
+
 FROM $BASE_ALPINE
 RUN apk add --no-cache --update ca-certificates openssl
 RUN mkdir -p /var/dex
