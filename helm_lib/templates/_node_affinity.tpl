@@ -120,6 +120,9 @@ tolerations:
 - key: node.deckhouse.io/uninitialized
   operator: "Exists"
   effect: "NoSchedule"
+- key: node.cloudprovider.kubernetes.io/uninitialized
+  operator: "Exists"
+  effect: "NoSchedule"
     {{- if include "_helm_lib_cloud_or_hybrid_cluster" $context }}
 - key: node.deckhouse.io/csi-not-bootstrapped
   operator: "Exists"
