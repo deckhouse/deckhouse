@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO structure this functions into classes and move to operations/bootstrap module
+// TODO structure these functions into classes and move to the operations/bootstrap module
 // TODO move states saving to operations/bootstrap/state.go
 
 package operations
