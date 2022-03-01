@@ -30,7 +30,7 @@ In Deckhouse, this module sets up:
 
 You can get Deckhouse releases list via the command `kubectl get DeckhouseRelease`. By default, cluster keeps last 10 outdated release and all deployed/pending releases
 
-Every release can have one of the next statuses:
+Every release can have one of the following statuses:
 `Pending` - release is waiting to be deployed: waiting for update window, canary deployment, etc. You can see the detailed status via `kubectl describe DeckhouseRelease $name` command
 `Deployed` - release is applied. It means that Deckhouse image tag was changed, but the update process of the all components
 is going asynchronously and could have not been finished yet
