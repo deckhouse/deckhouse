@@ -10,7 +10,7 @@ RUN wget https://github.com/dexidp/dex/archive/v2.31.0.tar.gz -O - | tar -xz --s
   && git apply /static-user-groups.patch
 RUN go build ./cmd/dex
 
-FROM ghcr.io/dexidp/dex@sha256:104e0ba05220915de6e5d122895658e671bd8a252dbb550d4d10b8245f691ad4 as dex
+FROM dexidp/dex:v2.30.0 as dex
 
 FROM $BASE_ALPINE
 RUN apk add --no-cache --update ca-certificates openssl
