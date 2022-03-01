@@ -8,6 +8,7 @@ properties:
     properties:
       connection:
         type: object
+        default: {}
         properties:
           authURL:
             type: string
