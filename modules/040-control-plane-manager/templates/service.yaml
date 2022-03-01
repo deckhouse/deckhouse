@@ -15,6 +15,7 @@ metadata:
     {{- end }}
 spec:
   type: LoadBalancer
+  externalTrafficPolicy: Local
     {{- if .Values.controlPlaneManager.apiserver.loadBalancer.sourceRanges }}
   loadBalancerSourceRanges:
     {{- .Values.controlPlaneManager.apiserver.loadBalancer.sourceRanges | toYaml | nindent 4 }}
