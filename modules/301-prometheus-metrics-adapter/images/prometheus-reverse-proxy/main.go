@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -29,23 +30,27 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
 var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
-var PROMETHEUS_URL = os.Getenv("PROMETHEUS_URL")
 
-var reNamespaceMatcher = regexp.MustCompile(`.*namespace="([0-9a-zA-Z_\-]+)".*`)
-var reMultiNamespaceMatcher = regexp.MustCompile(`.*namespace=~.*`)
+var PrometheusURL = os.Getenv("PROMETHEUS_URL")
 
-var sslClientCrt = "/etc/ssl/prometheus-api-client-tls/tls.crt"
-var sslClientKey = "/etc/ssl/prometheus-api-client-tls/tls.key"
-var httpTransport *http.Transport
+var (
+	reNamespaceMatcher      = regexp.MustCompile(`.*namespace="([0-9a-zA-Z_\-]+)".*`)
+	reMultiNamespaceMatcher = regexp.MustCompile(`.*namespace=~.*`)
+)
+
+var httpTransport http.RoundTripper
 
 const configPath = "/etc/prometheus-reverse-proxy/reverse-proxy.json"
 
-var appliedConfigMtime int64 = 0
-var config map[string]map[string]CustomMetricConfig
+var (
+	appliedConfigMtime int64 = 0
+	config             map[string]map[string]CustomMetricConfig
+)
 
 type CustomMetricConfig struct {
 	Cluster    string            `json:"cluster"`
@@ -63,21 +68,17 @@ type MetricHandler struct {
 }
 
 func initHttpTransport() {
-	sslClient, _ := tls.LoadX509KeyPair(sslClientCrt, sslClientKey)
-	tlsConfig := &tls.Config{
-		Certificates:       []tls.Certificate{sslClient},
-		InsecureSkipVerify: true,
-	}
-
-	httpTransport = &http.Transport{
+	httpTransport = wrapKubeTransport(&http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
 			Timeout: 1 * time.Second,
 		}).DialContext,
 
 		TLSHandshakeTimeout: 1 * time.Second,
-		TLSClientConfig:     tlsConfig,
-	}
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	})
 }
 
 func (m *MetricHandler) Init() error {
@@ -115,20 +116,20 @@ func (m *MetricHandler) RenderQuery() string {
 	return query
 }
 
-func http_handler_healthz(w http.ResponseWriter, r *http.Request) {
+func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Ok.")
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.String())
 }
 
-func http_my_router(w http.ResponseWriter, r *http.Request) {
+func httpMyRouter(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(r.URL.String(), "/api/v1/query?query=custom_metric%3A%3A") {
-		http_handler_custom_metric(w, r)
+		httpHandlerCustomMetric(w, r)
 	} else {
-		http_proxy_pass(w, r)
+		httpProxyPass(w, r)
 	}
 }
 
-func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
+func httpHandlerCustomMetric(w http.ResponseWriter, r *http.Request) {
 	defer logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.String())
 
 	fStat, _ := os.Stat(configPath)
@@ -157,7 +158,7 @@ func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
 
 	prometheusQuery := metricHandler.RenderQuery()
 
-	u, _ := url.Parse(PROMETHEUS_URL)
+	u, _ := url.Parse(PrometheusURL)
 	u.Path = r.URL.Path
 
 	q := r.URL.Query()
@@ -182,10 +183,10 @@ func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, resp.Body)
 }
 
-func http_proxy_pass(w http.ResponseWriter, r *http.Request) {
+func httpProxyPass(w http.ResponseWriter, r *http.Request) {
 	defer logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.String())
 
-	u, _ := url.Parse(PROMETHEUS_URL)
+	u, _ := url.Parse(PrometheusURL)
 	reverseProxy := httputil.NewSingleHostReverseProxy(u)
 	reverseProxy.Transport = httpTransport
 	reverseProxy.ServeHTTP(w, r)
@@ -199,8 +200,8 @@ func main() {
 	logger.Println("Server is starting to listen on ", listenAddr, "...")
 
 	router := http.NewServeMux()
-	router.Handle("/healthz", http.HandlerFunc(http_handler_healthz))
-	router.Handle("/", http.HandlerFunc(http_my_router))
+	router.Handle("/healthz", http.HandlerFunc(httpHandlerHealthz))
+	router.Handle("/", http.HandlerFunc(httpMyRouter))
 
 	server := &http.Server{
 		Addr:         listenAddr,
@@ -214,4 +215,64 @@ func main() {
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Fatalf("Could not listen on %s: %v\n", listenAddr, err)
 	}
+}
+
+const (
+	renewTokenPeriod = 30 * time.Second
+	tokenPath        = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+)
+
+// Update token periodically because BoundServiceAccountToken feature is enabled for Kubernetes >=1.21
+// https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#bound-service-account-token-volume
+
+type kubeTransport struct {
+	mu     sync.RWMutex
+	token  string
+	expiry time.Time
+
+	base http.RoundTripper
+}
+
+func wrapKubeTransport(base http.RoundTripper) http.RoundTripper {
+	t := &kubeTransport{base: base}
+	t.updateToken()
+	return t
+}
+
+func (t *kubeTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	t.updateToken()
+
+	r2 := r.Clone(r.Context())
+	r2.Header.Set("Authorization", "Bearer "+t.GetToken())
+
+	return t.base.RoundTrip(r2)
+}
+
+func (t *kubeTransport) updateToken() {
+	t.mu.RLock()
+	exp := t.expiry
+	t.mu.RUnlock()
+
+	now := time.Now()
+	if now.Before(exp) {
+		// Do not need to update token yet
+		return
+	}
+
+	token, err := ioutil.ReadFile(tokenPath)
+	if err != nil {
+		logger.Println("cannot read service account token, will try later")
+		return
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.token = string(token)
+	t.expiry = now.Add(renewTokenPeriod)
+}
+
+func (t *kubeTransport) GetToken() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.token
 }

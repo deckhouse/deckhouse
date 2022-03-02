@@ -91,13 +91,6 @@ spec:
           httpGet:
             path: /healthz
             port: 8000
-        volumeMounts:
-        - mountPath: /etc/prometheus-reverse-proxy/
-          name: prometheus-metrics-adapter-config
-          readOnly: true
-        - mountPath: /etc/ssl/prometheus-api-client-tls/
-          name: prometheus-metrics-adapter-prometheus-api-client-tls
-          readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -111,8 +104,5 @@ spec:
       - name: apiserver-proxy-client-ca
         configMap:
           name: prometheus-metrics-adapter-apiserver-proxy-client-ca
-      - name: prometheus-metrics-adapter-prometheus-api-client-tls
-        secret:
-          secretName: prometheus-metrics-adapter-prometheus-api-client-tls
       - name: tmp
         emptyDir: {}
