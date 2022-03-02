@@ -59,6 +59,10 @@ properties:
             type: array
             items:
               type: string
+          additionalTags:
+            type: array
+            items:
+              type: string
       podNetworkMode:
         type: string
       loadBalancer:
