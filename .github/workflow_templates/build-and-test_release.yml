@@ -117,7 +117,7 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "unit") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "matrix_tests" "Matrix tests") }!}
@@ -127,7 +127,7 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "matrix") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.matrix_tests) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "dhctl_tests" "Matrix tests") }!}
@@ -137,7 +137,7 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.dhctl_tests) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "golangci_lint" "GolangCI Lint") }!}
@@ -147,7 +147,7 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.golangci_lint) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "openapi_test_cases" "OpenAPI Test Cases") }!}
@@ -157,7 +157,7 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.openapi_test_cases) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "web_links_test" "Web links test") }!}
@@ -178,7 +178,7 @@ jobs:
       - git_info
       - build_fe
     continue-on-error: true
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.validators) | strings.Indent 6 }!}
 
 {!{/* Autodeploy site and docs to production env on push to main branch. */}!}

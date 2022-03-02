@@ -409,9 +409,11 @@ jobs:
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
               DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
               DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+              DESTINATION_TESTS_IMAGE=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
             else
               DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
               DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+              DESTINATION_TESTS_IMAGE=${CI_REGISTRY_IMAGE}/tests:${IMAGE_TAG}
             fi
 
             echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
@@ -422,9 +424,14 @@ jobs:
             DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
             pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
+            echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
+            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            pull_push 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
+
             echo "⚓️ [$(date -u)] Remove local tags."
             docker image rmi ${DESTINATION_IMAGE} || true
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
+            docker image rmi ${DESTINATION_TESTS_IMAGE} || true
           fi
           rm -f images_tags_werf.json
 
@@ -454,6 +461,11 @@ jobs:
               DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
               pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
+              echo "⚓️ [$(date -u)] Publish 'tests' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              DECKHOUSE_DESTINATION_TESTS_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
+              TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+              pull_push 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
+
               echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
               RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
@@ -462,6 +474,7 @@ jobs:
               echo "⚓️ [$(date -u)] Remove local tags."
               docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
               docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
+              docker image rmi ${DECKHOUSE_DESTINATION_TESTS_IMAGE} || true
               docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
 
               rm -f images_tags_werf.json
@@ -636,9 +649,11 @@ jobs:
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
               DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
               DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+              DESTINATION_TESTS_IMAGE=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
             else
               DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
               DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+              DESTINATION_TESTS_IMAGE=${CI_REGISTRY_IMAGE}/tests:${IMAGE_TAG}
             fi
 
             echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
@@ -649,9 +664,14 @@ jobs:
             DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
             pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
+            echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
+            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            pull_push 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
+
             echo "⚓️ [$(date -u)] Remove local tags."
             docker image rmi ${DESTINATION_IMAGE} || true
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
+            docker image rmi ${DESTINATION_TESTS_IMAGE} || true
           fi
           rm -f images_tags_werf.json
 
@@ -681,6 +701,11 @@ jobs:
               DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
               pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
+              echo "⚓️ [$(date -u)] Publish 'tests' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              DECKHOUSE_DESTINATION_TESTS_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
+              TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+              pull_push 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
+
               echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
               RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
@@ -689,6 +714,7 @@ jobs:
               echo "⚓️ [$(date -u)] Remove local tags."
               docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
               docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
+              docker image rmi ${DECKHOUSE_DESTINATION_TESTS_IMAGE} || true
               docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
 
               rm -f images_tags_werf.json
@@ -863,9 +889,11 @@ jobs:
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
               DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
               DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+              DESTINATION_TESTS_IMAGE=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
             else
               DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
               DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+              DESTINATION_TESTS_IMAGE=${CI_REGISTRY_IMAGE}/tests:${IMAGE_TAG}
             fi
 
             echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
@@ -876,9 +904,14 @@ jobs:
             DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
             pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
+            echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
+            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            pull_push 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
+
             echo "⚓️ [$(date -u)] Remove local tags."
             docker image rmi ${DESTINATION_IMAGE} || true
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
+            docker image rmi ${DESTINATION_TESTS_IMAGE} || true
           fi
           rm -f images_tags_werf.json
 
@@ -908,6 +941,11 @@ jobs:
               DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
               pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
 
+              echo "⚓️ [$(date -u)] Publish 'tests' image to deckhouse registry using tag ${IMAGE_TAG} ..."
+              DECKHOUSE_DESTINATION_TESTS_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
+              TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+              pull_push 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
+
               echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
               DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
               RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
@@ -916,6 +954,7 @@ jobs:
               echo "⚓️ [$(date -u)] Remove local tags."
               docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true
               docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true
+              docker image rmi ${DECKHOUSE_DESTINATION_TESTS_IMAGE} || true
               docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true
 
               rm -f images_tags_werf.json
@@ -1173,18 +1212,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1264,18 +1299,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'go test ./testing/matrix/ -v'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test ./testing/matrix/ -v
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1355,18 +1386,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: dhctl-tests
-          args: 'make ci'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} make ci
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1446,18 +1473,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'sh -c "go generate tools/register.go && golangci-lint run"'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} sh -c "go generate tools/register.go && golangci-lint run"
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1537,18 +1560,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'ginkgo -vet=off ./testing/openapi_cases/'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1780,18 +1799,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish

@@ -47,6 +47,7 @@ docker_options: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
 # <template: tests_template>
 {!{- $ctx       := index . 0 }!}
 {!{- $args_name := index . 1 }!}
+{!{- $buildType := index . 2 }!}
 {!{- $args_tmpl := printf "%s_run_args" $args_name }!}
 {!{- $default   := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
 {!{- $run       := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
@@ -57,17 +58,15 @@ steps:
 {!{ tmpl.Exec "login_dev_registry_step"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_readonly_registry_step"  $ctx | strings.Indent 2 }!}
   - name: Run tests
-    uses: {!{ index (ds "actions") "werf/actions/run" }!}
-    with:
-      channel: ${{env.WERF_CHANNEL}}
-      image: {!{ $run.image }!}
-      args: {!{ $run.args | squote }!}
     env:
-      WERF_SKIP_BUILD: "true"
-      WERF_DOCKER_OPTIONS: {!{ $run.docker_options | squote }!}
-      WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-      CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-      CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-      CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+      DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+    run: |
+{!{ if eq $buildType "release" }!}
+      TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
+{!{ else }!}
+      TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+{!{ end }!}
+      docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_URL} {!{ $run.args }!}
 # </template: tests_template>
 {!{- end -}!}
