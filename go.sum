@@ -259,8 +259,8 @@ github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWD
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/logboek v0.3.4 h1://0FHwS7hoLHTz7H+JlLheKlu298edC+qV61ca9OJBQ=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.0.8 h1:yPrjByvRHxveXfKuxD0yf07jOPD/Wv4c0YnaC15r7EE=
-github.com/flant/shell-operator v1.0.8/go.mod h1:bHcTpRq0k0c/kaVQl6sODi/Nz8mqmtmMk9ff9dxrpN4=
+github.com/flant/shell-operator v1.0.9-0.20220302082030-614d4cca72da h1:DPVDviZzDUWP3OSXB2I/Ttxu1K4fosxmDA3uHMTgcr8=
+github.com/flant/shell-operator v1.0.9-0.20220302082030-614d4cca72da/go.mod h1:bHcTpRq0k0c/kaVQl6sODi/Nz8mqmtmMk9ff9dxrpN4=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
 github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8/go.mod h1:ZhphrRTfi2rbfLwlschooIH4+wKKDR4Pdxhh+TRoA20=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
@@ -675,8 +675,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8m
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
-github.com/name212/addon-operator v1.0.4-0.20220228132112-53b1ab98e8e9 h1:JnophQyzpDaU2lkcmhAc9d4yp+3lbfusIZXfyWaR+NM=
-github.com/name212/addon-operator v1.0.4-0.20220228132112-53b1ab98e8e9/go.mod h1:G4HX7ggPvsXayUoYWTwfuNnF6Iw6Fe5jafE3kUWwA7g=
+github.com/name212/addon-operator v1.0.4-0.20220302082619-8fb436205183 h1:5k8o5NxlQ3wUmv74j+jFkijOR8lmH43507xaiDF3tYw=
+github.com/name212/addon-operator v1.0.4-0.20220302082619-8fb436205183/go.mod h1:9tUmk+zQ8SMHE/qLEwwkejjD+6+lBZivNsXxhIiVvNg=
 github.com/nats-io/jwt v0.3.0/go.mod h1:fRYCDE99xlTsqUzISS1Bi75UBJ6ljOJQOAAu5VglpSg=
 github.com/nats-io/jwt v0.3.2/go.mod h1:/euKqTS1ZD+zzjYrY7pseZrTtWQSjujC7xjPc8wL6eU=
 github.com/nats-io/nats-server/v2 v2.1.2/go.mod h1:Afk+wRZqkMQs/p45uXdrVLuab3gwv3Z8C4HTBu8GD/k=

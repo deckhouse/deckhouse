@@ -13,7 +13,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.4
 	github.com/flant/kube-client v0.0.6
-	github.com/flant/shell-operator v1.0.8
+	github.com/flant/shell-operator v1.0.9-0.20220302082030-614d4cca72da
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
@@ -57,7 +57,7 @@ require (
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 
-replace github.com/flant/addon-operator => github.com/name212/addon-operator v1.0.4-0.20220228132112-53b1ab98e8e9
+replace github.com/flant/addon-operator => github.com/name212/addon-operator v1.0.4-0.20220302082619-8fb436205183
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
