@@ -381,7 +381,6 @@ func DefineExecPostBootstrapScript(parent *kingpin.CmdClause) *kingpin.CmdClause
 		bootstrapState := bootstrap.NewBootstrapState(cache.Global())
 
 		postScriptExecutor := bootstrap.NewPostBootstrapScriptExecutor(sshClient, app.PostBootstrapScriptPath, bootstrapState).
-			WithErrorIfExecutionFail(app.PostBootstrapScriptExitIfFailed).
 			WithTimeout(app.PostBootstrapScriptTimeout)
 
 		return postScriptExecutor.Execute()

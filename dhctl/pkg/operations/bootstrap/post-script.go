@@ -17,6 +17,7 @@ package bootstrap
 import (
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"time"
 
@@ -25,11 +26,10 @@ import (
 )
 
 type PostBootstrapScriptExecutor struct {
-	path        string
-	timeout     time.Duration
-	errorIfFail bool
-	sshClient   *ssh.Client
-	state       *State
+	path      string
+	timeout   time.Duration
+	sshClient *ssh.Client
+	state     *State
 }
 
 func NewPostBootstrapScriptExecutor(sshClient *ssh.Client, path string, state *State) *PostBootstrapScriptExecutor {
@@ -45,11 +45,6 @@ func (e *PostBootstrapScriptExecutor) WithTimeout(timeout time.Duration) *PostBo
 	return e
 }
 
-func (e *PostBootstrapScriptExecutor) WithErrorIfExecutionFail(f bool) *PostBootstrapScriptExecutor {
-	e.errorIfFail = f
-	return e
-}
-
 func (e *PostBootstrapScriptExecutor) Execute() error {
 	return log.Process("bootstrap", "Execute post-bootstrap script", func() error {
 		var err error
@@ -57,13 +52,7 @@ func (e *PostBootstrapScriptExecutor) Execute() error {
 
 		if err != nil {
 			msg := fmt.Sprintf("Post execution script was failed: %v", err)
-			if e.errorIfFail {
-				return errors.New(msg)
-			}
-
-			log.ErrorF(msg)
-
-			return nil
+			return errors.New(msg)
 		}
 
 		err = e.state.SavePostBootstrapScriptResult(resultToSetState)
@@ -98,4 +87,25 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	}
 
 	return result, nil
+}
+
+func ValidateScriptFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("Cannot get stats for path %s: %v", path, err)
+	}
+
+	mode := info.Mode()
+
+	if !mode.IsRegular() {
+		return fmt.Errorf("Post bootstrap script should be regular file")
+	}
+
+	perm := info.Mode().Perm()
+
+	if perm&0111 != 0111 || perm&0444 != 0444 {
+		return fmt.Errorf("Post bootstrap script should be readable and executable for user group and other (-r-xr-xr-x)")
+	}
+
+	return nil
 }

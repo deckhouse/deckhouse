@@ -28,9 +28,8 @@ var (
 	ResourcesTimeout = "15m"
 	DeckhouseTimeout = 10 * time.Minute
 
-	PostBootstrapScriptTimeout      = 10 * time.Minute
-	PostBootstrapScriptPath         = ""
-	PostBootstrapScriptExitIfFailed = false
+	PostBootstrapScriptTimeout = 10 * time.Minute
+	PostBootstrapScriptPath    = ""
 
 	ForceAbortFromCache             = false
 	DontUsePublicControlPlaneImages = false
@@ -69,10 +68,6 @@ Experimental. This feature may be deleted in the future.`).
 		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_TIMEOUT")).
 		Default(PostBootstrapScriptTimeout.String()).
 		DurationVar(&PostBootstrapScriptTimeout)
-
-	cmd.Flag("post-bootstrap-script-exit-if-failed", "Exit with error if post bootstrap script was failed. Experimental. This feature may be deleted in the future.").
-		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_EXIT_IF_FAILED")).
-		BoolVar(&PostBootstrapScriptExitIfFailed)
 }
 
 func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
