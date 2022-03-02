@@ -4,7 +4,7 @@ positive:
   values:
     - internal:
         connection:
-          authURL: http://my.cloud.lalla/123/
+          authURL: http://my.cloud.lalla/1/
           username: myuser
           password: myPaSs
           domainName: mydomain
@@ -30,7 +30,7 @@ positive:
           ccc: ddd
     - internal:
         connection:
-          authURL: http://my.cloud.lalla/123/
+          authURL: http://my.cloud.lalla/2/
           username: myuser
           password: myPaSs
           domainName: mydomain
