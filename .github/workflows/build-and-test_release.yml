@@ -295,7 +295,10 @@ jobs:
       WERF_ENV: "FE"
     # <template: build_template>
     runs-on: [self-hosted, regular]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
+
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -304,6 +307,7 @@ jobs:
           unixTimestamp=$(date +%s)
           echo "::set-output name=started_at::${unixTimestamp}"
       # </template: started_at_output>
+
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -362,6 +366,7 @@ jobs:
       # </template: werf_install_step>
 
       - name: Build and push deckhouse images
+        id: build
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
@@ -402,7 +407,6 @@ jobs:
             docker image rmi ${DST} || true;
           }
 
-
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
@@ -434,6 +438,9 @@ jobs:
             echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
           fi
 
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE=
+
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
@@ -442,23 +449,21 @@ jobs:
 
             echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
-            DESTINATION_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
-            DESTINATION_INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
-            DESTINATION_TESTS_IMAGE=${BRANCH_REGISTRY_PATH}/tests:${IMAGE_TAG}
-
             echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
+            DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            DECKHOUSE_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
+            pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+            pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
-            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
+            TESTS_IMAGE_SRC="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            TESTS_IMAGE=${BRANCH_REGISTRY_PATH}/tests:${IMAGE_TAG}
+            pull_push_rmi 'tests' ${TESTS_IMAGE_SRC} ${TESTS_IMAGE}
           fi
-          rm -f images_tags_werf.json
 
 
           # Publish images for Git tag.
@@ -471,7 +476,7 @@ jobs:
             if [[ -n ${DECKHOUSE_REGISTRY_PATH} ]] ; then
               # Copy stages to prod registry from dev registry.
               werf build \
-                --repo ${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
+                --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
                 --report-path images_tags_werf.json
@@ -479,27 +484,32 @@ jobs:
             # Note: do not run second werf build for test repo, as it has no secondary repo.
 
             echo "⚓️ [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}
-            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
+            DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            DECKHOUSE_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}
+            pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
-            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'tests' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_TESTS_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
-            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-            pull_push 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
+            TESTS_IMAGE_SRC="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            TESTS_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
+            pull_push_rmi 'tests' ${TESTS_IMAGE_SRC} ${TESTS_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
-            RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
-
-            rm -f images_tags_werf.json
+            RELEASE_CHANNEL_IMAGE_SRC="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
+            RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
+            pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
+          echo "::set-output name=tests_image_name::${TESTS_IMAGE}"
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          rm -f images_tags_werf.json
     # </template: build_template>
 
       # <template: update_comment_on_finish>
@@ -544,7 +554,10 @@ jobs:
       WERF_ENV: "EE"
     # <template: build_template>
     runs-on: [self-hosted, regular]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
+
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -553,6 +566,7 @@ jobs:
           unixTimestamp=$(date +%s)
           echo "::set-output name=started_at::${unixTimestamp}"
       # </template: started_at_output>
+
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -611,6 +625,7 @@ jobs:
       # </template: werf_install_step>
 
       - name: Build and push deckhouse images
+        id: build
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
@@ -651,7 +666,6 @@ jobs:
             docker image rmi ${DST} || true;
           }
 
-
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
@@ -683,6 +697,9 @@ jobs:
             echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
           fi
 
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE=
+
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
@@ -691,23 +708,21 @@ jobs:
 
             echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
-            DESTINATION_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
-            DESTINATION_INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
-            DESTINATION_TESTS_IMAGE=${BRANCH_REGISTRY_PATH}/tests:${IMAGE_TAG}
-
             echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
+            DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            DECKHOUSE_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
+            pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+            pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
-            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
+            TESTS_IMAGE_SRC="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            TESTS_IMAGE=${BRANCH_REGISTRY_PATH}/tests:${IMAGE_TAG}
+            pull_push_rmi 'tests' ${TESTS_IMAGE_SRC} ${TESTS_IMAGE}
           fi
-          rm -f images_tags_werf.json
 
 
           # Publish images for Git tag.
@@ -720,7 +735,7 @@ jobs:
             if [[ -n ${DECKHOUSE_REGISTRY_PATH} ]] ; then
               # Copy stages to prod registry from dev registry.
               werf build \
-                --repo ${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
+                --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
                 --report-path images_tags_werf.json
@@ -728,27 +743,32 @@ jobs:
             # Note: do not run second werf build for test repo, as it has no secondary repo.
 
             echo "⚓️ [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}
-            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
+            DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            DECKHOUSE_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}
+            pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
-            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'tests' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_TESTS_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
-            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-            pull_push 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
+            TESTS_IMAGE_SRC="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            TESTS_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
+            pull_push_rmi 'tests' ${TESTS_IMAGE_SRC} ${TESTS_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
-            RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
-
-            rm -f images_tags_werf.json
+            RELEASE_CHANNEL_IMAGE_SRC="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
+            RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
+            pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
+          echo "::set-output name=tests_image_name::${TESTS_IMAGE}"
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          rm -f images_tags_werf.json
     # </template: build_template>
 
       # <template: update_comment_on_finish>
@@ -793,7 +813,10 @@ jobs:
       WERF_ENV: "CE"
     # <template: build_template>
     runs-on: [self-hosted, regular]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
+
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -802,6 +825,7 @@ jobs:
           unixTimestamp=$(date +%s)
           echo "::set-output name=started_at::${unixTimestamp}"
       # </template: started_at_output>
+
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -860,6 +884,7 @@ jobs:
       # </template: werf_install_step>
 
       - name: Build and push deckhouse images
+        id: build
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
@@ -900,7 +925,6 @@ jobs:
             docker image rmi ${DST} || true;
           }
 
-
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
           type werf && source $(werf ci-env github --verbose --as-file)
 
@@ -932,6 +956,9 @@ jobs:
             echo "⚓️ [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
           fi
 
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE=
+
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
@@ -940,23 +967,21 @@ jobs:
 
             echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
-            DESTINATION_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
-            DESTINATION_INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
-            DESTINATION_TESTS_IMAGE=${BRANCH_REGISTRY_PATH}/tests:${IMAGE_TAG}
-
             echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
-            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev' ${DEV_IMAGE_URL} ${DESTINATION_IMAGE}
+            DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            DECKHOUSE_IMAGE=${BRANCH_REGISTRY_PATH}:${IMAGE_TAG}
+            pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${IMAGE_TAG}".
-            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+            pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
-            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
+            TESTS_IMAGE_SRC="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            TESTS_IMAGE=${BRANCH_REGISTRY_PATH}/tests:${IMAGE_TAG}
+            pull_push_rmi 'tests' ${TESTS_IMAGE_SRC} ${TESTS_IMAGE}
           fi
-          rm -f images_tags_werf.json
 
 
           # Publish images for Git tag.
@@ -969,7 +994,7 @@ jobs:
             if [[ -n ${DECKHOUSE_REGISTRY_PATH} ]] ; then
               # Copy stages to prod registry from dev registry.
               werf build \
-                --repo ${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
+                --repo ${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX} \
                 --secondary-repo $WERF_REPO \
                 --parallel=true --parallel-tasks-limit=5 \
                 --report-path images_tags_werf.json
@@ -977,27 +1002,32 @@ jobs:
             # Note: do not run second werf build for test repo, as it has no secondary repo.
 
             echo "⚓️ [$(date -u)] Publish 'dev' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}
-            DEV_IMAGE_URL="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev' ${DEV_IMAGE_URL} ${DECKHOUSE_DESTINATION_IMAGE}
+            DECKHOUSE_IMAGE_SRC="$(jq -r '.Images."dev".DockerImageName' images_tags_werf.json)"
+            DECKHOUSE_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}
+            pull_push_rmi 'dev' ${DECKHOUSE_IMAGE_SRC} ${DECKHOUSE_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'dev/install' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
-            DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+            pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'tests' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DECKHOUSE_DESTINATION_TESTS_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
-            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-            pull_push 'tests' ${TESTS_IMAGE_URL} ${DECKHOUSE_DESTINATION_TESTS_IMAGE}
+            TESTS_IMAGE_SRC="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            TESTS_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/tests:${IMAGE_TAG}
+            pull_push_rmi 'tests' ${TESTS_IMAGE_SRC} ${TESTS_IMAGE}
 
             echo "⚓️ [$(date -u)] Publish 'release-channel-version' image to deckhouse registry using tag ${IMAGE_TAG} ..."
-            DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
-            RELEASE_CHANNEL_VERSION_IMAGE_URL="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
-            pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_VERSION_IMAGE_URL} ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE}
-
-            rm -f images_tags_werf.json
+            RELEASE_CHANNEL_IMAGE_SRC="$(jq -r '.Images."release-channel-version".DockerImageName' images_tags_werf.json)"
+            RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
+            pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
+          echo "::set-output name=tests_image_name::${TESTS_IMAGE}"
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          rm -f images_tags_werf.json
     # </template: build_template>
 
       # <template: update_comment_on_finish>
@@ -1272,31 +1302,35 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
-      - name: Login to readonly registry
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
-
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
-
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1372,31 +1406,35 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
-      - name: Login to readonly registry
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
-
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
-
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test ./testing/matrix/ -v
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test ./testing/matrix/ -v
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1472,31 +1510,35 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
-      - name: Login to readonly registry
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
-
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
-
-          docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} make ci
+          docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make ci
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1572,31 +1614,35 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
-      - name: Login to readonly registry
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
-
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
-
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} sh -c "go generate tools/register.go && golangci-lint run"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && golangci-lint run"
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1672,31 +1718,35 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
-      - name: Login to readonly registry
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
-
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
-
-          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} ginkgo -vet=off ./testing/openapi_cases/
+          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1937,31 +1987,35 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
-      - name: Login to readonly registry
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_readonly_registry_step>
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
-
-          TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
-
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
