@@ -11,6 +11,8 @@ properties:
       connection:
         type: object
         default: {}
+        x-examples:
+          - { "authURL": "http://my.cloud.lalla/123/", "caCert": "mycacert", "domainName": "mydomain", "tenantName": "mytenantname", "username": "myuser", "password": "mypass", "region": "myreg" }
         x-required-for-helm:
           - authURL
           - username
@@ -20,28 +22,20 @@ properties:
         properties:
           authURL:
             type: string
-            x-examples: ["http://my.cloud.lalla/123/"]
           caCert:
             type: string
-            x-examples: ["mycacert"]
           domainName:
             type: string
-            x-examples: ["mydomain"]
           tenantName:
             type: string
-            x-examples: ["mytenantname"]
           tenantID:
             type: string
-            x-examples: ["mytenantid"]
           username:
             type: string
-            x-examples: ["myuser"]
           password:
             type: string
-            x-examples: ["mypassword"]
           region:
             type: string
-            x-examples: ["myreg"]
       internalNetworkNames:
         type: array
         default: []
@@ -81,6 +75,10 @@ properties:
               type: string
       podNetworkMode:
         type: string
+        x-examples:
+          - "VXLAN"
+          - "DirectRouting"
+          - "DirectRoutingWithPortSecurityEnabled"
       loadBalancer:
         type: object
         default: {}
