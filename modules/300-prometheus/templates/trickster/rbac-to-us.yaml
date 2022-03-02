@@ -26,9 +26,16 @@ subjects:
   name: ingress-nginx:auth
 - kind: Group
   name: prometheus:auth
+{{- if (.Values.global.enabledModules | has "upmeter") }}
 - kind: ServiceAccount
   name: upmeter-agent
   namespace: d8-upmeter
+{{- end }}
+{{- if (.Values.global.enabledModules | has "prometheus-metrics-adapter") }}
+- kind: ServiceAccount
+  name: prometheus-metrics-adapter
+  namespace: d8-monitoring
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
