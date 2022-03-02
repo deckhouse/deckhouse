@@ -58,7 +58,6 @@ COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/l
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tpl.patch /
 COPY patches/auth-cookie-always.patch /
-COPY patches/deny-invalid-auth-locations.patch /
 COPY rootfs /
 
 RUN apk update \
@@ -111,8 +110,7 @@ RUN apk update \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tpl.patch \
-  && patch -p1 < /auth-cookie-always.patch  \
-  && patch -p1 < /deny-invalid-auth-locations.patch
+  && patch -p1 < /auth-cookie-always.patch
 
 WORKDIR /
 USER www-data
