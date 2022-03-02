@@ -17,8 +17,6 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
-
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	destroycmd "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
@@ -29,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"

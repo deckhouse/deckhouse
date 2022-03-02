@@ -18,8 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
-
 	"github.com/google/uuid"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -31,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
