@@ -5,9 +5,6 @@ positive:
       adapterPem: cert
       adapterCA: cert
       adapterKey: key
-      prometheusAPIClientTLS:
-        certificate: cert
-        key: key
       customMetrics:
         daemonset:
           name:
@@ -50,9 +47,6 @@ positive:
       adapterPem: cert
       adapterCA: cert
       adapterKey: key
-      prometheusAPIClientTLS:
-        certificate: cert
-        key: key
       customMetrics:
         daemonset: { }
         deployment: { }
@@ -69,9 +63,6 @@ negative:
       adapterPem: cert
       adapterCA: cert
       adapterKey: key
-      prometheusAPIClientTLS:
-        certificate: cert
-        key: key
       customMetrics:
         incorrect_metric_type:
           name:
