@@ -45,20 +45,3 @@
         It can affect certificates ordering and prolongation. Check certmanager logs for more info.
         `kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager` or
         `kubectl -n d8-cert-manager logs -l app=legacy-cert-manager -c cert-manager`
-
-- name: kubernetes.certmanager.orphan_certificate
-  rules:
-    - alert: D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
-      expr: max by (namespace, secret_name, annotation) (d8_orphan_secrets_without_corresponding_certificate_resources==1)
-      labels:
-        severity_level: "8"
-      annotations:
-        plk_markup_format: "markdown"
-        plk_protocol_version: "1"
-        plk_incident_initial_status: "todo"
-        plk_ignore_labels: "annotation"
-        plk_create_group_if_not_exists__d8_certmanager_orphan_secrets_checks_failed: D8CertmanagerOrphanSecretsChecksFailed,tier=~tier
-        plk_grouped_by__d8_certmanager_orphan_secrets_checks_failed: D8CertmanagerOrphanSecretsChecksFailed,tier=~tier
-        description: |
-          Secret {{$labels.namespace}}/{{$labels.secret_name}} has link to non-existent Certificate resource. It is probably garbage. Either delete the secret or remove the `{{$labels.annotation}}` label.
-        summary: Secret without corresponding Certificate CR
