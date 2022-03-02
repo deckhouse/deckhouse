@@ -6,12 +6,14 @@ WORKDIR /src/
 COPY patches/lua-info.patch /
 COPY patches/makefile.patch /
 COPY patches/healthcheck.patch /
+COPY patches/deny-invalid-auth-locations.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch controller-v1.0.4 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
+    patch -p1 < /deny-invalid-auth-locations.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # luarocks assets for luajit artifact
@@ -107,7 +109,6 @@ RUN apk update \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tpl.patch \
   && patch -p1 < /auth-cookie-always.patch
-
 WORKDIR /
 USER www-data
 EXPOSE 80 443

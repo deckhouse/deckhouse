@@ -7,6 +7,7 @@ COPY patches/lua-info.patch /
 COPY patches/makefile.patch /
 COPY patches/healthcheck.patch /
 COPY patches/pod-ip.patch /
+COPY patches/deny-invalid-auth-locations.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch controller-v0.49.1 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
@@ -14,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     patch -p1 < /makefile.patch && \
     patch -p1 < /pod-ip.patch && \
     patch -p1 < /healthcheck.patch && \
+    patch -p1 < /deny-invalid-auth-locations.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # luarocks assets for luajit artifact
@@ -56,6 +58,7 @@ COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/l
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tpl.patch /
 COPY patches/auth-cookie-always.patch /
+COPY patches/deny-invalid-auth-locations.patch /
 COPY rootfs /
 
 RUN apk update \
@@ -108,7 +111,8 @@ RUN apk update \
   && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tpl.patch \
-  && patch -p1 < /auth-cookie-always.patch
+  && patch -p1 < /auth-cookie-always.patch  \
+  && patch -p1 < /deny-invalid-auth-locations.patch
 
 WORKDIR /
 USER www-data
