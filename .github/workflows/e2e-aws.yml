@@ -305,8 +305,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -669,8 +669,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -1033,8 +1033,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -1397,8 +1397,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -1761,8 +1761,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -2125,8 +2125,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -2489,8 +2489,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -2853,8 +2853,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
 
