@@ -19,7 +19,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
 
       # </template: checkout_step>
       - name: Run workflow
@@ -42,7 +42,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
 
       # </template: checkout_step>
       - name: Find milestone

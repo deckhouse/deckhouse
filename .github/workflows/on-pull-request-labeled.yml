@@ -89,7 +89,7 @@ jobs:
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
         if: ${{ startsWith(github.event_name, 'pull_request') }}
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: "refs/pull/${{ github.event.number }}/head"
 
@@ -144,7 +144,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
 
       # </template: checkout_step>
       - name: Rerun workflow

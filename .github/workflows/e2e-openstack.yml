@@ -206,7 +206,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
 
       # </template: checkout_step>
       - name: Check e2e labels
@@ -247,7 +247,7 @@ jobs:
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -605,7 +605,7 @@ jobs:
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -963,7 +963,7 @@ jobs:
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -1321,7 +1321,7 @@ jobs:
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -1679,7 +1679,7 @@ jobs:
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -2037,7 +2037,7 @@ jobs:
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -2395,7 +2395,7 @@ jobs:
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -2753,7 +2753,7 @@ jobs:
 
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
@@ -3098,7 +3098,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
 
       # </template: checkout_step>
       # <template: update_comment_on_finish>
