@@ -1,4 +1,5 @@
 {{- $context := . }}
+{{- $ciliumEnabled := ($context.Values.global.enabledModules | has "cni-cilium") }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
   {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
     {{ $annotations := "" }}
@@ -25,7 +26,11 @@ metadata:
     {{- end }}
 spec:
   type: LoadBalancer
+{{- if $ciliumEnabled }}
+  externalTrafficPolicy: Cluster
+{{- else }}
   externalTrafficPolicy: Local
+{{- end }}
     {{- if $sourceRanges }}
   loadBalancerSourceRanges:
     {{- $sourceRanges | toYaml | nindent 4 }}
