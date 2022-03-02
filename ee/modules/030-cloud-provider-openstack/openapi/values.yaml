@@ -10,7 +10,6 @@ properties:
     properties:
       connection:
         type: object
-        default: {}
         x-examples:
           - { "authURL": "http://my.cloud.lalla/3/", "caCert": "mycacert", "domainName": "mydomain", "tenantName": "mytenantname", "username": "myuser", "password": "mypass", "region": "myreg" }
         x-required-for-helm:
