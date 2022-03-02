@@ -175,6 +175,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)
 
+		//if app.PostBootstrapScriptPath != "" {
+		//	os.FileInfo()
+		//}
+
 		// first, parse and check cluster config
 		metaConfig, err := loadConfigFromFile(app.ConfigPath)
 		if err != nil {

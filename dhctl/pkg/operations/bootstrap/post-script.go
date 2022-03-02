@@ -80,7 +80,6 @@ var resultPattern = regexp.MustCompile("(?m)^Result of post-bootstrap script:(.+
 func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	var result string
 	cmd := e.sshClient.UploadScript(e.path).
-		WithSetExecuteModeBefore(true).
 		WithTimeout(e.timeout).
 		Sudo()
 
