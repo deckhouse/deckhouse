@@ -129,7 +129,7 @@ func http_my_router(w http.ResponseWriter, r *http.Request) {
 }
 
 func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
-	defer logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.String())
+	defer logger.Println("http_handler_custom_metric: ", r.RemoteAddr, r.Method, r.UserAgent(), r.URL.String())
 
 	fStat, _ := os.Stat(configPath)
 	if mtime := fStat.ModTime().Unix(); mtime != appliedConfigMtime {
@@ -183,7 +183,7 @@ func http_handler_custom_metric(w http.ResponseWriter, r *http.Request) {
 }
 
 func http_proxy_pass(w http.ResponseWriter, r *http.Request) {
-	defer logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.String())
+	defer logger.Println("http_proxy_pass: ", r.RemoteAddr, r.Method, r.UserAgent(), r.URL.String())
 
 	u, _ := url.Parse(PROMETHEUS_URL)
 	reverseProxy := httputil.NewSingleHostReverseProxy(u)
