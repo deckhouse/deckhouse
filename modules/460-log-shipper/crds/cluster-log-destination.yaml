@@ -228,11 +228,11 @@ spec:
                     docType:
                       type: string
                       description: |
-                        The doc_type for your index data. This is only relevant for Elasticsearch <= 6.X.
+                        The `doc_type` for your index data. This is only relevant for Elasticsearch <= 6.X.
 
-                        For ES >= 7.X - You do not need this option since this version has removed doc_type mapping
-                        For ES >= 6.X - preferred value is a '_doc', this value will be easier to upgrade to 7.X
-                        For ES < 6.X - you can't use a value starting with '_' or empty string. So use some other value like 'vector' or 'logs'.
+                        - For Elasticsearch >= 7.X you do not need this option since this version has removed `doc_type` mapping;
+                        - For Elasticsearch >= 6.X the recommended value is `_doc`, because using it will make it easy to upgrade to 7.X;
+                        - For Elasticsearch < 6.X you can't use a value starting with `_` or empty string. Use, for example, values like `vector` or `logs`.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
