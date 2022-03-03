@@ -188,7 +188,13 @@ func http_proxy_pass(w http.ResponseWriter, r *http.Request) {
 	u, _ := url.Parse(PROMETHEUS_URL)
 	reverseProxy := httputil.NewSingleHostReverseProxy(u)
 	reverseProxy.Transport = httpTransport
+	reverseProxy.ErrorHandler = ProxyErrorHandler
+	r.Close = true
 	reverseProxy.ServeHTTP(w, r)
+}
+
+func ProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
+	logger.Println("http_proxy_pass error: " + err.Error())
 }
 
 func main() {
