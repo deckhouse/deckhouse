@@ -143,14 +143,7 @@ steps:
 {!{- end -}!}
 
 # <template: deploy_doc_template>
-- name: Check production kubeconfig
-  id: check_kubeconfig_doc_{!{$env}!}
-  env:
-    KUBECONFIG: ${{ secrets.KUBECONFIG_BASE64_PROD }}
-  run: |
-    if [[ -n ${KUBECONFIG} ]]; then echo "::set-output name=is_production::true"; fi
 - name: Deploy documentation to {!{ $env }!}
-  if: ${{ steps.check_kubeconfig_doc_{!{$env}!}.outputs.is_production == 'true' }}
   uses: {!{ index (ds "actions") "werf/actions/converge" }!}
   with:
     channel: ${{env.WERF_CHANNEL}}
@@ -179,14 +172,7 @@ steps:
 {!{- end -}!}
 
 # <template: deploy_site_template>
-- name: Check production kubeconfig
-  id: check_kubeconfig_site_{!{$env}!}
-  env:
-    KUBECONFIG: ${{ secrets.KUBECONFIG_BASE64_PROD }}
-  run: |
-    if [[ -n ${KUBECONFIG} ]]; then echo "::set-output name=is_production::true"; fi
 - name: Deploy site to {!{ $env }!}
-  if: ${{ steps.check_kubeconfig_site_{!{$env}!}.outputs.is_production == 'true' }}
   uses: {!{ index (ds "actions") "werf/actions/converge" }!}
   with:
     channel: ${{env.WERF_CHANNEL}}

@@ -301,14 +301,7 @@ jobs:
       # </template: login_flant_registry_step>
 
       # <template: deploy_site_template>
-      - name: Check production kubeconfig
-        id: check_kubeconfig_site_test
-        env:
-          KUBECONFIG: ${{ secrets.KUBECONFIG_BASE64_PROD }}
-        run: |
-          if [[ -n ${KUBECONFIG} ]]; then echo "::set-output name=is_production::true"; fi
       - name: Deploy site to test
-        if: ${{ steps.check_kubeconfig_site_test.outputs.is_production == 'true' }}
         uses: werf/actions/converge@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
@@ -333,14 +326,7 @@ jobs:
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
       # </template: doc_version_template>
       # <template: deploy_doc_template>
-      - name: Check production kubeconfig
-        id: check_kubeconfig_doc_test
-        env:
-          KUBECONFIG: ${{ secrets.KUBECONFIG_BASE64_PROD }}
-        run: |
-          if [[ -n ${KUBECONFIG} ]]; then echo "::set-output name=is_production::true"; fi
       - name: Deploy documentation to test
-        if: ${{ steps.check_kubeconfig_doc_test.outputs.is_production == 'true' }}
         uses: werf/actions/converge@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
