@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -189,13 +190,20 @@ func http_proxy_pass(w http.ResponseWriter, r *http.Request) {
 	reverseProxy := httputil.NewSingleHostReverseProxy(u)
 	reverseProxy.Transport = httpTransport
 	reverseProxy.ErrorHandler = ProxyErrorHandler
-	r.Close = true
+	reverseProxy.ModifyResponse = ProxyModifyResponse
 	reverseProxy.ServeHTTP(w, r)
 }
 
 func ProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
 	logger.Println("http_proxy_pass error: " + err.Error())
 }
+
+func ProxyModifyResponse(r *http.Response) error {
+	// return nil
+	//
+	// purposefully return an error so ErrorHandler gets called
+	return errors.New("uh-oh")
+},
 
 func main() {
 	listenAddr := "0.0.0.0:8000"
