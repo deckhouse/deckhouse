@@ -39,10 +39,10 @@
   env:
     HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
   run: |
-    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
+    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
 - name: Login to dev registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
-  if: ${{ steps.check_dev_registry.outputs.has_credentials == 'yes' }}
+  if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
   with:
     registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
     username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -58,10 +58,10 @@
   env:
     HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
   run: |
-    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
+    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
 - name: Login to readonly registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
-  if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
+  if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
   with:
     registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
     username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -77,10 +77,10 @@
   env:
     HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
   run: |
-    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
+    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
 - name: Login to rw registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
-  if: ${{ steps.check_rw_registry.outputs.has_credentials == 'yes' }}
+  if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
   with:
     registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
     username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
@@ -88,7 +88,7 @@
     logout: false
 - name: Login to Github Container Registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
-  if: ${{ steps.check_rw_registry.outputs.has_credentials != 'yes' }}
+  if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
   with:
     registry: ghcr.io
     username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
@@ -104,14 +104,27 @@
   env:
     HOST: ${{secrets.FLANT_REGISTRY_HOST}}
   run: |
-    if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
+    if [[ -n $HOST ]]; then
+      echo "::set-output name=has_flant_credentials::true"
+      echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+    else
+      echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+    fi
 - name: Login to flant registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
-  if: ${{ steps.check_flant_registry.outputs.has_credentials == 'yes' }}
+  if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
   with:
     registry: ${{ secrets.FLANT_REGISTRY_HOST }}
     username: ${{ secrets.FLANT_REGISTRY_USER }}
     password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+    logout: false
+- name: Login to Github Container Registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+  with:
+    registry: ghcr.io
+    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
     logout: false
 # </template: login_flant_registry_step>
 {!{- end -}!}

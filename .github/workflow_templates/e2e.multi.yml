@@ -288,10 +288,10 @@ jobs:
       env:
         KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
       run: |
-        if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+        if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
 
     - name: Alert on fail in default branch
-      if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+      if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
       env:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}

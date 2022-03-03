@@ -26,8 +26,6 @@ env:
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
-
-  FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
   # </template: werf_envs>
 
 
@@ -174,10 +172,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}

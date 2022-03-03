@@ -46,8 +46,6 @@ env:
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
-
-  FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
   # </template: werf_envs>
 
 
@@ -244,10 +242,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -261,10 +259,10 @@ jobs:
         env:
           HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -278,26 +276,46 @@ jobs:
         env:
           HOST: ${{secrets.FLANT_REGISTRY_HOST}}
         run: |
-          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::yes"; fi
+          if [[ -n $HOST ]]; then
+            echo "::set-output name=has_flant_credentials::true"
+            echo "::set-output name=web_registry_path::${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+          else
+            echo "::set-output name=web_registry_path::${GHA_TEST_REGISTRY_PATH}"
+          fi
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
-        if: ${{ steps.check_flant_registry.outputs.has_credentials == 'yes' }}
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
       # </template: login_flant_registry_step>
 
       # <template: deploy_site_template>
+      - name: Check production kubeconfig
+        id: check_kubeconfig_site_test
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG_BASE64_PROD }}
+        run: |
+          if [[ -n ${KUBECONFIG} ]]; then echo "::set-output name=is_production::true"; fi
       - name: Deploy site to test
+        if: ${{ steps.check_kubeconfig_site_test.outputs.is_production == 'true' }}
         uses: werf/actions/converge@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-test
         env:
-          WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
           WERF_DIR: "docs/site"
           WERF_RELEASE: "deckhouse-site"
           WERF_NAMESPACE: deckhouse-web-test
@@ -315,14 +333,21 @@ jobs:
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
       # </template: doc_version_template>
       # <template: deploy_doc_template>
+      - name: Check production kubeconfig
+        id: check_kubeconfig_doc_test
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG_BASE64_PROD }}
+        run: |
+          if [[ -n ${KUBECONFIG} ]]; then echo "::set-output name=is_production::true"; fi
       - name: Deploy documentation to test
+        if: ${{ steps.check_kubeconfig_doc_test.outputs.is_production == 'true' }}
         uses: werf/actions/converge@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-test
         env:
-          WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+          WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
           WERF_NAMESPACE: deckhouse-web-test
