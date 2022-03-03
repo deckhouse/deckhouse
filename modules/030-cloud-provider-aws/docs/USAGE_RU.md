@@ -2,7 +2,7 @@
 title: "Сloud provider — AWS: примеры конфигурации"
 ---
 
-## Custom resource `AWSInstanceClass`
+## Пример custom resource `AWSInstanceClass`
 
 Ниже представлен простой пример конфигурации custom resource `AWSInstanceClass`:
 
