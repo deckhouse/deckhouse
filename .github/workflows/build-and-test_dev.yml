@@ -551,6 +551,13 @@ jobs:
           fi
 
 
+
+          echo "::set-output name=tests_image_name::${TESTS_IMAGE}"
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          rm -f images_tags_werf.json
     # </template: build_template>
 
 

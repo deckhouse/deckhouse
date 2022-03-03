@@ -172,6 +172,7 @@ steps:
         RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
         pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
       fi
+{!{- end }!}
 
       echo "::set-output name=tests_image_name::${TESTS_IMAGE}"
 
@@ -179,6 +180,5 @@ steps:
     if: ${{ always() }}
     run: |
       rm -f images_tags_werf.json
-{!{- end }!}
 # </template: build_template>
 {!{ end }!}
