@@ -122,7 +122,7 @@ properties:
         items:
           type: string
         x-examples:
-          - [".*-hdd", "iscsi-fast"]:
+          - [".*-hdd", "iscsi-fast"]
       default:
         type: string
         x-examples:
