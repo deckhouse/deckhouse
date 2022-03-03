@@ -4,6 +4,16 @@ on:
     types: [created]
 
 jobs:
+  dump:
+    name: dump
+    runs-on: ubuntu-latest
+    steps:
+      - name: dump
+        env:
+          EVENT_COMMENT: ${{ toJSON(github.event.comment) }}
+        run: |
+          echo ${EVENT_COMMENT}
+
   trigger_for_release_issue:
     name: Trigger workflow by comment
     runs-on: ubuntu-latest
