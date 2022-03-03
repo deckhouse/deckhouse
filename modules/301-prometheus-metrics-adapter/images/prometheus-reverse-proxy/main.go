@@ -203,7 +203,7 @@ func ProxyModifyResponse(r *http.Response) error {
 	//
 	// purposefully return an error so ErrorHandler gets called
 	return errors.New("uh-oh")
-},
+}
 
 func main() {
 	listenAddr := "0.0.0.0:8000"
