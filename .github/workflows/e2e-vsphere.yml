@@ -548,8 +548,15 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      - name: Check alerting credentials
+        id: check_alerting
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+
       - name: Alert on fail in default branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: vSphere
           CRI: Docker
@@ -912,8 +919,15 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      - name: Check alerting credentials
+        id: check_alerting
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+
       - name: Alert on fail in default branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: vSphere
           CRI: Docker
@@ -1276,8 +1290,15 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      - name: Check alerting credentials
+        id: check_alerting
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+
       - name: Alert on fail in default branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: vSphere
           CRI: Docker
@@ -1640,8 +1661,15 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      - name: Check alerting credentials
+        id: check_alerting
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+
       - name: Alert on fail in default branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: vSphere
           CRI: Docker
@@ -2004,8 +2032,15 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      - name: Check alerting credentials
+        id: check_alerting
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+
       - name: Alert on fail in default branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -2368,8 +2403,15 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      - name: Check alerting credentials
+        id: check_alerting
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+
       - name: Alert on fail in default branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -2732,8 +2774,15 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      - name: Check alerting credentials
+        id: check_alerting
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+
       - name: Alert on fail in default branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: vSphere
           CRI: Containerd
@@ -3096,8 +3145,15 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+      - name: Check alerting credentials
+        id: check_alerting
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::yes"; fi
+
       - name: Alert on fail in default branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        if: ${{ steps.check_alerting.outputs.has_credentials && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: vSphere
           CRI: Containerd
