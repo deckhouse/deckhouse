@@ -646,7 +646,7 @@ const detectSlashCommand = ({ comment }) => {
   // User command is a command and a tag name.
   const parts = lines[0].split(/\s+/);
 
-  if ( ! /^\/[a-z\d_\-\/]+$/.test(parts[0])) {
+  if ( ! /^\/[a-z\d_\-\/.,]+$/.test(parts[0])) {
     return {notFoundMsg: 'not a slash command in the first line'};
   }
 
