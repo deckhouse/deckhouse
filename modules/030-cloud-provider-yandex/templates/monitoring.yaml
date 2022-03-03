@@ -1,0 +1,8 @@
+{{- $context := . }}
+
+{{- if and .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName .Values.cloudProviderYandex.cloudMetricsExporterEnabled }}
+
+  {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list $context "monitoring/grafana-dashboards/" "monitoring/grafana-dashboards/nat-instance") }}
+  {{- include "helm_lib_prometheus_rules_recursion" (list $context "d8-monitoring" "monitoring/prometheus-rules/nat-instance" "monitoring/prometheus-rules/nat-instance") }}
+
+{{- end }}

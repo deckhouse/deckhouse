@@ -3,6 +3,23 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    x-examples:
+    - sshPublicKey: "ssh-rsa AAAAAAA"
+      apiVersion: deckhouse.io/v1
+      kind: YandexClusterConfiguration
+      masterNodeGroup:
+        replicas: 1
+        instanceClass:
+          cores: 1
+          memory: 1024
+          imageID: fd8nb7ecsbvj76dfaa8b
+      provider:
+        cloudID: clnb7ecsbvj76dfaa8b
+        folderID: fldrb7ecsbvj76dfaa8b
+        serviceAccountJSON: '{"account": "a"}'
+      nodeNetworkCIDR: '127.0.0.1/8'
+      labels: { "label-2": "b" }
+      layout: Standard
     additionalProperties: false
     required: [apiVersion, kind, masterNodeGroup, nodeNetworkCIDR, sshPublicKey, layout, provider]
     properties:

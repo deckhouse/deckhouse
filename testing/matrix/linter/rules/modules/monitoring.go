@@ -46,7 +46,7 @@ func monitoringModuleRule(moduleName, modulePath, moduleNamespace string) errors
 	switch moduleName {
 	// These modules deploy common rules and dashboards to the cluster according to their configurations.
 	// That's why they have custom monitoring templates.
-	case "340-extended-monitoring", "340-monitoring-applications":
+	case "340-extended-monitoring", "340-monitoring-applications", "030-cloud-provider-yandex":
 		return errors.EmptyRuleError
 	}
 

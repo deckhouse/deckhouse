@@ -1,5 +1,14 @@
 type: object
 properties:
+  cloudMetricsExporterEnabled:
+    type: boolean
+    default: false
+    x-examples: [ true, false ]
+    description: |
+      Deploys Yandex Cloud metrics exporter in the cluster. Creates an API key to collect metrics beforehand.
+      When using the `WithNatInstance` layout starts collecting metrics for the NAT-instance.
+      NAT-instance metrics will have `nat_instance=true` label. Also, it will deploy Grafana dashboard for NAT-instance metrics.
+      Before usage, please see [pricing policy for Yandex Cloud Monitoring](https://cloud.yandex.ru/docs/monitoring/pricing)
   additionalExternalNetworkIDs:
     type: array
     items:

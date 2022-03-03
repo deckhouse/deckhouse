@@ -1,0 +1,23 @@
+{{- if .Values.cloudProviderYandex.cloudMetricsExporterEnabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-provider-yandex-cloud-metrics-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-cloud-metrics-exporter")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-yandex:cloud-metrics-exporter:d8-rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-cloud-metrics-exporter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+  - kind: ServiceAccount
+    name: cloud-provider-yandex-cloud-metrics-exporter
+    namespace: d8-monitoring
+{{- end }}
