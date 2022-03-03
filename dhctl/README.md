@@ -27,7 +27,7 @@ Basic features:
 
 ### Preparations
 The first step is setting up a host.
-Only `ubuntu-16.04`, `ubuntu-18.04`, `ubuntu-20.04`, `centos-7`, `rhel-7`, `centos-8`, `rhel-8`, `debian-9`, `debian-10`, `debian-11`, `astralinux-2.12(Deckhouse EE edition)`, `astralinux-1.7(Deckhouse EE edition)` OS are supported.
+Only `ubuntu-16.04`, `ubuntu-18.04`, `ubuntu-20.04`, `centos-7`, `rhel-7`, `centos-8`, `rhel-8`, `debian-9`, `debian-10`, `debian-11` OS are supported.
 
 * **Bare metal** - provide SSH access to the host and sudo access.
 * **Cloud provider** - ensure that Deckhouse supports your cloud.
