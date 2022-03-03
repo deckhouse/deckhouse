@@ -15,20 +15,3 @@ type OpenstackInstanceClass struct {
 	ImageName                string            `json:"imageName,omitempty" yaml:"imageName,omitempty"`
 	RootDiskSize             int32             `json:"rootDiskSize,omitempty" yaml:"rootDiskSize,omitempty"`
 }
-
-// type VsphereInstanceClassRuntimeOptions struct {
-// 	// Whether to enable or disable nested [hardware virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html).
-// 	NestedHardwareVirtualization bool `json:"nestedHardwareVirtualization,omitempty" yaml:"nestedHardwareVirtualization,omitempty"`
-// 	// The relative amount of CPU Shares for VMs to be created.
-// 	CPUShares *int32 `json:"cpuShares,omitempty" yaml:"cpuShares,omitempty"`
-// 	// CPU limit in MHz.
-// 	CPULimit *int32 `json:"cpuLimit,omitempty" yaml:"cpuLimit,omitempty"`
-// 	// CPU reservation in MHz.
-// 	CPUReservation *int32 `json:"cpuReservation,omitempty" yaml:"cpuReservation,omitempty"`
-// 	// The relative amount of Memory Shares for VMs to be created.
-// 	MemoryShares *int32 `json:"memoryShares,omitempty" yaml:"memoryShares,omitempty"`
-// 	// Memory limit in MB.
-// 	MemoryLimit *int32 `json:"memoryLimit,omitempty" yaml:"memoryLimit,omitempty"`
-// 	// VM memory reservation in percent (relative to `.spec.memory`).
-// 	MemoryReservation *int32 `json:"memoryReservation,omitempty" yaml:"memoryReservation,omitempty"`
-// }

@@ -23,15 +23,11 @@ type OpenstackCloudDiscoveryData struct {
 }
 
 func (dd *OpenstackCloudDiscoveryData) PathWithDiscoveryData(module OpenstackModuleConfiguration) {
-	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.internalNetworkNames //= $data.internalNetworkNames | .internalNetworkNames | . //= [] | unique')
-	//  values::set cloudProviderOpenstack.internal.internalNetworkNames "$i"
 	if len(module.InternalNetworkNames) > 0 {
 		dd.InternalNetworkNames = module.InternalNetworkNames
 	}
 	dd.InternalNetworkNames = unique(dd.InternalNetworkNames)
 
-	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.externalNetworkNames //= $data.externalNetworkNames | .externalNetworkNames + .additionalExternalNetworkNames | . //= [] | unique')
-	//  values::set cloudProviderOpenstack.internal.externalNetworkNames "$i"
 	if len(module.ExternalNetworkNames) > 0 {
 		dd.ExternalNetworkNames = module.ExternalNetworkNames
 	}
@@ -42,28 +38,18 @@ func (dd *OpenstackCloudDiscoveryData) PathWithDiscoveryData(module OpenstackMod
 
 	dd.ExternalNetworkNames = unique(dd.ExternalNetworkNames)
 
-	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.zones //= $data.zones | .zones | . //= [] | unique')
-	//  values::set cloudProviderOpenstack.internal.zones "$i"
 	if len(module.Zones) > 0 {
 		dd.Zones = module.Zones
 	}
 	dd.Zones = unique(dd.Zones)
 
-	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if (.instances == null or .instances == {}) then $data.instances else .instances end | . //= {}')
-	//  values::set cloudProviderOpenstack.internal.instances "$i"
 	if module.Instances != nil && !module.Instances.IsEmpty() {
 		dd.Instances = *module.Instances
 	}
 
-	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .podNetworkMode == null then $data.podNetworkMode else .podNetworkMode end')
-	//  values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
-
 	if module.PodNetworkMode != "" {
 		dd.PodNetworkMode = module.PodNetworkMode
 	}
-
-	//  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if (.loadBalancer == null or .loadBalancer == {}) then $data.loadBalancer else .loadBalancer end | . //= {}')
-	//  values::set cloudProviderOpenstack.internal.loadBalancer "$i"
 
 	if module.LoadBalancer != nil && !module.LoadBalancer.IsEmpty() {
 		dd.LoadBalancer = *module.LoadBalancer
