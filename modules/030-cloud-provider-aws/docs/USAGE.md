@@ -2,7 +2,7 @@
 title: "Cloud provider — AWS: usage"
 ---
 
-## Custom resource `AWSInstanceClass`
+## An example of the `AWSInstanceClass` custom resource
 
 Below is a simple example of custom resource `AWSInstanceClass` configuration:
 
