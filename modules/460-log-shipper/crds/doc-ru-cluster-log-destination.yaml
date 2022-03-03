@@ -79,14 +79,14 @@ spec:
                       description: |
                         Использовать Datastream для хранения логов (https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
 
-                        Datastreams производительнее для хранения логов и метрик, но они существуют только в Elasticsearch >= 7.16.X
-                      docType:
-                        description: |
-                          Использовать doc_type для индексов. Это имеет значение только для Elasticsearch <= 6.X.
+                        Datastreams производительнее для хранения логов и метрик, но они существуют только в Elasticsearch >= 7.16.X.
+                    docType:
+                      description: |
+                        Использовать `doc_type` для индексов. Имеет значение использовать только для Elasticsearch <= 6.X.
 
-                          Для ES >= 7.X - вам не нужно использовать эту опцию. Все работает по-умолчанию
-                          Для ES >= 6.X - рекомендуемое значение '_doc', это позволит легко обновиться до версии ES 7.X
-                          Для ES < 6.X - вы можете использовать любое значение, которое не начинается с '_'. Например: 'vector'
+                        - Для Elasticsearch >= 7.X вам не нужно использовать эту опцию, т.к. все работает по умолчанию;
+                        - Для Elasticsearch >= 6.X рекомендуемое значение — `_doc`, т.к. его использование позволит легко обновиться до Elasticsearch версии 7.X;
+                        - Для Elasticsearch < 6.X вы можете использовать любое значение, которое не начинается с `_`. Например — `vector`, `logs`.
                     tls:
                       description: Настройки защищённого TLS соединения.
                       properties:
@@ -119,7 +119,7 @@ spec:
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
-                          description: Конфигурация клиентского сертификата
+                          description: Конфигурация клиентского сертификата.
                           properties:
                             crtFile:
                               description: |
