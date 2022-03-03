@@ -84,7 +84,7 @@ spec:
   nodeGroups:
   - "master"
   content: |
-    if [ -x /usr/local/bin/crane ]; then
+    if [ -x /usr/local/bin/kubectl-cert_manager ]; then
       exit 0
     fi
     curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/kubectl-cert_manager-linux-amd64.tar.gz -o - | tar -zxvf - kubectl-cert_manager
