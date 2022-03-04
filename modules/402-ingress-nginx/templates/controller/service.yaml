@@ -26,7 +26,7 @@ metadata:
     {{- end }}
 spec:
   type: LoadBalancer
-{{ - if $ciliumEnabled }}
+{{- if $ciliumEnabled }}
   externalTrafficPolicy: Cluster
 {{- else }}
   externalTrafficPolicy: Local
