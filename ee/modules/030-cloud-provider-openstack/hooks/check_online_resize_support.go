@@ -11,8 +11,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/openstack"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -30,7 +28,7 @@ func handleCheckOnlineResize(input *go_hook.HookInput) error {
 		return err
 	}
 
-	isSupported, err := openstack.IsSupportsOnlineDiskResize()
+	isSupported, err := isSupportsOnlineDiskResize()
 	if err != nil {
 		return err
 	}

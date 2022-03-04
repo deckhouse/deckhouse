@@ -13,8 +13,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/openstack"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -42,7 +40,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar"}
 	} else {
-		openstackVolumeTypes, err = openstack.GetVolumeTypesArray()
+		openstackVolumeTypes, err = getVolumeTypesArray()
 		if err != nil {
 			return err
 		}

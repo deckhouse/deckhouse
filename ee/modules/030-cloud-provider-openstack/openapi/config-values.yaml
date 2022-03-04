@@ -2,48 +2,48 @@ type: object
 properties:
   connection:
     type: object
-    description: this section contains parameters required to connect to the cloud provider's API.
+    description: This section contains parameters required to connect to the cloud provider's API.
     properties:
       authURL:
         type: string
-        description: an OpenStack Identity API URL.
+        description: An OpenStack Identity API URL.
       caCert:
         type: string
         description: |
-          specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate;
+          Specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate;
           The certificate must have a PEM format.
       domainName:
         type: string
-        description: the domain name.
+        description: The domain name.
       tenantName:
         type: string
         description: |
-          the project name;
+          The project name;
             * Cannot be used together with `tenantID`.
       tenantID:
         type: string
         description: |
-          the project id;
+          The project id;
             * Cannot be used together with `tenantName`.
       username:
         type: string
-        description: the name of the user that has full project privileges.
+        description: The name of the user that has full project privileges.
       password:
         type: string
-        description: the user's password.
+        description: The user's password.
       region:
         type: string
-        description: the OpenStack region where the cluster will be deployed.
+        description: The OpenStack region where the cluster will be deployed.
   internalNetworkNames:
     type: array
-    description: additional networks that are connected to the VM. cloud-controller-manager uses them to insert InternalIPs into `.status.addresses` in the Node API object.
+    description: Additional networks that are connected to the VM. cloud-controller-manager uses them to insert InternalIPs into `.status.addresses` in the Node API object.
     x-examples:
       - [ "KUBE-3", "devops-internal" ]
     items:
       type: string
   externalNetworkNames:
     type: array
-    description: additional networks that are connected to the VM. cloud-controller-manager uses them to insert ExternalIPs into `.status.addresses` in the Node API object.
+    description: Additional networks that are connected to the VM. cloud-controller-manager uses them to insert ExternalIPs into `.status.addresses` in the Node API object.
     x-examples:
       - [ "KUBE-3", "devops-internal" ]
     items:
@@ -51,7 +51,7 @@ properties:
   additionalExternalNetworkNames:
     type: array
     description: |
-      specifies additional networks that can be connected to the VM. `cloud-controller-manager` uses them to insert `ExternalIP` to `.status.addresses` field in the Node API object.
+      Specifies additional networks that can be connected to the VM. `cloud-controller-manager` uses them to insert `ExternalIP` to `.status.addresses` field in the Node API object.
       If you have instances in the cluster that use External Networks (other than those set out in the placement strategy), you must pass them via the `additionalExternalNetworkNames` parameter.
     x-examples:
       - ["some-bgp-network"]
@@ -61,7 +61,7 @@ properties:
     type: string
     default: "DirectRoutingWithPortSecurityEnabled"
     description: |
-      sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
+      Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
         * Possible values:
           * `DirectRouting` — means that there is a direct routing between the nodes;
           * `DirectRoutingWithPortSecurityEnabled` - direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports;
@@ -70,25 +70,25 @@ properties:
     enum: ["DirectRouting", "DirectRoutingWithPortSecurityEnabled", "VXLAN"]
   instances:
     type: object
-    description: instance parameters that are used when creating virtual machines.
+    description: Instance parameters that are used when creating virtual machines.
     properties:
       sshKeyPairName:
         type: string
-        description: the name of the OpenStack `keypair` resource; it is used for provisioning instances.
+        description: The name of the OpenStack `keypair` resource; it is used for provisioning instances.
       securityGroups:
         type: array
-        description: a list of securityGroups to assign to the provisioned instances. Defines firewall rules for the provisioned instances.
+        description: A list of securityGroups to assign to the provisioned instances. Defines firewall rules for the provisioned instances.
         items:
           type: string
       imageName:
         type: string
-        description: the name of the image.
+        description: The name of the image.
       mainNetwork:
         type: string
-        description: the path to the network that will serve as the primary network (the default gateway) for connecting to the VM.
+        description: The path to the network that will serve as the primary network (the default gateway) for connecting to the VM.
       additionalNetworks:
         type: array
-        description: a list of networks to connect to the instance.
+        description: A list of networks to connect to the instance.
         items:
           type: string
   loadBalancer:
@@ -97,28 +97,28 @@ properties:
     properties:
       subnetID:
         type: string
-        description: an ID of the Neutron subnet to create the load balancer virtual IP in.
+        description: An ID of the Neutron subnet to create the load balancer virtual IP in.
       floatingNetworkID:
         type: string
-        description: an ID of the external network for floating IPs.
+        description: An ID of the external network for floating IPs.
   zones:
     type: array
-    description: the default list of zones for provisioning instances. Can be redefined for each NodeGroup individually.
+    description: The default list of zones for provisioning instances. Can be redefined for each NodeGroup individually.
     items:
       type: string
   tags:
     type: object
-    description: a dictionary of tags that will be available on all provisioned instances.
+    description: A dictionary of tags that will be available on all provisioned instances.
     additionalProperties:
       type: string
   storageClass:
     type: object
     default: {}
-    description: the module automatically creates StorageClasses that are available in OpenStack.
+    description: The module automatically creates StorageClasses that are available in OpenStack.
     properties:
       exclude:
         type: array
-        description: a list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
+        description: A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
         items:
           type: string
         x-examples:
@@ -128,13 +128,13 @@ properties:
         x-examples:
           - "ceph-ssd"
         description: |
-          the name of StorageClass that will be used in the cluster by default;
+          The name of StorageClass that will be used in the cluster by default;
             If the parameter is omitted, the default StorageClass is either:
               * an arbitrary StorageClass present in the cluster that has the default annotation;
               * the first StorageClass created by the module (in accordance with the order in OpenStack).
       topologyEnabled:
         type: boolean
         description: |
-          this feature enables driver to consider the topology constraints while creating the volume. It is used only during volume provisioning, existing PersistentVolumes are not affected;
+          This feature enables driver to consider the topology constraints while creating the volume. It is used only during volume provisioning, existing PersistentVolumes are not affected;
             * **Attention!** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
         default: true

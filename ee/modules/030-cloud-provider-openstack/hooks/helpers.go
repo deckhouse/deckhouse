@@ -1,31 +1,43 @@
-// Copyright 2021 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-package openstack
+package hooks
 
 import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/apiversions"
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
 	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
+// getVolumeTypesArray extract volume types from go hooks
+func getVolumeTypesArray() ([]string, error) {
+	client, err := clientconfig.NewServiceClient("volume", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	allPages, err := volumetypes.List(client, volumetypes.ListOpts{}).AllPages()
+	if err != nil {
+		return nil, err
+	}
+
+	volumeTypes, err := volumetypes.ExtractVolumeTypes(allPages)
+	if err != nil || len(volumeTypes) == 0 {
+		return nil, fmt.Errorf("list of volume types is empty is empty, or an error was returned: %v", err)
+	}
+
+	var volumeTypesList []string
+	for _, vt := range volumeTypes {
+		volumeTypesList = append(volumeTypesList, vt.Name)
+	}
+
+	return volumeTypesList, nil
+}
+
 var onlineResizeMinVersion = semver.MustParse("3.42")
 
-// IsSupportsOnlineDiskResize checks if openstack supports online resize, used as go lib
-func IsSupportsOnlineDiskResize() (bool, error) {
+// isSupportsOnlineDiskResize checks if openstack supports online resize, used as go lib
+func isSupportsOnlineDiskResize() (bool, error) {
 	client, err := clientconfig.NewServiceClient("volume", nil)
 
 	allPages, err := apiversions.List(client).AllPages()
@@ -57,24 +69,4 @@ func IsSupportsOnlineDiskResize() (bool, error) {
 	}
 
 	return false, nil
-}
-
-// SupportsOnlineDiskResize cli version of IsSupportsOnlineDiskResize
-func SupportsOnlineDiskResize() error {
-	isSupported, err := IsSupportsOnlineDiskResize()
-	if err != nil {
-		return err
-	}
-
-	stdout := "yes"
-	if !isSupported {
-		stdout = "no"
-	}
-
-	_, err = fmt.Print(stdout)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
