@@ -8,33 +8,31 @@ apiVersions:
         description: Публичный ключ для доступа на узлы под пользователем `user`.
       labels:
         description: |
-          Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
+          Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
-          Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+          Если поменять лейблы в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
 
-          Подробнее про лейблы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
-
-          Формат — `key: value`.
+          Подробнее про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels)
       peeredVPCs:
         description: |
           Список GCP VPC networks, с которыми будет объединена сеть кластера.
 
-          Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
+          Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринговое соединение необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
       masterNodeGroup:
         description: Спецификация для описания NodeGroup master-узлов.
         properties:
           replicas:
-            description: Сколько master-узлов создавать.
+            description: Количество создаваемых master-узлов.
           additionalNetworkTags:
             description: |
               Список дополнительных тегов.
 
-              К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+              К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать [в официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
           additionalLabels:
             description: |
-              Список дополнительных label'ов.
+              Список дополнительных лейблов.
 
-              Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+              Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
           instanceClass:
             description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
             properties: &instanceClassProperties_ru
@@ -49,28 +47,24 @@ apiVersions:
                 description: |
                   Образ, который будет использоваться в заказанных инстансах.
 
-                  Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
+                  Список образов можно найти [в документации](https://cloud.google.com/compute/docs/images#ubuntu).
 
                   **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7`.
               diskSizeGb:
                 description: Размер root-диска. Значение указывается в `ГиБ`.
               disableExternalIP:
                 description: |
-                  Запретить ли назначение внешнего IP для инстанса.
+                  Запрет назначения внешнего IP-адреса для инстанса.
 
-                  Параметр доступен только для layout `Standard`.
-
-                  `true` — узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
-
-                  `false` — для узлов создаются статические публичные адреса, они же используются для One-to-one NAT.
+                  Параметр доступен только для схемы размещения `Standard`.               
           zones:
-            description: Cписок зон, в которых допустимо создавать статичные-узлы.
+            description: Cписок зон, в которых допустимо создавать статичные узлы.
       nodeGroups:
         description: Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных фронтов или шлюзов).
         items:
           properties:
             name:
-              description: Имя NodeGroup, будет использоваться для генерации имен узлов.
+              description: Имя NodeGroup, которое будет использоваться для генерации имен узлов.
             replicas:
               description: Количество узлов.
             nodeTemplate:
@@ -86,12 +80,12 @@ apiVersions:
               description: |
                 Список дополнительных тегов.
 
-                К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать [в официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
             additionalLaddiabels:
               description: |
-                Список дополнительных label'ов.
+                Список дополнительных лейблов.
 
-                Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
             instanceClass:
               description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass).
               properties:
@@ -102,9 +96,7 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard).
-
-          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP адреса. [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat).
+          [Подробнее](../layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: Настройки для схемы размещения `Standard`.
         properties:
@@ -116,11 +108,11 @@ apiVersions:
         description: Параметры подключения к API GCP.
         properties:
           region:
-            description: Имя региона в котором будут заказываться инстансы.
+            description: Имя региона, в котором будут заказываться инстансы.
           serviceAccountJSON:
             description: |
-              Ключ к Service Account'у с правами Project Admin (`service account key`), в JSON-формате.
+              Ключ к Service Account'у с правами Project Admin (`service account key`) в JSON-формате.
 
-              [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) `service account key`.
+              [Подробнее](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) о том, как получить `service account key`.
       zones:
         description: Список зон, в которых допустимо создавать узлы.
