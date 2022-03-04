@@ -36,7 +36,7 @@ Every release can have one of the following statuses:
   * `Deployed` - release is applied. It means that the Deckhouse image tag was changed, but the update process of all components
 is going asynchronously and could not have been finished yet
   * `Outdated` - release is outdated and not used anymore.
-  *`Suspended` - release was suspended (for ex. it has an error). Can be set only if `suspended` release was not deployed yet
+  * `Suspended` - release was suspended (for ex. it has an error). Can be set only if `suspended` release was not deployed yet.
 
 
 ##### Update process
