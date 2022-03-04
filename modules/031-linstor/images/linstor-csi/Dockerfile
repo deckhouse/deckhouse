@@ -2,13 +2,23 @@ ARG BASE_DEBIAN
 ARG BASE_GOLANG_17_BUSTER
 
 FROM $BASE_GOLANG_17_BUSTER as builder
-ARG LINSTOR_CSI_VERSION=0.17.0
+ARG LINSTOR_CSI_GITREPO=https://github.com/linbit/linstor-csi
+ARG LINSTOR_CSI_VERSION=0.18.0
+ARG LINSTOR_WAIT_UNTIL_GITREPO=https://github.com/LINBIT/linstor-wait-until
+ARG LINSTOR_WAIT_UNTIL_VERSION=0.1.1
 
-RUN git clone https://github.com/linbit/linstor-csi/ /usr/local/go/linstor-csi/ \
+RUN git clone ${LINSTOR_CSI_GITREPO} /usr/local/go/linstor-csi/ \
  && cd /usr/local/go/linstor-csi \
  && git reset --hard v${LINSTOR_CSI_VERSION} \
- && make -f container.mk staticrelease \
- && mv ./linstor-csi-linux-amd64 /
+ && cd cmd/linstor-csi \
+ && go build -ldflags="-X github.com/piraeusdatastore/linstor-csi/pkg/driver.Version=v${LINSTOR_CSI_VERSION}" \
+ && mv ./linstor-csi /
+
+RUN git clone ${LINSTOR_WAIT_UNTIL_GITREPO} /usr/local/go/linstor-wait-until \
+ && cd /usr/local/go/linstor-wait-until \
+ && git reset --hard v${LINSTOR_WAIT_UNTIL_VERSION} \
+ && go build \
+ && mv ./linstor-wait-until /
 
 FROM $BASE_DEBIAN
 RUN apt-get update \
@@ -17,5 +27,5 @@ RUN apt-get update \
       e2fsprogs \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /linstor-csi-linux-amd64 /usr/bin/linstor-csi
-ENTRYPOINT ["/usr/bin/linstor-csi"]
+COPY --from=builder /linstor-csi /linstor-wait-until /
+ENTRYPOINT ["/linstor-csi"]
