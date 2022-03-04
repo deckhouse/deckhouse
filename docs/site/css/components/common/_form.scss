@@ -6,6 +6,19 @@
     &:last-child {
       margin-bottom: 0;
     }
+    &--wrap {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      & label {
+        margin-bottom: 0 !important;
+        order: 2;
+      }
+      & input {
+        order: 1;
+        margin-right: 10px;
+      }
+    }
   }
   &__h0n3y {
     opacity: 0;

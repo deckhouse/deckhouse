@@ -2,7 +2,7 @@
 
 ## Укажите параметры кластера
 
-<div class="form" style="width: 500px;">
+<div class="form">
   <div class="form__row">
     <label class="label" title="Укажите шаблон DNS, который будет использовать кластер">
       Шаблон для DNS-имен кластера
@@ -95,7 +95,7 @@
 
 Укажите параметры подключения к хранилищу образов и расположение образов Deckhouse. Это также может быть проксирующий registry.
 
-> При необходимости ознакомьтесь с информацией об [особенностях настройки registry](../../documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry).
+При необходимости ознакомьтесь с информацией об [особенностях настройки registry](../../documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry).
 
 </div>
 
@@ -128,12 +128,14 @@
   </div>
 
   <div class="form__row">
-    <label class="label" title="Укажите адрес APT/YUM proxy-сервера">
-      Хранилище использует протокол <code>HTTP</code>
-    </label>
-    <input
-      type="checkbox" id="registryScheme"
-      name="registryScheme" />
+    <div class="form__row--wrap">
+      <label class="label" title="Укажите адрес APT/YUM proxy-сервера">
+        Хранилище использует протокол <code>HTTP</code>
+      </label>
+      <input
+        type="checkbox" id="registryScheme"
+        name="registryScheme" />
+    </div>
     <span class="info">
        Отметьте, если ваше хранилище работает по протоколу HTTP, а не HTTPS.
     </span>
