@@ -17,8 +17,7 @@ runs:
         echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
         echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
 
-    # Find section in the project structure
-    - name: Find possibe sections in dirs
+    - name: Find possible sections in project structure
       id: sections
       uses: actions/github-script@v5
       with:
