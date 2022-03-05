@@ -5,7 +5,7 @@ FROM $BASE_GOLANG_17_BUSTER as builder
 ARG PIRAEUS_OPERATOR_GITREPO=https://github.com/piraeusdatastore/piraeus-operator
 ARG PIRAEUS_OPERATOR_VERSION=1.8.0-rc.1-6-g584f016
 
-# Fix conflicting names
+# Copy patches
 COPY ./patches /patches
 
 RUN git clone ${PIRAEUS_OPERATOR_GITREPO} /usr/local/go/piraeus-operator \
