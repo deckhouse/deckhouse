@@ -8,7 +8,7 @@ stages:
   - type werf && source $(werf ci-env gitlab --as-file)
   - werf converge
   tags:
-  - werf-distributed
+  - tfprod-distributed-werf
 
 Stage:
   <<: *base_deploy
