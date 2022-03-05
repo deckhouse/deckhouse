@@ -1,0 +1,56 @@
+candi:
+  features:
+    - summary: Divided sysctl-tuner to 2 separate steps and enable unsafe sysctls in kubelet config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/961
+  fixes:
+    - summary: Fix nodeUser password set error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/925
+cert-manager:
+  fixes:
+    - summary: Remove D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
+      pull_request: https://github.com/deckhouse/deckhouse/pull/999
+ci:
+  fixes:
+    - summary: Fix GitLab CI (.gitlab-ci-simple.yml)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/911
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix LE certificates ordering for balancers with PROXY PROTOCOL enabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/917
+cloud-provider-yandex:
+  features:
+    - summary: Support existing subnets in Yandex.Cloud
+      pull_request: https://github.com/deckhouse/deckhouse/pull/934
+deckhouse-web:
+  fixes:
+    - summary: Do not set external authentication by default.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/947
+flant-integration:
+  features:
+    - summary: Disable Grafana alerts by default.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/975
+ingress-nginx:
+  fixes:
+    - summary: remove pod in a background
+      pull_request: https://github.com/deckhouse/deckhouse/pull/955
+    - summary: Manual update for ingress controllers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/921
+      impact: Ingress nginx controllers will be removed manually by a hook.
+node-manager:
+  fixes:
+    - summary: Use step number with leading zeroes for custom steps.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/964
+okmeter:
+  fixes:
+    - summary: Make all the data okagent relies on persistent
+      pull_request: https://github.com/deckhouse/deckhouse/pull/962
+      impact: Expect okmeter DaemonSet rollout restart
+upmeter:
+  fixes:
+    - summary: Fixed floating bug causing false downtime of deckhouse/cluster-configuration probe
+      pull_request: https://github.com/deckhouse/deckhouse/pull/997
+user-authz:
+  fixes:
+    - summary: Add proper liveness probe which checks that webhook can access Kubernetes API
+      pull_request: https://github.com/deckhouse/deckhouse/pull/913
+
