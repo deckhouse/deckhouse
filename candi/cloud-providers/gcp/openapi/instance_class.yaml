@@ -79,7 +79,7 @@ spec:
                   description: |
                     Additional labels.
 
-                    [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                    [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels)
                   x-doc-example: |
                     ```yaml
                     project: cms-production
