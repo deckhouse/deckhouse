@@ -38,8 +38,40 @@ spec:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
   monitoringImage: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdReactor }}
+  monitoringBindAddress: 127.0.0.1
   kernelModuleInjectionImage: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdDriverLoader }}
   kernelModuleInjectionMode: Compile
   kernelModuleInjectionResources: {}
   additionalEnv: null
   logLevel: info
+  sidecars:
+  - name: kube-rbac-proxy
+    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 4 }}
+    image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+    args:
+      - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9942"
+      - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+      - "--v=2"
+      - "--logtostderr=true"
+      - "--stale-cache-interval=1h30m"
+    env:
+      - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+      - name: KUBE_RBAC_PROXY_CONFIG
+        value: |
+          upstreams:
+          - upstream: http://127.0.0.1:9942
+            path: /
+            authorization:
+              resourceAttributes:
+                namespace: d8-{{ .Chart.Name }}
+                apiGroup: apps
+                apiVersion: v1
+                resource: daemonsets
+                subresource: prometheus-metrics
+                name: linstor-node
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

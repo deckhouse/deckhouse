@@ -68,3 +68,35 @@ spec:
     Autoplacer/Weights/MinRscCount: "0"
     Autoplacer/Weights/MaxThroughput: "0"
   logLevel: info
+  httpBindAddress: "127.0.0.1"
+  sidecars:
+  - name: kube-rbac-proxy
+    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 4 }}
+    image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+    args:
+      - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):3370"
+      - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+      - "--v=2"
+      - "--logtostderr=true"
+      - "--stale-cache-interval=1h30m"
+    env:
+      - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+      - name: KUBE_RBAC_PROXY_CONFIG
+        value: |
+          upstreams:
+          - upstream: http://127.0.0.1:3370/metrics
+            path: /metrics
+            authorization:
+              resourceAttributes:
+                namespace: d8-{{ .Chart.Name }}
+                apiGroup: apps
+                apiVersion: v1
+                resource: deployments
+                subresource: prometheus-metrics
+                name: linstor-controller
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

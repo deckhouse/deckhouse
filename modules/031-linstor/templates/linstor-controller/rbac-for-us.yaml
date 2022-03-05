@@ -82,6 +82,13 @@ rules:
       - delete
       - update
       - patch
+  # For rbac-proxy
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -96,3 +103,17 @@ subjects:
   - kind: ServiceAccount
     name: linstor-controller
     namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:{{ .Chart.Name }}:linstor-controller-rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-controller")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: linstor-controller
+    namespace: d8-{{ .Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
