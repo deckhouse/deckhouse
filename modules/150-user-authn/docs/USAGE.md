@@ -17,7 +17,7 @@ title: "The user-authn module: usage"
 {% endraw %}
 
 ## Configuring a provider
-### Github
+### GitHub
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -38,7 +38,7 @@ To do this, go to `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register
 
 Paste the generated `Client ID` and `Client Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
-If the Github organization is managed by the client, go to `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` and request confirmation by clicking on `Send Request`. Then ask the client to confirm the request that will be sent to him by email.
+If the GitHub organization is managed by the client, go to `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` and request confirmation by clicking on `Send Request`. Then ask the client to confirm the request that will be sent to him by email.
 
 ### GitLab
 ```yaml
