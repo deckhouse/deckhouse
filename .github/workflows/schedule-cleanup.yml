@@ -196,7 +196,7 @@ jobs:
           ENABLE_REGISTRY_CLEANUP: ${{secrets.ENABLE_REGISTRY_CLEANUP}}
         run: |
           if [[ ${ENABLE_REGISTRY_CLEANUP} != "true" ]] ; then
-            echo "⚓️ [$(date -u)] No ENABLE_REGISTRY_CLEANUP=yes, skip running 'werf cleanup'."
+            echo "⚓️ [$(date -u)] ENABLE_REGISTRY_CLEANUP is not 'true', skip running 'werf cleanup'."
             exit 0
           fi
 
