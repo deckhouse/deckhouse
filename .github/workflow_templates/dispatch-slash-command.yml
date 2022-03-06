@@ -18,6 +18,7 @@ jobs:
           script: |
             // Check for release issue.
             const isReleaseIssue = context.payload.issue.labels.some((l) => l.name === 'issue/release');
+            const isPrivate = context.payload.repository.private;
             const authorAssociation = context.payload.comment.author_association;
             // Check for changelog PR.
             const isPR = !!context.payload.issue.pull_request;
@@ -25,13 +26,14 @@ jobs:
             const hasChangelogLabel = context.payload.issue.labels.some((l) => l.name === 'changelog');
             const hasAutoLabel = context.payload.issue.labels.some((l) => l.name === 'auto');
             core.info(`Is release issue?       ${isReleaseIssue}`)
+            core.info(`Private repo?           ${isPrivate}`)
             core.info(`Author association:     ${authorAssociation}`)
             core.info(`Is PR?                  ${isPR}`)
             core.info(`Milestone state:        ${milestoneState}`)
             core.info(`Has 'changelog' label?  ${hasChangelogLabel}`)
             core.info(`Has 'auto' label?       ${hasAutoLabel}`)
 
-            if (isReleaseIssue && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER')) {
+            if (isReleaseIssue && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
               return core.setOutput('trigger_for_release_issue', 'true');
             }
 
