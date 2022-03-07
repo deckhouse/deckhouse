@@ -1,0 +1,47 @@
+name: Publish channels
+on:
+  push:
+    branches:
+    - release-channels
+
+env:
+  WERF_CHANNEL: "ea"
+
+jobs:
+  deploy_channels_cm_prod:
+    name: Deploy to production
+    runs-on: self-hosted
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Converge
+      uses: werf/actions/converge@v1.2
+      with:
+        channel: ${{env.WERF_CHANNEL}}
+        kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD }}"
+        env: web-production
+      env:
+        WERF_NAMESPACE: "deckhouse-web-production"
+        WERF_DIR: "ci"
+
+  deploy_channels_cm_stage:
+    name: Deploy to Stage
+    runs-on: self-hosted
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Converge
+      uses: werf/actions/converge@v1.2
+      with:
+        channel: ${{env.WERF_CHANNEL}}
+        kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
+        env: web-stage
+      env:
+        WERF_NAMESPACE: "deckhouse-web-stage"
+        WERF_DIR: "ci"
