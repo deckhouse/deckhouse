@@ -387,3 +387,5 @@ done
 ```shell
 rm -f ~/.docker/config.json
 ```
+## How to add node configuration step?
+Additional node configuration steps are set by CR `NodeGroupConfiguration`.

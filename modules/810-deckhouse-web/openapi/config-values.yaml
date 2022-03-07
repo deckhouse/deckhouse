@@ -14,7 +14,6 @@ properties:
     properties:
       externalAuthentication:
         type: object
-        default: {}
         description: |
           Parameters to enable external authentication (the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism is used that is based on the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module).
         properties:
@@ -108,7 +107,6 @@ properties:
               The name of the secret in the `d8-system` namespace to use with the documentation web UI.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
-            default: "false"
   nodeSelector:
     type: object
     additionalProperties:

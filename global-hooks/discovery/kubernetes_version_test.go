@@ -33,6 +33,7 @@ import (
 )
 
 var _ = Describe("Global hooks :: kubernetes_version ::", func() {
+	versionHTTPClient = dependency.TestDC.GetHTTPClient()
 	const (
 		initValuesString           = `{"global": {"enabledModules": ["control-plane-manager"],"modulesImages": {}, "discovery":{}}}`
 		globalValuesWithoutCPMYaml = `

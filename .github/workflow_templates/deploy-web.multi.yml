@@ -30,6 +30,9 @@ on:
       pull_request_sha:
         description: 'Git SHA for restoring artifacts from cache'
         required: false
+      pull_request_head_label:
+        description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
+        required: false
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
@@ -56,6 +59,7 @@ jobs:
     name: Deploy site
     runs-on: [self-hosted, regular]
     steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
@@ -66,6 +70,6 @@ jobs:
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" .webEnv | strings.Indent 6 }!}
 
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job" $workflowName) | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,final" $workflowName) | strings.Indent 6 }!}
 
 {!{ end -}!}

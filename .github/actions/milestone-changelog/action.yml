@@ -17,108 +17,52 @@ runs:
         echo "::set-output name=milestone_title::${{ fromJSON(inputs.milestone).title }}"
         echo "::set-output name=milestone_number::${{ fromJSON(inputs.milestone).number }}"
 
-    # Fetch merged PRs in milestone
-    - name: Find Merged Pull Requests
-      id: merged_milestone
+    # Find section in the project structure
+    - name: Find possibe sections in dirs
+      id: sections
       uses: actions/github-script@v5
       with:
-        result-encoding: json
+        result-encoding: string
         script: |
-          const fetch = require('./.github/scripts/js/changelog-find-pulls.js')
-          const prs = await fetch({ github, context }, { milestone: process.env.MILESTONE })
-          core.setOutput("prs", prs)
-      env:
-        MILESTONE: ${{ steps.args.outputs.milestone_title }}
+          const findSections = require('./.github/scripts/js/changelog-find-sections.js')
+          return findSections().join("\n")
 
     - name: Collect Changelog
       id: changelog
-      uses: deckhouse/changelog-action@v1
+      uses: deckhouse/changelog-action@v2
       with:
         token: ${{ inputs.token }}
-        pull_requests: ${{ steps.merged_milestone.outputs.prs }}
+        repo: ${{ github.repository }}
+        milestone: ${{ steps.args.outputs.milestone_title }}
         # section:forced_impact_level
         allowed_sections: |
+          ${{ steps.sections.outputs.result }}
           ci:low
           testing:low
           tools:low
-          go_lib
-          helm_lib
-          jq_lib
-          shell_lib
-          basic-auth
-          candi
-          cert-manager
-          chrony
-          cloud-provider-aws
-          cloud-provider-azure
-          cloud-provider-gcp
-          cloud-provider-openstack
-          cloud-provider-vsphere
-          cloud-provider-yandex
-          cni-flannel
-          cni-simple-bridge
-          common
-          control-plane-manager
-          dashboard
-          deckhouse
-          deckhouse-controller
-          deckhouse-web
-          descheduler
-          dhctl
-          docs
-          extended-monitoring
-          flant-integration
-          global-hooks
-          helm
-          ingress-nginx
-          istio
-          keepalived
-          kube-dns
-          kube-proxy
-          local-path-provisioner
-          log-shipper
-          metallb
-          monitoring-applications
-          monitoring-custom
-          monitoring-kubernetes
-          monitoring-kubernetes-control-plane
-          monitoring-ping
-          namespace-configurator
-          network-gateway
-          network-policy-engine
-          node-local-dns
-          node-manager
-          okmeter
-          openvpn
-          operator-prometheus
-          operator-prometheus-crd
-          pod-reloader
-          priority-class
-          prometheus
-          prometheus-crd
-          prometheus-metrics-adapter
-          prometheus-pushgateway
-          registrypackages
-          secret-copier
-          terraform-manager
-          upmeter
-          user-authn
-          user-authn-crd
-          user-authz
-          vertical-pod-autoscaler
-          vertical-pod-autoscaler-crd
 
-
-    - name: Write Changelog File
-      id: file
+    # Patch-version YAML changelog
+    - name: Write Changelog YAML
+      id: yaml_file
       shell: bash
       run: |
         mkdir -p ./CHANGELOG
         filename='./CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}.yml'
-        cat > "$filename" <<EOBODYINACTION
-        ${{ steps.changelog.outputs.yaml }}
-        EOBODYINACTION
+        cat > "$filename" <<EOF
+        ${{ steps.changelog.outputs.release_yaml }}
+        EOF
 
+    # Cumulative markdown changelog
+    - name: Write Changelog Markdown
+      id: md_file
+      shell: bash
+      run: |
+        filename='./CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md'
+        cat > "$filename" <<EOF
+        ${{ steps.changelog.outputs.branch_markdown }}
+        EOF
+
+    # Patch-version markdown changelog + malformed and impact digest
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3.10.1
       with:
@@ -127,7 +71,7 @@ runs:
         branch: changelog/${{ steps.args.outputs.milestone_title }}
         milestone: ${{ steps.args.outputs.milestone_number }}
         title: Changelog ${{ steps.args.outputs.milestone_title }}
-        body: ${{ steps.changelog.outputs.markdown }}
+        body: ${{ steps.changelog.outputs.release_markdown }}
         labels: changelog, auto
         token: ${{ inputs.token }}
         delete-branch: true

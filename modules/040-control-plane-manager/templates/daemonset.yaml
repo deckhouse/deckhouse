@@ -63,12 +63,21 @@
   {{- if hasKey .Values.controlPlaneManager.apiserver "admissionPlugins" }}
     {{ $_ := set $tpl_context.apiserver "admissionPlugins" .Values.controlPlaneManager.apiserver.admissionPlugins }}
   {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "auditLog" }}
+    {{ $_ := set $tpl_context.apiserver "auditLog" .Values.controlPlaneManager.apiserver.auditLog }}
+  {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "serviceAccount" }}
+    {{ $_ := set $tpl_context.apiserver "serviceAccount" .Values.controlPlaneManager.apiserver.serviceAccount }}
+  {{- end }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "arguments" }}
 {{- $_ := set $tpl_context "arguments" .Values.controlPlaneManager.internal.arguments }}
+{{- end }}
+{{- if hasKey .Values.controlPlaneManager.internal "secretEncryptionKey" }}
+{{- $_ := set $tpl_context.apiserver "secretEncryptionKey" .Values.controlPlaneManager.internal.secretEncryptionKey }}
 {{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
@@ -92,6 +101,10 @@ extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "w
 
   {{- if $tpl_context.apiserver.auditPolicy }}
 extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
+  {{- end }}
+
+  {{- if $tpl_context.apiserver.secretEncryptionKey }}
+extra-file-secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" (dict "secretEncryptionKey" $tpl_context.apiserver.secretEncryptionKey) | b64enc }}
   {{- end }}
 
 extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}

@@ -75,9 +75,6 @@ bashible: &bashible
         generic:
           desiredVersion: "4.9.0-17-amd64"
           allowedPattern: ""
-        astra:
-          desiredVersion: "4.15.3-141-generic"
-          allowedPattern: "4.15|5.4|5.10"
     '10':
       docker:
         desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
@@ -135,11 +132,6 @@ bashible: &bashible
         generic:
           desiredVersion: "4.18.0-305.3.1.el8.x86_64"
           allowedPattern: "4.18.0-"
-  astra:
-    '1.7':
-      <<: *debian9
-    '2.12':
-      <<: *debian9
 k8s:
   '1.19':
     status: available
@@ -185,6 +177,8 @@ k8s:
       attacher: v3.0.2@sha256:6f80b12657a7e0a5c683b24e806c4bbbe33a43e39b041fe9b7514d665d478ea4
       resizer: v1.0.0@sha256:5a8d85cdd1c80f43fb8fe6dcde1fae707a3177aaf0a786ff4b9f6f20247ec3ff
       registrar: v2.0.1@sha256:e07f914c32f0505e4c470a62a40ee43f84cbf8dc46ff861f31b14457ccbad108
+      snapshotter: v3.0.3@sha256:9af9bf28430b00a0cedeb2ec29acadce45e6afcecd8bdf31c793c624cfa75fa7
+      livenessprobe: v2.5.0@sha256:44d8275b3f145bc290fd57cb00de2d713b5e72d2e827d8c5555f8ddb40bf3f02
     controlPlane:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
@@ -209,6 +203,8 @@ k8s:
       attacher: v3.1.0@sha256:50c3cfd458fc8e0bf3c8c521eac39172009382fc66dc5044a330d137c6ed0b09
       resizer: v1.1.0@sha256:7a5ba58a44e0d749e0767e4e37315bcf6a61f33ce3185c1991848af4db0fb70a
       registrar: v2.1.0@sha256:a61d309da54641db41fb8f35718f744e9f730d4d0384f8c4b186ddc9f06cbd5f
+      snapshotter: v3.0.3@sha256:9af9bf28430b00a0cedeb2ec29acadce45e6afcecd8bdf31c793c624cfa75fa7
+      livenessprobe: v2.5.0@sha256:44d8275b3f145bc290fd57cb00de2d713b5e72d2e827d8c5555f8ddb40bf3f02
     controlPlane:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiserver: sha256 digest isn't needed because this component is compiled from source

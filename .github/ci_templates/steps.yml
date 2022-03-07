@@ -87,3 +87,13 @@
     channel: ${{env.WERF_CHANNEL}}
 # </template: werf_install_step>
 {!{- end -}!}
+
+{!{ define "started_at_output" }!}
+# <template: started_at_output>
+- name: Job started timestamp
+  id: started_at
+  run: |
+    unixTimestamp=$(date +%s)
+    echo "::set-output name=started_at::${unixTimestamp}"
+# </template: started_at_output>
+{!{- end -}!}

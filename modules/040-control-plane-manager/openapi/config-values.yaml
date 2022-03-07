@@ -6,6 +6,21 @@ properties:
     description: |
       `kube-apiserver` parameters.
     properties:
+      serviceAccount:
+        type: object
+        default: {}
+        x-examples:
+          - {}
+          - additionalAPIAudiences: [ "istio-ca" ]
+        description: |
+          ServiceAccount issuing settings.
+        properties:
+          additionalAPIAudiences:
+            type: array
+            description: |
+              A list of API audiences to add when provisioning ServiceAccount tokens.
+            items:
+              type: string
       admissionPlugins:
         type: array
         description: |
@@ -27,15 +42,15 @@ properties:
 
           Note that `PodNodeSelector` [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
         x-examples:
-          - [ "AlwaysPullImages", "NamespaceAutoProvision" ]
+          - ["AlwaysPullImages", "NamespaceAutoProvision"]
         items:
           type: string
           enum:
-          - AlwaysPullImages
-          - NamespaceAutoProvision
-          - OwnerReferencesPermissionEnforcement
-          - PodNodeSelector
-          - PodTolerationRestriction
+            - AlwaysPullImages
+            - NamespaceAutoProvision
+            - OwnerReferencesPermissionEnforcement
+            - PodNodeSelector
+            - PodTolerationRestriction
       bindToWildcard:
         type: boolean
         default: false
@@ -58,7 +73,7 @@ properties:
           * *current_hostname*
           * *hostIP*
         x-examples:
-          - [ "my-site.com", "192.168.67.76" ]
+          - ["my-site.com", "192.168.67.76"]
         items:
           type: string
           pattern: '^[0-9a-zA-Z\.-]+$'
@@ -79,8 +94,8 @@ properties:
             description: |
               OIDC provider network address alias.
             x-examples:
-            - "1.2.3.4"
-            - ""
+              - "1.2.3.4"
+              - ""
           oidcCA:
             type: string
             description: |
@@ -142,13 +157,42 @@ properties:
       auditPolicyEnabled:
         type: boolean
         default: false
+        # FIXME doc content
         description: |
-          Enforce [additional audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
+          Set the [audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
       basicAuditPolicyEnabled:
         type: boolean
         default: true
         description: |
           Enforce basic Deckhouse audit policies.
+      auditLog:
+        type: object
+        default:
+          output: File
+        description: Audit policy settings
+        required:
+          - output
+        properties:
+          output:
+            type: string
+            description: Audit logs target stream.
+            default: File
+            enum:
+              - File
+              - Stdout
+          path:
+            type: string
+            description: Directory path for logs if the output is "File", otherwise ignored.
+            # Avoid trailing slash
+            pattern: ^[a-zA-Z0-9_/.-]+[a-zA-Z0-9_.-]$
+            default: /var/log/kube-audit
+      encryptionEnabled:
+        type: boolean
+        default: false
+        description: |
+          Enables [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+          Generates secret `kube-system/d8-secret-encryption-key` with encryption key.
+          > **Note!** This mode cannot be disabled !!!
   etcd:
     type: object
     description: |

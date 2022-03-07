@@ -31,6 +31,18 @@ prometheus:
         action: labeldrop
     remote_write:
     - url: {{ .Values.flantIntegration.metrics.url }}
+  {{- if .Values.global.modules.proxy }}
+    {{- $proxy := "" }}
+    {{- if .Values.global.modules.proxy.httpProxy }}
+      {{- $proxy = .Values.global.modules.proxy.httpProxy }}
+    {{- end }}
+    {{- if .Values.global.modules.proxy.httpsProxy }}
+      {{- $proxy = .Values.global.modules.proxy.httpsProxy }}
+    {{- end }}
+    {{- if $proxy }}
+      proxy_url: {{ $proxy }}
+    {{- end }}
+  {{- end }}
       bearer_token: {{ .Values.flantIntegration.internal.licenseKey }}
       metadata_config:
         send: false

@@ -13,8 +13,8 @@ It consists of the following components:
 Static users are managed using the [`User`](cr.html#user) Custom Resource. It contains all the user-related data, including the password.
 
 The following external authentication protocols/providers are supported:
-- Github
-- Gitlab
+- GitHub
+- GitLab
 - BitBucket Cloud
 - Crowd
 - LDAP

@@ -2,7 +2,9 @@
 title: "Cloud provider — AWS: usage"
 ---
 
-## An example of the `AWSInstanceClass` CR
+## An example of the `AWSInstanceClass` custom resource
+
+Below is a simple example of custom resource `AWSInstanceClass` configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -23,12 +25,12 @@ spec:
 The following parameters are supported in addition to the existing upstream ones:
 
 1. `service.beta.kubernetes.io/aws-load-balancer-type` — if it has the `none` value, then the Target Group will **only** be created (without any LoadBalancer).
-2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — this parameter is used together with `service.beta.kubernetes.io/aws-load-balancer-type: none`.
+2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — this parameter is used together with `service.beta.kubernetes.io/aws-load-balancer-type: none`:
    * Possible values:
-     * `tcp` (default)
-     * `tls`
-     * `http`
-     * `https`
+     * `tcp` (default);
+     * `tls`;
+     * `http`;
+     * `https`.
    * **Caution!** The `cloud-controller-manager` (CCM) will try to recreate the Target Group in response to changes in this field. If the Target Group has NLB or ALB attached to it, the CCM will fail to delete it and get stuck in this state forever.  You have to manually disconnect NLB or ALB from the Target Group.
 
 ## Configuring security policies on nodes
@@ -37,7 +39,7 @@ There may be many reasons why you may need to restrict or expand incoming/outgoi
 
 * Allow VMs on a different subnet to connect to cluster nodes;
 * Allow connecting to the ports of the static node so that the application can work;
-* Restrict access to external resources or other VMs in the cloud for security reasons;
+* Restrict access to external resources or other VMs in the cloud for security reasons.
 
 For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
 

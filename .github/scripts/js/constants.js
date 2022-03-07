@@ -23,6 +23,10 @@ const labels = {
   'deploy-web': [
     'deploy/web/test',
     'deploy/web/stage'
+  ],
+  'edition': [
+    'edition/ce',
+    'edition/ee'
   ]
 };
 module.exports.knownLabels = labels;

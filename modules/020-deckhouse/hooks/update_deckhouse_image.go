@@ -77,6 +77,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			FilterFunc:                   filterDeckhouseRelease,
 		},
+		{
+			Name:       "updating_cm",
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-release-updating"},
+			},
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			FilterFunc:                   filterUpdatingCM,
+		},
 	},
 }, dependency.WithExternalDependencies(updateDeckhouse))
 
@@ -88,6 +104,11 @@ type deckhousePodInfo struct {
 	Ready     bool   `json:"ready"`
 }
 
+const (
+	metricReleasesGroup = "d8_releases"
+	metricUpdatingGroup = "d8_updating"
+)
+
 func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	if !input.Values.Exists("deckhouse.releaseChannel") {
 		// dev upgrade - by tag
@@ -95,11 +116,26 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	// production upgrade
-	input.MetricsCollector.Expire("d8_releases")
+	input.MetricsCollector.Expire(metricReleasesGroup)
+
+	snap := input.Snapshots["deckhouse_pod"]
+	if len(snap) == 0 {
+		input.LogEntry.Warn("Deckhouse pod does not exist. Skipping update")
+		return nil
+	}
+	deckhousePod := snap[0].(deckhousePodInfo)
+	if deckhousePod.Ready {
+		input.MetricsCollector.Expire(metricUpdatingGroup)
+		if isUpdatingCMExists(input) {
+			deleteUpdatingCM(input)
+		}
+	} else if isUpdatingCMExists(input) {
+		input.MetricsCollector.Set("d8_is_updating", 1, nil, metrics.WithGroup(metricUpdatingGroup))
+	}
 
 	// initialize updater
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	updater := newDeckhouseUpdater(approvalMode)
+	updater := newDeckhouseUpdater(approvalMode, deckhousePod.Ready)
 
 	// fetch releases from snapshot and patch initial statuses
 	updater.FetchAndPrepareReleases(input)
@@ -180,6 +216,10 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		HasSuspendAnnotation: hasSuspendAnnotation,
 		HasForceAnnotation:   hasForceAnnotation,
 	}, nil
+}
+
+func filterUpdatingCM(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return unstructured.GetName(), nil
 }
 
 func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -304,6 +344,8 @@ type deckhouseUpdater struct {
 	skippedPatcheIndexes        []int
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
+
+	deckhousePodIsReady bool
 }
 type deckhouseRelease struct {
 	Name    string
@@ -320,7 +362,7 @@ type deckhouseRelease struct {
 	Phase          string
 }
 
-func newDeckhouseUpdater(mode string) *deckhouseUpdater {
+func newDeckhouseUpdater(mode string, podIsReady bool) *deckhouseUpdater {
 	return &deckhouseUpdater{
 		now:                         time.Now().UTC(),
 		inManualMode:                mode == "Manual",
@@ -328,6 +370,7 @@ func newDeckhouseUpdater(mode string) *deckhouseUpdater {
 		currentDeployedReleaseIndex: -1,
 		forcedReleaseIndex:          -1,
 		skippedPatcheIndexes:        make([]int, 0),
+		deckhousePodIsReady:         podIsReady,
 	}
 }
 
@@ -353,13 +396,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	// upgrade only when current release is ready.
 	// skip it for patches.
 	if !du.PredictedReleaseIsPatch() {
-		snap := input.Snapshots["deckhouse_pod"]
-		if len(snap) == 0 {
-			input.LogEntry.Warn("Deckhouse pod does not exist. Skipping upgrade")
-			return
-		}
-		deckhousePod := snap[0].(deckhousePodInfo)
-		if !deckhousePod.Ready {
+		if !du.deckhousePodIsReady {
 			input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
 			updateStatusMsg(input, predictedRelease, "Waiting for Deckhouse pod to be ready.")
 			return
@@ -378,7 +415,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	// check: release is approved or it's a patch
 	if !predictedRelease.StatusApproved && !du.PredictedReleaseIsPatch() {
 		input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
-		input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup("d8_releases"))
+		input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
 		updateStatusMsg(input, predictedRelease, "Waiting for manual approval.")
 		return
 	}
@@ -386,7 +423,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	// check: release requirements
 	passed := du.checkReleaseRequirements(input, predictedRelease)
 	if !passed {
-		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name}, metrics.WithGroup("d8_releases"))
+		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
 		input.LogEntry.Warningf("Release %s requirements are not met", predictedRelease.Name)
 		return
 	}
@@ -407,6 +444,7 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 		TransitionTime: du.now,
 	}
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", predictedRelease.Name, object_patch.WithSubresource("/status"))
+	createUpdatingCM(input, predictedRelease.Version.String())
 	// patch deckhouse deployment is faster then set internal values and then upgrade by helm
 	// we can set "deckhouse.internal.currentReleaseImageName" value but lets left it this way
 	input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -689,6 +727,36 @@ func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, r
 	}
 
 	return true
+}
+
+func createUpdatingCM(input *go_hook.HookInput, version string) {
+	cm := &corev1.ConfigMap{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "d8-release-updating",
+			Namespace: "d8-system",
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+			},
+		},
+		Data: map[string]string{
+			"version": version,
+		},
+	}
+
+	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+}
+
+func isUpdatingCMExists(input *go_hook.HookInput) bool {
+	snap := input.Snapshots["updating_cm"]
+	return len(snap) > 0
+}
+
+func deleteUpdatingCM(input *go_hook.HookInput) {
+	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "d8-release-updating", object_patch.InBackground())
 }
 
 func updateStatusMsg(input *go_hook.HookInput, release *deckhouseRelease, msg string) {

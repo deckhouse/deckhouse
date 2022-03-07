@@ -58,6 +58,9 @@ on:
       pull_request_sha:
         description: 'Git SHA for restoring artifacts from cache'
         required: false
+      pull_request_head_label:
+        description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
+        required: false
       cri:
         description: 'A comma-separated list of cri to test. Available: Docker and Containerd.'
         required: false
@@ -73,11 +76,21 @@ env:
 # Usually you run e2e and wait until it ends.
 
 jobs:
+  started_at:
+    name: Save start timestamp
+    outputs:
+      started_at: ${{ steps.started_at.outputs.started_at }}
+    runs-on: "ubuntu-latest"
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 
 {!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
+{!{- $lastCommentNeeds := slice "started_at" -}!}
+{!{- $jobNames := dict -}!}
 {!{- range $criName := $ctx.criNames -}!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
 {!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower -}!}
@@ -93,10 +106,26 @@ jobs:
 {!{-     if eq $ctx.provider "static"  -}!}
 {!{-       $layout = "Static" -}!}
 {!{-     end -}!}
-{!{-     $jobCtx := coll.Merge $ctx (dict "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName) }!}
+{!{-     $jobID := printf "run_%s_%s" $cri $kubernetesVersionSlug -}!}
+{!{-     $jobName := printf "%s, %s, Kubernetes %s" $workflowName $criName $kubernetesVersion -}!}
+{!{-     $lastCommentNeeds = $lastCommentNeeds | append $jobID -}!}
+{!{-     $jobNames = coll.Merge $jobNames (dict $jobID $jobName) }!}
+{!{-     $jobCtx := coll.Merge $ctx (dict "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
 {!{     tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
 {!{-   end -}!}
 {!{- end }!}
+
+  last_comment:
+    name: Update comment on finish
+    needs: {!{ $lastCommentNeeds | toJSON }!}
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    env:
+      JOB_NAMES: |
+        {!{ $jobNames | toJSON }!}
+    steps:
+{!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "workflow,final,no-skipped,restore-separate" $workflowName) | strings.Indent 6 }!}
 # </template: e2e_workflow_template>
 {!{ end -}!}
 
@@ -109,8 +138,8 @@ jobs:
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}
 # <template: e2e_run_job_template>
-run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
-  name: "{!{ $ctx.criName }!}, k8s {!{ $ctx.kubernetesVersion }!}"
+{!{ $ctx.jobID }!}:
+  name: "{!{ $ctx.jobName }!}"
   needs:
     - check_e2e_labels
     - git_info
@@ -119,12 +148,13 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
-    KUBERNETES_VERSION: {!{ $ctx.kubernetesVersion }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "update_comment_on_start" (printf "%s, %s, k8s %s" $ctx.workflowName $ctx.criName $ctx.kubernetesVersion) | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
@@ -142,7 +172,9 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
         sleep $delay
 
         # Calculate unique prefix for e2e test.
-        prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+        # GITHUB_RUN_ID is a unique number for each workflow run.
+        # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+        prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
         echo "::set-output name=prefix::${prefix}"
         echo "prefix=${prefix}"
 
@@ -260,7 +292,7 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
           echo Not a directory.
         fi
 
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job" (printf "%s, Kubernetes %s" $ctx.workflowName $ctx.kubernetesVersion)) | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
 
     - name: Alert on fail in default branch
       if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}

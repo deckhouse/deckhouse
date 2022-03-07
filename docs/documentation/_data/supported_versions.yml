@@ -5,13 +5,6 @@ osDistributions:
     name: CentOS
   debian:
     name: Debian
-  astra:
-    name: Astra Linux
-    versions:
-      '1.7':
-        name: Special Edition
-      '2.12':
-        name: Common Edition
 
 k8s_statuses:
   end-of-life:

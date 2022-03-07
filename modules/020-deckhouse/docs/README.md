@@ -12,7 +12,7 @@ In Deckhouse, this module sets up:
   Regardless of the set of modules enabled by default, any module can be explicitly enabled or disabled in the Deckhouse configuration (learn more [about enabling and disabling a module](../../#enabling-and-disabling-the-module)).
 - **[The release channel](configuration.html#parameters-releasechannel)**;
 
-  Deckhouse has a built-in mechanism for automatic updates. This mechanism uses [5 release channels](../../deckhouse-release-channels.html) with various stability and frequency of releases. Learn more about [how the automatic update mechanism works](../../deckhouse-faq.html#how-does-the-mechanism-of-automatic-stabilization-of-the-release-channel-work) and how you can [set the desired release channel](../../deckhouse-faq.html#how-do-i-set-the-desired-release-channel).
+  Deckhouse has a built-in mechanism for automatic updates. This mechanism uses [5 release channels](../../deckhouse-release-channels.html) with various stability and frequency of releases. Learn more about [how the automatic update mechanism works](../../deckhouse-faq.html#how-does-automatic-deckhouse-update-work) and how you can [set the desired release channel](../../deckhouse-faq.html#how-do-i-set-the-desired-release-channel).
 - **[The update mode](configuration.html#parameters-update-mode)** and **[update windows](configuration.html#parameters-update-windows)**;
 
   Deckhouse supports **manual** and **automatic** update modes.

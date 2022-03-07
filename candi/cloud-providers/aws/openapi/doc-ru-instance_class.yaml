@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Параметры instance в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
+            Параметры инстанса в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:
@@ -17,7 +17,7 @@ spec:
                     **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
                 ami:
                   description: |
-                    Образ (AMI ID), который будет использоваться в заказанных инстансах.
+                    Образ Amazon Machine Image (AMI ID), который будет использоваться в заказанных инстансах.
 
                     Как найти нужный AMI (в каждом регионе AMI разные):
                     ```shell
@@ -27,13 +27,13 @@ spec:
                     ```
                 spot:
                   description: |
-                    Создавать ли spot-инстансы (spot instance). Spot-инстансы будут запускаться с минимально возможной для успешного запуска ценой за час.
+                    Создание spot-инстансов (spot instance). Spot-инстансы будут запускаться с минимально возможной для успешного запуска ценой за час.
                 diskType:
                   description: |
                     Тип созданного диска.
                 iops:
                   description: |
-                    Количество `IOPS`. Применяется только для `diskType` **io1**.
+                    Количество IOPS. Применяется только для `diskType` **io1**.
                 diskSizeGb:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.

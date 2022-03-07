@@ -44,7 +44,7 @@ env:
   BASE_GOLANG_ALPINE: "registry.deckhouse.io/base_images/golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
   BASE_GOLANG_BUSTER: "registry.deckhouse.io/base_images/golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab"
   BASE_JEKYLL: "registry.deckhouse.io/base_images/jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34"
-  BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555"
+  BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.21.6-alpine@sha256:050385609d832fae11b007fbbfba77d0bba12bf72bc0dca0ac03e09b1998580f"
   BASE_NODE_16_ALPINE: "registry.deckhouse.io/base_images/node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
   BASE_PYTHON_ALPINE: "registry.deckhouse.io/base_images/python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
   BASE_SCRATCH: "registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
@@ -87,6 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ref: ${{ steps.ref.outputs.ref }}
+      edition: ${{ steps.check.outputs.edition }}
     # Skip if PR from deckhouse-BOaTswain, e.g. changelog PRs.
     if: ${{ ! startsWith(github.event_name, 'pull_request') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
@@ -122,6 +123,8 @@ jobs:
               return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
             }
 
+            core.info(`Labels: ${JSON.stringify(response.data[0].labels)}`);
+
             const prRepo = context.payload.pull_request.head.repo.full_name;
             const targetRepo = context.payload.repository.full_name;
             const isInternal = prRepo === targetRepo;
@@ -145,6 +148,12 @@ jobs:
                 return core.setFailed(`PR#${context.payload.pull_request.number} without label 'status/ok-to-test' is ignored.`);
               }
             }
+
+            const isEE = response.data[0].labels.some((l) => l.name === 'edition/ee');
+            const isCE = response.data[0].labels.some((l) => l.name === 'edition/ce');
+            const edition = isCE ? 'CE' : (isEE ? 'EE' : process.env.WERF_ENV);
+            core.info(`PR has 'edition/*'?   ${isCE || isEE} (${edition})`);
+            core.setOutput('edition', edition);
 
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
@@ -269,6 +278,36 @@ jobs:
 
   # </template: git_info_job>
 
+  enable_fe:
+    if: ${{ needs.pull_request_info.outputs.edition == 'FE' }}
+    name: Enable FE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_ee:
+    if: ${{ needs.pull_request_info.outputs.edition == 'EE' }}
+    name: Enable EE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_ce:
+    if: ${{ needs.pull_request_info.outputs.edition == 'CE' }}
+    name: Enable CE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
   go_generate:
     name: Go Generate
     needs:
@@ -278,6 +317,14 @@ jobs:
     # <template: go_generate_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_step>
       - name: Checkout sources
@@ -307,15 +354,25 @@ jobs:
     # </template: go_generate_template>
 
 
-  build_fe:
-    name: Build FE
+  build_deckhouse:
+    name: Build Deckhouse
     needs:
       - git_info
       - pull_request_info
       - go_generate
+    env:
+      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
     # <template: build_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -426,14 +483,16 @@ jobs:
             # Use it as image tag.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}
 
-            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch ${CI_COMMIT_BRANCH} using tag ${IMAGE_TAG}".
+            echo "⚓️ [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
             if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
               DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${IMAGE_TAG}
               DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}
+              DESTINATION_TESTS_IMAGE=${DEV_REGISTRY_PATH}/tests:${IMAGE_TAG}
             else
               DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${IMAGE_TAG}
               DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${IMAGE_TAG}
+              DESTINATION_TESTS_IMAGE=${CI_REGISTRY_IMAGE}/tests:${IMAGE_TAG}
             fi
 
             echo "⚓️ [$(date -u)] Publish 'dev' image to dev-registry using tag ${IMAGE_TAG}".
@@ -444,9 +503,14 @@ jobs:
             DEV_INSTALL_IMAGE_URL="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
             pull_push 'dev/install' ${DEV_INSTALL_IMAGE_URL} ${DESTINATION_INSTALL_IMAGE}
 
+            echo "⚓️ [$(date -u)] Publish 'tests' image to dev-registry using tag ${IMAGE_TAG}".
+            TESTS_IMAGE_URL="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+            pull_push 'tests' ${TESTS_IMAGE_URL} ${DESTINATION_TESTS_IMAGE}
+
             echo "⚓️ [$(date -u)] Remove local tags."
             docker image rmi ${DESTINATION_IMAGE} || true
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true
+            docker image rmi ${DESTINATION_TESTS_IMAGE} || true
           fi
           rm -f images_tags_werf.json
 
@@ -463,6 +527,14 @@ jobs:
     # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -512,6 +584,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
@@ -555,11 +635,19 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -589,18 +677,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
     # </template: tests_template>
 
   matrix_tests:
@@ -608,11 +692,19 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -642,18 +734,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'go test ./testing/matrix/ -v'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test ./testing/matrix/ -v
     # </template: tests_template>
 
   dhctl_tests:
@@ -661,11 +749,19 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -695,18 +791,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: dhctl-tests
-          args: 'make ci'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} make ci
     # </template: tests_template>
 
   golangci_lint:
@@ -714,11 +806,19 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -748,18 +848,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'sh -c "go generate tools/register.go && golangci-lint run"'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} sh -c "go generate tools/register.go && golangci-lint run"
     # </template: tests_template>
 
   openapi_test_cases:
@@ -767,11 +863,19 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -801,18 +905,14 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'ginkgo -vet=off ./testing/openapi_cases/'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
 
   web_links_test:
@@ -826,6 +926,14 @@ jobs:
     # <template: web_links_test_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -935,11 +1043,19 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
+      - build_deckhouse
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -969,16 +1085,12 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
       - name: Run tests
-        uses: werf/actions/run@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          image: tests
-          args: 'go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
         env:
-          WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
-          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
-          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
-          CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
-          CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        run: |
+
+          TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
+
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>

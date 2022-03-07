@@ -19,13 +19,21 @@ apiServer:
     readOnly: true
     pathType: DirectoryOrCreate
 {{- if .apiserver.auditPolicy }}
+  {{- if eq .apiserver.auditLog.output "File" }}
   - name: "kube-audit-log"
-    hostPath: "/var/log/kube-audit"
-    mountPath: "/var/log/kube-audit"
+    hostPath: "{{ .apiserver.auditLog.path }}"
+    mountPath: "{{ .apiserver.auditLog.path }}"
     readOnly: false
     pathType: DirectoryOrCreate
+  {{- end }}
 {{- end }}
   extraArgs:
+{{- if .apiserver.serviceAccount }}
+    api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
+    service-account-issuer: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}
+    service-account-key-file: /etc/kubernetes/pki/sa.pub
+    service-account-signing-key-file: /etc/kubernetes/pki/sa.key
+{{- end }}
 {{- if ne .runType "ClusterBootstrap" }}
     enable-admission-plugins: "EventRateLimit,ExtendedResourceToleration{{ if .apiserver.admissionPlugins }},{{ .apiserver.admissionPlugins | join "," }}{{ end }}"
     admission-control-config-file: "/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml"
@@ -35,7 +43,7 @@ apiServer:
 {{- end }}
     anonymous-auth: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "TTLAfterFinished=true"
@@ -77,12 +85,19 @@ apiServer:
   {{- end -}}
   {{- if .apiserver.auditPolicy }}
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
-    audit-log-path: /var/log/kube-audit/audit.log
     audit-log-format: json
+    {{- if eq .apiserver.auditLog.output "File" }}
+    audit-log-path: "{{ .apiserver.auditLog.path }}/audit.log"
     audit-log-truncate-enabled: "true"
     audit-log-maxage: "7"
     audit-log-maxsize: "100"
     audit-log-maxbackup: "10"
+    {{- else }}
+    audit-log-path: "-"
+    {{- end }}
+  {{- end }}
+  {{- if .apiserver.secretEncryptionKey }}
+    encryption-provider-config: /etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml
   {{- end }}
     profiling: "false"
     request-timeout: "300s"
@@ -105,7 +120,7 @@ controllerManager:
     profiling: "false"
     terminated-pod-gc-threshold: "12500"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "TTLAfterFinished=true"
@@ -138,7 +153,7 @@ scheduler:
 {{- end }}
     profiling: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
+    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
 {{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "DefaultPodTopologySpread=true"

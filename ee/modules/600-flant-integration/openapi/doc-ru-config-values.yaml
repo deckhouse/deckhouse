@@ -31,6 +31,9 @@ properties:
     type: string
     description: |
       Ключ для доступа к сервисам Фланта.
+  grafanaAlertsToMadisonEnabled:
+    description: |
+      В дополнение к Prometheus, посылать все алерты от Grafana в Madison.
   logs:
     properties:
       url:

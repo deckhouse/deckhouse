@@ -18,7 +18,7 @@ title: "Модуль user-authn: примеры конфигурации"
 
 
 ## Примеры настройки провайдера
-### Github
+### GitHub
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -27,7 +27,7 @@ metadata:
   name: github
 spec:
   type: Github
-  displayName: My Company Github
+  displayName: My Company GitHub
   github:
     clientID: plainstring
     clientSecret: plainstring
@@ -39,7 +39,7 @@ spec:
 
 Полученные `Client ID` и `Client Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
-В том случае, если организация Github находится под управлением клиента, необходимо перейти в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и запросить подтверждение нажатием на `Send Request`. После попросить клиента подтвердить запрос, который придет к нему на email.
+В том случае, если организация GitHub находится под управлением клиента, необходимо перейти в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и запросить подтверждение нажатием на `Send Request`. После попросить клиента подтвердить запрос, который придет к нему на email.
 
 ### GitLab
 ```yaml

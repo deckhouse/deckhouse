@@ -154,7 +154,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f).To(ExecuteSuccessfully())
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
-			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(3))
 		})
 
 		Context("After setting manual approve", func() {
@@ -376,8 +376,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			r130 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-0")
 			Expect(r130.Field("status.phase").String()).To(Equal("Pending"))
 			Expect(r130.Field("status.message").String()).To(Equal(`"k8s" requirement for deckhouseRelease "1.30.0" not met: min k8s version failed`))
-			Expect(f.MetricsCollector.CollectedMetrics()[1].Name).To(Equal("d8_release_blocked"))
-			Expect(*f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(float64(1)))
+			Expect(f.MetricsCollector.CollectedMetrics()[2].Name).To(Equal("d8_release_blocked"))
+			Expect(*f.MetricsCollector.CollectedMetrics()[2].Value).To(Equal(float64(1)))
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
 		})

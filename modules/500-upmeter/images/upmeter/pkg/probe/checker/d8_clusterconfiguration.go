@@ -161,11 +161,11 @@ func newSetInitedValueChecker(dynamicClient dynamic.ResourceInterface, name stri
 apiVersion: deckhouse.io/v1
 kind: UpmeterHookProbe
 metadata:
-  name: %s
+  name: %q
   labels:
     heritage: upmeter
     app: upmeter
-    upmeter-agent: %s
+    upmeter-agent: %q
     upmeter-group: deckhouse
     upmeter-probe: cluster-configuration
 spec:
@@ -222,7 +222,8 @@ func (c *setInitedValueChecker) create(value string) check.Error {
 	decUnstructured := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 
 	obj := &unstructured.Unstructured{}
-	manifest := fmt.Sprintf(c.template, c.name, c.name, value)
+	objName, agentID := c.name, c.name
+	manifest := fmt.Sprintf(c.template, objName, agentID, value)
 
 	if _, _, err := decUnstructured.Decode([]byte(manifest), nil, obj); err != nil {
 		return check.ErrFail("cannot create UpmeterHookProbe object at runtime: %v", err)

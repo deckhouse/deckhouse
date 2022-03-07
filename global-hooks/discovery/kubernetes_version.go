@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -30,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 )
@@ -44,6 +44,12 @@ const (
 const kubeVersionFileName = "/tmp/kubectl_version"
 
 const apiServerNs = "kube-system"
+
+// versionHTTPClient is used to validate that tls certificate DNS name contains kubernetes service cluster ip
+var (
+	versionHTTPClient d8http.Client
+	once              sync.Once
+)
 
 func apiServerK8sAppLabels() map[string]string {
 	return map[string]string{
@@ -106,7 +112,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyEndpointsAPIServerFilter,
 		},
 	},
-}, dependency.WithExternalDependencies(k8sVersions))
+}, k8sVersions)
 
 func applyAPIServerPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	// creationTimestamp needs for run hook on restart pod (name of apiserver not contains generated part)
@@ -236,7 +242,7 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 	return endpoints, nil
 }
 
-func k8sVersions(input *go_hook.HookInput, dc dependency.Container) error {
+func k8sVersions(input *go_hook.HookInput) error {
 	input.LogEntry.Infoln("k8s version. Start discovery")
 	endpoints, err := apiServerEndpoints(input)
 	if err != nil {
@@ -246,13 +252,28 @@ func k8sVersions(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	cl := dc.GetHTTPClient()
+	// Dedicated client for version discovery is required because cloud providers tend to issue certificates only for
+	// cluster IP, yet Deckhouse requests each endpoint separately. Certificate check will fail in this case.
+	//
+	// ServerName option allows Deckhouse to check, that certificate is issued for the kubernetes service dns name
+	// even if it requests apiserver endpoint.
+	once.Do(func() {
+		if versionHTTPClient != nil {
+			return
+		}
+		contentCA, _ := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+
+		versionHTTPClient = d8http.NewClient(
+			d8http.WithTLSServerName("kubernetes.default.svc"),
+			d8http.WithAdditionalCACerts([][]byte{contentCA}),
+		)
+	})
 
 	versions := make([]string, 0)
 	var minVer *semver.Version
 
 	for _, endpoint := range endpoints {
-		ver, err := getKubeVersionForServer(endpoint, cl)
+		ver, err := getKubeVersionForServer(endpoint, versionHTTPClient)
 		if err != nil {
 			return err
 		}

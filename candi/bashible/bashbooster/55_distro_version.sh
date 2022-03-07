@@ -41,16 +41,3 @@ bb-is-debian-version?() {
     return 1
   fi
 }
-
-bb-is-astra-version?() {
-  local ASTRA_VERSION_REGEX=$1
-  source /etc/os-release
-  if [ "${ID}" != "astra" ] ; then
-    return 1
-  fi
-  if [[ "${VERSION_ID}" =~ ${ASTRA_VERSION_REGEX} ]] ; then
-    return 0
-  else
-    return 1
-  fi
-}

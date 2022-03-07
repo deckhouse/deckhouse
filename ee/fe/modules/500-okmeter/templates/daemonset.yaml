@@ -90,4 +90,6 @@ spec:
         hostPath:
           path: /proc
       - name: okagentdir
-        emptyDir: {}
+        hostPath:
+          path: /usr/local/okagent
+          type: DirectoryOrCreate

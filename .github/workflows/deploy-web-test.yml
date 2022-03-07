@@ -25,6 +25,9 @@ on:
       pull_request_sha:
         description: 'Git SHA for restoring artifacts from cache'
         required: false
+      pull_request_head_label:
+        description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
+        required: false
 
 env:
 
@@ -59,7 +62,7 @@ env:
   BASE_GOLANG_ALPINE: "registry.deckhouse.io/base_images/golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
   BASE_GOLANG_BUSTER: "registry.deckhouse.io/base_images/golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab"
   BASE_JEKYLL: "registry.deckhouse.io/base_images/jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34"
-  BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555"
+  BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.21.6-alpine@sha256:050385609d832fae11b007fbbfba77d0bba12bf72bc0dca0ac03e09b1998580f"
   BASE_NODE_16_ALPINE: "registry.deckhouse.io/base_images/node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
   BASE_PYTHON_ALPINE: "registry.deckhouse.io/base_images/python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
   BASE_SCRATCH: "registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
@@ -204,6 +207,14 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
       # <template: checkout_from_event_ref_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
@@ -299,24 +310,32 @@ jobs:
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
+        id: update_comment_on_finish
         if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        continue-on-error: true
         env:
           NEEDS_CONTEXT: ${{ toJSON(needs) }}
           JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const statusSource = 'job';
+            const statusConfig = 'job,final';
             const name = 'Deploy web to test';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
 
-            console.log(`needsContext: ${JSON.stringify(needsContext)}`);
-            console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
 
             const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
