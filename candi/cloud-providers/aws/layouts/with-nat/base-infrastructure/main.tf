@@ -198,7 +198,7 @@ locals {
 
   actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
 
-  zone = lookup(local.bastion_instance != null ? local.bastion_instance : {}, "zone", null) != null ? local.bastion_instance.zone : local.actual_zones[0]
+  zone = lookup(local.bastion_instance, "zone", null) != null ? local.bastion_instance.zone : local.actual_zones[0]
 
   zone_to_subnet_id_map = {
     for subnet in aws_subnet.kube_public :
