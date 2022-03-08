@@ -554,10 +554,12 @@ import:
   add: /dhctl/bin/dhctl
   to: /usr/bin/dhctl
   after: setup
+{{- if ne .Env "CE" }}
 - artifact: terraform-provider-vsphere # from modules/040-terraform-manager/images/terraform-manager-vsphere/werf.inc.yaml
   add: /terraform-provider-vsphere/terraform-provider-vsphere
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_VSPHERE_NAMESPACE" }}/{{ env "TF_VSPHERE_TYPE" }}/{{ env "TF_VSPHERE_VERSION" }}/linux_amd64/terraform-provider-vsphere
   after: setup
+{{- end }}
 - artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
   add: /terraform-provider-gcp/terraform-provider-gcp
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
