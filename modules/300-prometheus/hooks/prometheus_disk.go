@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -113,6 +114,7 @@ type PersistentVolumeClaimFilter struct {
 	PromName        string
 	StorageClass    string
 	ResizePending   bool
+	VolumeName      string
 }
 
 func applyPersistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -143,6 +145,7 @@ func applyPersistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.F
 		PromName:        pvc.Labels["prometheus"],
 		StorageClass:    *pvc.Spec.StorageClassName,
 		ResizePending:   resizePending,
+		VolumeName:      pvc.Spec.VolumeName,
 	}, nil
 }
 
@@ -291,6 +294,33 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
+func isLocalStorage(input *go_hook.HookInput, dc dependency.Container, promName string) bool {
+	for _, obj := range input.Snapshots["pvcs"] {
+		pvc := obj.(PersistentVolumeClaimFilter)
+
+		if pvc.PromName != promName {
+			continue
+		}
+
+		pvName := pvc.VolumeName
+
+		kubeClient, err := dc.GetK8sClient()
+		if err != nil {
+			return false
+		}
+
+		pv, err := kubeClient.CoreV1().PersistentVolumes().Get(context.TODO(), pvName, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+
+		if len(pv.Spec.Local.Path) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName string) (diskSize int64) {
 	var allowVolumeExpansion bool
 
@@ -358,6 +388,10 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 	}
 
 	if diskSize < fsSize {
+		diskSize = fsSize
+	}
+
+	if isLocalStorage(input, dc, promName) && fsSize > 0 {
 		diskSize = fsSize
 	}
 
