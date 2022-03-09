@@ -6,7 +6,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Описывает параметры группы GCP Instances, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
+            Описывает параметры группы GCP Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:
@@ -44,6 +44,6 @@ spec:
                   description: |
                     Список дополнительных лейблов.
 
-                    Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                    
+                    Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
     - name: v1
       schema: *schema

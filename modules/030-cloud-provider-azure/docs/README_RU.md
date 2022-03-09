@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Azure"
+title: "Cloud provider — Azure"
 ---
 
 Взаимодействие с облачными ресурсами провайдера [Azure](https://portal.azure.com/) осуществляется с помощью модуля `cloud-provider-azure`. Он предоставляет возможность модулю [управления узлами](../../modules/040-node-manager/) использовать ресурсы Azure при заказе узлов для описанной [группы узлов](../../modules/040-node-manager/cr.html#nodegroup).

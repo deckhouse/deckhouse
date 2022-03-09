@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack: примеры конфигурации"
+title: "Cloud provider — OpenStack: примеры конфигурации"
 ---
 
 ## Пример конфигурации

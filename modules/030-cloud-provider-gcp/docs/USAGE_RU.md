@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP: примеры конфигурации"
+title: "Cloud provider — GCP: примеры конфигурации"
 ---
 
 ## Пример custom resource `GCPInstanceClass`

@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack: FAQ"
+title: "Cloud provider — OpenStack: FAQ"
 ---
 
 ## Как настроить LoadBalancer?

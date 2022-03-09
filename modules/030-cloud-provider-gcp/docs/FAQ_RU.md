@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP: FAQ"
+title: "Cloud provider — GCP: FAQ"
 ---
 
 ## Как мне поднять кластер

@@ -72,7 +72,7 @@ apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 # [<en>] list of internal cluster networks (e.g., '10.0.4.0/24'), which is
 # [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.)
-# [<ru>] cписок внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
+# [<ru>] список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
 # [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой
 internalNetworkCIDRs:
 - *!CHANGE_internalNetworkCIDRs*

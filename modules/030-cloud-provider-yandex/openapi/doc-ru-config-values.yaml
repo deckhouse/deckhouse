@@ -5,7 +5,7 @@ properties:
     items:
       type: string
     default: []
-    description: Cписок Network ID, которые будут считаться `ExternalIP` при перечислении адресов у Node. Опциональный параметр.
+    description: Список Network ID, которые будут считаться `ExternalIP` при перечислении адресов у Node. Опциональный параметр.
   storageClass:
     type: object
     properties:

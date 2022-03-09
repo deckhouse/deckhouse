@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP: настройки провайдера"
+title: "Cloud provider — GCP: настройки провайдера"
 ---
 
 <!-- SCHEMA -->

@@ -213,7 +213,7 @@ apiVersions:
       dhcpOptions:
         type: object
         description: |
-          Cписок DHCP-опций, которые будут установлены на все подсети.
+          Список DHCP-опций, которые будут установлены на все подсети.
 
           [Возможные проблемы](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
         properties:

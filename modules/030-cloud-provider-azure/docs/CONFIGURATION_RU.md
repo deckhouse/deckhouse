@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Azure: настройки"
+title: "Cloud provider — Azure: настройки"
 ---
 
 Модуль настраивается автоматически исходя из выбранной схемы размещения (custom resource `AzureClusterConfiguration`). В большинстве случаев нет необходимости ручной конфигурации модуля.

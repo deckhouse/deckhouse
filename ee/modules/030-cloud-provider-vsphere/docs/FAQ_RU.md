@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — VMware vSphere: FAQ"
+title: "Cloud provider — VMware vSphere: FAQ"
 ---
 
 ## Как поднять гибридный кластер?

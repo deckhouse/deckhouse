@@ -21,7 +21,7 @@ entries:
           url: /supported_versions.html
         - title:
             en: Revision comparison
-            ru: Cравнение редакций
+            ru: Сравнение редакций
           url: /revision-comparison.html
         - title: FAQ
           url: /deckhouse-faq.html
