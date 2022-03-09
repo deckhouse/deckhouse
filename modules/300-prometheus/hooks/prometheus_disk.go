@@ -316,9 +316,11 @@ func isLocalStorage(input *go_hook.HookInput, dc dependency.Container, promName 
 
 		//
 		input.LogEntry.Println(pv.Spec)
-
-		if len(pv.Spec.Local.Path) > 0 {
-			return true
+		
+		if pv.Spec.Local != nil {
+			if len(pv.Spec.Local.Path) > 0 {
+				return true
+			}
 		}
 	}
 	return false
