@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Yandex.Cloud: настройки"
+title: "Cloud provider — Yandex.Cloud: настройки"
 ---
 
 ## Параметры

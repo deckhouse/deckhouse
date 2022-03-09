@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — AWS: настройки"
+title: "Cloud provider — AWS: настройки"
 ---
 
 ## Параметры

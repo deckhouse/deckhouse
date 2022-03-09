@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Yandex.Cloud: примеры конфигурации"
+title: "Cloud provider — Yandex.Cloud: примеры конфигурации"
 ---
 
 ## Пример конфигурации модуля

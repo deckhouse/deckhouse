@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — AWS: примеры конфигурации"
+title: "Cloud provider — AWS: примеры конфигурации"
 ---
 
 ## Пример CR `AWSInstanceClass`

@@ -36,7 +36,7 @@ data:
   * По умолчанию — `global.discovery.clusterDomain`.
 * `storageClass` — имя storageClass'а, который использовать.
     * Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
-    * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск будет перезаказан, а все данные удалены.
+    * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск будет перезаказан, а все данные удалены.
     * Если указать `false` — будет форсироваться использование emptyDir'а.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
     * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) **(если включен модуль user-authn, параметры externalAuthentication настраиваются автоматически)**.

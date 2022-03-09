@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — VMware vSphere"
+title: "Cloud provider — VMware vSphere"
 ---
 
 Взаимодействие с облачными ресурсами провайдера на базе VMware vSphere осуществляется с помощью модуля `cloud-provider-vsphere`. Он предоставляет возможность модулю [управления узлами](../../modules/040-node-manager/) использовать ресурсы vSphere при заказе узлов для описанной [группы узлов](../../modules/040-node-manager/cr.html#nodegroup).

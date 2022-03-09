@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP"
+title: "Cloud provider — GCP"
 ---
 
 Взаимодействие с облачными ресурсами провайдера [Google](https://cloud.google.com/) осуществляется с помощью модуля `cloud-provider-gcp`. Он предоставляет возможность модулю [управления узлами](../../modules/040-node-manager/) использовать ресурсы GCP при заказе узлов для описанной [группы узлов](../../modules/040-node-manager/cr.html#nodegroup).

@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack"
+title: "Cloud provider — OpenStack"
 ---
 
 Взаимодействие с облачными ресурсами провайдеров на базе [OpenStack](https://www.openstack.org/) осуществляется с помощью модуля `cloud-provider-openstack`. Он предоставляет возможность модулю [управления узлами](../../modules/040-node-manager/) использовать ресурсы Openstack при заказе узлов для описанной [группы узлов](../../modules/040-node-manager/cr.html#nodegroup).
