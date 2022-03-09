@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — VMware vSphere: Примеры конфигурации"
+title: "Cloud provider — VMware vSphere: Примеры конфигурации"
 ---
 
 ## Пример конфигурации

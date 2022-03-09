@@ -121,7 +121,7 @@ spec:
                   properties:
                     type: &criType
                       description: |
-                        Тип сontainer runtime.
+                        Тип container runtime.
 
                         Если не указан, используется значение `defaultCRI` из первичной конфигурации кластера (параметр `cluster-configuration.yaml` секрета `d8-cluster-configuration` в namespace `kube-system`), которая создается при инсталляции.
 

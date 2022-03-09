@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack: Custom Resources"
+title: "Cloud provider — OpenStack: Custom Resources"
 ---
 
 <!-- SCHEMA -->

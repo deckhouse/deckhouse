@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Azure: примеры конфигурации"
+title: "Cloud provider — Azure: примеры конфигурации"
 ---
 
 ## Пример CR `AzureInstanceClass`

@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — VMware vSphere: настройки"
+title: "Cloud provider — VMware vSphere: настройки"
 ---
 
 Модуль автоматически включается для всех облачных кластеров развёрнутых в vSphere.

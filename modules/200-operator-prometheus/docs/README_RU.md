@@ -12,9 +12,9 @@ title: "Модуль operator-prometheus"
   - `ServiceMonitor` — определяет, как собирать метрики с сервисов
   - `Alertmanager` — определяет кластер *Alertmanager*'ов
   - `PrometheusRule` — определяет список *Prometheus rules*
-- cледит за этими ресурсами и:
+- следит за этими ресурсами и:
   - генерирует `StatefulSet` с самим *Prometheus* и необходимые для его работы конфигурационные файлы, сохраняя их в `Secret`;
-  - cледит за ресурсами `ServiceMonitor` и `PrometheusRule` и на их основании обновляет конфигурационные файлы *Prometheus* через внесение изменений в `Secret`.
+  - следит за ресурсами `ServiceMonitor` и `PrometheusRule` и на их основании обновляет конфигурационные файлы *Prometheus* через внесение изменений в `Secret`.
 
 ## Prometheus
 

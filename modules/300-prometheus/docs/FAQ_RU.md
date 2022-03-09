@@ -151,7 +151,7 @@ spec:
   type: External
 ```
 
-Подробно о всех параметрах можно прочитать в описании Сustom Resource [CustomAlertmanager](cr.html#customalertmanager)
+Подробно о всех параметрах можно прочитать в описании Custom Resource [CustomAlertmanager](cr.html#customalertmanager)
 
 ## Как в Alertmanager игнорировать лишние алерты?
 

@@ -35,7 +35,7 @@ properties:
         properties:
           customTolerationKeys:
             description: |
-              Cписок ключей пользовательских toleration.
+              Список ключей пользовательских toleration.
 
               Необходимо указывать, чтобы позволить планировщику размещать критически важные компоненты Deckhouse, такие как cni и csi, на выделенных узлах.
       https:
