@@ -35,7 +35,7 @@ ingress-nginx:
       pull_request: https://github.com/deckhouse/deckhouse/pull/955
     - summary: Manual update for ingress controllers
       pull_request: https://github.com/deckhouse/deckhouse/pull/921
-      impact: Ingress nginx controllers will be removed manually by a hook.
+      impact: Ingress nginx controller pods now managed by a special hook, not by a Kubernetes Controller.
 node-manager:
   fixes:
     - summary: Use step number with leading zeroes for custom steps.
