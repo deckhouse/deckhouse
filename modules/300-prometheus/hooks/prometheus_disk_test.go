@@ -285,26 +285,6 @@ status:
 		})
 	})
 
-	//Context("Cluster with storageClassExpensionTrue and pvc", func() {
-	//	BeforeEach(func() {
-	//		f.BindingContexts.Set(f.KubeStateSet(storageClassExpensionTrue + pvcMain + pvcLt + prom))
-	//		f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
-	//		f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
-	//		f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
-	//		f.ValuesSet("prometheus.internal.prometheusMain.diskUsage", 91)
-	//		f.ValuesSet("prometheus.internal.prometheusLongterm.diskUsage", 91)
-	//		f.RunHook()
-	//	})
-	//
-	//	It("must be executed successfully; prometheus-main-0,1 pvc must be 50Gi; prometheus-longterm-0,1 pvc must be 45Gi", func() {
-	//		Expect(f).To(ExecuteSuccessfully())
-	//		Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-main-db-prometheus-main-0").Field("spec.resources.requests.storage").String()).To(Equal("50Gi"))
-	//		Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-main-db-prometheus-main-1").Field("spec.resources.requests.storage").String()).To(Equal("50Gi"))
-	//		Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-longterm-db-prometheus-longterm-0").Field("spec.resources.requests.storage").String()).To(Equal("45Gi"))
-	//		Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-longterm-db-prometheus-longterm-1").Field("spec.resources.requests.storage").String()).To(Equal("45Gi"))
-	//	})
-	//})
-
 	Context("Cluster with pvc's in state FileSystemResizePending", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(pods + pvcMain + pvcLt + prom))

@@ -19,7 +19,6 @@ package hooks
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -126,7 +125,7 @@ func applyPersistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.F
 
 	pvcSizeInBytes, ok := pvc.Spec.Resources.Requests.Storage().AsInt64()
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("cannot get .Spec.Resources.Requests from PersistentVolumeClaim %s", pvc.Name))
+		return nil, fmt.Errorf("cannot get .Spec.Resources.Requests from PersistentVolumeClaim %s", pvc.Name)
 	}
 
 	resizePending := false
@@ -314,9 +313,6 @@ func isLocalStorage(input *go_hook.HookInput, dc dependency.Container, promName 
 			return false
 		}
 
-		//
-		input.LogEntry.Println(pv.Spec)
-		
 		if pv.Spec.Local != nil {
 			if len(pv.Spec.Local.Path) > 0 {
 				return true
@@ -408,7 +404,6 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 
 	return
 }
-
 
 func isVolumeExpansionAllowed(input *go_hook.HookInput, scName string) bool {
 	scs := input.Snapshots["scs"]
