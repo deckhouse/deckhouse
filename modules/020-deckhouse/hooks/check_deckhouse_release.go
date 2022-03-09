@@ -36,6 +36,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spaolacci/murmur3"
+	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -150,6 +151,8 @@ releaseLoop:
 		}
 	}
 
+	enabledModulesChangelog := releaseChecker.generateChangelogForEnabledModules(input)
+
 	release := &v1alpha1.DeckhouseRelease{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DeckhouseRelease",
@@ -159,9 +162,11 @@ releaseLoop:
 			Name: releaseName,
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
-			Version:      releaseChecker.releaseMetadata.Version,
-			ApplyAfter:   applyAfter,
-			Requirements: releaseChecker.releaseMetadata.Requirements,
+			Version:       releaseChecker.releaseMetadata.Version,
+			ApplyAfter:    applyAfter,
+			Requirements:  releaseChecker.releaseMetadata.Requirements,
+			Changelog:     enabledModulesChangelog,
+			ChangelogLink: fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseChecker.releaseMetadata.Version),
 		},
 		Approved: false,
 	}
@@ -173,6 +178,59 @@ releaseLoop:
 	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())
 
 	return nil
+}
+
+func (dcr *DeckhouseReleaseChecker) generateChangelogForEnabledModules(input *go_hook.HookInput) map[string]interface{} {
+	enabledModules := input.Values.Get("global.enabledModules").Array()
+	enabledModulesChangelog := make(map[string]interface{})
+
+	for _, enabledModule := range enabledModules {
+		if v, ok := dcr.releaseMetadata.Changelog[enabledModule.String()]; ok {
+			enabledModulesChangelog[enabledModule.String()] = v
+		}
+	}
+
+	// enable global modules
+	if v, ok := dcr.releaseMetadata.Changelog["global"]; ok {
+		enabledModulesChangelog["global"] = v
+	}
+
+	return enabledModulesChangelog
+}
+
+type releaseReader struct {
+	versionReader   *bytes.Buffer
+	changelogReader *bytes.Buffer
+}
+
+func (rr *releaseReader) untarLayer(rc io.Reader) error {
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			// end of archive
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		switch hdr.Name {
+		case "version.json":
+			_, err = io.Copy(rr.versionReader, tr)
+			if err != nil {
+				return err
+			}
+		case "changelog.yaml", "changelog.yml":
+			_, err = io.Copy(rr.changelogReader, tr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			continue
+		}
+	}
 }
 
 func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releaseMetadata, error) {
@@ -187,7 +245,10 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 		return meta, fmt.Errorf("no layers found")
 	}
 
-	var tarReader io.Reader
+	rr := &releaseReader{
+		versionReader:   bytes.NewBuffer(nil),
+		changelogReader: bytes.NewBuffer(nil),
+	}
 	for _, layer := range layers {
 		size, err := layer.Size()
 		if err != nil {
@@ -202,7 +263,7 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 			return meta, err
 		}
 
-		tarReader, err = untarLayer(rc)
+		err = rr.untarLayer(rc)
 		if err != nil {
 			rc.Close()
 			dcr.logger.Warnf("layer is invalid: %s", err)
@@ -211,32 +272,23 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 		rc.Close()
 	}
 
-	err = json.NewDecoder(tarReader).Decode(&meta)
-
-	return meta, err
-}
-
-func untarLayer(rc io.Reader) (io.Reader, error) {
-	result := bytes.NewBuffer(nil)
-	tr := tar.NewReader(rc)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of archive
-			return result, nil
-		}
+	if rr.versionReader.Len() > 0 {
+		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return nil, err
+			return meta, err
 		}
-		if hdr.Name != "version.json" {
-			continue
-		}
-		if _, err := io.Copy(result, tr); err != nil {
-			return nil, err
-		}
-
-		return result, nil
 	}
+
+	if rr.changelogReader.Len() > 0 {
+		var changelog map[string]interface{}
+		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+		if err != nil {
+			return meta, err
+		}
+		meta.Changelog = changelog
+	}
+
+	return meta, nil
 }
 
 type releaseMetadata struct {
@@ -244,6 +296,8 @@ type releaseMetadata struct {
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
 	Suspend      bool                      `json:"suspend"`
+
+	Changelog map[string]interface{}
 }
 
 type canarySettings struct {
@@ -298,7 +352,7 @@ func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash strin
 		return "", err
 	}
 	if releaseMeta.Version == "" {
-		return "", fmt.Errorf("version not found. Probably image is broken or layer is not exist")
+		return "", fmt.Errorf("version not found. Probably image is broken or layer does not exist")
 	}
 
 	dcr.releaseMetadata = releaseMeta

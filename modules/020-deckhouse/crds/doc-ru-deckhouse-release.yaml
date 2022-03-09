@@ -19,6 +19,10 @@ spec:
                   description: Время, до которого отложено обновление, если релиз является частью canary-release.
                 requirements:
                   description: Требования для установки релиза.
+                changelog:
+                  description: Изменения включенных модулей в данном релизе.
+                changelogLink:
+                  description: Ссылка на страницу со всеми изменениями данного релиза.
             status:
               properties:
                 phase:

@@ -19,7 +19,6 @@ package hooks
 import (
 	"archive/tar"
 	"bytes"
-	"encoding/json"
 	"io"
 	"io/ioutil"
 	"sort"
@@ -208,38 +207,120 @@ status:
 			Expect(rl.Field("spec.requirements").String()).To(Equal(`{"k8s":"1.19","req1":"dep1"}`))
 		})
 	})
+
+	Context("Release with changelog", func() {
+		BeforeEach(func() {
+			changelog := `
+cert-manager:
+  fixes:
+    - summary: Remove D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
+      pull_request: https://github.com/deckhouse/deckhouse/pull/999
+ci:
+  fixes:
+    - summary: Fix GitLab CI (.gitlab-ci-simple.yml)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/911
+global:
+  features:
+    - description: All master nodes will have  role in new exist clusters.
+      note: Add migration for adding role. Bashible steps will be rerunned on master nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/562
+    - description: Update Kubernetes patch versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/558
+  fixes:
+    - description: Fix parsing deckhouse images repo if there is the sha256 sum in the image name
+      pull_request: https://github.com/deckhouse/deckhouse/pull/527
+    - description: Fix serialization of empty strings in secrets
+      pull_request: https://github.com/deckhouse/deckhouse/pull/523
+`
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{
+						&fakeLayer{},
+						&fakeLayer{FilesContent: map[string]string{
+							"version.json":   `{"version": "v1.31.0"}`,
+							"changelog.yaml": changelog,
+						},
+						},
+					}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66858")
+				},
+			}, nil)
+			f.ValuesSet("global.enabledModules", []string{"cert-manager", "prometheus"})
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with requirements", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
+			// global changelog is added
+			globalChangelog := rl.Field("spec.changelog.global")
+			Expect(globalChangelog.Exists()).To(BeTrue())
+			// cert-manager module is enabled and has changes
+			certManagerChangelog := rl.Field("spec.changelog.cert-manager")
+			Expect(certManagerChangelog.Exists()).To(BeTrue())
+			// prometheus is enabled but doesn't have changes
+			prometheusChangelog := rl.Field("spec.changelog.prometheus")
+			Expect(prometheusChangelog.Exists()).To(BeFalse())
+			// ci module has changes but not enabled
+			ciChangelog := rl.Field("spec.changelog.ci")
+			Expect(ciChangelog.Exists()).To(BeFalse())
+
+			link := rl.Field("spec.changelogLink")
+			Expect(link.String()).To(BeEquivalentTo("https://github.com/deckhouse/deckhouse/releases/tag/v1.31.0"))
+		})
+	})
 })
 
 type fakeLayer struct {
 	v1.Layer
+	// Deprecated: use FilesContent with specified name instead
 	Body string
+
+	FilesContent map[string]string // pair: filename - file content
 }
 
 func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 	result := bytes.NewBuffer(nil)
+	if fl.FilesContent == nil {
+		fl.FilesContent = make(map[string]string)
+	}
 
-	if fl.Body == "" {
+	if fl.Body != "" && len(fl.FilesContent) == 0 {
+		// backward compatibility for tests
+		fl.FilesContent["version.json"] = fl.Body
+	}
+
+	if len(fl.FilesContent) == 0 {
 		return ioutil.NopCloser(result), nil
 	}
 
-	// returns tar file with content
-	// {"version": "v1.25.3"}
-	body := json.RawMessage(fl.Body)
-	hdr := &tar.Header{
-		Name: "version.json",
-		Mode: 0600,
-		Size: int64(len(body)),
-	}
 	wr := tar.NewWriter(result)
-	_ = wr.WriteHeader(hdr)
-	_, _ = wr.Write(body)
+
+	// create files in a single layer
+	for filename, content := range fl.FilesContent {
+		hdr := &tar.Header{
+			Name: filename,
+			Mode: 0600,
+			Size: int64(len(content)),
+		}
+		_ = wr.WriteHeader(hdr)
+		_, _ = wr.Write([]byte(content))
+	}
 	_ = wr.Close()
 
 	return ioutil.NopCloser(result), nil
 }
 
 func (fl fakeLayer) Size() (int64, error) {
-	return int64(len(fl.Body)), nil
+	if len(fl.Body) > 0 {
+		return int64(len(fl.Body)), nil
+	}
+
+	return int64(len(fl.FilesContent)), nil
 }
 
 func TestSort(t *testing.T) {
