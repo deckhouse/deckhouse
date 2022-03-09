@@ -100,17 +100,17 @@ spec:
                     properties:
                       kind:
                         type: string
-                        enum: [User,Group,ServiceAccount]
+                        enum: [User, Group, ServiceAccount]
                         description: 'Type of user identification resource.'
                         example: 'Group'
                       name:
                         type: string
-                        minLength: 1
                         description: 'Resource name.'
                         example: 'some-group-name'
                       namespace:
                         type: string
-                        minLength: 1
+                        maxLength: 63
+                        pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
                         description: 'ServiceAccount namespace.'
                 additionalRoles:
                   type: array
