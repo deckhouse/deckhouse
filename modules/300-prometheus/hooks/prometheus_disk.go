@@ -314,6 +314,9 @@ func isLocalStorage(input *go_hook.HookInput, dc dependency.Container, promName 
 			return false
 		}
 
+		//
+		input.LogEntry.Println(pv.Spec)
+
 		if len(pv.Spec.Local.Path) > 0 {
 			return true
 		}
