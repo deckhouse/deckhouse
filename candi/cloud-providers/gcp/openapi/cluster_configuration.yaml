@@ -100,8 +100,10 @@ apiVersions:
                 x-doc-default: true
                 description: |
                   Defines whether to disable external IP for an instance or not.
+                  - True means that nodes do not have public addresses and connect to the Internet over `CloudNAT`;
+                  - False means that static public addresses are created for nodes, they are also used for One-to-one NAT.
 
-                  This parameter is only available for the `Standard` layout.                  
+                  This parameter is only available for the `Standard` layout.
           zones:
             type: array
             description: A limited set of zones in which nodes can be created.
@@ -119,7 +121,10 @@ apiVersions:
           properties:
             name:
               type: string
-              description: The name of the NodeGroup to use for generating node names.
+              description: |
+                The name of the NodeGroup.
+
+                It is used for generating node names.
             replicas:
               type: integer
               description: The number of nodes to create.
@@ -177,7 +182,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](../layouts.html) about possible provider layouts. 
+          Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-gcp/layouts.html) about possible provider layouts.
       standard:
         type: object
         description: Settings for the `Standard` layout.

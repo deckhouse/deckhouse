@@ -17,7 +17,7 @@ apiVersions:
         description: |
           Список GCP VPC networks, с которыми будет объединена сеть кластера.
 
-          Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринговое соединение необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
+          Service Account должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринговое соединение необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
       masterNodeGroup:
         description: Спецификация для описания NodeGroup master-узлов.
         properties:
@@ -27,7 +27,7 @@ apiVersions:
             description: |
               Список дополнительных тегов.
 
-              К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать [в официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+              Теги, например, позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать [в официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
           additionalLabels:
             description: |
               Список дополнительных лейблов.
@@ -56,7 +56,7 @@ apiVersions:
                 description: |
                   Запрет назначения внешнего IP-адреса для инстанса.
 
-                  Параметр доступен только для схемы размещения `Standard`.               
+                  Параметр доступен только для схемы размещения `Standard`.
           zones:
             description: Cписок зон, в которых допустимо создавать статичные узлы.
       nodeGroups:
@@ -64,7 +64,10 @@ apiVersions:
         items:
           properties:
             name:
-              description: Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+              description: |
+                Имя NodeGroup.
+
+                Используется для генерации имен узлов.
             replicas:
               description: Количество узлов.
             nodeTemplate:
@@ -96,7 +99,7 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](../layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-gcp/layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: Настройки для схемы размещения `Standard`.
         properties:
