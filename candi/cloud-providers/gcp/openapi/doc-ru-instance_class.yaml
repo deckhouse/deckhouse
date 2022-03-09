@@ -21,12 +21,12 @@ spec:
                     GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
                 image:
                   description: |
-                    Образ, который будет использоваться в заказанных инстансах. Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
+                    Образ, который будет использоваться в заказанных инстансах. Список образов можно найти [в документации](https://cloud.google.com/compute/docs/images#ubuntu).
 
                     **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7`.
                 preemptible:
                   description: |
-                    Заказывать ли preemptible-инстансы.
+                    Необходимость заказа preemptible-инстансов.
                 diskType:
                   description: |
                     Тип созданного диска.
@@ -34,16 +34,16 @@ spec:
                   description: |
                     Размер root-диска. Значение указывается в `ГиБ`.
                 disableExternalIP:
-                  description: Запретить ли назначение внешнего IP для инстанса. True — инстанс будет создан  без внешнего IP.
+                  description: Запрет назначения внешнего IP-адреса для инстанса.
                 additionalNetworkTags:
                   description: |
                     Список дополнительных тегов.
 
-                    К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                    Теги, например, позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать [в официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
                 additionalLabels:
                   description: |
-                    Список дополнительных label'ов.
+                    Список дополнительных лейблов.
 
-                    Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                    Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                    
     - name: v1
       schema: *schema
