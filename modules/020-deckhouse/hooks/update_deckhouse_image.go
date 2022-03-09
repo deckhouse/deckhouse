@@ -51,6 +51,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "*/15 * * * * *",
 		},
 	},
+	Settings: &go_hook.HookConfigSettings{
+		EnableSchedulesOnStartup: true,
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "deckhouse_pod",

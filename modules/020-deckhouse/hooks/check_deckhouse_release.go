@@ -52,6 +52,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "* * * * *", // every minute
 		},
 	},
+	Settings: &go_hook.HookConfigSettings{
+		EnableSchedulesOnStartup: true,
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "releases",
