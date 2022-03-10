@@ -34,6 +34,10 @@ func (s *State) SavePostBootstrapScriptResult(result string) error {
 	return s.cache.Save(PostBootstrapResultCacheKey, []byte(result))
 }
 
+func (s *State) PostBootstrapScriptResult() ([]byte, error) {
+	return s.cache.Load(PostBootstrapResultCacheKey)
+}
+
 func (s *State) Clean() {
 	s.cache.Clean()
 }

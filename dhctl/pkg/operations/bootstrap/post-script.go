@@ -18,11 +18,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 type PostBootstrapScriptExecutor struct {
@@ -64,29 +64,36 @@ func (e *PostBootstrapScriptExecutor) Execute() error {
 	})
 }
 
-var resultPattern = regexp.MustCompile("(?m)^Result of post-bootstrap script:(.+)$")
-
 func (e *PostBootstrapScriptExecutor) run() (string, error) {
-	var result string
+	outputFile := fs.RandomNumberSuffix("/tmp/post-bootstrap-script-output")
+	envs := map[string]string{
+		"OUTPUT": outputFile,
+	}
+
+	// try to create output file on remote server for prevent error while download
+	err := e.sshClient.File().UploadBytes(nil, outputFile, 0o666)
+	if err != nil {
+		return "", fmt.Errorf("Cannot create output file for script %s: %w", e.path, err)
+	}
+
 	cmd := e.sshClient.UploadScript(e.path).
 		WithTimeout(e.timeout).
+		WithEnvs(envs).
+		WithLiveLogs(true).
 		Sudo()
 
-	out, err := cmd.Execute()
-
-	outStr := string(out)
-	log.InfoLn(outStr)
+	_, err = cmd.Execute()
 
 	if err != nil {
-		return "", fmt.Errorf("run %s: %w", e.path, err)
+		return "", fmt.Errorf("Running %s done with error: %w", e.path, err)
 	}
 
-	submatches := resultPattern.FindAllStringSubmatch(outStr, -1)
-	if len(submatches) > 0 && len(submatches[0]) > 1 {
-		result = submatches[0][1]
+	content, err := e.sshClient.File().DownloadBytes(outputFile)
+	if err != nil {
+		return "", fmt.Errorf("Cannot get output from remote file %s: %w", e.path, err)
 	}
 
-	return result, nil
+	return string(content), nil
 }
 
 func ValidateScriptFile(path string) error {

@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alessio/shellescape"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
@@ -34,7 +36,7 @@ type UploadScript struct {
 
 	ScriptPath string
 	Args       []string
-	envs       []string
+	envs       map[string]string
 
 	sudo    bool
 	liveLog bool
@@ -72,7 +74,7 @@ func (u *UploadScript) WithLiveLogs(liveLog bool) *UploadScript {
 	return u
 }
 
-func (u *UploadScript) WithEnvs(envs []string) *UploadScript {
+func (u *UploadScript) WithEnvs(envs map[string]string) *UploadScript {
 	u.envs = envs
 	return u
 }
@@ -92,14 +94,13 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	var cmd *Command
 	var scriptFullPath string
 	if u.sudo {
-		scriptFullPath = "/tmp/" + scriptName
+		scriptFullPath = u.pathWithEnv("/tmp/" + scriptName)
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Sudo()
 	} else {
-		scriptFullPath = "./" + scriptName
+		scriptFullPath = u.pathWithEnv("./" + scriptName)
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Cmd()
 	}
 
-	cmd.Env = u.envs
 	if u.liveLog {
 		cmd.EnableLive()
 	}
@@ -118,6 +119,24 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 		err = fmt.Errorf("execute on remote: %v", err)
 	}
 	return cmd.StdoutBytes(), err
+}
+
+func (u *UploadScript) pathWithEnv(path string) string {
+	if len(u.envs) == 0 {
+		return path
+	}
+
+	arrayToJoin := make([]string, 0, len(u.envs)*2)
+
+	for k, v := range u.envs {
+		vEscaped := shellescape.Quote(v)
+		kvStr := fmt.Sprintf("%s=%s", k, vEscaped)
+		arrayToJoin = append(arrayToJoin, kvStr)
+	}
+
+	envs := strings.Join(arrayToJoin, " ")
+
+	return fmt.Sprintf("%s %s", envs, path)
 }
 
 func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {

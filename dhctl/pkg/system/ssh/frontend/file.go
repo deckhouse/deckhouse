@@ -16,6 +16,7 @@ package frontend
 
 import (
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -58,7 +59,7 @@ func (f *File) Upload(srcPath, remotePath string) error {
 }
 
 // UploadBytes creates a tmp file and upload it to remote dstPath
-func (f *File) UploadBytes(data []byte, remotePath string) error {
+func (f *File) UploadBytes(data []byte, remotePath string, perm fs.FileMode) error {
 	srcPath, err := CreateEmptyTmpFile()
 	if err != nil {
 		return fmt.Errorf("create source tmp file: %v", err)
@@ -70,7 +71,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 		}
 	}()
 
-	err = ioutil.WriteFile(srcPath, data, 0o600)
+	err = ioutil.WriteFile(srcPath, data, perm)
 	if err != nil {
 		return fmt.Errorf("write data to tmp file: %v", err)
 	}
@@ -78,6 +79,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 	scp := cmd.NewSCP(f.Session).
 		WithSrc(srcPath).
 		WithRemoteDst(remotePath).
+		WithPreserve(true).
 		SCP().
 		CaptureStderr(nil).
 		CaptureStdout(nil)
