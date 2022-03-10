@@ -111,7 +111,10 @@ This is only needed if you have to move a static node from one cluster to anothe
 
 ## How do I know if something went wrong?
 
-The `node-manager` module creates the `bashible` service on each node. You can browse its logs using the following command: `journalctl -fu bashible`.
+The `node-manager` module creates the `bashible` service on each node. You can browse its logs using the following command: 
+```shell
+journalctl -fu bashible
+```
 
 ## How do I know what is running on a node while it is being created?
 
