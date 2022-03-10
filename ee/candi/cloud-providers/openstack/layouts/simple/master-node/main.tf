@@ -37,6 +37,7 @@ module "kubernetes_data" {
   node_index = var.nodeIndex
   master_id = openstack_compute_instance_v2.master.id
   volume_type = local.volume_type
+  volume_zone = local.zone
   tags = local.tags
 }
 
@@ -50,10 +51,11 @@ resource "openstack_blockstorage_volume_v2" "master" {
   size = local.root_disk_size
   image_id = data.openstack_images_image_v2.master.id
   metadata = local.metadata_tags
-  volume_type = local.volume_type
+  availability_zone = local.volume_type
   lifecycle {
     ignore_changes = [
       metadata,
+      availability_zone,
     ]
   }
 }
