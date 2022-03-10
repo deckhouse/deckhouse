@@ -1,0 +1,23 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix OpenStack CloudControllerManager configuration formatting
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1025
+cloud-provider-yandex:
+  fixes:
+    - summary: add existingZoneToSubnetIDMap field to openapi/values.yaml
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1031
+control-plane-manager:
+  fixes:
+    - summary: >-
+        Validate that the Kubernetes API endpoints certificate is signed for the
+        kubernetes.default.svc domain.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/953
+docs:
+  fixes:
+    - summary: Fix typos.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1024
+log-shipper:
+  fixes:
+    - summary: Fix description in the ClusterLogDestination CRD
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1002
+
