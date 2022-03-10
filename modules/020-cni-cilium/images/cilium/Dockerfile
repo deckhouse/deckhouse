@@ -3,19 +3,19 @@
 # Copyright 2020-2021 Authors of Cilium
 # SPDX-License-Identifier: Apache-2.0
 
-ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:9005878f5668f3f9bf49b237c9b8b37e248c33d6@sha256:682fc385c494984c2822ac1f2bc806e504addfdbd7a3257bfa587c0938b7614f
-ARG CILIUM_RUNTIME_IMAGE=quay.io/cilium/cilium-runtime:3e2ea3c996d8372ba65ee14058a716f797c67496@sha256:f5ea135fce72807158e520d1754e826b138cf9e97adde528fd992b3e79ef6ee8
+ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:c2ec83b1a4884d37ca89510cb9dceb8d741a0cf9@sha256:105cba5bd854763f83a74ac963b8c828770a92819c2da032a10e2ea6d909ab5b
+ARG CILIUM_RUNTIME_IMAGE=quay.io/cilium/cilium-runtime:d254efbeee6254829e016e8ce1fd1a4a98a11847@sha256:d69cec23a40bfb2f6541256d0b59838e22f31343b977ef5dbd0189114cd9bcd4
 
 # cilium-envoy from github.com/cilium/proxy
 #
-FROM quay.io/cilium/cilium-envoy:9b1701da9cc035a1696f3e492ee2526101262e56@sha256:c0e0586bf97e69b9c16c95eff707a264c1c00bb89371205e88f6849d12ed2de2 as cilium-envoy
+FROM quay.io/cilium/cilium-envoy:9c0d933166ba192713f9e2fc3901f788557286ee@sha256:943f1f522bdfcb1ca3fe951bd8186c41b970afa254096513ae6e0e0efda1a10d as cilium-envoy
 
 #
 # Hubble CLI
 #
 FROM ${CILIUM_BUILDER_IMAGE} as hubble
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.1.tar.gz | tar xvz -C /tmp/cilium-repo
-RUN bash /tmp/cilium-repo/cilium-1.11.1/images/cilium/download-hubble.sh
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.2.tar.gz | tar xvz -C /tmp/cilium-repo
+RUN bash /tmp/cilium-repo/cilium-1.11.2/images/cilium/download-hubble.sh
 RUN /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
 
 #
@@ -32,8 +32,8 @@ FROM ${CILIUM_BUILDER_IMAGE} as builder
 
 RUN apt-get update && apt-get install patch -y
 
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.1.tar.gz | tar xvz -C /tmp/cilium-repo
-WORKDIR /tmp/cilium-repo/cilium-1.11.1
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.2.tar.gz | tar xvz -C /tmp/cilium-repo
+WORKDIR /tmp/cilium-repo/cilium-1.11.2
 
 COPY 001-netfilter-compatibility-mode.patch /
 RUN patch -p1 < /001-netfilter-compatibility-mode.patch
