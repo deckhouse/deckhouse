@@ -124,9 +124,9 @@ apiVersions:
                 type: string
               enableExternalIP:
                 description: |
+                  Defines whether to enable external IP for an instance or not.
+
                   Only available for the `Standard` layout.
-                  * `false` — the nodes do not have public addresses and access the Internet over NAT.
-                  * `true` — static public addresses are created for nodes.
                 type: boolean
                 enum: [true, false]
                 x-doc-default: false
@@ -170,7 +170,8 @@ apiVersions:
                 The name of the NodeGroup to use for generating node names.
               type: string
             replicas:
-              description: The number of nodes to create.
+              description: |
+                The number of nodes to create.
               type: integer
             zones:
               description: |
@@ -289,7 +290,8 @@ apiVersions:
               The ID of the tenant.
             type: string
       zones:
-        description: The globally restricted set of zones that this Cloud Provider works with.
+        description: |
+          The globally restricted set of zones that this Cloud Provider works with.
         type: array
         items:
           type: string
