@@ -8,7 +8,7 @@ title: "Cloud provider — GCP: подготовка окружения"
 
 ## Настройка через Google Cloud Console
 
-Перейдите по [ссылке](https://console.cloud.google.com/iam-admin/serviceaccounts), выберите проект и создайте новый service account (также можно выбрать уже существующий).
+Перейдите [по ссылке](https://console.cloud.google.com/iam-admin/serviceaccounts), выберите проект и создайте новый service account (также можно выбрать уже существующий).
 
 Созданному service account'у должны быть присвоены несколько необходимых ролей:
 ```
