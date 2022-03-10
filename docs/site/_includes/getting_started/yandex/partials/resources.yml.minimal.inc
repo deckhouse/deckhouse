@@ -33,7 +33,7 @@ spec:
   memory: 8192
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
-  diskSizeGb: 30
+  diskSizeGB: 30
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
