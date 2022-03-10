@@ -32,11 +32,10 @@ EOF
 }
 
 function __main__() {
-  subjects=$()
-
   message="error:"
 
-  for subject in $(context::jq -r '.review.request.object.spec.subjects // [] | .[]'); do
+  for subject in $(context::jq -rc '.review.request.object.spec.subjects // [] | .[]'); do
+    # ServiceAccount name must be a valid domain name
     res=$(jq -rc '
     if
       .kind == "ServiceAccount" and
@@ -49,7 +48,22 @@ function __main__() {
     ' <<< "$subject")
 
     if [[ "$res" != "false" ]]; then
-      message="$message ServiceAccount name is invalid: $res ;"
+      message="$message ServiceAccount name is invalid: \"$res\" ;"
+    fi
+
+    # ServiceAccount has to have namespace
+    res=$(jq -rc '
+    if
+      .kind == "ServiceAccount" and .namespace == null
+    then
+      .name
+    else
+      false
+    end
+    ' <<< "$subject")
+
+    if [[ "$res" != "false" ]]; then
+      message="$message Namespace for the ServiceAccount \"$res\" is not provided ;"
     fi
   done
 
