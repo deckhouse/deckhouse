@@ -39,7 +39,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -50,26 +50,20 @@ const globalValues = `
     registryDockercfg: Y2ZnCg==
     tags:
       common:
-        csiExternalProvisioner116: imagehash
-        csiExternalAttacher116: imagehash
-        csiExternalResizer116: imagehash
-        csiNodeDriverRegistrar116: imagehash
-        csiExternalProvisioner119: imagehash
-        csiExternalAttacher119: imagehash
-        csiExternalResizer119: imagehash
-        csiNodeDriverRegistrar119: imagehash
+        csiExternalProvisioner121: imagehash
+        csiExternalAttacher121: imagehash
+        csiExternalResizer121: imagehash
+        csiNodeDriverRegistrar121: imagehash
         resolvWatcher: imagehash
       cloudProviderOpenstack:
-        cinderCsiPlugin116: imagehash
-        cinderCsiPlugin119: imagehash
-        cloudControllerManager116: imagehash
-        cloudControllerManager119: imagehash
+        cinderCsiPlugin121: imagehash
+        cloudControllerManager121: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       master: 3
       worker: 1
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.16.4
+    kubernetesVersion: 1.21.4
     defaultStorageClass: fastssd
 `
 
@@ -246,6 +240,7 @@ monitor-delay = "2s"
 monitor-timeout = "1s"
 subnet-id = "my-subnet-id"
 floating-network-id = "my-floating-network-id"
+enable-ingress-hostname = true
 [BlockStorage]
 rescan-on-resize = true`
 			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
