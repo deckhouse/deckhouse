@@ -254,7 +254,7 @@ properties:
                   ```
             additionalProperties:
               type: string
-            pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+              minLength: 1
           labels:
             description: |
               Labels to attach to resources created in the Yandex.Cloud.
