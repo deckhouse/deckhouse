@@ -114,7 +114,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<group_name>-
 
 Посмотреть логи сервиса `bashible`:
 ```shell
-journalctl -fu bashible`
+journalctl -fu bashible
 ```
 
 ## Как посмотреть, что в данный момент выполняется на узле при его создании?
