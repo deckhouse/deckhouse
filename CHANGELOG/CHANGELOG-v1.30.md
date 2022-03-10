@@ -35,7 +35,7 @@
 ## Release digest
 
 
- - Ingress nginx controllers will be removed manually by a hook.
+ - Ingress nginx controller pods now managed by a special hook, not by a Kubernetes Controller.
 
 ## Features
 
@@ -118,7 +118,7 @@
  - **[helm]** Add deprecation guide link to deprecated resources alerts. [#678](https://github.com/deckhouse/deckhouse/pull/678)
  - **[helm]** Provide an actual description for deprecated resources API versions alerts. [#569](https://github.com/deckhouse/deckhouse/pull/569)
  - **[ingress-nginx]** Manual update for ingress controllers [#921](https://github.com/deckhouse/deckhouse/pull/921)
-    Ingress nginx controllers will be removed manually by a hook.
+    Ingress nginx controller pods now managed by a special hook, not by a Kubernetes Controller.
  - **[ingress-nginx]** Fix handled request query on a dashboard. [#871](https://github.com/deckhouse/deckhouse/pull/871)
  - **[ingress-nginx]** temporary remove support of 1.0 controller [#782](https://github.com/deckhouse/deckhouse/pull/782)
  - **[ingress-nginx]** Added "pcre_jit on" to nginx.tmpl for controller-0.46 and above [#515](https://github.com/deckhouse/deckhouse/pull/515)
