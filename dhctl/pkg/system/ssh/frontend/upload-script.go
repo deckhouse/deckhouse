@@ -34,8 +34,10 @@ type UploadScript struct {
 
 	ScriptPath string
 	Args       []string
+	envs       []string
 
-	sudo bool
+	sudo    bool
+	liveLog bool
 
 	stdoutHandler func(string)
 
@@ -65,6 +67,16 @@ func (u *UploadScript) WithTimeout(timeout time.Duration) *UploadScript {
 	return u
 }
 
+func (u *UploadScript) WithLiveLogs(liveLog bool) *UploadScript {
+	u.liveLog = liveLog
+	return u
+}
+
+func (u *UploadScript) WithEnvs(envs []string) *UploadScript {
+	u.envs = envs
+	return u
+}
+
 func (u *UploadScript) Execute() (stdout []byte, err error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
@@ -85,6 +97,11 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	} else {
 		scriptFullPath = "./" + scriptName
 		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Cmd()
+	}
+
+	cmd.Env = u.envs
+	if u.liveLog {
+		cmd.EnableLive()
 	}
 
 	scriptCmd := cmd.CaptureStdout(nil)
