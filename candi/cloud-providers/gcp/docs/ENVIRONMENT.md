@@ -25,44 +25,41 @@ To create a `service account key` in JSON format, click on [three vertical dots]
 
 To configure via the command line interface, follow these steps:
 
-1\. Export environment variables:
-
-```shell
-export PROJECT=sandbox
-export SERVICE_ACCOUNT_NAME=deckhouse
-```
-2\. Select a project:
-
-```shell
-gcloud config set project $PROJECT
-```
-3\. Create a service account:
-
-```shell
-gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME
-```
-4\. Connect roles to the service account:
-
-```shell
-for role in roles/compute.admin roles/iam.serviceAccountUser roles/networkmanagement.admin; 
-do gcloud projects add-iam-policy-binding ${PROJECT} --member=serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com --role=${role}; done
-```
-List of roles required:
-```
-roles/compute.admin
-roles/iam.serviceAccountUser
-roles/networkmanagement.admin
-```
-
-5\. Verify service account roles:
-
-```shell
-gcloud projects get-iam-policy ${PROJECT} --flatten="bindings[].members" --format='table(bindings.role)' \
-      --filter="bindings.members:${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com"
-```
-6\. Create a `service account key`:
-
-```shell
-gcloud iam service-accounts keys create --iam-account ${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com \
-      ~/service-account-key-${PROJECT}-${SERVICE_ACCOUNT_NAME}.json
-```
+1. Export environment variables:
+   ```shell
+   export PROJECT=sandbox
+   export SERVICE_ACCOUNT_NAME=deckhouse
+   ```
+2. Select a project:
+   
+   ```shell
+   gcloud config set project $PROJECT
+   ```
+3. Create a service account:
+   
+   ```shell
+   gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME
+   ```
+4. Connect roles to the service account:
+   ```shell
+   for role in roles/compute.admin roles/iam.serviceAccountUser roles/networkmanagement.admin; 
+   do gcloud projects add-iam-policy-binding ${PROJECT} --member=serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com \
+      --role=${role}; done
+   ```
+   List of roles required:
+   ```
+   roles/compute.admin
+   roles/iam.serviceAccountUser
+   roles/networkmanagement.admin
+   ```
+   
+5. Verify service account roles:
+   ```shell
+   gcloud projects get-iam-policy ${PROJECT} --flatten="bindings[].members" --format='table(bindings.role)' \
+         --filter="bindings.members:${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com"
+   ```
+6. Create a `service account key`:
+   ```shell
+   gcloud iam service-accounts keys create --iam-account ${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com \
+         ~/service-account-key-${PROJECT}-${SERVICE_ACCOUNT_NAME}.json
+   ```
