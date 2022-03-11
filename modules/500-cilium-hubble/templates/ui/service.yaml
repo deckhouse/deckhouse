@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hubble-ui
+  namespace: d8-cni-cilium
+  labels:
+    app: hubble-ui
+spec:
+  type: ClusterIP
+  selector:
+    app: hubble-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8081

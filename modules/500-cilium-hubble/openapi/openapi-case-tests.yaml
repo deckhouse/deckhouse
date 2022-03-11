@@ -1,0 +1,20 @@
+positive:
+  configValues:
+  - debugLogging: true
+  - debugLogging: false
+  values:
+    - auth: {}
+      internal: {}
+    - auth: {}
+      https:
+        mode: CustomCertificate
+        customCertificate:
+          secretName: "plainstring"
+      internal:
+        customCertificateData:
+          tls.crt: plainstring
+          tls.key: plainstring
+negative:
+  values:
+  - internal:
+      something: ""

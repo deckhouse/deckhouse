@@ -1,0 +1,18 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      hubbleServer:
+        type: object
+        properties:
+          cert:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string
+

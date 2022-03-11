@@ -1,0 +1,50 @@
+type: object
+properties:
+  debugLogging:
+    type: boolean
+    default: false
+    description: Enabled debug logging for Cilium Hubble component.
+  auth:
+    type: object
+    default: {}
+    description: Options related to authentication or authorization in the application.
+    properties:
+      externalAuthentication:
+        type: object
+        description: |
+          A set of parameters to enable external authentication (it is based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > The `externalAuthentication` parameters are set automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            x-examples: [ "https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth" ]
+            description: The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
+            x-examples: [ "https://myhost.ru/dex/sign_in" ]
+            description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      password:
+        type: string
+        format: password
+        description: |
+          The password for http authorization of the `admin` user (it is generated automatically, but you can change it).
+
+          This parameter is used if the `externalAuthentication` is not enabled.
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access Hubble.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) one.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - [ "1.1.1.1/32" ]
+        description: An array if CIDRs that are allowed to authenticate in Hubble.

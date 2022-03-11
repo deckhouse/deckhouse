@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hubble-relay
+  namespace: d8-cni-cilium
+  labels:
+    app: hubble-relay
+spec:
+  type: ClusterIP
+  selector:
+    app: hubble-relay
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 4245
