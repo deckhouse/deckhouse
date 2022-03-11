@@ -180,6 +180,8 @@ releaseLoop:
 	return nil
 }
 
+var globalModules = []string{"candi", "deckhouse-controller", "global"}
+
 func (dcr *DeckhouseReleaseChecker) generateChangelogForEnabledModules(input *go_hook.HookInput) map[string]interface{} {
 	enabledModules := input.Values.Get("global.enabledModules").Array()
 	enabledModulesChangelog := make(map[string]interface{})
@@ -191,8 +193,10 @@ func (dcr *DeckhouseReleaseChecker) generateChangelogForEnabledModules(input *go
 	}
 
 	// enable global modules
-	if v, ok := dcr.releaseMetadata.Changelog["global"]; ok {
-		enabledModulesChangelog["global"] = v
+	for _, globalModule := range globalModules {
+		if v, ok := dcr.releaseMetadata.Changelog[globalModule]; ok {
+			enabledModulesChangelog[globalModule] = v
+		}
 	}
 
 	return enabledModulesChangelog
