@@ -64,13 +64,13 @@ function __main__() {
     # Group and User should not have a namespace
     namespace_failed=$(jq -rc '
     if .kind != "ServiceAccount" and .namespace != null
-    then "\(.kind)/\(.name)"
+    then "\(.kind) \(.name)"
     else false
     end
     ' <<< "$subject")
 
     if [[ "$namespace_failed" != "false" ]]; then
-      message="$message Namespace for the ServiceAccount $namespace_failed is not provided ;"
+      message="$message Namespace for the $namespace_failed must not be provided ;"
     fi
   done
 
