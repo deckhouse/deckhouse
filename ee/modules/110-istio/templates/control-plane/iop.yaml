@@ -145,9 +145,18 @@ spec:
         requests:
           cpu: 25m
           memory: 256Mi
-#TODO: affinity by revision
+  {{- if $.Values.istio.controlPlane.nodeSelector }}
+      nodeSelector:
+{{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
+  {{- else }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+  {{- end }}
+  {{- if $.Values.istio.controlPlane.tolerations }}
+      tolerations:
+{{ $.Values.istio.controlPlane.tolerations | toYaml | nindent 8 }}
+  {{- else }}
       {{- include "helm_lib_tolerations" (tuple $ "master") | nindent 6 }}
+  {{- end }}
     telemetry:
       enabled: true
       v2:
