@@ -54,20 +54,20 @@ cloudProviderOpenstack:
 			Expect(f.ValuesGet("cloudProviderOpenstack.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
-	"name": "default",
-	"type": "__DEFAULT__"
-  },
-  {
-	"name": "some-foo",
-	"type": "some-foo"
-  },
-  {
 	"name": "bar",
 	"type": "bar"
   },
   {
+	"name": "default",
+	"type": "__DEFAULT__"
+  },
+  {
 	"name": "other-bar",
 	"type": "other-bar"
+  },
+  {
+	"name": "some-foo",
+	"type": "some-foo"
   }
 ]
 `))

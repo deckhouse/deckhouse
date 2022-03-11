@@ -8,6 +8,7 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -52,7 +53,6 @@ cloudProviderOpenstack:
     securityGroups:
     - security_group_1
     - security_group_2
-  internalSubnet: "10.0.201.0/16"
   loadBalancer:
     subnetID: overrideSubnetID
   tags:
@@ -80,7 +80,6 @@ cloudProviderOpenstack:
     securityGroups:
     - security_group_1
     - security_group_2
-  internalSubnet: "10.0.201.0/16"
   loadBalancer: {}
 `
 	)
@@ -88,9 +87,12 @@ cloudProviderOpenstack:
 	var (
 		stateACloudDiscoveryData = `
 {
+  "apiVersion":"deckhouse.io/v1",
+  "kind":"OpenStackCloudDiscoveryData",
   "externalNetworkNames": [
     "external"
   ],
+  "layout": "Standard",
   "instances": {
     "imageName": "ubuntu",
     "mainNetwork": "kube",
@@ -112,23 +114,32 @@ cloudProviderOpenstack:
   }
 }
 `
+
 		stateACloudDiscoveryDataWithoutLoadbalancers = `
 {
+  "apiVersion":"deckhouse.io/v1",
+  "kind":"OpenStackCloudDiscoveryData",
   "externalNetworkNames": [
-    "external"
+	"external"
   ],
+  "layout": "StandardWithNoRouter",
   "instances": {
-    "imageName": "ubuntu",
-    "mainNetwork": "kube",
-    "sshKeyPairName": "my-key",
-    "securityGroups": [
-      "default",
-      "ssh-and-ping",
-      "security_group_1"
-    ]
+	"imageName": "ubuntu",
+	"mainNetwork": "kube",
+	"sshKeyPairName": "my-key",
+    "additionalNetworks": [
+	  "extra1",
+      "extra2"
+	],
+	"securityGroups": [
+	  "default",
+	  "ssh-and-ping",
+	  "security_group_1"
+	]
   },
   "internalNetworkNames": [
-    "internal"
+    "int1",
+    "int2"
   ],
   "podNetworkMode": "DirectRoutingWithPortSecurityEnabled",
   "zones": ["zone1", "zone2"]
@@ -162,6 +173,34 @@ tags:
   project: default
   env: production
 `
+		stateAClusterConfigurationWithNoRouter = `
+apiVersion: deckhouse.io/v1
+kind: OpenStackClusterConfiguration
+layout: StandardWithNoRouter
+standardWithNoRouter:
+  internalNetworkCIDR: 192.168.199.0/24
+  internalNetworkSecurity: true
+  externalNetworkName: public
+provider:
+  authURL: https://cloud.flant.com/v3/
+  domainName: Default
+  tenantName: tenant-name
+  username: user-name
+  password: pa$$word
+  region: HetznerFinland
+sshPublicKey: "aaaa"
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    flavorName: m1.large
+    imageName: ubuntu-18-04-cloud-amd64
+  volumeTypeMap:
+    nova: ceph-ssd
+tags:
+  project: default
+  env: production
+`
+
 		stateAWithoutLoadbalancers = fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
@@ -171,7 +210,7 @@ metadata:
 data:
   "cloud-provider-cluster-configuration.yaml": %s
   "cloud-provider-discovery-data.json": %s
-`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryDataWithoutLoadbalancers)))
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfigurationWithNoRouter)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryDataWithoutLoadbalancers)))
 
 		stateA = fmt.Sprintf(`
 apiVersion: v1
@@ -194,6 +233,9 @@ data: {}
 `
 	)
 
+	// TODO: eliminate the following dirty hack after `ee` subdirectory will be merged to the root
+	// Used to make dhctl config function able to validate `VsphereClusterConfiguration`.
+	_ = os.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "/deckhouse/ee/candi")
 	f := HookExecutionConfigInit(initValuesStringA, `{}`)
 
 	Context("Cluster has minimal cloudProviderOpenstack configuration and not empty discovery data", func() {

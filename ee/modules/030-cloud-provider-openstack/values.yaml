@@ -1,7 +1,0 @@
-cloudProviderOpenstack:
-  internal:
-    instances: {}
-    zones: []
-  instances: {}
-  storageClass:
-    topologyEnabled: true

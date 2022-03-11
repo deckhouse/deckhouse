@@ -1,0 +1,105 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-required-for-helm:
+      - internalNetworkNames
+    properties:
+      connection:
+        type: object
+        x-examples:
+          - { "authURL": "http://my.cloud.lalla/3/", "caCert": "mycacert", "domainName": "mydomain", "tenantName": "mytenantname", "username": "myuser", "password": "mypass", "region": "myreg" }
+        x-required-for-helm:
+          - authURL
+          - username
+          - password
+          - domainName
+          - region
+        properties:
+          authURL:
+            type: string
+          caCert:
+            type: string
+          domainName:
+            type: string
+          tenantName:
+            type: string
+          tenantID:
+            type: string
+          username:
+            type: string
+          password:
+            type: string
+          region:
+            type: string
+      internalNetworkNames:
+        type: array
+        default: []
+        items:
+          type: string
+      externalNetworkNames:
+        type: array
+        default: []
+        items:
+          type: string
+      zones:
+        type: array
+        default: []
+        items:
+          type: string
+      instances:
+        type: object
+        default: {}
+        properties:
+          sshKeyPairName:
+            type: string
+          securityGroups:
+            type: array
+            items:
+              type: string
+          imageName:
+            type: string
+          mainNetwork:
+            type: string
+          additionalNetworks:
+            type: array
+            items:
+              type: string
+          additionalTags:
+            type: array
+            items:
+              type: string
+      podNetworkMode:
+        type: string
+        x-examples:
+          - "VXLAN"
+          - "DirectRouting"
+          - "DirectRoutingWithPortSecurityEnabled"
+      loadBalancer:
+        type: object
+        default: {}
+        properties:
+          subnetID:
+            type: string
+          floatingNetworkID:
+            type: string
+      tags:
+        type: object
+        additionalProperties:
+          type: string
+      storageClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+            name:
+              type: string
+      defaultStorageClass:
+        type: string
+      supportsOnlineDiskResize:
+        type: boolean

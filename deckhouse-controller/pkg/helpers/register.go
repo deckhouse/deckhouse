@@ -23,7 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/aws"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/fnv"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/jwt"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/openstack"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/unit"
 	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 )
@@ -54,18 +53,6 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		awsMapZoneToSubnetsCommand := awsCommand.Command("map-zone-to-subnets", "Map zones to subnets.")
 		awsMapZoneToSubnetsCommand.Action(func(c *kingpin.ParseContext) error {
 			return aws.MapZoneToSubnets()
-		})
-	}
-
-	{
-		openstackCommand := helpersCommand.Command("openstack", "OpenStack helpers.")
-		openstackGetVolumeTypes := openstackCommand.Command("get-volume-types", "Get volume types.")
-		openstackGetVolumeTypes.Action(func(c *kingpin.ParseContext) error {
-			return openstack.GetVolumeTypes()
-		})
-		supportsOnlineDiskResize := openstackCommand.Command("supports-online-disk-resize", "Check whether block-storage API support online resize.")
-		supportsOnlineDiskResize.Action(func(c *kingpin.ParseContext) error {
-			return openstack.SupportsOnlineDiskResize()
 		})
 	}
 
