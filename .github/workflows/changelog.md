@@ -1,16 +1,15 @@
 # Changelog Workflows
 
-## What they do
+The set of workflows to generate changelogs for release messages and custom resource in clusters.
+The changelog is generated on milestone assignment on merged PRs or by merging the PR or by calling
+`/changelog` command in a 'Changelog PR' comments.
 
-Release changelog is generated on milestone assignment or PR merging or by calling command
-`/changelog` in 'changelog PR' comments.
+## Requirements
 
-### Requirements
+Changelog generation relies on repo secret `CHANGELOG_ACCESS_TOKEN` which must have `workflow`
+permission.
 
-Changelog generation relies on repo secret `CHANGELOG_ACCESS_TOKEN` which must
-have `workflow` permission.
-
-### Code
+## Code
 
 The changelog toolchain consists of these files
 
@@ -24,18 +23,31 @@ The changelog toolchain consists of these files
     workflows/
         changelog-command-dispatch.yml
         changelog-command.yml
-        changelog.yml
+        changelog-by-milestone.yml
+        changelog-by-pull.yml
 ```
 
-**Milestone changelog action** creates or updates a changelog PR for a given
-*open* milesone. It is used by two workflows.
 
-**Changelog workflow** re-generates all changelog PRs on push to the main
-branch.
+## Actions
+### Milestone changelog action
 
-**Changelog command dispatch** handles `/changelog` command and dispathes the
-`changelog-command` repository event.
+The action creates or updates a changelog PR for a given *open* milesone. It is used by workflows.
 
-**Changelog command** handles the `changelog-command` in the contet of a
-changelog pull request, and calls the action to update the PR in-place with
-fresh changelog.
+## Workflows
+
+### Changelog by milestone
+
+Generates all changelog PRs for opened milestones. Triggered by changing milestone in a merged PR.
+
+### Changelog by pull
+
+Generates the changelog on PR change for the PR milestone.
+
+### Changelog command dispatch
+
+Handles `/changelog` command and dispathes the `changelog-command` repository event.
+
+### Changelog command
+
+Handles the `changelog-command` in the contet of a changelog pull request, and calls the action to
+update the PR in-place with fresh changelog.
