@@ -1,3 +1,7 @@
+cloud-provider-aws:
+  fixes:
+    - summary: Fixed zone selection for bastion in WithNAT layout
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1021
 cloud-provider-openstack:
   fixes:
     - summary: Fix OpenStack CloudControllerManager configuration formatting
