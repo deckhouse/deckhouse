@@ -49,6 +49,14 @@ spec:
                   additionalProperties:
                     type: string
                   description: Deckhouse release requirements.
+                changelog:
+                  type: object
+                  description: Release's changelog for enabled modules.
+                  additionalProperties:
+                    type: string
+                changelogLink:
+                  type: string
+                  description: Link to site with full changelog for this release.
             status:
               type: object
               properties:
