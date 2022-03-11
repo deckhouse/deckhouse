@@ -108,7 +108,7 @@
         bindDN: {{ $provider.ldap.bindDN | quote }}
         {{- end }}
         {{- if $provider.ldap.bindPW  }}
-        bindPW: {{ $provider.ldap.bindPW }}
+        bindPW: '{{ $provider.ldap.bindPW }}'
         {{- end }}
         {{- if $provider.ldap.startTLS }}
         startTLS: true
