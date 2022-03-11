@@ -36,34 +36,41 @@ function __main__() {
 
   for subject in $(context::jq -rc '.review.request.object.spec.subjects // [] | .[]'); do
     # ServiceAccount name must be a valid domain name
-    res=$(jq -rc '
+    domain_failed=$(jq -rc '
     if
       .kind == "ServiceAccount" and
       (.name | test("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$") | not)
-    then
-      .name
-    else
-      false
+    then .name
+    else false
     end
     ' <<< "$subject")
 
-    if [[ "$res" != "false" ]]; then
-      message="$message ServiceAccount name is invalid: \"$res\" ;"
+    if [[ "$domain_failed" != "false" ]]; then
+      message="$message ServiceAccount name is invalid - $domain_failed ;"
     fi
 
     # ServiceAccount has to have namespace
-    res=$(jq -rc '
-    if
-      .kind == "ServiceAccount" and .namespace == null
-    then
-      .name
-    else
-      false
+    namespace_required=$(jq -rc '
+    if .kind == "ServiceAccount" and .namespace == null
+    then .name
+    else false
     end
     ' <<< "$subject")
 
-    if [[ "$res" != "false" ]]; then
-      message="$message Namespace for the ServiceAccount \"$res\" is not provided ;"
+    if [[ "$namespace_required" != "false" ]]; then
+      message="$message Namespace for the ServiceAccount $namespace_required is not provided ;"
+    fi
+
+    # Group and User should not have a namespace
+    namespace_failed=$(jq -rc '
+    if .kind != "ServiceAccount" and .namespace != null
+    then "\(.kind)/\(.name)"
+    else false
+    end
+    ' <<< "$subject")
+
+    if [[ "$namespace_failed" != "false" ]]; then
+      message="$message Namespace for the ServiceAccount $namespace_failed is not provided ;"
     fi
   done
 
