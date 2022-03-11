@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: istiod-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -22,7 +22,7 @@ kind: IstioOperator
 metadata:
   name: {{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 2 }}
 spec:
   revision: {{ $revision }}
 
@@ -114,7 +114,7 @@ spec:
       - d8-istio-sidecar-registry
 
       proxy:
-        image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}"
         clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
         resources: {}
         logLevel: warning
@@ -125,7 +125,7 @@ spec:
         excludeInboundPorts:  {{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," | quote }}
 
       proxy_init:
-        image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}"
         resources:
           limits:
             cpu: 2000m
@@ -134,20 +134,29 @@ spec:
             cpu: 10m
             memory: 10Mi
 
-{{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
     pilot:
       autoscaleEnabled: false
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
-      image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}
+      image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}"
       configNamespace: d8-{{ $.Chart.Name }}
       resources:
         requests:
           cpu: 25m
           memory: 256Mi
-#TODO: affinity by revision
-{{- include "helm_lib_node_selector" (tuple $ "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple $ "master") | indent 6 }}
+  {{- if $.Values.istio.controlPlane.nodeSelector }}
+      nodeSelector:
+{{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
+  {{- else }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+  {{- end }}
+  {{- if $.Values.istio.controlPlane.tolerations }}
+      tolerations:
+{{ $.Values.istio.controlPlane.tolerations | toYaml | nindent 8 }}
+  {{- else }}
+      {{- include "helm_lib_tolerations" (tuple $ "master") | nindent 6 }}
+  {{- end }}
     telemetry:
       enabled: true
       v2:
