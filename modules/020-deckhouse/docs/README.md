@@ -24,3 +24,29 @@ In Deckhouse, this module sets up:
 - **Service for validating Custom Resources**.
 
   The validation service prevents creating Custom Resources with invalid values or adding such values to the existing Custom Resources. Note that it only tracks Custom Resources managed by Deckhouse modules.
+
+### Deckhouse releases update
+
+#### Get Deckhouse releases status
+
+You can get Deckhouse releases list via the command `kubectl get deckhousereleases`. By default, a cluster keeps the last 10 outdated releases and all deployed/pending releases.
+
+Every release can have one of the following statuses:
+  * `Pending` - release is waiting to be deployed: waiting for update window, canary deployment, etc. You can see the detailed status via the `kubectl describe deckhouserelease $name` command.
+  * `Deployed` - release is applied. It means that the Deckhouse image tag was changed, but the update process of all components
+is going asynchronously and could not have been finished yet.
+  * `Outdated` - release is outdated and not used anymore.
+  * `Suspended` - release was suspended (for ex. it has an error). Can be set only if `suspended` release was not deployed yet.
+
+
+#### Update process
+When release status is changed to `Deployed` state, release is updating only a tag of the Deckhouse image.
+Deckhouse will start checking and updating process of the all modules, which were changed from the last release.
+Duration of an update could be different and connected to cluster size, enabled modules count and settings.
+Foe example: if you cluster have a lot of `NodeGroup` resources, it will take some time to update them because these resources are updated one by one
+`IngressNginxControllers` also updating one by one.
+
+
+#### Manual release deployment
+If you have a [manual update mode](usage.html#manual-update-confirmation) enabled and have a few Pending releases,
+you can approve them all at once. In that case Deckhouse will update in series keeping a release order and changing their status during the update.
