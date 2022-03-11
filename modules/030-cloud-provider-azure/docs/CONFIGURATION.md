@@ -18,19 +18,17 @@ The module automatically creates the following StorageClasses:
 
 It allows you to configure additional StorageClasses for volumes with configurable IOPS and Throughput. Also, it can filter out the unnecessary StorageClasses (you can do this via the `exclude` parameter).
 
-* `provision` — sets additional StorageClasses for [Azure ultra disks](https://docs.microsoft.com/en-us/azure/virtual-machines/disks-types#ultra-disk).
-  * Format — an array of objects;
-    * `name` — the name of the class to create;
-    * `diskIOPSReadWrite` — disk IOPS (limit of 300 IOPS/GiB, up to a maximum of 160 K IOPS per disk);
-    * `diskMBpsReadWrite` — disk throughput, `MBps`, (limit of a single disk is 256 KiB/s for each provisioned IOPS).
-  * An optional parameter;
+StorageClass Configuration Parameters:
+
+* `provision` — sets additional StorageClasses for [Azure ultra disks](https://docs.microsoft.com/en-us/azure/virtual-machines/disks-types#ultra-disk):
+  * `name` — the name of the class to create;
+  * `diskIOPSReadWrite` — disk IOPS (limit of 300 IOPS/GiB, up to a maximum of 160 K IOPS per disk);
+  * `diskMBpsReadWrite` — disk throughput, `MBps`, (limit of a single disk is 256 KiB/s for each provisioned IOPS).
 * `exclude` — a list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster;
-  * Format — an array of strings;
-  * An optional parameter;
-* `default` — the name of StorageClass that will be used by default in the cluster;
-  * Format — a string;
-  * An optional parameter;
+* `default` — the name of StorageClass that will be used by default in the cluster:
   * If the parameter is omitted, the default StorageClass is `managed-standard-ssd`.
+
+An example of Storage Class configuration:
 
 ```yaml
 cloudProviderAzure: |
