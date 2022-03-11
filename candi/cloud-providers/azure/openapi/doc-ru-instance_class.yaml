@@ -14,7 +14,7 @@ spec:
                   description: |
                     Тип заказываемых инстансов.
 
-                    Список всех доступных типов в регионе, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    Список всех доступных типов в регионе можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
                     ```shell
                     az vm list-sizes --location westeurope -o table
                     ```
@@ -22,11 +22,11 @@ spec:
                   description: |
                     Образ виртуальной машины, который будет использоваться для инстанса.
 
-                    Подробнее про образы виртуальных машин можно посмотреть в [официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+                    Подробнее про образы виртуальных машин можно посмотреть [в официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
 
                     Последнюю доступную версию образа можно получить c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
-                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`
-                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`
+                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`;
+                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`.
 
                     **По умолчанию:** образ из `AzureCloudDiscoveryData` (образ из которого был создан мастер при развертывании кластера).
 
@@ -38,7 +38,7 @@ spec:
                   description: |
                     Тип созданного диска.
 
-                    Список доступных типов дисков, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    Список доступных типов дисков можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
                     ```shell
                     az vm list-skus -l westeurope --zone`
                     ```
