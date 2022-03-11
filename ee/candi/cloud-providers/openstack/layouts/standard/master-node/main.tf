@@ -41,6 +41,7 @@ module "kubernetes_data" {
   node_index  = var.nodeIndex
   master_id   = module.master.id
   volume_type = local.volume_type
+  volume_zone = local.zone
   tags        = local.tags
 }
 
