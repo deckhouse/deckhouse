@@ -33,23 +33,32 @@ $(document).ready(function () {
     });
   }
 
-  update_parameter('dhctl-registry-docker-cfg', 'registryDockerCfg', '<YOUR_PRIVATE_ACCESS_STRING_IS_HERE>', null, '[config-yml]');
-  update_parameter('dhctl-registry-images-repo', 'imagesRepo', '<IMAGES_REPO_URI>', null, '[config-yml]');
-  update_parameter('dhctl-registry-ca', 'registryCA', '<REGISTRY_CA>', null, '[config-yml]');
-  if ( registrySchemeHTTP && registrySchemeHTTP === 'true' ) {
-    update_parameter('http', 'registryScheme', 'https', null, null);
-    updateTextInSnippet('[config-yml]', /registryScheme: https.+\n---/s, "registryScheme: http\n---");
-  }
+  if (registryImagesRepo && registryImagesRepo.length > 0) {
+    update_parameter('dhctl-registry-docker-cfg', 'registryDockerCfg', '<YOUR_PRIVATE_ACCESS_STRING_IS_HERE>', null, '[config-yml]');
+    update_parameter('dhctl-registry-images-repo', 'imagesRepo', '<IMAGES_REPO_URI>', null, '[config-yml]');
+    update_parameter('dhctl-registry-ca', 'registryCA', '<REGISTRY_CA>', null, '[config-yml]');
+    if (registrySchemeHTTP && registrySchemeHTTP === 'true') {
+      update_parameter('http', 'registryScheme', 'https', null, null);
+      updateTextInSnippet('[config-yml]', /registryScheme: https.+\n---/s, "registryScheme: http\n---");
+    }
 
-  if ( ( registrySchemeHTTP && registrySchemeHTTP === 'true' ) || !registryCA || (registryCA && registryCA.length < 1) ) {
-    // delete the registryCA parameter
-    $('code span.na').filter(function () {
-      return (this.innerText === "registryScheme");
-    }).each(function (index) {
-      delete_elements($(this).next().next().next(), 3);
-      updateTextInSnippet('[config-yml]', /(registryScheme: http[s]?).+\n---/s, "$1\n---");
+    if ((registrySchemeHTTP && registrySchemeHTTP === 'true') || !registryCA || (registryCA && registryCA.length < 1)) {
+      // delete the registryCA parameter
+      $('code span.na').filter(function () {
+        return (this.innerText === "registryScheme");
+      }).each(function (index) {
+        delete_elements($(this).next().next().next(), 3);
+        updateTextInSnippet('[config-yml]', /(registryScheme: http[s]?).+\n---/s, "$1\n---");
+      });
+
+    }
+    $('.highlight code').filter(function () {
+      return this.innerText.match('<IMAGES_REPO_URI>');
+    }).each(function () {
+      $(this).text($(this).text().replace('<IMAGES_REPO_URI>', registryImagesRepo));
     });
 
+    updateTextInSnippet('[docker-login-ce]', '<IMAGES_REPO_URI>', registryImagesRepo);
   }
 
   // delete empty lines in snippet
@@ -58,13 +67,6 @@ $(document).ready(function () {
     this.innerHTML = text.replace(/\s+\n(<span class="nn">---)/gs,"\n$1");
   });
 
-  $('.highlight code').filter(function () {
-    return this.innerText.match('<IMAGES_REPO_URI>');
-  }).each(function () {
-    $(this).text($(this).text().replace('<IMAGES_REPO_URI>', registryImagesRepo));
-  });
-
-  updateTextInSnippet('[docker-login-ce]', '<IMAGES_REPO_URI>', registryImagesRepo);
 });
 
 // Deletes element and the next count elements
