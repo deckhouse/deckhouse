@@ -6,7 +6,7 @@ groups:
     - name: beta
       version: v1.30.14
     - name: ea
-      version: v1.30.11
+      version: v1.30.14
     - name: stable
       version: v1.29.0
     - name: rock-solid
