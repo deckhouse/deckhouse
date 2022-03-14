@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -70,16 +71,32 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 		"OUTPUT": outputFile,
 	}
 
-	// try to create output file on remote server for prevent error while download
-	err := e.sshClient.File().UploadBytes(nil, outputFile, 0o666)
+	createOUtFileCmd := fmt.Sprintf("touch %s && chmod 644 %s", outputFile, outputFile)
+	err := frontend.NewCommand(e.sshClient.Settings, createOUtFileCmd).
+		Sudo().
+		WithStderrHandler(nil).
+		WithStdoutHandler(nil).
+		Run()
+
 	if err != nil {
-		return "", fmt.Errorf("Cannot create output file for script %s: %w", e.path, err)
+		return "", fmt.Errorf("Cannot create output file for script: %v", err)
 	}
+
+	defer func() {
+		// remove out file on server because it can contain non-safe information
+		err = frontend.NewCommand(e.sshClient.Settings, fmt.Sprintf("rm %s", outputFile)).
+			Sudo().
+			WithStderrHandler(nil).
+			WithStdoutHandler(nil).
+			Run()
+	}()
 
 	cmd := e.sshClient.UploadScript(e.path).
 		WithTimeout(e.timeout).
+		WithStdoutHandler(func(s string) {
+			log.InfoLn(s)
+		}).
 		WithEnvs(envs).
-		WithLiveLogs(true).
 		Sudo()
 
 	_, err = cmd.Execute()
@@ -91,6 +108,10 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	content, err := e.sshClient.File().DownloadBytes(outputFile)
 	if err != nil {
 		return "", fmt.Errorf("Cannot get output from remote file %s: %w", e.path, err)
+	}
+
+	if err != nil {
+		log.WarnLn("Post bootstrap output file '%s' did not remove from server", outputFile)
 	}
 
 	return string(content), nil
