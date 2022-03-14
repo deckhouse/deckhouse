@@ -258,15 +258,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 				pvc := obj.(PersistentVolumeClaimFilter)
 				if pvc.PromName == promName {
 					if pvc.RequestsStorage < diskSize {
-						patch := map[string]interface{}{
-							"spec": map[string]interface{}{
-								"resources": map[string]interface{}{
-									"requests": map[string]string{
-										"storage": fmt.Sprintf("%sGi", strconv.FormatInt(diskSize, 10)),
-									},
-								},
-							},
-						}
+						patch := makePatchRequestsStorage(diskSize)
 						input.LogEntry.Infof("PersistentVolumeClaim %s size will be changed from %dGB to %dGB", pvc.Name, pvc.RequestsStorage, diskSize)
 						input.PatchCollector.MergePatch(patch, "v1", "PersistentVolumeClaim", "d8-monitoring", pvc.Name)
 						continue
@@ -291,6 +283,18 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	return nil
+}
+
+func makePatchRequestsStorage(diskSize int64) map[string]interface{} {
+	return map[string]interface{}{
+		"spec": map[string]interface{}{
+			"resources": map[string]interface{}{
+				"requests": map[string]string{
+					"storage": fmt.Sprintf("%sGi", strconv.FormatInt(diskSize, 10)),
+				},
+			},
+		},
+	}
 }
 
 func isLocalStorage(input *go_hook.HookInput, dc dependency.Container, promName string) bool {
@@ -356,27 +360,25 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 			podFsSize, podFsUsed := getFsSizeAndUsed(input, dc, pod)
 			input.LogEntry.Debugf("%s, fsSize: %d, fsUsed: %d", pod.Name, podFsSize, podFsUsed)
 
-			if podFsSize != 0 {
-				input.MetricsCollector.Set(
-					"d8_prometheus_fs_size",
-					float64(podFsSize),
-					map[string]string{
-						"namespace": pod.Namespace,
-						"pod_name":  pod.Name,
-					},
-					metrics.WithGroup("prometheus_disk_hook"),
-				)
+			input.MetricsCollector.Set(
+				"d8_prometheus_fs_size",
+				float64(podFsSize),
+				map[string]string{
+					"namespace": pod.Namespace,
+					"pod_name":  pod.Name,
+				},
+				metrics.WithGroup("prometheus_disk_hook"),
+			)
 
-				input.MetricsCollector.Set(
-					"d8_prometheus_fs_used",
-					float64(podFsUsed),
-					map[string]string{
-						"namespace": pod.Namespace,
-						"pod_name":  pod.Name,
-					},
-					metrics.WithGroup("prometheus_disk_hook"),
-				)
-			}
+			input.MetricsCollector.Set(
+				"d8_prometheus_fs_used",
+				float64(podFsUsed),
+				map[string]string{
+					"namespace": pod.Namespace,
+					"pod_name":  pod.Name,
+				},
+				metrics.WithGroup("prometheus_disk_hook"),
+			)
 
 			if podFsSize > fsSize {
 				fsSize = podFsSize
