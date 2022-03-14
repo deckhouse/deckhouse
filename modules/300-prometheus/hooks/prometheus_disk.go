@@ -40,7 +40,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/ceph-csi",
+	Queue:        "/modules/prometheus/prometheus_disk",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "main",
