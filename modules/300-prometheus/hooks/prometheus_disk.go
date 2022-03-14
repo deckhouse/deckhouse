@@ -36,6 +36,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -191,6 +192,11 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 }
 
 func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
+	kubeClient, err := dc.GetK8sClient()
+	if err != nil {
+		return err
+	}
+
 	// checking pvc status for FileSystemResizePending or Resizing and restarting the pod if needed
 	podDeletionFlag := false
 	for _, obj := range input.Snapshots["pvcs"] {
@@ -248,7 +254,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 				diskResizeLimit = input.ConfigValues.Get(maxDiskSizeConfigPath).Int()
 			}
 
-			desiredSize := calcDesiredSize(input, dc, promName)
+			desiredSize := calcDesiredSize(input, kubeClient, promName)
 
 			if desiredSize <= diskResizeLimit {
 				diskSize = desiredSize
@@ -299,7 +305,7 @@ func makePatchRequestsStorage(diskSize int64) map[string]interface{} {
 	}
 }
 
-func isLocalStorage(input *go_hook.HookInput, dc dependency.Container, promName string) bool {
+func isLocalStorage(input *go_hook.HookInput, kubeClient k8s.Client, promName string) bool {
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaimFilter)
 
@@ -308,11 +314,6 @@ func isLocalStorage(input *go_hook.HookInput, dc dependency.Container, promName 
 		}
 
 		pvName := pvc.VolumeName
-
-		kubeClient, err := dc.GetK8sClient()
-		if err != nil {
-			return false
-		}
 
 		pv, err := kubeClient.CoreV1().PersistentVolumes().Get(context.TODO(), pvName, metav1.GetOptions{})
 		if err != nil {
@@ -328,7 +329,7 @@ func isLocalStorage(input *go_hook.HookInput, dc dependency.Container, promName 
 	return false
 }
 
-func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName string) (diskSize int64) {
+func calcDesiredSize(input *go_hook.HookInput, kubeClient k8s.Client, promName string) (diskSize int64) {
 	var allowVolumeExpansion bool
 
 	// find maximum PVC size
@@ -354,7 +355,7 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 	for _, obj := range pods {
 		pod := obj.(PodFilter)
 		if pod.PromName == promName && pod.PodScheduled && pod.ContainerReady {
-			podFsSize, podFsUsed := getFsSizeAndUsed(input, dc, pod)
+			podFsSize, podFsUsed := getFsSizeAndUsed(input, kubeClient, pod)
 			input.LogEntry.Debugf("%s, fsSize: %d, fsUsed: %d", pod.Name, podFsSize, podFsUsed)
 
 			input.MetricsCollector.Set(
@@ -391,7 +392,7 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 		diskSize = fsSize
 	}
 
-	if isLocalStorage(input, dc, promName) && fsSize > 0 {
+	if isLocalStorage(input, kubeClient, promName) && fsSize > 0 {
 		diskSize = fsSize
 	}
 
@@ -415,10 +416,10 @@ func isVolumeExpansionAllowed(input *go_hook.HookInput, scName string) bool {
 	return false
 }
 
-func getFsSizeAndUsed(input *go_hook.HookInput, dc dependency.Container, pod PodFilter) (fsSize int64, fsUsed int) {
+func getFsSizeAndUsed(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (fsSize int64, fsUsed int) {
 	containerName := "prometheus"
 	command := "df -PBG /prometheus/"
-	output, _, err := execToPodThroughAPI(dc, command, containerName, pod.Name, pod.Namespace)
+	output, _, err := execToPodThroughAPI(kubeClient, command, containerName, pod.Name, pod.Namespace)
 	if err != nil {
 		input.LogEntry.Warnf("%s: %s", pod.Name, err.Error())
 	} else {
@@ -433,12 +434,7 @@ func getFsSizeAndUsed(input *go_hook.HookInput, dc dependency.Container, pod Pod
 	return
 }
 
-func execToPodThroughAPI(dc dependency.Container, command, containerName, podName, namespace string) (string, string, error) {
-	kubeClient, err := dc.GetK8sClient()
-	if err != nil {
-		return "", "", err
-	}
-
+func execToPodThroughAPI(kubeClient k8s.Client, command, containerName, podName, namespace string) (string, string, error) {
 	req := kubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
