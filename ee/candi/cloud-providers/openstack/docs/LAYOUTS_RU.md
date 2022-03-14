@@ -2,15 +2,19 @@
 title: "Cloud provider — OpenStack: схемы размещения"
 ---
 
-## Standard
-Создаётся внутренняя сеть кластера со шлюзом в публичную сеть, узлы не имеют публичных IP-адресов. Для master-узла заказывается floating ip.
+Поддерживаются четыре схемы размещения. Ниже подробнее о каждой их них.
 
-**Внимание**
-Если провайдер не поддерживает SecurityGroups, то все приложения запущенные на узлах с FloatingIp будут доступны по белому IP.
-Например, kube-apiserver на мастерах будет доступен по 6443 порту. Чтобы избежать этого, рекомендуется использовать схему размещения SimpleWithInternalNetwork.
+## Standard
+Создаётся внутренняя сеть кластера со шлюзом в публичную сеть, узлы не имеют публичных IP-адресов. Для master-узла заказывается плавающий IP-адрес.
+
+> **Внимание!**
+> Если провайдер не поддерживает SecurityGroups, то все приложения, запущенные на узлах с FloatingIp, будут доступны по белому IP-адресу.
+> Например, kube-apiserver на master-узлах будет доступен на 6443 порту. Чтобы избежать этого, рекомендуется использовать схему размещения SimpleWithInternalNetwork.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vSTIcQnxcwHsgANqHE5Ry_ZcetYX2lTFdDjd3Kip5cteSbUxwRjR3NigwQzyTMDGX10_Avr_mizOB5o/pub?w=960&h=720)
 <!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
+
+Пример конфигурации схемы размещения:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -85,13 +89,15 @@ provider:
 один — в публичную сеть, другой — во внутреннюю сеть. Данная схема размещения должна использоваться, если необходимо, чтобы
 все узлы кластера были доступны напрямую.
 
-**Внимание**
-В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать floating IP для
-сети без роутера, поэтому нельзя заказать балансировщик с floating IP. Если заказывать internal loadbalancer, у которого
+> **Внимание!**
+> В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать плавающий IP-адрес для
+сети без роутера, поэтому нельзя заказать балансировщик с плавающий IP-адресом. Если заказывать internal loadbalancer, у которого
 virtual IP создаётся в публичной сети, то он всё равно доступен только с узлов кластера.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vR9Vlk22tZKpHgjOeQO2l-P0hyAZiwxU6NYGaLUsnv-OH0so8UXNnvrkNNiAROMHVI9iBsaZpfkY-kh/pub?w=960&h=720)
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
+
+Пример конфигурации схемы размещения:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -143,14 +149,15 @@ provider:
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
 
-**Внимание!**
-
-В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать floating IP для
-сети без роутера, поэтому нельзя заказать балансировщик с floating IP. Если заказывать internal loadbalancer, у которого
-virtual IP создаётся в публичной сети, то он всё равно доступен только с узлов кластера.
+> **Внимание!**
+> В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать плавающий IP-адрес для
+>сети без роутера, поэтому нельзя заказать балансировщик с плавающий IP-адресом. Если заказывать internal loadbalancer, у которого
+>virtual IP создаётся в публичной сети, то он всё равно доступен только с узлов кластера.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vTZbaJg7oIvoh2hkEW-DKbqeujhOiJtv_JSvfvDfXE9-mX_p6uggoY1Z9N2EAJ79c7IMfQC9ttQAmaP/pub?w=960&h=720)
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
+
+Пример конфигурации схемы размещения:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -201,14 +208,15 @@ provider:
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
 
-**Внимание!**
-
-В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается что они были ранее созданы.
-Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в OpenStackClusterConfiguration
-для masterNodeGroup и других nodeGroups, и `additionalSecurityGroups` при создании `OpenStackInstanceClass` в кластере.
+> **Внимание!**
+> В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается что они были ранее созданы.
+>Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в OpenStackClusterConfiguration
+>для masterNodeGroup и других nodeGroups, и `additionalSecurityGroups` при создании `OpenStackInstanceClass` в кластере.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vQOcYZPtHBqMtlNx9PDcMrqI0WEwRssL-oXONnrOoKNaIx1fcEODo9dK2zOoF1wbKeKJlhphFTuefB-/pub?w=960&h=720)
 <!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
+
+Пример конфигурации схемы размещения:
 
 ```yaml
 apiVersion: deckhouse.io/v1
