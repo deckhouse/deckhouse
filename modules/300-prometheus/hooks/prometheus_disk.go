@@ -342,12 +342,7 @@ func calcDesiredSize(input *go_hook.HookInput, dc dependency.Container, promName
 
 		allowVolumeExpansion = isVolumeExpansionAllowed(input, pvc.StorageClass)
 
-		if diskSize == 0 {
-			diskSize = pvc.RequestsStorage
-			continue
-		}
-
-		if diskSize < pvc.RequestsStorage {
+		if diskSize == 0 || diskSize < pvc.RequestsStorage {
 			diskSize = pvc.RequestsStorage
 		}
 	}
