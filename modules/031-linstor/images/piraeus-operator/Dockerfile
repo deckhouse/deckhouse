@@ -2,14 +2,15 @@ ARG BASE_DEBIAN
 ARG BASE_GOLANG_17_BUSTER
 
 FROM $BASE_GOLANG_17_BUSTER as builder
-ARG PIRAEUS_OPERATOR_VERSION=a09bf6d
+ARG PIRAEUS_OPERATOR_GITREPO=https://github.com/piraeusdatastore/piraeus-operator
+ARG PIRAEUS_OPERATOR_VERSION=1.8.0-rc.1-6-g584f016
 
 # Fix conflicting names
 COPY ./patches /patches
 
-RUN git clone https://github.com/piraeusdatastore/piraeus-operator /usr/local/go/piraeus-operator \
+RUN git clone ${PIRAEUS_OPERATOR_GITREPO} /usr/local/go/piraeus-operator \
  && cd /usr/local/go/piraeus-operator \
- && git reset --hard ${PIRAEUS_OPERATOR_VERSION} \
+ && git reset --hard v${PIRAEUS_OPERATOR_VERSION} \
  && git apply /patches/*.patch \
  && cd cmd/manager \
  && go build \

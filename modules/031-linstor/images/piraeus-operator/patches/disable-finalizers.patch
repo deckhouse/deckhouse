@@ -1,8 +1,8 @@
 diff --git a/pkg/controller/linstorcontroller/linstorcontroller_controller.go b/pkg/controller/linstorcontroller/linstorcontroller_controller.go
-index 284157f..7500c4a 100644
+index 2baafa8..2df99be 100644
 --- a/pkg/controller/linstorcontroller/linstorcontroller_controller.go
 +++ b/pkg/controller/linstorcontroller/linstorcontroller_controller.go
-@@ -166,13 +166,6 @@ func (r *ReconcileLinstorController) reconcileSpec(ctx context.Context, controll
+@@ -169,13 +169,6 @@ func (r *ReconcileLinstorController) reconcileSpec(ctx context.Context, controll
  		return r.finalizeControllerSet(ctx, controllerResource)
  	}
  
@@ -13,11 +13,11 @@ index 284157f..7500c4a 100644
 -		return fmt.Errorf("failed to add finalizer: %w", err)
 -	}
 -
- 	log.Debug("reconcile LINSTOR Service")
+ 	log.Debug("reconcile legacy config map name")
  
- 	ctrlService := newServiceForResource(controllerResource)
+ 	err = reconcileutil.DeleteIfOwned(ctx, r.client, &corev1.ConfigMap{ObjectMeta: getObjectMeta(controllerResource, "%s-config")}, controllerResource)
 diff --git a/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go b/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
-index c2eb993..3a6993d 100644
+index efd689b..78552d6 100644
 --- a/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
 +++ b/pkg/controller/linstorsatelliteset/linstorsatelliteset_controller.go
 @@ -184,12 +184,6 @@ func (r *ReconcileLinstorSatelliteSet) reconcileSpec(ctx context.Context, satell
@@ -30,6 +30,6 @@ index c2eb993..3a6993d 100644
 -		return []error{fmt.Errorf("failed to add finalizer to resource: %w", err)}
 -	}
 -
- 	log.Debug("reconcile satellite configmap")
+ 	log.Debug("reconcile legacy config map name")
  
- 	// Create the satellite configuration
+ 	err = reconcileutil.DeleteIfOwned(ctx, r.client, &corev1.ConfigMap{ObjectMeta: getObjectMeta(satelliteSet, "%s-config")}, satelliteSet)
