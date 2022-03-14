@@ -256,16 +256,18 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 
 			for _, obj := range input.Snapshots["pvcs"] {
 				pvc := obj.(PersistentVolumeClaimFilter)
-				if pvc.PromName == promName {
-					if pvc.RequestsStorage < diskSize {
-						patch := makePatchRequestsStorage(diskSize)
-						input.LogEntry.Infof("PersistentVolumeClaim %s size will be changed from %dGB to %dGB", pvc.Name, pvc.RequestsStorage, diskSize)
-						input.PatchCollector.MergePatch(patch, "v1", "PersistentVolumeClaim", "d8-monitoring", pvc.Name)
-						continue
-					}
-					if diskSize == 0 && pvc.RequestsStorage != 0 {
-						diskSize = pvc.RequestsStorage
-					}
+				if pvc.PromName != promName {
+					continue
+				}
+
+				if pvc.RequestsStorage < diskSize {
+					patch := makePatchRequestsStorage(diskSize)
+					input.LogEntry.Infof("PersistentVolumeClaim %s size will be changed from %dGB to %dGB", pvc.Name, pvc.RequestsStorage, diskSize)
+					input.PatchCollector.MergePatch(patch, "v1", "PersistentVolumeClaim", "d8-monitoring", pvc.Name)
+					continue
+				}
+				if diskSize == 0 && pvc.RequestsStorage != 0 {
+					diskSize = pvc.RequestsStorage
 				}
 			}
 
