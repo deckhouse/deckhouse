@@ -17,10 +17,8 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"reflect"
 	"testing"
-	"time"
 
 	lclient "github.com/LINBIT/golinstor/client"
 	v1 "k8s.io/api/core/v1"
@@ -28,8 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestParseThinPoolsEmpty(t *testing.T) {
-	got, err := parseThinPools(``)
+func TestParseLVMThinPoolsEmpty(t *testing.T) {
+	got, err := parseLVMThinPools("node1", ``)
 	if err != nil {
 		t.Errorf("\nexpected no error\ngot: %s", err.Error())
 	}
@@ -39,45 +37,69 @@ func TestParseThinPoolsEmpty(t *testing.T) {
 }
 
 func TestParseThinPoolsWrong(t *testing.T) {
-	_, err := parseThinPools(`a;b`)
+	_, err := parseLVMThinPools("node1", `a;b`)
 	if err == nil {
 		t.Errorf("\nexpected error\ngot: nil")
 	}
 }
 
 func TestParseThinPoolsNoTags(t *testing.T) {
-	got, err := parseThinPools(`  data;linstor_data;twi---tz--;
+	got, err := parseLVMThinPools("node1", `  data;linstor_data;twi---tz--;
   pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000;linstor_data;Vwi-aotz--;
   root;vg0;-wi-ao----;`)
 	if err != nil {
 		t.Errorf("\nexpected no error\ngot: %s", err.Error())
 	}
-	if got != nil {
-		t.Errorf("\nexpected nil\ngot: %+v", got)
+	expected := []Candidate{
+		Candidate{
+			Name:       "LVM Logical Volume linstor_data/data",
+			UniqueKey:  3709774633,
+			SkipReason: "has no propper tag set: can't find tag with prefix linstor",
+		},
+		Candidate{
+			Name:       "LVM Logical Volume linstor_data/pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000",
+			UniqueKey:  1603582185,
+			SkipReason: "is not a thin pool",
+		},
 	}
+	diffCandidates(t, &expected, &got)
+
 }
 
 func TestParseThinPoolsWithTags(t *testing.T) {
-	got, err := parseThinPools(`  data;linstor_data;twi---tz--;linstor-ssd
+	got, _ := parseLVMThinPools("node1", `  data;linstor_data;twi---tz--;linstor-ssd
   pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000;linstor_data;Vwi-aotz--;linstor-ssd
   root;vg0;-wi-ao----;`)
-	if err != nil {
-		t.Errorf("\nexpected no error\ngot: %s", err.Error())
-	}
-	expected := []ThinPool{
-		ThinPool{
-			Name:   "data",
-			VGName: "linstor_data",
-			Tags:   []string{"linstor-ssd"},
+	expected := []Candidate{
+		Candidate{
+			Name:      "LVM Logical Volume linstor_data/data",
+			UniqueKey: 2581560477,
+			StoragePool: lclient.StoragePool{
+				StoragePoolName: "ssd",
+				ProviderKind:    lclient.LVM_THIN,
+				NodeName:        "node1",
+				Props: map[string]string{
+					"StorDriver/LvmVg":    "linstor_data",
+					"StorDriver/ThinPool": "data",
+				},
+			},
+		},
+		Candidate{
+			Name:       "LVM Logical Volume linstor_data/pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000",
+			UniqueKey:  2121989597,
+			SkipReason: "is not a thin pool",
+		},
+		Candidate{
+			Name:       "LVM Logical Volume vg0/root",
+			UniqueKey:  1329238223,
+			SkipReason: "is not a thin pool",
 		},
 	}
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("\nexpected: %+v\ngot: %+v", expected, got)
-	}
+	diffCandidates(t, &expected, &got)
 }
 
 func TestParseVolumeGroupsEmpty(t *testing.T) {
-	got, err := parseVolumeGroups(``)
+	got, err := parseLVMVolumeGroups("node1", ``)
 	if err != nil {
 		t.Errorf("\nexpected no error\ngot: %s", err.Error())
 	}
@@ -87,95 +109,81 @@ func TestParseVolumeGroupsEmpty(t *testing.T) {
 }
 
 func TestParseVolumeGroupsWrong(t *testing.T) {
-	_, err := parseVolumeGroups(`avasd`)
+	_, err := parseLVMVolumeGroups("node1", `avasd`)
 	if err == nil {
 		t.Errorf("\nexpected error\ngot: nil")
 	}
 }
 
 func TestParseVolumeGroupsNoTags(t *testing.T) {
-	got, err := parseVolumeGroups(`  linstor_data;
+	got, err := parseLVMVolumeGroups("node1", `  linstor_data;
   vg0;`)
 	if err != nil {
 		t.Errorf("\nexpected no error\ngot: %s", err.Error())
 	}
-	if got != nil {
-		t.Errorf("\nexpected nil\ngot: %+v", got)
+	expected := []Candidate{
+		Candidate{
+			Name:       "LVM Volume Group linstor_data",
+			UniqueKey:  2152925717,
+			SkipReason: "has no propper tag set: can't find tag with prefix linstor",
+		},
+		Candidate{
+			Name:       "LVM Volume Group vg0",
+			UniqueKey:  1388896196,
+			SkipReason: "has no propper tag set: can't find tag with prefix linstor",
+		},
+	}
+	diffCandidates(t, &expected, &got)
+
+}
+
+func diffCandidates(t *testing.T, expected *[]Candidate, got *[]Candidate) {
+	e := *expected
+	g := *got
+	for i := 0; i < len(e); i++ {
+		if e[i].SkipReason != "" {
+			g[i].StoragePool = lclient.StoragePool{}
+		}
+		if !reflect.DeepEqual(g[i], e[i]) {
+			t.Errorf("\ncount:\t\t%d\nexpected:\t%+v\ngot:\t\t%+v", i+1, e[i], g[i])
+		}
 	}
 }
 
 func TestParseVolumeGroupsWithTags(t *testing.T) {
-	got, err := parseVolumeGroups(`  linstor_data;linstor-data
+	got, err := parseLVMVolumeGroups("node1", `  linstor_data;linstor-some-data
   vg0;`)
 	if err != nil {
 		t.Errorf("\nexpected no error\ngot: %s", err.Error())
 	}
-	expected := []VolumeGroup{
-		VolumeGroup{
-			Name: "linstor_data",
-			Tags: []string{"linstor-data"},
+	expected := []Candidate{
+		Candidate{
+			Name:      "LVM Volume Group linstor_data",
+			UniqueKey: 1151917120,
+			StoragePool: lclient.StoragePool{
+				StoragePoolName: "some-data",
+				ProviderKind:    lclient.LVM,
+				NodeName:        "node1",
+				Props: map[string]string{
+					"StorDriver/LvmVg": "linstor_data",
+				},
+			},
 		},
 	}
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("\nexpected: %+v\ngot: %+v", expected, got)
-	}
+	diffCandidates(t, &expected, &got)
 }
 
-func TestMakeLinstorStoragePoolLVMThin(t *testing.T) {
-	tp := ThinPool{
-		Name:   "data",
-		VGName: "linstor_data",
-		Tags:   []string{"linstor-ssd"},
-	}
-	got, err := makeLinstorStoragePool(&tp)
-	if err != nil {
-		t.Errorf("\nexpected no error\ngot: %s", err.Error())
-	}
-	expected := lclient.StoragePool{
+func TestNewKubernetesStorageClasses(t *testing.T) {
+	tp := lclient.StoragePool{
 		StoragePoolName: "ssd",
 		ProviderKind:    lclient.LVM_THIN,
+		NodeName:        "node1",
 		Props: map[string]string{
 			"StorDriver/LvmVg":    "linstor_data",
 			"StorDriver/ThinPool": "data",
 		},
 	}
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("\nexpected: %+v\ngot: %+v", expected, got)
-	}
-}
-
-func TestMakeLinstorStoragePoolLVM(t *testing.T) {
-	vg := VolumeGroup{
-		Name: "linstor_data",
-		Tags: []string{"linstor-data"},
-	}
-	got, err := makeLinstorStoragePool(&vg)
-	if err != nil {
-		t.Errorf("\nexpected no error\ngot: %s", err.Error())
-	}
-	expected := lclient.StoragePool{
-		StoragePoolName: "data",
-		ProviderKind:    lclient.LVM,
-		Props: map[string]string{
-			"StorDriver/LvmVg": "linstor_data",
-		},
-	}
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("\nexpected: %+v\ngot: %+v", expected, got)
-	}
-}
-
-func TestMakeKubernetesStorageClasses(t *testing.T) {
-	tp := ThinPool{
-		Name:   "data",
-		VGName: "linstor_data",
-		Tags:   []string{"linstor-ssd"},
-	}
-	got, err := makeKubernetesStorageClass(&tp, 2)
-
-	if err != nil {
-		t.Errorf("\nexpected no error\ngot: %s", err.Error())
-	}
+	got := newKubernetesStorageClass(&tp, 2)
 
 	volBindMode := storagev1.VolumeBindingImmediate
 	allowVolumeExpansion := true
@@ -197,70 +205,5 @@ func TestMakeKubernetesStorageClasses(t *testing.T) {
 
 	if !reflect.DeepEqual(got, expected) {
 		t.Errorf("\nexpected: %+v\ngot: %+v", expected, got)
-	}
-}
-
-func TestCandidatesLoop(t *testing.T) {
-
-	vg1 := VolumeGroup{
-		Name: "linstor_data",
-		Tags: []string{"linstor-data"},
-	}
-	vg2 := VolumeGroup{
-		Name: "linstor_hdd",
-		Tags: []string{"linstor-hdd"},
-	}
-	tp := ThinPool{
-		Name:   "data",
-		VGName: "linstor_data",
-		Tags:   []string{"linstor-ssd"},
-	}
-
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Millisecond)
-	var attempt int
-	candidatesChannel := runCandidatesLoop(ctx, func() ([]StoragePoolCandidate, error) {
-		var s []StoragePoolCandidate
-		attempt++
-		if attempt < 2 {
-			s = []StoragePoolCandidate{&vg1, &vg2}
-		} else {
-			s = []StoragePoolCandidate{&vg1, &vg2, &tp}
-		}
-		return s, nil
-	}, time.Millisecond)
-
-	var expectedStoragePoolsNames = []string{"data", "hdd", "ssd"}
-	var expectedStorageClassesNames = []string{
-		"linstor-data-r1", "linstor-data-r2", "linstor-data-r3",
-		"linstor-hdd-r1", "linstor-hdd-r2", "linstor-hdd-r3",
-		"linstor-ssd-r1", "linstor-ssd-r2", "linstor-ssd-r3",
-	}
-	var gotStoragePoolsNames []string
-	var gotStorageClassesNames []string
-
-	for candidate := range candidatesChannel {
-		// Create storage pool in LINSTOR
-		storagePool, err := makeLinstorStoragePool(candidate)
-		if err != nil {
-			t.Errorf("failed to generate LINSTOR storage pool: %s", err)
-		}
-		gotStoragePoolsNames = append(gotStoragePoolsNames, storagePool.StoragePoolName)
-
-		// Create StorageClasses in Kubernetes
-		for r := 1; r <= maxReplicasNum; r++ {
-			storageClass, err := makeKubernetesStorageClass(candidate, r)
-			if err != nil {
-				t.Errorf("failed to generate Kubernetes storage class: %s", err)
-			}
-			gotStorageClassesNames = append(gotStorageClassesNames, storageClass.GetName())
-		}
-	}
-
-	cancel()
-	if !reflect.DeepEqual(gotStoragePoolsNames, expectedStoragePoolsNames) {
-		t.Errorf("\nexpected LINSTOR storage pools: %+v\ngot: %+v", expectedStoragePoolsNames, gotStoragePoolsNames)
-	}
-	if !reflect.DeepEqual(gotStorageClassesNames, expectedStorageClassesNames) {
-		t.Errorf("\nexpected Kubernetes storage classes: %+v\ngot: %+v", expectedStorageClassesNames, gotStorageClassesNames)
 	}
 }

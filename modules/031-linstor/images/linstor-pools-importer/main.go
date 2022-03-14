@@ -19,27 +19,30 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/tools/clientcmd"
-	kclient "sigs.k8s.io/controller-runtime/pkg/client"
-
-	v1 "k8s.io/api/core/v1"
-	storagev1 "k8s.io/api/storage/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog"
 
 	lclient "github.com/LINBIT/golinstor/client"
+	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog"
+	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -48,63 +51,130 @@ const (
 	maxReplicasNum = 3
 )
 
-var (
-	nodeName  = os.Getenv("NODE_NAME")
-	podName   = os.Getenv("POD_NAME")
-	namespace = os.Getenv("NAMESPACE")
-)
-
-var supportedProviderKinds = []lclient.ProviderKind{lclient.LVM, lclient.LVM_THIN}
-
+// Print version
 func printVersion() {
 	klog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	klog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 }
 
+type options struct {
+	namespace    string
+	nodeName     string
+	podName      string
+	scanInterval int
+}
+
 func main() {
 
-	delaySeconds := flag.Int("delay", 10, "Delay in seconds between scanning attempts")
+	// Parse inputs
+	opts, err := parseInputs()
+	if err != nil {
+		klog.Fatalln("Failed to parse inputs", err)
+	}
 
-	flag.Parse()
+	// Print version
 	printVersion()
 
+	// Create Kubernetes client
+	kc, err := createKubeClient()
+	if err != nil {
+		klog.Fatalln("...", err)
+	}
+
+	// Create context
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Get owner
+	owner, err := getOwner(ctx, kc, opts.namespace, opts.podName)
+	if err != nil {
+		klog.Fatalln("failed to get owner pod:", err)
+	}
+
+	// Get LINSTOR client
+	lc, err := lclient.NewClient()
+	if err != nil {
+		klog.Fatalln("failed to create LINSTOR client:", err)
+	}
+
+	klog.Infof("Starting main loop (scanInterval: %d seconds)", opts.scanInterval)
+
+	// Main loop: configure storage pools and create storage classes
+	stop := make(chan struct{})
+	go func() {
+		defer cancel()
+		err := provisionStoragePools(ctx, lc, kc, &owner, opts.nodeName, time.Duration(opts.scanInterval)*time.Second)
+		if errors.Is(err, context.Canceled) {
+			// only occurs if the context was cancelled, and it only can be cancelled on SIGINT
+			stop <- struct{}{}
+			return
+		}
+		klog.Fatalln(err)
+	}()
+
+	// Blocks waiting signals from OS.
+	shutdown(func() {
+		cancel()
+		<-stop
+		os.Exit(0)
+	})
+}
+
+// Parse inputs
+func parseInputs() (options, error) {
+	var opts options
+	opts.scanInterval = *flag.Int("scan-interval", 10, "Delay in seconds between scanning attempts")
+	klog.Infof("scanInterval: %d", opts.scanInterval)
+
+	opts.nodeName = os.Getenv("NODE_NAME")
+	if opts.nodeName == "" {
+		return opts, fmt.Errorf("Required NODE_NAME env variable is not specified!")
+	}
+	klog.Infof("nodeName: %s", opts.nodeName)
+
+	opts.podName = os.Getenv("POD_NAME")
+	if opts.podName == "" {
+		return opts, fmt.Errorf("Required POD_NAME env variable is not specified!")
+	}
+
+	klog.Infof("podName: %s", opts.podName)
+
+	opts.namespace = os.Getenv("NAMESPACE")
+	if opts.namespace == "" {
+		return opts, fmt.Errorf("Required NAMESPACE env variable is not specified!")
+	}
+	klog.Infof("namespace: %s", opts.namespace)
+	flag.Parse()
+	return opts, nil
+}
+
+// Create Kubernetes client
+func createKubeClient() (kclient.Client, error) {
+	var kc kclient.Client
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientcmd.NewDefaultClientConfigLoadingRules(),
 		&clientcmd.ConfigOverrides{},
 	)
-
-	if nodeName == "" {
-		klog.Fatalln("Required NODE_NAME env variable is not specified!")
-	}
-	klog.Infof("nodeName: %+v", nodeName)
-	if podName == "" {
-		klog.Fatalln("Required POD_NAME env variable is not specified!")
-	}
-	klog.Infof("podName: %+v", podName)
-	if namespace == "" {
-		klog.Fatalln("Required NAMESPACE env variable is not specified!")
-	}
-	klog.Infof("namespace: %+v", namespace)
-
-	ctx := context.TODO()
-
 	// Get a config to talk to the apiserver
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
-		klog.Errorln("Failed to get kubernetes config:", err)
+		return kc, fmt.Errorf("Failed to get kubernetes config: %w", err)
 	}
-
-	kc, err := kclient.New(config, kclient.Options{})
+	kc, err = kclient.New(config, kclient.Options{})
 	if err != nil {
-		klog.Fatalln("Failed to create Kubernetes client:", err)
+		return kc, fmt.Errorf("Failed to create Kubernetes client: %w", err)
 	}
+	return kc, nil
+}
 
+// Get owner
+func getOwner(ctx context.Context, kc kclient.Client, namespace, podName string) (v1.ObjectReference, error) {
+	var owner v1.ObjectReference
 	var pod v1.Pod
-	err = kc.Get(ctx, types.NamespacedName{Name: podName, Namespace: namespace}, &pod)
+	err := kc.Get(ctx, types.NamespacedName{Name: podName, Namespace: namespace}, &pod)
 	if err != nil {
-		klog.Fatalf("look up owner(s) of pod: %v", err)
+		return owner, fmt.Errorf("look up owner(s) of pod %s/%s: %v", namespace, podName, err)
 	}
-	owner := v1.ObjectReference{
+	owner = v1.ObjectReference{
 		APIVersion: "v1",
 		Kind:       "Pod",
 		Name:       pod.GetName(),
@@ -112,327 +182,379 @@ func main() {
 		UID:        pod.GetUID(),
 	}
 	klog.Infof("using %s/%s as owner for Kubernetes events", owner.Kind, owner.Name)
-
-	lc, err := lclient.NewClient()
-	if err != nil {
-		klog.Fatalln("failed to create LINSTOR client:", err)
-	}
-
-	klog.Infof("Starting main loop (delay: %d seconds)", *delaySeconds)
-	candidatesChannel := runCandidatesLoop(ctx, getCandidates, time.Duration(*delaySeconds)*time.Second)
-
-	for candidate := range candidatesChannel {
-		klog.Infof("Got %s candidate: %+v\n", candidate.GetProviderKind(), candidate)
-		// Create storage pool in LINSTOR
-		storagePool, err := makeLinstorStoragePool(candidate)
-		if err != nil {
-			klog.Fatalln("failed to generate LINSTOR storage pool:", err)
-		}
-		_, err = lc.Nodes.Get(ctx, nodeName)
-		if err != nil {
-			klog.Fatalln("Failed to get LINSTOR node", err)
-		}
-		_, err = lc.Nodes.GetStoragePool(ctx, nodeName, storagePool.StoragePoolName)
-		if err != nil { // TODO check for 404
-			err = lc.Nodes.CreateStoragePool(ctx, nodeName, storagePool)
-			if err != nil {
-				event := makeKubernetesEvent(&owner, v1.EventTypeWarning, "Failed", "Failed to create LINSTOR storage pool"+err.Error())
-				err = kc.Create(ctx, &event)
-				if err != nil {
-					klog.Errorln("Failed to create event", err)
-				}
-				klog.Fatalln("Failed to create LINSTOR storage pool", err)
-			}
-			event := makeKubernetesEvent(&owner, v1.EventTypeNormal, "Created", "Created LINSTOR storage pool: "+nodeName+"/"+storagePool.StoragePoolName)
-			if err = kc.Create(ctx, &event); err != nil {
-				klog.Fatalln("Failed to create event", err)
-			}
-		}
-
-		// Get the maximum number of available replicas
-		opts := lclient.ListOpts{StoragePool: []string{storagePool.StoragePoolName}}
-		sp, err := lc.Nodes.GetStoragePoolView(ctx, &opts)
-		if err != nil {
-			klog.Fatalln("Failed to list LINSTOR storage pools", err)
-		}
-		replicasNum := len(sp)
-		if replicasNum > maxReplicasNum {
-			replicasNum = maxReplicasNum
-		}
-
-		// Create StorageClasses in Kubernetes
-		for r := 1; r <= replicasNum; r++ {
-			storageClass, err := makeKubernetesStorageClass(candidate, r)
-			if err != nil {
-				klog.Fatalln("failed to generate Kubernetes storage class:", err)
-			}
-			err = kc.Get(ctx, types.NamespacedName{Name: storageClass.GetName()}, &storageClass)
-			if err == nil { // TODO check for 404
-				continue
-			}
-			err = kc.Create(ctx, &storageClass)
-			if err != nil {
-				event := makeKubernetesEvent(&owner, v1.EventTypeWarning, "Failed", "Failed to create Kubernetes storage class"+err.Error())
-				if err := kc.Create(ctx, &event); err != nil {
-					klog.Errorln("Failed to create event", err)
-				}
-				klog.Fatalln("Failed to create Kubernetes storageClass", err)
-			}
-			event := makeKubernetesEvent(&owner, v1.EventTypeNormal, "Created", "Created Kubernetes storage class: "+storageClass.Name)
-			err = kc.Create(ctx, &event)
-			if err != nil {
-				klog.Fatalln("Failed to create event", err)
-			}
-		}
-	}
+	return owner, nil
 }
 
-// Makes loop over storage pool candidates, retruns channel of changed ones
-func runCandidatesLoop(ctx context.Context, f func() ([]StoragePoolCandidate, error), delay time.Duration) <-chan StoragePoolCandidate {
-	ch := make(chan StoragePoolCandidate)
+func provisionStoragePools(ctx context.Context, lc *lclient.Client, kc kclient.Client, owner *v1.ObjectReference, nodeName string, scanInterval time.Duration) error {
+	candiCh := make(chan Candidate)
+	errCh := make(chan error)
+
 	go func() {
-		var oldCandidates []StoragePoolCandidate
+		seen := make(map[uint32]struct{})
+
 		for {
-			select {
-			case <-ctx.Done():
-				close(ch)
+			candidates, err := getCandidates(nodeName)
+			if err != nil {
+				// only fatal error, cannot cmd
+				errCh <- err
 				return
-			default:
-				candidates, err := f()
-				if err != nil {
-					klog.Fatalln("failed to load candidates:", err)
-				}
-			LOOP:
-				for _, candidate := range candidates {
-					name := candidate.GetName()
-					if name == "" {
-						klog.Fatalln("storage pool name can't be empty")
-					}
-					for _, oldCandidate := range oldCandidates {
-						if name == oldCandidate.GetName() {
-							continue LOOP
-						}
-					}
-					ch <- candidate
-				}
-				oldCandidates = candidates
 			}
-			time.Sleep(delay)
+			for _, cand := range candidates {
+				if _, yes := seen[cand.UniqueKey]; yes {
+					continue
+				}
+				seen[cand.UniqueKey] = struct{}{}
+				candiCh <- cand
+			}
+			time.Sleep(scanInterval)
 		}
 	}()
-	return ch
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+
+		case err := <-errCh:
+			return fmt.Errorf("Cannot get storage pool candidates: %w", err)
+
+		case cand := <-candiCh:
+			if cand.SkipReason != "" {
+				klog.Infof("Skip %s as it %s", cand.Name, cand.SkipReason)
+				continue
+			}
+			klog.Infof("Processing %s", cand.Name)
+
+			changed, err := syncNodeStoragePool(ctx, lc, cand)
+			if err != nil {
+				// only abortions possible here
+				err2 := reportFailed(ctx, kc, nodeName, owner, "Failed to sync LINSTOR storage pool: "+err.Error())
+				if err2 != nil {
+					klog.Fatalln("Failed to create event", err2)
+				}
+				return err
+			}
+
+			if changed {
+				if err := reportCreated(ctx, kc, nodeName, owner, "Created LINSTOR storage pool: "+nodeName+"/"+cand.StoragePool.StoragePoolName); err != nil {
+					return err
+				}
+			} else {
+				klog.Info("LINSTOR storage pool " + nodeName + "/" + cand.StoragePool.StoragePoolName + " is already configured")
+			}
+
+			scs, err := genKubernetesStorageClasses(ctx, lc, cand)
+			if err != nil {
+				// only abortions possible here
+				err2 := reportFailed(ctx, kc, nodeName, owner, "Failed to generate Kubernetes storage classes: "+err.Error())
+				if err2 != nil {
+					klog.Fatalln("Failed to create event", err2)
+				}
+				return err
+			}
+
+			for _, sc := range scs {
+				changed, err := syncKubernetesStorageClass(ctx, kc, sc)
+				if err != nil {
+					// only abortions possible here
+					err2 := reportFailed(ctx, kc, nodeName, owner, "Failed to sync Kubernetes storage class: "+err.Error())
+					if err2 != nil {
+						klog.Fatalln("Failed to create event", err2)
+					}
+					return err
+				}
+
+				if changed {
+					if err := reportCreated(ctx, kc, nodeName, owner, "Created Kubernetes storage class: "+sc.GetName()); err != nil {
+						return err
+					}
+				} else {
+					klog.Info("Kubernetes storage class " + sc.GetName() + " is already configured")
+				}
+			}
+
+		}
+	}
 }
 
-// Collects all storage pool candidates from the node
-func getCandidates() ([]StoragePoolCandidate, error) {
-	var candidates []StoragePoolCandidate
-
-	// Getting LVM volume groups
-	var vgs VolumeGroups
-	err := vgs.LoadCandidates()
+func genKubernetesStorageClasses(ctx context.Context, lc *lclient.Client, cand Candidate) ([]storagev1.StorageClass, error) {
+	var scs []storagev1.StorageClass
+	// Get the maximum number of available replicas
+	opts := lclient.ListOpts{
+		StoragePool: []string{cand.StoragePool.StoragePoolName},
+		Limit:       maxReplicasNum,
+	}
+	sps, err := lc.Nodes.GetStoragePoolView(ctx, &opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get LVM volume groups: %s", err)
+		return nil, fmt.Errorf("Failed to list LINSTOR storage pools: %w", err)
 	}
-	for _, vg := range vgs {
-		candidates = append(candidates, vg)
+	replicasNum := len(sps)
+	if replicasNum > maxReplicasNum {
+		replicasNum = maxReplicasNum
 	}
 
-	// Getting LVM thin pools
-	var tps ThinPools
-	err = tps.LoadCandidates()
+	// Create StorageClasses in Kubernetes
+	for r := 1; r <= replicasNum; r++ {
+		scs = append(scs, newKubernetesStorageClass(&cand.StoragePool, r))
+	}
+	return scs, nil
+}
+
+func syncKubernetesStorageClass(ctx context.Context, kc kclient.Client, sc storagev1.StorageClass) (bool, error) {
+	// Check old storage class https://t.me/meta_tractor
+	err := kc.Get(ctx, types.NamespacedName{Name: sc.GetName()}, &sc)
+	if err == nil {
+		return false, nil
+	}
+	if !kerrors.IsNotFound(err) {
+		return false, fmt.Errorf("Failed to get Kubernetes storage class: %w", err)
+	}
+	// Create new storage class
+	err = kc.Create(ctx, &sc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get LVM thin pools: %s", err)
+		if kerrors.IsAlreadyExists(err) {
+			return false, nil
+		} else {
+			return false, fmt.Errorf("Failed to create Kubernetes storage class: %w", err)
+		}
 	}
-	for _, tp := range tps {
-		candidates = append(candidates, tp)
+	return true, nil
+}
+
+func syncNodeStoragePool(ctx context.Context, lc *lclient.Client, cand Candidate) (bool, error) {
+	// Check old storage pool
+	_, err := lc.Nodes.Get(ctx, cand.StoragePool.NodeName)
+	if err != nil {
+		return false, fmt.Errorf("Failed to get LINSTOR node: %w", err)
+	}
+	_, err = lc.Nodes.GetStoragePool(ctx, cand.StoragePool.NodeName, cand.StoragePool.StoragePoolName)
+	if err == nil {
+		return false, nil
+	}
+	if err != lclient.NotFoundError {
+		return false, fmt.Errorf("Failed to get LINSTOR storage pool: %w", err)
 	}
 
-	return candidates, nil
+	// Create new storage pool
+	err = lc.Nodes.CreateStoragePool(ctx, cand.StoragePool.NodeName, cand.StoragePool)
+	if err != nil {
+		return false, fmt.Errorf("Failed to create LINSTOR storage pool: %w", err)
+	}
+	return true, nil
 }
 
-type StoragePoolCandidates interface {
-	LoadCandidates() error
+// shutdown waits for SIGINT or SIGTERM and runs a callback function.
+//
+// First signal start a callback function, which should call os.Exit(0).
+// Next signal will force exit with os.Exit(128 + signalValue). If no cb is given, the exist is also forced.
+func shutdown(cb func()) {
+	exitGracefully := cb != nil
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+
+	for {
+		sig := <-ch
+
+		if exitGracefully {
+			exitGracefully = false
+			klog.Infof("Shutdown called with %q", sig.String())
+			go cb()
+			continue
+		}
+
+		klog.Infof("Forced shutdown with %q", sig.String())
+		signum := 0
+		if v, ok := sig.(syscall.Signal); ok {
+			signum = int(v)
+		}
+		os.Exit(128 + signum)
+	}
 }
 
-// Defines any type of LINSTOR storage pool candidate
-type StoragePoolCandidate interface {
-	GetName() string
-	GetProviderKind() lclient.ProviderKind
-	GetProps() map[string]string
+// Log and send creation event to Kubernetes
+func reportCreated(ctx context.Context, kc kclient.Client, nodeName string, owner *v1.ObjectReference, message string) error {
+	klog.Info(message)
+	event := newKubernetesEvent(nodeName, owner, v1.EventTypeNormal, "Created", message)
+	return kc.Create(ctx, &event)
 }
 
-type ThinPools []ThinPool
-type ThinPool struct {
-	Name   string
-	VGName string
-	Tags   []string
+// Log and send failed event to Kubernetes
+func reportFailed(ctx context.Context, kc kclient.Client, nodeName string, owner *v1.ObjectReference, message string) error {
+	klog.Info(message)
+	event := newKubernetesEvent(nodeName, owner, v1.EventTypeWarning, "Failed", message)
+	return kc.Create(ctx, &event)
 }
 
-func (a *ThinPools) LoadCandidates() error {
+type VolumeGroups struct{}
+
+func getLVMThinCandidates(nodeName string) ([]Candidate, error) {
 	cmd := exec.Command("lvs", "-oname,vg_name,lv_attr,tags", "--separator=;", "--noheadings", "--config="+lvmConfig)
+
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	tps, err := parseThinPools(out.String())
-	for _, tp := range tps {
-		*a = append(*a, tp)
-	}
-	if err != nil {
-		return err
-	}
-	return nil
+	return parseLVMThinPools(nodeName, out.String())
 }
-func parseThinPools(out string) ([]ThinPool, error) {
-	var tps []ThinPool
 
+type ThinPools struct{}
+
+func getLVMCandidates(nodeName string) ([]Candidate, error) {
+	cmd := exec.Command("vgs", "-oname,tags", "--separator=;", "--noheadings", "--config="+lvmConfig)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+	return parseLVMVolumeGroups(nodeName, out.String())
+}
+
+type Candidate struct {
+	Name        string
+	UniqueKey   uint32
+	SkipReason  string
+	StoragePool lclient.StoragePool
+}
+
+// Collects all storage pool candidates from the node
+func getCandidates(nodeName string) ([]Candidate, error) {
+	var candidates []Candidate
+
+	// Getting LVM storage pools
+	cs, err := getLVMCandidates(nodeName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read LVM storage pools: %s", err)
+	}
+	candidates = append(candidates, cs...)
+
+	// Getting LVM thin storage pools
+	cs, err = getLVMThinCandidates(nodeName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read LVMthin storage pools: %s", err)
+	}
+	candidates = append(candidates, cs...)
+
+	return candidates, nil
+}
+
+func parseLVMThinPools(nodeName, out string) ([]Candidate, error) {
+	var sps []Candidate
 	for _, line := range strings.Split(out, "\n") {
+		var skipReason string
+		// Parsing line
 		if line == "" {
 			continue
 		}
 		a := strings.Split(line, ";")
 		if len(a) != 4 {
-			return nil, fmt.Errorf("wrong line: %s", line)
+			return nil, fmt.Errorf("wrong line: %q", line)
 		}
-		name, vgName, lvAttr, tags := strings.TrimSpace(a[0]), a[1], a[2], strings.Split(a[3], ",")
-		if name == "" {
-			return nil, fmt.Errorf("name can't be empty")
+		lvName, vgName, lvAttr, tags := strings.TrimSpace(a[0]), a[1], a[2], strings.Split(a[3], ",")
+		if lvName == "" {
+			return nil, fmt.Errorf("LV name can't be empty (line: %q)", line)
 		}
 		if vgName == "" {
-			return nil, fmt.Errorf("vgName can't be empty")
+			return nil, fmt.Errorf("vgName can't be empty (line: %q)", line)
 		}
 		if lvAttr == "" {
-			return nil, fmt.Errorf("lvAttr can't be empty")
+			return nil, fmt.Errorf("lvAttr can't be empty (line: %q)", line)
 		}
-		if lvAttr[0:1] != "t" {
-			continue
+		name, err := parseNameFromLVMTags(&tags)
+		switch {
+		case lvAttr[0:1] != "t":
+			skipReason = "is not a thin pool"
+		case err != nil:
+			skipReason = "has no propper tag set: " + err.Error()
 		}
-		if tags[0] == "" {
-			continue
-		}
-		tps = append(tps, ThinPool{
-			Name:   name,
-			VGName: vgName,
-			Tags:   tags,
-		})
-	}
 
-	return tps, nil
+		// Calculating Hash
+		h := fnv.New32a()
+		h.Write([]byte("lvmthin"))
+		h.Write([]byte(line))
+
+		sps = append(sps, Candidate{
+			Name:       "LVM Logical Volume " + vgName + "/" + lvName,
+			UniqueKey:  h.Sum32(),
+			SkipReason: skipReason,
+			StoragePool: lclient.StoragePool{
+				StoragePoolName: name,
+				NodeName:        nodeName,
+				ProviderKind:    lclient.LVM_THIN,
+				Props: map[string]string{
+					"StorDriver/LvmVg":    vgName,
+					"StorDriver/ThinPool": lvName,
+				},
+			}})
+	}
+	return sps, nil
 }
 
-func (a ThinPool) GetName() string {
-	for _, tag := range a.Tags {
-		t := strings.Split(tag, "-")
-		if t[0] == linstorPrefix && t[1] != "" {
-			return t[1]
-		}
-	}
-	return ""
-}
-func (a ThinPool) GetProviderKind() lclient.ProviderKind { return lclient.LVM_THIN }
-func (a ThinPool) GetProps() map[string]string {
-	return map[string]string{
-		"StorDriver/LvmVg":    a.VGName,
-		"StorDriver/ThinPool": a.Name,
-	}
-}
-
-type VolumeGroups []VolumeGroup
-type VolumeGroup struct {
-	Name string
-	Tags []string
-}
-
-func (a *VolumeGroups) LoadCandidates() error {
-	cmd := exec.Command("vgs", "-oname,tags", "--separator=;", "--noheadings", "--config="+lvmConfig)
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-	vgs, err := parseVolumeGroups(out.String())
-	for _, vg := range vgs {
-		*a = append(*a, vg)
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-func parseVolumeGroups(out string) ([]VolumeGroup, error) {
-	var vgs []VolumeGroup
-
+func parseLVMVolumeGroups(nodeName, out string) ([]Candidate, error) {
+	var sps []Candidate
 	for _, line := range strings.Split(out, "\n") {
+		var skipReason string
+		// Parsing line
 		if line == "" {
 			continue
 		}
 		a := strings.Split(line, ";")
 		if len(a) != 2 {
-			return nil, fmt.Errorf("wrong line: %s", line)
+			return nil, fmt.Errorf("wrong line: %q", line)
 		}
-		name, tags := strings.TrimSpace(a[0]), strings.Split(a[1], ",")
-		if name == "" {
-			return nil, fmt.Errorf("name can't be empty")
+		vgName, tags := strings.TrimSpace(a[0]), strings.Split(a[1], ",")
+		if vgName == "" {
+			return nil, fmt.Errorf("VG name can't be empty (line: %q)", line)
 		}
-		if tags[0] == "" {
-			continue
+		name, err := parseNameFromLVMTags(&tags)
+		if err != nil {
+			skipReason = "has no propper tag set: " + err.Error()
 		}
-		vgs = append(vgs, VolumeGroup{
-			Name: name,
-			Tags: tags,
+
+		// Calculating Hash
+		h := fnv.New32a()
+		h.Write([]byte("lvm"))
+		h.Write([]byte(line))
+
+		sps = append(sps, Candidate{
+			Name:       "LVM Volume Group " + vgName,
+			UniqueKey:  h.Sum32(),
+			SkipReason: skipReason,
+			StoragePool: lclient.StoragePool{
+				StoragePoolName: name,
+				NodeName:        nodeName,
+				ProviderKind:    lclient.LVM,
+				Props: map[string]string{
+					"StorDriver/LvmVg": vgName,
+				},
+			},
 		})
 	}
-
-	return vgs, nil
+	return sps, nil
 }
 
-func (a VolumeGroup) GetName() string {
-	for _, tag := range a.Tags {
+func parseNameFromLVMTags(tags *[]string) (string, error) {
+	var foundNames []string
+	for _, tag := range *tags {
 		t := strings.Split(tag, "-")
 		if t[0] == linstorPrefix && t[1] != "" {
-			return t[1]
+			foundNames = append(foundNames, strings.TrimPrefix(tag, linstorPrefix+"-"))
 		}
 	}
-	return ""
-}
-func (a VolumeGroup) GetProviderKind() lclient.ProviderKind { return lclient.LVM }
-func (a VolumeGroup) GetProps() map[string]string {
-	return map[string]string{
-		"StorDriver/LvmVg": a.Name,
+	switch len(foundNames) {
+	case 0:
+		return "", errors.New("can't find tag with prefix " + linstorPrefix)
+	case 1:
+		return foundNames[0], nil
+	default:
+		return "", errors.New("found more than one tag with prefix " + linstorPrefix)
 	}
 }
 
-func makeLinstorStoragePool(c StoragePoolCandidate) (lclient.StoragePool, error) {
-	sp := lclient.StoragePool{
-		StoragePoolName: c.GetName(),
-		ProviderKind:    c.GetProviderKind(),
-		Props:           c.GetProps(),
-	}
-	if c.GetName() == "" {
-		return sp, fmt.Errorf("storage pool name can't be empty")
-	}
-	if sp.Props == nil {
-		return sp, fmt.Errorf("storage pool properties can't be empty")
-	}
-	suported := false
-	for _, k := range supportedProviderKinds {
-		if sp.ProviderKind == k {
-			suported = true
-			break
-		}
-	}
-	if !suported {
-		return sp, fmt.Errorf("storage pool providerKind %s is not supported", sp.ProviderKind)
-	}
-
-	return sp, nil
-}
-
-func makeKubernetesEvent(owner *v1.ObjectReference, eventType, reason, message string) v1.Event {
+func newKubernetesEvent(nodeName string, owner *v1.ObjectReference, eventType, reason, message string) v1.Event {
 	eventTime := metav1.Now()
 	event := v1.Event{
 		ObjectMeta: metav1.ObjectMeta{
@@ -457,25 +579,21 @@ func makeKubernetesEvent(owner *v1.ObjectReference, eventType, reason, message s
 	return event
 }
 
-func makeKubernetesStorageClass(c StoragePoolCandidate, r int) (storagev1.StorageClass, error) {
+func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.StorageClass {
 	volBindMode := storagev1.VolumeBindingImmediate
 	allowVolumeExpansion := true
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
-	name := c.GetName()
-	if name == "" {
-		return storagev1.StorageClass{}, fmt.Errorf("storage pool name can't be empty")
-	}
 	return storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s-r%d", linstorPrefix, name, r),
+			Name: fmt.Sprintf("%s-%s-r%d", linstorPrefix, sp.StoragePoolName, r),
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
 		AllowVolumeExpansion: &allowVolumeExpansion,
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
-			"linstor.csi.linbit.com/storagePool":    name,
+			"linstor.csi.linbit.com/storagePool":    sp.StoragePoolName,
 			"linstor.csi.linbit.com/placementCount": fmt.Sprintf("%d", r),
 		},
-	}, nil
+	}
 }

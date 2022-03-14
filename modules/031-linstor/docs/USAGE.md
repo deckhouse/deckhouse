@@ -43,15 +43,15 @@ lvs -o name,vg_name,tags
 
    `` `
    vgcreate linstor_data /dev/nvme0n1 /dev/nvme1n1
-   lvcreate -L 1.8T -T linstor_data/data --add-tag linstor-data
+   lvcreate -L 1.8T -T linstor_data/thindata --add-tag linstor-thindata
    ```
 
    (Take attention: the group itself should not have this tag configured)
 
 Using the commands above, create storage pools on all nodes where you plan to store your data.  
-Use the same names for storage pools on different nodes if you want them to fall into the same StorageClass.
+Use the same names for the storage pools on the different nodes if you want to achieve a general StorageClasses created for all of them.
 
-When all storage pools are created, you will see several new StorageClasses in Kubernetes: 
+When all storage pools are created, you will see up to three new StorageClasses in Kubernetes:
 ```console
 $ kubectl get storageclass
 NAME                   PROVISIONER                  AGE
