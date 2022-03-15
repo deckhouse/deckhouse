@@ -63,8 +63,7 @@ spec:
                     Node user SSH public keys.
 
                     Either `sshPublicKey` or `sshPublicKeys` **must** be specified.
-                  example:
-                    - [ 'ssh-rsa AAABBB', 'ssh-rsa BBBCCC' ]
+                  example: [ 'ssh-rsa AAABBB', 'ssh-rsa BBBCCC' ]
                 passwordHash:
                   type: string
                   description: |
@@ -82,14 +81,14 @@ spec:
                   description: 'Node user additional system groups.'
                   items:
                     type: string
-                  example:
+                  examples:
                   - [ 'docker' ]
                   - [ 'docker', 'ftp' ]
                 nodeGroups:
                   type: array
                   default: [ '*' ]
                   description: List of NodeGroups to apply the user for.
-                  example:
+                  examples:
                   - [ 'master', 'worker' ]
                   - [ 'worker' ]
                   - [ '*' ]

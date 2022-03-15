@@ -78,10 +78,10 @@ spec:
 
                     Option available only if `enableMultiTenancy` option is enabled.
                   x-doc-versionType: ee
+                  example: ['production-.*']
                   items:
                     type: string
                     minLength: 1
-                    example: 'production-.*'
                 subjects:
                   type: array
                   description: |
