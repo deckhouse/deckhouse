@@ -29,6 +29,7 @@
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "fullname" "csi-controller-legacy" }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
 {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_legacy_envs" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_legacy_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_legacy_volume_mounts" . | fromYamlArray) }}
