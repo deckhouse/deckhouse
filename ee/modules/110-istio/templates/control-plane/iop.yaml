@@ -142,9 +142,10 @@ spec:
       image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}"
       configNamespace: d8-{{ $.Chart.Name }}
       resources:
+        limits:
+          memory: 4Gi
         requests:
-          cpu: 25m
-          memory: 256Mi
+          memory: 4Gi
   {{- if $.Values.istio.controlPlane.nodeSelector }}
       nodeSelector:
 {{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
