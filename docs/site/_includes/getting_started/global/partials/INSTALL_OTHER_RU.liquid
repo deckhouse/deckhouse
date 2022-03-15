@@ -39,7 +39,8 @@ dhctl bootstrap \
   --ssh-user=<username> \
   --ssh-host=<master_ip> \
   --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml
+  --config=/config.yml \
+  --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
 dhctl bootstrap \
   --ssh-user=<username> \
@@ -52,7 +53,7 @@ dhctl bootstrap \
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-Здесь, переменная `username` — это имя пользователя, от которого генерировался SSH-ключ для установки.
+Здесь, переменная `username` — это имя пользователя, от которого генерировался SSH-ключ для установки. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`, иначе — оставьте пустым.
 {%- else %}
 Здесь, переменная `username` —
 {%- if page.platform_code == "openstack" %} имя пользователя по умолчанию для выбранного образа виртуальной машины.
