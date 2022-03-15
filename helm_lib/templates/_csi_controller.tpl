@@ -4,7 +4,7 @@
 
   {{- $config := index . 1 }}
   {{- $fullname := $config.fullname | default "csi-controller" }}
-  {{- /* we need this `if` to properly set $snapshotterEnabled variable if $config.snapshotterEnabled is not set */ - }}
+  {{- /* we need this `if` to properly set $snapshotterEnabled variable if $config.snapshotterEnabled is not set */ -}}
   {{- $snapshotterEnabled := true }}
   {{- if hasKey $config "snapshotterEnabled" }}
     {{- $snapshotterEnabled = $config.snapshotterEnabled }}
