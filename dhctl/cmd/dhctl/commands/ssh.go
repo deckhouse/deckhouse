@@ -86,7 +86,7 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		if Direction == "up" {
 			if Data != "" {
 				log.InfoF("upload bytes to '%s' on remote\n", DstPath)
-				err = sshCl.File().UploadBytes([]byte(Data), DstPath, 0o644)
+				err = sshCl.File().UploadBytes([]byte(Data), DstPath)
 			} else {
 				log.InfoF("upload local '%s' to '%s' on remote\n", SrcPath, DstPath)
 				err = sshCl.File().Upload(SrcPath, DstPath)
