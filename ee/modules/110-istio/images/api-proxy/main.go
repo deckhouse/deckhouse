@@ -194,7 +194,6 @@ func httpHandlerApiProxy(w http.ResponseWriter, r *http.Request) {
 		ErrorLog:      logger,
 		FlushInterval: 50 * time.Millisecond,
 		ModifyResponse: func(resp *http.Response) error {
-			resp.Header.Set("X-Proxy", "Magical")
 			logger.Println("[apiserver]", resp.Status)
 			return nil
 		},
