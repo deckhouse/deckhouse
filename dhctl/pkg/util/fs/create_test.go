@@ -34,7 +34,7 @@ func assertFileExistsWithContent(t *testing.T, fileName, expectContent string) {
 
 func TestTouchFile(t *testing.T) {
 	t.Run("Creates file if it not exists with empty content", func(t *testing.T) {
-		fileName := RandomFileName()
+		fileName := RandomTmpFileName()
 		_, err := os.Stat(fileName)
 		if err != nil && !os.IsNotExist(err) {
 			t.Fail()
@@ -54,7 +54,7 @@ func TestTouchFile(t *testing.T) {
 	})
 
 	t.Run("Does not rewrite file content if exists", func(t *testing.T) {
-		fileName := RandomFileName()
+		fileName := RandomTmpFileName()
 
 		const content = "test content"
 		err := ioutil.WriteFile(fileName, []byte(content), 0o600)

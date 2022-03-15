@@ -28,6 +28,9 @@ var (
 	ResourcesTimeout = "15m"
 	DeckhouseTimeout = 10 * time.Minute
 
+	PostBootstrapScriptTimeout = 10 * time.Minute
+	PostBootstrapScriptPath    = ""
+
 	ForceAbortFromCache             = false
 	DontUsePublicControlPlaneImages = false
 
@@ -51,6 +54,20 @@ func DefineDeckhouseFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("DECKHOUSE_TIMEOUT")).
 		Default(DeckhouseTimeout.String()).
 		DurationVar(&DeckhouseTimeout)
+}
+
+func DefinePostBootstrapScriptFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("post-bootstrap-script-path", `Path to bash (or another interpreted language which installed on master node) script which will execute after bootstrap resources.
+All output of the script will be logged with Info level with prefix 'Post-bootstrap script result:'.
+If you want save to state cache on key 'post-bootstrap-result' you need to out result with prefix 'Result of post-bootstrap script:' in one line.
+Experimental. This feature may be deleted in the future.`).
+		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_PATH")).
+		StringVar(&PostBootstrapScriptPath)
+
+	cmd.Flag("post-bootstrap-script-timeout", "Timeout to execute after bootstrap resources script. Experimental. This feature may be deleted in the future.").
+		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_TIMEOUT")).
+		Default(PostBootstrapScriptTimeout.String()).
+		DurationVar(&PostBootstrapScriptTimeout)
 }
 
 func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {

@@ -19,10 +19,9 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 var (

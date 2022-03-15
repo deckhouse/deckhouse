@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -168,9 +169,16 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineResourcesFlags(cmd, false)
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDontUsePublicImagesFlags(cmd)
+	app.DefinePostBootstrapScriptFlags(cmd)
 
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)
+
+		if app.PostBootstrapScriptPath != "" {
+			if err := bootstrap.ValidateScriptFile(app.PostBootstrapScriptPath); err != nil {
+				return err
+			}
+		}
 
 		// first, parse and check cluster config
 		metaConfig, err := loadConfigFromFile(app.ConfigPath)
@@ -204,6 +212,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		printBanner()
+
+		bootstrapState := bootstrap.NewBootstrapState(stateCache)
 
 		clusterUUID, err := generateClusterUUID(stateCache)
 		if err != nil {
@@ -335,11 +345,21 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
+		if app.PostBootstrapScriptPath != "" {
+			postScriptExecutor := bootstrap.NewPostBootstrapScriptExecutor(sshClient, app.PostBootstrapScriptPath, bootstrapState).
+				WithTimeout(app.PostBootstrapScriptTimeout)
+
+			if err := postScriptExecutor.Execute(); err != nil {
+				return err
+			}
+		}
+
 		_ = log.Process("bootstrap", "Clear cache", func() error {
 			cache.Global().CleanWithExceptions(
 				operations.MasterHostsCacheKey,
 				operations.ManifestCreatedInClusterCacheKey,
 				operations.BastionHostCacheKey,
+				bootstrap.PostBootstrapResultCacheKey,
 			)
 			log.WarnLn(`Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
 			return nil

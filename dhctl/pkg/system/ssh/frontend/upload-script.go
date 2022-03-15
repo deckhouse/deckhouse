@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alessio/shellescape"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
@@ -34,10 +36,13 @@ type UploadScript struct {
 
 	ScriptPath string
 	Args       []string
+	envs       map[string]string
 
 	sudo bool
 
 	stdoutHandler func(string)
+
+	timeout time.Duration
 }
 
 func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *UploadScript {
@@ -58,6 +63,16 @@ func (u *UploadScript) WithStdoutHandler(handler func(string)) *UploadScript {
 	return u
 }
 
+func (u *UploadScript) WithTimeout(timeout time.Duration) *UploadScript {
+	u.timeout = timeout
+	return u
+}
+
+func (u *UploadScript) WithEnvs(envs map[string]string) *UploadScript {
+	u.envs = envs
+	return u
+}
+
 func (u *UploadScript) Execute() (stdout []byte, err error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
@@ -71,10 +86,13 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	}
 
 	var cmd *Command
+	var scriptFullPath string
 	if u.sudo {
-		cmd = NewCommand(u.Session, "/tmp/"+scriptName, u.Args...).Sudo()
+		scriptFullPath = u.pathWithEnv("/tmp/" + scriptName)
+		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Sudo()
 	} else {
-		cmd = NewCommand(u.Session, "./"+scriptName, u.Args...).Cmd()
+		scriptFullPath = u.pathWithEnv("./" + scriptName)
+		cmd = NewCommand(u.Session, scriptFullPath, u.Args...).Cmd()
 	}
 
 	scriptCmd := cmd.CaptureStdout(nil)
@@ -82,11 +100,33 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 		scriptCmd = scriptCmd.WithStdoutHandler(u.stdoutHandler)
 	}
 
+	if u.timeout > 0 {
+		scriptCmd.WithTimeout(u.timeout)
+	}
+
 	err = scriptCmd.Run()
 	if err != nil {
 		err = fmt.Errorf("execute on remote: %v", err)
 	}
 	return cmd.StdoutBytes(), err
+}
+
+func (u *UploadScript) pathWithEnv(path string) string {
+	if len(u.envs) == 0 {
+		return path
+	}
+
+	arrayToJoin := make([]string, 0, len(u.envs)*2)
+
+	for k, v := range u.envs {
+		vEscaped := shellescape.Quote(v)
+		kvStr := fmt.Sprintf("%s=%s", k, vEscaped)
+		arrayToJoin = append(arrayToJoin, kvStr)
+	}
+
+	envs := strings.Join(arrayToJoin, " ")
+
+	return fmt.Sprintf("%s %s", envs, path)
 }
 
 func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {

@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
@@ -355,6 +356,44 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		return runFunc()
+	})
+
+	return cmd
+}
+
+func DefineExecPostBootstrapScript(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	cmd := parent.Command("exec-post-bootstrap", "Test scp upload and ssh run uploaded script.")
+	app.DefineSSHFlags(cmd)
+	app.DefineBecomeFlags(cmd)
+	app.DefinePostBootstrapScriptFlags(cmd)
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
+		if err != nil {
+			return nil
+		}
+
+		if err = cache.Init(sshClient.Check().String()); err != nil {
+			return fmt.Errorf("Can not init cache: %v", err)
+		}
+
+		bootstrapState := bootstrap.NewBootstrapState(cache.Global())
+
+		postScriptExecutor := bootstrap.NewPostBootstrapScriptExecutor(sshClient, app.PostBootstrapScriptPath, bootstrapState).
+			WithTimeout(app.PostBootstrapScriptTimeout)
+
+		if err := postScriptExecutor.Execute(); err != nil {
+			return err
+		}
+
+		out, err := bootstrapState.PostBootstrapScriptResult()
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Output from post-bootstrap script:\n%s", string(out))
+
+		return nil
 	})
 
 	return cmd

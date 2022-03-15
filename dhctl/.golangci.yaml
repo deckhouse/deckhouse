@@ -8,6 +8,8 @@ issues:
     - "error-strings: error strings should not be capitalized.*"
 
 linters-settings:
+  gci:
+    local-prefixes: github.com/deckhouse/
   goimports:
     local-prefixes: github.com/deckhouse/deckhouse
   errcheck:
@@ -26,6 +28,7 @@ linters:
     - exportloopref
     - gocritic
     - gocyclo
+    - gci
     - gofmt
     - goimports
     - gosec
