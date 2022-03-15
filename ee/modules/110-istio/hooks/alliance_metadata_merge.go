@@ -129,7 +129,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: "cron", Crontab: "0 3 1 * *"}, // once a day to refresh apiJWT
+		// {Name: "cron", Crontab: "0 3 * * *"}, // once a day to refresh apiJWT
+		{Name: "cron", Crontab: "0 3 1 * *"}, // once a month to refresh apiJWT
 	},
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, metadataMerge)
