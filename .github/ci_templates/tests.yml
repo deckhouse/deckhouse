@@ -67,6 +67,6 @@ steps:
 {!{ else }!}
       TESTS_IMAGE_URL=${DEV_REGISTRY_PATH}/tests:${CI_COMMIT_REF_SLUG}
 {!{ end }!}
-      docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_URL} {!{ $run.args }!}
+      docker run --pull always {!{ $run.docker_options }!} ${TESTS_IMAGE_URL} {!{ $run.args }!}
 # </template: tests_template>
 {!{- end -}!}
