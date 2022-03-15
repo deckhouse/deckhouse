@@ -158,6 +158,7 @@ RUN apt-get update && \
 RUN apt-get update \
  && apt-get install -y default-jre-headless thin-provisioning-tools python3-all python3-natsort \
  && dpkg -i packages/*.deb \
+ && sed -i 's/usage-count yes;/usage-count no;/' /etc/drbd.d/global_common.conf \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
