@@ -129,6 +129,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
+		// until the bug won't be solved https://github.com/istio/istio/issues/37925
 		// {Name: "cron", Crontab: "0 3 * * *"}, // once a day to refresh apiJWT
 		{Name: "cron", Crontab: "0 3 1 * *"}, // once a month to refresh apiJWT
 	},
