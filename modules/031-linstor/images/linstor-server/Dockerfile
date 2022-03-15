@@ -4,7 +4,7 @@ ARG BASE_GOLANG_17_BUSTER
 FROM $BASE_DEBIAN as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
-ARG LINSTOR_VERSION=1.18.0-rc.3
+ARG LINSTOR_VERSION=1.18.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
