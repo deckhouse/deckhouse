@@ -90,7 +90,6 @@ func checkAuthn(header http.Header, scope string) error {
 		return fmt.Errorf("JWT is signed for wrong scope.")
 	}
 
-	fmt.Println("token", reqTokenString, "payloadBytes", payloadBytes, "exp", payload.Exp, "payload", payload)
 	if payload.Exp < time.Now().UTC().Unix() {
 		return fmt.Errorf("JWT token expired.")
 	}
