@@ -39,7 +39,8 @@ dhctl bootstrap \
   --ssh-user=<username> \
   --ssh-host=<master_ip> \
   --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml
+  --config=/config.yml \
+  --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
 dhctl bootstrap \
   --ssh-user=<username> \
@@ -52,7 +53,7 @@ dhctl bootstrap \
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-`username` variable here refers to the user that generated the SSH key.
+`username` variable here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`, otherwise leave it empty.
 {%- else %}
 `username` variable here refers to
 {%- if page.platform_code == "openstack" %} the default user for the relevant VM image.
