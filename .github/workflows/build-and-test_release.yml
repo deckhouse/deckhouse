@@ -1219,7 +1219,7 @@ jobs:
 
           TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
+          docker run --pull always -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1306,7 +1306,7 @@ jobs:
 
           TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test ./testing/matrix/ -v
+          docker run --pull always -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test ./testing/matrix/ -v
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1393,7 +1393,7 @@ jobs:
 
           TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
-          docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} make ci
+          docker run --pull always -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} make ci
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1480,7 +1480,7 @@ jobs:
 
           TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} sh -c "go generate tools/register.go && golangci-lint run"
+          docker run --pull always -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} sh -c "go generate tools/register.go && golangci-lint run"
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1567,7 +1567,7 @@ jobs:
 
           TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
-          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} ginkgo -vet=off ./testing/openapi_cases/
+          docker run --pull always -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1806,7 +1806,7 @@ jobs:
 
           TESTS_IMAGE_URL=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/tests:${CI_COMMIT_REF_SLUG}
 
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
+          docker run --pull always -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_URL} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
