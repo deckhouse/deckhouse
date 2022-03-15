@@ -8,7 +8,7 @@ title: "Cloud provider — Azure: настройки"
 
 ## Storage
 
-Модуль автоматически создаёт следующие StorageClasses:
+Модуль автоматически создаёт следующие StorageClass'ы:
 
 | Имя | Тип диска |
 |---|---|
