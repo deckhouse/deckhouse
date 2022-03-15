@@ -1,83 +1,106 @@
 type: object
 properties:
   connection:
-    description: Параметры подключения к api cloud provider'a.
+    description: |
+      Параметры подключения к API cloud провайдера.
     properties:
       authURL:
-        description: OpenStack Identity API URL.
+        description: |
+          OpenStack Identity API URL.
       caCert:
         description: |
-          Если OpenStack API имеет self-signed сертификат, можно указать CA x509 сертификат, использовавшийся для подписи.
-          * Сертификат в PEM формате.
+          CA x509 сертификат в PEM формате, использовавшийся для подписи (можно указать, если OpenStack API имеет self-signed сертификат).
       domainName:
-        description: Имя домена.
+        description: |
+          Имя домена.
       tenantName:
         description: |
           Имя проекта.
-            * Не может использоваться вместе с `tenantID`.
+
+          Не может использоваться вместе с `tenantID`.
       tenantID:
         description: |
           ID проекта.
-            * Не может использоваться вместе с `tenantName`.
+
+          Не может использоваться вместе с `tenantName`.
       username:
-        description: Имя пользователя с полными правами на проект.
+        description: |
+          Имя пользователя с полными правами на проект.
       password:
-        description: Пароль к пользователю.
+        description: |
+          Пароль пользователя.
       region:
-        description: Регион OpenStack, где будет развёрнут кластер.
+        description: |
+          Регион OpenStack, где будет развёрнут кластер.
   internalNetworkNames:
-    description: Имена сетей, подключённые к виртуальной машине, и используемые cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
+    description: |
+      Имена сетей, подключённые к виртуальной машине и используемые cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
   externalNetworkNames:
-    description: Имена сетей, подключённые к виртуальной машине, и используемые cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
+    description: |
+      Имена сетей, подключённые к виртуальной машине и используемые cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
   additionalExternalNetworkNames:
     description: |
-      Имена дополнительных сетей, которые могут быть подключены к виртуальной машине, и используемые `cloud-controller-manager` для проставления `ExternalIP` в `.status.addresses` в Node API объект.
-      Если у вас в кластере есть инстансы, для которых будут использоваться External Networks, кроме указанных в схеме размещения, то их следует передавать в параметре `additionalExternalNetworkNames`.
+      Имена дополнительных сетей, которые могут быть подключены к виртуальной машине и использованы в `cloud-controller-manager` для проставления `ExternalIP` в `.status.addresses` в Node API объект.
+
+      Если в кластере есть инстансы, для которых будут использоваться External Networks, отличные от указанных в схеме размещения, то их следует передавать в параметре `additionalExternalNetworkNames`.
   podNetworkMode:
     description: |
-      Определяет способ организации трафика в той сети, которая используется для коммуникации между подами (обычно это internal сеть, но бывают исключения).
-        * Допустимые значение:
-          * `DirectRouting` – между узлами работает прямая маршрутизация.
-          * `DirectRoutingWithPortSecurityEnabled` - между узлами работает прямая маршрутизация, но только если в OpenStack явно разрешить на Port'ах диапазон адресов используемых во внутренней сети.
-            * **Внимание!** Убедитесь, что у `username` есть доступ на редактирование AllowedAddressPairs на Port'ах, подключенных в сеть `internalNetworkName`. Обычно в OpenStack такого доступа нет, если сеть имеет флаг `shared`.
-          * `VXLAN` – между узлами **НЕ** работает прямая маршрутизация, необходимо использовать VXLAN.
+      Способ организации трафика в той сети, которая используется для коммуникации между Pod'ами (обычно это internal сеть, но бывают исключения):
+        * `DirectRouting` – между узлами работает прямая маршрутизация;
+        * `DirectRoutingWithPortSecurityEnabled` - между узлами работает прямая маршрутизация, но только если в OpenStack явно разрешить на Port'ах диапазон адресов, используемых во внутренней сети:
+          * **Внимание!** Убедитесь, что у `username` есть доступ на редактирование AllowedAddressPairs на Port'ах, подключенных в сеть `internalNetworkName`. Обычно в OpenStack такого доступа нет, если сеть имеет флаг `shared`.
+        * `VXLAN` – между узлами **НЕ** работает прямая маршрутизация, необходимо использовать VXLAN.
   instances:
-    description: Параметры instances, которые используются при создании виртуальных машин.
+    description: |
+      Параметры инстансов, которые используются при создании виртуальных машин.
     properties:
       sshKeyPairName:
-        description: Имя OpenStack ресурса `keypair`, который будет использоваться при заказе instances.
+        description: |
+          Имя OpenStack ресурса `keypair`, который будет использоваться при заказе инстансов.
       securityGroups:
-        description: Список securityGroups, которые нужно прикрепить к заказанным instances. Используется для задания firewall правил по отношению к заказываемым instances.
+        description: |
+          Список securityGroups, которые нужно прикрепить к заказанным инстансам. Используется для задания firewall правил по отношению к заказываемым инстансам.
       imageName:
-        description: Имя образа.
+        description: |
+          Имя образа.
       mainNetwork:
-        description: Путь до network, которая будет подключена к виртуальной машине, как основная сеть (шлюз по умолчанию).
+        description: |
+          Путь до network, которая будет подключена к виртуальной машине как основная сеть (шлюз по умолчанию).
       additionalNetworks:
-        description: Список сетей, которые будут подключены к инстансу.
+        description: |
+          Список сетей, которые будут подключены к инстансу.
   loadBalancer:
-    description: Параметры Load Balancer.
+    description: |
+      Параметры Load Balancer'а.
     properties:
       subnetID:
-        description: ID Neutron subnet, в котором создать load balancer virtual IP.
+        description: |
+          ID Neutron subnet, в котором создать load balancer virtual IP.
       floatingNetworkID:
-        description: ID external network, который будет использоваться для заказа floating ip.
+        description: |
+          ID external network, который будет использоваться для заказа floating ip.
   zones:
-    description: Список зон, в котором по умолчанию заказывать инстансы. Может быть переопределён индивидуально для каждой NodeGroup'ы.
+    description: |
+      Список зон, в которых по умолчанию заказывать инстансы. Может быть переопределён индивидуально для каждой NodeGroup.
   tags:
-    description: Словарь тегов, которые будут на всех заказываемых инстансах.
+    description: |
+      Словарь тегов, которые будут на всех заказываемых инстансах.
   storageClass:
-    description: Модуль автоматически создаёт StorageClasses, которые есть в OpenStack.
+    description: |
+      Автоматически создание StorageClass'ов, которые есть в OpenStack.
     properties:
       exclude:
-        description: Полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
+        description: |
+          Полные имена (или regex выражения имён) StorageClass'ов, которые не будут созданы в кластере.
       default:
         description: |
-          Имя StorageClass, который будет использоваться в кластере по умолчанию.
-            * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
-              * Присутствующий в кластере произвольный StorageClass с default аннотацией.
-              * Первый StorageClass из создаваемых модулем (в порядке из OpenStack).
+          Имя StorageClass'а, который будет использоваться в кластере по умолчанию.
+
+          Если параметр не задан, фактическим StorageClass'ом по умолчанию будет либо:
+            * Присутствующий в кластере произвольный StorageClass с default аннотацией;
+            * Первый StorageClass из создаваемых модулем (в порядке из OpenStack).
       topologyEnabled:
         description: |
-          Этот параметр управляет функционалом драйвера, который определяет необходимость учитывать ограничения топологии облака при заказе дисков. Это учитывается только при создании дисков, существующие PersistentVolumes не будут изменены;
-            * **Внимание!** Если установлено значение `false` то все новые PersistentVolumes создаются без учёта ограничений топологии.
-
+          Этот параметр управляет функционалом драйвера, который определяет необходимость учёта ограничения топологии облака при заказе дисков. Это учитывается только при создании дисков, существующие PersistentVolume'ы не будут изменены;
+          
+          **Внимание!** Если установлено значение `false` то все новые PersistentVolume'ы создаются без учёта ограничений топологии.
