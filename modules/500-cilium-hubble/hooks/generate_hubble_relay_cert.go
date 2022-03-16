@@ -88,20 +88,18 @@ func generateHubbleRelayCert(input *go_hook.HookInput) error {
 
 	if len(snap) > 0 {
 		adm := snap[0].(certificate.Certificate)
-		input.Values.Set("cniCilium.internal.hubbleServer.cert", adm.Cert)
-		input.Values.Set("cniCilium.internal.hubbleServer.key", adm.Key)
-		input.Values.Set("cniCilium.internal.hubbleServer.ca", adm.CA)
+		input.Values.Set("ciliumHubble.internal.relay.cert", adm.Cert)
+		input.Values.Set("ciliumHubble.internal.relay.key", adm.Key)
+		input.Values.Set("ciliumHubble.internal.relay.ca", adm.CA)
 
 		return nil
 	}
 
-	serverSnap := input.Snapshots["ca-secret"]
-	input.LogEntry.Infof("SOME LEN", len(serverSnap))
-	input.LogEntry.Info(input.Snapshots["ca-secret"])
-	if len(serverSnap) == 0 {
+	snap = input.Snapshots["ca-secret"]
+	if len(snap) == 0 {
 		return errors.New("secret with hubble CA not found")
 	}
-	hubbleServerCert := serverSnap[0].(certificate.Certificate)
+	hubbleServerCert := snap[0].(certificate.Certificate)
 
 	const cn = "*.hubble-relay.cilium.io"
 	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
