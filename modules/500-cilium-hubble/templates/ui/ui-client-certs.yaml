@@ -6,6 +6,6 @@ metadata:
   namespace: d8-cni-cilium
 type: kubernetes.io/tls
 data:
-  ca.crt:  {{ $.Values.ciliumHubble.internal.relay.ca | b64enc }}
-  tls.crt: {{ $.Values.ciliumHubble.internal.relay.cert | b64enc }}
-  tls.key: {{ $.Values.ciliumHubble.internal.relay.key  | b64enc }}
+  ca.crt:  {{ $.Values.ciliumHubble.internal.ui.ca | b64enc }}
+  tls.crt: {{ $.Values.ciliumHubble.internal.ui.cert | b64enc }}
+  tls.key: {{ $.Values.ciliumHubble.internal.ui.key  | b64enc }}

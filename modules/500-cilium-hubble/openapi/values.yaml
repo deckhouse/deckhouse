@@ -8,7 +8,7 @@ properties:
     properties:
       deployDexAuthenticator:
         type: boolean
-      relay:
+      ui:
         type: object
         default: {}
         properties:
@@ -18,4 +18,28 @@ properties:
             type: string
           cert:
             type: string
+      relay:
+        type: object
+        default: {}
+        properties:
+          serverCerts:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: string
+              key:
+                type: string
+              cert:
+                type: string
+          clientCerts:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: string
+              key:
+                type: string
+              cert:
+                type: string
 

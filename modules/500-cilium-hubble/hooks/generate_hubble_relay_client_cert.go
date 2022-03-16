@@ -51,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:          filterAdmissionSecret,
 		},
 		{
-			Name:       "hubble-relay-cert-secret",
+			Name:       "hubble-relay-client-certs",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
@@ -66,7 +66,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:          filterAdmissionSecret,
 		},
 	},
-}, generateHubbleRelayCert)
+}, generateHubbleRelayClientCert)
 
 func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sec v1.Secret
@@ -83,14 +83,14 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}, nil
 }
 
-func generateHubbleRelayCert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["hubble-relay-cert-secret"]
+func generateHubbleRelayClientCert(input *go_hook.HookInput) error {
+	snap := input.Snapshots["hubble-relay-client-certs"]
 
 	if len(snap) > 0 {
 		adm := snap[0].(certificate.Certificate)
-		input.Values.Set("ciliumHubble.internal.relay.cert", adm.Cert)
-		input.Values.Set("ciliumHubble.internal.relay.key", adm.Key)
-		input.Values.Set("ciliumHubble.internal.relay.ca", adm.CA)
+		input.Values.Set("ciliumHubble.internal.relay.clientCerts.cert", adm.Cert)
+		input.Values.Set("ciliumHubble.internal.relay.clientCerts.key", adm.Key)
+		input.Values.Set("ciliumHubble.internal.relay.clientCerts.ca", adm.CA)
 
 		return nil
 	}
@@ -119,9 +119,9 @@ func generateHubbleRelayCert(input *go_hook.HookInput) error {
 		return errors.Wrap(err, "generate Cert failed")
 	}
 
-	input.Values.Set("ciliumHubble.internal.relay.cert", tls.Cert)
-	input.Values.Set("ciliumHubble.internal.relay.key", tls.Key)
-	input.Values.Set("ciliumHubble.internal.relay.ca", tls.CA)
+	input.Values.Set("ciliumHubble.internal.relay.clientCerts.cert", tls.Cert)
+	input.Values.Set("ciliumHubble.internal.relay.clientCerts.key", tls.Key)
+	input.Values.Set("ciliumHubble.internal.relay.clientCerts.ca", tls.CA)
 
 	return nil
 }
