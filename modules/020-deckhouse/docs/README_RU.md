@@ -65,7 +65,7 @@ search: releaseChannel, стабилизация релизного канала
   Например:
     `kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/fe:v1.30.5`
 - Установить конкретный тэг для deployment/deckhouse и удалить `releaseChannel` из ConfigMap deckhouse.
-    В таком случае вы останетесь на конкретной версии Deckhouse и не будете получать обновлений
+    В таком случае вы останетесь на конкретной версии Deckhouse и не будете получать обновлений.
     ```sh
     $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/fe:v1.30.5
     $ kubectl -n d8-system edit cm deckhouse
