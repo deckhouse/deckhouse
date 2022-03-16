@@ -50,6 +50,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			FilterFunc:                   filterAdmissionSecret,
 		},
+		{
+			Name:       "hubble-relay-cert-secret",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"hubble-relay-client-certs"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cni-cilium"},
+				},
+			},
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			FilterFunc:                   filterAdmissionSecret,
+		},
 	},
 }, generateHubbleRelayCert)
 
@@ -62,7 +78,9 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}
 
 	return certificate.Certificate{
-		CA: string(sec.Data["ca.crt"]),
+		CA:   string(sec.Data["ca.crt"]),
+		Cert: string(sec.Data["tls.crt"]),
+		Key:  string(sec.Data["tls.key"]),
 	}, nil
 }
 
@@ -79,7 +97,6 @@ func generateHubbleRelayCert(input *go_hook.HookInput) error {
 	}
 
 	snap = input.Snapshots["hubble-server-cert-secret"]
-
 	if len(snap) == 0 {
 		return errors.New("secret with hubble CA not found")
 	}
