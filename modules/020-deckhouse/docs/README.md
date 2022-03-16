@@ -69,7 +69,7 @@ You may need this in a situation when some Deckhouse release has an error that w
   Example:
     `kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/fe:v1.30.5`
 
-- Set a specified image tag for deployment/deckhouse and remove `releaseChannel` from deckhouse ConfigMap
+- Set a specified image tag for deployment/deckhouse and remove `releaseChannel` from deckhouse ConfigMap.
     In this case, you will hold a specified version and will not get any more updates.
     ```sh
     $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/fe:v1.30.5
