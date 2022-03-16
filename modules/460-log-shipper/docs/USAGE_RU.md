@@ -192,7 +192,7 @@ spec:
   type: Elasticsearch
   elasticsearch:
     endpoint: http://192.168.1.1:9200
-    docType: "vector" # Укажите значение здесь. Оно не должно начинаться с '_'
+    docType: "myDocType" # Укажите значение здесь. Оно не должно начинаться с '_'
     auth:
       strategy: Basic
       user: elastic
