@@ -106,7 +106,7 @@ func generateHubbleRelayCert(input *go_hook.HookInput) error {
 		cn,
 		certificate.Authority{
 			Key:  hubbleServerCert.Key,
-			Cert: hubbleServerCert.Cert,
+			Cert: hubbleServerCert.CA,
 		},
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",

@@ -87,7 +87,7 @@ func generateHubbleServerCert(input *go_hook.HookInput) error {
 			A: "rsa",
 			S: 2048,
 		}),
-		certificate.WithSANs("*.default.hubble-grpc.cilium.io"),
+		certificate.WithGroups("d8-cni-cilium"),
 	)
 	if err != nil {
 		return errors.Wrap(err, "generate CA failed")
