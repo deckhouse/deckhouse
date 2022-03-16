@@ -46,9 +46,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-cni-cilium"},
 				},
 			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			FilterFunc:                   filterAdmissionSecret,
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          filterAdmissionSecret,
 		},
 		{
 			Name:       "hubble-relay-cert-secret",
@@ -62,9 +61,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-cni-cilium"},
 				},
 			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			FilterFunc:                   filterAdmissionSecret,
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          filterAdmissionSecret,
 		},
 	},
 }, generateHubbleRelayCert)
