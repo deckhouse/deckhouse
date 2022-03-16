@@ -21,8 +21,6 @@ kubernetesVersion: "1.21"
 # [<en>] cluster domain (used for local routing)
 # [<ru>] домен кластера
 clusterDomain: "cluster.local"
-# [<en>] APT/YUM proxy server
-# [<ru>] APT/YUM proxy-сервер
 packagesProxy:
   uri: https://example.com
   username: <PROXY-USERNAME>

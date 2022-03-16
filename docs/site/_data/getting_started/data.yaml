@@ -409,6 +409,7 @@ installTypes:
           en: What can I do next?
         template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
   bm-private:
+    ce_only: true
     layouts:
       default:
         name: Default

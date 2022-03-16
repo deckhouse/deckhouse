@@ -29,6 +29,7 @@
 {%- for revision in site.data.getting_started.data.global.revisions %}
 {% for layout in site.data.getting_started.data.installTypes[page.platform_code].layouts %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
+{%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
 {% assign layoutCode = '' | append: layout[0] %}
 <div id='block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" {% if layout[1].recommended %}recommended-layout{% endif %} markdown="1">
     {% if page.lang == 'ru' %}

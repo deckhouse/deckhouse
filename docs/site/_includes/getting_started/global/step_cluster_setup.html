@@ -2,7 +2,7 @@
 
 ## Configure cluster
 
-<div class="form" style="width: 500px;">
+<div class="form">
   <div class="form__row">
     <label class="label" title="Specify a template for DNS names that will be used by your cluster">
       Template for DNS names
@@ -49,6 +49,125 @@
     </span>
   </div>
 {%- endunless %}
+{%- if page.platform_code == 'bm-private' %}
+
+<div class="form__row">
+  <div class="form__row--wrap">
+    <label for="enablePackagesProxy" class="label" title="Enable it if a proxy server is used to download deb or rpm packages">
+      A proxy server is used to download deb or rpm packages
+    </label>
+    <input
+      type="checkbox" id="enablePackagesProxy"
+      name="enablePackagesProxy" />
+  </div>
+  <span class="info">
+     Enable it if there is no direct access for downloading deb or rpm packages in your network, or a proxy-сервер is used.
+  </span>
+</div>
+<div class="packagesProxy-block" style="display: none;">
+    <div class="form__row">
+      <label class="label" title="Specify the address of the proxy server used to download deb or rpm packages">
+        The address of the proxy server used to download deb or rpm packages (e.g., <code>https://proxy.company.my</code>)
+      </label>
+      <input
+        class="textfield"
+        type="text" id="packagesProxyURI"
+        name="packagesProxyURI" placeholder=""
+        autocomplete="off" />
+    </div>
+
+    <div class="form__row">
+      <label class="label" title="Specify a username for authorization on the proxy server">
+        Username for authorization on the proxy server
+      </label>
+      <input
+        class="textfield"
+        type="text" id="packagesProxyUsername"
+        name="packagesProxyUsername" placeholder=""
+        autocomplete="off" />
+      <span class="info">
+         Leave it blank if the proxy server does not use authorization.
+      </span>
+    </div>
+
+    <div class="form__row">
+      <label class="label" title="Specify a password for authorization on the proxy server">
+        Password for authorization on the proxy server
+      </label>
+      <input
+        class="textfield"
+        type="text" id="packagesProxyPassword"
+        name="packagesProxyPassword" placeholder=""
+        autocomplete="off" />
+      <span class="info">
+         Leave it blank if the proxy server does not use authorization.
+      </span>
+    </div>
+</div>
+
+<div markdown="1">
+### Parameters for accessing container image registry (or proxy registry )
+
+> Read more about [configuring a container image storage](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry), if necessary.
+</div>
+
+  <div class="form__row">
+    <label class="label" title="Specify Deckhouse container images path prefix">
+      Deckhouse container images path prefix (e.g., it is <code>registry.deckhouse.io/deckhouse/ce/</code> for CE).
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryImagesRepo"
+      name="registryImagesRepo" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+       Deckhouse container images of the appropriate edition (CE or EE) should be available at the specified address and path.
+    </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Container image registry access rights, Base64 encoded">
+      Container image registry access rights, <strong>Base64 encoded</strong>.
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryDockerCfg"
+      name="registryDockerCfg" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+      It is a string from the Docker client configuration file (by default, the configuration file is <code>~/.docker/config.json</code>), Base64 encoded.<br />Read more about the parameter <a href="/{{ page.lang }}/documentation/v1/deckhouse-faq.html#configuring">in the documentation</a>.
+    </span>
+  </div>
+
+  <div class="form__row">
+    <div class="form__row--wrap">
+      <label for="registryScheme" class="label" title="Check it if the сontainer image registry uses the HTTP protocol rather than HTTPS">
+        Container image registry uses <code>HTTP</code> protocol.
+      </label>
+      <input
+        type="checkbox" id="registryScheme"
+        name="registryScheme" />
+    </div>
+    <span class="info">
+       Enable it if the сontainer image registry works over HTTP protocol rather than HTTPS.
+    </span>
+  </div>
+
+  <div class="form__row registryca-block" >
+    <label class="label" title="Root SSL certificate that can be used to verify the container image registry SSL certificate">
+      Root SSL certificate that can be used to verify the container image registry SSL certificate (e.g., if registry uses a self-signed certificate).
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryCA"
+      name="registryCA" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+       Leave it blank, if container image registry uses SSL certificate issued by a public CA.
+    </span>
+  </div>
+
+{% endif %}
 </div>
 
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}

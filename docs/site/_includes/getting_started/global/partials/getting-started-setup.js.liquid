@@ -11,9 +11,10 @@ function updateNode(selector, storageItemName) {
 
 function restoreData() {
   {%- if page.platform_code == 'bm-private' %}
-  updateNode('#PackagesProxyPassword','dhctl-packages-proxy-password');
-  updateNode('#PackagesProxyUsername','dhctl-packages-proxy-username');
-  updateNode('#PackagesProxyURI','dhctl-packages-proxy-uri');
+  updateNode('#enablePackagesProxy','dhctl-packages-proxy-enabled');
+  updateNode('#packagesProxyPassword','dhctl-packages-proxy-password');
+  updateNode('#packagesProxyUsername','dhctl-packages-proxy-username');
+  updateNode('#packagesProxyURI','dhctl-packages-proxy-uri');
   updateNode('#registryCA','dhctl-registry-ca');
   updateNode('#registryDockerCfg','dhctl-registry-docker-cfg');
   updateNode('#registryImagesRepo','dhctl-registry-images-repo');
@@ -56,13 +57,13 @@ $(document).ready(function(){
 		sessionStorage.setItem('dhctl-sshkey', $(this).val());
 	});
 {%- if page.platform_code == 'bm-private' %}
-  $('#PackagesProxyURI').change(function(){
+  $('#packagesProxyURI').change(function(){
     sessionStorage.setItem('dhctl-packages-proxy-uri', $(this).val());
   });
-  $('#PackagesProxyUsername').change(function(){
+  $('#packagesProxyUsername').change(function(){
     sessionStorage.setItem('dhctl-packages-proxy-username', $(this).val());
   });
-  $('#PackagesProxyPassword').change(function(){
+  $('#packagesProxyPassword').change(function(){
     sessionStorage.setItem('dhctl-packages-proxy-password', $(this).val());
   });
   $('#registryImagesRepo').change(function(){
@@ -78,6 +79,15 @@ $(document).ready(function(){
     } else {
       sessionStorage.setItem('dhctl-registry-scheme-http', "false");
       $('.registryca-block').css("display", "block");
+    }
+  });
+  $('#enablePackagesProxy').change(function(){
+    if (this.checked) {
+      sessionStorage.setItem('dhctl-packages-proxy-enabled', "true");
+      $('.packagesProxy-block').css("display", "block");
+    } else {
+      sessionStorage.setItem('dhctl-packages-proxy-enabled', "false");
+      $('.packagesProxy-block').css("display", "none");
     }
   });
   $('#registryCA').change(function(){

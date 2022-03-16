@@ -50,64 +50,70 @@
   </div>
 {%- endunless %}
 {%- if page.platform_code == 'bm-private' %}
-<div markdown="1">
-## Укажите параметры APT/YUM proxy-сервера (при необходимости)
 
-Если в вашей сети для скачивания APT или YUM-пакетов используется proxy-сервер, то укажите его параметры.
+<div class="form__row">
+  <div class="form__row--wrap">
+    <label for="enablePackagesProxy" class="label" title="">
+      Для скачивания deb или rpm-пакетов используется proxy-сервер
+    </label>
+    <input
+      type="checkbox" id="enablePackagesProxy"
+      name="enablePackagesProxy" />
+  </div>
+  <span class="info">
+     Отметьте, если в вашей сети <strong>нет</strong> прямого доступа для скачивания deb или rpm-пакетов и используется proxy-сервер.
+  </span>
 </div>
-  <div class="form__row">
-    <label class="label" title="Укажите адрес APT/YUM proxy-сервера">
-      Адрес APT/YUM proxy-сервера, например <code>https://proxy.company.my</code>
-    </label>
-    <input
-      class="textfield"
-      type="text" id="PackagesProxyURI"
-      name="PackagesProxyURI" placeholder=""
-      autocomplete="off" />
-    <span class="info">
-       Используется для скачивания APT/YUM-пакетов при настройке узла. Оставьте пустым, если для скачивая APT/YUM-пакетов не используется proxy-сервер и они доступы напрямую.
-    </span>
-  </div>
+<div class="packagesProxy-block" style="display: none;">
+    <div class="form__row">
+      <label class="label" title="Укажите адрес proxy-сервера используемого для скачивания deb или rpm-пакетов">
+        Адрес proxy-сервера, используемого для скачивания deb или rpm-пакетов (например, <code>https://proxy.company.my</code>)
+      </label>
+      <input
+        class="textfield"
+        type="text" id="packagesProxyURI"
+        name="packagesProxyURI" placeholder=""
+        autocomplete="off" />
+    </div>
 
-  <div class="form__row">
-    <label class="label" title="Укажите имя, для авторизации на APT/YUM proxy-сервере">
-      Имя для авторизации на proxy-сервере
-    </label>
-    <input
-      class="textfield"
-      type="text" id="PackagesProxyUsername"
-      name="PackagesProxyUsername" placeholder=""
-      autocomplete="off" />
-    <span class="info">
-       Оставьте пустым, если proxy-сервер не использует авторизацию.
-    </span>
-  </div>
+    <div class="form__row">
+      <label class="label" title="Укажите имя, для авторизации на proxy-сервере">
+        Имя для авторизации на proxy-сервере
+      </label>
+      <input
+        class="textfield"
+        type="text" id="packagesProxyUsername"
+        name="packagesProxyUsername" placeholder=""
+        autocomplete="off" />
+      <span class="info">
+         Оставьте пустым, если proxy-сервер не использует авторизацию.
+      </span>
+    </div>
 
-  <div class="form__row">
-    <label class="label" title="Укажите пароль, для авторизации на APT/YUM proxy-сервере">
-      Пароль для авторизации на proxy-сервере
-    </label>
-    <input
-      class="textfield"
-      type="text" id="PackagesProxyPassword"
-      name="PackagesProxyPassword" placeholder=""
-      autocomplete="off" />
-    <span class="info">
-       Оставьте пустым, если proxy-сервер не использует авторизацию.
-    </span>
-  </div>
+    <div class="form__row">
+      <label class="label" title="Укажите пароль, для авторизации на proxy-сервере">
+        Пароль для авторизации на proxy-сервере
+      </label>
+      <input
+        class="textfield"
+        type="text" id="packagesProxyPassword"
+        name="packagesProxyPassword" placeholder=""
+        autocomplete="off" />
+      <span class="info">
+         Оставьте пустым, если proxy-сервер не использует авторизацию.
+      </span>
+    </div>
+</div>
+
 <div markdown="1">
-## Укажите параметры хранилища образов
+### Параметры доступа к хранилищу образов контейнеров (или проксирующему registry)
 
-Укажите параметры подключения к хранилищу образов контейнеров и путь к образам контейнеров Deckhouse. Это также может быть проксирующий registry.
-
-При необходимости ознакомьтесь с информацией об [особенностях настройки registry](../../documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry).
-
+> При необходимости ознакомьтесь с [особенностями настройки хранилища образов контейнеров](../../documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry).
 </div>
 
   <div class="form__row">
-    <label class="label" title="Корневой адрес для образов контейнеров">
-      <strong>Обязательный параметр</strong>. Корневой адрес для образов контейнеров (например, <code>registry.company.my/deckhouse/</code>).
+    <label class="label" title="Укажите префикс имени образов контейнеров Deckhouse">
+      Префикс имени образов контейнеров Deckhouse (например, для публичных образов Deckhouse редакции CE — <code>registry.deckhouse.io/deckhouse/ce/</code>).
     </label>
     <input
       class="textfield"
@@ -120,8 +126,8 @@
   </div>
 
   <div class="form__row">
-    <label class="label" title="Права доступа к стороннему registry">
-      <strong>Обязательный параметр</strong>. Права доступа к стороннему registry <strong>в Base64</strong>.
+    <label class="label" title="Права доступа к хранилищу образов контейнеров в Base64">
+      Права доступа к хранилищу образов контейнеров <strong>в Base64</strong>.
     </label>
     <input
       class="textfield"
@@ -129,26 +135,26 @@
       name="registryDockerCfg" placeholder=""
       autocomplete="off" />
     <span class="info">
-      Строка авторизации из файла конфигурации Docker-клиента (по умолчанию — <code>~/.docker/config.json</code>), закодированная в Base64.<br />Подробнее про этот параметр читайте <a href="https://deckhouse.io/ru/documentation/v1/deckhouse-faq.html#подготовка-конфигурации">в документации</a>.
+      Строка авторизации из файла конфигурации Docker-клиента (по умолчанию, файл конфигурации — <code>~/.docker/config.json</code>), закодированная в Base64.<br />Подробнее про этот параметр читайте <a href="https://deckhouse.io/ru/documentation/v1/deckhouse-faq.html#подготовка-конфигурации">в документации</a>.
     </span>
   </div>
 
   <div class="form__row">
     <div class="form__row--wrap">
-      <label class="label" title="Укажите адрес APT/YUM proxy-сервера">
-        Хранилище использует протокол <code>HTTP</code>
+      <label for="registryScheme" class="label" title="Отметьте, если хранилище образов контейнеров использует протокол HTTP, а не HTTPS">
+        Хранилище образов контейнеров использует протокол <code>HTTP</code>.
       </label>
       <input
         type="checkbox" id="registryScheme"
         name="registryScheme" />
     </div>
     <span class="info">
-       Отметьте, если ваше хранилище работает по протоколу HTTP, а не HTTPS.
+       Отметьте, если указанное хранилище образов контейнеров работает по протоколу HTTP, а не HTTPS.
     </span>
   </div>
 
   <div class="form__row registryca-block" >
-    <label class="label" title="Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты)">
+    <label class="label" title="Корневой сертификат, которым можно проверить сертификат хранилища образов контейнеров (например, если хранилище использует самоподписанный сертификат)">
       Корневой SSL-сертификат, которым можно проверить SSL-сертификат хранилища образов контейнеров (например, если хранилище использует самоподписанный сертификат).
     </label>
     <input

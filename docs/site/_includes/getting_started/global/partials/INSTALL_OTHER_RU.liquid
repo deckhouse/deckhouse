@@ -1,7 +1,7 @@
 {% assign revision=include.revision %}
 
 Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узлы**{% endif %}.
-{%- if page.platform_code == 'bm-private' %} Авторизуйтесь на **[персональном компьютере](step2.html#процесс-установки)** в container registry (Docker registry), который вы указали на предыдущем этапе, затем выполните:
+{%- if page.platform_code == 'bm-private' %} Авторизуйтесь на **[персональном компьютере](step2.html#процесс-установки)** в container image registry, который вы указали на предыдущем этапе, затем выполните:
 {%- else %} Выполните на **[персональном компьютере](step2.html#процесс-установки)**:{% endif %}
 
 {%- if revision == 'ee' %}

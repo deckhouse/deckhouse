@@ -1,4 +1,5 @@
 $(document).ready(function () {
+  let enablePackagesProxy = sessionStorage.getItem('dhctl-packages-proxy-enabled')
   let proxyUsername = sessionStorage.getItem('dhctl-packages-proxy-username')
   let proxyPassword = sessionStorage.getItem('dhctl-packages-proxy-password')
   let proxyURI = sessionStorage.getItem('dhctl-packages-proxy-uri')
@@ -7,13 +8,14 @@ $(document).ready(function () {
   let registrySchemeHTTP = sessionStorage.getItem('dhctl-registry-scheme-http')
   let registryCA = sessionStorage.getItem('dhctl-registry-ca')
 
-  if ( proxyUsername && proxyUsername.length > 0 &&
+  if ( enablePackagesProxy && enablePackagesProxy === "true" &&
+       proxyUsername && proxyUsername.length > 0 &&
        proxyPassword && proxyPassword.length > 0 &&
        proxyURI && proxyURI.length > 0 ) {
     update_parameter('dhctl-packages-proxy-uri', 'uri', 'https://example.com', null, '[config-yml]');
     update_parameter('dhctl-packages-proxy-username', 'username', '<PROXY-USERNAME>', null, '[config-yml]');
     update_parameter('dhctl-packages-proxy-password', 'password', '<PROXY-PASSWORD>', null, '[config-yml]');
-  } else if (proxyURI && proxyURI.length > 0) {
+  } else if (enablePackagesProxy && enablePackagesProxy === "true" && proxyURI && proxyURI.length > 0) {
     // Have proxy without auth.
     update_parameter('dhctl-packages-proxy-uri', 'uri', 'https://example.com', null, '[config-yml]');
     $('code span.na').filter(function () {
