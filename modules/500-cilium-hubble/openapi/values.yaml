@@ -10,6 +10,7 @@ properties:
         type: boolean
       relay:
         type: object
+        default: {}
         properties:
           ca:
             type: string
