@@ -4,9 +4,11 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## Как настроить LoadBalancer?
 
-**Внимание!!! Для корректного определения клиентского IP необходимо использовать LoadBalancer с поддержкой Proxy Protocol.**
+> **Внимание!** Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
 
 ### Пример IngressNginxController
+
+Ниже представлен простой пример конфигурации `IngressNginxController`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -32,36 +34,38 @@ spec:
 ## Как настроить политики безопасности на узлах кластера?
 
 Вариантов, зачем может понадобиться ограничить или наоборот расширить входящий или исходящий трафик на виртуальных
-машинах кластера, может быть множество, например:
+машинах кластера, может быть множество. Например:
 
-* Разрешить подключение к узлам кластера с виртуальных машин из другой подсети
-* Разрешить подключение к портам статического узла для работы приложения
-* Ограничить доступ к внешним ресурсам или другим вм в облаке по требования службу безопасности
+* Разрешить подключение к узлам кластера с виртуальных машин из другой подсети;
+* Разрешить подключение к портам статического узла для работы приложения;
+* Ограничить доступ к внешним ресурсам или другим вм в облаке по требования службу безопасности.
 
 Для всего этого следует применять дополнительные security groups. Можно использовать только security groups, предварительно
 созданные в облаке.
 
-### Установка дополнительных security groups на мастерах и статических нодах
+### Установка дополнительных security groups на мастерах и статических узлах
 
 Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные
 security groups указываются в `OpenStackClusterConfiguration`:
 
-* Для мастеров — в секции `masterNodeGroup` в поле `additionalSecurityGroups`.
-* Для статических нод — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, также в поле `additionalSecurityGroups`.
+* Для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
+* Для статических узлов — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, а также в поле `additionalSecurityGroups`.
 
 Поле `additionalSecurityGroups` представляет собой массив строк с именами security groups.
 
-### Установка дополнительных security groups на эфемерных нодах
+### Установка дополнительных security groups на эфемерных узлах
 
 Необходимо прописать параметр `additionalSecurityGroups` для всех OpenStackInstanceClass в кластере, которым нужны дополнительные
-security groups. Смотри [параметры модуля cloud-provider-openstack](../../modules/030-cloud-provider-openstack/configuration.html).
+security groups. Подробнее — [параметры модуля cloud-provider-openstack](../../modules/030-cloud-provider-openstack/configuration.html).
 
 ## Как поднять гибридный кластер?
 
 Hybrid-кластер представляет собой объединённые в один кластер bare metal узлы и узлы openstack. Для создания такого кластера
 необходимо наличие L2 сети между всеми узлами кластера.
 
-1. Удалить flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`;
+Чтобы поднять гибридный кластер, выполните следующие шаги:
+
+1. Удалите flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`.
 2. Включите и [настройте](configuration.html#параметры) модуль.
 3. Создайте один или несколько custom resource [OpenStackInstanceClass](cr.html#openstackinstanceclass).
 4. Создайте один или несколько custom resource [NodeManager](../../modules/040-node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
@@ -70,7 +74,8 @@ Hybrid-кластер представляет собой объединённы
 
 ### Подключение storage в гибридном кластере
 
-Если вам требуются PersistentVolumes на нодах, подключаемых к кластеру из openstack, то необходимо создать StorageClass с нужным OpenStack volume type. Получить список типов можно командой `openstack volume type list`.
+Если вам требуются PersistentVolumes на узлах, подключаемых к кластеру из OpenStack, то необходимо создать StorageClass с нужным OpenStack volume type. Получить список типов можно с помощью команды `openstack volume type list`.
+
 Например, для volume type `ceph-ssd`:
 
 ```yaml
@@ -84,33 +89,34 @@ parameters:
 volumeBindingMode: WaitForFirstConsumer
 ```
 
-## Как загрузить image в OpenStack?
+## Как загрузить образ в OpenStack?
 
-1. Скачиваем последний стабильный образ Ubuntu 18.04
+1. Скачайте последний стабильный образ Ubuntu 18.04:
 
     ```shell
     curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64
     ```
 
-2. Подготавливаем OpenStack openrc-файл, который содержит credentials для обращения к API OpenStack.
+2. Подготовьте OpenStack openrc-файл, который содержит credentials для обращения к API OpenStack.
 
     > Интерфейс получения openrc-файла может отличаться в зависимости от провайдера OpenStack. Если провайдер предоставляет
-    > стандартный интерфейс для OpenStack, то скачать openrc-файл можно по [инструкции](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html)
+    > стандартный интерфейс для OpenStack, то скачать openrc-файл можно [по инструкции](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html).
 
-3. Либо устанавливаем OpenStack cli по [инструкции](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
-   Либо можно запустить docker контейнер, прокинув внутрь openrc-файл и скаченный локально образ ubuntu
+3. Либо установите OpenStack cli [по инструкции](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
+
+    Также можно запустить docker-контейнер, прокинув внутрь openrc-файл и скачанный локально образ Ubuntu:
 
     ```shell
     docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.mcs-openrc:/openrc jmcvea/openstack-client
     ```
 
-4. Инициализируем переменные окружения из openrc-файла
+4. Инициализируйте переменные окружения из openrc-файла:
 
     ```shell
     source /openrc
     ```
 
-5. Получаем список доступных типов дисков
+5. Получите список доступных типов дисков:
 
     ```shell
     / # openstack volume type list
@@ -128,13 +134,13 @@ volumeBindingMode: WaitForFirstConsumer
     +--------------------------------------+---------------+-----------+
     ```
 
-6. Создаём image, передаём в образ в качестве свойств тип диска, который будет использоваться, если OpenStack не поддерживает локальные диски или эти диски не подходят для работы
+6. Создайте образ и передайте в него в качестве свойств тип диска, который будет использоваться, если OpenStack не поддерживает локальные диски или эти диски не подходят для работы:
 
     ```shell
     openstack image create --private --disk-format qcow2 --container-format bare --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
     ```
 
-7. Проверяем, что image успешно создан
+7. Проверьте, что образ успешно создан:
 
     ```text
     / # openstack image show ubuntu-18-04-cloud-amd64
@@ -163,13 +169,13 @@ volumeBindingMode: WaitForFirstConsumer
     +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     ```
 
-## Как проверить поддерживает ли провайдер SecurityGroups?
+## Как проверить, поддерживает ли провайдер SecurityGroups
 
 Достаточно выполнить команду `openstack security group list`. Если в ответ вы не получите ошибок, то это значит, что [Security Groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) поддерживаются.
 
-## Как настроить работу ONLINE ресайз дисков
+## Как настроить работу ONLINE изменения размера дисков
 
-OpenStack API успешно рапортует о ресайзе, но Cinder никак не оповещает Nova о том, что диск поресайзился, поэтому диск внутри гостевой ОС остаётся старого размера.
+OpenStack API успешно рапортует об изменении размера диска, но Cinder никак не оповещает Nova о том, что диск изменился, поэтому диск внутри гостевой ОС остаётся старого размера.
 
 Для устранения проблемы необходимо прописать в `cinder.conf` параметры доступа к Nova API. Например, так:
 

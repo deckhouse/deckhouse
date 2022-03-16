@@ -4,9 +4,11 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## How do I set up LoadBalancer?
 
-**Note that Load Balancer must support Proxy Protocol to determine the client IP correctly.**
+> **Note** that Load Balancer must support Proxy Protocol to determine the client IP correctly.
 
 ### An example of IngressNginxController
+
+Below is a simple example of the `IngressNginxController' configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -31,11 +33,11 @@ spec:
 
 ## How do I set up security policies on cluster nodes?
 
-There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in AWS:
+There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
 
 * Allow VMs on a different subnet to connect to cluster nodes;
 * Allow connecting to the ports of the static node so that the application can work;
-* Restrict access to external resources or other VMs in the cloud for security reasons;
+* Restrict access to external resources or other VMs in the cloud for security reasons.
 
 For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
 
@@ -56,7 +58,9 @@ You have to set the `additionalSecurityGroups` parameter for all OpenStackInstan
 
 A hybrid cluster combines bare metal and openstack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
-1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`;
+To set up a hybrid cluster, follow these steps:
+
+1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`.
 2. Enable and [configure](configuration.html#parameters) the module.
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
 4. Create one or more [NodeManager](../../modules/040-node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
@@ -65,7 +69,9 @@ A hybrid cluster combines bare metal and openstack nodes. To create such a clust
 
 ### Attaching storage devices to instances in a hybrid cluster
 
-To use PersistentVolumes on openstack nodes, you must create StorageClass with the appropriate OpenStack volume type. The `openstack volume type list` command lists all available types. Here is the example config for the `ceph-ssd` volume type:
+To use PersistentVolumes on openstack nodes, you must create StorageClass with the appropriate OpenStack volume type. The `openstack volume type list` command lists all available types. 
+
+Here is the example config for the `ceph-ssd` volume type:
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -88,10 +94,11 @@ volumeBindingMode: WaitForFirstConsumer
 
 2. Prepare an OpenStack RC (openrc) file containing credentials for accessing the openstack API:
 
-    > The interface for getting an openrc file may differ depending on the OpenStack provider. If the provider has a standard interface for OpenStack, you can download the openrc file using the following [instruction](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html)
+    > The interface for getting an openrc file may differ depending on the OpenStack provider. If the provider has a standard interface for OpenStack, you can download the openrc file using the following [instruction](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html).
 
 3. Otherwise, install the OpenStack cli using this [instruction](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
-   Also, you can run the docker container and put an openrc file and a downloaded ubuntu image in it
+
+   Also, you can run the docker container and put an openrc file and a downloaded Ubuntu image in it:
 
     ```shell
     docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.mcs-openrc:/openrc jmcvea/openstack-client
@@ -156,7 +163,7 @@ volumeBindingMode: WaitForFirstConsumer
     +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     ```
 
-## How to check whether the provider supports SecurityGroups?
+## How to check whether the provider supports SecurityGroups
 
 Run the following command: `openstack security group list`. If there are no errors in the output, then [Security Groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) are supported.
 
