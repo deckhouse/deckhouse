@@ -98,7 +98,7 @@ spec:
         name: tmp
       - name: hubble-ui-client-certs
         projected:
-          defaultMode: 0400
+          defaultMode: 0444
           sources:
           - secret:
               name: hubble-ui-client-certs

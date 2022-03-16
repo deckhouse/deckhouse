@@ -87,7 +87,7 @@ func generateHubbleServerCert(input *go_hook.HookInput) error {
 			A: "rsa",
 			S: 2048,
 		}),
-		certificate.WithSANs("*.d8-cni-cilium.hubble-grpc.cilium.io"),
+		certificate.WithSANs("*.default.hubble-grpc.cilium.io"),
 	)
 	if err != nil {
 		return errors.Wrap(err, "generate CA failed")
@@ -100,7 +100,7 @@ func generateHubbleServerCert(input *go_hook.HookInput) error {
 			A: "rsa",
 			S: 2048,
 		}),
-		certificate.WithSANs("*.d8-cni-cilium.hubble-grpc.cilium.io"),
+		certificate.WithSANs("*.default.hubble-grpc.cilium.io"),
 		certificate.WithSigningDefaultExpiry(87600*time.Hour),
 	)
 	if err != nil {
