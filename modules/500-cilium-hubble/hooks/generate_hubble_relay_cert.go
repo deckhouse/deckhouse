@@ -97,6 +97,8 @@ func generateHubbleRelayCert(input *go_hook.HookInput) error {
 	}
 
 	serverSnap := input.Snapshots["ca-secret"]
+	input.LogEntry.Infof("SOME LEN", len(serverSnap))
+	input.LogEntry.Info(input.Snapshots["ca-secret"])
 	if len(serverSnap) == 0 {
 		return errors.New("secret with hubble CA not found")
 	}
