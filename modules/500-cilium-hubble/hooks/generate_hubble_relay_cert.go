@@ -35,7 +35,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "hubble-server-cert-secret",
+			Name:       "ca-secret",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
@@ -96,11 +96,11 @@ func generateHubbleRelayCert(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	snap = input.Snapshots["hubble-server-cert-secret"]
-	if len(snap) == 0 {
+	serverSnap := input.Snapshots["ca-secret"]
+	if len(serverSnap) == 0 {
 		return errors.New("secret with hubble CA not found")
 	}
-	hubbleServerCert := snap[0].(certificate.Certificate)
+	hubbleServerCert := serverSnap[0].(certificate.Certificate)
 
 	const cn = "*.hubble-relay.cilium.io"
 	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
