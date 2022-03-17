@@ -9,7 +9,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
-{{ include "helm_lib_resources_vpa_targetref" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resources ) | nindent 4 }}
+{{ include "helm_lib_resources_management_vpa_targetref" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resourcesManagement ) | nindent 4 }}
   {{- end }}
 
 ---
@@ -138,7 +138,7 @@ spec:
       image: "{{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}"
       configNamespace: d8-{{ $.Chart.Name }}
       resources:
-{{ include "helm_lib_resources_pod_spec" $.Values.istio.controlPlane.resources | nindent 8 }}
+{{ include "helm_lib_resources_management_pod_spec" $.Values.istio.controlPlane.resourcesManagement | nindent 8 }}
   {{- if $.Values.istio.controlPlane.nodeSelector }}
       nodeSelector:
 {{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
