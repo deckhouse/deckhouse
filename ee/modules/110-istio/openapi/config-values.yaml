@@ -304,6 +304,7 @@ properties:
             default: 'VPA'
           vpa:
             type: object
+            default: {}
             description: |
               Parameters of the VPA mode.
             properties:
