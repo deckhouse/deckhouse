@@ -20,17 +20,22 @@ properties:
                 properties:
                   cert:
                     type: string
+                    x-examples: ["---CERT PEM---"]
                   key:
                     type: string
+                    x-examples: ["---KEY PEM---"]
               server:
                 type: object
                 default: {}
                 properties:
                   cert:
                     type: string
+                    x-examples: ["---CERT PEM---"]
                   key:
                     type: string
+                    x-examples: ["---KEY PEM---"]
                   ca:
                     type: string
+                    x-examples: ["---ROOT PEM---"]
 
 

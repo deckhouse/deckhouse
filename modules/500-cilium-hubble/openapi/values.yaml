@@ -22,10 +22,13 @@ properties:
         properties:
           ca:
             type: string
+            x-examples: ["---ROOT PEM---"]
           key:
             type: string
+            x-examples: ["---KEY PEM---"]
           cert:
             type: string
+            x-examples: ["---CERT PEM---"]
       relay:
         type: object
         default: {}
@@ -36,20 +39,26 @@ properties:
             properties:
               ca:
                 type: string
+                x-examples: ["---ROOT PEM---"]
               key:
                 type: string
+                x-examples: ["---KEY PEM---"]
               cert:
                 type: string
+                x-examples: ["---CERT PEM---"]
           clientCerts:
             type: object
             default: {}
             properties:
               ca:
                 type: string
+                x-examples: ["---ROOT PEM---"]
               key:
                 type: string
+                x-examples: ["---KEY PEM---"]
               cert:
                 type: string
+                x-examples: ["---CERT PEM---"]
       customCertificateData:
         type: object
         properties:
