@@ -31,6 +31,6 @@ properties:
                   key:
                     type: string
                   ca:
-                    type: string`
+                    type: string
 
 

@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -86,8 +85,6 @@ func generateHubbleServerCert(input *go_hook.HookInput) error {
 		Key:  input.Values.Get("cniCilium.internal.hubble.certs.ca.key").String(),
 		Cert: input.Values.Get("cniCilium.internal.hubble.certs.ca.cert").String(),
 	}
-
-	fmt.Println("CA", ca)
 
 	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
 		cn,
