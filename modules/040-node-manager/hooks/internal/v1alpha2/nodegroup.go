@@ -253,10 +253,18 @@ type Kubelet struct {
 	// Directory path for managing kubelet files (volume mounts,etc).
 	// Default: '/var/lib/kubelet'
 	RootDir string `json:"rootDir,omitempty"`
+
+	// Maximum log file size before it is rotated.
+	// Default: '50Mi'
+	ContainerLogMaxSize string `json:"containerLogMaxSize,omitempty"`
+
+	// How many rotated log files to store before deleting them.
+	// Default: '4'
+	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
 }
 
 func (k Kubelet) IsEmpty() bool {
-	return k.MaxPods == nil && k.RootDir == ""
+	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0
 }
 
 type NodeGroupStatus struct {
