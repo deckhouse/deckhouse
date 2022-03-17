@@ -1,0 +1,76 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      deployDexAuthenticator:
+        type: boolean
+      caCert:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: string
+          key:
+            type: string
+      ui:
+        type: object
+        default: {}
+        properties:
+          ca:
+            type: string
+            x-examples: ["---ROOT PEM---"]
+          key:
+            type: string
+            x-examples: ["---KEY PEM---"]
+          cert:
+            type: string
+            x-examples: ["---CERT PEM---"]
+      relay:
+        type: object
+        default: {}
+        properties:
+          serverCerts:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: string
+                x-examples: ["---ROOT PEM---"]
+              key:
+                type: string
+                x-examples: ["---KEY PEM---"]
+              cert:
+                type: string
+                x-examples: ["---CERT PEM---"]
+          clientCerts:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: string
+                x-examples: ["---ROOT PEM---"]
+              key:
+                type: string
+                x-examples: ["---KEY PEM---"]
+              cert:
+                type: string
+                x-examples: ["---CERT PEM---"]
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+            x-examples:
+              - plainstring
+          tls.key:
+            type: string
+            x-examples:
+              - plainstring
+          ca.crt:
+            type: string
+            x-examples:
+              - plainstring

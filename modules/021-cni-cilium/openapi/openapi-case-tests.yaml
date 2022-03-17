@@ -1,0 +1,27 @@
+positive:
+  configValues:
+  - debugLogging: true
+    cleanState: true
+    createNodeRoutes: true
+    svcSourceRangeCheck: true
+    policyAuditMode: true
+  - debugLogging: false
+    cleanState: false
+    createNodeRoutes: false
+    svcSourceRangeCheck: false
+    policyAuditMode: false
+  values:
+  - internal:
+      hubble:
+        certs:
+          ca:
+            cert: CACA
+            key: CAKEY
+          server:
+            ca: CACACA
+            cert: CERT
+            key: KEY
+negative:
+  values:
+  - internal:
+      maglevHash: ""
