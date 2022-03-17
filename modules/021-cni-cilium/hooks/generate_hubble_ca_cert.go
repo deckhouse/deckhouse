@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"time"
-
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -32,15 +30,15 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/cilium-hubble/gen-cert",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	Queue:        "/modules/cni-cilium/gen-cert",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "hubble-relay-client-certs",
+			Name:       "ca-cert-secret",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"hubble-relay-client-certs"},
+				MatchNames: []string{"hubble-ca-secret"},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -48,12 +46,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			ExecuteHookOnEvents: pointer.BoolPtr(false),
-			FilterFunc:          filterAdmissionSecret,
+			FilterFunc:          filterCASecret,
 		},
 	},
-}, generateHubbleRelayClientCert)
+}, generateHubbleCACert)
 
-func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sec v1.Secret
 
 	err := sdk.FromUnstructured(obj, &sec)
@@ -62,51 +60,36 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}
 
 	return certificate.Certificate{
-		CA:   string(sec.Data["ca.crt"]),
-		Cert: string(sec.Data["tls.crt"]),
-		Key:  string(sec.Data["tls.key"]),
+		Cert: string(sec.Data["ca.crt"]),
+		Key:  string(sec.Data["ca.key"]),
 	}, nil
 }
 
-func genCAAuthority(input *go_hook.HookInput) certificate.Authority {
-	return certificate.Authority{
-		Key:  input.Values.Get("ciliumHubble.internal.caCert.key").String(),
-		Cert: input.Values.Get("ciliumHubble.internal.caCert.cert").String(),
-	}
-}
-
-func generateHubbleRelayClientCert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["hubble-relay-client-certs"]
+func generateHubbleCACert(input *go_hook.HookInput) error {
+	snap := input.Snapshots["ca-cert-secret"]
 
 	if len(snap) > 0 {
 		adm := snap[0].(certificate.Certificate)
-		input.Values.Set("ciliumHubble.internal.relay.clientCerts.cert", adm.Cert)
-		input.Values.Set("ciliumHubble.internal.relay.clientCerts.key", adm.Key)
-		input.Values.Set("ciliumHubble.internal.relay.clientCerts.ca", adm.CA)
+		input.Values.Set("cniCilium.internal.hubble.certs.ca.cert", adm.Cert)
+		input.Values.Set("cniCilium.internal.hubble.certs.ca.key", adm.Key)
 
 		return nil
 	}
 
-	ca := genCAAuthority(input)
-
-	const cn = "*.hubble-relay.cilium.io"
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
-		cn,
-		ca,
+	const cn = "d8.hubble-ca.cilium.io"
+	ca, err := certificate.GenerateCA(input.LogEntry, cn,
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,
 		}),
-		certificate.WithSANs(cn),
-		certificate.WithSigningDefaultExpiry(87600*time.Hour),
+		certificate.WithGroups("d8-cni-cilium"),
 	)
 	if err != nil {
-		return errors.Wrap(err, "generate Cert failed")
+		return errors.Wrap(err, "generate CA failed")
 	}
 
-	input.Values.Set("ciliumHubble.internal.relay.clientCerts.cert", tls.Cert)
-	input.Values.Set("ciliumHubble.internal.relay.clientCerts.key", tls.Key)
-	input.Values.Set("ciliumHubble.internal.relay.clientCerts.ca", tls.CA)
+	input.Values.Set("cniCilium.internal.hubble.certs.ca.cert", ca.Cert)
+	input.Values.Set("cniCilium.internal.hubble.certs.ca.key", ca.Key)
 
 	return nil
 }

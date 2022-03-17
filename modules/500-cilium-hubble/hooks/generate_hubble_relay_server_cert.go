@@ -30,24 +30,9 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/cilium-hubble/gen-cert",
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "ca-secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"hubble-server-certs"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-cni-cilium"},
-				},
-			},
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
-			FilterFunc:          filterAdmissionSecret,
-		},
 		{
 			Name:       "hubble-relay-server-certs",
 			ApiVersion: "v1",
@@ -78,19 +63,12 @@ func generateHubbleRelayServerCert(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	snap = input.Snapshots["ca-secret"]
-	if len(snap) == 0 {
-		return errors.New("secret with hubble CA not found")
-	}
-	hubbleServerCert := snap[0].(certificate.Certificate)
+	ca := genCAAuthority(input)
 
 	const cn = "*.hubble-relay.cilium.io"
 	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
 		cn,
-		certificate.Authority{
-			Key:  hubbleServerCert.Key,
-			Cert: hubbleServerCert.CA,
-		},
+		ca,
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,

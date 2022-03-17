@@ -6,14 +6,31 @@ properties:
     type: object
     default: {}
     properties:
-      hubbleServer:
+      hubble:
         type: object
         default: {}
         properties:
-          cert:
-            type: string
-          key:
-            type: string
-          ca:
-            type: string
+          certs:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: object
+                default: {}
+                properties:
+                  cert:
+                    type: string
+                  key:
+                    type: string
+              server:
+                type: object
+               `default: {}
+                properties:
+                  cert:
+                    type: string
+                  key:
+                    type: string
+                  ca:
+                    type: string`
+
 

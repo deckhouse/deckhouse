@@ -32,7 +32,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/cni-cilium/gen-cert",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -47,9 +47,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-cni-cilium"},
 				},
 			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			FilterFunc:                   filterAdmissionSecret,
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          filterAdmissionSecret,
 		},
 	},
 }, generateHubbleServerCert)
@@ -74,23 +73,17 @@ func generateHubbleServerCert(input *go_hook.HookInput) error {
 
 	if len(snap) > 0 {
 		adm := snap[0].(certificate.Certificate)
-		input.Values.Set("cniCilium.internal.hubbleServer.cert", adm.Cert)
-		input.Values.Set("cniCilium.internal.hubbleServer.key", adm.Key)
-		input.Values.Set("cniCilium.internal.hubbleServer.ca", adm.CA)
+		input.Values.Set("cniCilium.internal.hubble.certs.server.cert", adm.Cert)
+		input.Values.Set("cniCilium.internal.hubble.certs.server.key", adm.Key)
+		input.Values.Set("cniCilium.internal.hubble.certs.server.ca", adm.CA)
 
 		return nil
 	}
 
-	const cn = "d8.hubble-ca.cilium.io"
-	ca, err := certificate.GenerateCA(input.LogEntry, cn,
-		certificate.WithKeyRequest(&csr.KeyRequest{
-			A: "rsa",
-			S: 2048,
-		}),
-		certificate.WithGroups("d8-cni-cilium"),
-	)
-	if err != nil {
-		return errors.Wrap(err, "generate CA failed")
+	const cn = "*.default.hubble-grpc.cilium.io"
+	ca := certificate.Authority{
+		Key:  input.Values.Get("cniCilium.internal.hubble.certs.ca.key").String(),
+		Cert: input.Values.Get("cniCilium.internal.hubble.certs.ca.cert").String(),
 	}
 
 	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
@@ -100,16 +93,16 @@ func generateHubbleServerCert(input *go_hook.HookInput) error {
 			A: "rsa",
 			S: 2048,
 		}),
-		certificate.WithSANs("*.default.hubble-grpc.cilium.io"),
+		certificate.WithSANs(cn),
 		certificate.WithSigningDefaultExpiry(87600*time.Hour),
 	)
 	if err != nil {
 		return errors.Wrap(err, "generate Cert failed")
 	}
 
-	input.Values.Set("cniCilium.internal.hubbleServer.cert", tls.Cert)
-	input.Values.Set("cniCilium.internal.hubbleServer.key", tls.Key)
-	input.Values.Set("cniCilium.internal.hubbleServer.ca", tls.CA)
+	input.Values.Set("cniCilium.internal.hubble.certs.server.cert", tls.Cert)
+	input.Values.Set("cniCilium.internal.hubble.certs.server.key", tls.Key)
+	input.Values.Set("cniCilium.internal.hubble.certs.server.ca", tls.CA)
 
 	return nil
 }

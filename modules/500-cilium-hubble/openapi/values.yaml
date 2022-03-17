@@ -8,6 +8,14 @@ properties:
     properties:
       deployDexAuthenticator:
         type: boolean
+      caCert:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: string
+          key:
+            type: string
       ui:
         type: object
         default: {}
