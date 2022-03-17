@@ -27,6 +27,10 @@ positive:
         customCertificateData:
           tls.crt: plainstring
           tls.key: plainstring
+        ui:
+          ca: CACA
+          cert: CERT
+          key: KEY
 negative:
   values:
   - internal:
