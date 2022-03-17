@@ -316,6 +316,7 @@ properties:
                 default: 'Auto'
               cpu:
                 type: object
+                default: {}
                 description: |
                   CPU-related parameters.
                 properties:
@@ -336,6 +337,7 @@ properties:
                       The coefficient to calculate cpu limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
               memory:
                 type: object
+                default: {}
                 description: |
                   The amount of memory requested.
                 properties:
@@ -358,7 +360,6 @@ properties:
             type: object
             description: |
               Static resource management settings.
-            default: {}
             properties:
               requests:
                 type: object
