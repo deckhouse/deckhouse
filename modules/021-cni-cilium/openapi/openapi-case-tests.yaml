@@ -11,7 +11,16 @@ positive:
     svcSourceRangeCheck: false
     policyAuditMode: false
   values:
-  - internal: {}
+  - internal:
+      hubble:
+        certs:
+          ca:
+            cert: CACA
+            key: CAKEY
+          server:
+            ca: CACACA
+            cert: CERT
+            key: KEY
 negative:
   values:
   - internal:
