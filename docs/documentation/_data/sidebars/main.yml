@@ -408,6 +408,25 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/040-terraform-manager/configuration.html
+            - title: linstor
+              versionType: experimental
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/045-snapshot-controller
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/045-snapshot-controller/usage.html
+                - title:
+                    ru: Справка
+                    en: Reference
+                  folders:
+                    - title:
+                        ru: Настройки
+                        en: Configuration
+                      url: /modules/045-snapshot-controller/configuration.html
     - title:
         en: Accessing cluster
         ru: Доступ к кластеру

@@ -1,0 +1,72 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: d8-snapshot-controller
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: d8-snapshot-controller
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: d8-snapshot-controller
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller" )) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: d8-snapshot-controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d8-snapshot-controller
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller")) | nindent 2 }}
+spec:
+  minReadySeconds: 15
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  selector:
+    matchLabels:
+      app: d8-snapshot-controller
+  template:
+    metadata:
+      labels:
+        app: d8-snapshot-controller
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+      - name: snapshot-controller
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        args:
+        - --v=5
+        - --leader-election=true
+        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.snapshotController.snapshotController }}
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: d8-snapshot-controller
+      serviceAccountName: d8-snapshot-controller
