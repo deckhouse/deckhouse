@@ -2,7 +2,9 @@
 title: "Cloud provider — Azure: примеры конфигурации"
 ---
 
-## Пример CR `AzureInstanceClass`
+## Пример custom resource `AzureInstanceClass`
+
+Ниже представлен простой пример custom resource `AzureInstanceClass`:
 
 ```yaml
 apiVersion: deckhouse.io/v1

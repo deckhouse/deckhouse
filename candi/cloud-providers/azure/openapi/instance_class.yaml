@@ -44,8 +44,8 @@ spec:
                     More information about virtual machine images can be found in the [official documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
 
                     You can get the latest version of an image using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
-                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`
-                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`
+                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`;
+                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`.
 
                     **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
