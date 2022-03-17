@@ -478,4 +478,41 @@ a-b-c-1-2-3:
 		})
 	})
 
+	Context("istiod with default resources configuration", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			iopV181 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x8x1")
+			Expect(iopV181.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+requests:
+  cpu: 50m
+  memory: 256Mi
+`))
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
+			Expect(vpa.Field("spec.targetRef").String()).To(MatchYAML(`
+apiVersion: apps/v1
+kind: Deployment
+name: istiod-v1x8x1
+updatePolicy:
+  updateMode: Auto
+resourcePolicy:
+  containerPolicies:
+  - containerName: discovery
+    maxAllowed:
+      cpu: "2"
+      memory: "2Gi"
+    minAllowed:
+      cpu: "50m"
+      memory: "256Mi"
+    controlledValues: RequestsAndLimits
+`))
+		})
+	})
 })

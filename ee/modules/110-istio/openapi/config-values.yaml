@@ -162,6 +162,107 @@ properties:
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
           jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
+  controlPlane:
+    type: object
+    description: |
+      istiod specifig options.
+    default: {}
+    properties:
+      resources:
+      description: |
+        istiod resources management options.
+      default: {}
+      required: ['mode']
+      properties:
+        mode:
+          type: string
+          description: |
+            The mode for managing resource requests. Classical `Static` requests/limit or `VPA`.
+          enum: ['VPA', 'Static']
+          default: 'VPA'
+        vpa:
+          type: object
+          description: |
+            Parameters of the vpa mode.
+          properties:
+            mode:
+              type: string
+              description: |
+                The VPA usage mode.
+              enum: ['Initial', 'Auto']
+              default: 'Auto'
+            cpu:
+              type: object
+              description: |
+                CPU-related parameters.
+              properties:
+                max:
+                  description: |
+                    Maximum allowed CPU requests.
+                  default: '2'
+                  type: string
+                min:
+                  description: |
+                    Minimum allowed CPU requests.
+                  default: '50m'
+                  type: string
+                limitRatio:
+                  type: float
+                  examples: ['1.5']
+                  description: |
+                    The coefficient to calculate cpu limits.
+            memory:
+              type: object
+              description: |
+                The amount of memory requested.
+              properties:
+                max:
+                  description: |
+                    Maximum allowed memory requests.
+                  default: '2Gi'
+                  type: string
+                min:
+                  description: |
+                    Minimum allowed memory requests.
+                  default: '256Mi'
+                  type: string
+                limitRatio:
+                  type: float
+                  examples: ['1.5']
+                  description: |
+                    The coefficient to calculate memory limits.
+        static:
+          type: object
+          description: |
+            Static resource requirements settings.
+          default: {}
+          properties:
+            requests:
+              type: object
+              description: |
+                Requests configuration.
+              properties:
+                cpu:
+                  type: string
+                  description: |
+                    CPU requests.
+                memory:
+                  type: string
+                  description: |
+                    Memory requests.
+            limits:
+              type: object
+              description: |
+                Limits configuration.
+              properties:
+                cpu:
+                  type: string
+                  description: |
+                    CPU limits.
+                memory:
+                  type: string
+                  description: |
+                    Memory limits.
   sidecar:
     type: object
     description: Network settings for traffic capture by istio sidecar.
