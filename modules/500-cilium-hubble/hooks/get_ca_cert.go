@@ -46,8 +46,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-cni-cilium"},
 				},
 			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			FilterFunc:                   filterCASecret,
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          filterCASecret,
 		},
 	},
 }, getHubbleCACert)
