@@ -4,7 +4,7 @@ properties:
     type: boolean
     default: false
     description: |
-      Enable or disable debug logging for vector agent. Default: `false`.
+      Enable or disable agent debug logging. Default: `false`.
   resourcesRequests:
     required: ["mode"]
     type: object

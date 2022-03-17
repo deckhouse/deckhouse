@@ -110,7 +110,7 @@ spec:
                       description: |
                         The base URL of the Loki instance.
 
-                        > Vector automatically adds `/loki/api/v1/push` into URL during data transmission.
+                        > Agent automatically adds `/loki/api/v1/push` into URL during data transmission.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
@@ -232,7 +232,7 @@ spec:
 
                         - For Elasticsearch >= 7.X you do not need this option since this version has removed `doc_type` mapping;
                         - For Elasticsearch >= 6.X the recommended value is `_doc`, because using it will make it easy to upgrade to 7.X;
-                        - For Elasticsearch < 6.X you can't use a value starting with `_` or empty string. Use, for example, values like `vector` or `logs`.
+                        - For Elasticsearch < 6.X you can't use a value starting with `_` or empty string. Use, for example, values like `logs`.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
