@@ -81,14 +81,14 @@ spec:
                   description: 'Node user additional system groups.'
                   items:
                     type: string
-                  examples:
+                  x-examples:
                   - [ 'docker' ]
                   - [ 'docker', 'ftp' ]
                 nodeGroups:
                   type: array
                   default: [ '*' ]
                   description: List of NodeGroups to apply the user for.
-                  examples:
+                  x-examples:
                   - [ 'master', 'worker' ]
                   - [ 'worker' ]
                   - [ '*' ]
