@@ -70,7 +70,7 @@ modules:
 )
 
 var _ = Describe("Module :: cniCilium :: helm template ::", func() {
-	f := SetupHelmConfig(`{cniCilium: {bpfLBMode: DSR, internal: {hubble: {certs: {ca: {cert: CERT, key: KEY}, server: {ca: CA, key: KEY, cert: CERT}}}}}}`)
+	f := SetupHelmConfig(`{cniCilium: {bpfLBMode: "DSR", internal: {hubble: {certs: {ca: {cert: CERT, key: KEY}, server: {ca: CA, key: KEY, cert: CERT}}}}}}`)
 
 	Context("Cluster with cniCilium", func() {
 		BeforeEach(func() {
