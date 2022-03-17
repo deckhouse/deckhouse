@@ -2,11 +2,9 @@
 title: "Cloud provider — OpenStack: usage"
 ---
 
-## Examples of the configuration
-
 Below are two simple examples of OpenStack cloud provider configuration.
 
-### Example 1
+## Example 1
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: OpenStackInstanceClass
@@ -16,7 +14,7 @@ spec:
   flavorName: m1.large
 ```
 
-### Example 2
+## Example 2
 
 ```yaml
 cloudProviderOpenstack: |
@@ -43,4 +41,3 @@ cloudProviderOpenstack: |
     project: cms
     owner: default
 ```
-

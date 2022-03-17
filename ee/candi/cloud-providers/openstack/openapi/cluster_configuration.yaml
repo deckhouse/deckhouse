@@ -64,7 +64,6 @@ apiVersions:
                   For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
 
                   Flavor create example: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
-
                 x-doc-required: true
               imageName:
                 description: |
@@ -107,11 +106,9 @@ apiVersions:
               additionalTags:
                 description: |
                   The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
-                x-doc-example: |
-                  ```yaml
-                  project: cms-production
-                  severity: critical
-                  ```
+                x-examples:
+                  - project: cms-production
+                    severity: critical
                 type: object
                 additionalProperties:
                   type: string
@@ -124,11 +121,9 @@ apiVersions:
               We recommend using the fastest disks provided by the provider in all cases.
 
               If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `ru-1a` disk type, while master-1, master-3 will have the `ru-1b` disk type
-            x-doc-example: |
-              ```yaml
-              ru-1a: fast-ru-1a
+            x-examples:
+            - ru-1a: fast-ru-1a
               ru-1b: fast-ru-1b
-              ```
             type: object
             minProperties: 1
             additionalProperties:
@@ -323,11 +318,9 @@ apiVersions:
                   additionalTags:
                     description: |
                       The additional tags to attach to the instance created (in addition to those specified in the cloud provider configuration).
-                    x-doc-example: |
-                      ```yaml
-                      project: cms-production
+                    x-examples:
+                    - project: cms-production
                       severity: critical
-                      ```
                     type: object
                     additionalProperties:
                       type: string
@@ -422,7 +415,7 @@ apiVersions:
             <<: *externalNetworkName
           masterWithExternalFloatingIP:
             description: |
-              Defines if floating IP must be assigned to master nodes.
+              Defines if Floating IP must be assigned to master nodes.
             type: boolean
             default: true
       provider:

@@ -106,12 +106,9 @@ spec:
                 additionalTags:
                   description: |
                     The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
-
-                  x-doc-example: |
-                    ```yaml
+                  example:
                     project: cms-production
                     severity: critical
-                    ```
                   type: object
                   additionalProperties:
                     type: string
