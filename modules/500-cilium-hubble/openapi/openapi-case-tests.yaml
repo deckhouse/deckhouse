@@ -4,7 +4,20 @@ positive:
   - debugLogging: false
   values:
     - auth: {}
-      internal: {}
+      internal:
+        ui:
+          ca: CACA
+          cert: CERT
+          key: KEY
+        relay:
+          serverCerts:
+            ca: CACA
+            cert: CERT
+            key: KEY
+          clientCerts:
+            ca: CACA
+            cert: CERT
+            key: KEY
     - auth: {}
       https:
         mode: CustomCertificate
@@ -14,6 +27,19 @@ positive:
         customCertificateData:
           tls.crt: plainstring
           tls.key: plainstring
+        ui:
+          ca: CACA
+          cert: CERT
+          key: KEY
+        relay:
+          serverCerts:
+            ca: CACA
+            cert: CERT
+            key: KEY
+          clientCerts:
+            ca: CACA
+            cert: CERT
+            key: KEY
 negative:
   values:
   - internal:
