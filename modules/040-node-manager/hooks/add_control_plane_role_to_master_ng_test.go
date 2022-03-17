@@ -53,7 +53,7 @@ spec:
       node.deckhouse.io/group: worker-big
   nodeType: CloudEphemeral
 `
-		masterNgWithoutRole = `
+		masterNgWithoutRoleAndExcludeLBLabel = `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -69,7 +69,7 @@ spec:
       key: node-role.kubernetes.io/master
   nodeType: CloudStatic
 `
-		masterNgWithRole = `
+		masterNgWithRoleAndExcludeLBLabel = `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -81,6 +81,7 @@ spec:
     labels:
       node-role.kubernetes.io/master: ""
       node-role.kubernetes.io/control-plane: ""
+      node.kubernetes.io/exclude-from-external-load-balancers: ""
     taints:
     - effect: NoSchedule
       key: node-role.kubernetes.io/master
@@ -106,7 +107,7 @@ spec:
 
 	Context("Cluster has master node group without role", func() {
 		BeforeEach(func() {
-			JoinKubeResourcesAndSet(f, masterNgWithoutRole, workerNgYAML)
+			JoinKubeResourcesAndSet(f, masterNgWithoutRoleAndExcludeLBLabel, workerNgYAML)
 			f.RunHook()
 		})
 
@@ -117,6 +118,7 @@ spec:
 			labels := masterNg.Field("spec.nodeTemplate.labels").Map()
 
 			Expect(labels).To(HaveKey(controlPlaneRoleLabel))
+			Expect(labels).To(HaveKey(excludeLoadBalancerLabel))
 			Expect(labels).To(HaveKey("node-role.kubernetes.io/master"))
 		})
 
@@ -147,7 +149,7 @@ spec:
 
 	Context("Cluster has master node group with role", func() {
 		BeforeEach(func() {
-			JoinKubeResourcesAndSet(f, masterNgWithRole, workerNgYAML)
+			JoinKubeResourcesAndSet(f, masterNgWithRoleAndExcludeLBLabel, workerNgYAML)
 			f.RunHook()
 		})
 
@@ -157,7 +159,7 @@ spec:
 			masterNg := f.KubernetesResource("NodeGroup", "", "master")
 			workerNg := f.KubernetesResource("NodeGroup", "", "worker")
 
-			Expect(masterNg.ToYaml()).To(MatchYAML(masterNgWithRole))
+			Expect(masterNg.ToYaml()).To(MatchYAML(masterNgWithRoleAndExcludeLBLabel))
 			Expect(workerNg.ToYaml()).To(MatchYAML(workerNgYAML))
 		})
 	})

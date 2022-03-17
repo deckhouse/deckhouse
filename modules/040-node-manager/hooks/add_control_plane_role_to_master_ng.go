@@ -14,8 +14,9 @@
 
 package hooks
 
-// TODO remove after 1.32 release
-// add control-plane role for all master nodes over master node group
+// TODO remove after 1.33 release
+// add control-plane role and "node.kubernetes.io/exclude-from-external-load-balancers" label
+// for all master nodes over master node group
 // At current moment, first bootstrapped master get 'control-plane' role,
 // but other master nodes don't get this role, because
 // first master bootstrapped with kubeadm (kubeadm set role to node over label), but
@@ -28,7 +29,10 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
-const controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
+const (
+	controlPlaneRoleLabel    = "node-role.kubernetes.io/control-plane"
+	excludeLoadBalancerLabel = "node.kubernetes.io/exclude-from-external-load-balancers"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
@@ -39,7 +43,8 @@ func addControlPlaneRoleToMasterNodeGroup(input *go_hook.HookInput) error {
 		"spec": map[string]interface{}{
 			"nodeTemplate": map[string]interface{}{
 				"labels": map[string]interface{}{
-					"node-role.kubernetes.io/control-plane": "",
+					controlPlaneRoleLabel:    "",
+					excludeLoadBalancerLabel: "",
 				},
 			},
 		},

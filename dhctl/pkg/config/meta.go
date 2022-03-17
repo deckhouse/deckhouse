@@ -216,8 +216,9 @@ func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
 		},
 		"nodeTemplate": map[string]interface{}{
 			"labels": map[string]interface{}{
-				"node-role.kubernetes.io/master":        "",
-				"node-role.kubernetes.io/control-plane": "",
+				"node-role.kubernetes.io/master":                          "",
+				"node-role.kubernetes.io/control-plane":                   "",
+				"node.kubernetes.io/exclude-from-external-load-balancers": "",
 			},
 			"taints": []map[string]interface{}{
 				{
