@@ -1,6 +1,6 @@
-{{- /* Usage: {{ include "helm_lib_resources_management_pod_spec" <resources configuration> }} */ -}}
+{{- /* Usage: {{ include "helm_lib_resources_management_pod_resources" <resources configuration> }} */ -}}
 {{- /* returns rendered resources section based on configuration if it is */ -}}
-{{- define "helm_lib_resources_management_pod_spec" -}}
+{{- define "helm_lib_resources_management_pod_resources" -}}
   {{- $configuration := . -}}
 
   {{- if $configuration -}}

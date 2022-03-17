@@ -275,6 +275,7 @@ properties:
         description: |
           istiod resources management options.
         default: {}
+        required: ['mode']
         properties:
           mode:
             type: string
@@ -285,7 +286,7 @@ properties:
           vpa:
             type: object
             description: |
-              Parameters of the vpa mode.
+              Parameters of the VPA mode.
             properties:
               mode:
                 type: string
@@ -312,7 +313,7 @@ properties:
                     type: number
                     examples: [1.5]
                     description: |
-                      The coefficient to calculate cpu limits.
+                      The coefficient to calculate cpu limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
               memory:
                 type: object
                 description: |
@@ -332,11 +333,11 @@ properties:
                     type: number
                     examples: [1.5]
                     description: |
-                      The coefficient to calculate memory limits.
+                      The coefficient to calculate memory limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
           static:
             type: object
             description: |
-              Static resource requirements settings.
+              Static resource management settings.
             default: {}
             properties:
               requests:
