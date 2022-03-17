@@ -19,6 +19,7 @@ data:
     dh /etc/openvpn/certs/pki/dh.pem
     crl-verify /etc/openvpn/certs/pki/crl.pem
     tls-auth /etc/openvpn/certs/pki/ta.key
+    client-config-dir /etc/openvpn/ccd
     key-direction 0
     cipher AES-128-CBC
     management 127.0.0.1 8989
@@ -47,15 +48,8 @@ data:
       {{- end }}
     {{- end }}
 
-  configure.sh: |-
+  entrypoint.sh: |-
     #!/bin/sh
-    /etc/openvpn/setup/setup-certs.sh
-
-    md5_easyrsa_src="$(md5sum /usr/share/easy-rsa/easyrsa | awk '{print $1}')"
-    md5_easyrsa_dst="$(md5sum /etc/openvpn/certs/easyrsa | awk '{print $1}')"
-    if [ "$md5_easyrsa_src" != "$md5_easyrsa_dst" ]; then
-      cp /usr/share/easy-rsa/easyrsa /etc/openvpn/certs/easyrsa
-    fi
 
     iptables -t nat -A POSTROUTING -s {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} ! -d {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} -j MASQUERADE
 
@@ -64,26 +58,24 @@ data:
         mknod /dev/net/tun c 10 200
     fi
 
-    cp -f /etc/openvpn/setup/openvpn.conf /etc/openvpn/openvpn.conf
+    wait_file() {
+      file_path="$1"
+      while true; do
+        if [ -f $file_path ]; then
+          break
+        fi
+        echo "wait $file_path"
+        sleep 2
+      done
+    }
 
-    [ -d /etc/openvpn/certs/pki ] && chmod 755 /etc/openvpn/certs/pki
-    [ -f /etc/openvpn/certs/pki/crl.pem ] && chmod 644 /etc/openvpn/certs/pki/crl.pem
+    easyrsa_path="/etc/openvpn/certs"
+
+    wait_file "$easyrsa_path/pki/ca.crt"
+    wait_file "$easyrsa_path/pki/private/server.key"
+    wait_file "$easyrsa_path/pki/issued/server.crt"
+    wait_file "$easyrsa_path/pki/ta.key"
+    wait_file "$easyrsa_path/pki/dh.pem"
+    wait_file "$easyrsa_path/pki/crl.pem"
 
     openvpn --config /etc/openvpn/openvpn.conf
-
-  setup-certs.sh: |-
-    #!/bin/bash
-    EASY_RSA_LOC="/etc/openvpn/certs"
-    SERVER_CERT="${EASY_RSA_LOC}/pki/issued/server.crt"
-    cd $EASY_RSA_LOC
-    if [ -e "$SERVER_CERT" ]; then
-      echo "found existing certs - reusing"
-    else
-      cp -R /usr/share/easy-rsa/* $EASY_RSA_LOC
-      ./easyrsa init-pki
-      echo "ca\n" | ./easyrsa build-ca nopass
-      ./easyrsa build-server-full server nopass
-      ./easyrsa gen-dh
-      openvpn --genkey --secret ./pki/ta.key
-    fi
-    ./easyrsa gen-crl

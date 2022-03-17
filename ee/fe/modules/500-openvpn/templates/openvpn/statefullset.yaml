@@ -46,6 +46,10 @@ kind: StatefulSet
 metadata:
   name: {{ .Chart.Name }}
   namespace: d8-{{ .Chart.Name }}
+  {{- if .Values.openvpn.internal.migrated }}
+  annotations:
+    easyrsa-migrated: "true"
+  {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   replicas: 1
@@ -58,7 +62,7 @@ spec:
       labels:
         app: {{ .Chart.Name }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/openvpn/config.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/openvpn/configmap.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -68,36 +72,75 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+{{- if not .Values.openvpn.internal.migrated }}
+      initContainers:
+      - name: migration
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.openvpn.easyrsaMigrator }}
+        command: [ '/app/easyrsa-migrator' ]
+        volumeMounts:
+          - mountPath: /mnt/easyrsa
+            name: certs
+{{- end }}
       containers:
-      - name: {{ .Chart.Name }}
+# openvpn
+      - name: openvpn
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.openvpn.openvpn }}"
-        command: [ '/etc/openvpn/setup/configure.sh' ]
+        command: [ '/entrypoint.sh' ]
         ports:
         - name: ovpn-tcp
           containerPort: 1194
           protocol: TCP
+          {{- if hasKey .Values.openvpn "inlet" }}
+            {{- if eq .Values.openvpn.inlet "HostPort" }}
+          hostPort: {{ .Values.openvpn.hostPort | default 5416 }}
+            {{- end }}
+          {{- end }}
         volumeMounts:
-          - mountPath: /etc/openvpn/setup
-            name: openvpn
-            readOnly: false
-          - mountPath: /etc/openvpn/certs
-            name: certs
-            readOnly: false
-          - name: tmp
-            mountPath: /tmp
-          - name: dev-net
-            mountPath: /dev/net
+          - name: certs
+            mountPath: /etc/openvpn/certs
+          - name: ccd
+            mountPath: /etc/openvpn/ccd
+          - name: config
+            mountPath: /etc/openvpn/openvpn.conf
+            subPath: openvpn.conf
+            readOnly: true
+          - name: entrypoint
+            mountPath: /entrypoint.sh
+            subPath: entrypoint.sh
+            readOnly: true
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-      - name: {{ .Chart.Name }}-admin
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+# ovpn-admin
+      - name: ovpn-admin
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.openvpn.openvpnWebUi }}"
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.openvpn.ovpnAdmin }}"
         command:
         - /bin/sh
         - -c
-        - uwsgi --http 127.0.0.1:8000  --processes 1 --master --die-on-term --enable-threads --single-interpreter --vacuum --lazy-apps --wsgi-disable-file-wrapper --harakiri 80 -b 32768 --file app.py --callable app --check-static /app/frontend
+        - /app/ovpn-admin
+            --storage.backend="kubernetes.secrets"
+            --log.level="trace"
+            --listen.host="127.0.0.1"
+            --listen.port="8000"
+            --role="master"
+            {{- if hasKey .Values.openvpn "inlet" }}
+              {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
+            --ovpn.server.behindLB
+            --ovpn.service="openvpn-external"
+              {{- end }}
+            {{- end }}
+            --mgmt=main="127.0.0.1:8989"
+            --ccd --ccd.path="/mnt/ccd"
+            {{- $externalHost := "" }}
+            {{- if hasKey .Values.openvpn "inlet" }}
+              {{- if eq .Values.openvpn.inlet "ExternalIP" }}{{ $externalHost = .Values.openvpn.externalIP }}{{- end }}
+            {{- end }}
+            {{- if hasKey .Values.openvpn "externalHost" }}{{ $externalHost = .Values.openvpn.externalHost }}{{- end }}
+            {{- if ne $externalHost "" }}
+            --ovpn.server="{{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 | quote }}:tcp"
+            {{- end }}
         env:
         - name: POD_NAMESPACE
           valueFrom:
@@ -105,19 +148,18 @@ spec:
               fieldPath: metadata.namespace
         - name: EASYRSA_PATH
           value: /mnt/easyrsa
-        - name: EXTERNAL_PORT
-          value: {{ .Values.openvpn.externalPort | default 5416 | quote }}
-        {{- if hasKey .Values.openvpn "externalHost" }}
-        - name: EXTERNAL_HOST
-          value: {{ .Values.openvpn.externalHost }}
-        {{- end }}
         volumeMounts:
           - mountPath: /mnt/easyrsa
             name: certs
             readOnly: false
+          - name: ccd
+            mountPath: /mnt/ccd
+          - name: tmp
+            mountPath: /tmp
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+# kube-rbac-proxy
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
@@ -150,14 +192,32 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       volumes:
-      - name: openvpn
+      - name: config
         configMap:
-          name: {{ .Chart.Name }}
-          defaultMode: 0775
+          name: openvpn
+          defaultMode: 0644
+      - name: entrypoint
+        configMap:
+          name: openvpn
+          defaultMode: 0755
       - name: tmp
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
       - name: dev-net
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: ccd
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+{{- if .Values.openvpn.internal.migrated }}
+      - name: certs
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+{{- else }}
 {{- $storageClass := .Values.openvpn.internal.effectiveStorageClass }}
 {{- if $storageClass }}
   volumeClaimTemplates:
@@ -172,4 +232,5 @@ spec:
 {{- else }}
       - name: certs
         emptyDir: {}
+{{- end }}
 {{- end }}
