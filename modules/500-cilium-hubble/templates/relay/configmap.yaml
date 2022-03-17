@@ -4,6 +4,7 @@ kind: ConfigMap
 metadata:
   name: hubble-relay-config
   namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-relay")) | nindent 2 }}
 data:
   config.yaml: |
     peer-service: "unix:///var/run/cilium/hubble.sock"

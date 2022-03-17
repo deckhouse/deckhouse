@@ -44,6 +44,9 @@ spec:
         ports:
         - name: http
           containerPort: 8080
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
         volumeMounts:
           - mountPath: /tmp
             name: tmp
@@ -68,6 +71,9 @@ spec:
         ports:
         - name: grpc
           containerPort: 8090
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
         volumeMounts:
         - name: hubble-ui-client-certs
           mountPath: /var/lib/hubble-ui/certs
@@ -84,6 +90,9 @@ spec:
         ports:
         - name: http
           containerPort: 8081
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
         volumeMounts:
         - name: hubble-ui-envoy-yaml
           mountPath: /etc/envoy.yaml

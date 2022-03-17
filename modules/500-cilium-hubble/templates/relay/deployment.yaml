@@ -55,6 +55,9 @@ spec:
           livenessProbe:
             tcpSocket:
               port: grpc
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
           volumeMounts:
           - name: hubble-sock-dir
             mountPath: /var/run/cilium

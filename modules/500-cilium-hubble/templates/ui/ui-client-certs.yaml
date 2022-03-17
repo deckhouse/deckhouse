@@ -4,6 +4,7 @@ kind: Secret
 metadata:
   name: hubble-ui-client-certs
   namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
 type: kubernetes.io/tls
 data:
   ca.crt:  {{ $.Values.ciliumHubble.internal.ui.ca | b64enc }}
