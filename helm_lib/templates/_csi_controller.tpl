@@ -4,6 +4,11 @@
 
   {{- $config := index . 1 }}
   {{- $fullname := $config.fullname | default "csi-controller" }}
+  {{- /* we need this `if` to properly set $snapshotterEnabled variable if $config.snapshotterEnabled is not set */ -}}
+  {{- $snapshotterEnabled := true }}
+  {{- if hasKey $config "snapshotterEnabled" }}
+    {{- $snapshotterEnabled = $config.snapshotterEnabled }}
+  {{- end }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
   {{- $provisionerTimeout := $config.provisionerTimeout | default "600s" }}
   {{- $attacherTimeout := $config.attacherTimeout | default "600s" }}
@@ -190,6 +195,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- if $snapshotterEnabled }}
       - name: snapshotter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $snapshotterImage | quote }}
@@ -213,7 +219,8 @@ spec:
           mountPath: /csi
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- end }}
       - name: livenessprobe
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $livenessprobeImage | quote }}
