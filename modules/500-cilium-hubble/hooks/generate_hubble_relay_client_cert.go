@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -69,6 +70,8 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func genCAAuthority(input *go_hook.HookInput) certificate.Authority {
+	fmt.Println("GET KEY", input.Values.Get("ciliumHubble.internal.caCert.key").String())
+	fmt.Println("GET CERT", input.Values.Get("ciliumHubble.internal.caCert.cert").String())
 	return certificate.Authority{
 		Key:  input.Values.Get("ciliumHubble.internal.caCert.key").String(),
 		Cert: input.Values.Get("ciliumHubble.internal.caCert.cert").String(),
