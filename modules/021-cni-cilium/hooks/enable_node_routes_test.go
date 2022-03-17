@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() {
+var _ = Describe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() {
 	f := HookExecutionConfigInit(
 		`{
 "cniCilium": {"internal": {"hubble": {"certs": {"ca":{}}}}},
