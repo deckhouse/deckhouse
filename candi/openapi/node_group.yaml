@@ -455,7 +455,7 @@ spec:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
                                 example: '13:00'
-                                desription: 'Start time of disruptive update window (UTC timezone).'
+                                description: 'Start time of disruptive update window (UTC timezone).'
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
