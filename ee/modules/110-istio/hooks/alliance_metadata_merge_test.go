@@ -410,7 +410,7 @@ status:
 			expM0Date := time.Unix(tokenM0Payload.Exp, 0)
 
 			Expect(nbfM0Date).Should(BeTemporally("~", time.Now().UTC(), 25*time.Second))
-			Expect(expM0Date).Should(BeTemporally("~", time.Now().Add(25*time.Hour).UTC(), 25*time.Second))
+			Expect(expM0Date).Should(BeTemporally("~", time.Now().Add(time.Hour*24*366).UTC(), 25*time.Second))
 
 			Expect(f.ValuesGet("istio.internal.remotePublicMetadata").String()).To(MatchJSON(`
 		{
