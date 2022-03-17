@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -74,7 +72,6 @@ func getHubbleCACert(input *go_hook.HookInput) error {
 	}
 
 	adm := snap[0].(certificate.Certificate)
-	fmt.Println("GOT CA", adm)
 	input.Values.Set("ciliumHubble.internal.caCert.cert", adm.Cert)
 	input.Values.Set("ciliumHubble.internal.caCert.key", adm.Key)
 

@@ -11,8 +11,7 @@ positive:
     svcSourceRangeCheck: false
     policyAuditMode: false
   values:
-  - internal:
-      maglevHash:
+  - internal: {}
 negative:
   values:
   - internal:

@@ -61,10 +61,6 @@ modulesImages:
     cniCilium:
       cilium: hash
       operator: hash
-      hubbleRelay: hash
-      hubbleUiFrontend: hash
-      hubbleUiBackend: hash
-      hubbleUiProxy: hash
 modules:
   https:
     mode: CustomCertificate
@@ -74,7 +70,7 @@ modules:
 )
 
 var _ = Describe("Module :: cniCilium :: helm template ::", func() {
-	f := SetupHelmConfig(`{cniCilium: {internal: {maglevHash: 0123456789qazwsx}, hubbleEnabled: true, hubble: {auth: {}}}}`)
+	f := SetupHelmConfig(`{cniCilium: {internal: {hubble: {certs: {ca: {cert: CERT, key: KEY}, server: {ca: CA, key: KEY, cert: CERT}}}}}}`)
 
 	Context("Cluster with cniCilium", func() {
 		BeforeEach(func() {

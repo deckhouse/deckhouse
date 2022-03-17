@@ -51,7 +51,7 @@ data:
   enable-health-check-nodeport: "true"
   node-port-bind-protection: "true"
   enable-auto-protect-node-port-range: "true"
-  bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | quote }}
+  bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
   bpf-lb-algorithm: "random"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"

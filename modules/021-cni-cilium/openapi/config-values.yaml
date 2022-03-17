@@ -25,9 +25,7 @@ properties:
       Do not enforce any Network Policy. Only log allowed/disallowed connections.
   bpfLBMode:
     type: string
-    default: "hybrid"
-    enum: ["snat", "hybrid", "dsr"]
+    default: "Hybrid"
+    enum: ["SNAT", "Hybrid", "DSR"]
     description: |
       Select eBPF LoadBalancer mode.
-
-      For now, don't use anything except SNAT due to: https://github.com/cilium/cilium/pull/10744/files#diff-60443f6fcb4c63b10029ab426352983a3c4a77cabbc654d46d6798c6980b20a1R557-R559

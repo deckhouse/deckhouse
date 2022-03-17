@@ -74,7 +74,7 @@ modules:
 )
 
 var _ = Describe("Module :: ciliumHubble :: helm template ::", func() {
-	f := SetupHelmConfig(`{ciliumHubble: {internal: {deployDexAuthenticator: true}, auth: {}}}`)
+	f := SetupHelmConfig(`{ciliumHubble: {internal: {deployDexAuthenticator: true, ui: {ca: CACA, key: ZXC, cert: CERT}, relay: {serverCerts: {ca: CACA, key: ZXC, cert: CERT}, clientCerts: {ca: CACA, key: ZXC, cert: CERT}}}, auth: {}}}`)
 
 	Context("Cluster with ciliumHubble", func() {
 		BeforeEach(func() {
