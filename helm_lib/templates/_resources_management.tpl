@@ -38,18 +38,19 @@
 {{- end }}
 
 
-{{- /* Usage: {{ include "helm_lib_resources_management_vpa_targetref" (list <target apiversion> <target kind> <target name> <target container> <resources configuration> ) }} */ -}}
+{{- /* Usage: {{ include "helm_lib_resources_management_vpa_spec" (list <target apiversion> <target kind> <target name> <target container> <resources configuration> ) }} */ -}}
 {{- /* returns rendered vpa spec based on configuration and target reference */ -}}
-{{- define "helm_lib_resources_management_vpa_targetref" -}}
+{{- define "helm_lib_resources_management_vpa_spec" -}}
   {{- $targetAPIVersion := index . 0 -}}
   {{- $targetKind       := index . 1 -}}
   {{- $targetName       := index . 2 -}}
   {{- $targetContainer  := index . 3 -}}
   {{- $configuration    := index . 4 -}}
 
-apiVersion: {{ $targetAPIVersion }}
-kind: {{ $targetKind }}
-name: {{ $targetName }}
+targetRef:
+  apiVersion: {{ $targetAPIVersion }}
+  kind: {{ $targetKind }}
+  name: {{ $targetName }}
   {{- if eq ($configuration.mode) "VPA" }}
 updatePolicy:
   updateMode: {{ $configuration.vpa.mode | quote }}

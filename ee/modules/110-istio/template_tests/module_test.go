@@ -508,10 +508,11 @@ requests:
 limits: {}
 `))
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
-			Expect(vpa.Field("spec.targetRef").String()).To(MatchYAML(`
-apiVersion: apps/v1
-kind: Deployment
-name: istiod-v1x8x1
+			Expect(vpa.Field("spec").String()).To(MatchYAML(`
+targetRef:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: istiod-v1x8x1
 updatePolicy:
   updateMode: Auto
 resourcePolicy:
@@ -559,10 +560,11 @@ limits:
   memory: 44Gi
 `))
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
-			Expect(vpa.Field("spec.targetRef").String()).To(MatchYAML(`
-apiVersion: apps/v1
-kind: Deployment
-name: istiod-v1x8x1
+			Expect(vpa.Field("spec").String()).To(MatchYAML(`
+targetRef:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: istiod-v1x8x1
 updatePolicy:
   updateMode: "Off"
 `))
@@ -603,10 +605,11 @@ requests:
   memory: 512Mi
 `))
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
-			Expect(vpa.Field("spec.targetRef").String()).To(MatchYAML(`
-apiVersion: apps/v1
-kind: Deployment
-name: istiod-v1x8x1
+			Expect(vpa.Field("spec").String()).To(MatchYAML(`
+targetRef:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: istiod-v1x8x1
 resourcePolicy:
   containerPolicies:
   - containerName: discovery
@@ -657,10 +660,11 @@ requests:
   memory: "333"
 `))
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
-			Expect(vpa.Field("spec.targetRef").String()).To(MatchYAML(`
-apiVersion: apps/v1
-kind: Deployment
-name: istiod-v1x8x1
+			Expect(vpa.Field("spec").String()).To(MatchYAML(`
+targetRef:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: istiod-v1x8x1
 resourcePolicy:
   containerPolicies:
   - containerName: discovery
