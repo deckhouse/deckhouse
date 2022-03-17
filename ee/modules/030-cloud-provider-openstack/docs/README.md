@@ -2,7 +2,7 @@
 title: "Cloud provider — OpenStack"
 ---
 
-The `cloud-provider-openstack` module is responsible for interacting with the [OpenStack-based](https://www.openstack.org/) cloud resources. It allows the [node manager](../../modules/040-node-manager/) module to use Openstack resources for provisioning nodes for the specified [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
+The `cloud-provider-openstack` module is responsible for interacting with the [OpenStack-based](https://www.openstack.org/) cloud resources. It allows the [node manager](../../modules/040-node-manager/) module to use OpenStack resources for provisioning nodes for the specified [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
 
 The `cloud-provider-openstack` module:
 - Manages OpenStack resources using the `cloud-controller-manager` (CCM) module:

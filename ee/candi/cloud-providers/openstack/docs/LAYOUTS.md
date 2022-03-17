@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider - Openstack: Layouts"
+title: "Cloud provider - OpenStack: Layouts"
 ---
 
 Four layouts are supported. Below is more information about each of them.

@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Yandex.Cloud: Custom Resource"
+title: "Cloud provider — Yandex.Cloud: Custom Resources"
 ---
 
 <!-- SCHEMA -->

@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Openstack: подготовка окружения"
+title: "Cloud provider — OpenStack: подготовка окружения"
 ---
 
 Для того чтобы Deckhouse мог управлять ресурсами в облаке OpenStack, ему необходимо подключиться к OpenStack API. 
