@@ -275,7 +275,26 @@ properties:
         description: |
           istiod resources management options.
         default: {}
-        required: ['mode']
+        x-examples:
+        - mode: VPA
+          vpa:
+            mode: Auto
+            cpu:
+              min: "50m"
+              max: "2"
+              limitRatio: 1.5
+            memory:
+              min: "256Mi"
+              max: "2Gi"
+              limitRatio: 1.5
+        - mode: Static
+          static:
+            requests:
+              cpu: "55m"
+              memory: "256Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
         properties:
           mode:
             type: string
