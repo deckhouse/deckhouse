@@ -32,11 +32,6 @@
  - #744 unknown section "global"
  - #809 unknown section "general"
 
-## Release digest
-
-
- - Ingress nginx controller pods now managed by a special hook, not by a Kubernetes Controller.
-
 ## Features
 
 
@@ -61,7 +56,6 @@
  - **[ingress-nginx]** Add documentation article "How to enable HorizontalPodAutoscaling for IngressNginxController". [#648](https://github.com/deckhouse/deckhouse/pull/648)
  - **[ingress-nginx]** Add an example of usage LoadBalancer inlet with MetalLB. [#465](https://github.com/deckhouse/deckhouse/pull/465)
  - **[ingress-nginx]** Add ingress-nginx controller version 1.0 [#394](https://github.com/deckhouse/deckhouse/pull/394)
- - **[istio]** nodeSelector and tolerations customization for control-plane [#1034](https://github.com/deckhouse/deckhouse/pull/1034)
  - **[istio]**  option to set a static port for NodePort-type ingressgateway Service. [#575](https://github.com/deckhouse/deckhouse/pull/575)
  - **[local-path-provisioner]** Added reclaimPolicy selector, set default reclaimPolicy to Retain [#561](https://github.com/deckhouse/deckhouse/pull/561)
  - **[monitoring-kubernetes]** Added ebpf-exporter [#387](https://github.com/deckhouse/deckhouse/pull/387)
@@ -99,9 +93,7 @@
     Legacy cert-manager resources () will not be supported in 1.22+ clusters
  - **[chrony]** Bashible step fix — missed openntpd.service and time-sync.target in list. [#653](https://github.com/deckhouse/deckhouse/pull/653)
  - **[chrony]** Add VPA label  to make it take part in resources requests calculations. [#455](https://github.com/deckhouse/deckhouse/pull/455)
- - **[cloud-provider-aws]** Fixed zone selection for bastion in WithNAT layout [#1021](https://github.com/deckhouse/deckhouse/pull/1021)
  - **[cloud-provider-aws]** Documentation fixes. [#401](https://github.com/deckhouse/deckhouse/pull/401)
- - **[cloud-provider-openstack]** Set volume availability zone in dhctl on bootstrap [#1033](https://github.com/deckhouse/deckhouse/pull/1033)
  - **[cloud-provider-vsphere]** Install latest version of open-vm-tools [#667](https://github.com/deckhouse/deckhouse/pull/667)
  - **[control-plane-manager]** LoadBalancer annotations are able to be set [#567](https://github.com/deckhouse/deckhouse/pull/567)
  - **[deckhouse]** Update the description of the release process [#660](https://github.com/deckhouse/deckhouse/pull/660)
@@ -120,8 +112,6 @@
  - **[flant-integration]** Implement proper HA remote-write and reduce outgoing traffic amount. [#412](https://github.com/deckhouse/deckhouse/pull/412)
  - **[helm]** Add deprecation guide link to deprecated resources alerts. [#678](https://github.com/deckhouse/deckhouse/pull/678)
  - **[helm]** Provide an actual description for deprecated resources API versions alerts. [#569](https://github.com/deckhouse/deckhouse/pull/569)
- - **[ingress-nginx]** Manual update for ingress controllers [#921](https://github.com/deckhouse/deckhouse/pull/921)
-    Ingress nginx controller pods now managed by a special hook, not by a Kubernetes Controller.
  - **[ingress-nginx]** Fix handled request query on a dashboard. [#871](https://github.com/deckhouse/deckhouse/pull/871)
  - **[ingress-nginx]** temporary remove support of 1.0 controller [#782](https://github.com/deckhouse/deckhouse/pull/782)
  - **[ingress-nginx]** Added "pcre_jit on" to nginx.tmpl for controller-0.46 and above [#515](https://github.com/deckhouse/deckhouse/pull/515)
@@ -142,9 +132,7 @@
  - **[node-manager]** When calculating maximum instances for particular NodeGroup without zones defined — use global zones count from CloudProvider configuration. [#580](https://github.com/deckhouse/deckhouse/pull/580)
  - **[node-manager]** Fix Static node template annotations updating [#544](https://github.com/deckhouse/deckhouse/pull/544)
  - **[prometheus]** Make Grafana home dashboard queries to only show the top-used versions [#476](https://github.com/deckhouse/deckhouse/pull/476)
- - **[upmeter]** Fixed floating bug causing false downtime of deckhouse/cluster-configuration probe [#997](https://github.com/deckhouse/deckhouse/pull/997)
  - **[upmeter]** Assigned limited access rights to the agent serviceaccount [#469](https://github.com/deckhouse/deckhouse/pull/469)
- - **[user-authn]** Fixed .spec.ldap.bindPW escaping in DexProvider [#1032](https://github.com/deckhouse/deckhouse/pull/1032)
  - **[user-authn]** Migrate BitbucketCloud connector to utilizing workspaces API. [#738](https://github.com/deckhouse/deckhouse/pull/738)
  - **[user-authn]** Fix values scheme. [#676](https://github.com/deckhouse/deckhouse/pull/676)
  - **[user-authn]** Ignore updating an existing DexAuthenticator [#539](https://github.com/deckhouse/deckhouse/pull/539)
