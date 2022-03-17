@@ -24,7 +24,7 @@ properties:
                     type: string
               server:
                 type: object
-               `default: {}
+                default: {}
                 properties:
                   cert:
                     type: string
