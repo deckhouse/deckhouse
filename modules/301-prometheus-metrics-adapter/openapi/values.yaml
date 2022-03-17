@@ -12,7 +12,6 @@ properties:
     - adapterPem
     - adapterKey
     - adapterCA
-    - prometheusAPIClientTLS
     properties:
       adapterPem:
         x-examples: ["YjY0ZW5jX3N0cmluZwo="]
@@ -25,24 +24,6 @@ properties:
       adapterKey:
         x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
         type: string
-
-      prometheusAPIClientTLS:
-        default: {}
-        additionalProperties: false
-        x-required-for-helm:
-          - certificate
-          - key
-        type: object
-        properties:
-          certificate:
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
-            type: string
-          certificate_updated:
-            x-examples: [ false ]
-            type: boolean
-          key:
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
-            type: string
 
       customMetrics:
         type: object
