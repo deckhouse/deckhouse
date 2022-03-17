@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if bb-is-debian-version? 9 ; then
-  bb-rp-install "nginx:{{ .images.registrypackages.nginxDebian1180Stretch }}"
-fi
 if bb-is-debian-version? 10 ; then
   bb-rp-install "nginx:{{ .images.registrypackages.nginxDebian1202Buster }}"
-fi
-if bb-is-debian-version? 11 ; then
+elif bb-is-debian-version? 11 ; then
   bb-rp-install "nginx:{{ .images.registrypackages.nginxDebian1202Bullseye }}"
+else
+  bb-rp-install "nginx:{{ .images.registrypackages.nginxDebian1180Stretch }}"
 fi

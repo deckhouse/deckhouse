@@ -35,6 +35,10 @@ if [ -n "$metapackages" ]; then
   bb-apt-remove $metapackages
 fi
 
+# set default
+desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "kernel" "generic" "desiredVersion" | quote }}
+allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "kernel" "generic" "allowedPattern" | quote }}
+
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
   {{- $debianVersion := toString $key }}
   {{- if $value.kernel.generic }}

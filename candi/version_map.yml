@@ -74,7 +74,7 @@ bashible: &bashible
       kernel:
         generic:
           desiredVersion: "4.9.0-17-amd64"
-          allowedPattern: ""
+          allowedPattern: "4.9|4.15|4.19|5.4|5.10"
     '10':
       docker:
         desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"

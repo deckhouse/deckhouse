@@ -33,8 +33,9 @@ if [ -e /etc/os-release ]; then
       exit 1
     ;;
     *)
-      >&2 echo "ERROR: Unsupported Linux version: ${PRETTY_NAME}"
-      exit 1
+      >&2 echo "WARNING: Trying to use debian bundle as default for: ${PRETTY_NAME}"
+      echo "debian"
+      exit 0
     ;;
   esac
 fi
