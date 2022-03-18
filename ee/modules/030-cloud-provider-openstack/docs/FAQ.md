@@ -4,9 +4,11 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## How do I set up LoadBalancer?
 
-**Note that Load Balancer must support Proxy Protocol to determine the client IP correctly.**
+> **Note** that Load Balancer must support Proxy Protocol to determine the client IP correctly.
 
 ### An example of IngressNginxController
+
+Below is a simple example of the `IngressNginxController' configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -31,11 +33,11 @@ spec:
 
 ## How do I set up security policies on cluster nodes?
 
-There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in AWS:
+There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
 
 * Allow VMs on a different subnet to connect to cluster nodes;
 * Allow connecting to the ports of the static node so that the application can work;
-* Restrict access to external resources or other VMs in the cloud for security reasons;
+* Restrict access to external resources or other VMs in the cloud for security reasons.
 
 For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
 
@@ -54,9 +56,11 @@ You have to set the `additionalSecurityGroups` parameter for all OpenStackInstan
 
 ## How do I create a hybrid cluster?
 
-A hybrid cluster combines bare metal and openstack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
+A hybrid cluster combines bare metal and OpenStack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
-1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`;
+To set up a hybrid cluster, follow these steps:
+
+1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`.
 2. Enable and [configure](configuration.html#parameters) the module.
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
 4. Create one or more [NodeManager](../../modules/040-node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
@@ -65,7 +69,9 @@ A hybrid cluster combines bare metal and openstack nodes. To create such a clust
 
 ### Attaching storage devices to instances in a hybrid cluster
 
-To use PersistentVolumes on openstack nodes, you must create StorageClass with the appropriate OpenStack volume type. The `openstack volume type list` command lists all available types. Here is the example config for the `ceph-ssd` volume type:
+To use PersistentVolumes on OpenStack nodes, you must create StorageClass with the appropriate OpenStack volume type. The `openstack volume type list` command lists all available types. 
+
+Here is the example config for the `ceph-ssd` volume type:
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -82,81 +88,83 @@ volumeBindingMode: WaitForFirstConsumer
 
 1. Download the latest stable Ubuntu 18.04 image:
 
-    ```shell
-    curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64
-    ```
+   ```shell
+   curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64
+   ```
 
-2. Prepare an OpenStack RC (openrc) file containing credentials for accessing the openstack API:
+2. Prepare an OpenStack RC (openrc) file containing credentials for accessing the OpenStack API:
 
-    > The interface for getting an openrc file may differ depending on the OpenStack provider. If the provider has a standard interface for OpenStack, you can download the openrc file using the following [instruction](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html)
+   > The interface for getting an openrc file may differ depending on the OpenStack provider. If the provider has a standard interface for OpenStack, you can download the openrc file using the following [instruction](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
 
-3. Otherwise, install the OpenStack cli using this [instruction](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
-   Also, you can run the docker container and put an openrc file and a downloaded ubuntu image in it
+3. Otherwise, install the OpenStack client using this [instruction](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
 
-    ```shell
-    docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.mcs-openrc:/openrc jmcvea/openstack-client
-    ```
+   Also, you can run the container and mount an openrc file and a downloaded Ubuntu image in it:
+
+   ```shell
+   docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.openrc:/openrc jmcvea/openstack-client
+   ```
 
 4. Initialize the environment variables from the openrc file:
 
-    ```shell
-    source /openrc
-    ```
+   ```shell
+   source /openrc
+   ```
 
 5. Get a list of available disk types:
 
-    ```shell
-    / # openstack volume type list
-    +--------------------------------------+---------------+-----------+
-    | ID                                   | Name          | Is Public |
-    +--------------------------------------+---------------+-----------+
-    | 8d39c9db-0293-48c0-8d44-015a2f6788ff | ko1-high-iops | True      |
-    | bf800b7c-9ae0-4cda-b9c5-fae283b3e9fd | dp1-high-iops | True      |
-    | 74101409-a462-4f03-872a-7de727a178b8 | ko1-ssd       | True      |
-    | eadd8860-f5a4-45e1-ae27-8c58094257e0 | dp1-ssd       | True      |
-    | 48372c05-c842-4f6e-89ca-09af3868b2c4 | ssd           | True      |
-    | a75c3502-4de6-4876-a457-a6c4594c067a | ms1           | True      |
-    | ebf5922e-42af-4f97-8f23-716340290de2 | dp1           | True      |
-    | a6e853c1-78ad-4c18-93f9-2bba317a1d13 | ceph          | True      |
-    +--------------------------------------+---------------+-----------+
-    ```
+   ```shell
+   / # openstack volume type list
+   +--------------------------------------+---------------+-----------+
+   | ID                                   | Name          | Is Public |
+   +--------------------------------------+---------------+-----------+
+   | 8d39c9db-0293-48c0-8d44-015a2f6788ff | ko1-high-iops | True      |
+   | bf800b7c-9ae0-4cda-b9c5-fae283b3e9fd | dp1-high-iops | True      |
+   | 74101409-a462-4f03-872a-7de727a178b8 | ko1-ssd       | True      |
+   | eadd8860-f5a4-45e1-ae27-8c58094257e0 | dp1-ssd       | True      |
+   | 48372c05-c842-4f6e-89ca-09af3868b2c4 | ssd           | True      |
+   | a75c3502-4de6-4876-a457-a6c4594c067a | ms1           | True      |
+   | ebf5922e-42af-4f97-8f23-716340290de2 | dp1           | True      |
+   | a6e853c1-78ad-4c18-93f9-2bba317a1d13 | ceph          | True      |
+   +--------------------------------------+---------------+-----------+
+   ```
 
 6. Create an image, pass the disk format to use (if OpenStack does not support local disks or these disks don't fit):
 
-    ```shell
-    openstack image create --private --disk-format qcow2 --container-format bare --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
-    ```
+   ```shell
+   openstack image create --private --disk-format qcow2 --container-format bare \
+     --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
+   ```
 
 7. Check that the image was created successfully:
 
-    ```text
-    / # openstack image show ubuntu-18-04-cloud-amd64
-    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | Field            | Value                                                                                                                                                                                                                                                                                    |
-    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | checksum         | 3443a1fd810f4af9593d56e0e144d07d                                                                                                                                                                                                                                                          |
-    | container_format | bare                                                                                                                                                                                                                                                                                      |
-    | created_at       | 2020-01-10T07:23:48Z                                                                                                                                                                                                                                                                      |
-    | disk_format      | qcow2                                                                                                                                                                                                                                                                                     |
-    | file             | /v2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/file                                                                                                                                                                                                                                      |
-    | id               | 01998f40-57cc-4ce3-9642-c8654a6d14fc                                                                                                                                                                                                                                                      |
-    | min_disk         | 0                                                                                                                                                                                                                                                                                         |
-    | min_ram          | 0                                                                                                                                                                                                                                                                                         |
-    | name             | ubuntu-18-04-cloud-amd64                                                                                                                                                                                                                                                                  |
-    | owner            | bbf506e3ece54e21b2acf1bf9db4f62c                                                                                                                                                                                                                                                          |
-    | properties       | cinder_img_volume_type='dp1-high-iops', direct_url='rbd://b0e441fc-c317-4acf-a606-cf74683978d2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/snap', locations='[{u'url': u'rbd://b0e441fc-c317-4acf-a606-cf74683978d2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/snap', u'metadata': {}}]' |
-    | protected        | False                                                                                                                                                                                                                                                                                     |
-    | schema           | /v2/schemas/image                                                                                                                                                                                                                                                                         |
-    | size             | 343277568                                                                                                                                                                                                                                                                                 |
-    | status           | active                                                                                                                                                                                                                                                                                    |
-    | tags             |                                                                                                                                                                                                                                                                                           |
-    | updated_at       | 2020-05-01T17:18:34Z                                                                                                                                                                                                                                                                      |
-    | virtual_size     | None                                                                                                                                                                                                                                                                                      |
-    | visibility       | private                                                                                                                                                                                                                                                                                   |
-    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    ```
+   ```text
+   / # openstack image show ubuntu-18-04-cloud-amd64
+   +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | Field            | Value                                                                                                                                                                                                                                                                                     |
+   +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | checksum         | 3443a1fd810f4af9593d56e0e144d07d                                                                                                                                                                                                                                                          |
+   | container_format | bare                                                                                                                                                                                                                                                                                      |
+   | created_at       | 2020-01-10T07:23:48Z                                                                                                                                                                                                                                                                      |
+   | disk_format      | qcow2                                                                                                                                                                                                                                                                                     |
+   | file             | /v2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/file                                                                                                                                                                                                                                      |
+   | id               | 01998f40-57cc-4ce3-9642-c8654a6d14fc                                                                                                                                                                                                                                                      |
+   | min_disk         | 0                                                                                                                                                                                                                                                                                         |
+   | min_ram          | 0                                                                                                                                                                                                                                                                                         |
+   | name             | ubuntu-18-04-cloud-amd64                                                                                                                                                                                                                                                                  |
+   | owner            | bbf506e3ece54e21b2acf1bf9db4f62c                                                                                                                                                                                                                                                          |
+   | properties       | cinder_img_volume_type='dp1-high-iops', direct_url='rbd://b0e441fc-c317-4acf-a606-cf74683978d2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/snap', locations='[{u'url': u'rbd://b0e441fc-c317-4acf-a606-cf74683978d2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/snap', u'metadata': {}}]' |
+   | protected        | False                                                                                                                                                                                                                                                                                     |
+   | schema           | /v2/schemas/image                                                                                                                                                                                                                                                                         |
+   | size             | 343277568                                                                                                                                                                                                                                                                                 |
+   | status           | active                                                                                                                                                                                                                                                                                    |
+   | tags             |                                                                                                                                                                                                                                                                                           |
+   | updated_at       | 2020-05-01T17:18:34Z                                                                                                                                                                                                                                                                      |
+   | virtual_size     | None                                                                                                                                                                                                                                                                                      |
+   | visibility       | private                                                                                                                                                                                                                                                                                   |
+   +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   ```
 
-## How to check whether the provider supports SecurityGroups?
+## How to check whether the provider supports SecurityGroups
 
 Run the following command: `openstack security group list`. If there are no errors in the output, then [Security Groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) are supported.
 
@@ -180,4 +188,4 @@ user_domain_id = default
 username = {{ nova_service_user_name }}
 ```
 
-https://bugs.launchpad.net/openstack-ansible/+bug/1902914
+[Source...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)

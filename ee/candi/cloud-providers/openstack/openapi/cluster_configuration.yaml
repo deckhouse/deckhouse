@@ -14,7 +14,8 @@ apiVersions:
         enum: [OpenStackClusterConfiguration]
       sshPublicKey:
         type: string
-        description: A public key for accessing nodes.
+        description: |
+          A public key for accessing nodes.
         x-doc-required: true
       tags:
         type: object
@@ -31,10 +32,12 @@ apiVersions:
           type: string
         minItems: 1
         uniqueItems: true
-        description: The globally restricted set of zones that this Cloud Provider works with.
+        description: |
+          The globally restricted set of zones that this Cloud Provider works with.
         x-doc-required: false
       masterNodeGroup:
-        description: The definition of the master's NodeGroup.
+        description: |
+          The definition of the master's NodeGroup.
         x-doc-required: true
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]
@@ -42,7 +45,8 @@ apiVersions:
           replicas:
             type: integer
             minimum: 1
-            description: The number of master nodes to create.
+            description: |
+              The number of master nodes to create.
           instanceClass:
             description: |
               Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
@@ -56,9 +60,10 @@ apiVersions:
                   Flavor of OpenStack servers.
 
                   Get a list of all available flavors: `openstack flavor list`.
-                  For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
-                  Flavor create example: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
 
+                  For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
+
+                  Flavor create example: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
                 x-doc-required: true
               imageName:
                 description: |
@@ -66,7 +71,7 @@ apiVersions:
 
                   Use this command to get a list of available images: `openstack image list`.
 
-                  **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
+                  **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04` and `Centos 7` are supported and tested to work.
                 type: string
                 x-doc-required: true
               rootDiskSize:
@@ -74,11 +79,14 @@ apiVersions:
                   The size of a root disk (in gigabytes).
 
                   If the parameter is not set, a local disk with the size specified in flavor is used for the instance.
+
                   If the parameter is set, the instance will use the Cinder volume provisioned by OpenStack as a root disk (of the standard cluster type and the specified size).
 
                   > If there are several types of disks in *cloud provider*, you can set a default disk type for the image in order to select a specific VM's disk type; to do this, specify the name of a disk type in the image metadata.
-                  > Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-do-i-create-an-image-in-openstack) section describes how to do it
                   >
+                  > Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-do-i-create-an-image-in-openstack) section describes how to do it.
+                  >
+                  > Examples of commands:
                   > ```shell
                   > openstack volume type list
                   > openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
@@ -98,11 +106,9 @@ apiVersions:
               additionalTags:
                 description: |
                   The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
-                x-doc-example: |
-                  ```yaml
-                  project: cms-production
-                  severity: critical
-                  ```
+                x-examples:
+                  - project: cms-production
+                    severity: critical
                 type: object
                 additionalProperties:
                   type: string
@@ -115,13 +121,9 @@ apiVersions:
               We recommend using the fastest disks provided by the provider in all cases.
 
               If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `ru-1a` disk type, while master-1, master-3 will have the `ru-1b` disk type
-
-              The format ia a dictionary where the key is the name of the zone, value - disk type.
-            x-doc-example: |
-              ```yaml
-              ru-1a: fast-ru-1a
+            x-examples:
+            - ru-1a: fast-ru-1a
               ru-1b: fast-ru-1b
-              ```
             type: object
             minProperties: 1
             additionalProperties:
@@ -138,15 +140,18 @@ apiVersions:
           properties:
             name:
               type: string
-              description: The name of the NodeGroup to use for generating node names.
+              description: |
+                The name of the NodeGroup to use for generating node names.
               x-doc-required: true
             replicas:
               type: integer
-              description: The number of nodes to create.
+              description: |
+                The number of nodes to create.
               x-doc-required: true
             nodeTemplate:
               additionalProperties: false
-              description: Parameters of Node objects in Kubernetes to add after registering the node.
+              description: |
+                Parameters of Node objects in Kubernetes to add after registering the node.
               properties:
                 labels:
                   description: |
@@ -155,8 +160,6 @@ apiVersions:
                     The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
-
-                    Format — `key: value`.
                   x-doc-example: |
                     ```yaml
                     labels:
@@ -240,7 +243,8 @@ apiVersions:
                   type: array
                   items:
                     type: string
-                  description: A list of networks to assign Floating IPs to nodes.
+                  description: |
+                    A list of networks to assign Floating IPs to nodes.
             zones:
               type: array
               items:
@@ -257,13 +261,15 @@ apiVersions:
           Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html) about possible provider layouts.
         type: string
       standard:
-        description: Settings for the [`Standard`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standard) layout.
+        description: |
+          Settings for the [`Standard`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standard) layout.
         type: object
         additionalProperties: false
         required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
         properties:
           bastion:
-            description: The definition of the bastion instance.
+            description: |
+              The definition of the bastion instance.
             type: object
             properties:
               zone:
@@ -296,11 +302,14 @@ apiVersions:
                       The size of a root disk (in gigabytes).
 
                       If the parameter is not set, a local disk with the size specified in flavor is used for the instance.
+
                       If the parameter is set, the instance will use the Cinder volume provisioned by OpenStack as a root disk (of the standard cluster type and the specified size).
 
                       > If there are several types of disks in *cloud provider*, you can set a default disk type for the image in order to select a specific VM's disk type; to do this, specify the name of a disk type in the image metadata.
+                      >
                       > Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-do-i-create-an-image-in-openstack) section describes how to do it
                       >
+                      > Examples of commands:
                       > ```shell
                       > openstack volume type list
                       > openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
@@ -309,20 +318,20 @@ apiVersions:
                   additionalTags:
                     description: |
                       The additional tags to attach to the instance created (in addition to those specified in the cloud provider configuration).
-                    x-doc-example: |
-                      ```yaml
-                      project: cms-production
+                    x-examples:
+                    - project: cms-production
                       severity: critical
-                      ```
                     type: object
                     additionalProperties:
                       type: string
           internalNetworkCIDR: &internalNetworkCIDR
-            description: Routing for the internal cluster network.
+            description: |
+              Routing for the internal cluster network.
             type: string
             pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
           internalNetworkDNSServers:
-            description: A list of addresses of the recursive DNSs of the internal cluster network.
+            description: |
+              A list of addresses of the recursive DNSs of the internal cluster network.
             type: array
             items:
               type: string
@@ -333,10 +342,12 @@ apiVersions:
             type: boolean
             default: true
           externalNetworkName: &externalNetworkName
-            description: The name of the network for external connections.
+            description: |
+              The name of the network for external connections.
             type: string
       standardWithNoRouter:
-        description: Settings for the [`StandardWithNoRouter`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standardwithnorouter) layout.
+        description: |
+          Settings for the [`StandardWithNoRouter`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standardwithnorouter) layout.
         type: object
         additionalProperties: false
         required: [internalNetworkCIDR, externalNetworkName]
@@ -348,12 +359,14 @@ apiVersions:
           externalNetworkName:
             <<: *externalNetworkName
           externalNetworkDHCP: &externalNetworkDHCP
-            description: This parameter defines if DHCP is enabled in the external network.
+            description: |
+              This parameter defines if DHCP is enabled in the external network.
             type: boolean
             default: true
       simple:
         type: object
-        description: Settings for the [`Simple`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simple) layout.
+        description: |
+          Settings for the [`Simple`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simple) layout.
         additionalProperties: false
         required: [externalNetworkName]
         properties:
@@ -363,35 +376,37 @@ apiVersions:
             <<: *externalNetworkDHCP
           podNetworkMode:
             description: |
-              Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
-
-              * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
+              Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
+              * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode);
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (SecurityGroups are disabled in this mode).
 
               **Caution!** After changing this parameter, you need to run `dhctl converge`.
+
               **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting]
             default: VXLAN
       simpleWithInternalNetwork:
         type: object
-        description: Settings for the [`SimpleWithInternalNetwork`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simplewithinternalnetwork) layout.
+        description: |
+          Settings for the [`SimpleWithInternalNetwork`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simplewithinternalnetwork) layout.
         additionalProperties: false
         required: [internalSubnetName]
         properties:
           internalSubnetName:
             type: string
-            description: The name of the subnet in which the cluster nodes will run.
+            description: |
+              The name of the subnet in which the cluster nodes will run.
           podNetworkMode:
             description: |
-              Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
-
-              * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
-              * `DirectRoutingWithPortSecurityEnabled` — direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports.
+              Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
+              * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode);
+              * `DirectRoutingWithPortSecurityEnabled` — direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports:
                 * **Caution!** Make sure that the `username` can edit `AllowedAddressPairs` on Ports connected to the `internalNetworkName` network. Usually, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (`SecurityGroups` are disabled in this mode).
 
               **Caution!** After changing this parameter, you need to run `dhctl converge`.
+
               **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
@@ -399,23 +414,26 @@ apiVersions:
           externalNetworkName:
             <<: *externalNetworkName
           masterWithExternalFloatingIP:
-            description: Defines if floating IP must be assigned to master nodes.
+            description: |
+              Defines if Floating IP must be assigned to master nodes.
             type: boolean
             default: true
       provider:
         description: |
           Contains [settings to connect](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/environment.html) to the OpenStack API.
 
-          These settings are the same as those in the  `connection` field of the [cloud-provider-openstack](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/configuration.html#parameters) module.
+          These settings are the same as those in the `connection` field of the [cloud-provider-openstack](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/configuration.html#parameters) module.
         type: object
         additionalProperties: false
         properties:
           authURL:
             type: string
-            description: An OpenStack Identity API URL.
+            description: |
+              An OpenStack Identity API URL.
           caCert:
             type: string
-            description: Specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate. Certificate should be passed in PEM format as multiline string.
+            description: |
+              Specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate. Certificate should be passed in PEM format as multiline string.
             x-doc-example: |
               ```yaml
               caCert: |
@@ -426,7 +444,8 @@ apiVersions:
               ```
           domainName:
             type: string
-            description: The domain name.
+            description: |
+              The domain name.
           tenantName:
             type: string
             description: |
@@ -441,13 +460,16 @@ apiVersions:
               Cannot be used together with `tenantName`.
           username:
             type: string
-            description: The name of the user that has full project privileges.
+            description: |
+              The name of the user that has full project privileges.
           password:
             type: string
-            description: The user's password.
+            description: |
+              The user's password.
           region:
             type: string
-            description: The OpenStack region where the cluster will be deployed.
+            description: |
+              The OpenStack region where the cluster will be deployed.
         oneOf:
         - required: [authURL, domainName, tenantName, username, password, region]
         - required: [authURL, domainName, tenantID, username, password, region]

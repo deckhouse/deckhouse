@@ -4,8 +4,7 @@ title: "Cloud provider — Azure: Layouts"
 
 > **Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
 
-## Layouts
-### Standard
+## Standard
 
 * A separate [resorce group](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal) is created for the cluster
 * By default, one external IP address is dynamically allocated to each instance (it is used for Internet access only). Each IP has 64000 ports available for SNAT;

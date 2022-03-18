@@ -32,7 +32,9 @@ spec:
                     Flavor of OpenStack servers.
 
                     Get a list of all available flavors: `openstack flavor list`.
+
                     For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
+
                     Flavor create example: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
 
                   example: m1.medium
@@ -43,7 +45,7 @@ spec:
 
                     Use this command to get a list of available images: `openstack image list`.
 
-                    **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
+                    **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04` and `Centos 7` are supported and tested to work.
 
                     **By default:** either `OpenStackCloudDiscoveryData` value or `instances.imageName` is used.
                   x-doc-required: false
@@ -54,11 +56,14 @@ spec:
                     The size of a root disk (in gigabytes).
 
                     If the parameter is not set, a local disk with the size specified in flavor is used for the instance.
+
                     If the parameter is set, the instance will use the Cinder volume provisioned by OpenStack as a root disk (of the standard cluster type and the specified size).
 
                     > If there are several types of disks in *cloud provider*, you can set a default disk type for the image in order to select a specific VM's disk type; to do this, specify the name of a disk type in the image metadata.
+                    >
                     > Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-do-i-create-an-image-in-openstack) section describes how to do it
                     >
+                    > Examples of commands:
                     > ```shell
                     > openstack volume type list
                     > openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
@@ -101,12 +106,9 @@ spec:
                 additionalTags:
                   description: |
                     The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
-
-                  x-doc-example: |
-                    ```yaml
+                  example:
                     project: cms-production
                     severity: critical
-                    ```
                   type: object
                   additionalProperties:
                     type: string
