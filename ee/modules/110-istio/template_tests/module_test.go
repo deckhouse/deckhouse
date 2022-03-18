@@ -541,7 +541,7 @@ static:
     cpu: 11m
     memory: 22Mi
   limits:
-    cpu: "33"
+    cpu: 33
     memory: 44Gi
 `)
 			f.HelmRender()
@@ -556,7 +556,7 @@ requests:
   cpu: 11m
   memory: 22Mi
 limits:
-  cpu: "33"
+  cpu: 33
   memory: 44Gi
 `))
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
@@ -582,7 +582,7 @@ vpa:
   mode: Initial
   cpu:
     min: 101m
-    max: "1"
+    max: 1
     limitRatio: 2.5
   memory:
     min: 512Mi
@@ -636,8 +636,8 @@ mode: VPA
 vpa:
   mode: Initial
   cpu:
-    min: "3"
-    max: "5"
+    min: 3
+    max: 5
     limitRatio: 2.5
   memory:
     min: "333"
@@ -680,5 +680,4 @@ updatePolicy:
 `))
 		})
 	})
-
 })

@@ -12,7 +12,7 @@
 
       {{- if $configuration.vpa.cpu -}}
         {{- if $configuration.vpa.cpu.min -}}
-          {{- $_ := set $resources.requests "cpu" $configuration.vpa.cpu.min -}}
+          {{- $_ := set $resources.requests "cpu" ($configuration.vpa.cpu.min | toString) -}}
         {{- end -}}
         {{- if $configuration.vpa.cpu.limitRatio -}}
           {{- $cpuLimitMillicores := round (mulf (include "helm_lib_resources_management_cpu_units_to_millicores" $configuration.vpa.cpu.min) $configuration.vpa.cpu.limitRatio) 0 | int64 -}}
@@ -22,7 +22,7 @@
 
       {{- if $configuration.vpa.memory -}}
         {{- if $configuration.vpa.memory.min -}}
-          {{- $_ := set $resources.requests "memory" $configuration.vpa.memory.min -}}
+          {{- $_ := set $resources.requests "memory" ($configuration.vpa.memory.min | toString) -}}
         {{- end -}}
         {{- if $configuration.vpa.memory.limitRatio -}}
           {{- $memoryLimitBytes := round (mulf (include "helm_lib_resources_management_memory_units_to_bytes" $configuration.vpa.memory.min) $configuration.vpa.memory.limitRatio) 0 | int64 -}}
@@ -74,7 +74,7 @@ updatePolicy:
 {{- /* Usage: {{ include "helm_lib_resources_management_cpu_units_to_millicores" <cpu units> }} */ -}}
 {{- /* helper for converting cpu units to millicores */ -}}
 {{- define "helm_lib_resources_management_cpu_units_to_millicores" -}}
-  {{- $units := . -}}
+  {{- $units := . | toString -}}
   {{- if hasSuffix "m" $units -}}
     {{- trimSuffix "m" $units -}}
   {{- else -}}
@@ -86,7 +86,7 @@ updatePolicy:
 {{- /* Usage: {{ include "helm_lib_resources_management_memory_units_to_bytes" <memory units> }} */ -}}
 {{- /* helper for converting memory units to bytes */ -}}
 {{- define "helm_lib_resources_management_memory_units_to_bytes" }}
-  {{- $units := . -}}
+  {{- $units := . | toString -}}
   {{- if hasSuffix "k" $units -}}
     {{- trimSuffix "k" $units  | atoi | mul 1000 -}}
   {{- else if hasSuffix "M" $units -}}

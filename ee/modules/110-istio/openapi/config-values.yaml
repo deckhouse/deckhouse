@@ -281,7 +281,7 @@ properties:
             mode: Auto
             cpu:
               min: "50m"
-              max: "2"
+              max: 2
               limitRatio: 1.5
             memory:
               min: "256Mi"
@@ -293,7 +293,7 @@ properties:
               cpu: "55m"
               memory: "256Mi"
             limits:
-              cpu: "2"
+              cpu: 2
               memory: "2Gi"
         properties:
           mode:
@@ -323,13 +323,19 @@ properties:
                   max:
                     description: |
                       Maximum allowed CPU requests.
-                    default: '2'
-                    type: string
+                    default: 2
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
                   min:
                     description: |
                       Minimum allowed CPU requests.
                     default: '50m'
-                    type: string
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
                   limitRatio:
                     type: number
                     examples: [1.5]
@@ -345,12 +351,18 @@ properties:
                     description: |
                       Maximum allowed memory requests.
                     default: '2Gi'
-                    type: string
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    - type: number
                   min:
                     description: |
                       Minimum allowed memory requests.
                     default: '256Mi'
-                    type: string
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    - type: number
                   limitRatio:
                     type: number
                     examples: [1.5]
@@ -367,11 +379,17 @@ properties:
                   Requests configuration.
                 properties:
                   cpu:
-                    type: string
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
                     description: |
                       CPU requests.
                   memory:
-                    type: string
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    - type: number
                     description: |
                       Memory requests.
               limits:
@@ -380,11 +398,17 @@ properties:
                   Limits configuration.
                 properties:
                   cpu:
-                    type: string
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
                     description: |
                       CPU limits.
                   memory:
-                    type: string
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    - type: number
                     description: |
                       Memory limits.
   nodeSelector:
