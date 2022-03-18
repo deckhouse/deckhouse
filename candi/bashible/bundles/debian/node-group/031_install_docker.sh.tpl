@@ -60,6 +60,12 @@ if bb-apt-package? containerd.io && ! bb-apt-package? docker-ce ; then
   bb-flag-set reboot
 fi
 
+# set default
+desired_version_docker={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "desiredVersion" | quote }}
+allowed_versions_docker_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "allowedPattern" | quote }}
+desired_version_containerd={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "desiredVersion" | quote }}
+allowed_versions_containerd_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "allowedPattern" | quote }}
+
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
   {{- $debianVersion := toString $key }}
   {{- if or $value.docker.desiredVersion $value.docker.allowedPattern }}
@@ -97,6 +103,9 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
+# set default
+containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
+
 {{- $debianName := dict "9" "Stretch" "10" "Buster" "11" "Bullseye" }}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
   {{- $debianVersion := toString $key }}
@@ -126,6 +135,9 @@ if [[ "$should_install_docker" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
 
   bb-flag-set new-docker-installed
+
+#set default
+docker_tag="{{- index $.images.registrypackages (printf "dockerDebian%s" (index .k8s .kubernetesVersion "bashible" "debian" "9" "docker" "desiredVersion" | replace "docker-ce=" "" | replace "." "_" | replace ":" "_" | replace "~" "_" | camelcase)) }}"
 
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
   {{- $debianVersion := toString $key }}

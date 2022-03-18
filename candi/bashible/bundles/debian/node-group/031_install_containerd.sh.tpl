@@ -49,6 +49,10 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
   bb-flag-set reboot
 fi
 
+# set default
+desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | quote }}
+allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "allowedPattern" | quote }}
+
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
   {{- $debianVersion := toString $key }}
   {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
@@ -81,6 +85,9 @@ if [[ "$should_install_containerd" == true ]]; then
   fi
 
   bb-deckhouse-get-disruptive-update-approval
+
+# set default
+containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
 
 {{- $debianName := dict "9" "Stretch" "10" "Buster" "11" "Bullseye" }}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}

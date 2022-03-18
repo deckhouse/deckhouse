@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Avoid problems with expired ca-certificates
-bb-apt-install --force ca-certificates
-
-# Hack for old distros
-if grep -q "^mozilla\/DST_Root_CA_X3.crt$" /etc/ca-certificates.conf; then
-  sed -i "/mozilla\/DST_Root_CA_X3.crt/d" /etc/ca-certificates.conf
-  update-ca-certificates --fresh
-fi
-
-{{- if .registry.ca }}
-bb-event-on 'registry-ca-changed' '_update_ca_certificates'
-function _update_ca_certificates() {
-  update-ca-certificates
-}
-
-bb-sync-file /usr/local/share/ca-certificates/registry-ca.crt - registry-ca-changed << "EOF"
-{{ .registry.ca }}
-EOF
-{{- end }}
+set -Eeo pipefail
+apt-mark unhold virt-what
+dpkg -r virt-what
