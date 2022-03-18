@@ -1,11 +1,8 @@
 ---
-title: "The cni-flannel module: configuration"
+title: "The cni-cilium module: configuration"
 ---
 
-The module is **automatically** enabled for the following cloud providers:
-- [OpenStack](../../modules/030-cloud-provider-openstack/)
-- [VMware vSphere](../../modules/030-cloud-provider-vsphere/)
-
+The module is disabled by default.
 To enable it for the bare metal machines, add the following parameter to the Deckhouse configMap:
 ```
 cniCiliumEnabled: "true"

@@ -1,14 +1,11 @@
 ---
-title: "The cni-flannel module: configuration"
+title: "The cilium-hubble module: configuration"
 ---
 
-The module is **automatically** enabled for the following cloud providers:
-- [OpenStack](../../modules/030-cloud-provider-openstack/)
-- [VMware vSphere](../../modules/030-cloud-provider-vsphere/)
-
-To enable it for the bare metal machines, add the following parameter to the Deckhouse configMap:
+The module is **automatically** enabled when `cni-cilium` is used.
+To disable this module you can add to configMap Deckhouse:
 ```
-ciliumHubbleEnabled: "true"
+ciliumHubbleEnabled: "false"
 ```
 
 ## Parameters

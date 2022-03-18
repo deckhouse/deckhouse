@@ -22,7 +22,7 @@ metadata:
   name: operator
   namespace: d8-{{ .Chart.Name }}
 spec:
-{{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: operator

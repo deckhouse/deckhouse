@@ -1,11 +1,8 @@
 ---
-title: "Модуль cni-flannel: настройки"
+title: "Модуль cni-cilium: настройки"
 ---
 
-Модуль включается **автоматически** для следующих cloud-provider'ов:
-- [OpenStack](../../modules/030-cloud-provider-openstack/)
-- [VMware vSphere](../../modules/030-cloud-provider-vsphere/)
-
+Модуль по-умолчанию выключен.
 Для включения в bare metal, необходимо в configMap Deckhouse добавить:
 ```
 cniCiliumEnabled: "true"

@@ -1,5 +1,7 @@
-type: object # TODO
+type: object
 properties:
+  debugLogging:
+    description: Включает debug для компонентов hubble.
   auth:
     description: |
       Опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу документации.

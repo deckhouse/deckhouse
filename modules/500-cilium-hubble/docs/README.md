@@ -1,5 +1,5 @@
 ---
-title: "The cni-cilium module"
+title: "The cilium-hubble module"
 ---
 
-This module is responsible for providing a network between multiple nodes in a cluster using the [cilium](https://cilium.io/) module.
+This module is responsible for adding observability network tools when a cluster is using the cilium CNI. 

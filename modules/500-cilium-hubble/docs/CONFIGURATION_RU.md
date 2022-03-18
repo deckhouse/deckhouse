@@ -1,14 +1,11 @@
 ---
-title: "Модуль cni-flannel: настройки"
+title: "Модуль cilium-hubble: настройки"
 ---
 
-Модуль включается **автоматически** для следующих cloud-provider'ов:
-- [OpenStack](../../modules/030-cloud-provider-openstack/)
-- [VMware vSphere](../../modules/030-cloud-provider-vsphere/)
-
-Для включения в bare metal, необходимо в configMap Deckhouse добавить:
+Модуль включается **автоматически** если включен `cni-cilium` модуль.
+Для выключения, необходимо в configMap Deckhouse добавить:
 ```
-ciliumHubbleEnabled: "true"
+ciliumHubbleEnabled: "false"
 ```
 
 ## Параметры
