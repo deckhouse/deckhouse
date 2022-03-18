@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — GCP: custom resource"
+title: "Cloud provider — GCP: Custom Resources"
 ---
 
 <!-- SCHEMA -->

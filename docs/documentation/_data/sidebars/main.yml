@@ -185,7 +185,7 @@ entries:
                     ru: Примеры
                     en: Usage
                   url: /modules/030-cloud-provider-azure/usage.html
-            - title: Openstack
+            - title: OpenStack
               versionType: ee
               folders:
                 - title:

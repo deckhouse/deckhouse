@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Azure: custom resource"
+title: "Cloud provider — Azure: Custom Resources"
 ---
 
 <!-- SCHEMA -->
