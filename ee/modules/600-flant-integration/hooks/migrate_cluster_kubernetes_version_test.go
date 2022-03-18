@@ -53,10 +53,18 @@ metadata:
   namespace: kube-system
 type: Opaque
 `
+	const configMapTemplate = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-migrate-cluster-kubernetes-version
+  namespace: d8-flant-integration
+`
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
-	Context(fmt.Sprintf("Kubernetes version from secret is `%s`, should be changed to `Automatic`", config.DefaultKubernetesVersion), func() {
+	Context(fmt.Sprintf("Configmap about migration absent, kubernetes version from secret is `%s`, should be changed to `Automatic`", config.DefaultKubernetesVersion), func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData(config.DefaultKubernetesVersion))))
 			f.RunHook()
@@ -70,8 +78,30 @@ type: Opaque
 			expected := d8ClusterConfigurationSecretData("Automatic")
 			expectedYaml, _ := base64.StdEncoding.DecodeString(expected)
 			Expect(dataYaml).To(MatchYAML(expectedYaml))
+			cm := f.KubernetesResource("ConfigMap", "d8-flant-integration", "d8-migrate-cluster-kubernetes-version")
+			Expect(cm.Exists()).To(BeTrue())
 		})
 	})
+
+	Context(fmt.Sprintf("Configmap about migration present, kubernetes version from secret is `%s`, should not be changed", config.DefaultKubernetesVersion), func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData(config.DefaultKubernetesVersion)) + configMapTemplate))
+			f.RunHook()
+		})
+
+		It("Hook should run, kubernetes version should not change", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+			data := secret.Field("data.cluster-configuration\\.yaml")
+			dataYaml, _ := base64.StdEncoding.DecodeString(data.String())
+			expected := d8ClusterConfigurationSecretData(config.DefaultKubernetesVersion)
+			expectedYaml, _ := base64.StdEncoding.DecodeString(expected)
+			Expect(dataYaml).To(MatchYAML(expectedYaml))
+			cm := f.KubernetesResource("ConfigMap", "d8-flant-integration", "d8-migrate-cluster-kubernetes-version")
+			Expect(cm.Exists()).To(BeTrue())
+		})
+	})
+
 	Context(fmt.Sprintf("Kubernetes version from secret is not `%s`, should not be changed", config.DefaultKubernetesVersion), func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(secretTemplate, d8ClusterConfigurationSecretData("1.22"))))
