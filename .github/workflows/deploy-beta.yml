@@ -40,12 +40,7 @@ env:
   # </template: werf_envs>
   DEPLOY_CHANNEL: beta
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
-concurrency:
-  group: ${{ github.ref }}-deploy-channel-beta
-  cancel-in-progress: true
+# Note: no concurrency section for deploy workflows.
 
 jobs:
 
@@ -122,40 +117,75 @@ jobs:
 
   # </template: git_info_job>
 
-  # <template: check_label_job>
-  check_label:
-    name: Check label
+  detect_editions:
+    name: Detect editions
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.check_label.outputs.should_run }}
-      labels: ${{ steps.check_label.outputs.labels }}
+      DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
+      DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
+      DEPLOY_FE: ${{steps.detect_editions.outputs.DEPLOY_FE}}
     steps:
+      - name: Detect editions
+        id: detect_editions
+        env:
+          EDITIONS: ${{ github.event.inputs.editions }}
+        run: |
+          echo "Input allowed editions: '${EDITIONS}'"
 
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+          RESTRICTED=no
 
-      # </template: checkout_step>
-      - id: check_label
-        name: Check labels on push
-        uses: actions/github-script@v5.0.0
-        with:
-          script: |
-            const labelType = 'deploy';
-            const labelSubject = 'beta';
+          for edition in CE EE FE ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable deploy of ${edition} edition."
+              echo "::set-output name=DEPLOY_${edition}::true"
+              RESTRICTED=yes
+            fi
+          done
 
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.checkLabel({github, context, core, labelType, labelSubject});
-  # </template: check_label_job>
+          if [[ $RESTRICTED == "no" ]] ; then
+            echo "No restrictions. Enable deploy to all editions."
+            for edition in CE EE FE ; do
+              echo "::set-output name=DEPLOY_${edition}::true"
+            done
+          fi
+
+
+
+  enable_CE:
+    if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
+    name: Enable CE
+    needs:
+      - detect_editions
+    runs-on: ubuntu-latest
+    steps:
+      - run: ": Enable CE"
+
+  enable_EE:
+    if: ${{ needs.detect_editions.outputs.DEPLOY_EE == 'true' }}
+    name: Enable EE
+    needs:
+      - detect_editions
+    runs-on: ubuntu-latest
+    steps:
+      - run: ": Enable EE"
+
+  enable_FE:
+    if: ${{ needs.detect_editions.outputs.DEPLOY_FE == 'true' }}
+    name: Enable FE
+    needs:
+      - detect_editions
+    runs-on: ubuntu-latest
+    steps:
+      - run: ": Enable FE"
+
 
   run_deploy:
-    name: Deploy deckhouse to beta channel
+    name: Deploy ${{needs.git_info.outputs.ci_commit_tag}} to beta
     environment:
       name: beta
     needs:
-      - check_label
       - git_info
-    if: needs.check_label.outputs.should_run == 'true'
+      - detect_editions
     runs-on: [self-hosted, regular]
     steps:
 
@@ -179,20 +209,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-
-      # <template: restore_images_tags_json_from_cache_or_fail>
-      - name: Restore images_tags_json from cache
-        id: images-tags-json
-        uses: actions/cache@v2.1.7
-        with:
-          path: modules/images_tags_${{env.WERF_ENV}}.json
-          key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
-      - name: Fail if not found
-        if: steps.images-tags-json.outputs.cache-hit != 'true'
-        run: |
-          echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
-          exit 1
-      # </template: restore_images_tags_json_from_cache_or_fail>
 
       # <template: login_dev_registry_step>
       - name: Login to dev registry
@@ -224,52 +240,37 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      - name: Filter editions
-        id: filter_editions
-        env:
-          EDITIONS: ${{ github.event.inputs.editions }}
-        run: |
-          echo "Input allowed editions: '${EDITIONS}'"
-
-          RESTRICTED=no
-
-          for edition in CE EE FE ; do
-            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
-              echo "  - enable deploy of ${edition} edition."
-              echo "::set-output name=DEPLOY_${edition}::yes"
-              RESTRICTED=yes
-            fi
-          done
-
-          if [[ $RESTRICTED == "no" ]] ; then
-            echo "No restrictions. Enable deploy to all editions."
-            for edition in CE EE FE ; do
-              echo "::set-output name=DEPLOY_${edition}::yes"
-            done
-          fi
-
 
 
       - name: Publish release images for CE
-        if: ${{ steps.filter_editions.outputs.DEPLOY_CE == 'yes' }}
+        if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: CE
         run: |
           ## Source: .gitlab/ci_templates/deploy.yml
 
-          echo Publish CE edition.
-
           # Some precautions.
-          if [[ -z $DEV_REGISTRY_PATH ]] ; then
-            echo "DEV_REGISTRY_PATH is not set!"
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${CI_COMMIT_TAG} ]] ; then
+            echo "::error title=Missed variable::CI_COMMIT_TAG is not set. Probably you try to manually deploy from branch '${CI_COMMIT_BRANCH}'? Deploy allowed for tags only."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
-          if [[ -z $WERF_ENV ]] ; then
-            echo "WERF_ENV is not set!"
-            exit 1
-          fi
+
+          echo "Publish CE edition".
 
           # Variables
           #   1. CE/EE/FE -> ce/ee/fe
@@ -361,25 +362,34 @@ jobs:
           echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
           echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
       - name: Publish release images for EE
-        if: ${{ steps.filter_editions.outputs.DEPLOY_EE == 'yes' }}
+        if: ${{ needs.detect_editions.outputs.DEPLOY_EE == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: EE
         run: |
           ## Source: .gitlab/ci_templates/deploy.yml
 
-          echo Publish EE edition.
-
           # Some precautions.
-          if [[ -z $DEV_REGISTRY_PATH ]] ; then
-            echo "DEV_REGISTRY_PATH is not set!"
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${CI_COMMIT_TAG} ]] ; then
+            echo "::error title=Missed variable::CI_COMMIT_TAG is not set. Probably you try to manually deploy from branch '${CI_COMMIT_BRANCH}'? Deploy allowed for tags only."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
-          if [[ -z $WERF_ENV ]] ; then
-            echo "WERF_ENV is not set!"
-            exit 1
-          fi
+
+          echo "Publish EE edition".
 
           # Variables
           #   1. CE/EE/FE -> ce/ee/fe
@@ -471,25 +481,34 @@ jobs:
           echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
           echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
       - name: Publish release images for FE
-        if: ${{ steps.filter_editions.outputs.DEPLOY_FE == 'yes' }}
+        if: ${{ needs.detect_editions.outputs.DEPLOY_FE == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: FE
         run: |
           ## Source: .gitlab/ci_templates/deploy.yml
 
-          echo Publish FE edition.
-
           # Some precautions.
-          if [[ -z $DEV_REGISTRY_PATH ]] ; then
-            echo "DEV_REGISTRY_PATH is not set!"
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${CI_COMMIT_TAG} ]] ; then
+            echo "::error title=Missed variable::CI_COMMIT_TAG is not set. Probably you try to manually deploy from branch '${CI_COMMIT_BRANCH}'? Deploy allowed for tags only."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
             exit 1
           fi
-          if [[ -z $WERF_ENV ]] ; then
-            echo "WERF_ENV is not set!"
-            exit 1
-          fi
+
+          echo "Publish FE edition".
 
           # Variables
           #   1. CE/EE/FE -> ce/ee/fe
