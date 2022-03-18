@@ -14,6 +14,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -34,6 +35,16 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	return ccYaml, nil
 }
 
+func applyConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.ConfigMap{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	return true, nil
+}
+
 var (
 	_ = sdk.RegisterFunc(&go_hook.HookConfig{
 		Queue: "/modules/flant-integration",
@@ -52,11 +63,31 @@ var (
 				},
 				FilterFunc: applySecretFilter,
 			},
+			{
+				Name:       "migrationConfigMap",
+				ApiVersion: "v1",
+				Kind:       "ConfigMap",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-migrate-cluster-kubernetes-version"},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{
+						MatchNames: []string{"d8-flant-integration"},
+					},
+				},
+				FilterFunc: applyConfigMapFilter,
+			},
 		},
 	}, migrateClusterKubernetesVersion)
 )
 
 func migrateClusterKubernetesVersion(input *go_hook.HookInput) error {
+	cm, ok := input.Snapshots["migrationConfigMap"]
+	if ok && len(cm) == 1 && cm[0].(bool) {
+		input.LogEntry.Info(`find d8-flant-integration/d8-migrate-cluster-kubernetes-version configMap, migration was done, skipping`)
+		return nil
+	}
+
 	currentConfig, ok := input.Snapshots["clusterConfiguration"]
 	if !ok || len(currentConfig) == 0 {
 		input.LogEntry.Info(`cannot find kube-system/d8-cluster-configuration secret, skipping`)
@@ -102,5 +133,21 @@ func migrateClusterKubernetesVersion(input *go_hook.HookInput) error {
 	}
 	input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", "d8-cluster-configuration")
 
+	migrationIsDone := &v1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "d8-migrate-cluster-kubernetes-version",
+			Namespace: "d8-flant-integration",
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"module":   "flant-integration",
+			},
+		},
+	}
+
+	input.PatchCollector.Create(migrationIsDone)
 	return nil
 }
