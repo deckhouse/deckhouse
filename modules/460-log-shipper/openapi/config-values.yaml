@@ -76,7 +76,7 @@ properties:
               max:
                 oneOf:
                   - type: string
-                    pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
                   - type: number
                 x-examples: ["32Mi", 3000]
                 description: |
@@ -85,7 +85,7 @@ properties:
               min:
                 oneOf:
                   - type: string
-                    pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
                   - type: number
                 x-examples: ["4Mi", 400]
                 description: |
@@ -111,7 +111,7 @@ properties:
           memory:
             oneOf:
               - type: string
-                pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
               - type: number
             description: |
               Memory requests.
