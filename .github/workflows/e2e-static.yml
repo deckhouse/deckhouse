@@ -365,7 +365,7 @@ jobs:
           if [[ -n $CI_COMMIT_TAG ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty."
               exit 1
@@ -374,7 +374,9 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
-          echo "Pull dev/install image."
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
+          echo "Pull 'dev/install' image"
           docker pull "${IMAGE_NAME}"
 
       - name: "Run e2e test: Static/Docker/1.19"
@@ -723,7 +725,7 @@ jobs:
           if [[ -n $CI_COMMIT_TAG ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty."
               exit 1
@@ -732,7 +734,9 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
-          echo "Pull dev/install image."
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
+          echo "Pull 'dev/install' image"
           docker pull "${IMAGE_NAME}"
 
       - name: "Run e2e test: Static/Docker/1.20"
@@ -1081,7 +1085,7 @@ jobs:
           if [[ -n $CI_COMMIT_TAG ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty."
               exit 1
@@ -1090,7 +1094,9 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
-          echo "Pull dev/install image."
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
+          echo "Pull 'dev/install' image"
           docker pull "${IMAGE_NAME}"
 
       - name: "Run e2e test: Static/Docker/1.21"
@@ -1439,7 +1445,7 @@ jobs:
           if [[ -n $CI_COMMIT_TAG ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty."
               exit 1
@@ -1448,7 +1454,9 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
-          echo "Pull dev/install image."
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
+          echo "Pull 'dev/install' image"
           docker pull "${IMAGE_NAME}"
 
       - name: "Run e2e test: Static/Docker/1.22"
@@ -1797,7 +1805,7 @@ jobs:
           if [[ -n $CI_COMMIT_TAG ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty."
               exit 1
@@ -1806,7 +1814,9 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
-          echo "Pull dev/install image."
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
+          echo "Pull 'dev/install' image"
           docker pull "${IMAGE_NAME}"
 
       - name: "Run e2e test: Static/Containerd/1.19"
@@ -2155,7 +2165,7 @@ jobs:
           if [[ -n $CI_COMMIT_TAG ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty."
               exit 1
@@ -2164,7 +2174,9 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
-          echo "Pull dev/install image."
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
+          echo "Pull 'dev/install' image"
           docker pull "${IMAGE_NAME}"
 
       - name: "Run e2e test: Static/Containerd/1.20"
@@ -2513,7 +2525,7 @@ jobs:
           if [[ -n $CI_COMMIT_TAG ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty."
               exit 1
@@ -2522,7 +2534,9 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
-          echo "Pull dev/install image."
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
+          echo "Pull 'dev/install' image"
           docker pull "${IMAGE_NAME}"
 
       - name: "Run e2e test: Static/Containerd/1.21"
@@ -2871,7 +2885,7 @@ jobs:
           if [[ -n $CI_COMMIT_TAG ]] ; then
             REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
             if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}
+              IMAGE_NAME=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
             else
               echo "DECKHOUSE_REGISTRY_HOST is empty."
               exit 1
@@ -2880,7 +2894,9 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
-          echo "Pull dev/install image."
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
+          echo "Pull 'dev/install' image"
           docker pull "${IMAGE_NAME}"
 
       - name: "Run e2e test: Static/Containerd/1.22"
