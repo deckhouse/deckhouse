@@ -1,0 +1,9 @@
+ci:
+  features:
+    - summary: Add jobs to control editions when approving deploy to environment
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1051
+deckhouse:
+  fixes:
+    - summary: The more controlled and transparent release process.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/699
+

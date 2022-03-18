@@ -105,6 +105,7 @@
  - **[cloud-provider-openstack]** Set volume availability zone in dhctl on bootstrap [#1033](https://github.com/deckhouse/deckhouse/pull/1033)
  - **[cloud-provider-vsphere]** Install latest version of open-vm-tools [#667](https://github.com/deckhouse/deckhouse/pull/667)
  - **[control-plane-manager]** LoadBalancer annotations are able to be set [#567](https://github.com/deckhouse/deckhouse/pull/567)
+ - **[deckhouse]** The more controlled and transparent release process. [#699](https://github.com/deckhouse/deckhouse/pull/699)
  - **[deckhouse]** Update the description of the release process [#660](https://github.com/deckhouse/deckhouse/pull/660)
  - **[deckhouse]** Fix requirements check semver lib [#658](https://github.com/deckhouse/deckhouse/pull/658)
  - **[deckhouse]** The start and end times of the update window must belong to the same day. [#496](https://github.com/deckhouse/deckhouse/pull/496)
