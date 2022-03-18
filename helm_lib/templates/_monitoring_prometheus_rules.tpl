@@ -34,7 +34,12 @@
         {{- end }}
       {{- end }}
     {{- end }}
-    {{ $definition = $definitionStruct.Rules | toYaml }}
+
+     {{- if $definitionStruct.Rules }}
+       {{ $definition = $definitionStruct.Rules | toYaml }}
+     {{- else }}
+       {{ $definition = "[]" }}
+     {{- end }}
 
     {{- $resourceName := (regexReplaceAllLiteral "\\.(yaml|tpl)$" $path "") }}
     {{- $resourceName = ($resourceName | replace " " "-" | replace "." "-" | replace "_" "-") }}
