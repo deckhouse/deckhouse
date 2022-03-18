@@ -89,6 +89,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix docker-stuck-containers-cleaner unit [#1044](https://github.com/deckhouse/deckhouse/pull/1044)
  - **[candi]** Proper work with astra bundle in EE/FE. [#868](https://github.com/deckhouse/deckhouse/pull/868)
  - **[candi]** Fix centos distro version detection [#857](https://github.com/deckhouse/deckhouse/pull/857)
  - **[candi]** Speed up reboot master node on cluster bootstrap. [#800](https://github.com/deckhouse/deckhouse/pull/800)
@@ -104,6 +105,7 @@
  - **[cloud-provider-openstack]** Set volume availability zone in dhctl on bootstrap [#1033](https://github.com/deckhouse/deckhouse/pull/1033)
  - **[cloud-provider-vsphere]** Install latest version of open-vm-tools [#667](https://github.com/deckhouse/deckhouse/pull/667)
  - **[control-plane-manager]** LoadBalancer annotations are able to be set [#567](https://github.com/deckhouse/deckhouse/pull/567)
+ - **[deckhouse]** The more controlled and transparent release process. [#699](https://github.com/deckhouse/deckhouse/pull/699)
  - **[deckhouse]** Update the description of the release process [#660](https://github.com/deckhouse/deckhouse/pull/660)
  - **[deckhouse]** Fix requirements check semver lib [#658](https://github.com/deckhouse/deckhouse/pull/658)
  - **[deckhouse]** The start and end times of the update window must belong to the same day. [#496](https://github.com/deckhouse/deckhouse/pull/496)
@@ -134,6 +136,7 @@
  - **[local-path-provisioner]** Update local-path-provisioner v0.0.21, include fix [#478](https://github.com/deckhouse/deckhouse/pull/478)
     Protect PVs to be reused in case of unmounted storage.
  - **[log-shipper]** Add VPA label  to make it take part in resources requests calculations. [#455](https://github.com/deckhouse/deckhouse/pull/455)
+ - **[monitoring-kubernetes]** Add the container="POD" label to all advisor metrics for pause containers. [#960](https://github.com/deckhouse/deckhouse/pull/960)
  - **[monitoring-kubernetes]** Filter VPA by actual controllers to calculate VPA coverage [#459](https://github.com/deckhouse/deckhouse/pull/459)
  - **[monitoring-kubernetes]** Fixed node-exporter apparmor profile. [#457](https://github.com/deckhouse/deckhouse/pull/457)
  - **[node-manager]** Fix event creation for NG when new Machine provisioning process is failed [#757](https://github.com/deckhouse/deckhouse/pull/757)
