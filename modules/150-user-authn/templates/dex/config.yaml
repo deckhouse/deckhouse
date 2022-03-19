@@ -20,7 +20,7 @@
       reuseInterval: "2m"
       validIfNotUsedFor: "2190h" # 3 months
   logger:
-    level: info
+    level: debug
     format: json
   oauth2:
     responseTypes: ["code", "token", "id_token"]
