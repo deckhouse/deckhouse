@@ -27,8 +27,10 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
 )
 
-var validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
-var vectorArryayTemplate = regexp.MustCompile(`^[a-zA-Z0-9_\\\.\-]+\[\d+\]$`)
+var (
+	validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
+	vectorArrayTemplate   = regexp.MustCompile(`^[a-zA-Z0-9_\\\.\-]+\[\d+\]$`)
+)
 
 type commonDestinationSettings struct {
 	Name        string   `json:"-"`
@@ -324,22 +326,25 @@ func NewLogstashDestination(name string, cspec v1alpha1.ClusterLogDestinationSpe
 		KeyPass:        spec.TLS.KeyPass,
 		VerifyHostname: spec.TLS.VerifyHostname,
 	}
-	LSTLS := LogstashTLS{
+	lstls := LogstashTLS{
 		CommonTLS:         ctls,
 		VerifyCertificate: spec.TLS.VerifyCertificate,
 		Enabled:           enabledTLS,
 	}
-
-	LogstashEnc := LogstashEncoding{
+	logstashEnc := LogstashEncoding{
 		Codec:           "json",
 		TimestampFormat: "rfc3339",
+	}
+	keepalive := LogstashKeepalive{
+		TimeSecs: 7200,
 	}
 
 	return &logstashDestination{
 		commonDestinationSettings: common,
-		Encoding:                  LogstashEnc,
-		TLS:                       LSTLS,
+		Encoding:                  logstashEnc,
+		TLS:                       lstls,
 		Mode:                      "tcp",
 		Address:                   spec.Endpoint,
+		Keepalive:                 keepalive,
 	}
 }

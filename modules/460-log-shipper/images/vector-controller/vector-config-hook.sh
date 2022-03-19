@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -Eeuo pipefail
+shopt -s failglob
 
 for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
   source $f

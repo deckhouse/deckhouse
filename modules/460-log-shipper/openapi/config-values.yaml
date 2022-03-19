@@ -9,7 +9,9 @@ properties:
     required: ["mode"]
     type: object
     description: |
-      Max amounts of CPU and memory resources that the pod can request when selecting a node (if the VPA is disabled, then these values become the default ones).
+      Max amounts of CPU and memory resources that the pod can request when selecting a node.
+
+      If the vertical-pod-autoscaler module is disabled, then these values become the default ones.
     default: {}
     oneOf:
       - properties:
@@ -42,7 +44,7 @@ properties:
             description: |
               The VPA usage mode.
             enum: ["Initial", "Auto"]
-            default: "Auto"
+            default: "Initial"
           cpu:
             type: object
             description: |

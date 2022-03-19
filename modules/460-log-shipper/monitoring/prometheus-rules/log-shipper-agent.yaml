@@ -1,0 +1,75 @@
+- name: log-shipper-agent
+  rules:
+  - alert: D8LogShipperNotScheduledOnNode
+    # The second part of this query counts how many nodes that allowed to not contain a daemonset pod are in the cluster.
+    # Alert will be fired if there are more nodes without vector pods than allowed.
+    expr: |
+      (
+        (
+          max by (node) (kube_node_info)
+          unless
+          max by (node) (up{job="log-shipper-agent"})
+        )
+        *
+        scalar(
+          (
+            sum(
+              max by (node) (kube_node_info)
+              unless
+              max by (node) (up{job="log-shipper-agent"})
+            )
+            >
+            sum(kube_node_info) - sum(kube_daemonset_status_desired_number_scheduled{daemonset="log-shipper-agent", namespace="d8-log-shipper"})
+          ) or vector(0)
+        )
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "7"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_incident_initial_status: "todo"
+      plk_pending_until_firing_for: "5m"
+      summary: The log-shipper-agent Pod cannot schedule on Node {{ $labels.node }}
+      description: |
+        The log-shipper-agent Pod cannot schedule on Node {{ $labels.node }}.
+
+        Consider checking state of the d8-log-shipper/log-shipper-agent DaemonSet.
+        `kubectl -n d8-log-shipper get daemonset,pod --selector=app=log-shipper-agent`
+
+  - alert: D8LogShipperAgentNotScheduledInCluster
+    expr: |
+      count(ALERTS{alertname="D8LogShipperNotScheduledOnNode"}) > 1
+    labels:
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_group_for__main: "D8LogShipperNotScheduledOnNode,prometheus=deckhouse"
+      summary: Pods of log-shipper-agent cannot be scheduled in the cluster
+      description: |
+        Pods of log-shipper-agent cannot be scheduled in the cluster.
+        Additional information can be found in linked alerts.
+
+  - alert: D8LogShipperUnavailable
+    expr: |
+      count(ALERTS{alertname=~"D8LogShipperAgentNotScheduledInCluster", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"KubernetesDaemonSetReplicasUnavailable", namespace="d8-log-shipper", daemonset="log-shipper-agent", alertstate="firing"}) > 0
+    labels:
+      tier: cluster
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      plk_group_for__log_shipper_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace=d8-log-shipper,prometheus=deckhouse,daemonset=log-shipper-agent"
+      plk_grouped_by__log_shipper_not_scheduled: "D8LogShipperAgentNotScheduledInCluster,tier=cluster,prometheus=deckhouse"
+      summary: LogShipper is unavailable.
+      description: |
+        There are problems with the log-shiper module in the cluster. You can find out the cause by looking through the groupped alerts.

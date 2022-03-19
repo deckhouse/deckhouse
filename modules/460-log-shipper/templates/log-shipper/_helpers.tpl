@@ -1,11 +1,11 @@
 {{- define "vectorEnv" }}
-{{- if .Values.logShipper.debug }}
+  {{- if .Values.logShipper.debug }}
 # Migrate to VECTOR_LOG after upgrade to 0.18.
 - name: LOG
   value: debug
 - name: RUST_BACKTRACE
   value: full
-{{- end }}
+  {{- end }}
 - name: VECTOR_SELF_NODE_NAME
   valueFrom:
     fieldRef:

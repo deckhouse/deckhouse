@@ -1,0 +1,115 @@
+diff --git a/src/sinks/loki.rs b/src/sinks/loki.rs
+index 09078e2..82bd8b1 100644
+--- a/src/sinks/loki.rs
++++ b/src/sinks/loki.rs
+@@ -15,6 +15,7 @@ use crate::{
+     config::{log_schema, DataType, GenerateConfig, SinkConfig, SinkContext, SinkDescription},
+     event::{self, Event, Value},
+     http::{Auth, HttpClient, MaybeAuth},
++    internal_events::TemplateRenderingFailed,
+     sinks::util::{
+         buffer::loki::{GlobalTimestamps, LokiBuffer, LokiEvent, LokiRecord, PartitionKey},
+         encoding::{EncodingConfig, EncodingConfiguration},
+@@ -26,8 +27,10 @@ use crate::{
+     tls::{TlsOptions, TlsSettings},
+ };
+ use futures::{FutureExt, SinkExt};
++use regex::Regex;
+ use serde::{Deserialize, Serialize};
+ use std::collections::HashMap;
++use std::convert::TryFrom;
+
+ #[derive(Clone, Debug, Deserialize, Serialize)]
+ #[serde(deny_unknown_fields)]
+@@ -200,12 +203,63 @@ impl HttpSink for LokiSink {
+
+         let mut labels = Vec::new();
+
++        let re = Regex::new(r"^\{\{ (?P<template_key>[^{} ]+) \}\}$").unwrap();
++
+         for (key_template, value_template) in &self.labels {
+-            if let (Ok(key), Ok(value)) = (
+-                key_template.render_string(&event),
+-                value_template.render_string(&event),
+-            ) {
+-                labels.push((key, value));
++            if value_template.is_dynamic() && !key_template.is_dynamic() {
++                if let Ok(key) = key_template.render_string(&event) {
++                    if re.is_match(value_template.get_ref()) {
++                        let template_key =
++                            re.replace_all(value_template.get_ref(), "$template_key");
++                        if let Some(_internal_val) = event.as_log().get(template_key.clone()) {
++                            match _internal_val {
++                                Value::Map(_map) => {
++                                    let _map = event
++                                        .as_log()
++                                        .get(template_key.clone())
++                                        .unwrap()
++                                        .as_map()
++                                        .unwrap();
++                                    let intkeys: Vec<_> = _map.keys().cloned().collect();
++                                    for int_key in intkeys.iter() {
++                                        let tmp_key = format!(
++                                            "{{{{ {}.{} }}}}",
++                                            template_key,
++                                            convert_key(int_key.to_string())
++                                        );
++                                        let loki_key = slugify_text(format!("{}_{}", key, int_key));
++                                        let tmp_template =
++                                            Template::try_from(tmp_key.clone()).unwrap();
++                                        let _str_val = match tmp_template.render_string(&event) {
++                                            Ok(str_val) => {
++                                                labels.push((loki_key.clone(), str_val));
++                                            }
++                                            Err(error) => {
++                                                emit!(TemplateRenderingFailed {
++                                                    error,
++                                                    field: Some(&tmp_key),
++                                                    drop_event: false,
++                                                });
++                                            }
++                                        };
++                                    }
++                                }
++                                _ => {
++                                    if let Ok(value) = value_template.render_string(&event) {
++                                        labels.push((key.clone(), value));
++                                    }
++                                }
++                            }
++                        }
++                    }
++                }
++            } else {
++                if let (Ok(key), Ok(value)) = (
++                    key_template.render_string(&event),
++                    value_template.render_string(&event),
++                ) {
++                    labels.push((key, value));
++                }
+             }
+         }
+
+@@ -345,6 +399,22 @@ fn valid_label_name(label: &Template) -> bool {
+     }
+ }
+
++// convert strings to Loki format
++fn slugify_text(s: String) -> String {
++    let re = Regex::new(r"[^0-9A-Za-z_]").unwrap();
++    let result = re.replace_all(&s, "_");
++    return result.to_lowercase();
++}
++
++// convert keys to template format
++fn convert_key(s: String) -> String {
++    let res = s
++        .replace(".", "\\.")
++        .replace("]", "\\]")
++        .replace("[", "\\[");
++    return res;
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;

@@ -16,7 +16,6 @@ limitations under the License.
 
 package v1alpha1
 
-// Log filter strict to generate log pipeline
 type LogFilter struct {
 	Field    string            `json:"field"`
 	Operator LogFilterOperator `json:"operator"`

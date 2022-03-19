@@ -42,7 +42,7 @@ type fileLogSource struct {
 
 	Exclude   []string `json:"exclude,omitempty"`
 	Include   []string `json:"include,omitempty"`
-	Delimeter string   `json:"line_delimeter,omitempty"`
+	Delimiter string   `json:"line_delimiter,omitempty"`
 }
 
 func NewFileLogSource(name string, spec v1alpha1.FileSpec) impl.LogSource {
@@ -50,7 +50,7 @@ func NewFileLogSource(name string, spec v1alpha1.FileSpec) impl.LogSource {
 		commonSource: commonSource{Name: name, Type: "file"},
 		Exclude:      spec.Exclude,
 		Include:      spec.Include,
-		Delimeter:    spec.LineDelimiter,
+		Delimiter:    spec.LineDelimiter,
 	}
 }
 
@@ -64,8 +64,9 @@ type kubernetesLogSource struct {
 	labels labels.Selector
 	fields []string
 
-	namespaced bool // namespace or cluster Scope
-	namespaces []string
+	namespaced        bool // namespace or cluster Scope
+	namespaces        []string
+	excludeNamespaces []string
 
 	annotationFields kubeAnnotationFields
 }
@@ -73,11 +74,11 @@ type kubernetesLogSource struct {
 func NewKubernetesLogSource(name string, spec v1alpha1.KubernetesPodsSpec, namespaced bool) impl.LogSource {
 	labelsSelector, err := metav1.LabelSelectorAsSelector(&spec.LabelSelector)
 	if err != nil {
-		// LabelSelector valideted by OpenApi. Error in this place is very strange. We should panic.
+		// LabelSelector validated by OpenApi. Error in this place is very strange. We should panic.
 		panic(err)
 	}
 
-	FormatFields := kubeAnnotationFields{
+	formatFields := kubeAnnotationFields{
 		PodName:        "pod",
 		PodLabels:      "pod_labels",
 		PodIP:          "pod_ip",
@@ -89,17 +90,20 @@ func NewKubernetesLogSource(name string, spec v1alpha1.KubernetesPodsSpec, names
 	}
 
 	return kubernetesLogSource{
-		commonSource:     commonSource{Name: name, Type: "kubernetes_logs"},
-		namespaces:       spec.NamespaceSelector.MatchNames,
-		labels:           labelsSelector,
-		fields:           make([]string, 0),
-		namespaced:       namespaced,
-		annotationFields: FormatFields,
+		commonSource:      commonSource{Name: name, Type: "kubernetes_logs"},
+		namespaces:        spec.NamespaceSelector.MatchNames,
+		excludeNamespaces: spec.NamespaceSelector.ExcludeNames,
+		labels:            labelsSelector,
+		fields:            make([]string, 0),
+		namespaced:        namespaced,
+		annotationFields:  formatFields,
 	}
 }
 
 // BuildSources denormalizes sources for vector config, which can handle only one namespace per source
-// also mutates name of the source:
+// (it is impossible to use OR clauses for the field-selector, so you can only select a single namespace)
+//
+// Also mutates name of the source:
 // 1. Namespaced - d8_namespaced_<ns>_<source_name>
 // 2. Cluster - d8_cluster_<ns>_<source_name>
 // 3. Cluster with NamespaceSelector - d8_clusterns_<ns>_<source_name>
@@ -134,6 +138,12 @@ func (cs kubernetesLogSource) MarshalJSON() ([]byte, error) {
 	if len(cs.namespaces) > 0 {
 		ns := cs.namespaces[0] // namespace should be denormalized here and have only one value
 		cs.fields = append(cs.fields, "metadata.namespace="+ns)
+	} else {
+		// Apply namespaces exclusions only if the sync is not limited to a particular namespace.
+		// This is validated by the CRD OpenAPI spec.
+		for _, ns := range cs.excludeNamespaces {
+			cs.fields = append(cs.fields, "metadata.namespace!="+ns)
+		}
 	}
 
 	s := struct {

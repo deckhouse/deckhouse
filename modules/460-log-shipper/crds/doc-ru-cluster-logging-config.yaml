@@ -21,6 +21,11 @@ spec:
                   properties:
                     namespaceSelector:
                       description: Задать фильтр по Namespace.
+                      properties:
+                        matchNames:
+                          description: "Include only a particular set of namespaces."
+                        excludeNames:
+                          description: "Include all namespaces except a particular set."
                     labelSelector:
                       description: |
                         Настройка `labelSelector` позволяет задать фильтр по Pod Labels.

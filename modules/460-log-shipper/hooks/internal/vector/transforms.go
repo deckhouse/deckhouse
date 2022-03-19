@@ -28,10 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
 )
 
-// Create default transforms
-func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
-	// default cleanup transform
-	var cleanUpTransform DynamicTransform = DynamicTransform{
+func cleanUpTransform() *DynamicTransform {
+	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Type: "remap",
 		},
@@ -52,10 +50,41 @@ func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTran
 			"drop_on_abort": false,
 		},
 	}
+}
 
-	// default logstash & elasticsearch dedot transform
-	// Related issue https://github.com/timberio/vector/issues/3588
-	var deDotTransform DynamicTransform = DynamicTransform{
+func cleanDataTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Type: "remap",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        `if exists(.parsed_data) { del(.parsed_data) }`,
+			"drop_on_abort": false,
+		},
+	}
+}
+
+// jsonParseTransform is a default logstash & elasticsearch json parser transform
+func jsonParseTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Type: "remap",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source": ` structured, err1 = parse_json(.message)
+ if err1 == null {
+   .parsed_data = structured
+ }
+`,
+			"drop_on_abort": false,
+		},
+	}
+}
+
+// deDotTransform is a default logstash & elasticsearch dedot transform
+// Related issue https://github.com/timberio/vector/issues/3588
+func deDotTransform() *DynamicTransform {
+	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Type: "lua",
 		},
@@ -95,24 +124,10 @@ end
 `,
 		},
 	}
+}
 
-	// default logstash & elasticsearch json parser transform
-	var JSONParseTransform DynamicTransform = DynamicTransform{
-		CommonTransform: CommonTransform{
-			Type: "remap",
-		},
-		DynamicArgsMap: map[string]interface{}{
-			"source": ` structured, err1 = parse_json(.message)
- if err1 == null {
-   .parsed_data = structured
- }
-`,
-			"drop_on_abort": false,
-		},
-	}
-
-	// data stream elasticsearch transform
-	var DataStreamTransform DynamicTransform = DynamicTransform{
+func dataStreamTransform() *DynamicTransform {
+	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Type: "remap",
 		},
@@ -121,52 +136,110 @@ end
 			"drop_on_abort": false,
 		},
 	}
+}
 
-	// default cleanup transform
-	transforms := []impl.LogTransform{&cleanUpTransform}
-	// default transform for json
-	transforms = append(transforms, &JSONParseTransform)
-	// Adding specific storage transforms
-	if dest.Spec.Type == DestElasticsearch || dest.Spec.Type == DestLogstash {
-		transforms = append(transforms, &deDotTransform)
-		if len(dest.Spec.ExtraLabels) > 0 {
-			extraFieldsTransform := GenExtraFieldsTransform(dest.Spec.ExtraLabels)
-			transforms = append(transforms, &extraFieldsTransform)
+func extraFieldTransform(extraFields map[string]string) *DynamicTransform {
+
+	var dataField string
+	tmpFields := make([]string, 0, len(extraFields))
+	keys := make([]string, 0, len(extraFields))
+	for key := range extraFields {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if validMustacheTemplate.MatchString(extraFields[k]) {
+			dataField = validMustacheTemplate.FindStringSubmatch(extraFields[k])[1]
+			if dataField == "parsed_data" {
+				tmpFields = append(tmpFields, fmt.Sprintf(" if exists(.parsed_data) { .%s=.parsed_data } \n", k))
+			} else {
+				tmpDataFieldParts := strings.Split(dataField, ".")
+				dataFieldParts := make([]string, 0)
+				i := 0
+				for i < len(tmpDataFieldParts) {
+					if tmpDataFieldParts[i][len(tmpDataFieldParts[i])-1] == '\\' && i+1 <= len(tmpDataFieldParts) {
+						buf := tmpDataFieldParts[i]
+						iter := i + 1
+						for iter < len(tmpDataFieldParts) {
+							if tmpDataFieldParts[iter][len(tmpDataFieldParts[iter])-1] != '\\' {
+								buf = buf + "." + tmpDataFieldParts[iter]
+								break
+							}
+							buf = buf + "." + tmpDataFieldParts[iter]
+							iter++
+						}
+						dataFieldParts = append(dataFieldParts, buf)
+						i = iter + 1
+					} else {
+						dataFieldParts = append(dataFieldParts, tmpDataFieldParts[i])
+						i++
+					}
+				}
+				for i := range dataFieldParts {
+					if strings.Contains(dataFieldParts[i], "-") || strings.Contains(dataFieldParts[i], "\\") {
+						if vectorArrayTemplate.MatchString(dataFieldParts[i]) {
+							arrayVarParts := strings.Split(dataFieldParts[i], "[")
+							dataFieldParts[i] = fmt.Sprintf("\"%s\"[%s", strings.ReplaceAll(arrayVarParts[0], "\\", ""), arrayVarParts[1])
+						} else {
+							dataFieldParts[i] = fmt.Sprintf("\"%s\"", strings.ReplaceAll(dataFieldParts[i], "\\", ""))
+						}
+					}
+				}
+				tmpFields = append(tmpFields, fmt.Sprintf(" if exists(.parsed_data.%s) { .%s=.parsed_data.%s } \n", strings.Join(dataFieldParts, "."), k, strings.Join(dataFieldParts, ".")))
+			}
+		} else {
+			tmpFields = append(tmpFields, fmt.Sprintf(" .%s=\"%s\" \n", k, extraFields[k]))
 		}
 	}
 
-	if dest.Spec.Type == DestElasticsearch && dest.Spec.Elasticsearch.DataStreamEnabled {
-		transforms = append(transforms, &DataStreamTransform)
-	}
-
-	return transforms
-}
-
-// Create default transforms
-func CreateDefaultCleanUpTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
-	// delete parsed data transform
-	var cleanParsedDataTransform DynamicTransform = DynamicTransform{
+	extraFieldsTransform := DynamicTransform{
 		CommonTransform: CommonTransform{
 			Type: "remap",
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source": ` if exists(.parsed_data) {
-   del(.parsed_data)
- }
-`,
+			"source":        strings.Join(tmpFields, ""),
 			"drop_on_abort": false,
 		},
 	}
 
+	return &extraFieldsTransform
+}
+
+// CreateDefaultTransforms creates predefined transform instruction for every log source
+func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
+	// data stream elasticsearch transform
+
+	// default cleanup transform
+	transforms := []impl.LogTransform{
+		cleanUpTransform(),
+		jsonParseTransform(),
+	}
+
+	// Adding specific storage transforms
+	if dest.Spec.Type == DestElasticsearch || dest.Spec.Type == DestLogstash {
+		transforms = append(transforms, deDotTransform())
+
+		if len(dest.Spec.ExtraLabels) > 0 {
+			transforms = append(transforms, extraFieldTransform(dest.Spec.ExtraLabels))
+		}
+	}
+
+	if dest.Spec.Type == DestElasticsearch && dest.Spec.Elasticsearch.DataStreamEnabled {
+		transforms = append(transforms, dataStreamTransform())
+	}
+
+	return transforms
+}
+
+func CreateDefaultCleanUpTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
 	transforms := make([]impl.LogTransform, 0)
 	if dest.Spec.Type == DestElasticsearch || dest.Spec.Type == DestLogstash {
-		transforms = append(transforms, &cleanParsedDataTransform)
+		transforms = append(transforms, cleanDataTransform())
 	}
 	return transforms
 }
 
-// Create multiline transforms
-func CreateMultiLinaeTransforms(multiLineType v1alpha1.MultiLineParserType) []impl.LogTransform {
+func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType) []impl.LogTransform {
 	// default multiline transform
 	var multiLineTransform DynamicTransform = DynamicTransform{
 		CommonTransform: CommonTransform{
@@ -199,7 +272,6 @@ func CreateMultiLinaeTransforms(multiLineType v1alpha1.MultiLineParserType) []im
 	return []impl.LogTransform{&multiLineTransform}
 }
 
-// Create transforms from filter
 func CreateTransformsFromFilter(filters []v1alpha1.LogFilter) (transforms []impl.LogTransform, err error) {
 	transforms = make([]impl.LogTransform, 0)
 
@@ -294,8 +366,8 @@ func CreateTransformsFromFilter(filters []v1alpha1.LogFilter) (transforms []impl
 }
 
 func BuildTransformsFromMapSlice(inputName string, trans []impl.LogTransform) ([]impl.LogTransform, error) {
-
 	prevInput := inputName
+
 	for i, trm := range trans {
 		trm.SetName(fmt.Sprintf("d8_tf_%s_%d", inputName, i))
 		trm.SetInputs([]string{prevInput})
@@ -304,73 +376,6 @@ func BuildTransformsFromMapSlice(inputName string, trans []impl.LogTransform) ([
 	}
 
 	return trans, nil
-}
-
-func GenExtraFieldsTransform(extraFields map[string]string) DynamicTransform {
-
-	var dataField string
-	tmpFields := make([]string, 0, len(extraFields))
-	keys := make([]string, 0, len(extraFields))
-	for key := range extraFields {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		if validMustacheTemplate.MatchString(extraFields[k]) {
-			dataField = validMustacheTemplate.FindStringSubmatch(extraFields[k])[1]
-			if dataField == "parsed_data" {
-				tmpFields = append(tmpFields, fmt.Sprintf(" if exists(.parsed_data) { .%s=.parsed_data } \n", k))
-			} else {
-				tmpDataFieldParts := strings.Split(dataField, ".")
-				dataFieldParts := make([]string, 0)
-				i := 0
-				for i < len(tmpDataFieldParts) {
-					if tmpDataFieldParts[i][len(tmpDataFieldParts[i])-1] == '\\' && i+1 <= len(tmpDataFieldParts) {
-						buf := tmpDataFieldParts[i]
-						iter := i + 1
-						for iter < len(tmpDataFieldParts) {
-							if tmpDataFieldParts[iter][len(tmpDataFieldParts[iter])-1] != '\\' {
-								buf = buf + "." + tmpDataFieldParts[iter]
-								break
-							}
-							buf = buf + "." + tmpDataFieldParts[iter]
-							iter++
-						}
-						dataFieldParts = append(dataFieldParts, buf)
-						i = iter + 1
-					} else {
-						dataFieldParts = append(dataFieldParts, tmpDataFieldParts[i])
-						i++
-					}
-				}
-				for i := range dataFieldParts {
-					if strings.Contains(dataFieldParts[i], "-") || strings.Contains(dataFieldParts[i], "\\") {
-						if vectorArryayTemplate.MatchString(dataFieldParts[i]) {
-							arrayVarParts := strings.Split(dataFieldParts[i], "[")
-							dataFieldParts[i] = fmt.Sprintf("\"%s\"[%s", strings.ReplaceAll(arrayVarParts[0], "\\", ""), arrayVarParts[1])
-						} else {
-							dataFieldParts[i] = fmt.Sprintf("\"%s\"", strings.ReplaceAll(dataFieldParts[i], "\\", ""))
-						}
-					}
-				}
-				tmpFields = append(tmpFields, fmt.Sprintf(" if exists(.parsed_data.%s) { .%s=.parsed_data.%s } \n", strings.Join(dataFieldParts, "."), k, strings.Join(dataFieldParts, ".")))
-			}
-		} else {
-			tmpFields = append(tmpFields, fmt.Sprintf(" .%s=\"%s\" \n", k, extraFields[k]))
-		}
-	}
-
-	extraFieldsTransform := DynamicTransform{
-		CommonTransform: CommonTransform{
-			Type: "remap",
-		},
-		DynamicArgsMap: map[string]interface{}{
-			"source":        strings.Join(tmpFields, ""),
-			"drop_on_abort": false,
-		},
-	}
-
-	return extraFieldsTransform
 }
 
 type CommonTransform struct {

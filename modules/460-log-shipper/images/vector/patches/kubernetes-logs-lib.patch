@@ -1,0 +1,245 @@
+diff --git a/src/kubernetes/hash_value.rs b/src/kubernetes/hash_value.rs
+index c95c0a9..a597b07 100644
+--- a/src/kubernetes/hash_value.rs
++++ b/src/kubernetes/hash_value.rs
+@@ -50,6 +50,17 @@ where
+         let metadata = self.0.metadata();
+         Some(metadata.name.as_ref()?.as_str())
+     }
++
++    /// Get the `metadata` from the `T`'.
++    pub fn metadata(&self) -> ObjectMeta {
++        let metadata = self.0.metadata().clone();
++        metadata
++    }
++
++    /// Gets a mutable reference to the metadata of this resource value.
++    pub fn metadata_mut(&mut self) -> &mut ObjectMeta {
++        self.0.metadata_mut()
++    }
+ }
+
+ impl<T> PartialEq<Self> for HashValue<T>
+diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
+index 972ac23..069df05 100644
+--- a/src/kubernetes/state/evmap.rs
++++ b/src/kubernetes/state/evmap.rs
+@@ -1,15 +1,24 @@
+ //! A state implementation backed by [`evmap`].
+
+ use crate::kubernetes::{
++    client::Client,
+     debounce::Debounce,
+     hash_value::{HashKey, HashValue},
+ };
+ use async_trait::async_trait;
+ use evmap::WriteHandle;
+ use futures::future::BoxFuture;
+-use k8s_openapi::{apimachinery::pkg::apis::meta::v1::ObjectMeta, Metadata};
++use http::{Response, StatusCode};
++use k8s_openapi::{
++    api::apps::v1::ReplicaSet, api::batch::v1::Job, apimachinery::pkg::apis::meta::v1::ObjectMeta,
++    apimachinery::pkg::apis::meta::v1::OwnerReference, http, ListOptional, Metadata,
++};
++use std::string::String;
+ use std::time::Duration;
+
++use hyper::body;
++use hyper::Body;
++
+ /// A [`WriteHandle`] wrapper that implements [`super::Write`].
+ /// For use as a state writer implementation for
+ /// [`crate::kubernetes::Reflector`].
+@@ -20,6 +29,7 @@ where
+     inner: WriteHandle<String, Value<T>>,
+     debounced_flush: Option<Debounce>,
+     hash_key: HashKey,
++    client: Client,
+ }
+
+ impl<T> Writer<T>
+@@ -30,6 +40,7 @@ where
+     /// [`Writer`].
+     pub fn new(
+         mut inner: WriteHandle<String, Value<T>>,
++        client: Client,
+         flush_debounce_timeout: Option<Duration>,
+         hash_key: HashKey,
+     ) -> Self {
+@@ -44,6 +55,7 @@ where
+             inner,
+             debounced_flush,
+             hash_key,
++            client,
+         }
+     }
+
+@@ -71,16 +83,56 @@ where
+     type Item = T;
+
+     async fn add(&mut self, item: Self::Item) {
+-        if let Some((key, value)) = kv(item, self.hash_key) {
+-            self.inner.insert(key, value);
+-            self.debounced_flush();
++        if let Some((key, mut value)) = kv(item, self.hash_key) {
++            // Mutate object on adding
++            let tmp_metadata = value.metadata();
++            if let Some(namespace) = tmp_metadata.namespace.as_ref() {
++                if let Some(owner_references) = tmp_metadata.owner_references.to_owned() {
++                    let mut_meta = value.metadata_mut();
++                    mut_meta.owner_references = mutate_owner(
++                        self.client.clone(),
++                        namespace.to_string(),
++                        owner_references[0].clone(),
++                    )
++                    .await
++                    .clone();
++                    self.inner.insert(key, value);
++                    self.debounced_flush();
++                } else {
++                    self.inner.insert(key, value);
++                    self.debounced_flush();
++                }
++            } else {
++                self.inner.insert(key, value);
++                self.debounced_flush();
++            }
+         }
+     }
+
+     async fn update(&mut self, item: Self::Item) {
+-        if let Some((key, value)) = kv(item, self.hash_key) {
+-            self.inner.update(key, value);
+-            self.debounced_flush();
++        if let Some((key, mut value)) = kv(item, self.hash_key) {
++            // Mutate object on adding
++            let tmp_metadata = value.metadata();
++            if let Some(namespace) = tmp_metadata.namespace.as_ref() {
++                if let Some(owner_references) = tmp_metadata.owner_references.to_owned() {
++                    let mut_meta = value.metadata_mut();
++                    mut_meta.owner_references = mutate_owner(
++                        self.client.clone(),
++                        namespace.to_string(),
++                        owner_references[0].clone(),
++                    )
++                    .await
++                    .clone();
++                    self.inner.update(key, value);
++                    self.debounced_flush();
++                } else {
++                    self.inner.update(key, value);
++                    self.debounced_flush();
++                }
++            } else {
++                self.inner.update(key, value);
++                self.debounced_flush();
++            }
+         }
+     }
+
+@@ -134,6 +186,105 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+     Some((key, value))
+ }
+
++/// Owner mutator
++async fn mutate_owner(
++    mut client: Client,
++    namespace: String,
++    owner_ref: OwnerReference,
++) -> Option<Vec<OwnerReference>> {
++    let mut mut_owner_references: Vec<OwnerReference> = Vec::new();
++    let kind = owner_ref.kind.clone();
++    let name = owner_ref.name.clone();
++    mut_owner_references.push(owner_ref);
++    match kind.as_str() {
++        "ReplicaSet" | "Job" => {
++            let field_selector = format!("metadata.name={}", name);
++            let list_optional = ListOptional {
++                field_selector: Some(&field_selector),
++                label_selector: None,
++                limit: Some(1),
++                pretty: None,
++                resource_version: None,
++                timeout_seconds: Some(290), // https://github.com/kubernetes/kubernetes/issues/6513
++                continue_: None,
++            };
++            match kind.as_str() {
++                "ReplicaSet" => {
++                    if let Ok((request, _response_body)) =
++                        ReplicaSet::list_namespaced_replica_set(&namespace, list_optional)
++                    {
++                        let response = match client.send(request).await {
++                            Ok(response) => response,
++                            Err(_source) => Response::builder()
++                                .status(StatusCode::NOT_FOUND)
++                                .body(Body::empty())
++                                .unwrap(),
++                        };
++                        let status_code: StatusCode = response.status();
++                        if status_code == StatusCode::OK {
++                            // Stream response body.
++                            let mut response_body = _response_body(status_code);
++                            if let Ok(body) = body::to_bytes(response.into_body()).await {
++                                response_body.append_slice(&body);
++                                if let Ok(k8s_openapi::ListResponse::Ok(rs_list)) =
++                                    response_body.parse()
++                                {
++                                    if rs_list.items.len() > 0 {
++                                        let rs: ReplicaSet = rs_list.items[0].clone();
++                                        if let Some(owner_references) =
++                                            &rs.metadata().owner_references
++                                        {
++                                            mut_owner_references.drain(..);
++                                            mut_owner_references.push(owner_references[0].clone());
++                                        }
++                                    }
++                                }
++                            }
++                        }
++                    };
++                }
++                "Job" => {
++                    if let Ok((request, _response_body)) =
++                        Job::list_namespaced_job(&namespace, list_optional)
++                    {
++                        let response = match client.send(request).await {
++                            Ok(response) => response,
++                            Err(_source) => Response::builder()
++                                .status(StatusCode::NOT_FOUND)
++                                .body(Body::empty())
++                                .unwrap(),
++                        };
++                        let status_code: StatusCode = response.status();
++                        if status_code == StatusCode::OK {
++                            // Stream response body.
++                            let mut response_body = _response_body(status_code);
++                            if let Ok(body) = body::to_bytes(response.into_body()).await {
++                                response_body.append_slice(&body);
++                                if let Ok(k8s_openapi::ListResponse::Ok(job_list)) =
++                                    response_body.parse()
++                                {
++                                    if job_list.items.len() > 0 {
++                                        let job: Job = job_list.items[0].clone();
++                                        if let Some(owner_references) =
++                                            &job.metadata().owner_references
++                                        {
++                                            mut_owner_references.drain(..);
++                                            mut_owner_references.push(owner_references[0].clone());
++                                        }
++                                    }
++                                }
++                            }
++                        }
++                    };
++                }
++                _ => {}
++            };
++        }
++        _ => {}
++    }
++    Some(mut_owner_references)
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;

@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,9 +65,14 @@ type ClusterLoggingConfigStatus struct {
 }
 
 type KubernetesPodsSpec struct {
-	NamespaceSelector types.NameSelector `json:"namespaceSelector,omitempty"`
+	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty"`
 
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+type NamespaceSelector struct {
+	MatchNames   []string `json:"matchNames"`
+	ExcludeNames []string `json:"excludeNames"`
 }
 
 type FileSpec struct {
