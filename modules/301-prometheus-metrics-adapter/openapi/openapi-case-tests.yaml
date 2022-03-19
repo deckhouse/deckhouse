@@ -73,45 +73,32 @@ negative:
 # next case don't work because deckhouse testes not support x-required-for-helm
 # need to fix it and uncomment cases after fix
 
-##  # does not have internal pma tls
-#  - internal:
-#      prometheusAPIClientTLS:
-#        certificate: cert
-#        key: key
-#      customMetrics:
-#        daemonset: { }
-#        deployment: { }
-#        ingress: { }
-#        namespace: { }
-#        pod: { }
-#        service: { }
-#        statefulset: { }
-#
-#  # does not have prom client tls object
-#  - internal:
-#      adapterPem: cert
-#      adapterCA: cert
-#      adapterKey: key
-#      customMetrics:
-#        daemonset: { }
-#        deployment: { }
-#        ingress: { }
-#        namespace: { }
-#        pod: { }
-#        service: { }
-#        statefulset: { }
-#
-#  # does not have prom client tls
-#  - internal:
-#      adapterPem: cert
-#      adapterCA: cert
-#      adapterKey: key
-#      prometheusAPIClientTLS: { }
-#      customMetrics:
-#        daemonset: { }
-#        deployment: { }
-#        ingress: { }
-#        namespace: { }
-#        pod: { }
-#        service: { }
-#        statefulset: { }
+  # Cases with absent keys required for Helm.
+  helmValues:
+  # No requried fields.
+  - internal:
+      customMetrics:
+        daemonset: { }
+        deployment: { }
+        ingress: { }
+        namespace: { }
+        pod: { }
+        service: { }
+        statefulset: { }
+
+  # No required adapterKey.
+  - internal:
+      adapterPem: cert
+      adapterCA: cert
+      customMetrics:
+        daemonset: { }
+        deployment: { }
+        ingress: { }
+        namespace: { }
+        pod: { }
+        service: { }
+        statefulset: { }
+
+  # Only one required field.
+  - internal:
+      adapterKey: key

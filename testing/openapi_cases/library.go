@@ -17,7 +17,7 @@ limitations under the License.
 package openapi_cases
 
 import (
-	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -27,14 +27,40 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const FocusFieldName = "x-test-focus"
+
 type TestCase struct {
-	ConfigValues []json.RawMessage
-	Values       []json.RawMessage
+	ConfigValues []map[string]interface{}
+	Values       []map[string]interface{}
+	HelmValues   []map[string]interface{}
+}
+
+func (tc TestCase) HasFocused() bool {
+	for _, values := range tc.ConfigValues {
+		if _, hasFocus := values[FocusFieldName]; hasFocus {
+			return true
+		}
+	}
+	for _, values := range tc.Values {
+		if _, hasFocus := values[FocusFieldName]; hasFocus {
+			return true
+		}
+	}
+	for _, values := range tc.HelmValues {
+		if _, hasFocus := values[FocusFieldName]; hasFocus {
+			return true
+		}
+	}
+	return false
 }
 
 type TestCases struct {
 	Positive TestCase
 	Negative TestCase
+
+	dir        string
+	moduleName string
+	hasFocused bool
 }
 
 func (t *TestCases) HaveConfigValuesCases() bool {
@@ -43,6 +69,10 @@ func (t *TestCases) HaveConfigValuesCases() bool {
 
 func (t *TestCases) HaveValuesCases() bool {
 	return len(t.Positive.Values) > 0 || len(t.Negative.Values) > 0
+}
+
+func (t *TestCases) HaveHelmValuesCases() bool {
+	return len(t.Positive.HelmValues) > 0 || len(t.Negative.HelmValues) > 0
 }
 
 func GetAllOpenAPIDirs() ([]string, error) {
@@ -78,28 +108,46 @@ func GetAllOpenAPIDirs() ([]string, error) {
 	return dirs, nil
 }
 
-func ParseCasesTestFile(filename string) (TestCases, error) {
+func TestCasesFromFile(filename string) (*TestCases, error) {
 	var testCases TestCases
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return testCases, err
+		return nil, err
 	}
 	err = yaml.Unmarshal(yamlFile, &testCases)
 	if err != nil {
-		return testCases, err
+		return nil, err
 	}
-	return testCases, nil
+	testCases.hasFocused = testCases.Positive.HasFocused() || testCases.Negative.HasFocused()
+	return &testCases, nil
 }
 
-func ValidateCase(validator *validation.ValuesValidator, moduleName string, schema validation.SchemaType, testCase json.RawMessage) error {
-	var values map[string]interface{}
-	err := json.Unmarshal(testCase, &values)
-	if err != nil {
-		return err
+func ValidatePositiveCase(validator *validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
+	if _, hasFocus := testValues[FocusFieldName]; !hasFocus && runFocused {
+		return nil
 	}
-	err = validator.ValidateValues(validation.ModuleSchema, schema, moduleName, utils.Values{moduleName: values})
-	if err != nil {
-		return err
+	delete(testValues, FocusFieldName)
+	return validator.ValidateValues(validation.ModuleSchema, schema, moduleName, utils.Values{moduleName: testValues})
+}
+
+func ValidateNegativeCase(validator *validation.ValuesValidator, moduleName string, schema validation.SchemaType, testValues map[string]interface{}, runFocused bool) error {
+	_, hasFocus := testValues[FocusFieldName]
+	if !hasFocus && runFocused {
+		return nil
+	}
+	delete(testValues, FocusFieldName)
+	err := validator.ValidateValues(validation.ModuleSchema, schema, moduleName, utils.Values{moduleName: testValues})
+	if err == nil {
+		return fmt.Errorf("negative case error for %s values: test case should not pass validation: %+v", schema, ValuesToString(testValues))
+	}
+	// Focusing is a debugging tool, so print hidden error.
+	if hasFocus {
+		fmt.Printf("Debug: expected error for negative case: %v\n", err)
 	}
 	return nil
+}
+
+func ValuesToString(v map[string]interface{}) string {
+	b, _ := yaml.Marshal(v)
+	return string(b)
 }

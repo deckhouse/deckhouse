@@ -35,33 +35,46 @@ func TestOpenAPICases(t *testing.T) {
 }
 
 var _ = Describe("OpenAPI case tests", func() {
+	var err error
+
 	openAPIDirs, err := GetAllOpenAPIDirs()
 	It("Should find some directories with openapi-case-tests.yaml file", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(openAPIDirs).ToNot(HaveLen(0))
 	})
+
+	allTestCases := make([]*TestCases, 0)
+	var testCases *TestCases
 	for _, dir := range openAPIDirs {
-		testDir := dir
-		It(fmt.Sprintf("Openapi test cases should pass in %s", testDir), func() {
-			ExecuteTestCasesInDir(testDir)
+		testCases, err = TestCasesFromFile(filepath.Join(dir, "openapi-case-tests.yaml"))
+		if err != nil {
+			break
+		}
+		testCases.dir = dir
+		if testCases.hasFocused {
+			allTestCases = []*TestCases{testCases}
+			break
+		}
+		allTestCases = append(allTestCases, testCases)
+	}
+	Expect(err).NotTo(HaveOccurred(), "All openapi test cases should be parsed")
+
+	for _, testCases := range allTestCases {
+		It(fmt.Sprintf("Openapi test cases should pass in %s", testCases.dir), func() {
+			ExecuteTestCases(testCases)
 		})
 	}
 })
 
-func ExecuteTestCasesInDir(dir string) {
+func ExecuteTestCases(testCases *TestCases) {
 	// Silence addon-operator logger. (Validation, ModuleManager)
 	log.SetOutput(ioutil.Discard)
 
-	var testCases TestCases
-
-	modulePath, _ := filepath.Split(dir)
+	modulePath, _ := filepath.Split(testCases.dir)
 	moduleName := filepath.Base(modulePath)
-	By("Parse openAPI test cases file")
-	testCases, err := ParseCasesTestFile(filepath.Join(dir, "openapi-case-tests.yaml"))
-	Expect(err).NotTo(HaveOccurred())
 
 	By("Read openAPI schemas")
-	configBytes, valuesBytes, err := module_manager.ReadOpenAPIFiles(dir)
+	configBytes, valuesBytes, err := module_manager.ReadOpenAPIFiles(testCases.dir)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Parse openAPI schemas")
@@ -88,15 +101,21 @@ func ExecuteTestCasesInDir(dir string) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func PositiveCasesTest(validator *validation.ValuesValidator, moduleName string, testCases TestCases) error {
+func PositiveCasesTest(validator *validation.ValuesValidator, moduleName string, testCases *TestCases) error {
 	for _, testCase := range testCases.Positive.ConfigValues {
-		err := ValidateCase(validator, moduleName, validation.ConfigValuesSchema, testCase)
+		err := ValidatePositiveCase(validator, moduleName, validation.ConfigValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
 			return err
 		}
 	}
 	for _, testCase := range testCases.Positive.Values {
-		err := ValidateCase(validator, moduleName, validation.ValuesSchema, testCase)
+		err := ValidatePositiveCase(validator, moduleName, validation.ValuesSchema, testCase, testCases.hasFocused)
+		if err != nil {
+			return err
+		}
+	}
+	for _, testCase := range testCases.Positive.HelmValues {
+		err := ValidatePositiveCase(validator, moduleName, validation.HelmValuesSchema, testCase, testCases.hasFocused)
 		if err != nil {
 			return err
 		}
@@ -104,17 +123,23 @@ func PositiveCasesTest(validator *validation.ValuesValidator, moduleName string,
 	return nil
 }
 
-func NegativeCasesTest(validator *validation.ValuesValidator, moduleName string, testCases TestCases) error {
+func NegativeCasesTest(validator *validation.ValuesValidator, moduleName string, testCases *TestCases) error {
 	for _, testCase := range testCases.Negative.ConfigValues {
-		err := ValidateCase(validator, moduleName, validation.ConfigValuesSchema, testCase)
-		if err == nil {
-			return fmt.Errorf("negative case for config values: %s", string(testCase))
+		err := ValidateNegativeCase(validator, moduleName, validation.ConfigValuesSchema, testCase, testCases.hasFocused)
+		if err != nil {
+			return err
 		}
 	}
 	for _, testCase := range testCases.Negative.Values {
-		err := ValidateCase(validator, moduleName, validation.ValuesSchema, testCase)
-		if err == nil {
-			return fmt.Errorf("negative case for config values: %s", string(testCase))
+		err := ValidateNegativeCase(validator, moduleName, validation.ValuesSchema, testCase, testCases.hasFocused)
+		if err != nil {
+			return err
+		}
+	}
+	for _, testCase := range testCases.Negative.HelmValues {
+		err := ValidateNegativeCase(validator, moduleName, validation.HelmValuesSchema, testCase, testCases.hasFocused)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
