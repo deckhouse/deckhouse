@@ -25,6 +25,12 @@ jobs:
             //    https://github.com/actions/toolkit/blob/main/packages/github/src/interfaces.ts#L15
 
             const number = context.issue.number
+
+            if (!context.payload.issue.pull_request) {
+              core.notice(`Issue #${number} is not a pull request`)
+              return "skip"
+            }
+
             if (context.payload.action !== 'milestoned' && context.payload.action !== 'demilestoned') {
               // we support only milestoned because of race condition when milestone is changed
               // core.notice(`The PR #${number} payload action is not "milestoned" or "demilestoned", it is "${context.eventName}"`)
