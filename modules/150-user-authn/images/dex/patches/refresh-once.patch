@@ -288,7 +288,7 @@ index a8165300..78a837ab 100644
  	if err != nil {
  		s.logger.Errorf("failed to marshal refresh token: %v", err)
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index ca505859..b855b660 100644
+index ca505859..cb561efa 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
 @@ -40,6 +40,16 @@ const (
@@ -334,7 +334,7 @@ index ca505859..b855b660 100644
  		return cli.put(resourceRefreshToken, r.ObjectMeta.Name, newToken)
  	})
  }
-@@ -754,3 +771,58 @@ func retryOnConflict(ctx context.Context, action func() error) error {
+@@ -754,3 +771,61 @@ func retryOnConflict(ctx context.Context, action func() error) error {
  		}
  	}
  }
@@ -353,7 +353,8 @@ index ca505859..b855b660 100644
 +	val, ok := r.Annotations[lockAnnotation]
 +	if !ok {
 +		r.Annotations = lockData
-+		if err := cli.put(resourceRefreshToken, r.ObjectMeta.Name, r); err == nil {
++		err := cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
++		if err == nil {
 +			return false, nil
 +		}
 +
@@ -373,9 +374,11 @@ index ca505859..b855b660 100644
 +	// Lock time is out, lets break the lock and take the advantage
 +	r.Annotations = lockData
 +
-+	if err := cli.put(resourceRefreshToken, r.ObjectMeta.Name, r); err == nil {
++	err = cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
++	if err == nil {
 +		return false, nil
 +	}
++
 +	cli.logger.Debugf("break lock annotation error: %v", err)
 +	return isKubernetesAPIConflictError(err), nil
 +}
