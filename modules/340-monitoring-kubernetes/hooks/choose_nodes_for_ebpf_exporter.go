@@ -21,10 +21,13 @@ import (
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
+	ngHooks "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/api/v1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -33,6 +36,7 @@ const (
 
 type NodeEligibility struct {
 	Name            string
+	NodeGroup       string
 	IsEbpfSupported bool
 }
 
@@ -48,7 +52,7 @@ func getNodeNameWithSupportedDistro(obj *unstructured.Unstructured) (go_hook.Fil
 		return nil, err
 	}
 
-	nodeEligibility := &NodeEligibility{Name: node.Name}
+	nodeEligibility := &NodeEligibility{Name: node.Name, NodeGroup: node.Labels[ngHooks.NodeGroupNameLabel]}
 
 	matches := kernelRegex.FindStringSubmatch(node.Status.NodeInfo.KernelVersion)
 	if len(matches) != 2 {
@@ -69,6 +73,24 @@ func getNodeNameWithSupportedDistro(obj *unstructured.Unstructured) (go_hook.Fil
 	return nodeEligibility, nil
 }
 
+type NodeGroupManagedKernel struct {
+	NodeGroupName    string
+	HasManagedKernel bool
+}
+
+func nodeGroupHasManagedKernel(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	ng := &ngv1.NodeGroup{}
+	err := sdk.FromUnstructured(obj, ng)
+	if err != nil {
+		return nil, err
+	}
+
+	return &NodeGroupManagedKernel{
+		NodeGroupName:    ng.Name,
+		HasManagedKernel: pointer.BoolPtrDerefOr(ng.Spec.OperatingSystem.ManageKernel, true),
+	}, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -78,10 +100,27 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			FilterFunc: getNodeNameWithSupportedDistro,
 		},
+		{
+			Name:       "nodegroups",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+			FilterFunc: nodeGroupHasManagedKernel,
+		},
 	},
 }, labelNodes)
 
 func labelNodes(input *go_hook.HookInput) error {
+	ngSnapshot := input.Snapshots["nodegroups"]
+
+	var ngIsManagedKernelSet = make(map[string]bool, len(ngSnapshot))
+	for _, ngIsManagedKernelRaw := range ngSnapshot {
+		if ngIsManagedKernelRaw == nil {
+			continue
+		}
+		ngIsManagedKernel := ngIsManagedKernelRaw.(*NodeGroupManagedKernel)
+		ngIsManagedKernelSet[ngIsManagedKernel.NodeGroupName] = ngIsManagedKernel.HasManagedKernel
+	}
+
 	snapshot := input.Snapshots["nodes"]
 	for _, nodeEligibilityRaw := range snapshot {
 		if nodeEligibilityRaw == nil {
@@ -94,6 +133,13 @@ func labelNodes(input *go_hook.HookInput) error {
 			err := sdk.FromUnstructured(obj, &node)
 			if err != nil {
 				return nil, err
+			}
+
+			// skip nodes with non-managed kernel, can't rely on the correct kernel and kernel headers being present
+			if has, ok := ngIsManagedKernelSet[nodeEligibility.NodeGroup]; !ok || !has {
+				delete(node.Labels, ebpfSchedulingLabelKey)
+
+				return sdk.ToUnstructured(&node)
 			}
 
 			if !nodeEligibility.IsEbpfSupported {
