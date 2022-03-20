@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/api/shared"
+	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -29,9 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
-	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
