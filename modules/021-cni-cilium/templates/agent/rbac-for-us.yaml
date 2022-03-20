@@ -4,13 +4,13 @@ kind: ServiceAccount
 metadata:
   name: agent
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | indent 2 }}
+  {{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cni-cilium:agent
-{{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | indent 2 }}
+  {{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -24,7 +24,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:cni-cilium:agent
-{{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | indent 2 }}
+  {{ include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
 rules:
 - apiGroups:
   - networking.k8s.io

@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: operator
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "operator" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "operator" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -33,15 +33,15 @@ spec:
       labels:
         app: operator
     spec:
-{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | indent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | nindent 6 }}
       {{- if not .Values.global.clusterIsBootstrapped }}
       - key: node.cloudprovider.kubernetes.io/uninitialized
         operator: Exists
       {{- end }}
-{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "operator")) | nindent 6 }}
-{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "operator")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -106,7 +106,7 @@ spec:
               path: /metrics
               authorization:
                 resourceAttributes:
-                  namespace: d8-cni-cilium
+                  namespace: d8-{{ .Chart.Name }}
                   apiGroup: apps
                   apiVersion: v1
                   resource: deployments
