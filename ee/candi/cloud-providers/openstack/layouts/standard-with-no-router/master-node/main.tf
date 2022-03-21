@@ -18,6 +18,12 @@ module "network_security_info" {
   enabled = local.network_security
 }
 
+module "volume_zone" {
+  source = "../../../terraform-modules/volume-zone"
+  compute_zone = local.zone
+  region = var.providerClusterConfiguration.provider.region
+}
+
 module "master" {
   source = "../../../terraform-modules/master"
   prefix = local.prefix
@@ -33,6 +39,7 @@ module "master" {
   tags = local.tags
   zone = local.zone
   volume_type = local.volume_type
+  volume_zone = module.volume_zone.zone
 }
 
 module "kubernetes_data" {
@@ -41,7 +48,7 @@ module "kubernetes_data" {
   node_index = var.nodeIndex
   master_id = module.master.id
   volume_type = local.volume_type
-  volume_zone = local.zone
+  volume_zone = module.volume_zone.zone
   tags = local.tags
 }
 
