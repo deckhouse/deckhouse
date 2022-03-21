@@ -36,6 +36,8 @@ ci:
       pull_request: https://github.com/deckhouse/deckhouse/pull/616
       impact: Some pods including control-plane will be restarted. ingress-nginx is not one of them.
   fixes:
+    - summary: Minor fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1096
     - summary: Detect pull requests in changelog milestones.
       pull_request: https://github.com/deckhouse/deckhouse/pull/1087
     - summary: Proper image name in e2e tests for release tags
