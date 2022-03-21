@@ -376,6 +376,8 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
           docker pull "${IMAGE_NAME}"
 
@@ -747,6 +749,8 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
           docker pull "${IMAGE_NAME}"
 
@@ -1118,6 +1122,8 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
           docker pull "${IMAGE_NAME}"
 
@@ -1489,6 +1495,8 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
           docker pull "${IMAGE_NAME}"
 
@@ -1860,6 +1868,8 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
           docker pull "${IMAGE_NAME}"
 
@@ -2231,6 +2241,8 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
           docker pull "${IMAGE_NAME}"
 
@@ -2602,6 +2614,8 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
           docker pull "${IMAGE_NAME}"
 
@@ -2973,6 +2987,8 @@ jobs:
 
           echo "::set-output name=install-image-name::${IMAGE_NAME}"
 
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Name: ${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]'
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
           docker pull "${IMAGE_NAME}"
 
