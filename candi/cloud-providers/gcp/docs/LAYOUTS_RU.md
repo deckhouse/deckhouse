@@ -23,12 +23,12 @@ kind: GCPClusterConfiguration
 layout: Standard
 standard:
   # Optional, compute address names from this list are used as addresses for Cloud NAT.
-  cloudNATAddresses:                                         
+  cloudNATAddresses:
   - example-address-1
   - example-address-2
 subnetworkCIDR: 10.0.0.0/24         # Required.
 # Optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered.
-peeredVPCs:                                                  
+peeredVPCs:
 - default
 sshKey: "ssh-rsa <SSH_PUBLIC_KEY>"  # Required.
 labels:
@@ -40,7 +40,7 @@ masterNodeGroup:
   instanceClass:
     machineType: n1-standard-4      # Required.
     # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
     diskSizeGb: 20                  # Optional, local disk is used if not specified.
     disableExternalIP: false        # Optional, by default master has externalIP.
     additionalNetworkTags:          # Optional.
@@ -55,7 +55,7 @@ nodeGroups:
   instanceClass:
     machineType: n1-standard-4      # Required.
     # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
     diskSizeGb: 20                  # Optional, local disk is used if not specified.
     disableExternalIP: true         # Optional, by default nodes do not have externalIP.
     additionalNetworkTags:          # Optional.
@@ -93,7 +93,7 @@ kind: GCPClusterConfiguration
 layout: WithoutNAT
 subnetworkCIDR: 10.0.0.0/24         # Required.
 # Optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered.
-peeredVPCs:                                                 
+peeredVPCs:
 - default
 labels:
   kube: example
@@ -104,7 +104,7 @@ masterNodeGroup:
   instanceClass:
     machineType: n1-standard-4      # Required.
     # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
     diskSizeGb: 20                  # Optional, local disk is used if not specified.
     additionalNetworkTags:          # Optional.
     - tag1
@@ -118,7 +118,7 @@ nodeGroups:
   instanceClass:
     machineType: n1-standard-4      # Required.
     # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
     diskSizeGb: 20                  # Optional, local disk is used if not specified.
     additionalNetworkTags:          # Optional.
     - tag1

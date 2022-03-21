@@ -20,56 +20,72 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 standard:
-  internalNetworkCIDR: 192.168.199.0/24                   # required
-  internalNetworkDNSServers:                              # required
+  internalNetworkCIDR: 192.168.199.0/24         # Required.
+  internalNetworkDNSServers:                    # Required.
   - 8.8.8.8
   - 4.2.2.2
-  internalNetworkSecurity: true|false                     # optional, default true
-  externalNetworkName: shared                             # required
+  internalNetworkSecurity: true|false           # Optional, default true.
+  externalNetworkName: shared                   # Required.
   bastion:
-    zone: ru2-b                                           # optional
-    volumeType: fast-ru-2b                                # optional
+    zone: ru2-b                                 # Optional.
+    volumeType: fast-ru-2b                      # Optional.
     instanceClass:
-      flavorName: m1.large                                # required
-      imageName: ubuntu-20-04-cloud-amd64                 # required
-      rootDiskSize: 50                                    # optional, local disk is used if not specified
+      flavorName: m1.large                      # Required.
+      imageName: ubuntu-20-04-cloud-amd64       # Required.
+      # Optional, local disk is used if not specified.
+      rootDiskSize: 50
       additionalTags:
-        severity: critical                                # optional
-        environment: production                           # optional
+        severity: critical                      # Optional.
+        environment: production                 # Optional.
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 50                                      # optional, local disk is used if not specified
-    additionalSecurityGroups:                             # optional, additional security groups
+    flavorName: m1.large                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
+    rootDiskSize: 50
+    # Optional, additional security groups.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
     additionalTags:
       severity: critical
       environment: production
-  volumeTypeMap:                                          # required, volume type map for etcd and kubernetes certs (always use fastest disk supplied by provider).
-    ru-1a: fast-ru-1a                                     # If rootDiskSize specified than this volume type will be also used for master root volume
+  # Required, volume type map for etcd and kubernetes certs
+  # (always use fastest disk supplied by provider).
+  volumeTypeMap:
+    # If rootDiskSize specified than this volume type will
+    # be also used for master root volume.
+    ru-1a: fast-ru-1a
     ru-1b: fast-ru-1b
     ru-1c: fast-ru-1c
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 20                                      # optional, local disk is used if not specified
-    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network that is used as default gateway
-    mainNetwork: kube                                     # required, network will be used as default gateway
-    additionalNetworks:                                   # optional
+    flavorName: m1.small                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required
+    # Optional, local disk is used if not specified.
+    rootDiskSize: 20
+    # Optional, default false, determines if config drive is
+    # required during vm bootstrap process. It's needed if there
+    # is no dhcp in network that is used as default gateway.
+    configDrive: false
+    # Required, network will be used as default gateway.
+    mainNetwork: kube
+    additionalNetworks:                         # Optional.
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
+    # Optional, if there are networks with disabled port
+    # security their names must be specified.
+    networksWithSecurityDisabled:
     - office
-    floatingIPPools:                                      # optional, list of network pools where to order floating ips
+    # Optional, list of network pools where to order floating IPs.
+    floatingIPPools:
     - public
     - shared
-    additionalSecurityGroups:                             # optional, additional security groups
+    # Optional, additional security groups.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
   zones:
@@ -99,39 +115,57 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: StandardWithNoRouter
 standardWithNoRouter:
-  internalNetworkCIDR: 192.168.199.0/24                   # required
-  externalNetworkName: ext-net                            # required
-  externalNetworkDHCP: false                              # optional, whether dhcp is enabled in specified external network (default true)
-  internalNetworkSecurity: true|false                     # optional, default true
+  internalNetworkCIDR: 192.168.199.0/24          # Required.
+  externalNetworkName: ext-net                   # Required.
+  # Optional, whether dhcp is enabled in specified external
+  # network (default true).
+  externalNetworkDHCP: false
+  internalNetworkSecurity: true|false            # Optional, default true.
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 50                                      # optional, local disk is used if not specified
-    additionalSecurityGroups:                             # optional, additional security groups
+    flavorName: m1.large                         # Required.
+    imageName: ubuntu-18-04-cloud-amd64          # Required.
+    # Optional, local disk is used if not specified.
+    rootDiskSize: 50
+    # Optional, additional security groups.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  volumeTypeMap:                                          # required, volume type map for etcd and kubernetes certs (always use fastest disk supplied by provider).
-    nova: ceph-ssd                                        # If rootDiskSize specified than this volume type will be also used for master root volume
+  # Required, volume type map for etcd and kubernetes certs
+  # (always use fastest disk supplied by provider).
+  volumeTypeMap:
+    # If rootDiskSize specified than this volume type will
+    # be also used for master root volume.
+    nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 20                                      # optional, local disk is used if not specified
-    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network that is used as default gateway
-    mainNetwork: kube                                     # required, network will be used as default gateway
-    additionalNetworks:                                   # optional
+    flavorName: m1.small                         # Required.
+    imageName: ubuntu-18-04-cloud-amd64          # Required.
+    # Optional, local disk is used if not specified.
+    rootDiskSize: 20
+    # Optional, default false, determines if config drive
+    # is required during vm bootstrap process. It's needed
+    # if there is no dhcp in network that is used as default
+    # gateway.
+    configDrive: false
+    # Required, network will be used as default gateway.
+    mainNetwork: kube
+    additionalNetworks:                          # Optional.
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
+    # Optional, if there are networks with disabled port
+    # security their names must be specified.
+    networksWithSecurityDisabled:
     - office
-    floatingIPPools:                                      # optional, list of network pools where to order floating ips
+    # Optional, list of network pools where to order floating IPs.
+    floatingIPPools:
     - public
     - shared
-    additionalSecurityGroups:                             # optional, additional security groups
+    # Optional, additional security groups.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
@@ -156,38 +190,56 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Simple
 simple:
-  externalNetworkName: ext-net                            # required
-  externalNetworkDHCP: false                              # optional, default true
-  podNetworkMode: VXLAN                                   # optional, by default VXLAN, may also be DirectRouting or DirectRoutingWithPortSecurityEnabled
+  externalNetworkName: ext-net                  # Required.
+  externalNetworkDHCP: false                    # Optional, default true.
+  # Optional, by default VXLAN, may also be DirectRouting
+  # or DirectRoutingWithPortSecurityEnabled.
+  podNetworkMode: VXLAN
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 50                                      # optional, local disk is used if not specified
-    additionalSecurityGroups:                             # optional, additional security groups
+    flavorName: m1.large                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
+    rootDiskSize: 50
+    # Optional, additional security groups.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  volumeTypeMap:                                          # required, volume type map for etcd and kubernetes certs (always use fastest disk supplied by provider).
-    nova: ceph-ssd                                        # If rootDiskSize specified than this volume type will be also used for master root volume
+  # Required, volume type map for etcd and kubernetes certs
+  # (always use fastest disk supplied by provider).
+  volumeTypeMap:
+    # If rootDiskSize specified than this volume type will
+    # be also used for master root volume.
+    nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 20                                      # optional, local disk is used if not specified
-    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network that is used as default gateway
-    mainNetwork: kube                                     # required, network will be used as default gateway
-    additionalNetworks:                                   # optional
+    flavorName: m1.small                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
+    rootDiskSize: 20
+    # Optional, default false, determines if config drive
+    # is required during vm bootstrap process. It's needed
+    # if there is no dhcp in network that is used as default
+    # gateway.
+    configDrive: false
+    # Required, network will be used as default gateway.
+    mainNetwork: kube
+    additionalNetworks:                         # Optional.
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
+    # Optional, if there are networks with disabled port
+    # security their names must be specified.
+    networksWithSecurityDisabled:
     - office
-    floatingIPPools:                                      # optional, list of network pools where to order floating ips
+    # Optional, list of network pools where to order floating IPs.
+    floatingIPPools:
     - public
     - shared
-    additionalSecurityGroups:                             # optional, additional security groups
+    # Optional, additional security groups.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
@@ -213,39 +265,61 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: SimpleWithInternalNetwork
 simpleWithInternalNetwork:
-  internalSubnetName: pivot-standard                      # required, all cluster nodes have to be in the same subnet
-  podNetworkMode: DirectRoutingWithPortSecurityEnabled    # optional, by default DirectRoutingWithPortSecurityEnabled, may also be DirectRouting or VXLAN
-  externalNetworkName: ext-net                            # optional, if set will be used for load balancer default configuration and ordering master floating ip
-  masterWithExternalFloatingIP: false                     # optional, default value is true
+  # Required, all cluster nodes have to be in the same subnet.
+  internalSubnetName: pivot-standard
+  # Optional, by default DirectRoutingWithPortSecurityEnabled,
+  # may also be DirectRouting or VXLAN.
+  podNetworkMode: DirectRoutingWithPortSecurityEnabled
+  # Optional, if set will be used for load balancer default
+  # configuration and ordering master floating IP.
+  externalNetworkName: ext-net
+  # Optional, default value is true.
+  masterWithExternalFloatingIP: false
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 50                                      # optional, local disk is used if not specified
-    additionalSecurityGroups:                             # optional, additional security groups
+    flavorName: m1.large                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
+    rootDiskSize: 50
+    # Optional, additional security groups.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  volumeTypeMap:                                          # required, volume type map for etcd and kubernetes certs (always use fastest disk supplied by provider).
-    nova: ceph-ssd                                        # If rootDiskSize specified than this volume type will be also used for master root volume
+  # Required, volume type map for etcd and kubernetes certs
+  # (always use fastest disk supplied by provider).
+  volumeTypeMap:
+    # If rootDiskSize specified than this volume type will
+    # be also used for master root volume.
+    nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 20                                      # optional, local disk is used if not specified
-    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network that is used as default gateway
-    mainNetwork: kube                                     # required, network will be used as default gateway
-    additionalNetworks:                                   # optional
+    flavorName: m1.small                        # Required.
+    imageName: ubuntu-18-04-cloud-amd64         # Required.
+    # Optional, local disk is used if not specified.
+    rootDiskSize: 20
+    # Optional, default false, determines if config drive
+    # is required during vm bootstrap process. It's needed
+    # if there is no dhcp in network that is used as default
+    # gateway.
+    configDrive: false
+    # Required, network will be used as default gateway.
+    mainNetwork: kube
+    additionalNetworks:                         # Optional.
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
+    # Optional, if there are networks with disabled port
+    # security their names must be specified.
+    networksWithSecurityDisabled:
     - office
-    floatingIPPools:                                      # optional, list of network pools where to order floating ips
+    # Optional, list of network pools where to order floating IPs.
+    floatingIPPools:
     - public
     - shared
-    additionalSecurityGroups:                             # optional, additional security groups
+    # Optional, additional security groups.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
