@@ -488,6 +488,93 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		f.ValuesSetFromYaml("global", globalValues)
 	})
 
+	Context("Prometheus rules", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues)
+			setBashibleAPIServerTLSValues(f)
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
+		})
+
+		assertSpecDotGroupsArray := func(rule object_store.KubeObject, shouldEmpty bool) {
+			Expect(rule.Exists()).To(BeTrue())
+
+			groups := rule.Field("spec.groups")
+
+			Expect(groups.IsArray()).To(BeTrue())
+			if shouldEmpty {
+				Expect(groups.Array()).To(BeEmpty())
+			} else {
+				Expect(groups.Array()).ToNot(BeEmpty())
+			}
+		}
+
+		Context("For cluster auto-scaler", func() {
+			Context("cluster auto-scaler disabled", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("spec.groups should be empty array", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+
+					assertSpecDotGroupsArray(rule, true)
+				})
+			})
+
+			Context("cluster auto-scaler enabled", func() {
+				BeforeEach(func() {
+					// autoscaler enabled if have none empty cloud node group
+					f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+					setBashibleAPIServerTLSValues(f)
+					f.HelmRender()
+				})
+
+				It("spec.groups should be none empty array", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+
+					assertSpecDotGroupsArray(rule, false)
+				})
+			})
+		})
+
+		Context("For machine controller manager", func() {
+			Context("machine controller manager disabled", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("spec.groups should be empty array", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
+
+					assertSpecDotGroupsArray(rule, true)
+				})
+			})
+
+			Context("machine controller manager enabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("nodeManager.mcmEmergencyBrake", "false")
+					f.ValuesSetFromYaml("nodeManager.internal.machineControllerManagerEnabled", "true")
+
+					f.HelmRender()
+				})
+
+				It("spec.groups should be none empty array", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
+
+					assertSpecDotGroupsArray(rule, false)
+				})
+			})
+		})
+	})
+
 	Context("AWS", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
