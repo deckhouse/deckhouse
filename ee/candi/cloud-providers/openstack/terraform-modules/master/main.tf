@@ -16,7 +16,7 @@ resource "openstack_blockstorage_volume_v2" "master" {
   image_id          = data.openstack_images_image_v2.master.id
   metadata          = local.metadata_tags
   volume_type       = var.volume_type
-  availability_zone = var.zone
+  availability_zone = var.volume_zone
   lifecycle {
     ignore_changes = [
       metadata,

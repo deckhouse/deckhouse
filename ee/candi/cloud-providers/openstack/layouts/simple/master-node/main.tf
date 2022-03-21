@@ -31,13 +31,19 @@ data "openstack_networking_network_v2" "external" {
   name = local.external_network_name
 }
 
+module "volume_zone" {
+  source       = "../../../terraform-modules/volume-zone"
+  compute_zone = local.zone
+  region       = var.providerClusterConfiguration.provider.region
+}
+
 module "kubernetes_data" {
   source = "../../../terraform-modules/kubernetes-data"
   prefix = local.prefix
   node_index = var.nodeIndex
   master_id = openstack_compute_instance_v2.master.id
   volume_type = local.volume_type
-  volume_zone = local.zone
+  volume_zone = module.volume_zone.zone
   tags = local.tags
 }
 
@@ -51,7 +57,8 @@ resource "openstack_blockstorage_volume_v2" "master" {
   size = local.root_disk_size
   image_id = data.openstack_images_image_v2.master.id
   metadata = local.metadata_tags
-  availability_zone = local.volume_type
+  volume_type = local.volume_type
+  availability_zone = module.volume_zone.zone
   lifecycle {
     ignore_changes = [
       metadata,

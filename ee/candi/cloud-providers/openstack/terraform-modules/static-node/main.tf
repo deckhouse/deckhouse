@@ -11,6 +11,12 @@ module "security_groups" {
   security_group_names = local.security_group_names
 }
 
+module "volume_zone" {
+  source       = "/deckhouse/candi/cloud-providers/openstack/terraform-modules/volume-zone"
+  compute_zone = element(local.zones, var.nodeIndex)
+  region       = var.providerClusterConfiguration.provider.region
+}
+
 data "openstack_compute_availability_zones_v2" "zones" {}
 
 data "openstack_images_image_v2" "image" {
@@ -44,7 +50,7 @@ resource "openstack_blockstorage_volume_v2" "volume" {
   size              = local.root_disk_size
   image_id          = data.openstack_images_image_v2.image.id
   metadata          = local.metadata_tags
-  availability_zone = element(local.zones, var.nodeIndex)
+  availability_zone = module.volume_zone.zone
   lifecycle {
     ignore_changes = [
       metadata,
