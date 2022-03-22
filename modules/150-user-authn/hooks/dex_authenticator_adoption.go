@@ -34,7 +34,7 @@ func addDexAuthenticatorHelmLabelsToSecret(input *go_hook.HookInput) error {
 	patchAnnotations(input, "deckhouse-web", "d8-system", "deckhouse-web")
 	patchAnnotations(input, "upmeter", "d8-upmeter", "upmeter")
 	patchAnnotations(input, "status", "d8-upmeter", "upmeter")
-	patchAnnotations(input, "openvpn", "d8-upmeter", "openvpn")
+	patchAnnotations(input, "openvpn", "d8-openvpn", "openvpn")
 	patchAnnotations(input, "istio", "d8-istio", "istio")
 
 	return nil
