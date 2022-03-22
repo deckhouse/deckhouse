@@ -1,5 +1,5 @@
 diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
-index a8165300..78a837ab 100644
+index a8165300..807ef58d 100644
 --- a/server/refreshhandlers.go
 +++ b/server/refreshhandlers.go
 @@ -28,6 +28,10 @@ type refreshError struct {
@@ -138,7 +138,7 @@ index a8165300..78a837ab 100644
  		ident = newIdent
  	}
 
-+	s.logger.Debugf("connector identity is refreshed: %v", ident)
++	s.logger.Debugf("connector identity is refreshed: %s %s", ident.Username, ident.ConnectorData)
 +
  	return ident, nil
  }
@@ -163,7 +163,7 @@ index a8165300..78a837ab 100644
  			Token:     storage.NewID(),
  		}
  	}
-@@ -231,8 +251,10 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
+@@ -231,20 +251,44 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
 
  	refreshTokenUpdater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
  		if s.refreshTokenPolicy.RotationEnabled() {
@@ -176,7 +176,11 @@ index a8165300..78a837ab 100644
  					newToken.Token = old.Token
  					// Do not update last used time for offline session if token is allowed to be reused
  					lastUsed = old.LastUsed
-@@ -242,9 +264,26 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
++
++					s.logger.Debugf("obsolete token is used: %s", old.ID)
+ 					return old, nil
+ 				}
+ 				return old, errors.New("refresh token claimed twice")
  			}
 
  			old.ObsoleteToken = old.Token
@@ -191,10 +195,13 @@ index a8165300..78a837ab 100644
 +		// ConnectorData has been moved to OfflineSession
 +		old.ConnectorData = []byte{}
 +
-+		// Call  only once if there is a request which is not in reuse interval.
++		// Call  only once if there is a request which is not in the reuse interval.
 +		// This is required to avoid multiple calls to the external IdP for concurrent requests.
 +		// Dex will call the connector's Refresh method only once if request is not in reuse interval.
 +		s.logger.Debugf("calling connector refreshing: %s", old.ID)
++		s.logger.Debugf("requestToken: %s, databaseToken: %s, obsoleteToken: %s",
++			rCtx.requestToken.Token, old.Token, old.ObsoleteToken)
++
 +		ident, rerr = s.refreshWithConnector(ctx, rCtx)
 +		if rerr != nil {
 +			return old, rerr
@@ -203,7 +210,7 @@ index a8165300..78a837ab 100644
  		// Update the claims of the refresh token.
  		//
  		// UserID intentionally ignored for now.
-@@ -253,26 +292,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
+@@ -253,26 +297,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
  		old.Claims.Email = ident.Email
  		old.Claims.EmailVerified = ident.EmailVerified
  		old.Claims.Groups = ident.Groups
@@ -235,7 +242,7 @@ index a8165300..78a837ab 100644
  }
 
  // handleRefreshToken handles a refresh token request https://tools.ietf.org/html/rfc6749#section-6
-@@ -284,19 +320,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -284,19 +325,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
 
@@ -258,7 +265,7 @@ index a8165300..78a837ab 100644
  	if rerr != nil {
  		s.refreshTokenErrHelper(w, rerr)
  		return
-@@ -311,26 +347,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -311,26 +352,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		Groups:            ident.Groups,
  	}
 
@@ -288,7 +295,7 @@ index a8165300..78a837ab 100644
  	if err != nil {
  		s.logger.Errorf("failed to marshal refresh token: %v", err)
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index ca505859..cb561efa 100644
+index ca505859..b897047d 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
 @@ -40,6 +40,16 @@ const (
@@ -334,7 +341,7 @@ index ca505859..cb561efa 100644
  		return cli.put(resourceRefreshToken, r.ObjectMeta.Name, newToken)
  	})
  }
-@@ -754,3 +771,61 @@ func retryOnConflict(ctx context.Context, action func() error) error {
+@@ -754,3 +771,62 @@ func retryOnConflict(ctx context.Context, action func() error) error {
  		}
  	}
  }
@@ -358,7 +365,7 @@ index ca505859..cb561efa 100644
 +			return false, nil
 +		}
 +
-+		cli.logger.Debugf("set lock annotation error: %v", err)
++		cli.logger.Debugf("set lock annotation error: %v %v", isKubernetesAPIConflictError(err), err)
 +		return isKubernetesAPIConflictError(err), nil
 +	}
 +
@@ -368,6 +375,7 @@ index ca505859..cb561efa 100644
 +	}
 +
 +	if !currentTime.After(until) {
++		cli.logger.Debugf("waiting for the lock to be released: %v", err)
 +		return true, nil
 +	}
 +
@@ -384,7 +392,7 @@ index ca505859..cb561efa 100644
 +}
 +
 +func lockResource(cli *client, id string) error {
-+	for i := 0; i <= 120; i++ {
++	for i := 0; i <= 60; i++ {
 +		ok, err := createLockForRefreshToken(cli, id)
 +		if err != nil {
 +			return err
