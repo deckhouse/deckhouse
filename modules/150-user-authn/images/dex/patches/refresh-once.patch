@@ -1,8 +1,16 @@
 diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
-index a8165300..91ef1e0f 100644
+index a8165300..45d93e30 100644
 --- a/server/refreshhandlers.go
 +++ b/server/refreshhandlers.go
-@@ -28,6 +28,10 @@ type refreshError struct {
+@@ -2,6 +2,7 @@ package server
+
+ import (
+ 	"context"
++	"encoding/json"
+ 	"errors"
+ 	"fmt"
+ 	"net/http"
+@@ -28,6 +29,10 @@ type refreshError struct {
  	desc string
  }
 
@@ -13,7 +21,7 @@ index a8165300..91ef1e0f 100644
  func newInternalServerError() *refreshError {
  	return &refreshError{msg: errInvalidRequest, desc: "", code: http.StatusInternalServerError}
  }
-@@ -60,10 +64,23 @@ func (s *Server) extractRefreshTokenFromRequest(r *http.Request) (*internal.Refr
+@@ -60,10 +65,23 @@ func (s *Server) extractRefreshTokenFromRequest(r *http.Request) (*internal.Refr
  	return token, nil
  }
 
@@ -38,7 +46,7 @@ index a8165300..91ef1e0f 100644
  	refresh, err := s.storage.GetRefresh(token.RefreshId)
  	if err != nil {
  		s.logger.Errorf("failed to get refresh token: %v", err)
-@@ -104,7 +121,31 @@ func (s *Server) getRefreshTokenFromStorage(clientID string, token *internal.Ref
+@@ -104,7 +122,31 @@ func (s *Server) getRefreshTokenFromStorage(clientID string, token *internal.Ref
  		return nil, expiredErr
  	}
 
@@ -71,7 +79,7 @@ index a8165300..91ef1e0f 100644
  }
 
  func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken) ([]string, *refreshError) {
-@@ -139,43 +180,15 @@ func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken
+@@ -139,43 +181,15 @@ func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken
  	return requestedScopes, nil
  }
 
@@ -123,7 +131,7 @@ index a8165300..91ef1e0f 100644
  	}
 
  	// Can the connector refresh the identity? If so, attempt to refresh the data
-@@ -183,8 +196,8 @@ func (s *Server) refreshWithConnector(ctx context.Context, token *internal.Refre
+@@ -183,8 +197,8 @@ func (s *Server) refreshWithConnector(ctx context.Context, token *internal.Refre
  	//
  	// TODO(ericchiang): We may want a strict mode where connectors that don't implement
  	// this interface can't perform refreshing.
@@ -134,7 +142,7 @@ index a8165300..91ef1e0f 100644
  		if err != nil {
  			s.logger.Errorf("failed to refresh identity: %v", err)
  			return connector.Identity{}, newInternalServerError()
-@@ -192,6 +205,8 @@ func (s *Server) refreshWithConnector(ctx context.Context, token *internal.Refre
+@@ -192,6 +206,8 @@ func (s *Server) refreshWithConnector(ctx context.Context, token *internal.Refre
  		ident = newIdent
  	}
 
@@ -143,7 +151,7 @@ index a8165300..91ef1e0f 100644
  	return ident, nil
  }
 
-@@ -218,11 +233,16 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
+@@ -218,11 +234,16 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
  }
 
  // updateRefreshToken updates refresh token and offline session in the storage
@@ -163,7 +171,7 @@ index a8165300..91ef1e0f 100644
  			Token:     storage.NewID(),
  		}
  	}
-@@ -230,21 +250,51 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
+@@ -230,21 +251,51 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
  	lastUsed := s.now()
 
  	refreshTokenUpdater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
@@ -223,7 +231,7 @@ index a8165300..91ef1e0f 100644
  		// Update the claims of the refresh token.
  		//
  		// UserID intentionally ignored for now.
-@@ -253,26 +303,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
+@@ -253,26 +304,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
  		old.Claims.Email = ident.Email
  		old.Claims.EmailVerified = ident.EmailVerified
  		old.Claims.Groups = ident.Groups
@@ -255,7 +263,7 @@ index a8165300..91ef1e0f 100644
  }
 
  // handleRefreshToken handles a refresh token request https://tools.ietf.org/html/rfc6749#section-6
-@@ -284,19 +331,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -284,19 +332,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
 
@@ -278,7 +286,7 @@ index a8165300..91ef1e0f 100644
  	if rerr != nil {
  		s.refreshTokenErrHelper(w, rerr)
  		return
-@@ -311,26 +358,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -311,26 +359,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		Groups:            ident.Groups,
  	}
 
@@ -307,6 +315,15 @@ index a8165300..91ef1e0f 100644
  	rawNewToken, err := internal.Marshal(newToken)
  	if err != nil {
  		s.logger.Errorf("failed to marshal refresh token: %v", err)
+@@ -339,5 +381,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 	}
+
+ 	resp := s.toAccessTokenResponse(idToken, accessToken, rawNewToken, expiry)
++	data, _ := json.Marshal(resp)
++	s.logger.Debugf("refresh token request response: %s", data)
++
+ 	s.writeAccessToken(w, resp)
+ }
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
 index ca505859..f8fabea8 100644
 --- a/storage/kubernetes/storage.go
