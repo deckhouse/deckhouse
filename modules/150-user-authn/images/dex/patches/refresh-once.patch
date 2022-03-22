@@ -1,5 +1,5 @@
 diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
-index a8165300..45d93e30 100644
+index a8165300..ac09975f 100644
 --- a/server/refreshhandlers.go
 +++ b/server/refreshhandlers.go
 @@ -2,6 +2,7 @@ package server
@@ -79,7 +79,7 @@ index a8165300..45d93e30 100644
  }
 
  func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken) ([]string, *refreshError) {
-@@ -139,43 +181,15 @@ func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken
+@@ -139,60 +181,23 @@ func (s *Server) getRefreshScopes(r *http.Request, refresh *storage.RefreshToken
  	return requestedScopes, nil
  }
 
@@ -106,8 +106,7 @@ index a8165300..45d93e30 100644
 -		return connector.Identity{}, newInternalServerError()
 -	}
 -
-+func (s *Server) refreshWithConnector(ctx context.Context, rCtx *refreshContext) (connector.Identity, *refreshError) {
- 	ident := connector.Identity{
+-	ident := connector.Identity{
 -		UserID:            refresh.Claims.UserID,
 -		Username:          refresh.Claims.Username,
 -		PreferredUsername: refresh.Claims.PreferredUsername,
@@ -121,47 +120,41 @@ index a8165300..45d93e30 100644
 -	// it is excessive to refresh identity in upstream
 -	if s.refreshTokenPolicy.AllowedToReuse(refresh.LastUsed) && token.Token == refresh.ObsoleteToken {
 -		return ident, nil
-+		UserID:            rCtx.storageToken.Claims.UserID,
-+		Username:          rCtx.storageToken.Claims.Username,
-+		PreferredUsername: rCtx.storageToken.Claims.PreferredUsername,
-+		Email:             rCtx.storageToken.Claims.Email,
-+		EmailVerified:     rCtx.storageToken.Claims.EmailVerified,
-+		Groups:            rCtx.storageToken.Claims.Groups,
-+		ConnectorData:     rCtx.connectorData,
- 	}
-
+-	}
+-
++func (s *Server) refreshWithConnector(ctx context.Context, rCtx *refreshContext, ident *connector.Identity) *refreshError {
  	// Can the connector refresh the identity? If so, attempt to refresh the data
-@@ -183,8 +197,8 @@ func (s *Server) refreshWithConnector(ctx context.Context, token *internal.Refre
+ 	// in the connector.
  	//
  	// TODO(ericchiang): We may want a strict mode where connectors that don't implement
  	// this interface can't perform refreshing.
 -	if refreshConn, ok := conn.Connector.(connector.RefreshConnector); ok {
 -		newIdent, err := refreshConn.Refresh(ctx, parseScopes(scopes), ident)
 +	if refreshConn, ok := rCtx.connector.Connector.(connector.RefreshConnector); ok {
-+		newIdent, err := refreshConn.Refresh(ctx, parseScopes(rCtx.scopes), ident)
++		newIdent, err := refreshConn.Refresh(ctx, parseScopes(rCtx.scopes), *ident)
  		if err != nil {
  			s.logger.Errorf("failed to refresh identity: %v", err)
- 			return connector.Identity{}, newInternalServerError()
-@@ -192,6 +206,8 @@ func (s *Server) refreshWithConnector(ctx context.Context, token *internal.Refre
- 		ident = newIdent
+-			return connector.Identity{}, newInternalServerError()
++			return newInternalServerError()
+ 		}
+-		ident = newIdent
++		ident = &newIdent
  	}
 
+-	return ident, nil
 +	s.logger.Debugf("connector identity is refreshed: %s %s", ident.Username, ident.ConnectorData)
-+
- 	return ident, nil
++	return nil
  }
 
-@@ -218,11 +234,16 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
+ // updateOfflineSession updates offline session in the storage
+@@ -218,33 +223,75 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
  }
 
  // updateRefreshToken updates refresh token and offline session in the storage
 -func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *storage.RefreshToken, ident connector.Identity) (*internal.RefreshToken, *refreshError) {
 -	newToken := token
 +func (s *Server) updateRefreshToken(ctx context.Context, rCtx *refreshContext) (*internal.RefreshToken, connector.Identity, *refreshError) {
-+	var (
-+		ident connector.Identity
-+		rerr  *refreshError
-+	)
++	var rerr *refreshError
 +
 +	newToken := rCtx.requestToken
  	if s.refreshTokenPolicy.RotationEnabled() {
@@ -171,9 +164,19 @@ index a8165300..45d93e30 100644
  			Token:     storage.NewID(),
  		}
  	}
-@@ -230,21 +251,51 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
+
  	lastUsed := s.now()
 
++	ident := connector.Identity{
++		UserID:            rCtx.storageToken.Claims.UserID,
++		Username:          rCtx.storageToken.Claims.Username,
++		PreferredUsername: rCtx.storageToken.Claims.PreferredUsername,
++		Email:             rCtx.storageToken.Claims.Email,
++		EmailVerified:     rCtx.storageToken.Claims.EmailVerified,
++		Groups:            rCtx.storageToken.Claims.Groups,
++		ConnectorData:     rCtx.connectorData,
++	}
++
  	refreshTokenUpdater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
 -		if s.refreshTokenPolicy.RotationEnabled() {
 -			if old.Token != token.Token {
@@ -223,7 +226,7 @@ index a8165300..45d93e30 100644
 +		// This is required to avoid multiple calls to the external IdP for concurrent requests.
 +		// Dex will call the connector's Refresh method only once if request is not in reuse interval.
 +		s.logger.Debugf("calling connector refreshing: %s", old.ID)
-+		ident, rerr = s.refreshWithConnector(ctx, rCtx)
++		rerr = s.refreshWithConnector(ctx, rCtx, &ident)
 +		if rerr != nil {
 +			return old, rerr
 +		}
@@ -231,7 +234,7 @@ index a8165300..45d93e30 100644
  		// Update the claims of the refresh token.
  		//
  		// UserID intentionally ignored for now.
-@@ -253,26 +304,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
+@@ -253,26 +300,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
  		old.Claims.Email = ident.Email
  		old.Claims.EmailVerified = ident.EmailVerified
  		old.Claims.Groups = ident.Groups
@@ -263,7 +266,7 @@ index a8165300..45d93e30 100644
  }
 
  // handleRefreshToken handles a refresh token request https://tools.ietf.org/html/rfc6749#section-6
-@@ -284,19 +332,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -284,19 +328,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
 
@@ -286,7 +289,7 @@ index a8165300..45d93e30 100644
  	if rerr != nil {
  		s.refreshTokenErrHelper(w, rerr)
  		return
-@@ -311,26 +359,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -311,26 +355,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		Groups:            ident.Groups,
  	}
 
@@ -315,7 +318,7 @@ index a8165300..45d93e30 100644
  	rawNewToken, err := internal.Marshal(newToken)
  	if err != nil {
  		s.logger.Errorf("failed to marshal refresh token: %v", err)
-@@ -339,5 +381,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -339,5 +377,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  	}
 
  	resp := s.toAccessTokenResponse(idToken, accessToken, rawNewToken, expiry)
