@@ -1,0 +1,13 @@
+ci:
+  fixes:
+    - summary: Fix quoting backticks in changelog files
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1116
+deckhouse:
+  fixes:
+    - summary: Warn on failed changelog build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1115
+user-authn:
+  fixes:
+    - summary: Fix namespace for DexAuthenticator openvpn adoption
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1112
+
