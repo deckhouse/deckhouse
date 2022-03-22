@@ -290,7 +290,10 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 		var changelog map[string]interface{}
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
-			return meta, err
+			// if changelog build failed - warn about it but don't fail the release
+			dcr.logger.Warnf("Unmarshal CHANGELOG yaml failed: %s", err)
+			meta.Changelog = make(map[string]interface{})
+			return meta, nil
 		}
 		meta.Changelog = changelog
 	}
