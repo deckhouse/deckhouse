@@ -61,12 +61,16 @@ steps:
     env:
       TESTS_IMAGE_NAME: ${{needs.{!{$build_job}!}.outputs.tests_image_name}}
     run: |
-      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:upper:]' '[:lower:]'
       if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
         echo "TESTS_IMAGE_NAME is empty"
         exit 1
       fi
+
+      # Base64 decode image name.
+      TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d)
+
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:upper:]' '[:lower:]'
       echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
       docker pull ${TESTS_IMAGE_NAME}
       echo "⚓️ 🏎 [$(date -u)] Run tests..."

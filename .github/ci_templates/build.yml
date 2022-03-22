@@ -161,7 +161,8 @@ steps:
 {!{- end }!}
 
       # Save 'tests' image name to pass it as output for 'tests' jobs.
-      TESTS_IMAGE="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+      # Encode as base64 to avoid github secrets filter: "Skip output since it may contain secret".
+      TESTS_IMAGE="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json | base64)"
       echo "::set-output name=tests_image_name::${TESTS_IMAGE}"
 
   - name: Cleanup
