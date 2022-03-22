@@ -1,18 +1,27 @@
 type: object # TODO
 properties:
   debugLogging:
-    description: Включает debug логирование для компонентов Cilium.
+    description: Включает отладочный уровень логирования для компонентов Cilium.
   cleanState:
-    description: Очистить сохраненный статус. Отключите это опцию как только Cilium запуститься с данной опцией.
+    description: |
+      Включает очистку сохраненного статуса.
+
+      Отключите, как только все компоненты Cilium запустятся со сброшенным статусом.
   createNodeRoutes:
-    description: Create routes to Pods on other Nodes. All Nodes must be located in the same L2 domain.
+    description: |
+      Включает создание маршрутов к Pod'ам на других узлах.
+
+      Все узлы должны находиться в одной сети L2.
   svcSourceRangeCheck:
     description: |
-      Check source IP and validate it against Service's "loadBalancerSourceRanges".
-      Do not enable behind a load balancer that performs any form of SNAT.
+      Включает проверку source IP и его соответствие loadBalancerSourceRanges Service'а.
+
+      Не включайте, если перед сервисами есть балансировщик или какие-либо виды SNAT.
   policyAuditMode:
     description: |
-      Do not enforce any Network Policy. Only log allowed/disallowed connections.
+      Включает логирование соединений.
+
+      Не влияет на применение сетевых политик.
   bpfLBMode:
     description: |
-      Select eBPF LoadBalancer mode.
+      Режим работы балансировщика eBPF.

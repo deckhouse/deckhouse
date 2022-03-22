@@ -1,7 +1,7 @@
 type: object
 properties:
   debugLogging:
-    description: Включает debug для компонентов hubble.
+    description: Включает отладочный уровень логирования для компонентов hubble.
   auth:
     description: |
       Опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу документации.
@@ -25,9 +25,11 @@ properties:
           Используется, если не включен параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
-          Массив групп, пользователям которых разрешен доступ к просмотру документации.
+          Список групп, пользователям которых разрешен доступ к просмотру документации.
 
           Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
+      whitelistSourceRanges:
+        description: Список адресов (CIDR) которым разрешен доступ к Hubble.
   https:
     description: |
       Тип используемого сертификата.
