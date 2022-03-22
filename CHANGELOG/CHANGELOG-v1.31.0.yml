@@ -12,6 +12,10 @@ cert-manager:
   fixes:
     - summary: Update certificate requirements documentation.
       pull_request: https://github.com/deckhouse/deckhouse/pull/726
+chrony:
+  fixes:
+    - summary: Fix kilobyte selector for memory requests (k instead of K)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1088
 ci:
   features:
     - summary: Added 'edition/ce' and 'edition/ee' labels to set edition for build and tests.
@@ -181,6 +185,8 @@ deckhouse-controller:
     - summary: Deploy DexAuthenticators for modules from Helm.
       pull_request: https://github.com/deckhouse/deckhouse/pull/762
   fixes:
+    - summary: Fix empty snapshots in beforeHelm hooks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1109
     - summary: Update addon-operator and shell-operator.
       pull_request: https://github.com/deckhouse/deckhouse/pull/977
 deckhouse-web:
@@ -339,6 +345,8 @@ log-shipper:
     - summary: Fire an event if a config file was created/updated.
       pull_request: https://github.com/deckhouse/deckhouse/pull/956
   fixes:
+    - summary: Fix kilobyte selector for memory requests (k instead of K)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1088
     - summary: Minor documentation updates
       pull_request: https://github.com/deckhouse/deckhouse/pull/1056
     - summary: Fire the alert only if there are more pods absent than allowed by the DaemonSet status.
@@ -351,6 +359,9 @@ monitoring-kubernetes:
   features:
     - summary: Enable  collector in the .
       pull_request: https://github.com/deckhouse/deckhouse/pull/768
+  fixes:
+    - summary: Fix kilobyte selector for memory requests (k instead of K)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1088
 monitoring-kubernetes-control-plane:
   fixes:
     - summary: Proper kubectl command in alert description.
@@ -386,6 +397,8 @@ prometheus:
     - summary: Authenticate using Prometheus service account bearer token.
       pull_request: https://github.com/deckhouse/deckhouse/pull/718
   fixes:
+    - summary: Fix kilobyte selector for memory requests (k instead of K)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1088
     - summary: Exposing API doc fixes.
       pull_request: https://github.com/deckhouse/deckhouse/pull/870
 prometheus-metrics-adapter:
