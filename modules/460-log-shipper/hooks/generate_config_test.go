@@ -19,13 +19,36 @@ package hooks
 import (
 	"encoding/base64"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/assert"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
+
+func assertConfig(secret object_store.KubeObject, testdataName string) {
+	config := secret.Field(`data`).Get("vector\\.json").String()
+	d, _ := base64.StdEncoding.DecodeString(config)
+
+	// In case of error we need to print the generated config to be able to copy it to the golden file.
+	By("Result JSON:\n" + string(d))
+
+	filename := filepath.Join("testdata", testdataName)
+	goldenFileData, err := ioutil.ReadFile(filename)
+	Expect(err).To(BeNil())
+
+	// Automatically save generated configs to golden files.
+	// Use it only if you are aware of changes that caused a diff between generated configs and golden files.
+	if os.Getenv("D8_LOG_SHIPPER_SAVE_TESTDATA") == "yes" {
+		err := os.WriteFile(filename, d, 0644)
+		Expect(err).To(BeNil())
+	}
+
+	Expect(d).To(MatchJSON(goldenFileData))
+}
 
 var _ = Describe("Log shipper :: generate config from crd ::", func() {
 	f := HookExecutionConfigInit(`{"logShipper": {"internal": {"activated": false}}}`, ``)
@@ -35,7 +58,7 @@ var _ = Describe("Log shipper :: generate config from crd ::", func() {
 
 	Context("Simple pair", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+			f.BindingContexts.Set(f.KubeStateSet(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -101,7 +124,7 @@ spec:
     foo: bar
     app: "{{ ap-p[0].a }}"
 ---
-`, 1))
+`))
 			f.RunHook()
 		})
 
@@ -109,13 +132,11 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
+
 			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
 			Expect(secret).To(Not(BeEmpty()))
-			config := secret.Field(`data`).Get("vector\\.json").String()
-			d, _ := base64.StdEncoding.DecodeString(config)
-			goldenFileData, err := ioutil.ReadFile("testdata/simple-pair.json")
-			assert.NoError(GinkgoT(), err)
-			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
+
+			assertConfig(secret, "simple-pair.json")
 		})
 		Context("With deleting object", func() {
 			BeforeEach(func() {
@@ -132,7 +153,7 @@ spec:
 
 	Context("One source with multiple dests", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+			f.BindingContexts.Set(f.KubeStateSet(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -224,7 +245,7 @@ spec:
   extraLabels:
     foo: bar
 ---
-`, 1))
+`))
 			f.RunHook()
 		})
 
@@ -234,12 +255,10 @@ spec:
 			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
 			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
 			Expect(secret).To(Not(BeEmpty()))
-			config := secret.Field(`data`).Get("vector\\.json").String()
-			d, _ := base64.StdEncoding.DecodeString(config)
-			goldenFileData, err := ioutil.ReadFile("testdata/multiple-dests.json")
-			assert.NoError(GinkgoT(), err)
-			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
+
+			assertConfig(secret, "multiple-dests.json")
 		})
+
 		Context("With deleting object", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(""))
@@ -255,7 +274,7 @@ spec:
 
 	Context("Multinamespace source with one destination", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+			f.BindingContexts.Set(f.KubeStateSet(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -295,7 +314,7 @@ spec:
   extraLabels:
     foo: bar
 ---
-`, 1))
+`))
 			f.RunHook()
 		})
 
@@ -305,11 +324,8 @@ spec:
 			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
 			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
 			Expect(secret).To(Not(BeEmpty()))
-			config := secret.Field(`data`).Get("vector\\.json").String()
-			d, _ := base64.StdEncoding.DecodeString(config)
-			goldenFileData, err := ioutil.ReadFile("testdata/one-dest.json")
-			assert.NoError(GinkgoT(), err)
-			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
+
+			assertConfig(secret, "one-dest.json")
 		})
 		Context("With deleting object", func() {
 			BeforeEach(func() {
@@ -326,7 +342,7 @@ spec:
 
 	Context("Namespaced source", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PodLoggingConfig
@@ -385,7 +401,7 @@ spec:
   extraLabels:
     foo: bar
 ---
-`, 1))
+`))
 			f.RunHook()
 		})
 
@@ -395,11 +411,8 @@ spec:
 			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
 			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
 			Expect(secret).To(Not(BeEmpty()))
-			config := secret.Field(`data`).Get("vector\\.json").String()
-			d, _ := base64.StdEncoding.DecodeString(config)
-			goldenFileData, err := ioutil.ReadFile("testdata/namespaced-source.json")
-			assert.NoError(GinkgoT(), err)
-			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
+
+			assertConfig(secret, "namespaced-source.json")
 		})
 		Context("With deleting object", func() {
 			BeforeEach(func() {
@@ -416,7 +429,7 @@ spec:
 
 	Context("Namespaced with multiline", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PodLoggingConfig
@@ -456,7 +469,7 @@ spec:
     foo: bar
     app: "{{ ap-p[0].a }}"
 ---
-`, 1))
+`))
 			f.RunHook()
 		})
 
@@ -466,11 +479,8 @@ spec:
 			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
 			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
 			Expect(secret).To(Not(BeEmpty()))
-			config := secret.Field(`data`).Get("vector\\.json").String()
-			d, _ := base64.StdEncoding.DecodeString(config)
-			goldenFileData, err := ioutil.ReadFile("testdata/multiline.json")
-			assert.NoError(GinkgoT(), err)
-			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
+
+			assertConfig(secret, "multiline.json")
 		})
 		Context("With deleting object", func() {
 			BeforeEach(func() {
@@ -487,7 +497,7 @@ spec:
 
 	Context("Simple pair with datastream", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+			f.BindingContexts.Set(f.KubeStateSet(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -554,7 +564,7 @@ spec:
     foo: bar
     app: "{{ ap-p[0].a }}"
 ---
-`, 1))
+`))
 			f.RunHook()
 		})
 
@@ -564,11 +574,8 @@ spec:
 			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
 			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
 			Expect(secret).To(Not(BeEmpty()))
-			config := secret.Field(`data`).Get("vector\\.json").String()
-			d, _ := base64.StdEncoding.DecodeString(config)
-			goldenFileData, err := ioutil.ReadFile("testdata/pair-datastream.json")
-			assert.NoError(GinkgoT(), err)
-			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
+
+			assertConfig(secret, "pair-datastream.json")
 		})
 		Context("With deleting object", func() {
 			BeforeEach(func() {
@@ -585,7 +592,7 @@ spec:
 
 	Context("Simple pair for ES 5.X", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+			f.BindingContexts.Set(f.KubeStateSet(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -652,7 +659,7 @@ spec:
     foo: bar
     app: "{{ ap-p[0].a }}"
 ---
-`, 1))
+`))
 			f.RunHook()
 		})
 
@@ -662,11 +669,8 @@ spec:
 			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
 			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
 			Expect(secret).To(Not(BeEmpty()))
-			config := secret.Field(`data`).Get("vector\\.json").String()
-			d, _ := base64.StdEncoding.DecodeString(config)
-			goldenFileData, err := ioutil.ReadFile("testdata/es-5x.json")
-			assert.NoError(GinkgoT(), err)
-			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
+
+			assertConfig(secret, "es-5x.json")
 		})
 		Context("With deleting object", func() {
 			BeforeEach(func() {

@@ -72,7 +72,7 @@
       "inputs": [
         "d8_tf_tests-whispers_whispers-logs_4"
       ],
-      "source": " if exists(.parsed_data) {\n   del(.parsed_data)\n }\n",
+      "source": "if exists(.parsed_data) { del(.parsed_data) }",
       "type": "remap"
     }
   },

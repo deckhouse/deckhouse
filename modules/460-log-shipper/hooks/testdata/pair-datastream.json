@@ -46,7 +46,7 @@
       "inputs": [
         "d8_tf_test-source_10"
       ],
-      "source": " if exists(.parsed_data) {\n   del(.parsed_data)\n }\n",
+      "source": "if exists(.parsed_data) { del(.parsed_data) }",
       "type": "remap"
     },
     "d8_tf_test-source_2": {
