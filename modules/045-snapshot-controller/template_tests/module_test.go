@@ -33,6 +33,7 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd", "linstor"]
+  highAvailability: true
   modules:
     placement: {}
   discovery:
@@ -44,6 +45,8 @@ const (
     registry: registry.deckhouse.io
     registryDockercfg: Y2ZnCg==
     tags:
+      common:
+        kubeRbacProxy: a4506c2aa962611cf1858c774129d2a4f233502ecc376929aa97b9f5-1639403210069
       snapshotController:
         snapshotController: c5ea7eea9e0dc2984e8f0f7164961bc3a7b35e9004f5c9163f8673d9-1647642694163
         snapshotValidationWebhook: 97f79f3229931b2503a6d136ca020f5dec1e5cfed7b144f676b878de-1647642710881
