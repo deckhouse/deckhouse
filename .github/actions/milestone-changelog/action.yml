@@ -47,7 +47,7 @@ runs:
       run: |
         mkdir -p ./CHANGELOG
         filename='./CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}.yml'
-        cat > "$filename" <<EOF
+        cat > "$filename" <<"EOF"
         ${{ steps.changelog.outputs.release_yaml }}
         EOF
 
@@ -57,7 +57,7 @@ runs:
       shell: bash
       run: |
         filename='./CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md'
-        cat > "$filename" <<EOF
+        cat > "$filename" <<"EOF"
         ${{ steps.changelog.outputs.branch_markdown }}
         EOF
 
