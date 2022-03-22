@@ -59,7 +59,7 @@ ci:
     - summary: Splitted workflows for PR edits and Milestone assignments
       pull_request: https://github.com/deckhouse/deckhouse/pull/1014
       impact: Reduced the number of changelog re-generation
-    - summary: Tests running — migration from  to .
+    - summary: Tests running — migration from `werf run` to `docker run`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/981
     - summary: shorten cluster prefix for e2e
       pull_request: https://github.com/deckhouse/deckhouse/pull/973
@@ -117,7 +117,7 @@ cloud-provider-yandex:
       pull_request: https://github.com/deckhouse/deckhouse/pull/831
 common:
   fixes:
-    - summary: The  template requires NAMESPACE environment variable.
+    - summary: The `csi-controller` template requires NAMESPACE environment variable.
       pull_request: https://github.com/deckhouse/deckhouse/pull/864
 control-plane-manager:
   features:
@@ -128,19 +128,19 @@ control-plane-manager:
     - summary: Added option to change audit log files location.
       pull_request: https://github.com/deckhouse/deckhouse/pull/949
     - summary: >-
-        Set Kubernetes version to  for clusters where current version is . This
+        Set Kubernetes version to `Automatic` for clusters where current version is `1.19`. This
         change applies only in FE/EE release.
       pull_request: https://github.com/deckhouse/deckhouse/pull/807
     - summary: Define default config that spreads Pods between zones with finer granularity than before.
       pull_request: https://github.com/deckhouse/deckhouse/pull/784
     - summary: >-
         Allow changing a list of active admission plugins via
-         configuration.
+        `controlPlaneManager.apiserver.admissionPlugins` configuration.
 
         ExtendedResourceToleration and EventRateLimit are always enabled.
       pull_request: https://github.com/deckhouse/deckhouse/pull/783
     - summary: |-
-        Enabled  on Kubernetes <1.21.
+        Enabled `TTLAfterFinished` on Kubernetes <1.21.
         Allows to clean up old jobs automatically. 
         https://kubernetes.io/docs/concepts/workloads/controllers/ttlafterfinished/
       pull_request: https://github.com/deckhouse/deckhouse/pull/781
@@ -150,7 +150,7 @@ control-plane-manager:
       pull_request: https://github.com/deckhouse/deckhouse/pull/773
     - summary: >-
         Allows configuring Kubernetes API LoadBalancer external port via
-         config value.
+        `controlPlaneManager.apiserver.loadBalancer.port` config value.
       pull_request: https://github.com/deckhouse/deckhouse/pull/765
 dashboard:
   features:
@@ -162,19 +162,19 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/946
     - summary: Adding alert about the beginning of the Deckhouse update
       pull_request: https://github.com/deckhouse/deckhouse/pull/845
-    - summary: Add node affinity in a  deployment for evicting Pod from converging node.
+    - summary: Add node affinity in a `deckhouse` deployment for evicting Pod from converging node.
       pull_request: https://github.com/deckhouse/deckhouse/pull/353
       impact: >-
         Nodes labeled 'dhctl.deckhouse.io/node-for-converge' will be excluded from scheduling
-         Pod.
+        `deckhouse` Pod.
   fixes:
     - summary: Add docs about Deckhouse release process
       pull_request: https://github.com/deckhouse/deckhouse/pull/980
     - summary: >-
-         and  hooks now schedule without waiting first
+        Update Deckhouse and check Deckhouse release hooks now schedule without waiting first
         converge.
       pull_request: https://github.com/deckhouse/deckhouse/pull/977
-    - summary: Remove additional print column .
+    - summary: Remove additional print column applyAfter.
       pull_request: https://github.com/deckhouse/deckhouse/pull/805
 deckhouse-controller:
   features:
@@ -195,8 +195,8 @@ deckhouse-web:
       pull_request: https://github.com/deckhouse/deckhouse/pull/762
   fixes:
     - summary: >-
-        OpenAPI fix and  hook fix — do nothing if the  isn't
-        , but there is  configured.
+        OpenAPI fix and copy_custom_certificate hook fix — do nothing if the https.mode isn't
+        CustomCertificate, but there is <module>.https.customCertificate.secretName configured.
       pull_request: https://github.com/deckhouse/deckhouse/pull/755
 dhctl:
   features:
@@ -213,7 +213,7 @@ dhctl:
     - summary: Control plane readiness check before control plane node converging.
       pull_request: https://github.com/deckhouse/deckhouse/pull/353
   fixes:
-    - summary: Fix potential panic for bashible logs in  command.
+    - summary: Fix potential panic for bashible logs in `dhctl bootstrap` command.
       pull_request: https://github.com/deckhouse/deckhouse/pull/724
 docs:
   features:
@@ -334,7 +334,7 @@ kube-dns:
     - summary: Add ability to tune cache TTL for stub zones.
       pull_request: https://github.com/deckhouse/deckhouse/pull/815
   fixes:
-    - summary: FAQ clarifications about changing , ServiceAccount tokens and Istio.
+    - summary: FAQ clarifications about changing `clusterDomain`, ServiceAccount tokens and Istio.
       pull_request: https://github.com/deckhouse/deckhouse/pull/686
 linstor:
   features:
@@ -357,7 +357,7 @@ monitoring-applications:
       pull_request: https://github.com/deckhouse/deckhouse/pull/840
 monitoring-kubernetes:
   features:
-    - summary: Enable  collector in the .
+    - summary: Enable `systemd` collector in the `node-exporter`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/768
   fixes:
     - summary: Fix kilobyte selector for memory requests (k instead of K)
@@ -372,14 +372,14 @@ node-manager:
       pull_request: https://github.com/deckhouse/deckhouse/pull/920
     - summary: Add a file with context-building error on failure.
       pull_request: https://github.com/deckhouse/deckhouse/pull/850
-    - summary: Upgrade  to v0.19.0.
+    - summary: Upgrade `cluster-autoscaler` to v0.19.0.
       pull_request: https://github.com/deckhouse/deckhouse/pull/793
       impact: >-
-        All Daemonsets in  namespaces are excluded from eviction on a down-scale and kept
+        All Daemonsets in `d8-*` namespaces are excluded from eviction on a down-scale and kept
         ready until node removal.
     - summary: >-
-        Allows changing kubelet log rotation via new NodeGroup parameters:  and
-        .
+        Allows changing kubelet log rotation via new NodeGroup parameters: `containerLogMaxSize` and
+        `containerLogMaxFiles`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/766
   fixes:
     - summary: Fix incorrect prometheus rules fo k8s 1.19
@@ -436,7 +436,7 @@ user-authz:
 vertical-pod-autoscaler:
   fixes:
     - summary: >-
-        If the new calculated  values for Pods are less than 10% of old values, the
+        If the new calculated `max_allowed` values for Pods are less than 10% of old values, the
         values are not changed. Hook starts only when Deckhouse Pod becomes ready.
       pull_request: https://github.com/deckhouse/deckhouse/pull/627
 
