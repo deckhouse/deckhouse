@@ -64,6 +64,7 @@
  - **[prometheus]** Exposing API doc fixes. [#870](https://github.com/deckhouse/deckhouse/pull/870)
  - **[upmeter]** Make dashboards immutable (that weren't already). [#840](https://github.com/deckhouse/deckhouse/pull/840)
  - **[upmeter]** Rework scheduler with respect of cluster-autoscaler taints. [#793](https://github.com/deckhouse/deckhouse/pull/793)
+ - **[user-authn]** Fix namespace for DexAuthenticator openvpn adoption [#1112](https://github.com/deckhouse/deckhouse/pull/1112)
  - **[user-authn]** Kubeconfig: hide the "connect to api.%s" button if publish API is not enabled. [#764](https://github.com/deckhouse/deckhouse/pull/764)
  - **[vertical-pod-autoscaler]** If the new calculated `max_allowed` values for Pods are less than 10% of old values, the values are not changed. Hook starts only when Deckhouse Pod becomes ready. [#627](https://github.com/deckhouse/deckhouse/pull/627)
 
