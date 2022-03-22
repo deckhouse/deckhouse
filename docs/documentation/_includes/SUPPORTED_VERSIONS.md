@@ -11,19 +11,19 @@ The following Linux Distributions are currently supported for nodes:
 
 {%- for osItem in osVersions %}
 {%- assign osKey = osItem[0] %}
-{%- assign osName = site.data.supported_versions.osDistributions[osKey] | default: osKey  %}
-- {{ osName }}:
+{%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
 {%- for osData in osItem[1] %}
-  - {{ osData[0] }}
+{%- assign osVersion = osData[0]  %}
+  - {{ osName }} {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}
 {%- endfor %}
 {%- endfor %}
 
 {% if page.lang == 'ru' %}
 ## Kubernetes
-В настоящий момент поддерживаются следующие версии Kubernetes.
+В настоящий момент поддерживаются следующие версии Kubernetes:
 {%- else %}
 ## Kubernetes
-The following Kubernetes versions are currently supported.
+The following Kubernetes versions are currently supported:
 {%- endif %}
 <table>
 <thead>
