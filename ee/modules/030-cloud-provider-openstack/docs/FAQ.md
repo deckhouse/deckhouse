@@ -189,3 +189,47 @@ username = {{ nova_service_user_name }}
 ```
 
 [Source...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
+
+## How to use rootDiskSize and when it is preferred
+
+Check the OpenStack flavor that you will use.
+
+```
+openstack flavor show m1.medium-50g -c disk
++-------+-------+
+| Field | Value |
++-------+-------+
+| disk  | 50    |
++-------+-------+
+```
+
+If disk value is zero, then you always have to set rootDiskSize.
+
+If disk value is not zero, then you have several options.
+Different OpenStack providers have different volume types that are used for root volumes.
+It can be network disks or local disks.
+You should check documentation or ask the cloud provider administrator for support.
+Local disks have some limitations, and one of them is that vm can't be migrated between hypervisors.
+But local disks are generally cheaper and faster than network disks. So we have the following recommendations:
+* For master node, it's preferred to use network disk.
+* For ephemeral node, local disk can be used.
+* Avoid using flavors with disk value set together with `roodDiskSize` parameter. Cloud providers can charge you for unused volume ordered, depending on flavor.
+
+After all recommendations are checked, follow this instruction:
+If the `rootDiskSize` is not set, an ephemeral disk with the size specified in flavor and the type specified by the cloud provider is used for the instance.
+
+If the `rootDiskSize` is set, the instance will use the Cinder volume provisioned by OpenStack as a root disk (of the default OpenStack volume type and the specified size).
+But there are important notes further:
+* Volume type from `volumeTypeMap` in OpenStackClusterConfigurationFor is always used for master nodes.
+* It is possible to override default volume type of *cloud provider*. Below is instruction how to do it.
+
+> If there are several types of disks in *cloud provider*, you can set a default disk type for the image in order to select a specific VM's disk type; to do this, specify the name of a disk type in the image metadata.
+>
+> Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-do-i-create-an-image-in-openstack) section describes how to do it
+>
+> Examples of commands:
+> ```shell
+> openstack volume type list
+> openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
+> ```
+
