@@ -4,39 +4,35 @@ title: "The snapshot-controller moule: configuration examples"
 
 ### Using snapshots
 
-To use snapshots, you first need to create a `VolumeSnapshotClass`:
+To use snapshots, you need to specify a `VolumeSnapshotClass`.
+To get a list of available snapshot classes in your cluster, run:
 
-```yaml
-apiVersion: snapshot.storage.k8s.io/v1beta1
-kind: VolumeSnapshotClass
-metadata:
-  name: my-first-linstor-snapshot-class
-driver: linstor.csi.linbit.com
-deletionPolicy: Delete
+```
+kubectl get volumesnapshotclasses.snapshot.storage.k8s.io
 ```
 
-You can then use this snapshot class to create a snapshot from an existing PVC:
+You can then use snapshot class to create a snapshot from an existing PVC:
 
 ```yaml
 apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshot
 metadata:
-  name: my-first-linstor-snapshot
+  name: my-first-snapshot
 spec:
-  volumeSnapshotClassName: my-first-linstor-snapshot-class
+  volumeSnapshotClassName: linstor
   source:
-    persistentVolumeClaimName: my-first-linstor-volume
+    persistentVolumeClaimName: my-first-volume
 ```
 
 After a short wait, the snapshot will be ready:
 
 ```yaml
-$ kubectl describe volumesnapshots.snapshot.storage.k8s.io my-first-linstor-snapshot
+$ kubectl describe volumesnapshots.snapshot.storage.k8s.io my-first-snapshot
 ...
 Spec:
   Source:
-    Persistent Volume Claim Name:  my-first-linstor-snapshot
-  Volume Snapshot Class Name:      my-first-linstor-snapshot-class
+    Persistent Volume Claim Name:  my-first-snapshot
+  Volume Snapshot Class Name:      my-first-snapshot-class
 Status:
   Bound Volume Snapshot Content Name:  snapcontent-b6072ab7-6ddf-482b-a4e3-693088136d2c
   Creation Time:                       2020-06-04T13:02:28Z
@@ -50,11 +46,11 @@ You can restore the content of this snaphost by creating a new PVC with the snap
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: my-first-linstor-volume-from-snapshot
+  name: my-first-volume-from-snapshot
 spec:
-  storageClassName: linstor-basic-storage-class
+  storageClassName: linstor-data-r2
   dataSource:
-    name: my-first-linstor-snapshot
+    name: my-first-snapshot
     kind: VolumeSnapshot
     apiGroup: snapshot.storage.k8s.io
   accessModes:
@@ -78,9 +74,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: my-cloned-pvc
 spec:
-  storageClassName: linstor-basic-storage-class
+  storageClassName: linstor-data-r2
   dataSource:
-    name: my-origin-linstor-pvc
+    name: my-origin-pvc
     kind: PersistentVolumeClaim
   accessModes:
     - ReadWriteOnce

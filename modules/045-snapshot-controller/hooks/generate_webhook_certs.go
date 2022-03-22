@@ -49,13 +49,15 @@ func applyCertsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, fmt.Errorf("cannot convert selfsigned certificate secret to secret: %v", err)
 	}
 
-	return CertSnapshot{
+	cs := &CertSnapshot{
 		Name: secret.Name,
 		Cert: certificate.Certificate{
 			CA:   string(secret.Data["ca.crt"]),
 			Key:  string(secret.Data["tls.key"]),
 			Cert: string(secret.Data["tls.crt"]),
-		}}, nil
+		}}
+
+	return cs, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -81,26 +83,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func generateSelfSignedCertificates(input *go_hook.HookInput) error {
 	var caCert certificate.Authority
 	var cert certificate.Certificate
-	var s CertSnapshot
 
 	snaps := input.Snapshots["certs"]
 	for _, snap := range snaps {
-		s = snap.(CertSnapshot)
+		s := snap.(*CertSnapshot)
 		cert = s.Cert
 	}
 
-	if len(cert.CA) == 0 {
+	if cert.CA == "" || cert.Cert == "" || cert.Key == "" {
 		var err error
 		caCert, err = certificate.GenerateCA(input.LogEntry, "snapshot-validation-webhook-ca")
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}
 
-		// serviceFQDN := fmt.Sprintf(
-		// 	"%s.%s",
-		// 	serviceHost,
-		// 	input.Values.Get("global.discovery.clusterDomain").String(),
-		// )
 		cert, err = certificate.GenerateSelfSignedCert(input.LogEntry,
 			"snapshot-validation-webhook",
 			caCert,
@@ -108,7 +104,6 @@ func generateSelfSignedCertificates(input *go_hook.HookInput) error {
 			certificate.WithSANs(
 				serviceName,
 				serviceHost,
-				// serviceFQDN,
 				"localhost",
 				"::1",
 				"127.0.0.1",

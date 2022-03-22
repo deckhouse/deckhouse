@@ -25,6 +25,7 @@ function __main__() {
       cloud-provider-gcp \
       cloud-provider-openstack \
       cloud-provider-yandex \
+      cloud-provider-vsphere \
       linstor \
     ; do
     if values::array_has global.enabledModules "$module"; then
