@@ -89,6 +89,7 @@
 ## Fixes
 
 
+ - **[candi]** Automatically discover zone for volumes in OpenStack [#1104](https://github.com/deckhouse/deckhouse/pull/1104)
  - **[candi]** Fix docker-stuck-containers-cleaner unit [#1044](https://github.com/deckhouse/deckhouse/pull/1044)
  - **[candi]** Proper work with astra bundle in EE/FE. [#868](https://github.com/deckhouse/deckhouse/pull/868)
  - **[candi]** Fix centos distro version detection [#857](https://github.com/deckhouse/deckhouse/pull/857)
