@@ -17,6 +17,7 @@ properties:
         default: "unknown"
       deployDexAuthenticator:
         type: boolean
+        x-examples: [true, false]
       customCertificateData:
         type: object
         properties:
