@@ -792,7 +792,16 @@ jobs:
         env:
           TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
-          docker run --pull always -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:upper:]' '[:lower:]'
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
     # </template: tests_template>
 
   matrix_tests:
@@ -867,7 +876,16 @@ jobs:
         env:
           TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
-          docker run --pull always -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test ./testing/matrix/ -v
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:upper:]' '[:lower:]'
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test ./testing/matrix/ -v
     # </template: tests_template>
 
   dhctl_tests:
@@ -942,7 +960,16 @@ jobs:
         env:
           TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
-          docker run --pull always -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make ci
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:upper:]' '[:lower:]'
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make ci
     # </template: tests_template>
 
   golangci_lint:
@@ -1017,7 +1044,16 @@ jobs:
         env:
           TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
-          docker run --pull always -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && golangci-lint run"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:upper:]' '[:lower:]'
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && golangci-lint run"
     # </template: tests_template>
 
   openapi_test_cases:
@@ -1092,7 +1128,16 @@ jobs:
         env:
           TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
-          docker run --pull always -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:upper:]' '[:lower:]'
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
 
   web_links_test:
@@ -1319,5 +1364,14 @@ jobs:
         env:
           TESTS_IMAGE_NAME: ${{needs.build_deckhouse.outputs.tests_image_name}}
         run: |
-          docker run --pull always -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:upper:]' '[:lower:]'
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
