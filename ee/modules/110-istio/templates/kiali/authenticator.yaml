@@ -10,7 +10,9 @@ metadata:
     dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "istio") }}
+  {{ if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   sendAuthorizationHeader: true
   {{- with .Values.istio.auth.allowedUserGroups }}
