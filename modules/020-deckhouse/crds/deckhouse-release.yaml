@@ -53,7 +53,7 @@ spec:
                   type: object
                   description: Release's changelog for enabled modules.
                   additionalProperties:
-                    type: string
+                    type: object
                 changelogLink:
                   type: string
                   description: Link to site with full changelog for this release.
