@@ -1,4 +1,12 @@
 ARG BASE_UBUNTU
+ARG BASE_GOLANG_17_ALPINE
+
+FROM $BASE_GOLANG_17_ALPINE as kernel-version-parser
+
+WORKDIR /go/src/
+COPY kernel-version-parser .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-w -s -extldflags "-static"' -o kernel-version-parser main.go
+
 
 FROM $BASE_UBUNTU
 
@@ -21,4 +29,7 @@ RUN wget -O /usr/local/bin/ebpf_exporter https://github.com/cloudflare/ebpf_expo
   chmod +x /usr/local/bin/ebpf_exporter
 RUN apt-get purge -y wget
 
-ENTRYPOINT ["/usr/local/bin/ebpf_exporter"]
+COPY --from=kernel-version-parser /go/src/kernel-version-parser /usr/local/bin/
+COPY entrypoint.sh /
+
+ENTRYPOINT [ "/entrypoint.sh" ]
