@@ -9,4 +9,5 @@ data:
   "csi-migration": "false"
   "csi-auth-check": "true"
   "online-volume-extend": "true"
+  "block-volume-snapshot": "true"
 {{- end }}
