@@ -28,13 +28,13 @@ EOF
 Create cluster with kind:
 {% snippetcut selector="create-kind-cluster" %}
 ```shell
-kind create cluster --config kind.cfg
+kind create cluster --image "kindest/node:v1.22.7" --config kind.cfg
 ```
 {% endsnippetcut %}
 
 Example of creation command output:
 ```
-$ kind create cluster --config kind.cfg
+$ kind create cluster --image "kindest/node:v1.22.7" --config kind.cfg
 Creating cluster "kind" ...
  ✓ Ensuring node image (kindest/node:v1.21.1) 🖼
  ✓ Preparing nodes 📦  
