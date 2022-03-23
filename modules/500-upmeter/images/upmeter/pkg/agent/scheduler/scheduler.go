@@ -199,7 +199,7 @@ func (e *Scheduler) export(start time.Time) error {
 }
 
 func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
-	episodes := make([]check.Episode, len(e.results))
+	episodes := make([]check.Episode, 0, len(e.results))
 
 	// Collect episodes for calculated probes.
 	for _, calc := range e.probeManager.Calculators() {
