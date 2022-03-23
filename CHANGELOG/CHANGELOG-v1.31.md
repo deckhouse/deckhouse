@@ -4,6 +4,7 @@
 
 
  - All Daemonsets in `d8-*` namespaces are excluded from eviction on a down-scale and kept ready until node removal.
+ - Fix deploy of DexAuthenticators to clusters with the OnlyInURI HTTPS mode
  - Ingress controllers of version >=0.33 will be restarted.
  - Kubernetes control-plane components and kubelet will restart for 1.20, 1.21 and 1.22 minor versions.
 
@@ -55,6 +56,7 @@
  - **[deckhouse]** Remove additional print column applyAfter. [#805](https://github.com/deckhouse/deckhouse/pull/805)
  - **[deckhouse-web]** OpenAPI fix and copy_custom_certificate hook fix — do nothing if the https.mode isn't CustomCertificate, but there is <module>.https.customCertificate.secretName configured. [#755](https://github.com/deckhouse/deckhouse/pull/755)
  - **[dhctl]** Fix potential panic for bashible logs in `dhctl bootstrap` command. [#724](https://github.com/deckhouse/deckhouse/pull/724)
+ - **[extended-monitoring]** Start webserver immediately for the extended-monitoring-exporter [#1137](https://github.com/deckhouse/deckhouse/pull/1137)
  - **[ingress-nginx]** Proper validating webhook configuration for k8s 1.22+. [#637](https://github.com/deckhouse/deckhouse/pull/637)
  - **[istio]** Canary usage doc fix. [#731](https://github.com/deckhouse/deckhouse/pull/731)
  - **[kube-dns]** FAQ clarifications about changing `clusterDomain`, ServiceAccount tokens and Istio. [#686](https://github.com/deckhouse/deckhouse/pull/686)
@@ -64,6 +66,8 @@
  - **[prometheus]** Exposing API doc fixes. [#870](https://github.com/deckhouse/deckhouse/pull/870)
  - **[upmeter]** Make dashboards immutable (that weren't already). [#840](https://github.com/deckhouse/deckhouse/pull/840)
  - **[upmeter]** Rework scheduler with respect of cluster-autoscaler taints. [#793](https://github.com/deckhouse/deckhouse/pull/793)
+ - **[user-authn]** Do not set ingress TLS certificate secret name if HTTPS mode is the OnlyInURI [#1128](https://github.com/deckhouse/deckhouse/pull/1128)
+    Fix deploy of DexAuthenticators to clusters with the OnlyInURI HTTPS mode
  - **[user-authn]** Fix namespace for DexAuthenticator openvpn adoption [#1112](https://github.com/deckhouse/deckhouse/pull/1112)
  - **[user-authn]** Kubeconfig: hide the "connect to api.%s" button if publish API is not enabled. [#764](https://github.com/deckhouse/deckhouse/pull/764)
  - **[vertical-pod-autoscaler]** If the new calculated `max_allowed` values for Pods are less than 10% of old values, the values are not changed. Hook starts only when Deckhouse Pod becomes ready. [#627](https://github.com/deckhouse/deckhouse/pull/627)
