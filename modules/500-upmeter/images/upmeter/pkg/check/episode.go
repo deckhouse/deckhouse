@@ -72,12 +72,11 @@ func (e Episode) IsCorrect(step time.Duration) bool {
 	return e.Total() <= step
 }
 
+// Combine deduces en episode from the two choosing the longest possible uptime, then the longest
+// possible downtime, then longest possible uncertainty. All the range time left will be unknown.
 func (e Episode) Combine(o Episode, slotSize time.Duration) Episode {
 	target := Episode{
-		ProbeRef: ProbeRef{
-			Group: e.ProbeRef.Group,
-			Probe: e.ProbeRef.Probe,
-		},
+		ProbeRef: e.ProbeRef,
 		TimeSlot: e.TimeSlot,
 	}
 
@@ -121,19 +120,10 @@ func (e Episode) Combine(o Episode, slotSize time.Duration) Episode {
 }
 
 func (e Episode) EqualTimers(a Episode) bool {
-	if e.Up != a.Up {
-		return false
-	}
-	if e.Down != a.Down {
-		return false
-	}
-	if e.Unknown != a.Unknown {
-		return false
-	}
-	if e.NoData != a.NoData {
-		return false
-	}
-	return true
+	return e.Up == a.Up &&
+		e.Down == a.Down &&
+		e.Unknown == a.Unknown &&
+		e.NoData == a.NoData
 }
 
 func (e Episode) String() string {
