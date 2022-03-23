@@ -12,7 +12,7 @@ webhooks:
   matchPolicy: Equivalent
   {{- end }}
   sideEffects: None
-  timeoutSeconds: 3
+  timeoutSeconds: 10
   clientConfig:
     service:
       name: annotations-converter-webhook
