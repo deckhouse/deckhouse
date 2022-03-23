@@ -182,9 +182,26 @@ func (e *Scheduler) scrape() error {
 
 // export copies scraped results and sends them to sender along as evaluates computed probes.
 func (e *Scheduler) export(start time.Time) error {
-	var episodes []check.Episode
+	episodes, err := e.convert(start)
+	if err != nil {
+		return err
+	}
 
-	// collect episodes for calculated probes
+	// clean allocated series space
+	for id := range e.results {
+		series := e.series[id]
+		series.Clean()
+	}
+
+	e.send <- episodes
+
+	return nil
+}
+
+func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
+	episodes := make([]check.Episode, len(e.results))
+
+	// Collect episodes for calculated probes.
 	for _, calc := range e.probeManager.Calculators() {
 		sss := make([]*check.StatusSeries, 0)
 		for _, id := range calc.MergeIds() {
@@ -195,17 +212,17 @@ func (e *Scheduler) export(start time.Time) error {
 
 		series, err := check.MergeStatusSeries(e.seriesSize, sss)
 		if err != nil {
-			return fmt.Errorf("cannot calculate episode stats for %q: %v", calc.ProbeRef().Id(), err)
+			return nil, fmt.Errorf("cannot calculate episode stats for %q: %v", calc.ProbeRef().Id(), err)
 		}
 
 		ep := check.NewEpisode(calc.ProbeRef(), start, e.scrapePeriod, series.Stats())
 		episodes = append(episodes, ep)
 	}
 
-	// collect episodes for real probes
+	// Collect episodes for real probes and sort series by group.
 	byGroup := make(map[string][]*check.StatusSeries)
 	for id, probeResult := range e.results {
-		// Sort series for groups. Calculated series no new data, so they are skipped.
+		// Calculated probe series contain no new data, so they are skipped.
 		group := probeResult.ProbeRef().Group
 		if _, ok := byGroup[group]; !ok {
 			byGroup[group] = make([]*check.StatusSeries, 0)
@@ -217,30 +234,20 @@ func (e *Scheduler) export(start time.Time) error {
 		episodes = append(episodes, ep)
 	}
 
-	// collect group episodes
-	for group, sss := range byGroup {
-		series, err := check.MergeStatusSeries(e.seriesSize, sss)
+	// Collect group episodes.
+	for group, probeSeriesList := range byGroup {
+		groupSeries, err := check.MergeStatusSeries(e.seriesSize, probeSeriesList)
 		if err != nil {
-			return fmt.Errorf("cannot calculate episode stats for group %q: %v", group, err)
+			return nil, fmt.Errorf("cannot calculate episode stats for group %q: %v", group, err)
 		}
 
 		groupRef := check.ProbeRef{Group: group}
-		ep := check.NewEpisode(groupRef, start, e.scrapePeriod, series.Stats())
+		ep := check.NewEpisode(groupRef, start, e.scrapePeriod, groupSeries.Stats())
 		episodes = append(episodes, ep)
 	}
 
-	// clean used data
-	for id := range e.results {
-		series := e.series[id]
-		series.Clean()
-	}
-
-	e.send <- episodes
-
-	return nil
+	return episodes, nil
 }
-
-
 
 func (e *Scheduler) Stop() {
 	close(e.stop)
