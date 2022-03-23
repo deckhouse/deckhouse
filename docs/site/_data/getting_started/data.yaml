@@ -415,7 +415,7 @@ installTypes:
         name: Default
         recommended: true
     pages_title:
-      en: "Deckhouse Platform inside a private environment"
+      en: "Deckhouse Platform in a private environment"
       ru: "Deckhouse Platform в закрытом окружении"
     type: baremetal
     name:
@@ -430,7 +430,7 @@ installTypes:
       step3:
         name:
           ru: Подготовка к установке
-          en: Preparing for installing
+          en: Preparing for installation
         template: getting_started/global/step_cluster_setup.html
       step4:
         name:

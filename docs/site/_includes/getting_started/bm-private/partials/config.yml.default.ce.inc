@@ -43,12 +43,12 @@ deckhouse:
   configOverrides:
     global:
       modules:
-        # [<en>] Template that will be used for system apps domains within the cluster
-        # [<en>] e.g., Grafana for %s.example.com will be available as grafana.example.com.
+        # [<en>] Template to use for system app domains within the cluster.
+        # [<en>] For example, in the case of %s.example.com, Grafana will be mapped to grafana.example.com.
         # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
         # [<ru>] Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
         publicDomainTemplate: "%s.example.com"
-    # [<en>] Enable cni-flannel module.
+    # [<en>] Enable the cni-flannel module.
     # [<ru>] Включить модуль cni-flannel.
     cniFlannelEnabled: true
     # [<en>] Cni-flannel module settings.
@@ -62,7 +62,7 @@ deckhouse:
   # [<en>] Address of the Docker registry where the Deckhouse images are located.
   # [<ru>] Адрес Docker registry с образами Deckhouse.
   imagesRepo: <IMAGES_REPO_URI>
-  # [<en>] A special string with your token to access Docker registry.
+  # [<en>] A special string with your token to access the Docker registry.
   # [<ru>] Строка с ключом для доступа к Docker registry.
   registryDockerCfg: <YOUR_PRIVATE_ACCESS_STRING_IS_HERE>
   # [<en>] Registry access scheme (http or https).
@@ -80,8 +80,8 @@ apiVersion: deckhouse.io/v1
 # [<en>] Type of the configuration section.
 # [<ru>] Тип секции конфигурации.
 kind: StaticClusterConfiguration
-# [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
-# [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.).
+# [<en>] List of internal cluster networks (e.g., '10.0.4.0/24')
+# [<en>] for linking Kubernetes components (kube-apiserver, kubelet etc.).
 # [<ru>] Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
 # [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
 internalNetworkCIDRs:

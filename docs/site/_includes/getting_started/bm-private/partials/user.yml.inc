@@ -27,7 +27,7 @@ spec:
   # [<en>] User e-mail.
   # [<ru>] E-mail пользователя.
   email: admin@example.com
-  # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated  now.
+  # [<en>] This is a hash of the newly generated <GENERATED_PASSWORD> password.
   # [<en>] Generate your own or use it at your own risk (for testing purposes):
   # [<en>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2
   # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного сейчас.
