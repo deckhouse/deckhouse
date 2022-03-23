@@ -8,6 +8,8 @@
 - name: RUST_BACKTRACE
   value: full
   {{- end }}
+- name: VECTOR_CONFIG
+  value: "/etc/vector/**/*.json"
 - name: VECTOR_SELF_NODE_NAME
   valueFrom:
     fieldRef:
