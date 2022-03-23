@@ -36,16 +36,9 @@ spec:
             values:
             - {{ $v | quote }}
           {{- end }}
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 1
-        podAffinityTerm:
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/instance: linstor
-              app.kubernetes.io/managed-by: piraeus-operator
-              app.kubernetes.io/name: piraeus-controller
+    {{- with (index (fromYaml (include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app.kubernetes.io/instance" "linstor" "app.kubernetes.io/managed-by" "piraeus-operator" "app.kubernetes.io/name" "piraeus-controller")))) "affinity") }}
+    {{ toYaml . | nindent 4 }}
+    {{- end }}
   dbConnectionURL: k8s
   #luksSecret: linstor-passphrase
   sslSecret: linstor-controller-ssl-cert
@@ -60,7 +53,7 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
-  replicas: 1
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   additionalEnv: []
   additionalProperties:
     Autoplacer/Weights/MaxFreeSpace: "0"

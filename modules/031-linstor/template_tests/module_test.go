@@ -33,6 +33,7 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
+  highAvailability: true
   modules:
     placement: {}
   discovery:
