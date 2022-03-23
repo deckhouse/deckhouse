@@ -52,8 +52,7 @@ spec:
                 changelog:
                   type: object
                   description: Release's changelog for enabled modules.
-                  additionalProperties:
-                    type: object
+                  x-kubernetes-preserve-unknown-fields: true
                 changelogLink:
                   type: string
                   description: Link to site with full changelog for this release.
