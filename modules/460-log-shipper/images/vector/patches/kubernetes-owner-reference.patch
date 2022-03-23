@@ -1,15 +1,15 @@
 diff --git a/src/sources/kubernetes_logs/mod.rs b/src/sources/kubernetes_logs/mod.rs
-index dc3f6a222..c309c5e18 100644
+index dc3f6a222..f2a3d9597 100644
 --- a/src/sources/kubernetes_logs/mod.rs
 +++ b/src/sources/kubernetes_logs/mod.rs
-@@ -49,6 +49,7 @@ mod transform_utils;
- mod util;
-
- use futures::{future::FutureExt, stream::StreamExt};
+@@ -15,6 +15,7 @@ use file_source::{
+ };
+ use futures_util::Stream;
+ use k8s_openapi::api::core::v1::{Namespace, Pod};
 +use k8s_openapi::api::apps::v1::ReplicaSet;
- use k8s_paths_provider::K8sPathsProvider;
- use lifecycle::Lifecycle;
- use namespace_metadata_annotator::NamespaceMetadataAnnotator;
+ use serde::{Deserialize, Serialize};
+ use vector_common::TimeZone;
+ use vector_core::ByteSizeOf;
 @@ -302,8 +303,8 @@ impl Source {
          let mut reflector = k8s::reflector::Reflector::new(
              watcher,
@@ -45,7 +45,7 @@ index dc3f6a222..c309c5e18 100644
 +        let mut rs_reflector = k8s::reflector::Reflector::new(
 +            rs_watcher,
 +            rs_state_writer,
-+            Some(field_selector.to_owned()),
++            None,
 +            Some(label_selector.to_owned()),
 +            Duration::from_secs(1),
 +        );
@@ -68,10 +68,10 @@ index dc3f6a222..c309c5e18 100644
 +            let (slot, shutdown) = lifecycle.add();
 +            let fut =
 +                util::cancel_on_signal(rs_reflector_process, shutdown).map(|result| match result {
-+                    Ok(()) => info!(message = "Deployment reflector process completed gracefully."),
++                    Ok(()) => info!(message = "ReplicaSet reflector process completed gracefully."),
 +                    Err(error) => emit!(&KubernetesLifecycleError {
 +                        error,
-+                        message: "Deployment reflector process exited with an error.",
++                        message: "ReplicaSet reflector process exited with an error.",
 +                    }),
 +                });
 +            slot.bind(Box::pin(fut));
