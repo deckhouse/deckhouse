@@ -186,25 +186,52 @@ func (e *Scheduler) export(start time.Time) error {
 
 	// collect episodes for calculated probes
 	for _, calc := range e.probeManager.Calculators() {
-		sss := []*check.StatusSeries{}
+		sss := make([]*check.StatusSeries, 0)
 		for _, id := range calc.MergeIds() {
 			if ss, ok := e.series[id]; ok {
 				sss = append(sss, ss)
 			}
 		}
+
 		series, err := check.MergeStatusSeries(e.seriesSize, sss)
 		if err != nil {
 			return fmt.Errorf("cannot calculate episode stats for %q: %v", calc.ProbeRef().Id(), err)
 		}
+
 		ep := check.NewEpisode(calc.ProbeRef(), start, e.scrapePeriod, series.Stats())
 		episodes = append(episodes, ep)
 	}
 
 	// collect episodes for real probes
+	byGroup := make(map[string][]*check.StatusSeries)
 	for id, probeResult := range e.results {
+		// Sort series for groups. Calculated series no new data, so they are skipped.
+		group := probeResult.ProbeRef().Group
+		if _, ok := byGroup[group]; !ok {
+			byGroup[group] = make([]*check.StatusSeries, 0)
+		}
 		series := e.series[id]
+		byGroup[group] = append(byGroup[group], series)
+
 		ep := check.NewEpisode(probeResult.ProbeRef(), start, e.scrapePeriod, series.Stats())
 		episodes = append(episodes, ep)
+	}
+
+	// collect group episodes
+	for group, sss := range byGroup {
+		series, err := check.MergeStatusSeries(e.seriesSize, sss)
+		if err != nil {
+			return fmt.Errorf("cannot calculate episode stats for group %q: %v", group, err)
+		}
+
+		groupRef := check.ProbeRef{Group: group}
+		ep := check.NewEpisode(groupRef, start, e.scrapePeriod, series.Stats())
+		episodes = append(episodes, ep)
+	}
+
+	// clean used data
+	for id := range e.results {
+		series := e.series[id]
 		series.Clean()
 	}
 
@@ -212,6 +239,8 @@ func (e *Scheduler) export(start time.Time) error {
 
 	return nil
 }
+
+
 
 func (e *Scheduler) Stop() {
 	close(e.stop)
