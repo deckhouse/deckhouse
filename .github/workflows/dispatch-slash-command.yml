@@ -56,7 +56,7 @@ jobs:
 
       - name: Slash Command Dispatch
         if: steps.milestone.outputs.result
-        uses: peter-evans/slash-command-dispatch@v2
+        uses: peter-evans/slash-command-dispatch@v3
         with:
           token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           commands: changelog
