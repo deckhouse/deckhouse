@@ -21,9 +21,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/flant/shell-operator/pkg/metric_storage"
+
 	"d8.io/upmeter/pkg/agent/manager"
 	"d8.io/upmeter/pkg/check"
-	"github.com/flant/shell-operator/pkg/metric_storage"
 )
 
 func TestScheduler_convert(t *testing.T) {
