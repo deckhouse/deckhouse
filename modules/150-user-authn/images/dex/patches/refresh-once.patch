@@ -1,5 +1,5 @@
 diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
-index a8165300..6c0b9883 100644
+index a8165300..ce99066f 100644
 --- a/server/refreshhandlers.go
 +++ b/server/refreshhandlers.go
 @@ -2,6 +2,7 @@ package server
@@ -147,7 +147,7 @@ index a8165300..6c0b9883 100644
  }
 
  // updateOfflineSession updates offline session in the storage
-@@ -218,33 +223,74 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
+@@ -218,33 +223,79 @@ func (s *Server) updateOfflineSession(refresh *storage.RefreshToken, ident conne
  }
 
  // updateRefreshToken updates refresh token and offline session in the storage
@@ -212,6 +212,11 @@ index a8165300..6c0b9883 100644
 +				return old, errors.New("refresh token claimed twice")
 +			}
 +
++			// Return previously generated token for all requests with an obsolete tokens
++			if old.ObsoleteToken == rCtx.requestToken.Token {
++				newToken.Token = old.Token
++			}
++
 +			// Do not update last used time for offline session if token is allowed to be reused
 +			lastUsed = old.LastUsed
 +
@@ -237,7 +242,7 @@ index a8165300..6c0b9883 100644
  		// Update the claims of the refresh token.
  		//
  		// UserID intentionally ignored for now.
-@@ -253,26 +299,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
+@@ -253,26 +304,23 @@ func (s *Server) updateRefreshToken(token *internal.RefreshToken, refresh *stora
  		old.Claims.Email = ident.Email
  		old.Claims.EmailVerified = ident.EmailVerified
  		old.Claims.Groups = ident.Groups
@@ -269,7 +274,7 @@ index a8165300..6c0b9883 100644
  }
 
  // handleRefreshToken handles a refresh token request https://tools.ietf.org/html/rfc6749#section-6
-@@ -284,19 +327,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -284,19 +332,19 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
 
@@ -292,7 +297,7 @@ index a8165300..6c0b9883 100644
  	if rerr != nil {
  		s.refreshTokenErrHelper(w, rerr)
  		return
-@@ -311,26 +354,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -311,26 +359,20 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		Groups:            ident.Groups,
  	}
 
@@ -321,7 +326,7 @@ index a8165300..6c0b9883 100644
  	rawNewToken, err := internal.Marshal(newToken)
  	if err != nil {
  		s.logger.Errorf("failed to marshal refresh token: %v", err)
-@@ -339,5 +376,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -339,5 +381,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  	}
 
  	resp := s.toAccessTokenResponse(idToken, accessToken, rawNewToken, expiry)
