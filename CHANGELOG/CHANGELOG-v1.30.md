@@ -114,6 +114,7 @@
  - **[dhctl]** Do not print error about not existing bastion host key for abort command. [#655](https://github.com/deckhouse/deckhouse/pull/655)
  - **[dhctl]** Check deckhouse pod readiness before get logs. It fixes static cluster bootstrap. [#571](https://github.com/deckhouse/deckhouse/pull/571)
  - **[dhctl]** All master nodes will have `control-plane` role in new clusters. [#562](https://github.com/deckhouse/deckhouse/pull/562)
+ - **[docs]** Updated the Supported OS versions list format. [#1126](https://github.com/deckhouse/deckhouse/pull/1126)
  - **[docs]** Getting started with Azure minor updates. [#698](https://github.com/deckhouse/deckhouse/pull/698)
  - **[docs]** Fix instructions for switching registry and image copier [#533](https://github.com/deckhouse/deckhouse/pull/533)
  - **[extended-monitoring]** CronJobFailed alert bugfix. [#489](https://github.com/deckhouse/deckhouse/pull/489)
