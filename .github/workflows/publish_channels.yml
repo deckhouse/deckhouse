@@ -10,7 +10,7 @@ env:
 jobs:
   deploy_channels_cm_prod:
     name: Deploy to production
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -29,7 +29,7 @@ jobs:
 
   deploy_channels_cm_stage:
     name: Deploy to Stage
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
