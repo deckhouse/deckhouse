@@ -186,7 +186,13 @@ func (e *Scheduler) export(start time.Time) error {
 
 	// collect episodes for calculated probes
 	for _, calc := range e.probeManager.Calculators() {
-		series, err := check.MergeStatusSeries(e.seriesSize, e.series, calc.MergeIds())
+		sss := []*check.StatusSeries{}
+		for _, id := range calc.MergeIds() {
+			if ss, ok := e.series[id]; ok {
+				sss = append(sss, ss)
+			}
+		}
+		series, err := check.MergeStatusSeries(e.seriesSize, sss)
 		if err != nil {
 			return fmt.Errorf("cannot calculate episode stats for %q: %v", calc.ProbeRef().Id(), err)
 		}
