@@ -337,7 +337,7 @@ index a8165300..ce99066f 100644
  }
 diff --git a/storage/kubernetes/lock.go b/storage/kubernetes/lock.go
 index 276009a4..71d56b05 100644
---- /dev/null
+--- a/storage/kubernetes/lock.go
 +++ b/storage/kubernetes/lock.go
 @@ -1 +1,127 @@
  package kubernetes
