@@ -23,6 +23,9 @@ spec:
       action: labeldrop
     - sourceLabels: ["pod"]
       targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
   selector:
     matchLabels:
       app: extended-monitoring-exporter

@@ -264,7 +264,7 @@ class GetHandler(BaseHTTPRequestHandler):
     @classmethod
     def loop_get_metrics(cls):
         cls.get_metrics()
-        _populated = True
+        cls._populated = True
         sleep(30)
 
         while 1:
@@ -278,7 +278,7 @@ class GetHandler(BaseHTTPRequestHandler):
         if self.path == "/ready":
             apis.get_api_versions()
             # Wait for the first metrics request to succeed
-            self.send_response(200 if self._populated else 400)
+            self.send_response(200 if self.__class__._populated else 400)
             self.end_headers()
             return
 
