@@ -132,7 +132,7 @@ func getStatus(dbctx *dbcontext.DbContext, monitor *crd.DowntimeMonitor, filter 
 		return nil, err
 	}
 
-	statuses, err := entity.FetchStatuses(dbctx, filter.probe, rng, incidents)
+	statuses, err := entity.Statuses(dbctx, filter.probe, rng, incidents)
 	if err != nil {
 		return nil, err
 	}

@@ -89,9 +89,7 @@ func (a ByTimeSlot) Less(i, j int) bool {
 	return a[i].TimeSlot < a[j].TimeSlot
 }
 
-const TotalProbeName = "__total__"
-
-func FetchStatuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
+func Statuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
 	daoCtx := dbctx.Start()
 	defer daoCtx.Stop()
 
@@ -210,7 +208,7 @@ func calculateTotalForStepRange(statuses map[string]map[string]map[int64]*Episod
 		)
 
 		for probe, infos := range probes {
-			if probe == TotalProbeName {
+			if probe == dao.GroupAggregation {
 				continue
 			}
 			if _, ok := infos[stepRange.From]; !ok {
@@ -232,11 +230,11 @@ func calculateTotalForStepRange(statuses map[string]map[string]map[int64]*Episod
 		totalStatusInfo.Unknown = maxAvail - totalStatusInfo.Up - totalStatusInfo.Down
 		totalStatusInfo.NoData = stepRange.Diff() - maxAvail
 
-		if _, ok := statuses[group][TotalProbeName]; !ok {
-			statuses[group][TotalProbeName] = map[int64]*EpisodeSummary{}
+		if _, ok := statuses[group][dao.GroupAggregation]; !ok {
+			statuses[group][dao.GroupAggregation] = map[int64]*EpisodeSummary{}
 		}
 
-		statuses[group][TotalProbeName][stepRange.From] = totalStatusInfo
+		statuses[group][dao.GroupAggregation][stepRange.From] = totalStatusInfo
 	}
 }
 
@@ -389,19 +387,19 @@ func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range, ref ch
 	}
 
 	// Create empty statuses for groupName and probeName if there are no episodes and probeName is __total__.
-	if ref.Probe == TotalProbeName {
+	if ref.Probe == dao.GroupAggregation {
 		group := ref.Group
 
 		if _, ok := statuses[group]; !ok {
 			statuses[group] = map[string]map[int64]*EpisodeSummary{}
 		}
 
-		if _, ok := statuses[group][TotalProbeName]; !ok {
-			statuses[group][TotalProbeName] = map[int64]*EpisodeSummary{}
+		if _, ok := statuses[group][dao.GroupAggregation]; !ok {
+			statuses[group][dao.GroupAggregation] = map[int64]*EpisodeSummary{}
 		}
 
 		for _, stepRange := range stepRanges {
-			statuses[group][TotalProbeName][stepRange.From] = newEpisodeSummary(stepRange)
+			statuses[group][dao.GroupAggregation][stepRange.From] = newEpisodeSummary(stepRange)
 		}
 	}
 
@@ -417,15 +415,15 @@ func transformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[i
 		if _, ok := res[group]; !ok {
 			res[group] = map[string][]EpisodeSummary{}
 		}
-		if ref.Probe == TotalProbeName {
-			res[group][TotalProbeName] = make([]EpisodeSummary, 0)
-			for _, info := range statuses[group][TotalProbeName] {
-				res[group][TotalProbeName] = append(res[group][TotalProbeName], *info)
+		if ref.Probe == dao.GroupAggregation {
+			res[group][dao.GroupAggregation] = make([]EpisodeSummary, 0)
+			for _, info := range statuses[group][dao.GroupAggregation] {
+				res[group][dao.GroupAggregation] = append(res[group][dao.GroupAggregation], *info)
 			}
-			sort.Sort(ByTimeSlot(res[group][TotalProbeName]))
+			sort.Sort(ByTimeSlot(res[group][dao.GroupAggregation]))
 		} else {
 			for probe, infos := range probes {
-				if probe == TotalProbeName {
+				if probe == dao.GroupAggregation {
 					continue
 				}
 				if _, ok := res[group][probe]; !ok {

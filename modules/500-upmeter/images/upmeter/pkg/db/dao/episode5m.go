@@ -33,9 +33,8 @@ const (
 	GroupAggregation = "__total__"
 )
 
-// __all__ and __total__ probes should select all probes
 func areAllProbesRequested(probe string) bool {
-	return probe == ProbeEnumeration || probe == GroupAggregation
+	return probe == ProbeEnumeration
 }
 
 type EpisodeDao5m struct {
@@ -187,10 +186,14 @@ func (d *EpisodeDao5m) ListEpisodesByRange(from, to int64, ref check.ProbeRef) (
 		queryArgs = append(queryArgs, ref.Group)
 	}
 
-	// __all__ and __total__ probes should select all probes
 	if !areAllProbesRequested(ref.Probe) {
+		// Choose specific probe
 		query += " AND probe_name = ?"
 		queryArgs = append(queryArgs, ref.Probe)
+	} else {
+		// Choose all probes, but omit group as a whole
+		query += " AND probe_name != ?"
+		queryArgs = append(queryArgs, GroupAggregation)
 	}
 
 	rows, err := d.DbCtx.StmtRunner().Query(query, queryArgs...)
@@ -232,11 +235,16 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 			groupBy = append(groupBy, "group_name")
 		}
 
-		// __all__ and __total__ probes should select all probes
 		if !areAllProbesRequested(ref.Probe) {
+			// Choose specific probe
 			where += " AND probe_name = ?"
 			queryArgs = append(queryArgs, ref.Probe)
+		} else {
+			// Choose all probes, but omit group as a whole
+			where += " AND probe_name != ?"
+			queryArgs = append(queryArgs, GroupAggregation)
 		}
+
 		selectPart += ", probe_name"
 		groupBy = append(groupBy, "probe_name")
 

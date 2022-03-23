@@ -112,7 +112,7 @@ func getStatusSummary(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMonitor) 
 	for _, group := range groups {
 		ref := check.ProbeRef{
 			Group: group,
-			Probe: entity.TotalProbeName,
+			Probe: dao.GroupAggregation,
 		}
 
 		filter := &statusFilter{
