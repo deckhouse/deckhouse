@@ -8,7 +8,7 @@ COPY patches/client-groups.patch patches/static-user-groups.patch patches/refres
 RUN wget https://github.com/dexidp/dex/archive/v2.31.0.tar.gz -O - | tar -xz --strip-components=1 \
   && git apply /client-groups.patch \
   && git apply /static-user-groups.patch \
-  && patch -p1 < /refresh-once.patch \
+  && git apply /refresh-once.patch \
   && git apply /gitlab-refresh-tokens.patch
 RUN go build ./cmd/dex
 
