@@ -24,12 +24,12 @@ You will need:
 
    Requirements:
 {% if page.platform_code == "bm-private" %}
-   - Access to a proxy registry ([read more](../../documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
+   - access to a proxy registry ([read more](../../documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
 {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry (it is also possible to use a [third-party registry](../bm-private/step2.html));
 {%- endif %}
 {%- if page.platform_type == "existing" %}
-   - The kubectl command-line tool must be configured to communicate with your cluster.
+   - the kubectl command-line tool must be configured to communicate with your cluster.
 {%- else %}
    - SSH key access to the node, the **master node** of the future cluster.
 {%- endif %}
@@ -53,8 +53,8 @@ You will need:
    - at least 40 GB of disk space for the cluster and etcd data;
    - OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7;
 {% if page.platform_code == "bm-private" %}
-   - Access to a proxy registry or to a private container image registry containing Deckhouse images;
-   - Access to a proxy server for downloading deb/rpm OS packages (if necessary);
+   - access to a proxy registry or to a private container image registry containing Deckhouse images;
+   - access to a proxy server for downloading deb/rpm OS packages (if necessary);
 {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry (it is also possible to use a [third-party registry](../bm-private/step2.html));
 {%- endif %}
@@ -71,8 +71,8 @@ You will need:
    Below are the minimum requirements for any node (node group):
    - OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7;
    {% if page.platform_code == "bm-private" %}
-   - Access to a proxy registry or to a private container image registry containing Deckhouse images;
-   - Access to a proxy server for downloading deb/rpm OS packages (if necessary);
+   - access to a proxy registry or to a private container image registry containing Deckhouse images;
+   - access to a proxy server for downloading deb/rpm OS packages (if necessary);
    {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry (it is also possible to use a [third-party registry](../bm-private/step2.html)).
    {%- endif %}
