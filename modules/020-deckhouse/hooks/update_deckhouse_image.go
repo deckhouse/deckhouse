@@ -764,8 +764,9 @@ func deleteUpdatingCM(input *go_hook.HookInput) {
 
 func updateStatusMsg(input *go_hook.HookInput, release *deckhouseRelease, msg string) {
 	st := statusPatch{
-		Message:  msg,
-		Approved: release.StatusApproved,
+		Message:        msg,
+		Approved:       release.StatusApproved,
+		TransitionTime: time.Now().UTC(),
 	}
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
 }
