@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package executor
+package scheduler
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 	"d8.io/upmeter/pkg/check"
 )
 
-type ProbeExecutor struct {
+type Scheduler struct {
 	probeManager *manager.Manager
 	metrics      *metric_storage.MetricStorage
 
@@ -48,13 +48,13 @@ type ProbeExecutor struct {
 	done chan struct{}
 }
 
-func New(mgr *manager.Manager, send chan []check.Episode) *ProbeExecutor {
+func New(mgr *manager.Manager, send chan []check.Episode) *Scheduler {
 	const (
 		exportPeriod = 30 * time.Second
-		scrapePeriod = 200 * time.Millisecond
+		scrapePeriod = 200 * time.Millisecond // minimal probe interval
 	)
 
-	return &ProbeExecutor{
+	return &Scheduler{
 		recv:    make(chan check.Result),
 		series:  make(map[string]*check.StatusSeries),
 		results: make(map[string]*check.ProbeResult),
@@ -71,13 +71,13 @@ func New(mgr *manager.Manager, send chan []check.Episode) *ProbeExecutor {
 	}
 }
 
-func (e *ProbeExecutor) Start() {
+func (e *Scheduler) Start() {
 	go e.runTicker()
 	go e.scrapeTicker()
 }
 
 // runTicker is the scheduler for probe checks
-func (e *ProbeExecutor) runTicker() {
+func (e *Scheduler) runTicker() {
 	ticker := time.NewTicker(e.scrapePeriod)
 
 	for {
@@ -93,7 +93,7 @@ func (e *ProbeExecutor) runTicker() {
 }
 
 // scrapeTicker collects probe check results and schedules the exporting of episodes.
-func (e *ProbeExecutor) scrapeTicker() {
+func (e *Scheduler) scrapeTicker() {
 	ticker := time.NewTicker(e.scrapePeriod)
 
 	for {
@@ -131,7 +131,7 @@ func (e *ProbeExecutor) scrapeTicker() {
 }
 
 // run checks if probe is running and restarts them
-func (e *ProbeExecutor) run() {
+func (e *Scheduler) run() {
 	// rounding lets us avoid inaccuracies in time comparison
 	now := time.Now().Round(e.scrapePeriod)
 
@@ -154,7 +154,7 @@ func (e *ProbeExecutor) run() {
 }
 
 // collect stores the check result in the intermediate format
-func (e *ProbeExecutor) collect(checkResult check.Result) {
+func (e *Scheduler) collect(checkResult check.Result) {
 	id := checkResult.ProbeRef.Id()
 	probeResult, ok := e.results[id]
 	if !ok {
@@ -165,7 +165,7 @@ func (e *ProbeExecutor) collect(checkResult check.Result) {
 }
 
 // scrape checks probe results
-func (e *ProbeExecutor) scrape() error {
+func (e *Scheduler) scrape() error {
 	for id, probeResult := range e.results {
 		series, ok := e.series[id]
 		if !ok {
@@ -181,7 +181,7 @@ func (e *ProbeExecutor) scrape() error {
 }
 
 // export copies scraped results and sends them to sender along as evaluates computed probes.
-func (e *ProbeExecutor) export(start time.Time) error {
+func (e *Scheduler) export(start time.Time) error {
 	var episodes []check.Episode
 
 	// collect episodes for calculated probes
@@ -207,7 +207,7 @@ func (e *ProbeExecutor) export(start time.Time) error {
 	return nil
 }
 
-func (e *ProbeExecutor) Stop() {
+func (e *Scheduler) Stop() {
 	close(e.stop)
 
 	<-e.done

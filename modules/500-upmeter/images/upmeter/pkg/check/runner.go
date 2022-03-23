@@ -22,7 +22,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Runner is a glue between the executor and a check.
+// Runner is a glue between the scheduler and a check.
 type Runner struct {
 	// defined by check
 	ref       *ProbeRef

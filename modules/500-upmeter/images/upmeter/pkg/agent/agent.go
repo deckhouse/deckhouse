@@ -23,8 +23,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/agent/executor"
 	"d8.io/upmeter/pkg/agent/manager"
+	"d8.io/upmeter/pkg/agent/scheduler"
 	"d8.io/upmeter/pkg/agent/sender"
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/db/migrations"
@@ -38,7 +38,7 @@ type Agent struct {
 	logger *log.Logger
 
 	sender    *sender.Sender
-	scheduler *executor.ProbeExecutor
+	scheduler *scheduler.Scheduler
 }
 
 type Config struct {
@@ -90,7 +90,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	storage := sender.NewStorage(dbctx)
 
 	a.sender = sender.New(client, ch, storage, a.config.Period)
-	a.scheduler = executor.New(registry, ch)
+	a.scheduler = scheduler.New(registry, ch)
 
 	a.sender.Start()
 	a.scheduler.Start()
