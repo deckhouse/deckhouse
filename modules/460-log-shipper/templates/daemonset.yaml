@@ -57,7 +57,8 @@ spec:
       labels:
         app: log-shipper-agent
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/log-shipper/configmap.yaml") . | sha256sum }}
+        # TODO(nabokihms): why do we need this if we have dynamic config reloading feature?
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
