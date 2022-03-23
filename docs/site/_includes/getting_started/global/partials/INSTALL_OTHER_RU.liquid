@@ -1,6 +1,8 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узлы**{% endif %}. Выполните на **[персональном компьютере](step2.html#процесс-установки)**:
+Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узлы**{% endif %}.
+{%- if page.platform_code == 'bm-private' %} Авторизуйтесь на **[персональном компьютере](step2.html#процесс-установки)** в container image registry, который вы указали на предыдущем этапе, затем выполните:
+{%- else %} Выполните на **[персональном компьютере](step2.html#процесс-установки)**:{% endif %}
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}
@@ -12,11 +14,13 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 ```
 {% endsnippetcut %}
 {% else %}
-{% snippetcut %}
+{% snippetcut selector="docker-login-ce" %}
 ```shell
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{% if page.platform_code == "bm-private" %} --dont-use-public-control-plane-images{% endif %}{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% endif %}{% if page.platform_type == "existing" or page.platform_code == "kind" %} -v "$HOME/.kube/config:/kubeconfig" \
-{% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ce/install:stable bash
+{% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %}
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>:stable
+{%- else %} registry.deckhouse.io/deckhouse/ce/install:stable{% endif %} bash
 ```
 {% endsnippetcut %}
 {% endif %}

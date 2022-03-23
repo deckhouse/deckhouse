@@ -96,6 +96,7 @@ $(document).ready(function () {
     update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, '[user-yml]');
     update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, 'code span.c1');
     update_domain_parameters();
+    config_highlight();
 });
 
 </script>

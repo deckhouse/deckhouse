@@ -152,6 +152,15 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
     }
 }
 
+function updateTextInSnippet(snippetSelector, replacePattern, value) {
+  $(snippetSelector).each(function (index) {
+    let content = ($(this)[0]) ? $(this)[0].textContent : null;
+    if (content && content.length > 0) {
+      this.textContent = content.replace(replacePattern, value);
+    }
+  });
+}
+
 function getDockerAuthFromToken(username, password) {
     return btoa(username + ':' + password);
 }

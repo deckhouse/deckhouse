@@ -408,6 +408,45 @@ installTypes:
           ru: Куда двигаться дальше?
           en: What can I do next?
         template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
+  bm-private:
+    ce_only: true
+    layouts:
+      default:
+        name: Default
+        recommended: true
+    pages_title:
+      en: "Deckhouse Platform in a private environment"
+      ru: "Deckhouse Platform в закрытом окружении"
+    type: baremetal
+    name:
+      en: Private environment
+      ru: Закрытое окружение
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: A brief overview of installation
+        template: getting_started/bm/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Подготовка к установке
+          en: Preparing for installation
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          ru: Завершение установки
+          en: Finishing installation
+        template: getting_started/bm/STEP_FINALIZE.md
+      step6:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
   bm:
     layouts:
       default:
