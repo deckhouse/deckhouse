@@ -335,14 +335,18 @@ index a8165300..ce99066f 100644
 +
  	s.writeAccessToken(w, resp)
  }
-diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index ca505859..f8fabea8 100644
---- a/storage/kubernetes/storage.go
-+++ b/storage/kubernetes/storage.go
-@@ -40,6 +40,16 @@ const (
- 	resourceDeviceToken     = "devicetokens"
- )
-
+diff --git a/storage/kubernetes/lock.go b/storage/kubernetes/lock.go
+index 276009a4..71d56b05 100644
+--- a/storage/kubernetes/lock.go
++++ b/storage/kubernetes/lock.go
+@@ -1 +1,127 @@
+ package kubernetes
++
++import (
++	"fmt"
++	"time"
++)
++
 +const (
 +	lockAnnotation = "dexidp.com/resource-lock"
 +	lockTimeFormat = time.RFC3339
@@ -353,42 +357,58 @@ index ca505859..f8fabea8 100644
 +	lockCheckPeriod = 100 * time.Millisecond
 +)
 +
- // Config values for the Kubernetes storage type.
- type Config struct {
- 	InCluster      bool   `json:"inCluster"`
-@@ -447,11 +457,15 @@ func (cli *client) DeleteConnector(id string) error {
- }
-
- func (cli *client) UpdateRefreshToken(id string, updater func(old storage.RefreshToken) (storage.RefreshToken, error)) error {
-+	if err := lockResource(cli, id); err != nil {
-+		return err
++// refreshTokenLock is an implementation of annotation-based optimistic locking.
++//
++// Refresh token contains data to refresh identity in external authentication system.
++// There is a requirement that refresh should be called only once because of several reasons:
++// * Some of OIDC providers could use the refresh token rotation feature which requires calling refresh only once.
++// * Providers can limit the rate of requests to the token endpoint, which will lead to the error
++//   in case of many concurrent requests.
++type refreshTokenLock struct {
++	cli          *client
++	waitingState bool
++}
++
++func newRefreshTokenLock(cli *client) *refreshTokenLock {
++	return &refreshTokenLock{cli: cli}
++}
++
++func (l *refreshTokenLock) Lock(id string) error {
++	for i := 0; i <= 60; i++ {
++		ok, err := l.setLockAnnotation(id)
++		if err != nil {
++			return err
++		}
++		if !ok {
++			return nil
++		}
++		time.Sleep(lockCheckPeriod)
 +	}
- 	return retryOnConflict(context.TODO(), func() error {
- 		r, err := cli.getRefreshToken(id)
- 		if err != nil {
- 			return err
- 		}
++	return fmt.Errorf("timeout waiting for refresh token %s lock", id)
 +
- 		updated, err := updater(toStorageRefreshToken(r))
- 		if err != nil {
- 			return err
-@@ -460,6 +474,9 @@ func (cli *client) UpdateRefreshToken(id string, updater func(old storage.Refres
-
- 		newToken := cli.fromStorageRefreshToken(updated)
- 		newToken.ObjectMeta = r.ObjectMeta
-+		// Nullify annotations to remove the lock
-+		newToken.Annotations = nil
++}
 +
- 		return cli.put(resourceRefreshToken, r.ObjectMeta.Name, newToken)
- 	})
- }
-@@ -754,3 +771,80 @@ func retryOnConflict(ctx context.Context, action func() error) error {
- 		}
- 	}
- }
++func (l *refreshTokenLock) Unlock(id string) {
++	if l.waitingState {
++		// Do not need to unlock for waiting goroutines, because the have not set it.
++		return
++	}
 +
-+func createLockForRefreshToken(cli *client, id string, waitingState *bool) (bool, error) {
-+	r, err := cli.getRefreshToken(id)
++	r, err := l.cli.getRefreshToken(id)
++	if err != nil {
++		l.cli.logger.Debugf("failed to get resource to release lock for refresh token %s: %v", id, err)
++		return
++	}
++
++	r.Annotations = nil
++	err = l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
++	if err != nil {
++		l.cli.logger.Debugf("failed to release lock for refresh token %s: %v", id, err)
++	}
++}
++
++func (l *refreshTokenLock) setLockAnnotation(id string) (bool, error) {
++	r, err := l.cli.getRefreshToken(id)
 +	if err != nil {
 +		return false, err
 +	}
@@ -400,20 +420,20 @@ index ca505859..f8fabea8 100644
 +
 +	val, ok := r.Annotations[lockAnnotation]
 +	if !ok {
-+		if *waitingState {
-+			cli.logger.Debugf("lock annotation is gone")
++		if l.waitingState {
++			l.cli.logger.Debugf("lock annotation is gone")
 +			return false, nil
 +		}
 +
 +		r.Annotations = lockData
-+		err := cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
++		err := l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
 +		if err == nil {
 +			return false, nil
 +		}
 +
 +		if isKubernetesAPIConflictError(err) {
-+			cli.logger.Debugf("after error waiting for the lock to be released: %v", err)
-+			*waitingState = true
++			l.cli.logger.Debugf("after error waiting for the lock to be released: %v", err)
++			l.waitingState = true
 +			return true, nil
 +		}
 +		return false, err
@@ -425,44 +445,60 @@ index ca505859..f8fabea8 100644
 +	}
 +
 +	if !currentTime.After(until) {
-+		cli.logger.Debugf("waiting for the lock to be released")
-+		*waitingState = true
++		l.cli.logger.Debugf("waiting for the lock to be released")
++		l.waitingState = true
 +		return true, nil
 +	}
 +
 +	// Lock time is out, lets break the lock and take the advantage
 +	r.Annotations = lockData
 +
-+	err = cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
++	err = l.cli.put(resourceRefreshToken, r.ObjectMeta.Name, r)
 +	if err == nil {
-+		cli.logger.Debugf("break lock annotation")
++		l.cli.logger.Debugf("break lock annotation")
 +		return false, nil
 +	}
 +
-+	cli.logger.Debugf("break lock annotation error: %v", err)
++	l.cli.logger.Debugf("break lock annotation error: %v", err)
 +	if isKubernetesAPIConflictError(err) {
-+		*waitingState = true
-+		cli.logger.Debugf("after breaking error waiting for the lock to be released: %v", err)
++		l.waitingState = true
++		l.cli.logger.Debugf("after breaking error waiting for the lock to be released: %v", err)
 +		return true, nil
 +	}
 +	return false, err
 +}
+diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
+index ca505859..9f0575e6 100644
+--- a/storage/kubernetes/storage.go
++++ b/storage/kubernetes/storage.go
+@@ -447,11 +447,19 @@ func (cli *client) DeleteConnector(id string) error {
+ }
+
+ func (cli *client) UpdateRefreshToken(id string, updater func(old storage.RefreshToken) (storage.RefreshToken, error)) error {
++	lock := newRefreshTokenLock(cli)
 +
-+func lockResource(cli *client, id string) error {
-+	var waitingState bool
-+
-+	for i := 0; i <= 60; i++ {
-+		ok, err := createLockForRefreshToken(cli, id, &waitingState)
-+		if err != nil {
-+			return err
-+		}
-+		if !ok {
-+			return nil
-+		}
-+		time.Sleep(lockCheckPeriod)
++	if err := lock.Lock(id); err != nil {
++		return err
 +	}
-+	return fmt.Errorf("timeout waiting for refresh token %s lock", id)
-+}
++	defer lock.Unlock(id)
++
+ 	return retryOnConflict(context.TODO(), func() error {
+ 		r, err := cli.getRefreshToken(id)
+ 		if err != nil {
+ 			return err
+ 		}
++
+ 		updated, err := updater(toStorageRefreshToken(r))
+ 		if err != nil {
+ 			return err
+@@ -460,6 +468,7 @@ func (cli *client) UpdateRefreshToken(id string, updater func(old storage.Refres
+
+ 		newToken := cli.fromStorageRefreshToken(updated)
+ 		newToken.ObjectMeta = r.ObjectMeta
++
+ 		return cli.put(resourceRefreshToken, r.ObjectMeta.Name, newToken)
+ 	})
+ }
 diff --git a/storage/kubernetes/storage_test.go b/storage/kubernetes/storage_test.go
 index 4571327a..9d4d04d0 100644
 --- a/storage/kubernetes/storage_test.go
