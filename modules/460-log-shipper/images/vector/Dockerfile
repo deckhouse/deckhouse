@@ -20,7 +20,7 @@ RUN cargo build \
     -j $(($(nproc) /2)) \
     --offline \
     --no-default-features \
-    --features "api,api-client,enrichment-tables,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sources-file,sources-kubernetes_logs,transforms,unix,vendor-all,vrl-cli" \
+    --features "api,api-client,enrichment-tables,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,unix,vendor-all,vrl-cli" \
     && strip target/release/vector
 
 FROM $BASE_DEBIAN

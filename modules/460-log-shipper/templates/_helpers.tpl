@@ -3,6 +3,8 @@
 # Migrate to VECTOR_LOG after upgrade to 0.18.
 - name: LOG
   value: debug
+- name: VECTOR_LOG
+  value: debug
 - name: RUST_BACKTRACE
   value: full
   {{- end }}
