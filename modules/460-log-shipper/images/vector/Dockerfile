@@ -23,7 +23,7 @@ RUN cargo build \
     --features "api,api-client,enrichment-tables,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,unix,vendor-all,vrl-cli" \
     && strip target/release/vector
 
-FROM $BASE_DEBIAN
+FROM debian:bullseye
 COPY --from=build /vector/vector/target/release/vector /usr/bin/vector
 RUN mkdir -p /etc/vector \
     && apt-get update \
