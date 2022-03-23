@@ -6,10 +6,11 @@ RUN apt-get update \
       ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev librdkafka-dev
 
 WORKDIR /vector
-COPY patches/loki-labels.patch patches/kubernetes-logs-lib.patch /
-RUN git clone --depth 1 --branch v0.20.0 https://github.com/timberio/vector.git
-    # && git apply /loki-labels.patch \
-    # && git apply /kubernetes-logs-lib.patch
+COPY patches/loki-labels.patch patches/kubernetes-owner-reference.patch /
+RUN git clone --depth 1 --branch v0.20.0 https://github.com/timberio/vector.git \
+    && cd vector \
+    && git apply /kubernetes-owner-reference.patch
+    # && git apply /loki-labels.patch
 
 # Download and cache dependencies
 WORKDIR /vector/vector

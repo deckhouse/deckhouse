@@ -1,0 +1,260 @@
+diff --git a/src/sources/kubernetes_logs/mod.rs b/src/sources/kubernetes_logs/mod.rs
+index dc3f6a222..c309c5e18 100644
+--- a/src/sources/kubernetes_logs/mod.rs
++++ b/src/sources/kubernetes_logs/mod.rs
+@@ -49,6 +49,7 @@ mod transform_utils;
+ mod util;
+
+ use futures::{future::FutureExt, stream::StreamExt};
++use k8s_openapi::api::apps::v1::ReplicaSet;
+ use k8s_paths_provider::K8sPathsProvider;
+ use lifecycle::Lifecycle;
+ use namespace_metadata_annotator::NamespaceMetadataAnnotator;
+@@ -302,8 +303,8 @@ impl Source {
+         let mut reflector = k8s::reflector::Reflector::new(
+             watcher,
+             state_writer,
+-            Some(field_selector),
+-            Some(label_selector),
++            Some(field_selector.to_owned()),
++            Some(label_selector.to_owned()),
+             Duration::from_secs(1),
+         );
+         let reflector_process = reflector.run();
+@@ -332,9 +333,37 @@ impl Source {
+         );
+         let ns_reflector_process = ns_reflector.run();
+
++        // -----------------------------------------------------------------
++
++        let rs_watcher = k8s::api_watcher::ApiWatcher::new(
++            client.clone(),
++            ReplicaSet::watch_replica_set_for_all_namespaces,
++        );
++        let rs_watcher = k8s::instrumenting_watcher::InstrumentingWatcher::new(rs_watcher);
++        let (rs_state_reader, rs_state_writer) = evmap::new();
++        let rs_state_writer = k8s::state::evmap::Writer::new(
++            rs_state_writer,
++            Some(Duration::from_millis(10)),
++            HashKey::Uid,
++        );
++        let rs_state_writer = k8s::state::instrumenting::Writer::new(rs_state_writer);
++        let rs_state_writer =
++            k8s::state::delayed_delete::Writer::new(rs_state_writer, delay_deletion);
++
++        let mut rs_reflector = k8s::reflector::Reflector::new(
++            rs_watcher,
++            rs_state_writer,
++            Some(field_selector.to_owned()),
++            Some(label_selector.to_owned()),
++            Duration::from_secs(1),
++        );
++        let rs_reflector_process = rs_reflector.run();
++
++        // -----------------------------------------------------------------
++
+         let paths_provider =
+             K8sPathsProvider::new(state_reader.clone(), ns_state_reader.clone(), exclude_paths);
+-        let annotator = PodMetadataAnnotator::new(state_reader, pod_fields_spec);
++        let annotator = PodMetadataAnnotator::new(state_reader, rs_state_reader, pod_fields_spec);
+         let ns_annotator = NamespaceMetadataAnnotator::new(ns_state_reader, namespace_fields_spec);
+
+         // TODO: maybe more of the parameters have to be configurable.
+@@ -473,6 +502,18 @@ impl Source {
+                 });
+             slot.bind(Box::pin(fut));
+         }
++        {
++            let (slot, shutdown) = lifecycle.add();
++            let fut =
++                util::cancel_on_signal(rs_reflector_process, shutdown).map(|result| match result {
++                    Ok(()) => info!(message = "Deployment reflector process completed gracefully."),
++                    Err(error) => emit!(&KubernetesLifecycleError {
++                        error,
++                        message: "Deployment reflector process exited with an error.",
++                    }),
++                });
++            slot.bind(Box::pin(fut));
++        }
+         {
+             let (slot, shutdown) = lifecycle.add();
+             let fut = util::run_file_server(file_server, file_source_tx, shutdown, checkpointer)
+diff --git a/src/sources/kubernetes_logs/pod_metadata_annotator.rs b/src/sources/kubernetes_logs/pod_metadata_annotator.rs
+index 85d236c07..94b451840 100644
+--- a/src/sources/kubernetes_logs/pod_metadata_annotator.rs
++++ b/src/sources/kubernetes_logs/pod_metadata_annotator.rs
+@@ -4,12 +4,14 @@
+
+ use evmap::ReadHandle;
+ use k8s_openapi::{
++    api::apps::v1::ReplicaSet,
+     api::core::v1::{Container, ContainerStatus, Pod, PodSpec, PodStatus},
+     apimachinery::pkg::apis::meta::v1::ObjectMeta,
+ };
+ use serde::{Deserialize, Serialize};
+
+ use super::path_helpers::{parse_log_file_path, LogFileInfo};
++use crate::kubernetes::state::evmap::Value;
+ use crate::{
+     event::{Event, LogEvent, PathComponent, PathIter},
+     kubernetes as k8s,
+@@ -54,6 +56,7 @@ impl Default for FieldsSpec {
+ /// Annotate the event with pod metadata.
+ pub struct PodMetadataAnnotator {
+     pods_state_reader: ReadHandle<String, k8s::state::evmap::Value<Pod>>,
++    rs_state_reader: ReadHandle<String, k8s::state::evmap::Value<ReplicaSet>>,
+     fields_spec: FieldsSpec,
+ }
+
+@@ -61,10 +64,12 @@ impl PodMetadataAnnotator {
+     /// Create a new [`PodMetadataAnnotator`].
+     pub fn new(
+         pods_state_reader: ReadHandle<String, k8s::state::evmap::Value<Pod>>,
++        rs_state_reader: ReadHandle<String, k8s::state::evmap::Value<ReplicaSet>>,
+         fields_spec: FieldsSpec,
+     ) -> Self {
+         Self {
+             pods_state_reader,
++            rs_state_reader,
+             fields_spec,
+         }
+     }
+@@ -82,7 +87,7 @@ impl PodMetadataAnnotator {
+         let pod: &Pod = entry.as_ref();
+
+         annotate_from_file_info(log, &self.fields_spec, &file_info);
+-        annotate_from_metadata(log, &self.fields_spec, &pod.metadata);
++        annotate_from_metadata(log, &self.fields_spec, &pod.metadata, &self.rs_state_reader);
+
+         let container;
+         if let Some(ref pod_spec) = pod.spec {
+@@ -123,7 +128,12 @@ fn annotate_from_file_info(
+     );
+ }
+
+-fn annotate_from_metadata(log: &mut LogEvent, fields_spec: &FieldsSpec, metadata: &ObjectMeta) {
++fn annotate_from_metadata(
++    log: &mut LogEvent,
++    fields_spec: &FieldsSpec,
++    metadata: &ObjectMeta,
++    rs_state: &ReadHandle<String, Value<ReplicaSet>>,
++) {
+     for (ref key, ref val) in [
+         (&fields_spec.pod_name, &metadata.name),
+         (&fields_spec.pod_namespace, &metadata.namespace),
+@@ -137,10 +147,21 @@ fn annotate_from_metadata(log: &mut LogEvent, fields_spec: &FieldsSpec, metadata
+     }
+
+     if let Some(owner_references) = &metadata.owner_references {
+-        log.insert(
+-            &fields_spec.pod_owner,
+-            format!("{}/{}", owner_references[0].kind, owner_references[0].name),
+-        );
++        let mut reference = format!("{}/{}", owner_references[0].kind, owner_references[0].name);
++
++        // ReplicaSet is an intermediate system controller, most of the time created by Deployment
++        if owner_references[0].kind == "ReplicaSet" {
++            if let Some(single_rs_state) = rs_state.get(&owner_references[0].uid) {
++                let entry = single_rs_state.get_one().unwrap();
++                let rs: &ReplicaSet = entry.as_ref();
++
++                if let Some(rs_owner_reference) = &rs.metadata.owner_references {
++                    reference = format!("{}/{}", rs_owner_reference[0].kind, rs_owner_reference[0].name);
++                }
++            }
++        }
++
++        log.insert(&fields_spec.pod_owner,reference);
+     }
+
+     if let Some(labels) = &metadata.labels {
+@@ -211,7 +232,9 @@ fn annotate_from_container(log: &mut LogEvent, fields_spec: &FieldsSpec, contain
+
+ #[cfg(test)]
+ mod tests {
++    use crate::kubernetes::HashValue;
+     use k8s_openapi::api::core::v1::PodIP;
++    use k8s_openapi::apimachinery::pkg::apis::meta::v1::OwnerReference;
+     use vector_common::assert_event_data_eq;
+
+     use super::*;
+@@ -290,6 +313,14 @@ mod tests {
+                         .into_iter()
+                         .collect(),
+                     ),
++                    owner_references: Some(vec![OwnerReference {
++                        api_version: "apps/v1".to_string(),
++                        block_owner_deletion: None,
++                        controller: None,
++                        kind: "ReplicaSet".to_string(),
++                        name: "test".to_string(),
++                        uid: "does-not-exist".to_string(),
++                    }]),
+                     ..ObjectMeta::default()
+                 },
+                 {
+@@ -299,6 +330,7 @@ mod tests {
+                     log.insert("uid", "sandbox0-uid");
+                     log.insert("labels.sandbox0-label0", "val0");
+                     log.insert("labels.sandbox0-label1", "val1");
++                    log.insert("kubernetes.pod_owner", "ReplicaSet/test");
+                     log
+                 },
+             ),
+@@ -319,6 +351,14 @@ mod tests {
+                         .into_iter()
+                         .collect(),
+                     ),
++                    owner_references: Some(vec![OwnerReference {
++                        api_version: "apps/v1".to_string(),
++                        block_owner_deletion: None,
++                        controller: None,
++                        kind: "ReplicaSet".to_string(),
++                        name: "test-2".to_string(),
++                        uid: "existing-uid".to_string(),
++                    }]),
+                     ..ObjectMeta::default()
+                 },
+                 {
+@@ -326,6 +366,7 @@ mod tests {
+                     log.insert("kubernetes.pod_name", "sandbox0-name");
+                     log.insert("kubernetes.pod_namespace", "sandbox0-ns");
+                     log.insert("kubernetes.pod_uid", "sandbox0-uid");
++                    log.insert("kubernetes.pod_owner", "Deployment/test-deployment");
+                     log.insert(r#"kubernetes.pod_labels.nested0\.label0"#, "val0");
+                     log.insert(r#"kubernetes.pod_labels.nested0\.label1"#, "val1");
+                     log.insert(r#"kubernetes.pod_labels.nested1\.label0"#, "val2");
+@@ -337,7 +378,32 @@ mod tests {
+
+         for (fields_spec, metadata, expected) in cases.into_iter() {
+             let mut log = LogEvent::default();
+-            annotate_from_metadata(&mut log, &fields_spec, &metadata);
++
++            // There is a single replicaset in the cluster to test pod_owner_references
++            let (data, mut write) = evmap::new();
++            write.insert(
++                String::from("existing-uid"),
++                Box::new(HashValue::new(ReplicaSet {
++                    metadata: ObjectMeta {
++                        name: Some("test".to_owned()),
++                        namespace: Some("sandbox0-ns".to_owned()),
++                        owner_references: Some(vec![OwnerReference {
++                            api_version: "apps/v1".to_string(),
++                            block_owner_deletion: None,
++                            controller: None,
++                            kind: "Deployment".to_string(),
++                            name: "test-deployment".to_string(),
++                            uid: "".to_string(),
++                        }]),
++                        ..ObjectMeta::default()
++                    },
++                    spec: None,
++                    status: None,
++                })),
++            );
++            write.refresh();
++
++            annotate_from_metadata(&mut log, &fields_spec, &metadata, &data);
+             assert_event_data_eq!(log, expected);
+         }
+     }
