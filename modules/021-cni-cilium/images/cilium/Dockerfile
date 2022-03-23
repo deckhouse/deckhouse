@@ -36,7 +36,9 @@ RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive
 WORKDIR /tmp/cilium-repo/cilium-1.11.2
 
 COPY 001-netfilter-compatibility-mode.patch /
-RUN patch -p1 < /001-netfilter-compatibility-mode.patch
+COPY 002-skip-masquerad-only-for-internalip.patch /
+RUN patch -p1 < /001-netfilter-compatibility-mode.patch && \
+    patch -p1 < /002-skip-masquerad-only-for-internalip.patch
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
