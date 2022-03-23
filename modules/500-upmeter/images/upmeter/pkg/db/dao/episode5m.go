@@ -29,13 +29,13 @@ import (
 )
 
 const (
-	everyProbe       = "__all__"
-	groupAggregation = "__total__"
+	ProbeEnumeration = "__all__"
+	GroupAggregation = "__total__"
 )
 
 // __all__ and __total__ probes should select all probes
 func areAllProbesRequested(probe string) bool {
-	return probe == everyProbe || probe == groupAggregation
+	return probe == ProbeEnumeration || probe == GroupAggregation
 }
 
 type EpisodeDao5m struct {

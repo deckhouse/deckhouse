@@ -25,6 +25,7 @@ import (
 
 	"d8.io/upmeter/pkg/agent/manager"
 	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/db/dao"
 )
 
 type Scheduler struct {
@@ -241,7 +242,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 			return nil, fmt.Errorf("cannot calculate episode stats for group %q: %v", group, err)
 		}
 
-		groupRef := check.ProbeRef{Group: group}
+		groupRef := check.ProbeRef{Group: group, Probe: dao.GroupAggregation}
 		ep := check.NewEpisode(groupRef, start, e.scrapePeriod, groupSeries.Stats())
 		episodes = append(episodes, ep)
 	}
