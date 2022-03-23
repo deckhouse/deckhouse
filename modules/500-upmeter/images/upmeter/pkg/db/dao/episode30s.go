@@ -231,7 +231,7 @@ func (d *EpisodeDao30s) SaveBatch(episodes []check.Episode) error {
 	for _, ep := range episodes {
 		err := d.Insert(ep)
 		if err != nil {
-			return err
+			return fmt.Errorf("inserting episode (%s): %w", ep.String(), err)
 		}
 	}
 	return nil
