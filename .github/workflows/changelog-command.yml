@@ -17,7 +17,7 @@ jobs:
           token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
 
       - name: Add reaction for success
-        uses: peter-evans/create-or-update-comment@v1
+        uses: peter-evans/create-or-update-comment@v2
         with:
           token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
