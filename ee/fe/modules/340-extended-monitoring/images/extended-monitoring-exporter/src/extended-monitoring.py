@@ -253,6 +253,7 @@ def _get_metrics():
 
 class GetHandler(BaseHTTPRequestHandler):
     _response = ""
+    _populated = False
 
     @classmethod
     def get_metrics(cls):
@@ -262,6 +263,10 @@ class GetHandler(BaseHTTPRequestHandler):
 
     @classmethod
     def loop_get_metrics(cls):
+        cls.get_metrics()
+        cls._populated = True
+        sleep(30)
+
         while 1:
             try:
                 cls.get_metrics()
@@ -272,7 +277,8 @@ class GetHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/ready":
             apis.get_api_versions()
-            self.send_response(200)
+            # Wait for the first metrics request to succeed
+            self.send_response(200 if self.__class__._populated else 400)
             self.end_headers()
             return
 
@@ -303,12 +309,11 @@ if __name__ == '__main__':
     if len(sys.argv) == 3:
         server_port = int(sys.argv[2])
 
-    # Get metrics once synchronously before starting web server
-    GetHandler.get_metrics()
     server = ThreadingHTTPServer((server_address, server_port), GetHandler)
 
     try:
         # Run metrics renew in background (daemon thread is canceled on the script exit)
+        logging.info('Starting metrics loop')
         Thread(target=GetHandler.loop_get_metrics, daemon=True).start()
 
         logging.info('Starting server')
