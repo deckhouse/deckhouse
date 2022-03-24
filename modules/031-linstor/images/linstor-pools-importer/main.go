@@ -22,7 +22,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"hash/fnv"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -190,7 +189,7 @@ func provisionStoragePools(ctx context.Context, lc *lclient.Client, kc kclient.C
 	errCh := make(chan error)
 
 	go func() {
-		seen := make(map[uint32]struct{})
+		seen := make(map[string]struct{})
 
 		for {
 			candidates, err := getCandidates(nodeName)
@@ -200,10 +199,10 @@ func provisionStoragePools(ctx context.Context, lc *lclient.Client, kc kclient.C
 				return
 			}
 			for _, cand := range candidates {
-				if _, yes := seen[cand.UniqueKey]; yes {
+				if _, yes := seen[cand.UUID]; yes {
 					continue
 				}
-				seen[cand.UniqueKey] = struct{}{}
+				seen[cand.UUID] = struct{}{}
 				candiCh <- cand
 			}
 			time.Sleep(scanInterval)
@@ -389,7 +388,7 @@ func reportFailed(ctx context.Context, kc kclient.Client, nodeName string, owner
 type VolumeGroups struct{}
 
 func getLVMThinCandidates(nodeName string) ([]Candidate, error) {
-	cmd := exec.Command("lvs", "-oname,vg_name,lv_attr,tags", "--separator=;", "--noheadings", "--config="+lvmConfig)
+	cmd := exec.Command("lvs", "-oname,vg_name,lv_attr,uuid,tags", "--separator=;", "--noheadings", "--config="+lvmConfig)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -403,7 +402,7 @@ func getLVMThinCandidates(nodeName string) ([]Candidate, error) {
 type ThinPools struct{}
 
 func getLVMCandidates(nodeName string) ([]Candidate, error) {
-	cmd := exec.Command("vgs", "-oname,tags", "--separator=;", "--noheadings", "--config="+lvmConfig)
+	cmd := exec.Command("vgs", "-oname,uuid,tags", "--separator=;", "--noheadings", "--config="+lvmConfig)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -415,7 +414,7 @@ func getLVMCandidates(nodeName string) ([]Candidate, error) {
 
 type Candidate struct {
 	Name        string
-	UniqueKey   uint32
+	UUID        string
 	SkipReason  string
 	StoragePool lclient.StoragePool
 }
@@ -450,10 +449,10 @@ func parseLVMThinPools(nodeName, out string) ([]Candidate, error) {
 			continue
 		}
 		a := strings.Split(line, ";")
-		if len(a) != 4 {
+		if len(a) != 5 {
 			return nil, fmt.Errorf("wrong line: %q", line)
 		}
-		lvName, vgName, lvAttr, tags := strings.TrimSpace(a[0]), a[1], a[2], strings.Split(a[3], ",")
+		lvName, vgName, lvAttr, uuid, tags := strings.TrimSpace(a[0]), a[1], a[2], a[3], strings.Split(a[4], ",")
 		if lvName == "" {
 			return nil, fmt.Errorf("LV name can't be empty (line: %q)", line)
 		}
@@ -463,6 +462,9 @@ func parseLVMThinPools(nodeName, out string) ([]Candidate, error) {
 		if lvAttr == "" {
 			return nil, fmt.Errorf("lvAttr can't be empty (line: %q)", line)
 		}
+		if uuid == "" {
+			return nil, fmt.Errorf("uuid can't be empty (line: %q)", line)
+		}
 		name, err := parseNameFromLVMTags(&tags)
 		switch {
 		case lvAttr[0:1] != "t":
@@ -471,14 +473,9 @@ func parseLVMThinPools(nodeName, out string) ([]Candidate, error) {
 			skipReason = "has no propper tag set: " + err.Error()
 		}
 
-		// Calculating Hash
-		h := fnv.New32a()
-		h.Write([]byte("lvmthin"))
-		h.Write([]byte(line))
-
 		sps = append(sps, Candidate{
 			Name:       "LVM Logical Volume " + vgName + "/" + lvName,
-			UniqueKey:  h.Sum32(),
+			UUID:       uuid,
 			SkipReason: skipReason,
 			StoragePool: lclient.StoragePool{
 				StoragePoolName: name,
@@ -502,26 +499,24 @@ func parseLVMVolumeGroups(nodeName, out string) ([]Candidate, error) {
 			continue
 		}
 		a := strings.Split(line, ";")
-		if len(a) != 2 {
+		if len(a) != 3 {
 			return nil, fmt.Errorf("wrong line: %q", line)
 		}
-		vgName, tags := strings.TrimSpace(a[0]), strings.Split(a[1], ",")
+		vgName, uuid, tags := strings.TrimSpace(a[0]), a[1], strings.Split(a[2], ",")
 		if vgName == "" {
 			return nil, fmt.Errorf("VG name can't be empty (line: %q)", line)
+		}
+		if uuid == "" {
+			return nil, fmt.Errorf("uuid can't be empty (line: %q)", line)
 		}
 		name, err := parseNameFromLVMTags(&tags)
 		if err != nil {
 			skipReason = "has no propper tag set: " + err.Error()
 		}
 
-		// Calculating Hash
-		h := fnv.New32a()
-		h.Write([]byte("lvm"))
-		h.Write([]byte(line))
-
 		sps = append(sps, Candidate{
 			Name:       "LVM Volume Group " + vgName,
-			UniqueKey:  h.Sum32(),
+			UUID:       uuid,
 			SkipReason: skipReason,
 			StoragePool: lclient.StoragePool{
 				StoragePoolName: name,

@@ -44,21 +44,26 @@ func TestParseThinPoolsWrong(t *testing.T) {
 }
 
 func TestParseThinPoolsNoTags(t *testing.T) {
-	got, err := parseLVMThinPools("node1", `  data;linstor_data;twi---tz--;
-  pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000;linstor_data;Vwi-aotz--;
-  root;vg0;-wi-ao----;`)
+	got, err := parseLVMThinPools("node1", `  data;linstor_data;twi---tz--;aDJhKS-fdhT-94VT-MxG8-8WMY-3SwO-2An0gR;
+  pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000;linstor_data;Vwi-aotz--;7hVfzc-HBLf-R2PB-Yo5L-BXvQ-30aa-GC5Ced;
+  root;vg0;-wi-ao----;PGmBTo-G5Gp-kjKk-mIMv-hprr-BdPG-DPCJHP;`)
 	if err != nil {
 		t.Errorf("\nexpected no error\ngot: %s", err.Error())
 	}
 	expected := []Candidate{
 		Candidate{
 			Name:       "LVM Logical Volume linstor_data/data",
-			UniqueKey:  3709774633,
+			UUID:       "aDJhKS-fdhT-94VT-MxG8-8WMY-3SwO-2An0gR",
 			SkipReason: "has no propper tag set: can't find tag with prefix linstor",
 		},
 		Candidate{
 			Name:       "LVM Logical Volume linstor_data/pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000",
-			UniqueKey:  1603582185,
+			UUID:       "7hVfzc-HBLf-R2PB-Yo5L-BXvQ-30aa-GC5Ced",
+			SkipReason: "is not a thin pool",
+		},
+		Candidate{
+			Name:       "LVM Logical Volume vg0/root",
+			UUID:       "PGmBTo-G5Gp-kjKk-mIMv-hprr-BdPG-DPCJHP",
 			SkipReason: "is not a thin pool",
 		},
 	}
@@ -67,13 +72,13 @@ func TestParseThinPoolsNoTags(t *testing.T) {
 }
 
 func TestParseThinPoolsWithTags(t *testing.T) {
-	got, _ := parseLVMThinPools("node1", `  data;linstor_data;twi---tz--;linstor-ssd
-  pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000;linstor_data;Vwi-aotz--;linstor-ssd
-  root;vg0;-wi-ao----;`)
+	got, _ := parseLVMThinPools("node1", `  data;linstor_data;twi---tz--;aDJhKS-fdhT-94VT-MxG8-8WMY-3SwO-2An0gR;linstor-ssd
+  pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000;linstor_data;Vwi-aotz--;7hVfzc-HBLf-R2PB-Yo5L-BXvQ-30aa-GC5Ced;linstor-ssd
+  root;vg0;-wi-ao----;PGmBTo-G5Gp-kjKk-mIMv-hprr-BdPG-DPCJHP;`)
 	expected := []Candidate{
 		Candidate{
-			Name:      "LVM Logical Volume linstor_data/data",
-			UniqueKey: 2581560477,
+			Name: "LVM Logical Volume linstor_data/data",
+			UUID: "aDJhKS-fdhT-94VT-MxG8-8WMY-3SwO-2An0gR",
 			StoragePool: lclient.StoragePool{
 				StoragePoolName: "ssd",
 				ProviderKind:    lclient.LVM_THIN,
@@ -86,12 +91,12 @@ func TestParseThinPoolsWithTags(t *testing.T) {
 		},
 		Candidate{
 			Name:       "LVM Logical Volume linstor_data/pvc-ecc0e656-78ca-497f-8f7a-f9fe3b384748_00000",
-			UniqueKey:  2121989597,
+			UUID:       "7hVfzc-HBLf-R2PB-Yo5L-BXvQ-30aa-GC5Ced",
 			SkipReason: "is not a thin pool",
 		},
 		Candidate{
 			Name:       "LVM Logical Volume vg0/root",
-			UniqueKey:  1329238223,
+			UUID:       "PGmBTo-G5Gp-kjKk-mIMv-hprr-BdPG-DPCJHP",
 			SkipReason: "is not a thin pool",
 		},
 	}
@@ -116,20 +121,20 @@ func TestParseVolumeGroupsWrong(t *testing.T) {
 }
 
 func TestParseVolumeGroupsNoTags(t *testing.T) {
-	got, err := parseLVMVolumeGroups("node1", `  linstor_data;
-  vg0;`)
+	got, err := parseLVMVolumeGroups("node1", `  linstor_data;BQ5CtV-2arB-FUA8-oynj-XWk2-1pFa-urUSxO;
+  vg0;hCbPFt-asAS-7DVb-OLtl-Ame3-XSmB-sxyXsO;`)
 	if err != nil {
 		t.Errorf("\nexpected no error\ngot: %s", err.Error())
 	}
 	expected := []Candidate{
 		Candidate{
 			Name:       "LVM Volume Group linstor_data",
-			UniqueKey:  2152925717,
+			UUID:       "BQ5CtV-2arB-FUA8-oynj-XWk2-1pFa-urUSxO",
 			SkipReason: "has no propper tag set: can't find tag with prefix linstor",
 		},
 		Candidate{
 			Name:       "LVM Volume Group vg0",
-			UniqueKey:  1388896196,
+			UUID:       "hCbPFt-asAS-7DVb-OLtl-Ame3-XSmB-sxyXsO",
 			SkipReason: "has no propper tag set: can't find tag with prefix linstor",
 		},
 	}
@@ -151,15 +156,15 @@ func diffCandidates(t *testing.T, expected *[]Candidate, got *[]Candidate) {
 }
 
 func TestParseVolumeGroupsWithTags(t *testing.T) {
-	got, err := parseLVMVolumeGroups("node1", `  linstor_data;linstor-some-data
-  vg0;`)
+	got, err := parseLVMVolumeGroups("node1", `  linstor_data;BQ5CtV-2arB-FUA8-oynj-XWk2-1pFa-urUSxO;linstor-some-data
+  vg0;hCbPFt-asAS-7DVb-OLtl-Ame3-XSmB-sxyXsO;`)
 	if err != nil {
 		t.Errorf("\nexpected no error\ngot: %s", err.Error())
 	}
 	expected := []Candidate{
 		Candidate{
-			Name:      "LVM Volume Group linstor_data",
-			UniqueKey: 1151917120,
+			Name: "LVM Volume Group linstor_data",
+			UUID: "BQ5CtV-2arB-FUA8-oynj-XWk2-1pFa-urUSxO",
 			StoragePool: lclient.StoragePool{
 				StoragePoolName: "some-data",
 				ProviderKind:    lclient.LVM,
@@ -168,6 +173,11 @@ func TestParseVolumeGroupsWithTags(t *testing.T) {
 					"StorDriver/LvmVg": "linstor_data",
 				},
 			},
+		},
+		Candidate{
+			Name:       "LVM Volume Group vg0",
+			UUID:       "hCbPFt-asAS-7DVb-OLtl-Ame3-XSmB-sxyXsO",
+			SkipReason: "has no propper tag set: can't find tag with prefix linstor",
 		},
 	}
 	diffCandidates(t, &expected, &got)
