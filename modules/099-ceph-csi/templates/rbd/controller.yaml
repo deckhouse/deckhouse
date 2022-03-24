@@ -1,0 +1,267 @@
+###
+### controller
+###
+
+{{- $deployRBDController := false }}
+
+{{- range $cr := .Values.cephCsi.internal.crs }}
+  {{- if $cr.spec.rbd }}
+    {{- $deployRBDController = true }}
+  {{- end }}
+{{- end }}
+
+
+{{- $csiDriverName := "rbd.csi.ceph.com" }}
+{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cephCsi.cephcsi)}}
+
+### rbd_csi_controller_args
+
+{{- define "rbd_csi_controller_args" }}
+- "--type=controller"
+- "--v=5"
+- "--drivername=$(DRIVER_NAME)"
+- "--drivernamespace=$(DRIVER_NAMESPACE)"
+{{- end }}
+
+
+### rbd_csi_controller_envs
+
+{{- define "rbd_csi_controller_envs" }}
+{{- $csiDriverName := index . 0 }}
+- name: DRIVER_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: DRIVER_NAME
+  value: {{ $csiDriverName }}
+{{- end }}
+
+
+### rbd_csi_controller_volumes
+
+{{- define "rbd_csi_controller_volumes" }}
+- name: ceph-csi-config
+  configMap:
+    name: ceph-csi-config
+    items:
+      - key: config.json
+        path: config.json
+- name: ceph-config
+  configMap:
+    name: ceph-config
+- name: host-dev
+  hostPath:
+    path: /dev
+- name: host-sys
+  hostPath:
+    path: /sys
+- name: lib-modules
+  hostPath:
+    path: /lib/modules
+- name: keys-tmp-dir
+  emptyDir: {
+    medium: "Memory"
+  }
+- name: etc-ceph-dir
+  emptyDir: {
+    medium: "Memory"
+  }
+{{- end }}
+
+
+### rbd_csi_controller_volume_mounts
+
+{{- define "rbd_csi_controller_volume_mounts" }}
+- name: ceph-csi-config
+  mountPath: /etc/ceph-csi-config/
+- name: etc-ceph-dir
+  mountPath: /etc/ceph/
+# - name: ceph-config
+#   mountPath: /etc/ceph/
+- name: keys-tmp-dir
+  mountPath: /tmp/csi/keys
+{{- end }}
+
+
+### rbd_csi_additional_containers
+
+{{- define "rbd_csi_additional_containers" }}
+{{- $csiDriverName := index . 0 }}
+{{- $csiControllerImage := index . 1 }}
+- name: rbdplugin
+  image: {{ $csiControllerImage }}
+  args:
+    - "--nodeid=$(NODE_ID)"
+    - "--type=rbd"
+    - "--controllerserver=true"
+    - "--pidlimit=-1"
+    - "--endpoint=$(CSI_ENDPOINT)"
+    - "--v=5"
+    - "--drivername=$(DRIVER_NAME)"
+    - "--rbdhardmaxclonedepth=8"
+    - "--rbdsoftmaxclonedepth=4"
+    - "--maxsnapshotsonimage=450"
+    - "--minsnapshotsonimage=250"
+  env:
+    - name: POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: DRIVER_NAME
+      value: {{ $csiDriverName }}
+    - name: NODE_ID
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: CSI_ENDPOINT
+      value: "unix:///csi/csi.sock"
+  securityContext:
+    privileged: true
+    capabilities:
+      add: ["SYS_ADMIN"]
+    allowPrivilegeEscalation: true
+  volumeMounts:
+    - name: socket-dir
+      mountPath: /csi
+    - mountPath: /dev
+      name: host-dev
+    - mountPath: /sys
+      name: host-sys
+    - mountPath: /lib/modules
+      name: lib-modules
+      readOnly: true
+    - name: ceph-csi-config
+      mountPath: /etc/ceph-csi-config/
+    - name: etc-ceph-dir
+      mountPath: /etc/ceph/
+    # - name: ceph-config
+    #   mountPath: /etc/ceph/
+    - name: keys-tmp-dir
+      mountPath: /tmp/csi/keys
+{{- end }}
+
+{{- if $deployRBDController }}
+
+  {{- $csiControllerConfig := dict }}
+  {{- $_ := set $csiControllerConfig "fullname" "csi-controller-rbd" }}
+  {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
+
+  {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "rbd_csi_controller_args" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "rbd_csi_controller_envs" (list $csiDriverName) | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "rbd_csi_controller_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "rbd_csi_controller_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalContainers" (include "rbd_csi_additional_containers" (list $csiDriverName $csiControllerImage) | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+{{- end }}
+
+###
+### node
+###
+
+### rbd_csi_node_args
+
+{{- define "rbd_csi_node_args" }}
+- "--nodeid=$(NODE_ID)"
+- "--pluginpath=/var/lib/kubelet/plugins"
+- "--stagingpath=/var/lib/kubelet/plugins/kubernetes.io/csi/pv/"
+- "--type=rbd"
+- "--nodeserver=true"
+- "--pidlimit=-1"
+- "--endpoint=$(CSI_ENDPOINT)"
+- "--v=5"
+- "--drivername=$(DRIVER_NAME)"
+{{- end }}
+
+
+### rbd_csi_node_envs
+
+{{- define "rbd_csi_node_envs" }}
+{{- $csiDriverName := index . 0 }}
+- name: POD_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.podIP
+- name: DRIVER_NAME
+  value: {{ $csiDriverName }}
+- name: NODE_ID
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
+- name: CSI_ENDPOINT
+  value: "unix:///csi/csi.sock"
+{{- end }}
+
+
+### rbd_csi_node_volume_mounts
+
+{{- define "rbd_csi_node_volume_mounts" }}
+- mountPath: /run/mount
+  name: host-mount
+- mountPath: /sys
+  name: host-sys
+- mountPath: /etc/selinux
+  name: etc-selinux
+  readOnly: true
+- mountPath: /lib/modules
+  name: lib-modules
+  readOnly: true
+- name: ceph-csi-config
+  mountPath: /etc/ceph-csi-config/
+- name: keys-tmp-dir
+  mountPath: /tmp/csi/keys
+- name: etc-ceph-dir
+  mountPath: /etc/ceph/
+{{- end }}
+
+
+### rbd_csi_node_volumes
+
+{{- define "rbd_csi_node_volumes" }}
+- name: host-mount
+  hostPath:
+    path: /run/mount
+- name: host-sys
+  hostPath:
+    path: /sys
+- name: etc-selinux
+  hostPath:
+    path: /etc/selinux
+- name: lib-modules
+  hostPath:
+    path: /lib/modules
+- name: ceph-csi-config
+  configMap:
+    name: ceph-csi-config
+    items:
+      - key: config.json
+        path: config.json
+- name: keys-tmp-dir
+  emptyDir: {
+    medium: "Memory"
+  }
+- name: etc-ceph-dir
+  emptyDir: {
+    medium: "Memory"
+  }
+{{- end }}
+
+
+{{- if $deployRBDController }}
+
+  {{- $csiNodeConfig := dict }}
+  {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+  {{- $_ := set $csiNodeConfig "driverFQDN" $csiDriverName }}
+  {{- $_ := set $csiNodeConfig "fullname" "csi-node-rbd" }}
+  {{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
+
+  {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "rbd_csi_node_args" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "rbd_csi_node_envs" (list $csiDriverName) | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "rbd_csi_node_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "rbd_csi_node_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+
+{{- end }}

@@ -1,0 +1,30 @@
+positive:
+  values:
+    - internal:
+        crs:
+          - name: test
+            spec:
+              clusterID: test
+              monitors:
+                - test
+              rbd:
+                storageClasses:
+                  - allowVolumeExpansion: true
+                    defaultFSType: ext4
+                    mountOptions:
+                      - discard
+                    namePostfix: test
+                    pool: test
+                    reclaimPolicy: Delete
+              userID: test
+              userKey: test
+negative:
+  values:
+    - internal:
+        crs:
+          - name: test
+            spec:
+              rbd:
+                storageClasses:
+                  - defaultFSType: ntfs
+                    namePostfix: test
