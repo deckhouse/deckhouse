@@ -25,6 +25,24 @@ import (
 
 var _ = Describe("Modules :: prometheus :: hooks :: prometheus_disk ::", func() {
 	const (
+		prom = `
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  labels:
+    app: prometheus
+  name: main
+  namespace: d8-monitoring
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  labels:
+    app: prometheus
+  name: longterm
+  namespace: d8-monitoring
+`
 		pvcMain = `
 ---
 apiVersion: v1
@@ -188,6 +206,7 @@ status:
 	)
 
 	f := HookExecutionConfigInit(`{"prometheus": {"internal":{"prometheusMain":{}, "prometheusLongterm":{} }}}`, `{}`)
+	f.RegisterCRD("monitoring.coreos.com", "v1", "Prometheus", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -203,7 +222,7 @@ status:
 	Context("Empty cluster and Schedule", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(``)
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.RunHook()
 		})
 
@@ -214,81 +233,61 @@ status:
 
 	Context("Cluster with storageClassExpensionFalse", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(storageClassExpensionFalse))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
+			f.BindingContexts.Set(f.KubeStateSet(prom + storageClassExpensionFalse))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; main and longterm disk size must be 30, retention must be 25", func() {
+		It("must be executed successfully; main and longterm disk size must be 30, retention must be 27", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("30"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("25"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("27"))
 			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.diskSizeGigabytes").String()).To(Equal("30"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("25"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("27"))
 		})
 	})
 
 	Context("Cluster with storageClassExpensionTrue", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(storageClassExpensionTrue))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
+			f.BindingContexts.Set(f.KubeStateSet(prom + storageClassExpensionTrue))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; main and longterm disk size must be 15, retention must be 10", func() {
+		It("must be executed successfully; main and longterm disk size must be 25, retention must be 22", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("15"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("10"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.diskSizeGigabytes").String()).To(Equal("15"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("10"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("25"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("22"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.diskSizeGigabytes").String()).To(Equal("25"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("22"))
 		})
 	})
 
 	Context("Cluster with storageClassExpensionTrue and pvc", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pvcMain + pvcLt + storageClassExpensionTrue))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
+			f.BindingContexts.Set(f.KubeStateSet(prom + pvcMain + pvcLt + storageClassExpensionTrue))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; main disk size must be 45, retention must be 36; longterm disk size must be 40, retention must be 32", func() {
+		It("must be executed successfully; main disk size must be 45, retention must be 40; longterm disk size must be 40, retention must be 36", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("45"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("36"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("40"))
 			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.diskSizeGigabytes").String()).To(Equal("40"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("32"))
-		})
-	})
-
-	Context("Cluster with storageClassExpensionTrue and pvc", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(storageClassExpensionTrue + pvcMain + pvcLt))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
-			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
-			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
-			f.ValuesSet("prometheus.internal.prometheusMain.diskUsage", 91)
-			f.ValuesSet("prometheus.internal.prometheusLongterm.diskUsage", 91)
-			f.RunHook()
-		})
-
-		It("must be executed successfully; prometheus-main-0,1 pvc must be 50Gi; prometheus-longterm-0,1 pvc must be 45Gi", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-main-db-prometheus-main-0").Field("spec.resources.requests.storage").String()).To(Equal("50Gi"))
-			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-main-db-prometheus-main-1").Field("spec.resources.requests.storage").String()).To(Equal("50Gi"))
-			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-longterm-db-prometheus-longterm-0").Field("spec.resources.requests.storage").String()).To(Equal("45Gi"))
-			Expect(f.KubernetesResource("PersistentVolumeClaim", "d8-monitoring", "prometheus-longterm-db-prometheus-longterm-1").Field("spec.resources.requests.storage").String()).To(Equal("45Gi"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("36"))
 		})
 	})
 
 	Context("Cluster with pvc's in state FileSystemResizePending", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pods + pvcMain + pvcLt))
+			f.BindingContexts.Set(f.KubeStateSet(pods + pvcMain + pvcLt + prom))
 			f.RunHook()
 		})
 
