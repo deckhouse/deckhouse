@@ -160,8 +160,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		Context("After setting manual approve", func() {
 			BeforeEach(func() {
 				f.KubeStateSet("")
-				cc := f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + manualApprovedReleases)
-				f.BindingContexts.Set(cc)
+				f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + manualApprovedReleases)
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 				f.RunHook()
 			})
 			It("Must upgrade deckhouse", func() {
@@ -174,8 +174,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		Context("Auto deploy Patch release in Manual mode", func() {
 			BeforeEach(func() {
 				f.KubeStateSet("")
-				cc := f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + deckhouseReleases + deckhousePatchRelease)
-				f.BindingContexts.Set(cc)
+				f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + deckhouseReleases + deckhousePatchRelease)
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 				f.RunHook()
 			})
 			It("Must upgrade deckhouse", func() {

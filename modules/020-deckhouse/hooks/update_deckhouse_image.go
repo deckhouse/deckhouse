@@ -74,6 +74,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "releases",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "DeckhouseRelease",
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			FilterFunc:                   filterDeckhouseRelease,
 		},
