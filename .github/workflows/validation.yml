@@ -27,6 +27,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  close_dependabot_prs_for_forks:
+    name: Autoclose Dependabot PRs for forks
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
+    env:
+      ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
+    steps:
+      - name: Close PR
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            // Keep PR if explicitly enabled.
+            const {ENABLE_DEPENDABOT_IN_FORKS} = process.env;
+            const prNum = context.payload.pull_request.number;
+            const repo = context.payload.repository.full_name;
+            if (ENABLE_DEPENDABOT_IN_FORKS === 'true') {
+              core.info(`Secret ENABLE_DEPENDABOT_IN_FORKS is 'true', proceed with validation for PR#${prNUM} in repo ${repo}.`);
+              return
+            }
+            core.info(`Secret ENABLE_DEPENDABOT_IN_FORKS is not 'true', close PR#${prNum} in repo ${repo}.`);
+            return await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNum,
+              state: 'closed'
+            });
+
 
   # <template: pull_request_info>
   pull_request_info:

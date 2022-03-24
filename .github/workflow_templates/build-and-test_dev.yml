@@ -95,7 +95,7 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "build_deckhouse") | strings.Indent 4 }!}
 
   matrix_tests:
     name: Matrix tests
@@ -103,7 +103,7 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "build_deckhouse") | strings.Indent 4 }!}
 
   dhctl_tests:
     name: Dhctl Tests
@@ -111,7 +111,7 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_deckhouse") | strings.Indent 4 }!}
 
   golangci_lint:
     name: GolangCI Lint
@@ -119,7 +119,7 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_deckhouse") | strings.Indent 4 }!}
 
   openapi_test_cases:
     name: OpenAPI Test Cases
@@ -127,7 +127,7 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_deckhouse") | strings.Indent 4 }!}
 
   web_links_test:
     name: Web links test
@@ -145,4 +145,4 @@ jobs:
       - git_info
       - pull_request_info
       - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
