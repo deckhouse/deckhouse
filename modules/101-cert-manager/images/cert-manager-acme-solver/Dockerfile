@@ -1,5 +1,5 @@
 ARG BASE_ALPINE
-FROM quay.io/jetstack/cert-manager-acmesolver:v1.6.1@sha256:7e4e2e023fcd24b64e597848c8b1bf25674d267dfc8a7b3ad72ce9eb0c75e917 as artifact
+FROM quay.io/jetstack/cert-manager-acmesolver:v1.7.1@sha256:9f39386b03da0dbf9e8208e77a8fbce7f920491c1dc6c4f16d898dbc4c123e74 as artifact
 FROM $BASE_ALPINE as final
 COPY --from=artifact /app/cmd/acmesolver/acmesolver /bin/acmesolver
 RUN apk add --no-cache ca-certificates
