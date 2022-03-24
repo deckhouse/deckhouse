@@ -35,6 +35,7 @@
 ## Release digest
 
 
+ - Disable enforced namespace passing to a query. If your metric need to be selected with a specific namespace label value, you should set it directly in an HPA's label selector
  - Ingress nginx controller pods now managed by a special hook, not by a Kubernetes Controller.
 
 ## Features
@@ -147,6 +148,8 @@
  - **[node-manager]** When calculating maximum instances for particular NodeGroup without zones defined — use global zones count from CloudProvider configuration. [#580](https://github.com/deckhouse/deckhouse/pull/580)
  - **[node-manager]** Fix Static node template annotations updating [#544](https://github.com/deckhouse/deckhouse/pull/544)
  - **[prometheus]** Make Grafana home dashboard queries to only show the top-used versions [#476](https://github.com/deckhouse/deckhouse/pull/476)
+ - **[prometheus-metrics-adapter]** Restore HPA external metrics behavior [#1154](https://github.com/deckhouse/deckhouse/pull/1154)
+    Disable enforced namespace passing to a query. If your metric need to be selected with a specific namespace label value, you should set it directly in an HPA's label selector
  - **[upmeter]** Fixed floating bug causing false downtime of deckhouse/cluster-configuration probe [#997](https://github.com/deckhouse/deckhouse/pull/997)
  - **[upmeter]** Assigned limited access rights to the agent serviceaccount [#469](https://github.com/deckhouse/deckhouse/pull/469)
  - **[user-authn]** Fixed .spec.ldap.bindPW escaping in DexProvider [#1032](https://github.com/deckhouse/deckhouse/pull/1032)
