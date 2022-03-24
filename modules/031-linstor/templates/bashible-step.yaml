@@ -1,0 +1,53 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: add-drbd-to-blacklist.sh
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  weight: 100
+  nodeGroups: ["*"]
+  bundles: ["*"]
+  content: |
+    # Copyright 2021 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    # DRBD devices should not be queried by the LVM and multipath commands.
+    # So we add DRBD devices into blacklist for multipath and configure
+    # global_filter in lvm.conf for them
+    set -e
+
+    # multipath
+    mkdir -p /etc/multipath/conf.d
+    cat > /etc/multipath/conf.d/drbd.conf <<EOF
+    blacklist {
+        devnode "^drbd[0-9]+"
+    }
+    EOF
+    systemctl reload multipathd || true
+
+    # lvm
+    command -V lvmconfig >/dev/null 2>&1 || exit 0
+    test -f /etc/lvm/lvm.conf || exit 0
+    cur=$(lvmconfig devices/global_filter 2>/dev/null || true)
+    
+    case "${cur}" in
+      '' ) new="[\"r|^/dev/drbd|\"]" ;;
+      */dev/drbd*) exit 0 ;;
+      'global_filter="'*) new="[\"r|^/dev/drbd|\",${cur#*=}]" ;;
+      'global_filter=['*) new="[\"r|^/dev/drbd|\",${cur#*[}" ;;
+      *) echo error parsing global filter >&2; exit 1 ;;
+    esac
+    
+    lvmconfig --config "devices/global_filter=$new" --withcomments --merge > /etc/lvm/lvm.conf.$$
+    mv /etc/lvm/lvm.conf.$$ /etc/lvm/lvm.conf
