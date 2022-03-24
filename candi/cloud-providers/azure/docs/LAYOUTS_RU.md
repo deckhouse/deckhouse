@@ -19,28 +19,28 @@ title: "Cloud provider — Azure: схемы размещения"
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>" # Required.
-vNetCIDR: 10.50.0.0/16 # Required.
-subnetCIDR: 10.50.0.0/24 # Required.
+sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>" # Обязательный параметр.
+vNetCIDR: 10.50.0.0/16 # Обязательный параметр.
+subnetCIDR: 10.50.0.0/24 # Обязательный параметр.
 standard:
-  natGatewayPublicIpCount: 1 # Optional, by default 0.
+  natGatewayPublicIpCount: 1 # Необязательный параметр, по умолчанию 0.
 masterNodeGroup:
   replicas: 1
-  zones: ["1"] # Optional, by default ["1"].
+  zones: ["1"] # Необязательный параметр, по умолчанию ["1"].
   instanceClass:
-    machineSize: Standard_F4 # Required.
+    machineSize: Standard_F4 # Обязательный параметр.
     diskSizeGb: 32
-    # Required.
-    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140
-    enableExternalIP: false # Optional, by default true.
+    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140  # Обязательный параметр.
+    enableExternalIP: false # Необязательный параметр, по умолчанию true.
 provider:
-  subscriptionId: "" # Required.
-  clientId: "" # Required.
-  clientSecret: "" # Required.
-  tenantId: "" # Required.
-  location: "westeurope" # Required.
-# Optional, list of Azure VNets with which Kubernetes VNet will be peered.
+  subscriptionId: "" # Обязательный параметр.
+  clientId: "" # Обязательный параметр.
+  clientSecret: "" # Обязательный параметр.
+  tenantId: "" # Обязательный параметр.
+  location: "westeurope" # Обязательный параметр.
+# Необязательный параметр, список Azure VNets, с которыми Kubernetes VNet будет
+# соединяться через пиринговое соединение.
 peeredVNets:
-  - resourceGroupName: kube-bastion # Required.
-    vnetName: kube-bastion-vnet # Required.
+  - resourceGroupName: kube-bastion # Обязательный параметр.
+    vnetName: kube-bastion-vnet # Обязательный параметр.
 ```

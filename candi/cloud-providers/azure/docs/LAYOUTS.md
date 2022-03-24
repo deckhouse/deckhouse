@@ -30,8 +30,7 @@ masterNodeGroup:
   instanceClass:
     machineSize: Standard_F4 # Required.
     diskSizeGb: 32
-    # Required.
-    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140
+    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140 # Required.
     enableExternalIP: false # Optional, by default true.
 provider:
   subscriptionId: "" # Required.
