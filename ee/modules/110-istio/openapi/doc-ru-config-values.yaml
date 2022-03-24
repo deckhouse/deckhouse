@@ -143,6 +143,58 @@ properties:
           Опциональные tolerations для компонента istiod. Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
           Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      resourceManagement:
+        description: |
+          Настройки управления ресурсами istiod.
+        properties:
+          mode:
+          vpa:
+            description: |
+              Параметры для режима VPA.
+            properties:
+              mode:
+                description: |
+                  Режим работы VPA.
+              cpu:
+                min:
+                  description: |
+                    Минимально допустимый requests для cpu.
+                max:
+                  description: |
+                    Максимально допустимый requests для cpu.
+                limitRatio:
+                  description: |
+                    Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у пода. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+              memory:
+                min:
+                  description: |
+                    Минимально допустимый requests для memory.
+                max:
+                  description: |
+                    Максимально допустимый requests для memory.
+                limitRatio:
+                  description: |
+                    Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у пода. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+          static:
+            description: |
+              Настройки управления ресурсами в статическом режиме.
+            properties:
+              requests:
+                properties:
+                  cpu:
+                    description: |
+                      Реквесты CPU.
+                  memory:
+                    description: |
+                      Реквесты памяти.
+              limits:
+                properties:
+                  cpu:
+                    description: |
+                      Лимиты CPU.
+                  memory:
+                    description: |
+                      Лимиты памяти.
   nodeSelector:
     description: |
       Опциональный селектор для компонентов istio-operator, metadata-exporter и kiali. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.

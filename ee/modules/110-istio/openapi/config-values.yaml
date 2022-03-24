@@ -271,6 +271,146 @@ properties:
               format: int64
             value:
               type: string
+      resourcesManagement:
+        description: |
+          istiod resources management options.
+        default: {}
+        x-examples:
+        - mode: VPA
+          vpa:
+            mode: Auto
+            cpu:
+              min: "50m"
+              max: 2
+              limitRatio: 1.5
+            memory:
+              min: "256Mi"
+              max: "2Gi"
+              limitRatio: 1.5
+        - mode: Static
+          static:
+            requests:
+              cpu: "55m"
+              memory: "256Mi"
+            limits:
+              cpu: 2
+              memory: "2Gi"
+        properties:
+          mode:
+            type: string
+            description: |
+              The mode for managing resource requests. Classical `Static` requests/limit or `VPA`.
+            enum: ['VPA', 'Static']
+            default: 'VPA'
+          vpa:
+            type: object
+            default: {}
+            description: |
+              Parameters of the VPA mode.
+            properties:
+              mode:
+                type: string
+                description: |
+                  The VPA usage mode.
+                enum: ['Initial', 'Auto']
+                default: 'Auto'
+              cpu:
+                type: object
+                default: {}
+                description: |
+                  CPU-related parameters.
+                properties:
+                  max:
+                    description: |
+                      Maximum allowed CPU requests.
+                    default: 2
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
+                  min:
+                    description: |
+                      Minimum allowed CPU requests.
+                    default: '50m'
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
+                  limitRatio:
+                    type: number
+                    examples: [1.5]
+                    description: |
+                      The coefficient to calculate cpu limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+              memory:
+                type: object
+                default: {}
+                description: |
+                  The amount of memory requested.
+                properties:
+                  max:
+                    description: |
+                      Maximum allowed memory requests.
+                    default: '2Gi'
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    - type: number
+                  min:
+                    description: |
+                      Minimum allowed memory requests.
+                    default: '256Mi'
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    - type: number
+                  limitRatio:
+                    type: number
+                    examples: [1.5]
+                    description: |
+                      The coefficient to calculate memory limits. It is optionally used to calculate initial limits for Pod. VPA for its part keeps the initial limits/requests ratio during further resource tunings.
+          static:
+            type: object
+            description: |
+              Static resource management settings.
+            properties:
+              requests:
+                type: object
+                description: |
+                  Requests configuration.
+                properties:
+                  cpu:
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
+                    description: |
+                      CPU requests.
+                  memory:
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    - type: number
+                    description: |
+                      Memory requests.
+              limits:
+                type: object
+                description: |
+                  Limits configuration.
+                properties:
+                  cpu:
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
+                    description: |
+                      CPU limits.
+                  memory:
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+                    - type: number
+                    description: |
+                      Memory limits.
   nodeSelector:
     type: object
     additionalProperties:

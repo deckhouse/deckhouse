@@ -79,7 +79,7 @@ const istioValues = `
       externalAuthentication: {}
       password: qqq
     outboundTrafficPolicyMode: AllowAny
-    controlPlane: {}
+    tlsMode: "Off"
     sidecar:
       includeOutboundIPRanges: ["10.0.0.0/24"]
       excludeOutboundIPRanges: ["1.2.3.4/32"]
@@ -94,6 +94,17 @@ const istioValues = `
         inlet: LoadBalancer
         nodePort: {}
     tracing: {}
+    controlPlane:
+      resourcesManagement:
+        mode: VPA
+        vpa:
+          mode: Auto
+          cpu:
+            min: "50m"
+            max: "2"
+          memory:
+            min: "256Mi"
+            max: "2Gi"
 `
 
 var _ = Describe("Module :: istio :: helm template :: main", func() {
@@ -478,4 +489,195 @@ a-b-c-1-2-3:
 		})
 	})
 
+	Context("istiod with default resourcesManagement configuration", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			iopV181 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x8x1")
+			Expect(iopV181.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+requests:
+  cpu: 50m
+  memory: 256Mi
+limits: {}
+`))
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
+			Expect(vpa.Field("spec").String()).To(MatchYAML(`
+targetRef:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: istiod-v1x8x1
+updatePolicy:
+  updateMode: Auto
+resourcePolicy:
+  containerPolicies:
+  - containerName: discovery
+    maxAllowed:
+      cpu: "2"
+      memory: "2Gi"
+    minAllowed:
+      cpu: "50m"
+      memory: "256Mi"
+    controlledValues: RequestsAndLimits
+`))
+		})
+	})
+
+	Context("istiod with custom static resourcesManagement configuration", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
+			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
+mode: Static
+static:
+  requests:
+    cpu: 11m
+    memory: 22Mi
+  limits:
+    cpu: 33
+    memory: 44Gi
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			iopV181 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x8x1")
+			Expect(iopV181.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+requests:
+  cpu: 11m
+  memory: 22Mi
+limits:
+  cpu: 33
+  memory: 44Gi
+`))
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
+			Expect(vpa.Field("spec").String()).To(MatchYAML(`
+targetRef:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: istiod-v1x8x1
+updatePolicy:
+  updateMode: "Off"
+`))
+		})
+	})
+
+	Context("istiod with custom vpa resourcesManagement configuration case #1", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
+			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
+mode: VPA
+vpa:
+  mode: Initial
+  cpu:
+    min: 101m
+    max: 1
+    limitRatio: 2.5
+  memory:
+    min: 512Mi
+    max: 5Gi
+    limitRatio: 2.5
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			iopV181 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x8x1")
+			Expect(iopV181.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+limits:
+  cpu: 253m
+  memory: "1342177280"
+requests:
+  cpu: 101m
+  memory: 512Mi
+`))
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
+			Expect(vpa.Field("spec").String()).To(MatchYAML(`
+targetRef:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: istiod-v1x8x1
+resourcePolicy:
+  containerPolicies:
+  - containerName: discovery
+    controlledValues: RequestsAndLimits
+    maxAllowed:
+      cpu: "1"
+      memory: 5Gi
+    minAllowed:
+      cpu: 101m
+      memory: 512Mi
+updatePolicy:
+  updateMode: Initial
+`))
+		})
+	})
+
+	Context("istiod with custom vpa resourcesManagement configuration case #2", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
+			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
+mode: VPA
+vpa:
+  mode: Initial
+  cpu:
+    min: 3
+    max: 5
+    limitRatio: 2.5
+  memory:
+    min: "333"
+    max: 7Gi
+    limitRatio: 2.5
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			iopV181 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x8x1")
+			Expect(iopV181.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+limits:
+  cpu: 7500m
+  memory: "833"
+requests:
+  cpu: "3"
+  memory: "333"
+`))
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
+			Expect(vpa.Field("spec").String()).To(MatchYAML(`
+targetRef:
+  apiVersion: apps/v1
+  kind: Deployment
+  name: istiod-v1x8x1
+resourcePolicy:
+  containerPolicies:
+  - containerName: discovery
+    controlledValues: RequestsAndLimits
+    maxAllowed:
+      cpu: "5"
+      memory: 7Gi
+    minAllowed:
+      cpu: "3"
+      memory: "333"
+updatePolicy:
+  updateMode: Initial
+`))
+		})
+	})
 })
