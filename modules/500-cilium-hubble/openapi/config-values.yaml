@@ -7,7 +7,7 @@ properties:
   auth:
     type: object
     default: {}
-    description: Options related to authentication or authorization in the application.
+    description: Options related to authentication or authorization in the Hubble web UI.
     properties:
       externalAuthentication:
         type: object
@@ -36,7 +36,7 @@ properties:
         items:
           type: string
         description: |
-          An array of user groups that can access Hubble.
+          An array of user groups that can access Hubble web UI.
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
@@ -47,7 +47,7 @@ properties:
           type: string
         x-examples:
           - [ "1.1.1.1/32" ]
-        description: An array if CIDRs that are allowed to authenticate in Hubble.
+        description: An array if CIDRs that are allowed to authenticate in Hubble web UI.
   https:
     type: object
     x-examples:
@@ -98,7 +98,7 @@ properties:
           secretName:
             type: string
             description: |
-              The name of the secret in the `d8-system` namespace to use with the documentation web UI.
+              The name of the secret in the `d8-system` namespace to use with the Hubble web UI.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
 

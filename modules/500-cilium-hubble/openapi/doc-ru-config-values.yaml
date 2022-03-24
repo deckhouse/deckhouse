@@ -1,10 +1,10 @@
 type: object
 properties:
   debugLogging:
-    description: Включает отладочный уровень логирования для компонентов hubble.
+    description: Включает отладочный уровень логирования для компонентов Hubble.
   auth:
     description: |
-      Опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу документации.
+      Опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу Hubble.
     properties:
       externalAuthentication:
         description: |
@@ -25,11 +25,11 @@ properties:
           Используется, если не включен параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
-          Список групп, пользователям которых разрешен доступ к просмотру документации.
+          Список групп, пользователям которых разрешен доступ к web-интерфейсу Hubble.
 
           Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
       whitelistSourceRanges:
-        description: Список адресов (CIDR) которым разрешен доступ к Hubble.
+        description: Список адресов (CIDR) которым разрешен доступ к web-интерфейсу Hubble.
   https:
     description: |
       Тип используемого сертификата.
@@ -54,6 +54,6 @@ properties:
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса документации.
+              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса Hubble.
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
