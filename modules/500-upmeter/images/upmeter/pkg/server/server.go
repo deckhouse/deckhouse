@@ -28,9 +28,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/crd"
+	"d8.io/upmeter/pkg/db"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/db/migrations"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/server/api"
 	"d8.io/upmeter/pkg/server/remotewrite"
@@ -79,9 +79,9 @@ func (s *server) Start(ctx context.Context) error {
 	}
 
 	// Database connection with pool
-	dbCtx, err := migrations.GetMigratedDatabase(ctx, s.config.DatabasePath, s.config.DatabaseMigrationsPath)
+	dbctx, err := db.Connect(s.config.DatabasePath, dbcontext.DefaultConnectionOptions())
 	if err != nil {
-		return fmt.Errorf("database not connected: %v", err)
+		return fmt.Errorf("cannot connect to database: %v", err)
 	}
 
 	// Downtime CR monitor
@@ -91,18 +91,18 @@ func (s *server) Start(ctx context.Context) error {
 	}
 
 	// Metrics controller
-	s.remoteWriteController, err = initRemoteWriteController(ctx, dbCtx, kubeClient, s.config.OriginsCount, s.logger)
+	s.remoteWriteController, err = initRemoteWriteController(ctx, dbctx, kubeClient, s.config.OriginsCount, s.logger)
 	if err != nil {
 		s.logger.Debugf("starting controller... did't happen: %v", err)
 		return fmt.Errorf("cannot start remote_write controller: %v", err)
 	}
 
-	go cleanOld30sEpisodes(ctx, dbCtx)
+	go cleanOld30sEpisodes(ctx, dbctx)
 
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")
 	listenAddr := s.config.ListenHost + ":" + s.config.ListenPort
-	s.server = initHttpServer(dbCtx, s.downtimeMonitor, s.remoteWriteController, listenAddr)
+	s.server = initHttpServer(dbctx, s.downtimeMonitor, s.remoteWriteController, listenAddr)
 
 	err = s.server.ListenAndServe()
 	if err == http.ErrServerClosed {

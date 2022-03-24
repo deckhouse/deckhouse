@@ -59,6 +59,24 @@ spec:
           path: /var/lib/upmeter/agent
       initContainers:
       {{- include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "data") | nindent 6 }}
+      - name: migrator
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}"
+        command:
+          - /migrate
+          - -verbose
+          - "-path=/data/migrations/agent"
+          - "-database=sqlite3:///db/db.sqlite"
+          - up
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
+        volumeMounts:
+          - mountPath: /db
+            name: data
+            readOnly: false
+          - mountPath: /tmp
+            name: tmp
       containers:
         - name: agent
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
@@ -87,8 +105,6 @@ spec:
             value: "443"
           - name: UPMETER_DB_PATH
             value: "/db/db.sqlite"
-          - name: UPMETER_DB_MIGRATIONS_PATH
-            value: "/data/migrations/agent"
           {{- if hasKey $.Values.global "clusterConfiguration" }}
             {{- if eq $.Values.global.clusterConfiguration.clusterType "Cloud" }}
           - name: UPMETER_CLOUD_CONTROLLER_MANAGER_NAMESPACE

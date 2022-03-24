@@ -27,7 +27,8 @@ import (
 	"d8.io/upmeter/pkg/agent/scheduler"
 	"d8.io/upmeter/pkg/agent/sender"
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db/migrations"
+	"d8.io/upmeter/pkg/db"
+	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/kubernetes"
 )
 
@@ -79,7 +80,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	// Database connection with pool
-	dbctx, err := migrations.GetMigratedDatabase(ctx, a.config.DatabasePath, a.config.DatabaseMigrationsPath)
+	dbctx, err := db.Connect(a.config.DatabasePath, dbcontext.DefaultConnectionOptions())
 	if err != nil {
 		return fmt.Errorf("cannot connect to database: %v", err)
 	}
