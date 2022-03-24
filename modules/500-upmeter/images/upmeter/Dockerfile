@@ -22,7 +22,7 @@ RUN go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@
 FROM $BASE_ALPINE
 # sqlite for debug
 RUN apk add --update sqlite tree
-COPY --from=artifact /app/pkg/db/migrations/agent   /data/migrations/agent
-COPY --from=artifact /app/pkg/db/migrations/server  /data/migrations/server
+COPY --from=artifact /app/pkg/db/migrations/agent  /data/migrations/agent
+COPY --from=artifact /app/pkg/db/migrations/server /data/migrations/server
 COPY --from=artifact /migrate /migrate
 COPY --from=artifact /upmeter /upmeter
