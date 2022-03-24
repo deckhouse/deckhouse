@@ -14,7 +14,7 @@ steps:
     env:
       WERF_DIR: "docs/documentation"
       WERF_LOG_VERBOSE: "on"
-      WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+      WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
 # </template: doc_web_build_template>
 {!{- end -}!}
 
@@ -34,7 +34,7 @@ steps:
     env:
       WERF_DIR: "docs/site"
       WERF_LOG_VERBOSE: "on"
-      WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+      WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
 # </template: main_web_build_template>
 {!{- end -}!}
 
@@ -49,6 +49,8 @@ steps:
   {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
 
   - name: Prepare site structure
+    env:
+      WEB_REGISTRY_PATH: ${{steps.check_flant_registry.outputs.web_registry_path}}
     run: |
       type werf
       werf version
@@ -59,7 +61,7 @@ steps:
       echo "_TMPDIR=$_TMPDIR" >> ${GITHUB_ENV}
       echo "_TMPDIR=$_TMPDIR"
 
-      export WERF_REPO="${FLANT_REGISTRY_PATH}"
+      export WERF_REPO="${WEB_REGISTRY_PATH}"
       echo -n 'use werf_repo'
       echo $WERF_REPO | tr 'a-z' 'A-Z'
 
@@ -148,7 +150,7 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
-    WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+    WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
     WERF_NAMESPACE: {!{ $ns }!}
@@ -177,7 +179,7 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
-    WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+    WERF_REPO: ${{steps.check_flant_registry.outputs.web_registry_path}}
     WERF_DIR: "docs/site"
     WERF_RELEASE: "deckhouse-site"
     WERF_NAMESPACE: {!{ $ns }!}

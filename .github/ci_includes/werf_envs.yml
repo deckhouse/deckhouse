@@ -12,7 +12,7 @@ TEST_TIMEOUT: "15m"
 # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in Github.
 DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
 BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
-
-FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+# Registry for additional repositories used for testing Github Actions workflows.
+GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 # </template: werf_envs>
 {!{- end -}!}
