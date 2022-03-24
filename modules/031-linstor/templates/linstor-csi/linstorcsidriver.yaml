@@ -90,7 +90,7 @@ spec:
   {{- end }}
   linstorHttpsClientSecret: linstor-client-https-cert
   priorityClassName: ""
-  controllerReplicas: 1
+  controllerReplicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
   nodeAffinity: {}
   nodeTolerations:
@@ -106,17 +106,9 @@ spec:
             values:
             - {{ $v | quote }}
           {{- end }}
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 1
-        podAffinityTerm:
-          topologyKey: kubernetes.io/hostname
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/component: csi-controller
-              app.kubernetes.io/instance: linstor
-              app.kubernetes.io/managed-by: piraeus-operator
-              app.kubernetes.io/name: piraeus-csi
+    {{- with (index (fromYaml (include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app.kubernetes.io/component" "csi-controller" "app.kubernetes.io/instance" "linstor" "app.kubernetes.io/managed-by" "piraeus-operator" "app.kubernetes.io/name" "piraeus-csi")))) "affinity") }}
+    {{ toYaml . | nindent 4 }}
+    {{- end }}
   controllerTolerations:
     {{- index (include "helm_lib_tolerations" (tuple . "master") | fromYaml) "tolerations" | toYaml | nindent 4 }}
   enableTopology: true
