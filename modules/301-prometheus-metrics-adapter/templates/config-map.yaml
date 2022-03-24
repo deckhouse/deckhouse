@@ -9,6 +9,8 @@ data:
   config.yaml: |
     externalRules:
     - seriesQuery: '{__name__=~"kube_adapter_metric_.+"}'
+      resources:
+        namespaced: false
       name:
         matches: "^kube_adapter_metric_(.+)$"
         as: "${1}"
