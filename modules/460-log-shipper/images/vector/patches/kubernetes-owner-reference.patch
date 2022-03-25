@@ -64,10 +64,10 @@ index 0abe760b7..5c907cebc 100644
          let resulting_state_reader = state_reader.clone();
 
 diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
-index 4c55d095f..973a76775 100644
+index 4c55d095f..8f6e76057 100644
 --- a/src/kubernetes/state/evmap.rs
 +++ b/src/kubernetes/state/evmap.rs
-@@ -5,8 +5,13 @@ use std::time::Duration;
+@@ -5,8 +5,14 @@ use std::time::Duration;
  use async_trait::async_trait;
  use evmap::WriteHandle;
  use futures::future::BoxFuture;
@@ -76,12 +76,13 @@ index 4c55d095f..973a76775 100644
 +use k8s_openapi::api::apps::v1::{ReadNamespacedReplicaSetResponse, ReplicaSet};
 +use k8s_openapi::apimachinery::pkg::apis::meta::v1::OwnerReference;
  use k8s_openapi::{apimachinery::pkg::apis::meta::v1::ObjectMeta, Metadata};
++use tracing::debug;
 
 +use crate::kubernetes::client::Client;
  use crate::kubernetes::{
      debounce::Debounce,
      hash_value::{HashKey, HashValue},
-@@ -19,6 +24,7 @@ pub struct Writer<T>
+@@ -19,6 +25,7 @@ pub struct Writer<T>
  where
      T: Metadata<Ty = ObjectMeta> + Send,
  {
@@ -89,7 +90,7 @@ index 4c55d095f..973a76775 100644
      inner: WriteHandle<String, Value<T>>,
      debounced_flush: Option<Debounce>,
      hash_key: HashKey,
-@@ -31,6 +37,7 @@ where
+@@ -31,6 +38,7 @@ where
      /// Take a [`WriteHandle`], initialize it and return it wrapped with
      /// [`Writer`].
      pub fn new(
@@ -97,7 +98,7 @@ index 4c55d095f..973a76775 100644
          mut inner: WriteHandle<String, Value<T>>,
          flush_debounce_timeout: Option<Duration>,
          hash_key: HashKey,
-@@ -43,6 +50,7 @@ where
+@@ -43,6 +51,7 @@ where
          let debounced_flush = flush_debounce_timeout.map(Debounce::new);
 
          Self {
@@ -105,7 +106,7 @@ index 4c55d095f..973a76775 100644
              inner,
              debounced_flush,
              hash_key,
-@@ -73,14 +81,16 @@ where
+@@ -73,14 +82,16 @@ where
      type Item = T;
 
      async fn add(&mut self, item: Self::Item) {
@@ -124,11 +125,11 @@ index 4c55d095f..973a76775 100644
              self.inner.update(key, value);
              self.debounced_flush();
          }
-@@ -102,6 +112,65 @@ where
+@@ -102,6 +113,83 @@ where
      }
  }
 
-+async fn enrich_owner_ref(client: &mut Client, metadata: &mut ObjectMeta) -> Option<Vec<OwnerReference>> {
++async fn enrich_owner_ref(client: &mut Client, metadata: &mut ObjectMeta) {
 +    if let Some(or) = metadata.owner_references.to_owned() {
 +        let mut ns = String::from("default");
 +        if let Some(namespace) = metadata.namespace.to_owned() {
@@ -137,20 +138,24 @@ index 4c55d095f..973a76775 100644
 +
 +        match or[0].kind.as_str() {
 +            "ReplicaSet" => {
-+                let owner_ref = replicaset_owner_ref(
-+                    &mut client.clone(),
-+                    or[0].name.as_str(),
-+                    ns.as_str(),
-+                ).await;
++                debug!(
++                    "Pod {} in namespace {} is owned by ReplicaSet",
++                    or[0].name, ns
++                );
++                let owner_ref =
++                    replicaset_owner_ref(&mut client.clone(), or[0].name.as_str(), ns.as_str())
++                        .await;
 +
 +                if let Some(owner_ref) = owner_ref {
++                    debug!("Owner Ref {}/{}", owner_ref[0].kind, owner_ref[0].name);
 +                    metadata.owner_references = Some(owner_ref);
 +                }
 +            }
-+            _ => {}
++            _ => {
++                debug!("Unknown kind {}", or[0].kind);
++            }
 +        }
 +    }
-+    return None;
 +}
 +
 +async fn replicaset_owner_ref(
@@ -163,6 +168,10 @@ index 4c55d095f..973a76775 100644
 +    {
 +        let resp = client.send(req).await.ok()?;
 +        let status = resp.status();
++        debug!(
++            "ReplicaSet {}/{} response StatusCode {}",
++            name, namespace, status
++        );
 +
 +        if status != StatusCode::OK {
 +            return None;
@@ -171,16 +180,26 @@ index 4c55d095f..973a76775 100644
 +        // Read body to not to get EOF error for json parsing
 +        let mut resp_result = resp_body(status);
 +        if let Ok(body) = body::to_bytes(resp.into_body()).await {
++            debug!("ReplicaSet {}/{} reading body", name, namespace);
++
 +            resp_result.append_slice(&body);
 +        }
++
++        debug!("ReplicaSet {}/{} parsing body", name, namespace);
 +
 +        if let Ok(read_rs_result) = resp_body(status).parse() {
 +            match read_rs_result {
 +                ReadNamespacedReplicaSetResponse::Ok(rs) => {
++                    debug!("Got owner reference for ReplicaSet {}/{}", name, namespace);
 +                    return rs.metadata.owner_references;
 +                }
 +                // Ignore is cannot get the owner
-+                _ => {}
++                _ => {
++                    debug!(
++                        "Not ReadNamespacedReplicaSetResponse {}/{}",
++                        name, namespace
++                    );
++                }
 +            }
 +        }
 +    }
@@ -190,13 +209,14 @@ index 4c55d095f..973a76775 100644
  #[async_trait]
  impl<T> super::MaintainedWrite for Writer<T>
  where
-@@ -139,9 +208,13 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+@@ -138,10 +226,14 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+
  #[cfg(test)]
  mod tests {
-     use k8s_openapi::api::core::v1::Pod;
-+    use wiremock::MockServer;
-+    use vector_core::config::proxy::ProxyConfig;
 +    use crate::kubernetes::client;
+     use k8s_openapi::api::core::v1::Pod;
++    use vector_core::config::proxy::ProxyConfig;
++    use wiremock::MockServer;
 
      use super::*;
      use crate::kubernetes::state::{MaintainedWrite, Write};
@@ -204,7 +224,7 @@ index 4c55d095f..973a76775 100644
 
      fn make_pod(uid: &str) -> Pod {
          Pod {
-@@ -185,8 +258,17 @@ mod tests {
+@@ -185,8 +277,17 @@ mod tests {
 
      #[tokio::test]
      async fn test_without_debounce() {
@@ -219,11 +239,11 @@ index 4c55d095f..973a76775 100644
 +
          let (state_reader, state_writer) = evmap::new();
 -        let mut state_writer = Writer::new(state_writer, None, HashKey::Uid);
-+        let mut state_writer = Writer::new(client.clone(),state_writer, None, HashKey::Uid);
++        let mut state_writer = Writer::new(client.clone(), state_writer, None, HashKey::Uid);
 
          assert!(state_reader.is_empty());
          assert!(state_writer.maintenance_request().is_none());
-@@ -201,13 +283,21 @@ mod tests {
+@@ -201,13 +302,25 @@ mod tests {
 
      #[tokio::test]
      async fn test_with_debounce() {
@@ -241,9 +261,14 @@ index 4c55d095f..973a76775 100644
 -
          let (state_reader, state_writer) = evmap::new();
          let flush_debounce_timeout = Duration::from_millis(100);
-         let mut state_writer =
+-        let mut state_writer =
 -            Writer::new(state_writer, Some(flush_debounce_timeout), HashKey::Uid);
-+            Writer::new(client.clone(),state_writer, Some(flush_debounce_timeout), HashKey::Uid);
++        let mut state_writer = Writer::new(
++            client.clone(),
++            state_writer,
++            Some(flush_debounce_timeout),
++            HashKey::Uid,
++        );
 
          assert!(state_reader.is_empty());
          assert!(state_writer.maintenance_request().is_none());
