@@ -30,7 +30,7 @@ modulesImages:
       kubeRbacProxy: tagstring
     openvpn:
       openvpn: tagstring
-      openvpnWebUi: tagstring
+      ovpnAdmin: tagstring
 modules:
   https:
     mode: CustomCertificate
@@ -46,6 +46,7 @@ const customCertificatePresent = `
 https:
   mode: CustomCertificate
 internal:
+  migrated: true
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY

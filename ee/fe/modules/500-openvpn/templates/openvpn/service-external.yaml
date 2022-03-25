@@ -48,6 +48,8 @@ spec:
     app: {{ .Chart.Name }}
   {{- else if eq .Values.openvpn.inlet "Direct" }}
 ---
+  {{- else if eq .Values.openvpn.inlet "HostPort" }}
+---
   {{- else }}
     {{- cat "Unsupported inlet type" .inlet | fail }}
   {{- end }}

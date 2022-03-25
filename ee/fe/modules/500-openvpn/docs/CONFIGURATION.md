@@ -15,6 +15,7 @@ data:
     * The following inlet types are supported:
       * `ExternalIP` — when there are nodes with public IPs. It is used together with the `externalIP` parameter;
       * `LoadBalancer` — for all cloud providers and cloud-based placement strategies that support the provision of LoadBalancers;
+      * `HostPort` — the port of the openvpn server will be available on the node where it is scheduled. The port can be configured in the `hostPort` parameter;
       * `Direct` — for non-standard cases. You need to create a service called `openvpn-external` in the `d8-openvpn` namespace. It will route traffic to the pod with the `app: openvpn` label to the port called `ovpn-tcp` (or just 1194). This service provides the externalIP, the IP address of the balancer or its host. If none of these are present, you need to specify the `externalHost` parameter;
 * `loadBalancer` — a section of optional parameters of the `LoadBalancer` inlet:
     * `annotations` — annotations to assign to the service for flexible configuration of the load balancer;
@@ -22,6 +23,9 @@ data:
     * `sourceRanges` — a list of CIDRs that are allowed to connect to the load balancer;
         * Format — an array of strings;
         * The cloud provider may not support this option or ignore it;
+* `hostPort` — port to connect to the openvpn server, which will be available on the node where it is scheduled;
+  * The parameter is available when selecting inlet `HostPort`;
+  * The default value is `5416`;
 * `externalIP` — the IP address of a cluster node to connect OpenVPN clients;
   * It is only required if the `ExternalIP` inlet is used;
 * `externalPort` — the port to expose on the `externalIP` or load balancer;
@@ -34,10 +38,6 @@ data:
   * By default, the IP address of the kube-system/kube-dns service is used;
 * `pushToClientSearchDomains` — a list of search domains to send to clients upon connection;
   * The default value is `global.discovery.clusterDomain`;
-* `storageClass` — the name of the StorageClass to use;
-    * If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data;
-    * **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk reprovisioning and data loss;
-    * Setting it to `false` forces the use of an emptyDir volume;
 * `auth` — options related to authentication or authorization in the application:
     * `externalAuthentication` — a set of parameters to enable external authentication (it is based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module) (**the externalAuthentication parameters are set automatically if the user-authn module is enabled**);
         * `authURL` — the URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code;

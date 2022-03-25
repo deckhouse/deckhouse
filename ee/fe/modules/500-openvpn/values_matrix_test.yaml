@@ -28,7 +28,7 @@ global:
         kubeRbacProxy: hashstring
       openvpn:
         openvpn: hashstring
-        openvpnWebUi: hashstring
+        ovpnAdmin: hashstring
   discovery:
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]
@@ -49,6 +49,7 @@ openvpn:
         customCertificate:
           secretName: plainstring
   internal:
+    migrated: true
     customCertificateData:
       tls.crt: plainstring
       tls.key: plainstring
