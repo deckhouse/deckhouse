@@ -1,5 +1,6 @@
 ARG BASE_DEBIAN_BULLSEYE
 ARG BASE_RUST
+
 FROM $BASE_RUST as build
 
 RUN apt-get update \
