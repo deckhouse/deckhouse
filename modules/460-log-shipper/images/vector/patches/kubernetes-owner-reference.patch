@@ -64,7 +64,7 @@ index 0abe760b7..5c907cebc 100644
          let resulting_state_reader = state_reader.clone();
 
 diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
-index 4c55d095f..8ddf5984a 100644
+index 4c55d095f..6036a8b5f 100644
 --- a/src/kubernetes/state/evmap.rs
 +++ b/src/kubernetes/state/evmap.rs
 @@ -5,8 +5,13 @@ use std::time::Duration;
@@ -124,7 +124,7 @@ index 4c55d095f..8ddf5984a 100644
              self.inner.update(key, value);
              self.debounced_flush();
          }
-@@ -102,6 +112,60 @@ where
+@@ -102,6 +112,65 @@ where
      }
  }
 
@@ -161,16 +161,21 @@ index 4c55d095f..8ddf5984a 100644
 +    if let Ok((req, resp_body)) =
 +        ReplicaSet::read_namespaced_replica_set(name, namespace, Default::default())
 +    {
-+        let status = client.send(req).await.ok()?.status();
++        let resp = client.send(req).await.ok()?;
++        let status = resp.status();
++
 +        if status != StatusCode::OK {
 +            return None;
 +        }
-+        if let Ok(resp_result) = resp_body(status).parse() {ё
-+            // Read body to not to get EOF error for json parsing
-+            if let Ok(body) = body::to_bytes(resp_result.into_body()).await {
-+                resp_body.append_slice(&body);
-+            }
-+            match resp_result {
++
++        // Read body to not to get EOF error for json parsing
++        let mut resp_result = resp_body(status);
++        if let Ok(body) = body::to_bytes(resp.into_body()).await {
++            resp_result.append_slice(&body);
++        }
++
++        if let Ok(read_rs_result) = resp_body(status).parse() {
++            match read_rs_result {
 +                ReadNamespacedReplicaSetResponse::Ok(rs) => {
 +                    return rs.metadata.owner_references;
 +                }
@@ -185,7 +190,7 @@ index 4c55d095f..8ddf5984a 100644
  #[async_trait]
  impl<T> super::MaintainedWrite for Writer<T>
  where
-@@ -139,14 +203,26 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+@@ -139,14 +208,26 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
  #[cfg(test)]
  mod tests {
      use k8s_openapi::api::core::v1::Pod;
@@ -212,7 +217,7 @@ index 4c55d095f..8ddf5984a 100644
                  ..ObjectMeta::default()
              },
              ..Pod::default()
-@@ -163,6 +239,7 @@ mod tests {
+@@ -163,6 +244,7 @@ mod tests {
 
      #[test]
      fn test_kv_static_pod() {
@@ -220,7 +225,7 @@ index 4c55d095f..8ddf5984a 100644
          let pod = Pod {
              metadata: ObjectMeta {
                  uid: Some("uid".to_owned()),
-@@ -185,8 +262,17 @@ mod tests {
+@@ -185,8 +267,17 @@ mod tests {
 
      #[tokio::test]
      async fn test_without_debounce() {
@@ -239,7 +244,7 @@ index 4c55d095f..8ddf5984a 100644
 
          assert!(state_reader.is_empty());
          assert!(state_writer.maintenance_request().is_none());
-@@ -201,13 +287,21 @@ mod tests {
+@@ -201,13 +292,21 @@ mod tests {
 
      #[tokio::test]
      async fn test_with_debounce() {

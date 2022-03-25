@@ -1,5 +1,6 @@
-ARG BASE_DEBIAN
-FROM registry.deckhouse.io/base_images/rust:1.57.0@sha256:7d2592d1a6a73055fbadc0c76868046736ce5fa834ed5c201e3b21f27c28947e as build
+ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_RUST
+FROM $BASE_RUST as build
 
 RUN apt-get update \
     && apt-get install -yq \
@@ -24,7 +25,7 @@ RUN cargo build \
     --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,unix,vendor-all,vrl-cli" \
     && strip target/release/vector
 
-FROM debian:bullseye
+FROM $BASE_DEBIAN_BULLSEYE
 COPY --from=build /vector/vector/target/release/vector /usr/bin/vector
 RUN mkdir -p /etc/vector \
     && apt-get update \
