@@ -64,16 +64,17 @@ index 0abe760b7..5c907cebc 100644
          let resulting_state_reader = state_reader.clone();
 
 diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
-index 4c55d095f..2bf4700f4 100644
+index 4c55d095f..07adc0155 100644
 --- a/src/kubernetes/state/evmap.rs
 +++ b/src/kubernetes/state/evmap.rs
-@@ -5,8 +5,14 @@ use std::time::Duration;
+@@ -5,8 +5,15 @@ use std::time::Duration;
  use async_trait::async_trait;
  use evmap::WriteHandle;
  use futures::future::BoxFuture;
 +use http::StatusCode;
 +use hyper::body;
 +use k8s_openapi::api::apps::v1::{ReadNamespacedReplicaSetResponse, ReplicaSet};
++use k8s_openapi::api::batch::v1::{Job, ReadNamespacedJobResponse};
 +use k8s_openapi::apimachinery::pkg::apis::meta::v1::OwnerReference;
  use k8s_openapi::{apimachinery::pkg::apis::meta::v1::ObjectMeta, Metadata};
 +use tracing::debug;
@@ -82,7 +83,7 @@ index 4c55d095f..2bf4700f4 100644
  use crate::kubernetes::{
      debounce::Debounce,
      hash_value::{HashKey, HashValue},
-@@ -19,6 +25,7 @@ pub struct Writer<T>
+@@ -19,6 +26,7 @@ pub struct Writer<T>
  where
      T: Metadata<Ty = ObjectMeta> + Send,
  {
@@ -90,7 +91,7 @@ index 4c55d095f..2bf4700f4 100644
      inner: WriteHandle<String, Value<T>>,
      debounced_flush: Option<Debounce>,
      hash_key: HashKey,
-@@ -31,6 +38,7 @@ where
+@@ -31,6 +39,7 @@ where
      /// Take a [`WriteHandle`], initialize it and return it wrapped with
      /// [`Writer`].
      pub fn new(
@@ -98,7 +99,7 @@ index 4c55d095f..2bf4700f4 100644
          mut inner: WriteHandle<String, Value<T>>,
          flush_debounce_timeout: Option<Duration>,
          hash_key: HashKey,
-@@ -43,6 +51,7 @@ where
+@@ -43,6 +52,7 @@ where
          let debounced_flush = flush_debounce_timeout.map(Debounce::new);
 
          Self {
@@ -106,7 +107,7 @@ index 4c55d095f..2bf4700f4 100644
              inner,
              debounced_flush,
              hash_key,
-@@ -73,14 +82,16 @@ where
+@@ -73,14 +83,16 @@ where
      type Item = T;
 
      async fn add(&mut self, item: Self::Item) {
@@ -125,7 +126,7 @@ index 4c55d095f..2bf4700f4 100644
              self.inner.update(key, value);
              self.debounced_flush();
          }
-@@ -102,6 +113,78 @@ where
+@@ -102,6 +114,100 @@ where
      }
  }
 
@@ -138,22 +139,23 @@ index 4c55d095f..2bf4700f4 100644
 +
 +        match or[0].kind.as_str() {
 +            "ReplicaSet" => {
-+                debug!(
-+                    "Pod {} in namespace {} is owned by ReplicaSet",
-+                    or[0].name, ns
-+                );
 +                let owner_ref =
 +                    replicaset_owner_ref(&mut client.clone(), or[0].name.as_str(), ns.as_str())
 +                        .await;
 +
 +                if let Some(owner_ref) = owner_ref {
-+                    debug!("Owner Ref {}/{}", owner_ref[0].kind, owner_ref[0].name);
 +                    metadata.owner_references = Some(owner_ref);
 +                }
 +            }
-+            _ => {
-+                debug!("Unknown kind {}", or[0].kind);
++            "Job" => {
++                let owner_ref =
++                    job_owner_ref(&mut client.clone(), or[0].name.as_str(), ns.as_str()).await;
++
++                if let Some(owner_ref) = owner_ref {
++                    metadata.owner_references = Some(owner_ref);
++                }
 +            }
++            _ => {}
 +        }
 +    }
 +}
@@ -176,25 +178,46 @@ index 4c55d095f..2bf4700f4 100644
 +        // Read body to not to get EOF error for json parsing
 +        let mut resp_result = resp_body(status);
 +        if let Ok(body) = body::to_bytes(resp.into_body()).await {
-+            debug!("ReplicaSet {}/{} reading body", name, namespace);
 +            resp_result.append_slice(&body);
 +        }
-+
-+        debug!("ReplicaSet {}/{} parsing body", name, namespace);
 +
 +        if let Ok(read_rs_result) = resp_result.parse() {
 +            match read_rs_result {
 +                ReadNamespacedReplicaSetResponse::Ok(rs) => {
-+                    debug!("Got owner reference for ReplicaSet {}/{}", name, namespace);
 +                    return rs.metadata.owner_references;
 +                }
-+                // Ignore is cannot get the owner
-+                _ => {
-+                    debug!(
-+                        "Not ReadNamespacedReplicaSetResponse {}/{}",
-+                        name, namespace
-+                    );
++                _ => {} // Ignore is cannot get the owner
++            }
++        }
++    }
++    return None;
++}
++
++async fn job_owner_ref(
++    client: &mut Client,
++    name: &str,
++    namespace: &str,
++) -> Option<Vec<OwnerReference>> {
++    if let Ok((req, resp_body)) = Job::read_namespaced_job(name, namespace, Default::default()) {
++        let resp = client.send(req).await.ok()?;
++        let status = resp.status();
++
++        if status != StatusCode::OK {
++            return None;
++        }
++
++        // Read body to not to get EOF error for json parsing
++        let mut resp_result = resp_body(status);
++        if let Ok(body) = body::to_bytes(resp.into_body()).await {
++            resp_result.append_slice(&body);
++        }
++
++        if let Ok(read_rs_result) = resp_result.parse() {
++            match read_rs_result {
++                ReadNamespacedJobResponse::Ok(rs) => {
++                    return rs.metadata.owner_references;
 +                }
++                _ => {} // Ignore is cannot get the owner
 +            }
 +        }
 +    }
@@ -204,16 +227,15 @@ index 4c55d095f..2bf4700f4 100644
  #[async_trait]
  impl<T> super::MaintainedWrite for Writer<T>
  where
-@@ -138,10 +221,16 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+@@ -138,10 +244,15 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
 
  #[cfg(test)]
  mod tests {
-+    use std::fmt::format;
 +    use crate::kubernetes::client;
      use k8s_openapi::api::core::v1::Pod;
 +    use vector_core::config::proxy::ProxyConfig;
-+    use wiremock::{Mock, MockServer, ResponseTemplate};
 +    use wiremock::matchers::{method, path};
++    use wiremock::{Mock, MockServer, ResponseTemplate};
 
      use super::*;
      use crate::kubernetes::state::{MaintainedWrite, Write};
@@ -221,18 +243,7 @@ index 4c55d095f..2bf4700f4 100644
 
      fn make_pod(uid: &str) -> Pod {
          Pod {
-@@ -171,8 +260,8 @@ mod tests {
-                         "kubernetes.io/config.mirror".to_owned(),
-                         "config-hashsum".to_owned(),
-                     )]
--                    .into_iter()
--                    .collect(),
-+                        .into_iter()
-+                        .collect(),
-                 ),
-                 ..ObjectMeta::default()
-             },
-@@ -185,8 +274,17 @@ mod tests {
+@@ -185,8 +296,17 @@ mod tests {
 
      #[tokio::test]
      async fn test_without_debounce() {
@@ -251,7 +262,7 @@ index 4c55d095f..2bf4700f4 100644
 
          assert!(state_reader.is_empty());
          assert!(state_writer.maintenance_request().is_none());
-@@ -201,13 +299,25 @@ mod tests {
+@@ -201,13 +321,25 @@ mod tests {
 
      #[tokio::test]
      async fn test_with_debounce() {
