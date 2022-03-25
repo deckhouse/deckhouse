@@ -64,7 +64,7 @@ index 0abe760b7..5c907cebc 100644
          let resulting_state_reader = state_reader.clone();
 
 diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
-index 4c55d095f..6036a8b5f 100644
+index 4c55d095f..973a76775 100644
 --- a/src/kubernetes/state/evmap.rs
 +++ b/src/kubernetes/state/evmap.rs
 @@ -5,8 +5,13 @@ use std::time::Duration;
@@ -139,8 +139,8 @@ index 4c55d095f..6036a8b5f 100644
 +            "ReplicaSet" => {
 +                let owner_ref = replicaset_owner_ref(
 +                    &mut client.clone(),
-+                    ns.as_str(),
 +                    or[0].name.as_str(),
++                    ns.as_str(),
 +                ).await;
 +
 +                if let Some(owner_ref) = owner_ref {
@@ -190,7 +190,7 @@ index 4c55d095f..6036a8b5f 100644
  #[async_trait]
  impl<T> super::MaintainedWrite for Writer<T>
  where
-@@ -139,14 +208,26 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+@@ -139,9 +208,13 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
  #[cfg(test)]
  mod tests {
      use k8s_openapi::api::core::v1::Pod;
@@ -204,28 +204,7 @@ index 4c55d095f..6036a8b5f 100644
 
      fn make_pod(uid: &str) -> Pod {
          Pod {
-             metadata: ObjectMeta {
-                 uid: Some(uid.to_owned()),
-+                owner_references: Some(vec![OwnerReference {
-+                    api_version: "apps/v1".to_string(),
-+                    block_owner_deletion: None,
-+                    controller: None,
-+                    kind: "ReplicaSet".to_string(),
-+                    name: "test".to_string(),
-+                    uid: "".to_string(),
-+                }]),
-                 ..ObjectMeta::default()
-             },
-             ..Pod::default()
-@@ -163,6 +244,7 @@ mod tests {
-
-     #[test]
-     fn test_kv_static_pod() {
-+
-         let pod = Pod {
-             metadata: ObjectMeta {
-                 uid: Some("uid".to_owned()),
-@@ -185,8 +267,17 @@ mod tests {
+@@ -185,8 +258,17 @@ mod tests {
 
      #[tokio::test]
      async fn test_without_debounce() {
@@ -244,7 +223,7 @@ index 4c55d095f..6036a8b5f 100644
 
          assert!(state_reader.is_empty());
          assert!(state_writer.maintenance_request().is_none());
-@@ -201,13 +292,21 @@ mod tests {
+@@ -201,13 +283,21 @@ mod tests {
 
      #[tokio::test]
      async fn test_with_debounce() {
