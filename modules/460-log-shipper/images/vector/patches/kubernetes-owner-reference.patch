@@ -64,14 +64,15 @@ index 0abe760b7..5c907cebc 100644
          let resulting_state_reader = state_reader.clone();
 
 diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
-index 4c55d095f..a4dee82ca 100644
+index 4c55d095f..8ddf5984a 100644
 --- a/src/kubernetes/state/evmap.rs
 +++ b/src/kubernetes/state/evmap.rs
-@@ -5,8 +5,12 @@ use std::time::Duration;
+@@ -5,8 +5,13 @@ use std::time::Duration;
  use async_trait::async_trait;
  use evmap::WriteHandle;
  use futures::future::BoxFuture;
 +use http::StatusCode;
++use hyper::body;
 +use k8s_openapi::api::apps::v1::{ReadNamespacedReplicaSetResponse, ReplicaSet};
 +use k8s_openapi::apimachinery::pkg::apis::meta::v1::OwnerReference;
  use k8s_openapi::{apimachinery::pkg::apis::meta::v1::ObjectMeta, Metadata};
@@ -80,7 +81,7 @@ index 4c55d095f..a4dee82ca 100644
  use crate::kubernetes::{
      debounce::Debounce,
      hash_value::{HashKey, HashValue},
-@@ -19,6 +23,7 @@ pub struct Writer<T>
+@@ -19,6 +24,7 @@ pub struct Writer<T>
  where
      T: Metadata<Ty = ObjectMeta> + Send,
  {
@@ -88,7 +89,7 @@ index 4c55d095f..a4dee82ca 100644
      inner: WriteHandle<String, Value<T>>,
      debounced_flush: Option<Debounce>,
      hash_key: HashKey,
-@@ -31,6 +36,7 @@ where
+@@ -31,6 +37,7 @@ where
      /// Take a [`WriteHandle`], initialize it and return it wrapped with
      /// [`Writer`].
      pub fn new(
@@ -96,7 +97,7 @@ index 4c55d095f..a4dee82ca 100644
          mut inner: WriteHandle<String, Value<T>>,
          flush_debounce_timeout: Option<Duration>,
          hash_key: HashKey,
-@@ -43,6 +49,7 @@ where
+@@ -43,6 +50,7 @@ where
          let debounced_flush = flush_debounce_timeout.map(Debounce::new);
 
          Self {
@@ -104,7 +105,7 @@ index 4c55d095f..a4dee82ca 100644
              inner,
              debounced_flush,
              hash_key,
-@@ -73,14 +80,16 @@ where
+@@ -73,14 +81,16 @@ where
      type Item = T;
 
      async fn add(&mut self, item: Self::Item) {
@@ -123,7 +124,7 @@ index 4c55d095f..a4dee82ca 100644
              self.inner.update(key, value);
              self.debounced_flush();
          }
-@@ -102,6 +111,56 @@ where
+@@ -102,6 +112,60 @@ where
      }
  }
 
@@ -164,7 +165,11 @@ index 4c55d095f..a4dee82ca 100644
 +        if status != StatusCode::OK {
 +            return None;
 +        }
-+        if let Ok(resp_result) = resp_body(status).parse() {
++        if let Ok(resp_result) = resp_body(status).parse() {ё
++            // Read body to not to get EOF error for json parsing
++            if let Ok(body) = body::to_bytes(resp_result.into_body()).await {
++                resp_body.append_slice(&body);
++            }
 +            match resp_result {
 +                ReadNamespacedReplicaSetResponse::Ok(rs) => {
 +                    return rs.metadata.owner_references;
@@ -180,7 +185,7 @@ index 4c55d095f..a4dee82ca 100644
  #[async_trait]
  impl<T> super::MaintainedWrite for Writer<T>
  where
-@@ -139,9 +198,13 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+@@ -139,14 +203,26 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
  #[cfg(test)]
  mod tests {
      use k8s_openapi::api::core::v1::Pod;
@@ -194,7 +199,28 @@ index 4c55d095f..a4dee82ca 100644
 
      fn make_pod(uid: &str) -> Pod {
          Pod {
-@@ -185,8 +248,17 @@ mod tests {
+             metadata: ObjectMeta {
+                 uid: Some(uid.to_owned()),
++                owner_references: Some(vec![OwnerReference {
++                    api_version: "apps/v1".to_string(),
++                    block_owner_deletion: None,
++                    controller: None,
++                    kind: "ReplicaSet".to_string(),
++                    name: "test".to_string(),
++                    uid: "".to_string(),
++                }]),
+                 ..ObjectMeta::default()
+             },
+             ..Pod::default()
+@@ -163,6 +239,7 @@ mod tests {
+
+     #[test]
+     fn test_kv_static_pod() {
++
+         let pod = Pod {
+             metadata: ObjectMeta {
+                 uid: Some("uid".to_owned()),
+@@ -185,8 +262,17 @@ mod tests {
 
      #[tokio::test]
      async fn test_without_debounce() {
@@ -213,7 +239,7 @@ index 4c55d095f..a4dee82ca 100644
 
          assert!(state_reader.is_empty());
          assert!(state_writer.maintenance_request().is_none());
-@@ -201,13 +273,21 @@ mod tests {
+@@ -201,13 +287,21 @@ mod tests {
 
      #[tokio::test]
      async fn test_with_debounce() {
