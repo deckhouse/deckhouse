@@ -64,7 +64,7 @@ index 0abe760b7..5c907cebc 100644
          let resulting_state_reader = state_reader.clone();
 
 diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
-index 4c55d095f..8f6e76057 100644
+index 4c55d095f..2bf4700f4 100644
 --- a/src/kubernetes/state/evmap.rs
 +++ b/src/kubernetes/state/evmap.rs
 @@ -5,8 +5,14 @@ use std::time::Duration;
@@ -125,7 +125,7 @@ index 4c55d095f..8f6e76057 100644
              self.inner.update(key, value);
              self.debounced_flush();
          }
-@@ -102,6 +113,83 @@ where
+@@ -102,6 +113,78 @@ where
      }
  }
 
@@ -168,10 +168,6 @@ index 4c55d095f..8f6e76057 100644
 +    {
 +        let resp = client.send(req).await.ok()?;
 +        let status = resp.status();
-+        debug!(
-+            "ReplicaSet {}/{} response StatusCode {}",
-+            name, namespace, status
-+        );
 +
 +        if status != StatusCode::OK {
 +            return None;
@@ -181,13 +177,12 @@ index 4c55d095f..8f6e76057 100644
 +        let mut resp_result = resp_body(status);
 +        if let Ok(body) = body::to_bytes(resp.into_body()).await {
 +            debug!("ReplicaSet {}/{} reading body", name, namespace);
-+
 +            resp_result.append_slice(&body);
 +        }
 +
 +        debug!("ReplicaSet {}/{} parsing body", name, namespace);
 +
-+        if let Ok(read_rs_result) = resp_body(status).parse() {
++        if let Ok(read_rs_result) = resp_result.parse() {
 +            match read_rs_result {
 +                ReadNamespacedReplicaSetResponse::Ok(rs) => {
 +                    debug!("Got owner reference for ReplicaSet {}/{}", name, namespace);
@@ -209,14 +204,16 @@ index 4c55d095f..8f6e76057 100644
  #[async_trait]
  impl<T> super::MaintainedWrite for Writer<T>
  where
-@@ -138,10 +226,14 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+@@ -138,10 +221,16 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
 
  #[cfg(test)]
  mod tests {
++    use std::fmt::format;
 +    use crate::kubernetes::client;
      use k8s_openapi::api::core::v1::Pod;
 +    use vector_core::config::proxy::ProxyConfig;
-+    use wiremock::MockServer;
++    use wiremock::{Mock, MockServer, ResponseTemplate};
++    use wiremock::matchers::{method, path};
 
      use super::*;
      use crate::kubernetes::state::{MaintainedWrite, Write};
@@ -224,7 +221,18 @@ index 4c55d095f..8f6e76057 100644
 
      fn make_pod(uid: &str) -> Pod {
          Pod {
-@@ -185,8 +277,17 @@ mod tests {
+@@ -171,8 +260,8 @@ mod tests {
+                         "kubernetes.io/config.mirror".to_owned(),
+                         "config-hashsum".to_owned(),
+                     )]
+-                    .into_iter()
+-                    .collect(),
++                        .into_iter()
++                        .collect(),
+                 ),
+                 ..ObjectMeta::default()
+             },
+@@ -185,8 +274,17 @@ mod tests {
 
      #[tokio::test]
      async fn test_without_debounce() {
@@ -243,7 +251,7 @@ index 4c55d095f..8f6e76057 100644
 
          assert!(state_reader.is_empty());
          assert!(state_writer.maintenance_request().is_none());
-@@ -201,13 +302,25 @@ mod tests {
+@@ -201,13 +299,25 @@ mod tests {
 
      #[tokio::test]
      async fn test_with_debounce() {
