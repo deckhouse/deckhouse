@@ -6,11 +6,11 @@ title: "Cloud provider — VMware vSphere: Preparing environment"
 
 ## List of required vSphere resources
 
-* **User** with required set of [permissions](#permissions).
-* **Network** with DHCP server and access to the Internet
-* **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category.
-* **ComputeCluster** with a tag in [`k8s-zone`](#creating-tags-and-tag-categories).
-* **Datastore** with required [tags](#datastore-tags).
+* **User** with required set of [permissions](#permissions);
+* **Network** with DHCP server and access to the Internet;
+* **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category;
+* **ComputeCluster** with a tag in [`k8s-zone`](#creating-tags-and-tag-categories);
+* **Datastore** with required [tags](#datastore-tags);
 * **Template** — [prepared](#building-a-vm-image) VM image.
 
 ## Configuring vSphere
@@ -18,6 +18,8 @@ title: "Cloud provider — VMware vSphere: Preparing environment"
 The vSphere CLI called [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) is designed to configure vSphere.
 
 ### Setting up govc
+
+To configure the utility, set the following environment variables:
 
 ```shell
 export GOVC_URL=example.com
@@ -86,13 +88,13 @@ A VLAN with DHCP and Internet access is required for the running cluster:
 * If the VLAN is private (private addresses), then this network can be used for cluster nodes.
 
 ### Inbound traffic
-* You can use an internal load balancer (if present) and direct traffic directly to the front nodes of the cluster.
+* You can use an internal load balancer (if present) and direct traffic directly to the front nodes of the cluster;
 * If there is no load balancer, you can use MetalLB in BGP mode to organize fault-tolerant load balancers (recommended). In this case, front nodes of the cluster will have two interfaces. For this, you will need:
   * A dedicated VLAN for traffic exchange between BGP routers and MetalLB. This VLAN must have DHCP and Internet access;
   * IP addresses of BGP routers;
   * ASN — the AS number on the BGP router;
   * ASN — the AS number in the cluster;
-  * A range to announce addresses from;
+  * A range to announce addresses from.
 
 ### Using the data store
 Various types of storage can be used in the cluster; for the minimum configuration, you will need:
@@ -100,6 +102,8 @@ Various types of storage can be used in the cluster; for the minimum configurati
 * Datastore for provisioning root disks for the VMs (it can be the same Datastore as for PersistentVolume).
 
 ### Building a VM image
+
+To build a VM image, follow these steps:
 
 1. [Install Packer](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 1. Clone the Deckhouse repository:
