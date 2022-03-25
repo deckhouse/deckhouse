@@ -109,6 +109,7 @@ func cleanupReleases(input *go_hook.HookInput) error {
 		lastDeployed := deployedReleasesIndexes[0] // releases are reversed, that's why we have to take the first one (latest Deployed release)
 		sp := statusPatch{
 			Phase:          v1alpha1.PhaseOutdated,
+			Message:        "Outdated by cleanup hook",
 			TransitionTime: now,
 		}
 
