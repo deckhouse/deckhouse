@@ -75,7 +75,7 @@ spec:
           exec:
             command:
             - /readiness.sh
-          periodSeconds: 1
+          periodSeconds: 5
           timeoutSeconds: 7
         volumeMounts:
         - mountPath: /run/xtables.lock
