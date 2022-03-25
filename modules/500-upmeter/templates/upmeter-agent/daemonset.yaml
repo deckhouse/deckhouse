@@ -75,8 +75,6 @@ spec:
           - mountPath: /db
             name: data
             readOnly: false
-          - mountPath: /tmp
-            name: tmp
       containers:
         - name: agent
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
