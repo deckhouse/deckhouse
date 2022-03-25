@@ -21,56 +21,74 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 standard:
-  internalNetworkCIDR: 192.168.199.0/24                   # required
-  internalNetworkDNSServers:                              # required
+  internalNetworkCIDR: 192.168.199.0/24         # Обязательный параметр.
+  internalNetworkDNSServers:                    # Обязательный параметр.
   - 8.8.8.8
   - 4.2.2.2
-  internalNetworkSecurity: true|false                     # optional, default true
-  externalNetworkName: shared                             # required
+  internalNetworkSecurity: true|false           # Необязательный параметр, по умолчанию true.
+  externalNetworkName: shared                   # Обязательный параметр.
   bastion:
-    zone: ru2-b                                           # optional
-    volumeType: fast-ru-2b                                # optional
+    zone: ru2-b                                 # Необязательный параметр.
+    volumeType: fast-ru-2b                      # Необязательный параметр.
     instanceClass:
-      flavorName: m1.large                                # required
-      imageName: ubuntu-20-04-cloud-amd64                 # required
-      rootDiskSize: 50                                    # optional, local disk is used if not specified
+      flavorName: m1.large                      # Обязательный параметр.
+      imageName: ubuntu-20-04-cloud-amd64       # Обязательный параметр.
+      # Необязательный параметр. Если не указан — используется локальный диск..
+      rootDiskSize: 50
       additionalTags:
-        severity: critical                                # optional
-        environment: production                           # optional
+        severity: critical                      # Необязательный параметр.
+        environment: production                 # Необязательный параметр.
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 50                                      # optional, local disk is used if not specified
-    additionalSecurityGroups:                             # optional, additional security groups
+    flavorName: m1.large                        # Обязательный параметр.
+    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
+    # Необязательный параметр. Если не указан — используется локальный диск.
+    rootDiskSize: 50
+    # Необязательный параметр, дополнительные группы безопасности.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
     additionalTags:
       severity: critical
       environment: production
-  volumeTypeMap:                                          # required, volume type map for etcd and kubernetes certs (always use fastest disk supplied by provider).
-    ru-1a: fast-ru-1a                                     # If rootDiskSize specified than this volume type will be also used for master root volume
+  # Обязательный параметр. Карта типов томов для сертификатов etcd и Kubernetes
+  # (всегда используйте самый быстрый диск, предоставленный поставщиком).
+  volumeTypeMap:
+    # Если указан rootDiskSize, то этот тип тома также будет
+    # использоваться для главного корневого тома.
+    ru-1a: fast-ru-1a
     ru-1b: fast-ru-1b
     ru-1c: fast-ru-1c
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 20                                      # optional, local disk is used if not specified
-    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network that is used as default gateway
-    mainNetwork: kube                                     # required, network will be used as default gateway
-    additionalNetworks:                                   # optional
+    flavorName: m1.small                        # Обязательный параметр.
+    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
+    # Необязательный параметр, Если не указан — используется локальный диск.
+    rootDiskSize: 20
+    # Необязательный параметр, по умолчанию false. Определяет, требуется ли
+    # конфигурационный диск во время процесса начальной загрузки виртуальной
+    # машины. Это необходимо, если в сети нет DHCP, который используется в
+    # качестве шлюза по умолчанию.
+    configDrive: false
+    # Обязательный параметр, сеть будет использована как шлюз по-умолчанию.
+    mainNetwork: kube
+    additionalNetworks:                         # Необязательный параметр.
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
+    # Необязательный параметр, если существуют сети с отключенной защитой
+    # портов, необходимо указать их имена.
+    networksWithSecurityDisabled:
     - office
-    floatingIPPools:                                      # optional, list of network pools where to order floating ips
+    # Необязательный параметр, список сетевых пулов, в которых можно заказать
+    # плавающие IP-адреса.
+    floatingIPPools:
     - public
     - shared
-    additionalSecurityGroups:                             # optional, additional security groups
+    # Необязательный параметр, дополнительные группы безопасности.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
   zones:
@@ -104,39 +122,59 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: StandardWithNoRouter
 standardWithNoRouter:
-  internalNetworkCIDR: 192.168.199.0/24                   # required
-  externalNetworkName: ext-net                            # required
-  externalNetworkDHCP: false                              # optional, whether dhcp is enabled in specified external network (default true)
-  internalNetworkSecurity: true|false                     # optional, default true
+  internalNetworkCIDR: 192.168.199.0/24         # Обязательный параметр.
+  externalNetworkName: ext-net                  # Обязательный параметр.
+  # Необязательный параметр, включен ли DHCP в указанной внешней сети
+  # (значение по умолчанию true).
+  externalNetworkDHCP: false
+  # Необязательный параметр, по умолчанию true.
+  internalNetworkSecurity: true|false
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 50                                      # optional, local disk is used if not specified
-    additionalSecurityGroups:                             # optional, additional security groups
+    flavorName: m1.large                        # Обязательный параметр.
+    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
+    # Необязательный параметр. Если не указан — используется локальный диск.
+    rootDiskSize: 50
+    # Необязательный параметр, дополнительные группы безопасности.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  volumeTypeMap:                                          # required, volume type map for etcd and kubernetes certs (always use fastest disk supplied by provider).
-    nova: ceph-ssd                                        # If rootDiskSize specified than this volume type will be also used for master root volume
+  # Обязательный параметр. Карта типов томов для сертификатов etcd и Kubernetes
+  # (всегда используйте самый быстрый диск, предоставляемый поставщиком).
+  volumeTypeMap:
+    # Если указан rootDiskSize, то этот тип тома также будет
+    # использоваться для главного корневого тома.
+    nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 20                                      # optional, local disk is used if not specified
-    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network that is used as default gateway
-    mainNetwork: kube                                     # required, network will be used as default gateway
-    additionalNetworks:                                   # optional
+    flavorName: m1.small                         # Обязательный параметр.
+    imageName: ubuntu-18-04-cloud-amd64          # Обязательный параметр.
+    # Необязательный параметр. Если не указан — используется локальный диск.
+    rootDiskSize: 20
+    # Необязательный параметр, по умолчанию false. Определяет, требуется ли
+    # конфигурационный диск во время процесса начальной загрузки виртуальной
+    # машины. Это необходимо, если в сети нет DHCP, который используется в
+    # качестве шлюза по умолчанию.
+    configDrive: false
+    # Обязательный параметр, сеть будет использована как шлюз по-умолчанию.
+    mainNetwork: kube
+    additionalNetworks:                           # Необязательный параметр.
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
+    # Необязательный параметр. Если существуют сети с отключенной защитой
+    # портов, необходимо указать их имена.
+    networksWithSecurityDisabled:
     - office
-    floatingIPPools:                                      # optional, list of network pools where to order floating ips
+    # Необязательный параметр. Список сетевых пулов, в которых можно заказать
+    # плавающие IP-адреса.
+    floatingIPPools:
     - public
     - shared
-    additionalSecurityGroups:                             # optional, additional security groups
+    # Необязательный параметр, дополнительные группы безопасности.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
@@ -165,38 +203,58 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Simple
 simple:
-  externalNetworkName: ext-net                            # required
-  externalNetworkDHCP: false                              # optional, default true
-  podNetworkMode: VXLAN                                   # optional, by default VXLAN, may also be DirectRouting or DirectRoutingWithPortSecurityEnabled
+  externalNetworkName: ext-net                  # Обязательный параметр.
+  # Необязательный параметр, по умолчанию true.
+  externalNetworkDHCP: false
+  # Необязательный параметр, по умолчанию VXLAN, также может быть DirectRouting
+  # или DirectRoutingWithPortSecurityEnabled.
+  podNetworkMode: VXLAN
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 50                                      # optional, local disk is used if not specified
-    additionalSecurityGroups:                             # optional, additional security groups
+    flavorName: m1.large                        # Обязательный параметр.
+    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
+    # Необязательный параметр. Если не указан — используется локальный диск.
+    rootDiskSize: 50
+    # Необязательный параметр, дополнительные группы безопасности.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  volumeTypeMap:                                          # required, volume type map for etcd and kubernetes certs (always use fastest disk supplied by provider).
-    nova: ceph-ssd                                        # If rootDiskSize specified than this volume type will be also used for master root volume
+  # Обязательный параметр. Карта типов томов для сертификатов etcd и Kubernetes
+  # (всегда используйте самый быстрый диск, предоставляемый поставщиком).
+  volumeTypeMap:
+    # Если указан rootDiskSize, то этот тип тома также будет
+    # использоваться для главного корневого тома.
+    nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 20                                      # optional, local disk is used if not specified
-    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network that is used as default gateway
-    mainNetwork: kube                                     # required, network will be used as default gateway
-    additionalNetworks:                                   # optional
+    flavorName: m1.small                        # Обязательный параметр.
+    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
+    # Необязательный параметр. Если не указан — используется локальный диск.
+    rootDiskSize: 20
+    # Необязательный параметр, по умолчанию false. Определяет, требуется ли
+    # конфигурационный диск во время процесса начальной загрузки виртуальной
+    # машины. Это необходимо, если в сети нет DHCP, который используется в
+    # качестве шлюза по умолчанию.
+    configDrive: false
+    # Обязательный параметр, сеть будет использована как шлюз по-умолчанию.
+    mainNetwork: kube
+    additionalNetworks:                         # Необязательный параметр.
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
+    # Необязательный параметр. Если существуют сети с отключенной защитой
+    # портов, необходимо указать их имена.
+    networksWithSecurityDisabled:
     - office
-    floatingIPPools:                                      # optional, list of network pools where to order floating ips
+    # Необязательный параметр. Список сетевых пулов, в которых можно заказать
+    # плавающие IP-адреса.
+    floatingIPPools:
     - public
     - shared
-    additionalSecurityGroups:                             # optional, additional security groups
+    # Необязательный параметр, дополнительные группы безопасности.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
@@ -223,39 +281,62 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: SimpleWithInternalNetwork
 simpleWithInternalNetwork:
-  internalSubnetName: pivot-standard                      # required, all cluster nodes have to be in the same subnet
-  podNetworkMode: DirectRoutingWithPortSecurityEnabled    # optional, by default DirectRoutingWithPortSecurityEnabled, may also be DirectRouting or VXLAN
-  externalNetworkName: ext-net                            # optional, if set will be used for load balancer default configuration and ordering master floating ip
-  masterWithExternalFloatingIP: false                     # optional, default value is true
+  # Обязательный параметр, все узлы кластера должны находиться в одной подсети.
+  internalSubnetName: pivot-standard
+  # Необязательный параметр, по умолчанию DirectRoutingWithPortSecurityEnabled,
+  # также может быть DirectRouting или VXLAN.
+  podNetworkMode: DirectRoutingWithPortSecurityEnabled
+  # Необязательный параметр. Если задан, будет использоваться для конфигурации
+  # балансировщика нагрузки по умолчанию и для главного плавающего IP-адреса.
+  externalNetworkName: ext-net
+  # Необязательный параметр, по умолчанию true.
+  masterWithExternalFloatingIP: false
 masterNodeGroup:
   replicas: 3
   instanceClass:
-    flavorName: m1.large                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 50                                      # optional, local disk is used if not specified
-    additionalSecurityGroups:                             # optional, additional security groups
+    flavorName: m1.large                        # Обязательный параметр.
+    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр.
+    # Необязательный параметр. Если не указан — используется локальный диск.
+    rootDiskSize: 50
+    # Необязательный параметр, дополнительные группы безопасности.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
-  volumeTypeMap:                                          # required, volume type map for etcd and kubernetes certs (always use fastest disk supplied by provider).
-    nova: ceph-ssd                                        # If rootDiskSize specified than this volume type will be also used for master root volume
+  # Обязательный параметр. Карта типов томов для сертификатов etcd и Kubernetes
+  # (всегда используйте самый быстрый диск, предоставляемый поставщиком).
+  volumeTypeMap:
+    # Если указан rootDiskSize, то этот тип тома также будет
+    # использоваться для главного корневого тома.
+    nova: ceph-ssd
 nodeGroups:
 - name: front
   replicas: 2
   instanceClass:
-    flavorName: m1.small                                  # required
-    imageName: ubuntu-18-04-cloud-amd64                   # required
-    rootDiskSize: 20                                      # optional, local disk is used if not specified
-    configDrive: false                                    # optional, default false, determines if config drive is required during vm bootstrap process. It's needed if there is no dhcp in network that is used as default gateway
-    mainNetwork: kube                                     # required, network will be used as default gateway
-    additionalNetworks:                                   # optional
+    flavorName: m1.small                        # Обязательный параметр.
+    imageName: ubuntu-18-04-cloud-amd64         # Обязательный параметр
+    # Необязательный параметр. Если не указан — используется локальный диск.
+    rootDiskSize: 20
+    # Необязательный параметр, по умолчанию false. Определяет, требуется ли
+    # конфигурационный диск во время процесса начальной загрузки виртуальной
+    # машины. Это необходимо, если в сети нет DHCP, который используется в
+    # качестве шлюза по умолчанию.
+    configDrive: false
+    # Обязательный параметр. Сеть будет использована как шлюз по-умолчанию.
+    mainNetwork: kube
+    additionalNetworks:                         # Необязательный параметр.
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
+    # Необязательный параметр. Если существуют сети с отключенной защитой
+    # портов, необходимо указать их имена.
+    networksWithSecurityDisabled:
     - office
-    floatingIPPools:                                      # optional, list of network pools where to order floating ips
+    # Необязательный параметр. Список сетевых пулов, в которых можно заказать
+    # плавающие IP-адреса.
+    floatingIPPools:
     - public
     - shared
-    additionalSecurityGroups:                             # optional, additional security groups
+    # Необязательный параметр, дополнительные группы безопасности.
+    additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"

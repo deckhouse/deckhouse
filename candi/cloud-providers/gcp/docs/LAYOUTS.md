@@ -22,45 +22,47 @@ apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: Standard
 standard:
-  cloudNATAddresses:                                         # optional, compute address names from this list are used as addresses for Cloud NAT
+  # Optional, compute address names from this list are used as addresses for Cloud NAT.
+  cloudNATAddresses:
   - example-address-1
   - example-address-2
-subnetworkCIDR: 10.0.0.0/24                                  # required
-peeredVPCs:                                                  # optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered
+subnetworkCIDR: 10.0.0.0/24         # Required.
+peeredVPCs:
+# Optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered.
 - default
-sshKey: "ssh-rsa <SSH_PUBLIC_KEY>"                           # required
+sshKey: "ssh-rsa <SSH_PUBLIC_KEY>"  # Required.
 labels:
   kube: example
 masterNodeGroup:
   replicas: 1
-  zones:                                                     # optional
+  zones:                            # Optional.
   - europe-west4-b
   instanceClass:
-    machineType: n1-standard-4                               # required
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    # required
-    diskSizeGb: 20                                           # optional, local disk is used if not specified
-    disableExternalIP: false                                 # optional, by default master has externalIP
-    additionalNetworkTags:                                   # optional
+    machineType: n1-standard-4      # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Required.
+    diskSizeGb: 20                  # Optional, local disk is used if not specified.
+    disableExternalIP: false        # Optional, by default master has externalIP.
+    additionalNetworkTags:          # Optional.
     - tag1
-    additionalLabels:                                        # optional
+    additionalLabels:               # Optional.
       kube-node: master
 nodeGroups:
 - name: static
   replicas: 1
-  zones:                                                     # optional
+  zones:                            # Optional.
   - europe-west4-b
   instanceClass:
-    machineType: n1-standard-4                               # required
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    # required
-    diskSizeGb: 20                                           # optional, local disk is used if not specified
-    disableExternalIP: true                                  # optional, by default nodes do not have externalIP
-    additionalNetworkTags:                                   # optional
+    machineType: n1-standard-4      # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Required.
+    diskSizeGb: 20                  # Optional, local disk is used if not specified.
+    disableExternalIP: true         # Optional, by default nodes do not have externalIP.
+    additionalNetworkTags:          # Optional.
     - tag1
-    additionalLabels:                                        # optional
+    additionalLabels:               # Optional.
       kube-node: static
 provider:
-  region: europe-west4                                       # required
-  serviceAccountJSON: |                                      # required
+  region: europe-west4              # Required.
+  serviceAccountJSON: |             # Required.
     {
       "type": "service_account",
       "project_id": "sandbox",
@@ -87,39 +89,40 @@ Example of the layout configuration:
 apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: WithoutNAT
-subnetworkCIDR: 10.0.0.0/24                                 # required
-peeredVPCs:                                                 # optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered
+subnetworkCIDR: 10.0.0.0/24         # Required.
+# Optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered.
+peeredVPCs:
 - default
 labels:
   kube: example
 masterNodeGroup:
   replicas: 1
-  zones:                                                     # optional
+  zones:                            # Optional.
   - europe-west4-b
   instanceClass:
-    machineType: n1-standard-4                               # required
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    # required
-    diskSizeGb: 20                                           # optional, local disk is used if not specified
-    additionalNetworkTags:                                   # optional
+    machineType: n1-standard-4      # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Required.
+    diskSizeGb: 20                  # Optional, local disk is used if not specified.
+    additionalNetworkTags:          # Optional.
     - tag1
-    additionalLabels:                                        # optional
+    additionalLabels:               # Optional.
       kube-node: master
 nodeGroups:
 - name: static
   replicas: 1
-  zones:                                                     # optional
+  zones:                            # Optional.
   - europe-west4-b
   instanceClass:
-    machineType: n1-standard-4                               # required
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    # required
-    diskSizeGb: 20                                           # optional, local disk is used if not specified
-    additionalNetworkTags:                                   # optional
+    machineType: n1-standard-4      # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Required.
+    diskSizeGb: 20                  # Optional, local disk is used if not specified.
+    additionalNetworkTags:          # Optional.
     - tag1
-    additionalLabels:                                        # optional
+    additionalLabels:               # Optional.
       kube-node: static
 provider:
-  region: europe-west4                                       # required
-  serviceAccountJSON: |                                      # required
+  region: europe-west4              # Required.
+  serviceAccountJSON: |             # Required.
     {
       "type": "service_account",
       "project_id": "sandbox",

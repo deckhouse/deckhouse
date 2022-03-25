@@ -19,26 +19,27 @@ Example of the layout configuration:
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>" # required
-vNetCIDR: 10.50.0.0/16 # required
-subnetCIDR: 10.50.0.0/24 # required
+sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>" # Required.
+vNetCIDR: 10.50.0.0/16 # Required.
+subnetCIDR: 10.50.0.0/24 # Required.
 standard:
-  natGatewayPublicIpCount: 1 # optional, by default 0
+  natGatewayPublicIpCount: 1 # Optional, by default 0.
 masterNodeGroup:
   replicas: 1
-  zones: ["1"] # optional, by default ["1"]
+  zones: ["1"] # Optional, by default ["1"].
   instanceClass:
-    machineSize: Standard_F4 # required
+    machineSize: Standard_F4 # Required.
     diskSizeGb: 32
-    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140 # required
-    enableExternalIP: false # optional, by default true
+    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140 # Required.
+    enableExternalIP: false # Optional, by default true.
 provider:
-  subscriptionId: "" # required
-  clientId: "" # required
-  clientSecret: "" # required
-  tenantId: "" # required
-  location: "westeurope" # required
-peeredVNets: # optional, list of Azure VNets with which Kubernetes VNet will be peered
-  - resourceGroupName: kube-bastion # required
-    vnetName: kube-bastion-vnet # required
+  subscriptionId: "" # Required.
+  clientId: "" # Required.
+  clientSecret: "" # Required.
+  tenantId: "" # Required.
+  location: "westeurope" # Required.
+# Optional, list of Azure VNets with which Kubernetes VNet will be peered.
+peeredVNets:
+  - resourceGroupName: kube-bastion # Required.
+    vnetName: kube-bastion-vnet # Required.
 ```

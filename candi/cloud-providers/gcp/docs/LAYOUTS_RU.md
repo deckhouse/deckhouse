@@ -22,45 +22,49 @@ apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: Standard
 standard:
-  cloudNATAddresses:                                         # optional, compute address names from this list are used as addresses for Cloud NAT
+  # Необязательный параметр. Адреса из этого списка будут использованы для
+  # адресации Cloud NAT.
+  cloudNATAddresses:
   - example-address-1
   - example-address-2
-subnetworkCIDR: 10.0.0.0/24                                  # required
-peeredVPCs:                                                  # optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered
+subnetworkCIDR: 10.0.0.0/24         # Обязательный параметр.
+# Необязательный параметр, список GCP VPC Networks, с которыми Kubernetes VPC
+# Network будет соединяться через пиринговое соединение.
+peeredVPCs:
 - default
-sshKey: "ssh-rsa <SSH_PUBLIC_KEY>"                           # required
+sshKey: "ssh-rsa <SSH_PUBLIC_KEY>"  # Обязательный параметр.
 labels:
   kube: example
 masterNodeGroup:
   replicas: 1
-  zones:                                                     # optional
+  zones:                            # Необязательный параметр.
   - europe-west4-b
   instanceClass:
-    machineType: n1-standard-4                               # required
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    # required
-    diskSizeGb: 20                                           # optional, local disk is used if not specified
-    disableExternalIP: false                                 # optional, by default master has externalIP
-    additionalNetworkTags:                                   # optional
+    machineType: n1-standard-4      # Обязательный параметр.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Обязательный параметр.
+    diskSizeGb: 20                  # Необязательный параметр. Если не указан — используется локальный диск.
+    disableExternalIP: false        # Необязательный параметр, по умолчанию master-узел имеет externalIP.
+    additionalNetworkTags:          # Необязательный параметр.
     - tag1
-    additionalLabels:                                        # optional
+    additionalLabels:               # Необязательный параметр.
       kube-node: master
 nodeGroups:
 - name: static
   replicas: 1
-  zones:                                                     # optional
+  zones:                            # Необязательный параметр.
   - europe-west4-b
   instanceClass:
-    machineType: n1-standard-4                               # required
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    # required
-    diskSizeGb: 20                                           # optional, local disk is used if not specified
-    disableExternalIP: true                                  # optional, by default nodes do not have externalIP
-    additionalNetworkTags:                                   # optional
+    machineType: n1-standard-4      # Обязательный параметр.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Обязательный параметр.
+    diskSizeGb: 20                  # Необязательный параметр. Если не указан — используется локальный диск.
+    disableExternalIP: true         # Необязательный параметр, по умолчанию узлы не имеют externalIP.
+    additionalNetworkTags:          # Необязательный параметр.
     - tag1
-    additionalLabels:                                        # optional
+    additionalLabels:               # Необязательный параметр.
       kube-node: static
 provider:
-  region: europe-west4                                       # required
-  serviceAccountJSON: |                                      # required
+  region: europe-west4              # Обязательный параметр.
+  serviceAccountJSON: |             # Обязательный параметр.
     {
       "type": "service_account",
       "project_id": "sandbox",
@@ -87,39 +91,41 @@ provider:
 apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: WithoutNAT
-subnetworkCIDR: 10.0.0.0/24                                 # required
-peeredVPCs:                                                 # optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered
+subnetworkCIDR: 10.0.0.0/24         # Обязательный параметр.
+# Необязательный параметр, список GCP VPC Networks, с которыми Kubernetes VPC
+# Network будет соединяться через пиринговое соединение.
+peeredVPCs:
 - default
 labels:
   kube: example
 masterNodeGroup:
   replicas: 1
-  zones:                                                     # optional
+  zones:                            # Необязательный параметр.
   - europe-west4-b
   instanceClass:
-    machineType: n1-standard-4                               # required
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    # required
-    diskSizeGb: 20                                           # optional, local disk is used if not specified
-    additionalNetworkTags:                                   # optional
+    machineType: n1-standard-4      # Обязательный параметр.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Обязательный параметр.
+    diskSizeGb: 20                  # Необязательный параметр, Если не указан — используется локальный диск.
+    additionalNetworkTags:          # Необязательный параметр.
     - tag1
-    additionalLabels:                                        # optional
+    additionalLabels:               # Необязательный параметр.
       kube-node: master
 nodeGroups:
 - name: static
   replicas: 1
-  zones:                                                     # optional
+  zones:                            # Необязательный параметр.
   - europe-west4-b
   instanceClass:
-    machineType: n1-standard-4                               # required
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911    # required
-    diskSizeGb: 20                                           # optional, local disk is used if not specified
-    additionalNetworkTags:                                   # optional
+    machineType: n1-standard-4      # Обязательный параметр.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911  # Обязательный параметр.
+    diskSizeGb: 20                  # Необязательный параметр, Если не указан — используется локальный диск.
+    additionalNetworkTags:          # Необязательный параметр.
     - tag1
-    additionalLabels:                                        # optional
+    additionalLabels:               # Необязательный параметр.
       kube-node: static
 provider:
-  region: europe-west4                                       # required
-  serviceAccountJSON: |                                      # required
+  region: europe-west4              # Обязательный параметр.
+  serviceAccountJSON: |             # Обязательный параметр.
     {
       "type": "service_account",
       "project_id": "sandbox",

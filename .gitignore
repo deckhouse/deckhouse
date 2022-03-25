@@ -39,3 +39,7 @@ layouts-tests-tmp/
 
 # ignore generated files
 /modules/040-node-manager/images/bashible-apiserver/pkg/template/test_data/**/generated/**
+
+# macOS Finder files
+*.DS_Store
+._*
