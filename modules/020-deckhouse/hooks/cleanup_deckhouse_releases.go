@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/v1alpha1"
 )
@@ -38,10 +39,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/deckhouse/cleanup_deckhouse_release",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "releases",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "DeckhouseRelease",
-			FilterFunc: filterDeckhouseRelease,
+			Name:                "releases",
+			ApiVersion:          "deckhouse.io/v1alpha1",
+			Kind:                "DeckhouseRelease",
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          filterDeckhouseRelease,
 		},
 	},
 }, cleanupReleases)
@@ -104,17 +106,19 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	// some old releases, for example - when downgrade the release channel
 	// mark them as Outdated
 	if len(deployedReleasesIndexes) > 0 && len(pendingReleasesIndexes) > 0 {
-		lastDeployed := deployedReleasesIndexes[len(deployedReleasesIndexes)-1]
+		lastDeployed := deployedReleasesIndexes[0] // releases are reversed, that's why we have to take the first one (latest Deployed release)
 		sp := statusPatch{
 			Phase:          v1alpha1.PhaseOutdated,
 			TransitionTime: now,
 		}
 
 		for _, index := range pendingReleasesIndexes {
-			if index < lastDeployed {
-				release := releases[index]
-				input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			if index <= lastDeployed {
+				continue
 			}
+
+			release := releases[index]
+			input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
 		}
 	}
 
