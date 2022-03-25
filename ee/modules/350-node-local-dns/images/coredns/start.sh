@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+
 # Setup interface
 dev_name="nodelocaldns"
 if ! ip link show "$dev_name" >/dev/null 2>&1 ; then
@@ -13,15 +15,15 @@ if ! ip -json addr show "$dev_name" | jq -re "any(.[].addr_info[]?.local; . == \
 fi
 
 # Setup iptables
-if ! iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p tcp -m tcp --sport 53 -j NOTRACK >/dev/null 2>&1; then
-  iptables -w 600 -t raw -A OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p tcp -m tcp --sport 53 -j NOTRACK
+if ! iptables -w 60 -t raw -C OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p tcp -m tcp --sport 53 -j NOTRACK >/dev/null 2>&1; then
+  iptables -w 60 -t raw -A OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p tcp -m tcp --sport 53 -j NOTRACK
 fi
-if ! iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p udp -m udp --sport 53 -j NOTRACK >/dev/null 2>&1; then
-  iptables -w 600 -t raw -A OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p udp -m udp --sport 53 -j NOTRACK
+if ! iptables -w 60 -t raw -C OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p udp -m udp --sport 53 -j NOTRACK >/dev/null 2>&1; then
+  iptables -w 60 -t raw -A OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p udp -m udp --sport 53 -j NOTRACK
 fi
-if iptables -w 600 -t raw -C PREROUTING -d ${KUBE_DNS_SVC_IP}/32 -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
+if iptables -w 60 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
   # Remove. Will be added later.
-  iptables -w 600 -t raw -D PREROUTING -d ${KUBE_DNS_SVC_IP}/32 -m socket --nowildcard -j NOTRACK >/dev/null 2>&1
+  iptables -w 60 -t raw -D PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1
 fi
 
 exec /coredns -conf /etc/coredns/Corefile
