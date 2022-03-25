@@ -7,6 +7,7 @@
  - Fix deploy of DexAuthenticators to clusters with the OnlyInURI HTTPS mode
  - Ingress controllers of version >=0.33 will be restarted.
  - Kubernetes control-plane components and kubelet will restart for 1.20, 1.21 and 1.22 minor versions.
+ - The new module - Linstor. It enables a replicated block storage solution in the cluster using the LINSTOR and the DRBD kernel module.
 
 ## Features
 
@@ -39,6 +40,8 @@
  - **[ingress-nginx]** Deny locations with invalid auth URL. [#989](https://github.com/deckhouse/deckhouse/pull/989)
     Ingress controllers of version >=0.33 will be restarted.
  - **[kube-dns]** Add ability to tune cache TTL for stub zones. [#815](https://github.com/deckhouse/deckhouse/pull/815)
+ - **[linstor]** Added linstor module [#746](https://github.com/deckhouse/deckhouse/pull/746)
+    The new module - Linstor. It enables a replicated block storage solution in the cluster using the LINSTOR and the DRBD kernel module.
  - **[monitoring-kubernetes]** Enable `systemd` collector in the `node-exporter`. [#768](https://github.com/deckhouse/deckhouse/pull/768)
  - **[node-manager]** Add a file with context-building error on failure. [#850](https://github.com/deckhouse/deckhouse/pull/850)
  - **[node-manager]** Upgrade `cluster-autoscaler` to v0.19.0. [#793](https://github.com/deckhouse/deckhouse/pull/793)
@@ -55,6 +58,7 @@
  - **[cloud-provider-vsphere]** Fix handle of compatibilityFlag in Deckhouse config [#1156](https://github.com/deckhouse/deckhouse/pull/1156)
  - **[common]** The `csi-controller` template requires NAMESPACE environment variable. [#864](https://github.com/deckhouse/deckhouse/pull/864)
  - **[deckhouse]** Remove additional print column applyAfter. [#805](https://github.com/deckhouse/deckhouse/pull/805)
+ - **[deckhouse-controller]** Set debug level for snapshot info messages [#1160](https://github.com/deckhouse/deckhouse/pull/1160)
  - **[deckhouse-web]** OpenAPI fix and copy_custom_certificate hook fix — do nothing if the https.mode isn't CustomCertificate, but there is <module>.https.customCertificate.secretName configured. [#755](https://github.com/deckhouse/deckhouse/pull/755)
  - **[dhctl]** Fix potential panic for bashible logs in `dhctl bootstrap` command. [#724](https://github.com/deckhouse/deckhouse/pull/724)
  - **[extended-monitoring]** Start webserver immediately for the extended-monitoring-exporter [#1137](https://github.com/deckhouse/deckhouse/pull/1137)

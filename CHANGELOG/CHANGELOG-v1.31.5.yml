@@ -1,0 +1,5 @@
+deckhouse-controller:
+  fixes:
+    - summary: Set debug level for snapshot info messages
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1160
+
