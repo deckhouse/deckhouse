@@ -64,26 +64,28 @@ index 0abe760b7..5c907cebc 100644
          let resulting_state_reader = state_reader.clone();
 
 diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
-index 4c55d095f..07adc0155 100644
+index 4c55d095f..a539445a0 100644
 --- a/src/kubernetes/state/evmap.rs
 +++ b/src/kubernetes/state/evmap.rs
-@@ -5,8 +5,15 @@ use std::time::Duration;
+@@ -5,8 +5,16 @@ use std::time::Duration;
  use async_trait::async_trait;
  use evmap::WriteHandle;
  use futures::future::BoxFuture;
+-use k8s_openapi::{apimachinery::pkg::apis::meta::v1::ObjectMeta, Metadata};
 +use http::StatusCode;
 +use hyper::body;
-+use k8s_openapi::api::apps::v1::{ReadNamespacedReplicaSetResponse, ReplicaSet};
-+use k8s_openapi::api::batch::v1::{Job, ReadNamespacedJobResponse};
-+use k8s_openapi::apimachinery::pkg::apis::meta::v1::OwnerReference;
- use k8s_openapi::{apimachinery::pkg::apis::meta::v1::ObjectMeta, Metadata};
-+use tracing::debug;
++use k8s_openapi::{
++    api::apps::v1::{ReadNamespacedReplicaSetResponse, ReplicaSet},
++    api::batch::v1::{ReadNamespacedJobResponse, Job},
++    apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference},
++    Metadata,
++};
 
 +use crate::kubernetes::client::Client;
  use crate::kubernetes::{
      debounce::Debounce,
      hash_value::{HashKey, HashValue},
-@@ -19,6 +26,7 @@ pub struct Writer<T>
+@@ -19,6 +27,7 @@ pub struct Writer<T>
  where
      T: Metadata<Ty = ObjectMeta> + Send,
  {
@@ -91,7 +93,7 @@ index 4c55d095f..07adc0155 100644
      inner: WriteHandle<String, Value<T>>,
      debounced_flush: Option<Debounce>,
      hash_key: HashKey,
-@@ -31,6 +39,7 @@ where
+@@ -31,6 +40,7 @@ where
      /// Take a [`WriteHandle`], initialize it and return it wrapped with
      /// [`Writer`].
      pub fn new(
@@ -99,7 +101,7 @@ index 4c55d095f..07adc0155 100644
          mut inner: WriteHandle<String, Value<T>>,
          flush_debounce_timeout: Option<Duration>,
          hash_key: HashKey,
-@@ -43,6 +52,7 @@ where
+@@ -43,6 +53,7 @@ where
          let debounced_flush = flush_debounce_timeout.map(Debounce::new);
 
          Self {
@@ -107,7 +109,7 @@ index 4c55d095f..07adc0155 100644
              inner,
              debounced_flush,
              hash_key,
-@@ -73,14 +83,16 @@ where
+@@ -73,14 +84,16 @@ where
      type Item = T;
 
      async fn add(&mut self, item: Self::Item) {
@@ -126,7 +128,7 @@ index 4c55d095f..07adc0155 100644
              self.inner.update(key, value);
              self.debounced_flush();
          }
-@@ -102,6 +114,100 @@ where
+@@ -102,6 +115,100 @@ where
      }
  }
 
@@ -227,15 +229,14 @@ index 4c55d095f..07adc0155 100644
  #[async_trait]
  impl<T> super::MaintainedWrite for Writer<T>
  where
-@@ -138,10 +244,15 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
+@@ -138,10 +245,14 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
 
  #[cfg(test)]
  mod tests {
 +    use crate::kubernetes::client;
      use k8s_openapi::api::core::v1::Pod;
 +    use vector_core::config::proxy::ProxyConfig;
-+    use wiremock::matchers::{method, path};
-+    use wiremock::{Mock, MockServer, ResponseTemplate};
++    use wiremock::MockServer;
 
      use super::*;
      use crate::kubernetes::state::{MaintainedWrite, Write};
