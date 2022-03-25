@@ -325,8 +325,6 @@ istio:
     - summary: Deploy DexAuthenticators for modules from Helm.
       pull_request: https://github.com/deckhouse/deckhouse/pull/762
   fixes:
-    - summary: apiJWT exp prolongation and api-proxy logging improvements
-      pull_request: https://github.com/deckhouse/deckhouse/pull/1012
     - summary: Canary usage doc fix.
       pull_request: https://github.com/deckhouse/deckhouse/pull/731
 kube-dns:
@@ -340,6 +338,11 @@ linstor:
   features:
     - summary: Switch rc to stable release
       pull_request: https://github.com/deckhouse/deckhouse/pull/1047
+    - summary: Added linstor module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/746
+      impact: >-
+        The new module - Linstor. It enables a replicated block storage solution in the cluster
+        using the LINSTOR and the DRBD kernel module.
 log-shipper:
   features:
     - summary: Fire an event if a config file was created/updated.
