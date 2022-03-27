@@ -9,7 +9,7 @@ data:
     {
       "data_dir": "/vector-data",
       "api" : {
-        "address" : "0.0.0.0:8686",
+        "address" : "127.0.0.1:8686",
         "enabled" : true,
         "playground" : false
       },
