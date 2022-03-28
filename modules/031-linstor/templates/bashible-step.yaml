@@ -54,7 +54,7 @@ spec:
       mkdir -p /etc/multipath/conf.d
       bb-sync-file /etc/multipath/conf.d/drbd.conf - <<EOF
     blacklist {
-        devnode "^drbd[0-9]+"
+            devnode "^drbd[0-9]+"
     }
     EOF
     }
