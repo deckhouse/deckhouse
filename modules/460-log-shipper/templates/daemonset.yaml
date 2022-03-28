@@ -92,7 +92,7 @@ spec:
             httpGet:
               path: /api/health
               port: 9254
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
@@ -102,7 +102,7 @@ spec:
             httpGet:
               path: /api/health
               port: 9254
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
@@ -110,10 +110,10 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
-{{- if eq .Values.logShipper.resourcesRequests.mode "Static" }}
+              {{- if eq .Values.logShipper.resourcesRequests.mode "Static" }}
               cpu: {{ .Values.logShipper.resourcesRequests.static.cpu | quote }}
               memory: {{ .Values.logShipper.resourcesRequests.static.memory | quote }}
-{{- end }}
+              {{- end }}
           volumeMounts:
             - name: var-log
               mountPath: /var/log/
@@ -139,7 +139,7 @@ spec:
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
               excludePaths:
-              - /api/healthz
+              - /api/health
               upstreams:
               - upstream: http://127.0.0.1:9090/metrics
                 path: /metrics
@@ -182,7 +182,7 @@ spec:
           projected:
             sources:
               - configMap:
-                  name: vector-daemon-config
+                  name: log-shipper-config
         - name: vector-config-dir
           emptyDir: {}
         - name: shell-operator-tmp

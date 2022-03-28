@@ -22,26 +22,26 @@ for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
 done
 
 function cleanup_test_dir() {
-  NEW_CONFIG_DIR=$1
-  rm -rf $NEW_CONFIG_DIR
-  mkdir -p $NEW_CONFIG_DIR
+  new_config_dir=$1
+  rm -rf $new_config_dir
+  mkdir -p $new_config_dir
 }
 
 function mk_configs() {
-  NEW_CONFIG_DIR=$1
-  echo "$2" | base64 -d > ${NEW_CONFIG_DIR}/vector.json
+  new_config_dir=$1
+  echo "$2" | base64 -d > ${new_config_dir}/vector.json
 }
 
 function check_configs() {
-  CONFIG_DIR=$1
-  NEW_CONFIG=$2
-  NEW_MD5=$(echo "$NEW_CONFIG" | base64 -d | md5sum | awk '{print $1}')
-  if [ -f $CONFIG_DIR/vector.json ]; then
-    OLD_MD5=$(cat $CONFIG_DIR/vector.json | md5sum | awk '{print $1}')
+  config_dir=$1
+  new_config=$2
+  new_md5=$(echo "$new_config" | base64 -d | md5sum | awk '{print $1}')
+  if [[ -f $config_dir/vector.json ]]; then
+    old_md5=$(cat $config_dir/vector.json | md5sum | awk '{print $1}')
   else
-    OLD_MD5=""
+    old_md5=""
   fi
-  if [ "$NEW_MD5" == "$OLD_MD5" ]; then
+  if [ "$new_md5" == "$old_md5" ]; then
     echo 0
   else
     echo 1
@@ -68,27 +68,27 @@ EOF
 }
 
 function __main__() {
-  TEST_DIR="/tmp/tmp_vector_conf"
-  DEFAULT_CONFIG="/etc/vector/default/defaults.json"
-  PROD_CONFIG_DIR="/etc/vector/dynamic"
+  test_dir="/tmp/tmp_vector_conf"
+  default_config="/etc/vector/default/defaults.json"
+  dynamic_config_dir="/etc/vector/dynamic"
 
   echo "Starting vector reload hook"
-  vectorConfig=$(context::jq -r '.snapshots.d8_vector_config.[0].filterResult.configs."vector.json"')
+  vector_config=$(context::jq -r '.snapshots.d8_vector_config.[0].filterResult.configs."vector.json"' | envsubst)
 
   # Cleanup test directory
-  cleanup_test_dir $TEST_DIR
+  cleanup_test_dir $test_dir
 
   # Create configs
-  mk_configs $TEST_DIR $vectorConfig
-  vector --color never validate --config-json $DEFAULT_CONFIG --config-json $TEST_DIR/*.json
+  mk_configs $test_dir $vector_config
+  vector --color never validate --config-json $default_config --config-json $test_dir/*.json
 
-  RET_CODE=$?
+  ret_code=$?
 
-  if [ x$RET_CODE == x0 ]; then
-    doReload=$(check_configs $PROD_CONFIG_DIR $vectorConfig)
-    if [[ "${doReload}" == "1" ]]; then
+  if [[ "x$ret_code" == "x0" ]]; then
+    do_reload=$(check_configs $dynamic_config_dir $vector_config)
+    if [[ "${do_reload}" == "1" ]]; then
       echo "Reloading vector"
-      mk_configs $PROD_CONFIG_DIR $vectorConfig
+      mk_configs $dynamic_config_dir $vector_config
       kill -HUP $(pidof vector)
     else
       echo "Configs are equal, doing nothing."

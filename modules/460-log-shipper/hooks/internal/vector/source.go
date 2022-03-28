@@ -135,6 +135,8 @@ func (cs kubernetesLogSource) BuildSources() []impl.LogSource {
 }
 
 func (cs kubernetesLogSource) MarshalJSON() ([]byte, error) {
+	cs.fields = append(cs.fields, "metadata.name!=$VECTOR_SELF_NODE_NAME")
+
 	if len(cs.namespaces) > 0 {
 		ns := cs.namespaces[0] // namespace should be denormalized here and have only one value
 		cs.fields = append(cs.fields, "metadata.namespace="+ns)
