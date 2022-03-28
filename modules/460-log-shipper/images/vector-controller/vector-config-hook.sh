@@ -85,10 +85,12 @@ function __main__() {
   ret_code=$?
 
   if [[ "x$ret_code" == "x0" ]]; then
-    diff -u "$dynamic_config_dir/vector.json" "$test_dir/vector.json"
-
     do_reload=$(check_configs $dynamic_config_dir $vector_config)
     if [[ "${do_reload}" == "1" ]]; then
+      if [[ -f "$dynamic_config_dir/vector.json" ]] ; then
+        diff -u "$dynamic_config_dir/vector.json" "$test_dir/vector.json"
+      fi
+
       mk_configs $dynamic_config_dir $vector_config
 
       vector_pid=$(pidof vector)
