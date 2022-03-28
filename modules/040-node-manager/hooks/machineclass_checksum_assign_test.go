@@ -374,8 +374,8 @@ internal:
   instancePrefix: myprefix
   cloudProvider:
     type: gcp
-      gcp:
-        diskSizeGb: 50
+    gcp:
+      diskSizeGb: 50
   nodeGroups:
   - name: worker
     instanceClass: # maximum filled
