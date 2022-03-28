@@ -7,7 +7,6 @@ The module is automatically enabled for all cloud clusters deployed in vSphere.
 You can configure the number and parameters of ordering machines in the cloud via the [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) custom resource of the node-manager module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the `cloudInstances.ClassReference` parameter of NodeGroup). In the case of the vSphere cloud provider, the instance class is the [`VsphereInstanceClass`](cr.html#vsphereinstanceclass) custom resource that stores specific parameters of the machines.
 
 ## Parameters
-
 <!-- SCHEMA -->
 
 ## Storage
@@ -15,16 +14,11 @@ You can configure the number and parameters of ordering machines in the cloud vi
 The module automatically creates a StorageClass for each Datastore and DatastoreCluster in the zone(-s). Also, it can filter out the unnecessary StorageClasses (you can do this via the `exclude` parameter).
 
 * `exclude` — a list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster;
-  * Format — an array of strings;
-  * An optional parameter;
-* `default` — the name of StorageClass that will be used in the cluster by default;
-  * Format — a string;
-  * An optional parameter;
-  * If the parameter is omitted, the default StorageClass is either:
-    * an arbitrary StorageClass present in the cluster that has the default annotation;
-    * the first (in lexicographic order) StorageClass of those created by the module.
+* `default` — the name of StorageClass that will be used in the cluster by default. If the parameter is omitted, the default StorageClass is either:
+  * an arbitrary StorageClass present in the cluster that has the default annotation;
+  * the first (in lexicographic order) StorageClass of those created by the module.
 
-Example:
+An example:
 ```yaml
 cloudProviderVsphere: |
   storageClass:
@@ -38,13 +32,11 @@ cloudProviderVsphere: |
 
 By default, the storage subsystem uses CNS volumes with the ability of online-resize. FCD volumes are also supported, but only in the legacy or migration modes.
 
-* `compatibilityFlag` — a flag allowing the use of the old CSI version;
-  * Format — a string;
-  * Possible values:
-    * `legacy` — use the old version of the driver. FCD discs only, no online-resizing;
-    * `migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.
-  * An optional parameter;
+* `compatibilityFlag` — a flag allowing the use of the old CSI version. Possible values:
+  * `legacy` — use the old version of the driver. FCD discs only, no online-resizing;
+  * `migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.
 
+An example:
 ```yaml
 cloudProviderVsphere: |
   storageClass:
@@ -58,27 +50,25 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 1. Run the `kubectl cordon node_where_pod_is_hosted` command;
 2. Delete the Pod;
 3. Make sure that the resize was successful. The PVC object must *not have* the `Resizing` condition. **Note** that the `FileSystemResizePending` state is OK;
-4. Run the `kubectl uncordon node_where_pod_is_hosted` command;
+4. Run the `kubectl uncordon node_where_pod_is_hosted` command.
 
 ## Environment requirements
 
-1. vSphere version required: `v7.0U2` ([required](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) for the `Online volume expansion` work); 
-2. vCenter to which master nodes can connect to from within the cluster;
-3. Datacenter with the following components:
-
-    1. VirtualMachine template with a [specific](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource.
-       * VM image should use `Virtual machines with hardware version 15 or later` (required for online resize to work).
-    2. The network must be available on all ESXi where VirtualMachines will be created.
-    3. One or more Datastores connected to all ESXi where VirtualMachines will be created.
-        * A tag from the tag category in `zoneTagCategory` (`k8s-zone` by default) **must be added** to Datastores. This tag will indicate the **zone**.  All Clusters of a specific zone must have access to all Datastores within the same zone.
-    4. The cluster with the required ESXis.
-        * A tag from the tag category in `zoneTagCategory` (`k8s-zone` by default) **must be added** to the Cluster. This tag will indicate the **zone**.
-    5. Folder for VirtualMachines to be created.
-        * An optional parameter. By default, the root vm folder is used.
-    6. Create a role with the appropriate [set](#list-of-privileges-for-using-the-module) of privileges.
-    7. Create a user and assign the above role to it.
-
-4. A tag from the tag category in `regionTagCategory` (`k8s-region` by default) **must be added** to the Datacenter. This tag will indicate the region.
+* vSphere version required: `v7.0U2` ([required](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansionmd#vsphere-csi-driver---volume-expansion) for the `Online volume expansion` work);
+* vCenter to which master nodes can connect to from within the cluster;
+* Datacenter with the following components:
+  1. VirtualMachine template with a [specific](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource.
+    * VM image should use `Virtual machines with hardware version 15 or later` (required for online resize to work).
+  2. The network must be available on all ESXi where VirtualMachines will be created.
+  3. One or more Datastores connected to all ESXi where VirtualMachines will be created.
+    * A tag from the tag category in `zoneTagCategory` (`k8s-zone` by default) **must be added** to Datastores. This tag will indicate the **zone**.  All Clusters of a specific zone must have access to all Datastores within the same zone.
+  4. The cluster with the required ESXis.
+    * A tag from the tag category in `zoneTagCategory` (`k8s-zone` by default) **must be added** to the Cluster. This tag will indicate the **zone**.
+  5. Folder for VirtualMachines to be created.
+    * An optional parameter. By default, the root vm folder is used.
+  6. Create a role with the appropriate [set](#list-of-privileges-for-using-the-module) of privileges.
+  7. Create a user and assign the above role to it.
+* A tag from the tag category in `regionTagCategory` (`k8s-region` by default) **must be added** to the Datacenter. This tag will indicate the region.
 
 ## List of privileges for using the module
 
