@@ -65,6 +65,7 @@
  - **[ingress-nginx]** Proper validating webhook configuration for k8s 1.22+. [#637](https://github.com/deckhouse/deckhouse/pull/637)
  - **[istio]** Canary usage doc fix. [#731](https://github.com/deckhouse/deckhouse/pull/731)
  - **[kube-dns]** FAQ clarifications about changing `clusterDomain`, ServiceAccount tokens and Istio. [#686](https://github.com/deckhouse/deckhouse/pull/686)
+ - **[linstor]** Add DRBD devices to blacklist on nodes. DRBD devices should not be queried by LVM and multipath commands So we add DRBD devices into blacklist for multipath and configure global_filter in lvm.conf for them. [#1153](https://github.com/deckhouse/deckhouse/pull/1153)
  - **[log-shipper]** Fire the alert only if there are more pods absent than allowed by the DaemonSet status. [#756](https://github.com/deckhouse/deckhouse/pull/756)
  - **[monitoring-applications]** Make dashboards immutable (that weren't already). [#840](https://github.com/deckhouse/deckhouse/pull/840)
  - **[monitoring-kubernetes-control-plane]** Proper kubectl command in alert description. [#741](https://github.com/deckhouse/deckhouse/pull/741)
