@@ -1,11 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: snapshot-validation-service
+  name: d8-snapshot-validation-webhook
   namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-validation-webhook")) | nindent 2 }}
 spec:
   selector:
-    app: snapshot-validation
+    app: d8-snapshot-validation-webhook
   ports:
     - protocol: TCP
       port: 4443

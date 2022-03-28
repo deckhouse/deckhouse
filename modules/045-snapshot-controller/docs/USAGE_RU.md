@@ -14,7 +14,7 @@ kubectl get volumesnapshotclasses.snapshot.storage.k8s.io
 Затем вы сможете использовать снапшот-класс для создания снапшота из существующего тома:
 
 ```yaml
-apiVersion: snapshot.storage.k8s.io/v1beta1
+apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshot
 metadata:
   name: my-first-snapshot

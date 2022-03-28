@@ -62,7 +62,7 @@ var _ = Describe("Modules :: snapshot-controller :: hooks :: generate_certs ::",
 
 			// Additional checks for controller certificate
 			opts := x509.VerifyOptions{
-				DNSName: "snapshot-validation-webhook.kube-system.svc",
+				DNSName: "d8-snapshot-validation-webhook.kube-system.svc",
 				Roots:   certPool,
 			}
 			_, err = cert.Verify(opts)

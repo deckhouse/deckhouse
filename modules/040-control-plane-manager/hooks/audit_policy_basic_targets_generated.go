@@ -51,7 +51,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"d8-control-plane-manager",
 	"d8-kube-dns",
 	"d8-kube-proxy",
-	"d8-snapshot-controller",
+	"d8-snapshot-controller-snapshot-controller",
 	"d8-vertical-pod-autoscaler-admission-controller",
 	"d8-vertical-pod-autoscaler-recommender",
 	"d8-vertical-pod-autoscaler-updater",

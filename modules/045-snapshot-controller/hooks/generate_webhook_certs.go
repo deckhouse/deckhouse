@@ -31,7 +31,7 @@ import (
 
 const (
 	namespace   = "kube-system"
-	serviceName = "snapshot-validation-webhook"
+	serviceName = "d8-snapshot-validation-webhook"
 	serviceHost = serviceName + "." + namespace + ".svc"
 	secretName  = "d8-snapshot-validation-webhook-certs"
 	certPath    = "snapshotController.internal.webhookCert"
@@ -98,7 +98,7 @@ func generateSelfSignedCertificates(input *go_hook.HookInput) error {
 		}
 
 		cert, err = certificate.GenerateSelfSignedCert(input.LogEntry,
-			"snapshot-validation-webhook",
+			"d8-snapshot-validation-webhook",
 			caCert,
 			certificate.WithSigningDefaultExpiry(87600*time.Hour),
 			certificate.WithSANs(

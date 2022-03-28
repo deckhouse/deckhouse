@@ -14,7 +14,7 @@ kubectl get volumesnapshotclasses.snapshot.storage.k8s.io
 You can then use snapshot class to create a snapshot from an existing PVC:
 
 ```yaml
-apiVersion: snapshot.storage.k8s.io/v1beta1
+apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshot
 metadata:
   name: my-first-snapshot
