@@ -3,7 +3,9 @@
 {{- $_ := set $options "machineType" .nodeGroup.instanceClass.machineType -}}
 
 {{- if hasKey .nodeGroup.instanceClass "diskSizeGb" -}}
-  {{- $_ := set $options "diskSizeGb" .nodeGroup.instanceClass.diskSizeGb -}}
+  {{- if ne .nodeGroup.instanceClass.diskSizeGb .Values.nodeManager.internal.cloudProvider.gcp.diskSizeGb -}}
+    {{- $_ := set $options "diskSizeGb" .nodeGroup.instanceClass.diskSizeGb -}}
+  {{- end }}
 {{- end -}}
 
 {{- if hasKey .nodeGroup.instanceClass "diskType" -}}
