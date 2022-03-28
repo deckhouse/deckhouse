@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtologrus"
 	"github.com/flant/kube-client/klogtologrus"
 	sh_app "github.com/flant/shell-operator/pkg/app"
+	"github.com/flant/shell-operator/pkg/config"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 	log "github.com/sirupsen/logrus"
@@ -65,7 +66,9 @@ func main() {
 	startCmd := kpApp.Command("start", "Start deckhouse.").
 		Default().
 		Action(func(c *kingpin.ParseContext) error {
-			sh_app.SetupLogging()
+			runtimeConfig := config.NewConfig()
+			// Init logging subsystem.
+			sh_app.SetupLogging(runtimeConfig)
 			log.Infof("deckhouse %s (addon-operator %s, shell-operator %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion)
 
 			// Set hook metrics listen port if flat is not passed.
