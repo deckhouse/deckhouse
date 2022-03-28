@@ -423,7 +423,7 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 		sp := statusPatch{
 			Phase:          v1alpha1.PhaseOutdated,
 			Approved:       currentRelease.StatusApproved,
-			Message:        "",
+			Message:        "Last Deployed release outdated",
 			TransitionTime: du.now,
 		}
 		input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentRelease.Name, object_patch.WithSubresource("/status"))
@@ -433,7 +433,7 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 		sp := statusPatch{
 			Phase:          v1alpha1.PhaseOutdated,
 			Approved:       true,
-			Message:        "",
+			Message:        "Skipped because of new patches",
 			TransitionTime: du.now,
 		}
 		for _, index := range du.skippedPatcheIndexes {

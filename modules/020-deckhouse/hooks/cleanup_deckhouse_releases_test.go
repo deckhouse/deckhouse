@@ -83,6 +83,96 @@ var _ = Describe("Modules :: deckhouse :: hooks :: cleanup deckhouse releases ::
 			Expect(ll.Items).Should(HaveLen(6))
 		})
 	})
+
+	Context("Releases from real cluster", func() {
+		rl := `
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1-30-16
+spec:
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.16
+status:
+  approved: true
+  message: ""
+  phase: Outdated
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1-30-17
+spec:
+  applyAfter: "2022-03-22T16:39:01.017873947Z"
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.17
+status:
+  approved: false
+  message: ""
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1-30-18
+spec:
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.18
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1-30-19
+spec:
+  applyAfter: "2022-03-24T12:20:02.146704455Z"
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.19
+status:
+  approved: true
+  message: ""
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1-30-9
+spec:
+  version: v1.30.9
+status:
+  approved: true
+  message: ""
+  phase: Outdated
+`
+		BeforeEach(func() {
+			bc := f.KubeStateSetAndWaitForBindingContexts(rl, 1)
+			f.BindingContexts.Set(bc)
+			f.RunHook()
+		})
+		It("Should keep last release in order", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			rl19 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-19")
+			rl18 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-18")
+			rl17 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-30-17")
+			Expect(rl19.Field("status.phase").String()).Should(Equal("Pending"))
+			Expect(rl18.Field("status.phase").String()).Should(Equal("Deployed"))
+			Expect(rl17.Field("status.phase").String()).Should(Equal("Outdated"))
+		})
+	})
 })
 
 func generateReleases(deployedReleasesCount, outdatedReleasesCount int) string {
