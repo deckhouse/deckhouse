@@ -16,7 +16,8 @@ RUN git clone ${LINSTOR_GITREPO} /linstor-server
 WORKDIR /linstor-server
 RUN git checkout v${LINSTOR_VERSION}
 
-RUN make debrelease \
+RUN git config --global url."https://github.com/".insteadOf git://github.com/ \
+ && make debrelease \
  && rm -rf /root/.gradle/caches/ \
  && mv linstor-server-${LINSTOR_VERSION}.tar.gz /linstor-server_$(echo ${LINSTOR_VERSION} | tr '-' '~').orig.tar.gz \
  && tar -C / -xvf /linstor-server_$(echo ${LINSTOR_VERSION} | tr '-' '~').orig.tar.gz
