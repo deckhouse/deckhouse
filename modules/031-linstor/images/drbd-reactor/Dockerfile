@@ -44,7 +44,7 @@ RUN apt-get update \
 
 RUN git clone --recurse-submodules ${REACTOR_GITREPO} /drbd-reactor
 WORKDIR /drbd-reactor
-RUN git checkout v${REACTOR_VERSION} \
+RUN git reset --hard v${REACTOR_VERSION} \
  && install /dev/null /usr/local/bin/lbvers.py \
  && make debrelease VERSION=${REACTOR_VERSION} \
  && mv drbd-reactor-${REACTOR_VERSION}.tar.gz ../drbd-reactor_${REACTOR_VERSION}.orig.tar.gz \
