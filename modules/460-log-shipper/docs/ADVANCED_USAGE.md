@@ -20,14 +20,14 @@ kubectl -n d8-log-shipper get pods -o wide | grep $node
 kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
 ```
 
-All following commands assumed to be executed in from the pod shell:
+All following commands are assumed to be executed from the pod's shell.
 
 ### See pipelines as a graph
 
 * Execute the `vector graph` command to get the output of logs pipelines topology in the [DOT format](https://graphviz.org/doc/info/lang.html).
 * Put the output to [webgraphviz](http://www.webgraphviz.com/) os similar service to render the graph. 
 
-The example of the graph output for a single pipeline in ascii format:
+Example of the graph output for a single pipeline in ASCII format:
 ```
 +------------------------------------------------+
 |  d8_cluster_source_flant-integration-d8-logs   |
@@ -58,11 +58,11 @@ There is the `vector top` command to help you see how much data is going through
 
 Example of the output:
 
-![Grafana cloud API key](../../images/460-log-shipper/vector_top.png)
+![Vector TOP output](../../images/460-log-shipper/vector_top.png)
 
 ### Get raw log samples
 
-You can execute the `vector tap` to get all raw samples from logging configs.
+You can execute the `vector tap` to get all raw samples for all logging configs.
 The only argument to the command is the ID of the pipeline stage (glob patterns are allowed).
 
 Logs before applying any transforms:
@@ -72,7 +72,7 @@ vector tap d8_cluster_source_*
 
 Transformed logs:
 ```bash
-vector tap d8_*
+vector tap d8_tf_*
 ```
 
 You can then use the `vector vrl` interactive console to debug [VRL](https://vector.dev/docs/reference/vrl/) remap rules for messages.
@@ -84,9 +84,9 @@ del(.test2)
 .
 ```
 
-## How to add s new source/sink support for log-shipper?
+## How to add a new source/sink support for log-shipper?
 
-Vector in the log-shipper module has been built with the limited amount of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
+Vector in the log-shipper module has been built with the limited number of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
 
 You can see a list of all supported features by executing the `vector list` command.
 
