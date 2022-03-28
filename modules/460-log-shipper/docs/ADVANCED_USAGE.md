@@ -54,11 +54,11 @@ The example of the graph output for a single pipeline in ascii format:
 
 ### Investigate data processing
 
-There is the `vector top` command to help you see how many data is going through all checkpoints of the pipeline.
+There is the `vector top` command to help you see how much data is going through all checkpoints of the pipeline.
 
-The example of the output:
+Example of the output:
 
-SOME PICTURE
+![Grafana cloud API key](../../images/460-log-shipper/vector_top.png)
 
 ### Get raw log samples
 
@@ -86,8 +86,8 @@ del(.test2)
 
 ## How to add s new source/sink support for log-shipper?
 
-Vector in log-shipper module has been build with the limited amount of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
+Vector in the log-shipper module has been built with the limited amount of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
 
-You can see list of the all supported features by executing the `vector list` command.
+You can see a list of all supported features by executing the `vector list` command.
 
 If supporting a new source/sink is required, you need to add the corresponding feature to the list of enabled features in the Dockerfile.
