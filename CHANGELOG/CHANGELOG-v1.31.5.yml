@@ -5,8 +5,4 @@ ci:
   fixes:
     - summary: support for additional repos to test CI cnahges
       pull_request: https://github.com/deckhouse/deckhouse/pull/1027
-deckhouse-controller:
-  fixes:
-    - summary: Set debug level for snapshot info messages
-      pull_request: https://github.com/deckhouse/deckhouse/pull/1160
 

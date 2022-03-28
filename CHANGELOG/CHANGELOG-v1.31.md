@@ -58,7 +58,6 @@
  - **[cloud-provider-vsphere]** Fix handle of compatibilityFlag in Deckhouse config [#1156](https://github.com/deckhouse/deckhouse/pull/1156)
  - **[common]** The `csi-controller` template requires NAMESPACE environment variable. [#864](https://github.com/deckhouse/deckhouse/pull/864)
  - **[deckhouse]** Remove additional print column applyAfter. [#805](https://github.com/deckhouse/deckhouse/pull/805)
- - **[deckhouse-controller]** Set debug level for snapshot info messages [#1160](https://github.com/deckhouse/deckhouse/pull/1160)
  - **[deckhouse-web]** OpenAPI fix and copy_custom_certificate hook fix — do nothing if the https.mode isn't CustomCertificate, but there is <module>.https.customCertificate.secretName configured. [#755](https://github.com/deckhouse/deckhouse/pull/755)
  - **[dhctl]** Fix potential panic for bashible logs in `dhctl bootstrap` command. [#724](https://github.com/deckhouse/deckhouse/pull/724)
  - **[extended-monitoring]** Start webserver immediately for the extended-monitoring-exporter [#1137](https://github.com/deckhouse/deckhouse/pull/1137)
