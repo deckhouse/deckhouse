@@ -20,28 +20,37 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
+            if (!context.payload.comment.body.startsWith('/')) {
+              core.notice(`Ignore regular comment.`);
+              return;
+            }
+
             // Check for release issue.
             const isReleaseIssue = context.payload.issue.labels.some((l) => l.name === 'issue/release');
             const isPrivate = context.payload.repository.private;
             const authorAssociation = context.payload.comment.author_association;
             // Check for changelog PR.
             const isPR = !!context.payload.issue.pull_request;
-            const milestoneState = context.payload.issue.milestone.state;
+            const isMilestoned = !!context.payload.issue.milestone;
+            const milestoneState = isMilestoned && context.payload.issue.milestone.state;
             const hasChangelogLabel = context.payload.issue.labels.some((l) => l.name === 'changelog');
             const hasAutoLabel = context.payload.issue.labels.some((l) => l.name === 'auto');
             core.info(`Is release issue?       ${isReleaseIssue}`)
             core.info(`Private repo?           ${isPrivate}`)
             core.info(`Author association:     ${authorAssociation}`)
             core.info(`Is PR?                  ${isPR}`)
+            core.info(`Is milestoned?          ${isMilestoned}`)
             core.info(`Milestone state:        ${milestoneState}`)
             core.info(`Has 'changelog' label?  ${hasChangelogLabel}`)
             core.info(`Has 'auto' label?       ${hasAutoLabel}`)
 
             if (isReleaseIssue && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
+              core.notice(`Comment on release issue with possible slash command.`);
               return core.setOutput('trigger_for_release_issue', 'true');
             }
 
             if (isPR && milestoneState === 'open' && hasChangelogLabel && hasAutoLabel) {
+              core.notice(`Comment on changelog pull request.`);
               return core.setOutput('trigger_for_changelog', 'true');
             }
 
