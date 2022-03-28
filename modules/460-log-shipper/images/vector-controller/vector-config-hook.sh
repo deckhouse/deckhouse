@@ -85,11 +85,17 @@ function __main__() {
   ret_code=$?
 
   if [[ "x$ret_code" == "x0" ]]; then
+    diff -u "$dynamic_config_dir/vector.json" "$test_dir/vector.json"
+
     do_reload=$(check_configs $dynamic_config_dir $vector_config)
     if [[ "${do_reload}" == "1" ]]; then
-      echo "Reloading vector"
       mk_configs $dynamic_config_dir $vector_config
-      kill -HUP $(pidof vector)
+
+      vector_pid=$(pidof vector)
+      if [[ "x$vector_pid" != "x" ]]; then
+        echo "Reloading vector"
+        kill -HUP $(vector_pid)
+      fi
     else
       echo "Configs are equal, doing nothing."
     fi
@@ -97,7 +103,6 @@ function __main__() {
     echo "Invalid config, skip running"
     exit 1
   fi
-
 }
 
 hook::run "$@"

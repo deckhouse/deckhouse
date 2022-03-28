@@ -29,36 +29,38 @@ import (
 )
 
 func cleanUpTransform() *DynamicTransform {
+	const cleanUpSnippet = `
+if exists(.pod_labels."controller-revision-hash") {
+  del(.pod_labels."controller-revision-hash")
+}
+if exists(.pod_labels."pod-template-hash") {
+  del(.pod_labels."pod-template-hash")
+}
+if exists(.kubernetes) {
+  del(.kubernetes)
+}
+if exists(.file) {
+  del(.file)
+}`
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Type: "remap",
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source": ` if exists(.pod_labels."controller-revision-hash") {
-    del(.pod_labels."controller-revision-hash")
- }
-  if exists(.pod_labels."pod-template-hash") {
-   del(.pod_labels."pod-template-hash")
- }
- if exists(.kubernetes) {
-   del(.kubernetes)
- }
- if exists(.file) {
-   del(.file)
- }
-`,
+			"source":        cleanUpSnippet,
 			"drop_on_abort": false,
 		},
 	}
 }
 
 func cleanDataTransform() *DynamicTransform {
+	const cleanDataSnippet = `if exists(.parsed_data) { del(.parsed_data) }`
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Type: "remap",
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source":        `if exists(.parsed_data) { del(.parsed_data) }`,
+			"source":        cleanDataSnippet,
 			"drop_on_abort": false,
 		},
 	}
@@ -66,16 +68,17 @@ func cleanDataTransform() *DynamicTransform {
 
 // jsonParseTransform is a default logstash & elasticsearch json parser transform
 func jsonParseTransform() *DynamicTransform {
+	const jsonParseSnippet = `
+structured, err1 = parse_json(.message)
+if err1 == null {
+  .parsed_data = structured
+}`
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Type: "remap",
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source": ` structured, err1 = parse_json(.message)
- if err1 == null {
-   .parsed_data = structured
- }
-`,
+			"source":        jsonParseSnippet,
 			"drop_on_abort": false,
 		},
 	}
@@ -84,16 +87,7 @@ func jsonParseTransform() *DynamicTransform {
 // deDotTransform is a default logstash & elasticsearch dedot transform
 // Related issue https://github.com/timberio/vector/issues/3588
 func deDotTransform() *DynamicTransform {
-	return &DynamicTransform{
-		CommonTransform: CommonTransform{
-			Type: "lua",
-		},
-		DynamicArgsMap: map[string]interface{}{
-			"version": "2",
-			"hooks": map[string]interface{}{
-				"process": "process",
-			},
-			"source": `
+	const deDotSnippet = `
 function process(event, emit)
 	if event.log.pod_labels == nil then
 		return
@@ -120,8 +114,17 @@ function dedot(map)
 	for k, v in pairs(new_map) do
 		map[k] = v
 	end
-end
-`,
+end`
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Type: "lua",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"version": "2",
+			"hooks": map[string]interface{}{
+				"process": "process",
+			},
+			"source": deDotSnippet,
 		},
 	}
 }
@@ -337,24 +340,27 @@ func CreateTransformsFromFilter(filters []v1alpha1.LogFilter) (transforms []impl
 		case v1alpha1.LogFilterOpNotRegex:
 			regexps := make([]string, 0)
 			for _, regexp := range filter.Values {
-				regexps = append(regexps, fmt.Sprintf(`{ matched, err = match(.parsed_data.%s, r'%s')
- if err != null {
- true
- } else {
- !matched
- }}`, filter.Field, regexp))
+				regexps = append(regexps, fmt.Sprintf(`
+{
+  matched, err = match(.parsed_data.%s, r'%s')
+  if err != null {
+    true
+  } else {
+    !matched
+  }
+}`, filter.Field, regexp))
 			}
 			transforms = append(transforms, &DynamicTransform{
 				CommonTransform: CommonTransform{
 					Type: "filter",
 				},
 				DynamicArgsMap: map[string]interface{}{
-					"condition": fmt.Sprintf(`if exists(.parsed_data.%s) && is_string(.parsed_data.%s)
- {
- %s
- } else {
- true
- }`, filter.Field, filter.Field, strings.Join(regexps, " && ")),
+					"condition": fmt.Sprintf(`
+if exists(.parsed_data.%s) && is_string(.parsed_data.%s) {
+  %s
+} else {
+  true
+}`, filter.Field, filter.Field, strings.Join(regexps, " && ")),
 				},
 			})
 		default:

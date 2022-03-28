@@ -152,7 +152,7 @@ spec:
                     subresource: prometheus-metrics
                     name: log-shipper-agent
               - upstream: http://127.0.0.1:8686/
-                path: /api
+                path: /api/
                 authorization:
                   resourceAttributes:
                     namespace: d8-{{ $.Chart.Name }}
