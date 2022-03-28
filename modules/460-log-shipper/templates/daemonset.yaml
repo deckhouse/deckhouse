@@ -90,8 +90,8 @@ spec:
           readinessProbe:
             failureThreshold: 3
             httpGet:
-              path: /health
-              port: api
+              path: /api/health
+              port: 9254
               scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -100,20 +100,13 @@ spec:
           livenessProbe:
             failureThreshold: 10
             httpGet:
-              path: /health
-              port: api
+              path: /api/health
+              port: 9254
               scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 5
-          ports:
-            - name: metrics
-              containerPort: 9090
-              protocol: TCP
-            - name: api
-              containerPort: 8686
-              protocol: TCP
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 14 }}
@@ -145,6 +138,8 @@ spec:
                 fieldPath: status.podIP
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
+              excludePaths:
+              - /api/healthz
               upstreams:
               - upstream: http://127.0.0.1:9090/metrics
                 path: /metrics
@@ -155,6 +150,16 @@ spec:
                     apiVersion: v1
                     resource: daemonsets
                     subresource: prometheus-metrics
+                    name: log-shipper-agent
+              - upstream: http://127.0.0.1:8686/
+                path: /api
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ $.Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: http
                     name: log-shipper-agent
           ports:
           - containerPort: 9254
