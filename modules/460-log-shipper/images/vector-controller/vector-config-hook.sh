@@ -72,7 +72,6 @@ function __main__() {
   default_config="/etc/vector/default/defaults.json"
   dynamic_config_dir="/etc/vector/dynamic"
 
-  echo "Starting vector reload hook"
   vector_config=$(context::jq -r '.snapshots.d8_vector_config.[0].filterResult.configs."vector.json"' | envsubst)
 
   # Cleanup test directory
