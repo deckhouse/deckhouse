@@ -9,3 +9,4 @@ properties:
       activated:
         type: boolean
         default: false
+        x-examples: [false, true]

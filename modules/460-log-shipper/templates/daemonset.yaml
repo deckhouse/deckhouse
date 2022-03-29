@@ -109,7 +109,7 @@ spec:
           - name: var-lib
             mountPath: /var/lib
             readOnly: true
-            {{- include "vectorMounts" . | nindent 12 }}
+            {{- include "vectorMounts" . | nindent 10 }}
         - name: vector-reloader
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.logShipper.vector }}"
@@ -127,7 +127,7 @@ spec:
             mountPath: /tmp
           - name: reloader-run
             mountPath: /var/run
-            {{- include "vectorMounts" . | nindent 12 }}
+            {{- include "vectorMounts" . | nindent 10 }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
