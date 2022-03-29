@@ -32,5 +32,5 @@ RUN mkdir -p /etc/vector \
     && apt-get update \
     && apt-get install -yq ca-certificates tzdata inotify-tools gettext \
     && rm -rf /var/cache/apt/archives/* \
-COPY reloader /usr/bin/
+ADD reloader /usr/bin/
 ENTRYPOINT ["/usr/bin/vector"]
