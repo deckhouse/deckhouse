@@ -35,7 +35,7 @@ data:
 {{- if and .Values.istio.tracing.enabled .Values.istio.tracing.kiali }}
       tracing:
         enabled: true
-        url: {{ .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
+        url: {{ .Values.istio.tracing.kiali.jaegerURLForUsers }}
   {{- if .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
         in_cluster_url: {{ .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
         use_grpc: true
