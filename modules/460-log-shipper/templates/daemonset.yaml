@@ -194,9 +194,6 @@ spec:
           sources:
           - configMap:
               name: log-shipper-config
-        configMap:
-          name: openvpn
-          defaultMode: 0644
       - name: vector-config-dir
         emptyDir: {}
       - name: reloader-tmp
