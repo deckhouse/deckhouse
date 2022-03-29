@@ -86,7 +86,7 @@ function __main__() {
 
   if [[ "x$ret_code" == "x0" ]]; then
     do_reload=$(check_configs $dynamic_config_dir $vector_config)
-    if [[ "${do_reload}" == "1" ]]; then
+    if [[ "x$do_reload" == "x1" ]]; then
       if [[ -f "$dynamic_config_dir/vector.json" ]] ; then
         diff -u "$dynamic_config_dir/vector.json" "$test_dir/vector.json"
       fi
@@ -96,7 +96,7 @@ function __main__() {
       vector_pid=$(pidof vector)
       if [[ "x$vector_pid" != "x" ]]; then
         echo "Reloading vector"
-        kill -HUP $(vector_pid)
+        kill -SIGHUP "$vector_pid"
       fi
     else
       echo "Configs are equal, doing nothing."
