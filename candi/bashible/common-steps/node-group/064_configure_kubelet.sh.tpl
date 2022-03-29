@@ -203,8 +203,8 @@ featureGates:
   ExpandCSIVolumes: true
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
-imageGCHighThresholdPercent: 85
-imageGCLowThresholdPercent: 80
+imageGCHighThresholdPercent: 70
+imageGCLowThresholdPercent: 65
 kubeAPIBurst: 50
 kubeAPIQPS: 50
 hairpinMode: promiscuous-bridge
