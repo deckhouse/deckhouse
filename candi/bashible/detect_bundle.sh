@@ -32,12 +32,15 @@ if [ -e /etc/os-release ]; then
       >&2 echo "ERROR: Can't determine OS! No ID and VERSION_ID in /etc/os-release."
       exit 1
     ;;
-    *)
-      >&2 echo "WARNING: Trying to use debian bundle as default for: ${PRETTY_NAME}"
-      echo "debian"
-      exit 0
-    ;;
   esac
+  # try to determine os by packet manager
+  bundle="debian"
+  if yum -q --version >/dev/null 2>/dev/null; then
+    bundle="centos"
+  fi
+  >&2 echo "WARNING: Trying to use ${bundle} bundle as default for: ${PRETTY_NAME}"
+  echo "${bundle}"
+  exit 0
 fi
 
 >&2 echo "ERROR: Can't determine OS! /etc/os-release is not found."
