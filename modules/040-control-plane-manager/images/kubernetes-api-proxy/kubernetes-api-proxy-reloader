@@ -21,7 +21,7 @@ shopt -s inherit_errexit
 shopt -s failglob
 
 while inotifywait -qq -e modify /etc/nginx/nginx_new.conf; do
-  if ! >&2 diff -u /etc/nginx/nginx.conf /etc/nginx/nginx_new.conf && nginx -t -c /nginx/nginx_new.conf
+  if ! >&2 diff -u /etc/nginx/nginx.conf /etc/nginx/nginx_new.conf && nginx -t -c /nginx/nginx_new.conf; then
     >&2 echo "nginx.conf changed!"
     cp /etc/nginx/nginx_new.conf /etc/nginx/nginx.conf
     kill -s SIGHUP $(pidof nginx)
