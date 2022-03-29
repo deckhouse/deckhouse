@@ -20,10 +20,16 @@ set -Eeuo pipefail
 shopt -s inherit_errexit
 shopt -s failglob
 
-while inotifywait -qq -e modify /etc/nginx/nginx_new.conf; do
+function nginx_reload() {
   if ! >&2 diff -u /etc/nginx/nginx.conf /etc/nginx/nginx_new.conf && nginx -t -c /etc/nginx/nginx_new.conf; then
     >&2 echo "nginx.conf changed!"
     cp /etc/nginx/nginx_new.conf /etc/nginx/nginx.conf
     kill -s SIGHUP $(pidof nginx)
   fi
+}
+
+nginx_reload
+
+while inotifywait -qq -e modify /etc/nginx/nginx_new.conf; do
+  nginx_reload
 done
