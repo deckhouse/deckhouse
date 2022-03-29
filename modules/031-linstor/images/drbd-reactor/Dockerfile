@@ -56,15 +56,15 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_DEBIAN
 
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update \
- && apt-get -y install python3-toml \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
-
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /thin-send-recv_*.deb /packages/
 COPY --from=reactor-builder /drbd-reactor_*.deb /packages/
 
-RUN dpkg -i packages/*.deb
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update \
+ && apt-get -y install python3-toml \
+ && dpkg -i packages/*.deb \
+ && sed -i 's/usage-count yes;/usage-count no;/' /etc/drbd.d/global_common.conf \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/usr/sbin/drbd-reactor"]
