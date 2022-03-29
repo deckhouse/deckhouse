@@ -8,8 +8,8 @@ BEGIN IMMEDIATE;
 -- Dummy calculation of a group uptime. It is pessimistic from the point of single probe episode,
 -- but at the same time it is optimistic from the group perspective, since it implies all dowtime
 -- probe fully overlaps in time.
-INSERT INTO
-        episodes_5m (
+INSERT
+        OR IGNORE INTO episodes_5m (
                 timeslot,
                 nano_up,
                 nano_down,
