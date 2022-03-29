@@ -30,5 +30,5 @@ function nginx_reload() {
 
 while true; do
   nginx_reload
-  inotifywait -q -e modify /etc/nginx/nginx_new.conf
+  inotifywait -q -e modify,move_self /etc/nginx/nginx_new.conf
 done
