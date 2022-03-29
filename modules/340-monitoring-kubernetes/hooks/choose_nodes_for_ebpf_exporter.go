@@ -20,14 +20,15 @@ import (
 	"fmt"
 	"regexp"
 
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
+
 	"github.com/Masterminds/semver/v3"
 	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 	ngHooks "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 )
 
 const (
@@ -36,7 +37,7 @@ const (
 
 type NodeEligibility struct {
 	Name            string
-	NodeGroup       string
+	NodeGroupName   string
 	IsEbpfSupported bool
 }
 
@@ -52,7 +53,7 @@ func getNodeNameWithSupportedDistro(obj *unstructured.Unstructured) (go_hook.Fil
 		return nil, err
 	}
 
-	nodeEligibility := &NodeEligibility{Name: node.Name, NodeGroup: node.Labels[ngHooks.NodeGroupNameLabel]}
+	nodeEligibility := &NodeEligibility{Name: node.Name, NodeGroupName: node.Labels[ngHooks.NodeGroupNameLabel]}
 
 	matches := kernelRegex.FindStringSubmatch(node.Status.NodeInfo.KernelVersion)
 	if len(matches) != 2 {
@@ -136,7 +137,7 @@ func labelNodes(input *go_hook.HookInput) error {
 			}
 
 			// skip nodes with non-managed kernel, can't rely on the correct kernel and kernel headers being present
-			if has, ok := ngIsManagedKernelSet[nodeEligibility.NodeGroup]; !ok || !has {
+			if has, ok := ngIsManagedKernelSet[nodeEligibility.NodeGroupName]; !ok || !has {
 				delete(node.Labels, ebpfSchedulingLabelKey)
 
 				return sdk.ToUnstructured(&node)
