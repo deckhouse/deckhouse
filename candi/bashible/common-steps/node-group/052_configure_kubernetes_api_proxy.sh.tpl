@@ -35,7 +35,7 @@ events {
 stream {
   upstream kubernetes {
     least_conn;
-{{- if eq .runType "Normal" }}}}
+{{- if eq .runType "Normal" }}
   {{- range $key,$value := .normal.apiserverEndpoints }}
     server {{ $value }};
   {{- end }}
