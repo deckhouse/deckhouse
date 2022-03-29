@@ -16,7 +16,7 @@ mkdir -p /etc/kubernetes/kubernetes-api-proxy
 # Read previously discovered IP
 discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
-bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx.conf - << EOF
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
 user nginx;
 
 pid /tmp/kubernetes-api-proxy.pid;
@@ -54,6 +54,10 @@ stream {
 }
 EOF
 
+if ! -f /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf; then
+  cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
+fi
+
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
 kind: Pod
@@ -66,9 +70,16 @@ metadata:
 spec:
   dnsPolicy: ClusterFirstWithHostNet
   hostNetwork: true
+  shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
-    image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.common "nginx") }}
+    image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    volumeMounts:
+    - mountPath: /etc/nginx
+      name: kubernetes-api-proxy-conf
+  - name: kubernetes-api-proxy-reloader
+    image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    command: ["/kubernetes-api-proxy-reloader"]
     volumeMounts:
     - mountPath: /etc/nginx
       name: kubernetes-api-proxy-conf
