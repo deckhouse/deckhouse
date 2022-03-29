@@ -31,7 +31,7 @@ function modify_user() {
 
   usermod -G "$extra_groups" "$user_name"
 
-  shadow_line="$(getent shadow "$user_name")"
+  local shadow_line="$(getent shadow "$user_name")"
 
   local -a shadow_parsed
   IFS=':' read -r -a shadow_parsed <<< "$shadow_line"
