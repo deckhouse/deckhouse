@@ -2,6 +2,8 @@
 title: "Cloud provider — VMware vSphere: usage"
 ---
 
+Below is an example configuration for a VMware vSphere cloud provider.
+
 ## An example of the configuration
 
 ```yaml
@@ -31,7 +33,7 @@ cloudProviderVsphere: |
     size: SMALL
 ```
 
-## An example of the `VsphereInstanceClass` CR
+## An example of the `VsphereInstanceClass` custom resource
 
 ```yaml
 apiVersion: deckhouse.io/v1

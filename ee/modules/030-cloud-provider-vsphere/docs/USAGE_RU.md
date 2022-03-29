@@ -2,6 +2,8 @@
 title: "Cloud provider — VMware vSphere: Примеры конфигурации"
 ---
 
+Ниже представлен пример конфигурации cloud-провайдера VMware vSphere.
+
 ## Пример конфигурации
 
 ```yaml
@@ -33,7 +35,7 @@ cloudProviderVsphere: |
 
 
 
-## Пример CR `VsphereInstanceClass`
+## Пример custom resource `VsphereInstanceClass`
 
 ```yaml
 apiVersion: deckhouse.io/v1
