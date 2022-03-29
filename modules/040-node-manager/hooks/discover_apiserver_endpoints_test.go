@@ -23,9 +23,10 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: discover_apiserver_endpoints ::", func() {
+var _ = FDescribe("Modules :: node-manager :: hooks :: discover_apiserver_endpoints ::", func() {
 	const (
 		stateSingleAddress = `
+---
 apiVersion: v1
 kind: Endpoints
 metadata:
@@ -41,6 +42,7 @@ subsets:
 `
 
 		stateMultipleAddresses = `
+---
 apiVersion: v1
 kind: Endpoints
 metadata:
@@ -58,6 +60,7 @@ subsets:
 `
 
 		stateMultupleAddressesWithDifferentPorts = `
+---
 apiVersion: v1
 kind: Endpoints
 metadata:
@@ -77,6 +80,39 @@ subsets:
   - name: https
     port: 6444
     protocol: TCP
+`
+
+		stateDeckhouseAPIServerPod = `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver-0
+  namespace: kube-system
+  labels:
+    component: kube-apiserver
+    tier: control-plane
+status:
+  podIP: 192.168.199.233
+  conditions:
+  - status: "True"
+    type: Ready
+`
+		stateDeckhouseAPIServerSecondPod = `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver-1
+  namespace: kube-system
+  labels:
+    component: kube-apiserver
+    tier: control-plane
+status:
+  podIP: 192.168.199.244
+  conditions:
+  - status: "True"
+    type: Ready
 `
 	)
 
@@ -113,6 +149,31 @@ subsets:
 				It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444']", func() {
 					Expect(f).To(ExecuteSuccessfully())
 					Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444"]`))
+				})
+
+				Context("Kube-apiserver pod is present", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(stateMultupleAddressesWithDifferentPorts + stateDeckhouseAPIServerPod))
+						f.RunHook()
+					})
+
+					It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444','192.168.199.233:6443']", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443"]`))
+					})
+
+					Context("Second kube-apiserver pod is present", func() {
+						BeforeEach(func() {
+							f.BindingContexts.Set(f.KubeStateSet(stateMultupleAddressesWithDifferentPorts + stateDeckhouseAPIServerPod + stateDeckhouseAPIServerSecondPod))
+							f.RunHook()
+						})
+
+						It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444','192.168.199.233:6443','192.168.199.244:6443']", func() {
+							Expect(f).To(ExecuteSuccessfully())
+							Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443","192.168.199.244:6443"]`))
+						})
+					})
+
 				})
 			})
 		})
