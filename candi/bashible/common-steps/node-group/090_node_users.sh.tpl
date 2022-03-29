@@ -31,11 +31,8 @@ function modify_user() {
 
   usermod -G "$extra_groups" "$user_name"
 
-  local shadow_line="$(getent shadow "$user_name")"
-
-  local -a shadow_parsed
-  IFS=':' read -r -a shadow_parsed <<< "$shadow_line"
-  if [ "$password_hash" != "${shadow_parsed[1]}" ]; then
+  local current_hash="$(getent shadow "$user_name" | awk -F ":" '{print $2}')"
+  if [ "$password_hash" != "$current_hash" ]; then
     usermod -p "$password_hash" "$user_name"
     echo "Password hash was updated for user '$user_name'"
   fi
