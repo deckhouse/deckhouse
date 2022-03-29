@@ -12,7 +12,7 @@ spec:
     kind: Deployment
     name: prometheus-metrics-adapter
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
 {{- end }}
 ---
 apiVersion: apps/v1
