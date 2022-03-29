@@ -122,7 +122,6 @@ spec:
           volumeMounts:
           - name: vector-dynamic-config
             mountPath: /opt/vector/
-            readOnly: true
           - name: reloader-tmp
             mountPath: /tmp
           - name: reloader-run
