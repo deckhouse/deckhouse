@@ -28,8 +28,7 @@ function nginx_reload() {
   fi
 }
 
-nginx_reload
-
-while inotifywait -qq -e modify /etc/nginx/nginx_new.conf; do
+while true; do
   nginx_reload
+  inotifywait -q -e modify /etc/nginx/nginx_new.conf
 done
