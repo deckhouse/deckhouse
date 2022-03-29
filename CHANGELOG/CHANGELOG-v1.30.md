@@ -90,6 +90,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix update password hash for node user. [#1192](https://github.com/deckhouse/deckhouse/pull/1192)
  - **[candi]** Automatically discover zone for volumes in OpenStack [#1104](https://github.com/deckhouse/deckhouse/pull/1104)
  - **[candi]** Fix docker-stuck-containers-cleaner unit [#1044](https://github.com/deckhouse/deckhouse/pull/1044)
  - **[candi]** Proper work with astra bundle in EE/FE. [#868](https://github.com/deckhouse/deckhouse/pull/868)
@@ -136,6 +137,7 @@
  - **[ingress-nginx]** Set proper version for new ingress-nginx controller 1.0 (drop the patch version). [#480](https://github.com/deckhouse/deckhouse/pull/480)
  - **[ingress-nginx]** Always return auth request cookies (only for controllers >= 0.33) [#368](https://github.com/deckhouse/deckhouse/pull/368)
     Ingress Nginx controllers >=0.33 pods will be restarted
+ - **[istio]** The `istio.tracing.kiali.jaegerURLForUsers` parameter bugfix. [#1196](https://github.com/deckhouse/deckhouse/pull/1196)
  - **[istio]** Correct decision to deploy ingressgateway for multiclusters. [#640](https://github.com/deckhouse/deckhouse/pull/640)
  - **[istio]** `globalVersion` option clarification in documentation. [#584](https://github.com/deckhouse/deckhouse/pull/584)
  - **[local-path-provisioner]** Update local-path-provisioner v0.0.21, include fix [#478](https://github.com/deckhouse/deckhouse/pull/478)
