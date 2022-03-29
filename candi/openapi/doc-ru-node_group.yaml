@@ -279,6 +279,16 @@ spec:
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet'а (volume mounts, и т.д.).
+                    containerLogMaxSize:
+                      description: |
+                        Максимальный размер файла журнала до того, как он будет ротирован.
+
+                        Внимание! Параметр не влияет на работу, если тип CRI — Docker.
+                    containerLogMaxFiles:
+                      description: |
+                        Максимальное количество файлов журналов с учетом ротации.
+
+                        Внимание! Параметр не влияет на работу, если тип CRI — Docker.
     - name: v1alpha2
       additionalPrinterColumns: *additionalPrinterColumns
       schema:

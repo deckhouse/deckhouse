@@ -507,7 +507,8 @@ spec:
                       pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
                       description: |
                         Maximum log file size before it is rotated.
-                        WARNING! This parameter does nothing if CRI type == Docker.
+
+                        WARNING! This parameter does nothing if CRI type is Docker.
                     containerLogMaxFiles:
                       type: integer
                       minimum: 1
@@ -515,7 +516,8 @@ spec:
                       default: 4
                       description: |
                         How many rotated log files to store before deleting them.
-                        WARNING! This parameter does nothing if CRI type == Docker.
+
+                        WARNING! This parameter does nothing if CRI type is Docker.
     - name: v1alpha2
       served: true
       storage: true
