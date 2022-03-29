@@ -68,20 +68,6 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       containers:
-        - name: vector-controller
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.logShipper.vectorController }}"
-          resources:
-            requests:
-              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          env:
-          {{- include "vectorEnv" . | nindent 10 }}
-          volumeMounts:
-            - name: shell-operator-tmp
-              mountPath: /tmp
-            - name: shell-operator-run
-              mountPath: /var/run
-            {{- include "vectorMounts" . | nindent 12 }}
         - name: vector
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.logShipper.vector }}"
@@ -117,12 +103,30 @@ spec:
               memory: {{ .Values.logShipper.resourcesRequests.static.memory | quote }}
               {{- end }}
           volumeMounts:
-            - name: var-log
-              mountPath: /var/log/
-              readOnly: true
-            - name: var-lib
-              mountPath: /var/lib
-              readOnly: true
+          - name: var-log
+            mountPath: /var/log/
+            readOnly: true
+          - name: var-lib
+            mountPath: /var/lib
+            readOnly: true
+            {{- include "vectorMounts" . | nindent 12 }}
+        - name: vector-reloader
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.logShipper.vector }}"
+          command: ["reloader"]
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          env:
+          {{- include "vectorEnv" . | nindent 10 }}
+          volumeMounts:
+          - name: vector-dynamic-config
+            mountPath: /opt/vector/
+            readOnly: true
+          - name: reloader-tmp
+            mountPath: /tmp
+          - name: reloader-run
+            mountPath: /var/run
             {{- include "vectorMounts" . | nindent 12 }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
@@ -171,24 +175,32 @@ spec:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
       terminationGracePeriodSeconds: 120
       volumes:
-        - name: var-log
-          hostPath:
-            path: /var/log/
-        - name: var-lib
-          hostPath:
-            path: /var/lib/
-        - name: vector-data-dir
-          hostPath:
-            path: /mnt/vector-data
-        - name: vector-sample-config-dir
-          projected:
-            sources:
-              - configMap:
-                  name: log-shipper-config
-        - name: vector-config-dir
-          emptyDir: {}
-        - name: shell-operator-tmp
-          emptyDir: {}
-        - name: shell-operator-run
-          emptyDir: {}
+      - name: var-log
+        hostPath:
+          path: /var/log/
+      - name: var-lib
+        hostPath:
+          path: /var/lib/
+      - name: vector-data-dir
+        hostPath:
+          path: /mnt/vector-data
+      - name: vector-dynamic-config
+        projected:
+          sources:
+          - secret:
+              name: d8-log-shipper-config
+      - name: vector-sample-config-dir
+        projected:
+          sources:
+          - configMap:
+              name: log-shipper-config
+        configMap:
+          name: openvpn
+          defaultMode: 0644
+      - name: vector-config-dir
+        emptyDir: {}
+      - name: reloader-tmp
+        emptyDir: {}
+      - name: reloader-run
+        emptyDir: {}
 {{- end }}

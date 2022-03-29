@@ -30,6 +30,7 @@ FROM $BASE_DEBIAN_BULLSEYE
 COPY --from=build /vector/vector/target/release/vector /usr/bin/vector
 RUN mkdir -p /etc/vector \
     && apt-get update \
-    && apt-get install -yq ca-certificates tzdata \
-    && rm -rf /var/cache/apt/archives/*
+    && apt-get install -yq ca-certificates tzdata inotify-tools gettext \
+    && rm -rf /var/cache/apt/archives/* \
+COPY reloader.sh /usr/bin/reloader
 ENTRYPOINT ["/usr/bin/vector"]

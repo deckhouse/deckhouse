@@ -10,7 +10,7 @@
     "merge_strategies": {
       "message": "concat"
     },
-    "starts_when": " if exists(.message) { if length(.message) > 0 { matched, err = match(.message, r'^[^\\s\\t]'); if err != null { false; } else { matched; }; } else { false; }; } else { false; } ",
+    "starts_when": " if exists(.message) { if length!(.message) > 0 { matched, err = match(.message, r'^[^\\s\\t]'); if err != null { false; } else { matched; }; } else { false; }; } else { false; } ",
     "type": "reduce"
   }
 ]

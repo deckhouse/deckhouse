@@ -57,7 +57,7 @@
         "pod": "{{ pod }}",
         "pod_ip": "{{ pod_ip }}",
         "stream": "{{ stream }}",
-        "pod_labels": "{{ pod_labels }}",
+        "pod_labels_*": "{{ pod_labels }}",
         "pod_owner": "{{ pod_owner }}"
       },
       "remove_label_fields": true,

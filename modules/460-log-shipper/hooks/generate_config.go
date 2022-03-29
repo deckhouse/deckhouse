@@ -35,7 +35,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/log-shipper/generate_config",
+	Queue:        "/modules/log-shipper/generate_config",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cluster_log_source",

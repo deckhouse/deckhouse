@@ -362,7 +362,7 @@
         "node": "{{ node }}",
         "pod": "{{ pod }}",
         "pod_ip": "{{ pod_ip }}",
-        "pod_labels": "{{ pod_labels }}",
+        "pod_labels_*": "{{ pod_labels }}",
         "pod_owner": "{{ pod_owner }}",
         "stream": "{{ stream }}"
       },
