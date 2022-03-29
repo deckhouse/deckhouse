@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: node-manager :: hooks :: discover_apiserver_endpoints ::", func() {
+var _ = Describe("Modules :: node-manager :: hooks :: discover_apiserver_endpoints ::", func() {
 	const (
 		stateSingleAddress = `
 ---

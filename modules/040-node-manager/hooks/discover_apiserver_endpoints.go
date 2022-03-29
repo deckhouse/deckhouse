@@ -130,7 +130,7 @@ func handleAPIEndpoints(input *go_hook.HookInput) error {
 		}
 	}
 	endpointsList := make([]string, 0, len(endpointsSet))
-	for ep, _ := range endpointsSet {
+	for ep := range endpointsSet {
 		endpointsList = append(endpointsList, ep)
 	}
 
