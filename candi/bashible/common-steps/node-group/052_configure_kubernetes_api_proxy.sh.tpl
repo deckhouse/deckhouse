@@ -19,7 +19,7 @@ discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx.conf - << EOF
 user nginx;
 
-pid /var/run/kubernetes-api-proxy.pid;
+pid /tmp/kubernetes-api-proxy.pid;
 error_log stderr notice;
 
 worker_processes 2;
@@ -72,6 +72,7 @@ spec:
     volumeMounts:
     - mountPath: /etc/nginx
       name: kubernetes-api-proxy-conf
+  priorityClassName: system-node-critical
   volumes:
   - hostPath:
       path: /etc/kubernetes/kubernetes-api-proxy
