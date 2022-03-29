@@ -261,7 +261,7 @@ func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType) []imp
 
 	switch multiLineType {
 	case v1alpha1.MultiLineParserGeneral:
-		multiLineTransform.DynamicArgsMap["starts_when"] = " if exists(.message) { if length(.message) > 0 { matched, err = match(.message, r'^[^\\s\\t]'); if err != null { false; } else { matched; }; } else { false; }; } else { false; } "
+		multiLineTransform.DynamicArgsMap["starts_when"] = " if exists(.message) { if length!(.message) > 0 { matched, err = match(.message, r'^[^\\s\\t]'); if err != null { false; } else { matched; }; } else { false; }; } else { false; } "
 	case v1alpha1.MultiLineParserBackslash:
 		multiLineTransform.DynamicArgsMap["ends_when"] = " matched, err = match(.message, r'[^\\\\]$'); if err != null { false; } else { matched; } "
 	case v1alpha1.MultiLineParserLogWithTime:
