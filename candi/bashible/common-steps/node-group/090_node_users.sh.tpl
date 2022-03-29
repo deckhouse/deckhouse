@@ -31,8 +31,32 @@ function modify_user() {
 
   usermod -G "$extra_groups" "$user_name"
 
-  if ! grep -q -F "$password_hash" /etc/shadow; then
+  update_password=''
+  # with grep we decrease checks count
+  # why we can get multiple line with grep?
+  # for example, we have users 'test' and 'testuser'
+  # for 'test' user we get 2 lines and we should iterate through lines
+  # parse it and compare password-hash for 'test' user only
+  for shadow_line in $(grep -F "$user_name" /etc/shadow); do
+    # /etc/shadow lines has ':' separator
+    IFS=':' read -r -a shadow_parsed <<< "$shadow_line"
+
+    # found user for update
+    if [ "$user_name" == "${shadow_parsed[0]}" ]; then
+
+      # compare hashes
+      if [ "$password_hash" != "${shadow_parsed[1]}" ]; then
+        update_password='yes'
+      fi
+
+      # we found user for update here, exit from loop
+      break
+    fi
+  done
+
+  if [ "$update_password" == 'yes' ]; then
       usermod -p "$password_hash" "$user_name"
+      echo "Password hash was updated for user '$user_name'"
   fi
 }
 
