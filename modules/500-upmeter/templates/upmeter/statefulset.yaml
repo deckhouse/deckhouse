@@ -81,7 +81,7 @@ spec:
           - /migrate
           - -verbose
           - "-path=/data/migrations/server"
-          - "-database=sqlite3:///db/downtime.db.sqlite"
+          - "-database=sqlite3:///db/downtime.db.sqlite?x-no-tx-wrap=true"
           - up
         securityContext:
           runAsNonRoot: false

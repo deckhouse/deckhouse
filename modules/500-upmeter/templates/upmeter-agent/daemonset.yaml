@@ -65,7 +65,7 @@ spec:
           - /migrate
           - -verbose
           - "-path=/data/migrations/agent"
-          - "-database=sqlite3:///db/db.sqlite"
+          - "-database=sqlite3:///db/db.sqlite?x-no-tx-wrap=true"
           - up
         securityContext:
           runAsNonRoot: false
