@@ -36,8 +36,8 @@ stream {
   upstream kubernetes {
     least_conn;
 {{- if eq .runType "Normal" }}}}
-  {{- $apiserver := range .normal.apiserverEndpoints }}
-    server {{ $apiserver }};
+  {{- range $key,$value := .normal.apiserverEndpoints }}
+    server {{ $value }};
   {{- end }}
 {{- else if eq .runType "ClusterBootstrap" }}
     server ${discovered_node_ip}:6443;
