@@ -1,5 +1,39 @@
+diff --git a/src/sinks/loki/config.rs b/src/sinks/loki/config.rs
+index f955a4ba5..cecf77873 100644
+--- a/src/sinks/loki/config.rs
++++ b/src/sinks/loki/config.rs
+@@ -139,7 +139,14 @@ pub fn valid_label_name(label: &Template) -> bool {
+         // The closest mention is in section about Parser Expression https://grafana.com/docs/loki/latest/logql/
+         //
+         // [a-zA-Z_][a-zA-Z0-9_]*
+-        let label_trim = label.get_ref().trim();
++        //
++        // '_*' symbol at the end of the label name will be treated as a prefix for
++        // underlying object keys.
++        let mut label_trim = label.get_ref().trim();
++        if let Some(without_opening_end) = label_trim.strip_suffix("_*") {
++            label_trim = without_opening_end
++        }
++
+         let mut label_chars = label_trim.chars();
+         if let Some(ch) = label_chars.next() {
+             (ch.is_ascii_alphabetic() || ch == '_')
+@@ -162,11 +169,13 @@ mod tests {
+         assert!(valid_label_name(&" name ".try_into().unwrap()));
+         assert!(valid_label_name(&"bee_bop".try_into().unwrap()));
+         assert!(valid_label_name(&"a09b".try_into().unwrap()));
++        assert!(valid_label_name(&"abc_*".try_into().unwrap()));
+
+         assert!(!valid_label_name(&"0ab".try_into().unwrap()));
+         assert!(!valid_label_name(&"*".try_into().unwrap()));
+         assert!(!valid_label_name(&"".try_into().unwrap()));
+         assert!(!valid_label_name(&" ".try_into().unwrap()));
++        assert!(!valid_label_name(&"_*".try_into().unwrap()));
+
+         assert!(valid_label_name(&"{{field}}".try_into().unwrap()));
+     }
 diff --git a/src/sinks/loki/sink.rs b/src/sinks/loki/sink.rs
-index 58219c9e1..cc8136d41 100644
+index 58219c9e1..db264ca2a 100644
 --- a/src/sinks/loki/sink.rs
 +++ b/src/sinks/loki/sink.rs
 @@ -1,6 +1,7 @@
@@ -10,7 +44,7 @@ index 58219c9e1..cc8136d41 100644
  use snafu::Snafu;
  use vector_common::encode_logfmt;
  use vector_core::{
-@@ -157,19 +158,30 @@ pub(super) struct EventEncoder {
+@@ -157,19 +158,31 @@ pub(super) struct EventEncoder {
 
  impl EventEncoder {
      fn build_labels(&self, event: &Event) -> Vec<(String, String)> {
@@ -34,6 +68,7 @@ index 58219c9e1..cc8136d41 100644
 +                    let output: serde_json::map::Map<String, serde_json::Value> =
 +                        serde_json::from_str(value.as_str()).unwrap();
 +
++                    // key_* -> key_one, key_two, key_three
 +                    for (k, v) in output {
 +                        vec.push((
 +                            slugify_text(format!("{}{}", pkey, k)),
@@ -52,7 +87,7 @@ index 58219c9e1..cc8136d41 100644
      }
 
      fn remove_label_fields(&self, event: &mut Event) {
-@@ -350,12 +362,19 @@ impl StreamSink<Event> for LokiSink {
+@@ -350,12 +363,18 @@ impl StreamSink<Event> for LokiSink {
      }
  }
 
@@ -64,8 +99,8 @@ index 58219c9e1..cc8136d41 100644
 +
  #[cfg(test)]
  mod tests {
-+    use std::collections::BTreeMap;
-     use std::{collections::HashMap, convert::TryFrom};
+-    use std::{collections::HashMap, convert::TryFrom};
++    use std::{collections::{BTreeMap, HashMap}, convert::TryFrom};
 
      use futures::stream::StreamExt;
 -    use vector_core::event::Event;
