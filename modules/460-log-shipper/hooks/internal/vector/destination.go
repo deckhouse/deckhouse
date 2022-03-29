@@ -125,15 +125,15 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 
 	// default labels
 	labels := map[string]string{
-		"namespace":  "{{ namespace }}",
-		"container":  "{{ container }}",
-		"image":      "{{ image }}",
-		"pod":        "{{ pod }}",
-		"node":       "{{ node }}",
-		"pod_ip":     "{{ pod_ip }}",
-		"stream":     "{{ stream }}",
-		"pod_labels": "{{ pod_labels }}",
-		"pod_owner":  "{{ pod_owner }}",
+		"namespace":    "{{ namespace }}",
+		"container":    "{{ container }}",
+		"image":        "{{ image }}",
+		"pod":          "{{ pod }}",
+		"node":         "{{ node }}",
+		"pod_ip":       "{{ pod_ip }}",
+		"stream":       "{{ stream }}",
+		"pod_labels_*": "{{ pod_labels }}",
+		"pod_owner":    "{{ pod_owner }}",
 	}
 	var dataField string
 	keys := make([]string, 0, len(cspec.ExtraLabels))

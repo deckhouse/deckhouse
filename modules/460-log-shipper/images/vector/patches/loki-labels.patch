@@ -1,115 +1,109 @@
-diff --git a/src/sinks/loki.rs b/src/sinks/loki.rs
-index 09078e2..82bd8b1 100644
---- a/src/sinks/loki.rs
-+++ b/src/sinks/loki.rs
-@@ -15,6 +15,7 @@ use crate::{
-     config::{log_schema, DataType, GenerateConfig, SinkConfig, SinkContext, SinkDescription},
-     event::{self, Event, Value},
-     http::{Auth, HttpClient, MaybeAuth},
-+    internal_events::TemplateRenderingFailed,
-     sinks::util::{
-         buffer::loki::{GlobalTimestamps, LokiBuffer, LokiEvent, LokiRecord, PartitionKey},
-         encoding::{EncodingConfig, EncodingConfiguration},
-@@ -26,8 +27,10 @@ use crate::{
-     tls::{TlsOptions, TlsSettings},
- };
- use futures::{FutureExt, SinkExt};
+diff --git a/src/sinks/loki/sink.rs b/src/sinks/loki/sink.rs
+index 58219c9e1..cc8136d41 100644
+--- a/src/sinks/loki/sink.rs
++++ b/src/sinks/loki/sink.rs
+@@ -1,6 +1,7 @@
+ use std::{collections::HashMap, num::NonZeroUsize};
+
+ use futures::{stream::BoxStream, StreamExt};
 +use regex::Regex;
- use serde::{Deserialize, Serialize};
- use std::collections::HashMap;
-+use std::convert::TryFrom;
+ use snafu::Snafu;
+ use vector_common::encode_logfmt;
+ use vector_core::{
+@@ -157,19 +158,30 @@ pub(super) struct EventEncoder {
 
- #[derive(Clone, Debug, Deserialize, Serialize)]
- #[serde(deny_unknown_fields)]
-@@ -200,12 +203,63 @@ impl HttpSink for LokiSink {
-
-         let mut labels = Vec::new();
-
-+        let re = Regex::new(r"^\{\{ (?P<template_key>[^{} ]+) \}\}$").unwrap();
+ impl EventEncoder {
+     fn build_labels(&self, event: &Event) -> Vec<(String, String)> {
+-        self.labels
+-            .iter()
+-            .filter_map(|(key_template, value_template)| {
+-                if let (Ok(key), Ok(value)) = (
+-                    key_template.render_string(event),
+-                    value_template.render_string(event),
+-                ) {
+-                    Some((key, value))
++        let mut vec: Vec<(String, String)> = Vec::new();
 +
-         for (key_template, value_template) in &self.labels {
--            if let (Ok(key), Ok(value)) = (
--                key_template.render_string(&event),
--                value_template.render_string(&event),
--            ) {
--                labels.push((key, value));
-+            if value_template.is_dynamic() && !key_template.is_dynamic() {
-+                if let Ok(key) = key_template.render_string(&event) {
-+                    if re.is_match(value_template.get_ref()) {
-+                        let template_key =
-+                            re.replace_all(value_template.get_ref(), "$template_key");
-+                        if let Some(_internal_val) = event.as_log().get(template_key.clone()) {
-+                            match _internal_val {
-+                                Value::Map(_map) => {
-+                                    let _map = event
-+                                        .as_log()
-+                                        .get(template_key.clone())
-+                                        .unwrap()
-+                                        .as_map()
-+                                        .unwrap();
-+                                    let intkeys: Vec<_> = _map.keys().cloned().collect();
-+                                    for int_key in intkeys.iter() {
-+                                        let tmp_key = format!(
-+                                            "{{{{ {}.{} }}}}",
-+                                            template_key,
-+                                            convert_key(int_key.to_string())
-+                                        );
-+                                        let loki_key = slugify_text(format!("{}_{}", key, int_key));
-+                                        let tmp_template =
-+                                            Template::try_from(tmp_key.clone()).unwrap();
-+                                        let _str_val = match tmp_template.render_string(&event) {
-+                                            Ok(str_val) => {
-+                                                labels.push((loki_key.clone(), str_val));
-+                                            }
-+                                            Err(error) => {
-+                                                emit!(TemplateRenderingFailed {
-+                                                    error,
-+                                                    field: Some(&tmp_key),
-+                                                    drop_event: false,
-+                                                });
-+                                            }
-+                                        };
-+                                    }
-+                                }
-+                                _ => {
-+                                    if let Ok(value) = value_template.render_string(&event) {
-+                                        labels.push((key.clone(), value));
-+                                    }
-+                                }
-+                            }
-+                        }
++        for (key_template, value_template) in self.labels.iter() {
++            if let (Ok(key), Ok(value)) = (
++                key_template.render_string(event),
++                value_template.render_string(event),
++            ) {
++                if key.ends_with("_*") {
++                    let pkey = key.trim_end_matches("*");
++                    let output: serde_json::map::Map<String, serde_json::Value> =
++                        serde_json::from_str(value.as_str()).unwrap();
++
++                    for (k, v) in output {
++                        vec.push((
++                            slugify_text(format!("{}{}", pkey, k)),
++                            Value::from(v).to_string_lossy(),
++                        ))
 +                    }
-+                }
-+            } else {
-+                if let (Ok(key), Ok(value)) = (
-+                    key_template.render_string(&event),
-+                    value_template.render_string(&event),
-+                ) {
-+                    labels.push((key, value));
-+                }
-             }
-         }
+                 } else {
+-                    None
++                    vec.push((key, value));
+                 }
+-            })
+-            .collect()
++            }
++        }
++        return vec;
+     }
 
-@@ -345,6 +399,22 @@ fn valid_label_name(label: &Template) -> bool {
+     fn remove_label_fields(&self, event: &mut Event) {
+@@ -350,12 +362,19 @@ impl StreamSink<Event> for LokiSink {
      }
  }
 
-+// convert strings to Loki format
 +fn slugify_text(s: String) -> String {
 +    let re = Regex::new(r"[^0-9A-Za-z_]").unwrap();
 +    let result = re.replace_all(&s, "_");
 +    return result.to_lowercase();
 +}
 +
-+// convert keys to template format
-+fn convert_key(s: String) -> String {
-+    let res = s
-+        .replace(".", "\\.")
-+        .replace("]", "\\]")
-+        .replace("[", "\\[");
-+    return res;
-+}
-+
  #[cfg(test)]
  mod tests {
-     use super::*;
++    use std::collections::BTreeMap;
+     use std::{collections::HashMap, convert::TryFrom};
+
+     use futures::stream::StreamExt;
+-    use vector_core::event::Event;
++    use vector_core::event::{Event, Value};
+
+     use super::{EventEncoder, KeyPartitioner, RecordFilter};
+     use crate::{
+@@ -400,6 +419,10 @@ mod tests {
+             Template::try_from("{{ name }}").unwrap(),
+             Template::try_from("{{ value }}").unwrap(),
+         );
++        labels.insert(
++            Template::try_from("test_key_*").unwrap(),
++            Template::try_from("{{ dict }}").unwrap(),
++        );
+         let encoder = EventEncoder {
+             key_partitioner: KeyPartitioner::new(None),
+             encoding: EncodingConfig::from(Encoding::Json),
+@@ -412,12 +435,21 @@ mod tests {
+         log.insert(log_schema().timestamp_key(), chrono::Utc::now());
+         log.insert("name", "foo");
+         log.insert("value", "bar");
++
++        let mut test_dict = BTreeMap::default();
++        test_dict.insert("one".to_string(), Value::from("foo"));
++        test_dict.insert("two".to_string(), Value::from("baz"));
++        log.insert("dict", Value::from(test_dict));
++
+         let record = encoder.encode_event(event);
+         assert!(record.event.event.contains(log_schema().timestamp_key()));
+-        assert_eq!(record.labels.len(), 2);
++        assert_eq!(record.labels.len(), 4);
++
+         let labels: HashMap<String, String> = record.labels.into_iter().collect();
+         assert_eq!(labels["static"], "value".to_string());
+         assert_eq!(labels["foo"], "bar".to_string());
++        assert_eq!(labels["test_key_one"], "foo".to_string());
++        assert_eq!(labels["test_key_two"], "baz".to_string());
+     }
+
+     #[test]
