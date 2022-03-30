@@ -21,9 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/yaml"
 
-	internal "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -162,17 +160,7 @@ spec:
 			masterNg := f.KubernetesResource("NodeGroup", "", "master")
 			workerNg := f.KubernetesResource("NodeGroup", "", "worker")
 
-			var masterNgExpected internal.NodeGroup
-			var masterNgInCluster internal.NodeGroup
-
-			err := yaml.Unmarshal([]byte(masterNgWithRoleAndExcludeLBLabel), &masterNgExpected)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = yaml.Unmarshal([]byte(masterNg.ToYaml()), &masterNgInCluster)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(masterNgExpected).To(Equal(masterNgInCluster))
-
+			Expect(masterNg.ToYaml()).To(MatchYAML(masterNgWithRoleAndExcludeLBLabel))
 			Expect(workerNg.ToYaml()).To(MatchYAML(workerNgYAML))
 		})
 	})

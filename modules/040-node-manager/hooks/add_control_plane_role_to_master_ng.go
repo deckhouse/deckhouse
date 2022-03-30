@@ -24,12 +24,11 @@ package hooks
 // we will add label to nodegroup template for existing clusters
 
 import (
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
@@ -42,22 +41,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, addControlPlaneRoleToMasterNodeGroup)
 
 func addControlPlaneRoleToMasterNodeGroup(input *go_hook.HookInput) error {
-	input.PatchCollector.Filter(func(unstructured *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		unstructured.GetLabels()
+	input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		obj = obj.DeepCopy()
 
-		var ng v1.NodeGroup
-
-		err := sdk.FromUnstructured(unstructured, &ng)
+		labels, _, err := unstructured.NestedMap(obj.Object, "spec", "nodeTemplate", "labels")
 		if err != nil {
 			return nil, err
 		}
 
-		labels := ng.Spec.NodeTemplate.Labels
+		delete(labels, excludeLoadBalancerLabel)
 		labels[controlPlaneRoleLabel] = ""
 
-		delete(labels, excludeLoadBalancerLabel)
+		err = unstructured.SetNestedMap(obj.Object, labels, "spec", "nodeTemplate", "labels")
+		if err != nil {
+			return nil, err
+		}
 
-		return sdk.ToUnstructured(&ng)
+		return obj, nil
 
 	}, "deckhouse.io/v1", "NodeGroup", "", "master", object_patch.IgnoreMissingObject())
 
