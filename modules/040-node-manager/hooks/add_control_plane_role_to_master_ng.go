@@ -27,6 +27,9 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
@@ -39,18 +42,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, addControlPlaneRoleToMasterNodeGroup)
 
 func addControlPlaneRoleToMasterNodeGroup(input *go_hook.HookInput) error {
-	patch := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"nodeTemplate": map[string]interface{}{
-				"labels": map[string]interface{}{
-					controlPlaneRoleLabel:    "",
-					excludeLoadBalancerLabel: "",
-				},
-			},
-		},
-	}
+	input.PatchCollector.Filter(func(unstructured *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		unstructured.GetLabels()
 
-	input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", "master", object_patch.IgnoreMissingObject())
+		var ng v1.NodeGroup
+
+		err := sdk.FromUnstructured(unstructured, &ng)
+		if err != nil {
+			return nil, err
+		}
+
+		labels := ng.Spec.NodeTemplate.Labels
+		labels[controlPlaneRoleLabel] = ""
+
+		delete(labels, excludeLoadBalancerLabel)
+
+		return sdk.ToUnstructured(&ng)
+
+	}, "deckhouse.io/v1", "NodeGroup", "", "master", object_patch.IgnoreMissingObject())
 
 	return nil
 }
