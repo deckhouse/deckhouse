@@ -9,7 +9,7 @@ COPY patches/healthcheck.patch /
 COPY patches/deny-invalid-auth-locations.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
-    git clone --branch controller-v1.0.4 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
+    git clone --branch controller-v1.1.2 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
@@ -25,7 +25,7 @@ RUN apt-get update \
   && luarocks install lua-iconv 7-3
 
 # IngressNginxController docker image
-FROM k8s.gcr.io/ingress-nginx/controller:v1.0.4@sha256:545cff00370f28363dad31e3b59a94ba377854d3a11f18988f5f9e56841ef9ef as controller_1_0_4
+FROM k8s.gcr.io/ingress-nginx/controller:v1.1.2@sha256:28b11ce69e57843de44e3db6413e98d09de0f6688e33d4bd384002a44f78405c as controller_image
 
 # Final image
 FROM $BASE_ALPINE
@@ -44,12 +44,12 @@ RUN addgroup -Sg 101 www-data \
   && adduser -S -D -H -u 101 -h /usr/local/nginx \
     -s /sbin/nologin -G www-data -g www-data www-data
 
-COPY --from=controller_1_0_4 /usr/local /usr/local
-COPY --from=controller_1_0_4 /opt /opt
-COPY --from=controller_1_0_4 --chown=www-data:www-data /etc /etc
-COPY --from=controller_1_0_4 --chown=www-data:www-data /dbg /dbg
-COPY --from=controller_1_0_4 --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
-COPY --from=controller_1_0_4 --chown=www-data:www-data /wait-shutdown /wait-shutdown
+COPY --from=controller_image /usr/local /usr/local
+COPY --from=controller_image /opt /opt
+COPY --from=controller_image --chown=www-data:www-data /etc /etc
+COPY --from=controller_image --chown=www-data:www-data /dbg /dbg
+COPY --from=controller_image --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
+COPY --from=controller_image --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
 # We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
