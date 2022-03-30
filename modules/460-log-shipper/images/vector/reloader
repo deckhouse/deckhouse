@@ -60,7 +60,7 @@ function reload_once() {
   fi
 
   log "Start reloading a config"
-  vector_config=$(cat "$sample_config_dir" | envsubst | base64 -w0)
+  vector_config=$(cat "$sample_config" | envsubst | base64 -w0)
 
   # Cleanup test directory
   cleanup_test_dir $test_dir
