@@ -1,13 +1,9 @@
-Index: internal/ingress/controller/checker.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/internal/ingress/controller/checker.go b/internal/ingress/controller/checker.go
---- a/internal/ingress/controller/checker.go	(revision ef82c35371a4a2091e459afb8b2dba87f1a83083)
-+++ b/internal/ingress/controller/checker.go	(revision 080cf290a7fbe3d1cecba9a56d46fb5a24d6eab6)
-@@ -36,10 +36,6 @@
-
+index 3229778..e444c88 100644
+--- a/internal/ingress/controller/checker.go
++++ b/internal/ingress/controller/checker.go
+@@ -35,10 +35,6 @@ func (n NGINXController) Name() string {
+ 
  // Check returns if the nginx healthz endpoint is returning ok (status code 200)
  func (n *NGINXController) Check(_ *http.Request) error {
 -	if n.isShuttingDown {
