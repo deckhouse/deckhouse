@@ -66,8 +66,8 @@ steps:
         exit 1
       fi
 
-      # Base64 decode image name.
-      TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d)
+      # Decode image name from gzip+base64.
+      TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
 
       # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
