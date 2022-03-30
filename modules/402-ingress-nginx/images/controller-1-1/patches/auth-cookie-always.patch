@@ -1,7 +1,7 @@
-diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
+diff --git a/etc/nginx/template/nginx.tmpl b/etc/nginx/template/nginx.tmpl
 index 2ee7683..4fa4b89 100755
---- a/rootfs/etc/nginx/template/nginx.tmpl
-+++ b/rootfs/etc/nginx/template/nginx.tmpl
+--- a/etc/nginx/template/nginx.tmpl
++++ b/etc/nginx/template/nginx.tmpl
 @@ -1210,7 +1210,7 @@ stream {
              # this location requires authentication
              auth_request        {{ $authPath }};
