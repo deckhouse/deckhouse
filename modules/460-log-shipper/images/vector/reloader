@@ -95,7 +95,7 @@ function __main__() {
 
 log "Start watching the $sample_config_dir file"
 
-inotifywait -q -r -e create,delete,modify,move "$sample_config_dir" >&3 |
+inotifywait -q -m -e create,delete,modify,move "$sample_config_dir" >&3 |
 while read -r <&3; do
   __main__
 done
