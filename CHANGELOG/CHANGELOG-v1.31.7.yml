@@ -1,0 +1,16 @@
+candi:
+  fixes:
+    - summary: Fix docker stuck containers cleaner pattern check
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1205
+    - summary: Set reasonable image GC thresholds
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1189
+      impact: Kubelet restart
+docs:
+  fixes:
+    - summary: Minor updates in the NodeGroup CRD description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1190
+ingress-nginx:
+  fixes:
+    - summary: Fix ingress admission webhook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1207
+
