@@ -62,6 +62,7 @@
  - **[deckhouse-web]** OpenAPI fix and copy_custom_certificate hook fix — do nothing if the https.mode isn't CustomCertificate, but there is <module>.https.customCertificate.secretName configured. [#755](https://github.com/deckhouse/deckhouse/pull/755)
  - **[dhctl]** Fix potential panic for bashible logs in `dhctl bootstrap` command. [#724](https://github.com/deckhouse/deckhouse/pull/724)
  - **[extended-monitoring]** Start webserver immediately for the extended-monitoring-exporter [#1137](https://github.com/deckhouse/deckhouse/pull/1137)
+ - **[ingress-nginx]** Fix ingress admission webhook [#1207](https://github.com/deckhouse/deckhouse/pull/1207)
  - **[ingress-nginx]** Proper validating webhook configuration for k8s 1.22+. [#637](https://github.com/deckhouse/deckhouse/pull/637)
  - **[istio]** Canary usage doc fix. [#731](https://github.com/deckhouse/deckhouse/pull/731)
  - **[kube-dns]** FAQ clarifications about changing `clusterDomain`, ServiceAccount tokens and Istio. [#686](https://github.com/deckhouse/deckhouse/pull/686)
