@@ -25,8 +25,9 @@ import (
 	"net/http"
 	"time"
 
-	"d8.io/upmeter/pkg/util"
 	log "github.com/sirupsen/logrus"
+
+	"d8.io/upmeter/pkg/util"
 )
 
 type Client struct {

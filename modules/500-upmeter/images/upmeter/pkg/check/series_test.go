@@ -176,7 +176,6 @@ func Test_StatusSeries_Merge(t *testing.T) {
 		args      args
 		wantStats Stats
 	}{
-
 		{
 			name:    "nodata 0/0 + 0/0",
 			wantErr: false,
