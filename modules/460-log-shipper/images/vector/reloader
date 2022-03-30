@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# Copyright 2021 Flant JSC
+# Copyright 2022 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 set -Eeuo pipefail
 
 function log() {
-  echo "$(date +%s) | $1"
+  echo "$(date) | $1"
 }
 
 function cleanup_test_dir() {
@@ -48,19 +48,19 @@ function check_configs() {
 }
 
 default_config="/etc/vector/default/defaults.json"
-sample_config_dir="/opt/vector/vector.json"
+sample_config="/opt/vector/vector.json"
 
 dynamic_config_dir="/etc/vector/dynamic"
 test_dir="/tmp/tmp_vector_conf"
 
-function __main__() {
-  if [[ -f "$sample_config_dir" ]] ; then
+function reload_once() {
+  if [[ ! -f "$sample_config" ]] ; then
     log "No sample config found"
     return
   fi
 
   log "Start reloading a config"
-  vector_config=$(cat "$sample_config_dir" | envsubst)
+  vector_config=$(cat "$sample_config_dir" | envsubst | base64 -w0)
 
   # Cleanup test directory
   cleanup_test_dir $test_dir
@@ -75,7 +75,7 @@ function __main__() {
     do_reload=$(check_configs $dynamic_config_dir $vector_config)
     if [[ "x$do_reload" == "x1" ]]; then
       if [[ -f "$dynamic_config_dir/vector.json" ]] ; then
-        diff -u "$dynamic_config_dir/vector.json" "$test_dir/vector.json"
+        diff -u "$dynamic_config_dir/vector.json" "$test_dir/vector.json" || true
       fi
 
       mk_configs $dynamic_config_dir $vector_config
@@ -93,9 +93,10 @@ function __main__() {
   fi
 }
 
-log "Start watching the $sample_config_dir file"
-
-inotifywait -q -m -e create,delete,modify,move "$sample_config_dir" >&3 |
-while read -r <&3; do
-  __main__
+reload_once
+log "Start watching the $sample_config file"
+while true; do
+  event=$(inotifywait -q -e close,delete "$sample_config")
+  log "Received $event event"
+  reload_once || true
 done
