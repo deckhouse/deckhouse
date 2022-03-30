@@ -8,6 +8,7 @@ metadata:
   annotations:
     prometheus.deckhouse.io/port: "8443"
     prometheus.deckhouse.io/tls: "true"
+    prometheus.deckhouse.io/sample-limit: "5000"
 spec:
   type: ClusterIP
   clusterIP: None
