@@ -30,6 +30,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/probe/util"
+	uutil "d8.io/upmeter/pkg/util"
 )
 
 // SmokeMiniAvailable is a checker constructor and configurator
@@ -170,6 +171,7 @@ func (c *smokeMiniChecker) request(ctx context.Context, ip string) error {
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
+	req.Header.Set("User-Agent", uutil.AgentUserAgent)
 	if err != nil {
 		return err
 	}

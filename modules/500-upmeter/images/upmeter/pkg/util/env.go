@@ -33,3 +33,6 @@ func GetenvInt64(name string) int {
 	}
 	return n
 }
+
+const AgentUserAgent = "UpmeterAgent/1.0"
+const ServerUserAgent = "Upmeter/1.0"

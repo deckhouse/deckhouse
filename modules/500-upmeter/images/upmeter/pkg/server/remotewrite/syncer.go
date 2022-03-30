@@ -29,6 +29,7 @@ import (
 	"d8.io/upmeter/pkg/check"
 	v1 "d8.io/upmeter/pkg/crd/v1"
 	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/util"
 )
 
 var ErrSkip = fmt.Errorf("skip export")
@@ -218,6 +219,9 @@ func newExportConfig(rw *v1.RemoteWrite) exportingConfig {
 			Endpoint:    rw.Spec.Config.Endpoint,
 			BasicAuth:   rw.Spec.Config.BasicAuth,
 			BearerToken: rw.Spec.Config.BearerToken,
+			Headers: map[string]string{
+				"User-Agent": util.ServerUserAgent,
+			},
 		},
 		slotSize: time.Duration(rw.Spec.IntervalSeconds) * time.Second,
 		labels:   labels,

@@ -36,6 +36,8 @@ import (
 	"d8.io/upmeter/pkg/server/remotewrite"
 )
 
+const UserAgent = "Upmeter/1.0"
+
 // server initializes all dependencies:
 // - kubernetes client
 // - crd monitor
