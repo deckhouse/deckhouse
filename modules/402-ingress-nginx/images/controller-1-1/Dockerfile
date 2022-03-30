@@ -100,7 +100,7 @@ RUN apk update \
   && setcap    cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
   && setcap -v cap_net_bind_service=+ep /usr/local/nginx/sbin/nginx \
 # Create symlinks to redirect nginx logs to stdout and stderr docker log collector
-  &&  ln -sf /dev/stdout /var/log/nginx/access.log \
+  && ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /dev/stderr /var/log/nginx/error.log \
   && apk del libcap \
   && cd / \

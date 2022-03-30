@@ -1,7 +1,7 @@
-diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
+diff --git a/etc/nginx/template/nginx.tmpl b/etc/nginx/template/nginx.tmpl
 index 2ee7683..b3d4377 100755
---- a/rootfs/etc/nginx/template/nginx.tmpl
-+++ b/rootfs/etc/nginx/template/nginx.tmpl
+--- a/etc/nginx/template/nginx.tmpl
++++ b/etc/nginx/template/nginx.tmpl
 @@ -12,6 +12,9 @@
  # setup custom paths that do not require root access
  pid {{ .PID }};
