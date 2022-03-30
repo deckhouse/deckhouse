@@ -46,7 +46,7 @@ spec:
                   type: integer
                 imageID:
                   description: |
-                    Идентификатор образа, который будет установлен в заказанные instance'ы.
+                    Идентификатор образа, который будет установлен в заказанные инстансы.
 
                     По умолчанию: образ из `masterInstanceClass` из `providerClusterConfiguration`.
                   example: fd8nb7ecsbvj76dfaa8b
@@ -58,7 +58,7 @@ spec:
                   type: string
                 preemptible:
                   description: |
-                    Заказывать ли preemptible instance.
+                    Необходимость заказа preemptible instance.
                   type: boolean
                   x-doc-default: false
                 diskType:
@@ -84,7 +84,7 @@ spec:
                   type: boolean
                 mainSubnet:
                   description: |
-                    Позволяет переопределить имя основного subnet, к которому будет подключен инстанс.
+                    Переопределение имени основного subnet, к которому будет подключен инстанс.
 
                     По умолчанию: subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
                   example: e9bnc7g9mu9mper9clk4
@@ -101,7 +101,7 @@ spec:
                 additionalLabels:
                   type: object
                   description: |
-                    Дополнительные label'ы, которые будут присвоены созданным инстансам.
+                    Дополнительные лейблы, которые будут присвоены созданным инстансам.
                   x-doc-example: |
                     ```yaml
                     project: cms-production
@@ -117,7 +117,7 @@ spec:
                   - SOFTWARE_ACCELERATED
                   default: STANDARD
                   description: |
-                    Тип сети: STANDARD или SOFTWARE_ACCELERATED
+                    Тип сети: STANDARD или SOFTWARE_ACCELERATED.
     - name: v1
       served: true
       storage: false
@@ -162,7 +162,7 @@ spec:
                   type: integer
                 imageID:
                   description: |
-                    Идентификатор образа, который будет установлен в заказанные instance'ы.
+                    Идентификатор образа, который будет установлен в заказанные инстансы.
 
                     По умолчанию: образ из `masterInstanceClass` из `providerClusterConfiguration`.
                   example: fd8nb7ecsbvj76dfaa8b
@@ -174,7 +174,7 @@ spec:
                   type: string
                 preemptible:
                   description: |
-                    Заказывать ли preemptible instance.
+                    Необходимость заказа preemptible instance.
                   type: boolean
                   x-doc-default: false
                 diskType:
@@ -194,13 +194,13 @@ spec:
                   type: integer
                 assignPublicIPAddress:
                   description: |
-                    Присваивать ли публичные IP-адреса инстансам.
+                    Необходимость присвоения публичных IP-адресов инстансам.
                   example: false
                   x-doc-default: false
                   type: boolean
                 mainSubnet:
                   description: |
-                    Позволяет переопределить имя основного subnet, к которому будет подключен инстанс.
+                    Переопределение имени основного subnet, к которому будет подключен инстанс.
 
                     По умолчанию: subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
                   example: e9bnc7g9mu9mper9clk4
@@ -217,7 +217,7 @@ spec:
                 additionalLabels:
                   type: object
                   description: |
-                    Дополнительные label'ы, которые будут присвоены созданным инстансам.
+                    Дополнительные лейблы, которые будут присвоены созданным инстансам.
                   x-doc-example: |
                     ```yaml
                     project: cms-production
