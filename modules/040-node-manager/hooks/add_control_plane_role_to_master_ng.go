@@ -27,7 +27,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -40,25 +39,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, addControlPlaneRoleToMasterNodeGroup)
 
 func addControlPlaneRoleToMasterNodeGroup(input *go_hook.HookInput) error {
-	input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		obj = obj.DeepCopy()
+	patch := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"nodeTemplate": map[string]interface{}{
+				"labels": map[string]interface{}{
+					controlPlaneRoleLabel:    "",
+					excludeLoadBalancerLabel: nil,
+				},
+			},
+		},
+	}
 
-		labels, _, err := unstructured.NestedMap(obj.Object, "spec", "nodeTemplate", "labels")
-		if err != nil {
-			return nil, err
-		}
-
-		delete(labels, excludeLoadBalancerLabel)
-		labels[controlPlaneRoleLabel] = ""
-
-		err = unstructured.SetNestedMap(obj.Object, labels, "spec", "nodeTemplate", "labels")
-		if err != nil {
-			return nil, err
-		}
-
-		return obj, nil
-
-	}, "deckhouse.io/v1", "NodeGroup", "", "master", object_patch.IgnoreMissingObject())
+	input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", "master", object_patch.IgnoreMissingObject())
 
 	return nil
 }
