@@ -15,7 +15,7 @@ index b1c90e0..8ca2b0f 100644
  		GOBUILD_FLAGS=$(GOBUILD_FLAGS) \
  		build/build.sh
 +else
-+ @build/build.sh
++	@build/build.sh
 +endif
 
  .PHONY: build-plugin
