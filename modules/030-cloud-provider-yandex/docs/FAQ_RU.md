@@ -4,15 +4,15 @@ title: "Cloud provider — Yandex.Cloud: FAQ"
 
 ## Как настроить INTERNAL LoadBalancer?
 
-Установить аннотацию для сервиса:
+Для настройки INTERNAL LoadBalancer'а установите аннотацию для сервиса:
 ```
 yandex.cpi.flant.com/listener-subnet-id: SubnetID
 ```
-Аннотация указывает, какой Subnet будет слушать LB.
+Аннотация указывает, какой subnet будет слушать LB.
 
 ## Как зарезервировать публичный IP-адрес?
 
-Для использования в `externalIPAddresses` и `natInstanceExternalAddress`.
+Для использования в `externalIPAddresses` и `natInstanceExternalAddress` выполните следующую команду:
 
 ```shell
 $ yc vpc address create --external-ipv4 zone=ru-central1-a
@@ -28,9 +28,11 @@ reserved: true
 
 ## Проблемы `dhcpOptions` и пути их решения
 
-Использование в настройках DHCP серверов DNS, отличающихся от предоставляемых yandex облаком, является временным решением, пока Yandex.Cloud не введёт Managed DNS услугу. Чтобы обойти ограничения, описанные ниже, рекомендуется использовать `stubZones` из модуля [`kube-dns`]({{"/modules/042-kube-dns/" | true_relative_url }} )
+Использование в настройках DHCP серверов DNS, отличающихся от предоставляемых Yandex облаком, является временным решением до тех пор, пока Yandex.Cloud не введёт Managed DNS услугу. Чтобы обойти ограничения, описанные ниже, рекомендуется использовать `stubZones` из модуля [`kube-dns`]({{"/modules/042-kube-dns/" | true_relative_url }} )
 
 ### Изменение параметров
+
+Обратите внимание на следующие особенности:
 
 1. При изменении данных параметров требуется выполнить `netplan apply` или аналог, форсирующий обновление DHCP lease.
 2. Потребуется перезапуск всех hostNetwork Pod'ов (особенно `kube-dns`), чтобы перечитать новый `resolv.conf`.
