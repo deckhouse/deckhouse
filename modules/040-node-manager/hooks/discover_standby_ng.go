@@ -198,7 +198,6 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 	for _, node := range input.Snapshots["node_groups"] {
 		ng := node.(StandbyNodeGroupInfo)
 
-		// Ignore node groups without standby parameter, or having it zero, or where minPerZone == maxPerZone.
 		if !ng.NeedStandby {
 			setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, nil)
 			continue
