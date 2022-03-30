@@ -39,7 +39,7 @@ function echo_err() {
 }
 
 function get_stuck_containers() {
-  sed_pattern='s/^.+Container ([a-z0-9]{64}) failed to exit within [0-9]+ seconds of signal 15 - using the force.+$/\1/p'
+  sed_pattern='s/^.+Container ([a-z0-9]{64}) failed to exit within [0-9]+ seconds of signal [0-9]+ - using the force.+$/\1/p'
   journalctl --since "$log_period_minutes min ago" -u docker.service | \
     sed -nr "$sed_pattern" | \
     sort | \
