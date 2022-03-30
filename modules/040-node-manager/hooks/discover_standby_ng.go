@@ -36,6 +36,7 @@ import (
 
 type StandbyNodeGroupInfo struct {
 	Name                    string
+	MinPerZone              int
 	MaxPerZone              int
 	ZonesCount              int
 	Standby                 *intstr.IntOrString
@@ -50,11 +51,6 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		return nil, err
 	}
 
-	maxPerZone := 1
-	if nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
-		maxPerZone = int(*nodeGroup.Spec.CloudInstances.MaxPerZone)
-	}
-
 	var zonesCount int
 	if nodeGroup.Spec.CloudInstances.Zones != nil {
 		zonesCount = len(nodeGroup.Spec.CloudInstances.Zones)
@@ -67,7 +63,8 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	return StandbyNodeGroupInfo{
 		Name:                    nodeGroup.GetName(),
-		MaxPerZone:              maxPerZone,
+		MaxPerZone:              int(*nodeGroup.Spec.CloudInstances.MaxPerZone),
+		MinPerZone:              int(*nodeGroup.Spec.CloudInstances.MinPerZone),
 		ZonesCount:              zonesCount,
 		Standby:                 nodeGroup.Spec.CloudInstances.Standby,
 		StandbyNotHeldResources: nodeGroup.Spec.CloudInstances.StandbyHolder.NotHeldResources,
@@ -188,8 +185,8 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 	for _, node := range input.Snapshots["node_groups"] {
 		ng := node.(StandbyNodeGroupInfo)
 
-		// Ignore node groups without standby parameter, or having it zero.
-		if ng.Standby == nil || ng.Standby.String() == "0" {
+		// Ignore node groups without standby parameter, or having it zero, or where min == max.
+		if ng.Standby == nil || ng.Standby.String() == "0" || ng.MinPerZone == ng.MaxPerZone {
 			setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, nil)
 			continue
 		}
