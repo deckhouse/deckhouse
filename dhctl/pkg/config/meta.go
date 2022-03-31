@@ -82,6 +82,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
 
+		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
+		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
+
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
