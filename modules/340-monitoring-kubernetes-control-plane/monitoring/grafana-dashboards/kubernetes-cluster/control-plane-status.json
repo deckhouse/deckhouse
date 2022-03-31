@@ -22,8 +22,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 31,
-  "iteration": 1642787489404,
+  "iteration": 1648719781890,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -872,7 +871,7 @@
         "total": false,
         "values": false
       },
-      "lines": true,
+      "lines": false,
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
@@ -890,7 +889,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by(verb, resource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "sum by(verb) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1013,6 +1013,18 @@
                 "value": 150
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "subresource"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
           }
         ]
       },
@@ -1025,20 +1037,16 @@
       "id": 47,
       "options": {
         "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Value"
-          }
-        ]
+        "sortBy": []
       },
       "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by(verb, resource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "sum by(verb, resource, subresource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
           "format": "table",
           "instant": true,
+          "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1054,7 +1062,8 @@
               "names": [
                 "resource",
                 "verb",
-                "Value"
+                "Value",
+                "subresource"
               ]
             }
           }
@@ -1121,7 +1130,7 @@
         "total": false,
         "values": false
       },
-      "lines": true,
+      "lines": false,
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
@@ -1139,7 +1148,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (verb, resource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "max by (verb) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1262,6 +1272,18 @@
                 "value": 150
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "subresource"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
           }
         ]
       },
@@ -1280,9 +1302,10 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (verb, resource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "max by (verb, resource, subresource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
           "format": "table",
           "instant": true,
+          "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1298,7 +1321,8 @@
               "names": [
                 "resource",
                 "verb",
-                "Value"
+                "Value",
+                "subresource"
               ]
             }
           }
@@ -1342,6 +1366,10 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1361,7 +1389,7 @@
         "total": false,
         "values": false
       },
-      "lines": true,
+      "lines": false,
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
@@ -1372,16 +1400,39 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "$$hashKey": "object:1066",
+          "alias": "/^0.[01234]/",
+          "color": "#56A64B"
+        },
+        {
+          "$$hashKey": "object:1192",
+          "alias": "/^0.[56789]/",
+          "color": "#F2CC0C"
+        },
+        {
+          "$$hashKey": "object:1208",
+          "alias": "/^[123456789]/",
+          "color": "#E02F44"
+        },
+        {
+          "$$hashKey": "object:1216",
+          "alias": "+Inf",
+          "color": "#AD0317"
+        }
+      ],
       "spaceLength": 10,
       "stack": true,
       "steppedLine": true,
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (verb, resource) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le)",
+          "format": "heatmap",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{verb}}",
+          "legendFormat": "{{le}}",
           "refId": "A"
         }
       ],
@@ -1389,7 +1440,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Kube-apiserver latency",
+      "title": "Kube-apiserver latency bucket",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1406,7 +1457,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:286",
-          "format": "s",
+          "format": "ops",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1420,7 +1471,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -1503,6 +1554,18 @@
                 "value": 150
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "subresource"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
           }
         ]
       },
@@ -1521,9 +1584,10 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by (verb, resource) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "expr": "max by (verb, resource, subresource) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
           "format": "table",
           "instant": true,
+          "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1539,7 +1603,8 @@
               "names": [
                 "resource",
                 "verb",
-                "Value"
+                "Value",
+                "subresource"
               ]
             }
           }
@@ -1578,13 +1643,452 @@
       "type": "table"
     },
     {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 43
+      },
+      "hiddenSeries": false,
+      "id": 50,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.2.6",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "$$hashKey": "object:1066",
+          "alias": "/^0.[01234]/",
+          "color": "#56A64B"
+        },
+        {
+          "$$hashKey": "object:1192",
+          "alias": "/^0.[56789]/",
+          "color": "#F2CC0C"
+        },
+        {
+          "$$hashKey": "object:1208",
+          "alias": "/^[123456789]/",
+          "color": "#E02F44"
+        },
+        {
+          "$$hashKey": "object:1216",
+          "alias": "+Inf",
+          "color": "#AD0317"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le) / scalar(sum(rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])))",
+          "format": "heatmap",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-apiserver latency bucket %",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:286",
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": "1",
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:287",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 43
+      },
+      "hiddenSeries": false,
+      "id": 51,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.2.6",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~\"CONNECT|WATCH\", job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (instance, le))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-apiserver latency time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:286",
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:287",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 51
+      },
+      "hiddenSeries": false,
+      "id": 52,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.2.6",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "$$hashKey": "object:1066",
+          "alias": "/^0.00[0-9]/",
+          "color": "#56A64B"
+        },
+        {
+          "$$hashKey": "object:1192",
+          "alias": "/^0.0[1-9]/",
+          "color": "#F2CC0C"
+        },
+        {
+          "$$hashKey": "object:1208",
+          "alias": "/^0.[1-9]/",
+          "color": "#FF780A"
+        },
+        {
+          "$$hashKey": "object:1216",
+          "alias": "/^[1-9]/",
+          "color": "#C4162A"
+        },
+        {
+          "$$hashKey": "object:2638",
+          "alias": "+Inf",
+          "color": "#AD0317"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\", verb=~\"$verb\"}[$__interval_sx4])) by (le)",
+          "format": "heatmap",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Etcd requests latency bucket",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:286",
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:287",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "hiddenSeries": false,
+      "id": 53,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.2.6",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance:6443\"}[$__interval_sx4])) by (instance, le))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Etcd latency time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:286",
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:287",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "collapsed": false,
       "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 59
       },
       "id": 44,
       "panels": [],
@@ -1603,7 +2107,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 44
+        "y": 60
       },
       "hiddenSeries": false,
       "id": 37,
@@ -1694,7 +2198,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 44
+        "y": 60
       },
       "hiddenSeries": false,
       "id": 38,
@@ -1779,7 +2283,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 68
       },
       "id": 42,
       "panels": [],
@@ -1798,7 +2302,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 53
+        "y": 69
       },
       "hiddenSeries": false,
       "id": 39,
@@ -1889,7 +2393,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 53
+        "y": 69
       },
       "hiddenSeries": false,
       "id": 40,
@@ -1998,7 +2502,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -2032,7 +2536,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -2066,7 +2570,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -2131,5 +2635,5 @@
   "timezone": "",
   "title": "Control Plane Status",
   "uid": "3yqtXDzia",
-  "version": 2
+  "version": 1
 }
