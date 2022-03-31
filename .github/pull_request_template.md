@@ -63,7 +63,7 @@ $(gh pr diff   $PULL_REQUEST_NUMBER   |
 )
 EOF
 
-Find all possible sections (excluding ci and docs):
+Find all possible sections (excluding ci):
 
 node -e 'console.log(require("./.github/scripts/js/changelog-find-sections.js")().join("\n"))'
 -->
