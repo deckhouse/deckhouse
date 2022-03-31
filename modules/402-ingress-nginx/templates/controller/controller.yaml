@@ -234,8 +234,7 @@ spec:
         - --default-ssl-certificate={{ printf "%s/%s" $defaultSSLCertificateSecretRef.namespace $defaultSSLCertificateSecretRef.name }}
         {{- end }}
         {{- if semverCompare ">=1.1" $controllerVersion }}
-        - --controller-class=k8s.io/ingress-nginx
-        - --ingress-class-by-name=true
+        - --controller-class={{ printf "ingress-nginx.deckhouse.io/%s" $crd.spec.ingressClass }}
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}

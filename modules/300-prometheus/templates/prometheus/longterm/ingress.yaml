@@ -32,6 +32,7 @@ metadata:
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/rewrite-target: "/$2"
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:

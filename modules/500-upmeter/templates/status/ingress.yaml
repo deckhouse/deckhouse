@@ -23,6 +23,7 @@ metadata:
 {{- end }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
@@ -71,6 +72,7 @@ metadata:
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET"
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:

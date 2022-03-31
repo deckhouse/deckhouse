@@ -81,6 +81,7 @@ spec:
      name: domain-wildcard
      namespace: app-namespace
    spec:
+     ingressClassName: nginx
      rules:
      - host: "*.domain.com"
        http:

@@ -33,7 +33,7 @@ spec:
 
                     Using this option, you can create several controllers to use with a single ingress
 
-                    **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation will also be handled.
+                    **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   example: 'nginx'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                 inlet:

@@ -81,6 +81,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
      name: domain-wildcard
      namespace: app-namespace
    spec:
+     ingressClassName: nginx
      rules:
      - host: "*.domain.com"
        http:
