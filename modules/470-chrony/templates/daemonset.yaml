@@ -77,7 +77,7 @@ spec:
             - tracking
           initialDelaySeconds: 30
           periodSeconds: 60
-          timeoutSeconds: 5
+          timeoutSeconds: 15
         volumeMounts:
         - name: tz-config
           mountPath: /etc/localtime
@@ -99,4 +99,3 @@ spec:
           path: /etc/timezone
       - name: chrony
         emptyDir: {}
-
