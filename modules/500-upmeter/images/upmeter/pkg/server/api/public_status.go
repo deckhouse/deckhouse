@@ -69,6 +69,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error getting current status\n", http.StatusInternalServerError)
+		log.Errorln("Cannot get status: %w", err)
 		return
 	}
 
@@ -99,7 +100,7 @@ func getStatusSummary(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMonitor) 
 		return nil, "", fmt.Errorf("cannot list groups: %v", err)
 	}
 
-	rng := currentRange(time.Now())
+	rng := threeStepRange(time.Now())
 	log.Infof("Request public status from=%d to=%d at %d", rng.From, rng.To, time.Now().Unix())
 
 	muteTypes := []string{
@@ -117,7 +118,7 @@ func getStatusSummary(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMonitor) 
 
 		filter := &statusFilter{
 			stepRange:         rng,
-			probe:             ref,
+			probeRef:          ref,
 			muteDowntimeTypes: muteTypes,
 		}
 
@@ -144,7 +145,7 @@ func getStatusSummary(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMonitor) 
 	return groupStatuses, totalStatus, nil
 }
 
-func currentRange(now time.Time) ranges.StepRange {
+func threeStepRange(now time.Time) ranges.StepRange {
 	step := 5 * time.Minute
 	slotStart := now.Truncate(step)
 	from := slotStart.Add(-2 * step)

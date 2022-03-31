@@ -25,7 +25,7 @@ import (
 
 func Test_currentRange(t *testing.T) {
 	ts := time.Unix(1803468883, 90)
-	rng := currentRange(ts)
+	rng := threeStepRange(ts)
 
 	n := (rng.To - rng.From) / rng.Step
 	if n != 3 {

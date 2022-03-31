@@ -336,7 +336,7 @@ func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range) map[st
 	return statuses
 }
 
-// transformTimestampedMapsToSortedArrays transforms each map timestamp -> EpisodeSummary into sorted array.
+// transformTimestampedMapsToSortedArrays transforms each map[timestamp]EpisodeSummary into sorted array.
 // TODO can be splited into SelectTotal|Probes and TransformToSortedArrays
 func transformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[int64]*EpisodeSummary, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
 	// Transform maps "step->EpisodeSummary" in statuses to sorted arrays in StatusResponse
