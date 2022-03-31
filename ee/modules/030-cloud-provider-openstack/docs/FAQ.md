@@ -164,7 +164,7 @@ volumeBindingMode: WaitForFirstConsumer
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    ```
 
-## How to check whether the provider supports SecurityGroups
+## How to check whether the provider supports SecurityGroups?
 
 Run the following command: `openstack security group list`. If there are no errors in the output, then [Security Groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) are supported.
 
@@ -189,3 +189,52 @@ username = {{ nova_service_user_name }}
 ```
 
 [Source...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
+
+## How to use rootDiskSize and when it is preferred?
+
+Check the disk value of the OpenStack flavor that you will use:
+```shell
+openstack flavor show m1.medium-50g -c disk
+```
+
+Example:
+```
+# openstack flavor show m1.medium-50g -c disk
++-------+-------+
+| Field | Value |
++-------+-------+
+| disk  | 50    |
++-------+-------+
+```
+
+If the disk value is zero, then you always have to set [rootDiskSize](cr.html#openstackinstanceclass-v1-spec-rootdisksize).
+
+If the disk value is not zero, then you have several options.
+Different OpenStack providers have different volume types that are used for root volumes.
+It can be network disks or local disks.
+You should check a documentation or ask the cloud provider administrator for support.
+
+Local disks have some limitations, and one of them is that VM can't migrate between hypervisors.
+But local disks are generally cheaper and faster than network disks. So we have the following recommendations:
+* For master node, it's preferred to use network disk;
+* For ephemeral node, local disk can be used;
+* Avoid using flavors with disk value set together with `rootDiskSize` parameter. Cloud providers can charge you for unused volume ordered, depending on flavor.
+
+In view of the above:
+- If the `rootDiskSize` is not set, an ephemeral disk with the size specified in flavor and the type specified by the cloud provider is used for the instance;
+- If the `rootDiskSize` is set, the instance will use the Cinder volume provisioned by OpenStack as a root disk (of the default OpenStack volume type and the specified size).
+But there are important notes further:
+  * Volume type from OpenStackClusterConfiguration's [volumeTypeMap](cluster_configuration.html#parameters-masternodegroup-volumetypemap) parameters is always used for master nodes;
+  * It is possible to [override](#how-to-override-a-default-volume-type-of-cloud-provider) default volume type of cloud provider.
+
+## How to override a default volume type of cloud provider?
+
+If there are several types of disks in a *cloud provider*, you can set a default disk type for the image in order to select a specific VM's disk type. To do this, specify the name of a disk type in the image metadata.
+
+Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](#how-do-i-create-an-image-in-openstack) section describes how to do it
+
+Example:
+```shell
+openstack volume type list
+openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
+```
