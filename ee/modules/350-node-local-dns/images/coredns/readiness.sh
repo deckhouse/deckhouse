@@ -10,7 +10,7 @@ function error() {
   exit 1
 }
 
-trap error ERR EXIT
+trap error ERR
 
 curl -sS --connect-timeout 1 --max-time 1 "127.0.0.1:9225/health" >/dev/null
 curl -sS --connect-timeout 1 --max-time 1 "127.0.0.1:9254/metrics" >/dev/null
