@@ -1,12 +1,14 @@
 columns:
   en:
   - items:
-      - title: GitHub
-        external_url: 'http://github.com/deckhouse/deckhouse'
-      - title: Documentation
-        url: '/documentation/v1/'
       - title: Getting Started
         url: '/gs/'
+      - title: Documentation
+        url: '/documentation/v1/'
+      - title: Community
+        url: '/community/about.html'
+      - title: GitHub
+        external_url: 'http://github.com/deckhouse/deckhouse'
   - title: Products
     items:
       - title: Deckhouse Platform CE
@@ -19,14 +21,12 @@ columns:
         url: '/services/managed.html'
       - title: Training & Consulting
         url: '/services/training.html'
-  - title: About us
+  - title: Resources
     items:
-      - title: Company
-        url: '/about_us.html'
-      - title: Open Source
-        url: '/about_us.html#open-source'
-      - title: Clients
-        url: '/about_us.html#clients'
+      - title: Deckhouse Security
+        url: '/security.html'
+      - title: Deckhouse vs KaaS
+        url: '/deckhouse_vs_kaas.html'
       - title: Cookie policy
         url: '/cookie-policy.html'
       - title: Privacy policy
@@ -35,12 +35,14 @@ columns:
         url: '/terms-of-service.html'
   ru:
   - items:
-      - title: GitHub
-        external_url: 'http://github.com/deckhouse/deckhouse'
-      - title: Документация
-        url: '/documentation/v1/'
       - title: Быстрый старт
         url: '/gs/'
+      - title: Документация
+        url: '/documentation/v1/'
+      - title: Сообщество
+        url: '/community/about.html'
+      - title: GitHub
+        external_url: 'http://github.com/deckhouse/deckhouse'
   - title: Продукты
     items:
       - title: Deckhouse Platform CE
@@ -53,13 +55,11 @@ columns:
         url: '/services/managed.html'
       - title: Обучение и консалтинг
         url: '/services/training.html'
-  - title: О нас
+  - title: Информация
     items:
-      - title: Компания
-        url: '/about_us.html'
-      - title: Open Source
-        url: '/about_us.html#open-source'
-      - title: Клиенты
-        url: '/about_us.html#clients'
+      - title: Безопасность Deckhouse
+        url: '/security.html'
+      - title: Сравнение с KaaS
+        url: '/deckhouse_vs_kaas.html'
       - title: Политика конфиденциальности
         url: '/security-policy.html'
