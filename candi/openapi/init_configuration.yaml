@@ -15,8 +15,8 @@ apiVersions:
       deckhouse:
         type: object
         oneOf:
-        - required: [devBranch, configOverrides]
-        - required: [releaseChannel, configOverrides]
+        - required: [devBranch]
+        - required: [releaseChannel]
         properties:
           imagesRepo:
             type: string
