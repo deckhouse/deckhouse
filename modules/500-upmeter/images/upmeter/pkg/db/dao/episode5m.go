@@ -191,11 +191,6 @@ func (d *EpisodeDao5m) ListEpisodesByRange(from, to int64, ref check.ProbeRef) (
 		query += " AND probe_name = ?"
 		queryArgs = append(queryArgs, ref.Probe)
 	}
-	// else {
-	// 	// Choose all probes, but omit group as a whole
-	// 	query += " AND probe_name != ?"
-	// 	queryArgs = append(queryArgs, GroupAggregation)
-	// }
 
 	rows, err := d.DbCtx.StmtRunner().Query(query, queryArgs...)
 	if err != nil {
@@ -241,11 +236,6 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 			where += " AND probe_name = ?"
 			queryArgs = append(queryArgs, ref.Probe)
 		}
-		// else {
-		// 	// Choose all probes, but omit group as a whole
-		// 	where += " AND probe_name != ?"
-		// 	queryArgs = append(queryArgs, GroupAggregation)
-		// }
 
 		selectPart += ", probe_name"
 		groupBy = append(groupBy, "probe_name")
