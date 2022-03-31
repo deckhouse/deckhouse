@@ -17,6 +17,8 @@ package hooks
 import (
 	"context"
 
+	"sigs.k8s.io/yaml"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,13 +27,74 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: migrate :: add_control_plane_role_to_master_ng_test ::", func() {
+var _ = FDescribe("Global hooks :: migrate :: add_control_plane_role_to_master_ng_test ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
 	var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 	f.RegisterCRD(nodeGroupResource.Group, nodeGroupResource.Version, "NodeGroup", false)
 
 	const (
+		workerNodeYaml = `
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-ng1-bbb
+  labels:
+    node.deckhouse.io/group: worker-big
+spec:
+  podCIDR: 10.111.0.0/24
+  podCIDRs:
+  - 10.111.0.0/24
+  providerID: openstack:///d4c6e736-f6ec-44a5-9f44-b82b11cb7748
+status:
+  conditions:
+  - some: thing
+  - status: "True"
+    type: Ready
+`
+
+		masterNodeWithExcludeLoadBalancerLabel = `
+apiVersion: v1
+kind: Node
+metadata:
+  name: master-0
+  labels:
+    node-role.kubernetes.io/master: ""
+    node.kubernetes.io/exclude-from-external-load-balancers: ""
+spec:
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+status:
+  conditions:
+  - some: thing
+  - status: "False"
+    type: Ready
+  - some: thing
+`
+		masterNodeWithoutExcludeLoadBalancerLabel = `
+apiVersion: v1
+kind: Node
+metadata:
+  name: master-0
+  labels:
+    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
+spec:
+  podCIDR: 10.111.0.0/24
+  podCIDRs:
+  - 10.111.0.0/24
+  providerID: openstack:///d4c6e736-f6ec-44a5-9f44-b82b11cb7749
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+status:
+  conditions:
+  - some: thing
+  - status: "False"
+    type: Ready
+  - some: thing
+`
 		workerNgYAML = `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -162,6 +225,77 @@ spec:
 
 			Expect(masterNg.ToYaml()).To(MatchYAML(masterNgWithRoleAndExcludeLBLabel))
 			Expect(workerNg.ToYaml()).To(MatchYAML(workerNgYAML))
+		})
+	})
+
+	Context("Cluster has master node with exclude external lb label", func() {
+		BeforeEach(func() {
+			JoinKubeResourcesAndSet(f, masterNgWithRoleAndExcludeLBLabel, masterNodeWithExcludeLoadBalancerLabel, workerNgYAML, workerNodeYaml)
+			f.RunHook()
+		})
+
+		It("Should remove label from node and not affect another labels", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			masterNode := f.KubernetesResource("Node", "", "master-0")
+			labels := masterNode.Field("metadata.labels").Map()
+
+			Expect(labels).ToNot(HaveKey(excludeLoadBalancerLabel))
+			Expect(labels).To(HaveKey("node-role.kubernetes.io/master"))
+		})
+
+		It("Should not affect spec and status", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			masterNode := f.KubernetesResource("Node", "", "master-0")
+			spec := masterNode.Field("spec")
+			status := masterNode.Field("status")
+
+			Expect(spec.Exists()).To(BeTrue())
+			Expect(status.Exists()).To(BeTrue())
+
+			specYaml, err := yaml.JSONToYAML([]byte(spec.Raw))
+			Expect(err).ToNot(HaveOccurred())
+
+			statusYaml, err := yaml.JSONToYAML([]byte(status.Raw))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(specYaml).To(MatchYAML(`
+taints:
+- effect: NoSchedule
+  key: node-role.kubernetes.io/master
+`))
+			Expect(statusYaml).To(MatchYAML(`
+conditions:
+- some: thing
+- status: "False"
+  type: Ready
+- some: thing
+`))
+		})
+
+		It("Does not affect another nodes", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			workerNode := f.KubernetesResource("Node", "", "node-ng1-bbb")
+			Expect(workerNode.ToYaml()).To(MatchYAML(workerNodeYaml))
+		})
+	})
+
+	Context("Cluster has master node without exclude external lb label", func() {
+		BeforeEach(func() {
+			JoinKubeResourcesAndSet(f, masterNgWithRoleAndExcludeLBLabel, masterNodeWithoutExcludeLoadBalancerLabel, workerNgYAML, workerNodeYaml)
+			f.RunHook()
+		})
+
+		It("Should not affect node groups", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			workerNode := f.KubernetesResource("Node", "", "node-ng1-bbb")
+			masterNode := f.KubernetesResource("Node", "", "master-0")
+
+			Expect(masterNode.ToYaml()).To(MatchYAML(masterNodeWithoutExcludeLoadBalancerLabel))
+			Expect(workerNode.ToYaml()).To(MatchYAML(workerNodeYaml))
 		})
 	})
 })
