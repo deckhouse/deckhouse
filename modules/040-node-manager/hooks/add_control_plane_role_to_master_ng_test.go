@@ -26,7 +26,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Global hooks :: migrate :: add_control_plane_role_to_master_ng_test ::", func() {
+var _ = Describe("Global hooks :: migrate :: add_control_plane_role_to_master_ng_test ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
 	var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
