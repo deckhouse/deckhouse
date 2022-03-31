@@ -218,7 +218,7 @@ Local disks have some limitations, and one of them is that VM can't migrate betw
 But local disks are generally cheaper and faster than network disks. So we have the following recommendations:
 * For master node, it's preferred to use network disk;
 * For ephemeral node, local disk can be used;
-* Avoid using flavors with disk value set together with `roodDiskSize` parameter. Cloud providers can charge you for unused volume ordered, depending on flavor.
+* Avoid using flavors with disk value set together with `rootDiskSize` parameter. Cloud providers can charge you for unused volume ordered, depending on flavor.
 
 In view of the above:
 - If the `rootDiskSize` is not set, an ephemeral disk with the size specified in flavor and the type specified by the cloud provider is used for the instance;
