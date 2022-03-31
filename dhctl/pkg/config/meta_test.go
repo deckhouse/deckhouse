@@ -115,7 +115,7 @@ provider:
        "private_key": "privateKey"
     }
 `
-	t := template.New("config_template").Funcs(sprig.TxtFuncMap())
+	t := template.New("testconfig_template").Funcs(sprig.TxtFuncMap())
 	t, err := t.Parse(config)
 	if err != nil {
 		panic(err)
