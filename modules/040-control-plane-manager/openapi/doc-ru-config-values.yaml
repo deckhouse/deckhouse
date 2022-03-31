@@ -5,17 +5,17 @@ properties:
     properties:
       serviceAccount:
         description: |
-          Настройки выпуска ServiceAccounts.
+          Настройки выпуска ServiceAccount'ов.
         properties:
           additionalAPIAudiences:
             description: |
-              Список API audiences, которые следует добавить при создании токенов ServiceAccount.
+              Список API audience'ов, которые следует добавить при создании токенов ServiceAccount.
       admissionPlugins:
         description: |
           Включить дополнительные [admission plugin'ы](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
 
           Список admission plugin'ов, включенных всегда вдобавок к включенным в Kubernetes по умолчанию:
-          1. ExtendedResourceToleration
+          1. ExtendedResourceToleration.
           2. EventRateLimit с конфигурацией:
 
               ```yaml
@@ -27,12 +27,11 @@ properties:
                 burst: 100
                 cacheSize: 2000
               ```
-
-          `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на Namespaces.
+          `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на пространстве имен.
 
       bindToWildcard:
         description: |
-          Слушать ли на `0.0.0.0`.
+          Прослушивание `0.0.0.0`.
 
           По умолчанию API-сервер слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout).
       certSANs:
@@ -40,17 +39,17 @@ properties:
           Массив строк, список дополнительных [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), с которыми будет сгенерирован сертификат API-сервера.
 
           Кроме переданного списка, всегда используется и следующий список:
-          * `kubernetes`
-          * `kubernetes.default`
-          * `kubernetes.default.svc`
-          * `kubernetes.default.svc.cluster.local`
-          * `192.168.0.1`
-          * `127.0.0.1`
-          * *текущий_hostname*
-          * *hostIP*
+          * `kubernetes`;
+          * `kubernetes.default`;
+          * `kubernetes.default.svc`;
+          * `kubernetes.default.svc.cluster.local`;
+          * `192.168.0.1`;
+          * `127.0.0.1`;
+          * *текущий_hostname*;
+          * *hostIP*.
       authn:
         description: |
-          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/)
+          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/).
         properties:
           oidcIssuerURL:
             description: |
@@ -69,7 +68,7 @@ properties:
               CA аутентификационного webhook'a.
       authz:
         description: |
-          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://deckhouse.io/ru/documentation/v1/modules/140-user-authz/)
+          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://deckhouse.io/ru/documentation/v1/modules/140-user-authz/).
         properties:
           webhookURL:
             description: |
@@ -79,12 +78,12 @@ properties:
               CA авторизациионного webhook'a.
       loadBalancer:
         description: |
-          Если указано, будет создан сервис с типом `LoadBalancer` (`d8-control-plane-apiserver` в ns `kube-system`).
+          Создание сервиса с типом `LoadBalancer` (`d8-control-plane-apiserver` в ns `kube-system`).
         properties:
           annotations:
             description: |
               Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
-              > **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
+              > **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа Load Balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
           sourceRanges:
             description: |
               Список CIDR, которым разрешен доступ к API.
@@ -100,16 +99,19 @@ properties:
         description: |
           Применять базовые политики аудита Deckhouse.
       auditPolicy:
-        description: Параметры аудита
+        description: |
+          Параметры аудита.
         properties:
           output:
-            description: Вывод логов.
+            description: |
+              Вывод логов.
           path:
-            description: Путь к директории. Действует только в случае `output=file`.
+            description: |
+              Путь к директории. Действует только в случае `output=file`.
       encryptionEnabled:
         description: |
           Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
-          Генерирует secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрации.
+          Генерирует secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
           > **Важно!**  Этот режим нельзя отключить!!!
 
   etcd:
@@ -124,5 +126,5 @@ properties:
       Число секунд, через которое узел перейдёт в состояние `Unreachable` при потере с ним связи.
   failedNodePodEvictionTimeoutSeconds:
     description: |
-      Количество секунд, по прошествии которых, с узла в статусе `Unreachable` будут удалены Pod'ы.
+      Количество секунд, по прошествии которых с узла в статусе `Unreachable` будут удалены Pod'ы.
       > **Важно!** При изменении этого параметра потребуется перезапуск Pod'ов.

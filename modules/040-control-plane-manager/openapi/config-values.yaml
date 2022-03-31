@@ -39,7 +39,6 @@ properties:
                 burst: 100
                 cacheSize: 2000
               ```
-
           Note that `PodNodeSelector` [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
         x-examples:
           - ["AlwaysPullImages", "NamespaceAutoProvision"]
@@ -64,14 +63,14 @@ properties:
           Array of [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), with which the API server certificate will be generated.
 
           In addition to the passed list, the following list is always used:
-          * `kubernetes`
-          * `kubernetes.default`
-          * `kubernetes.default.svc`
-          * `kubernetes.default.svc.cluster.local`
-          * `192.168.0.1`
-          * `127.0.0.1`
-          * *current_hostname*
-          * *hostIP*
+          * `kubernetes`;
+          * `kubernetes.default`;
+          * `kubernetes.default.svc`;
+          * `kubernetes.default.svc.cluster.local`;
+          * `192.168.0.1`;
+          * `127.0.0.1`;
+          * *current_hostname*;
+          * *hostIP*.
         x-examples:
           - ["my-site.com", "192.168.67.76"]
         items:
@@ -169,20 +168,23 @@ properties:
         type: object
         default:
           output: File
-        description: Audit policy settings
+        description: |
+          Audit policy settings
         required:
           - output
         properties:
           output:
             type: string
-            description: Audit logs target stream.
+            description: |
+              Audit logs target stream.
             default: File
             enum:
               - File
               - Stdout
           path:
             type: string
-            description: Directory path for logs if the output is "File", otherwise ignored.
+            description: |
+              Directory path for logs if the output is "File", otherwise ignored.
             # Avoid trailing slash
             pattern: ^[a-zA-Z0-9_/.-]+[a-zA-Z0-9_.-]$
             default: /var/log/kube-audit
