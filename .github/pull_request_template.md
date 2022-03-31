@@ -26,24 +26,44 @@
 
 ```changes
 section: <kebab-case of a modules/*> | <1st level dir in the repo>
-type: fix | feature
+type: fix | feature | chore
 summary: <what effectively changes in a single line>
-impact_level: low | high*
-impact: <what to expect, possibly multi-line>, required if impact_level is high
+impact_level: low | high* <this is an impact for users, not deckhouse>
+impact: <what to expect for users, possibly multi-line>, required if impact_level is high
 ```
 
 <!---
 Tip for the section field:
 
-  - <kebab-case of a modules/*>, like "cloud-provider-aws", "node-manager"
+  - <kebab-case of a module>, e.g. "cloud-provider-aws", "node-manager"
   - "dhctl"
   - "candi"
   - "deckhouse-controller"
   - *_lib
   - "docs", includes website changes, should always have low impact
-  - "tests", should always have low impact
+  - "testing", should always have low impact
   - "tools", should always have low impact
   - "ci", should always have low impact
-  - "global" affects all possible modules at once, discouraged if only a few of modules affected, it is better to have multiple exact changes
 
+Find changed sections:
+
+cat <<EOF
+sections:
+$(gh pr diff   $PULL_REQUEST_NUMBER   |
+  egrep "([+]{3}|[-]{3}) [ab]/" |
+  cut -d/ -f2- |
+  sed 's#^ee/##' |
+  sed 's#^fe/##' |
+  sed 's#^modules/##' |
+  sed 's#[0-9][0-9][0-9]-##' |
+  cut -d/ -f1 |
+  sort |
+  uniq |
+  xargs -n 1 -- echo -
+)
+EOF
+
+Find all possible sections (excluding ci and docs):
+
+node -e 'console.log(require("./.github/scripts/js/changelog-find-sections.js")().join("\n"))'
 -->
