@@ -64,7 +64,7 @@ spec:
 * **self-hosted**: перейти в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`;
 * **cloud gitlab.com**: под главной учетной записью проекта перейти в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, scopes выбрать: `read_user`, `openid`.
 
-**Внимание!** Не включайте опцию `Expire access tokens` для приложения, потому что это [сломает](https://github.com/dexidp/dex/issues/2316) интеграцию между Dex и Gitlab.
+**Внимание!** Выключите опцию `Expire access tokens` для приложения, иначе это [сломает](https://github.com/dexidp/dex/issues/2316) интеграцию между Dex и Gitlab.
 
 Полученные `Application ID` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
