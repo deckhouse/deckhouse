@@ -15,7 +15,6 @@ RUN $(go env GOPATH)/bin/golangci-lint run ./...
 # build
 RUN go build -ldflags "-linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
 # add migrator, outside of go module
-WORKDIR /
 RUN go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.15 \
   && mv $(go env GOPATH)/bin/migrate /migrate
 
