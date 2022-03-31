@@ -4,7 +4,6 @@ Use a Docker image to install the **Deckhouse Platform**. It is necessary to tra
 {%- if page.platform_code == 'bm-private' %} Log in on the **[personal computer](step2.html#installation-process)** to the container image registry you specified in the previous step, then run:
 {%- else %} Run on the **[personal computer](step2.html#installation-process)**:{% endif %}
 
-
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}
 ```text
@@ -17,7 +16,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {% else %}
 {% snippetcut selector="docker-login-ce" %}
 ```shell
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{% if page.platform_code == "bm-private" %} --dont-use-public-control-plane-images{% endif %}{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% endif %}{% if page.platform_type == "existing" or page.platform_code == "kind" %} -v "$HOME/.kube/config:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>:stable
@@ -45,6 +44,9 @@ dhctl bootstrap \
   --ssh-host=<master_ip> \
   --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
   --config=/config.yml \
+{%- if page.platform_code == "bm-private" %}
+  --dont-use-public-control-plane-images \
+{%- endif %}
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
 dhctl bootstrap \
