@@ -88,7 +88,7 @@ deckhouse:
         publicDomainTemplate: "%s.example.com"
     nginxIngressEnabled: false
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: WithoutNAT
 masterNodeGroup:
