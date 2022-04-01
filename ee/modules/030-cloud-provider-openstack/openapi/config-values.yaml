@@ -69,7 +69,6 @@ properties:
       type: string
   podNetworkMode:
     type: string
-    default: "DirectRoutingWithPortSecurityEnabled"
     description: |
       Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
         * `DirectRouting` — means that there is a direct routing between the nodes;
