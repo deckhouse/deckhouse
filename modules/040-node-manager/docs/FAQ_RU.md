@@ -28,8 +28,8 @@ search: добавить ноду в кластер, добавить узел �
 Чтобы перенести существующий статичный узел из одной node-group в другую, необходимо изменить у узла лейбл группы:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<group_name>-
+kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 Изменения не будут применены мгновенно. Обновлением состояния объектов NodeGroup занимается один из хуков Deckhouse, который подписывается на изменения узлов.
