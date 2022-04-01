@@ -36,20 +36,22 @@ impact: <what to expect for users, possibly multi-line>, required if impact_leve
 Tip for the section field:
 
   - <kebab-case of a module>, e.g. "cloud-provider-aws", "node-manager"
-  - "dhctl"
+  - "ci", has forced low impact
+  - "docs", includes website changes, should have low impact
   - "candi"
   - "deckhouse-controller"
-  - *_lib
-  - "docs", includes website changes, should always have low impact
-  - "testing", should always have low impact
-  - "tools", should always have low impact
-  - "ci", should always have low impact
+  - "dhctl"
+  - "global-hooks"
+  - "go_lib"
+  - "helm_lib"
+  - "jq_lib"
+  - "shell_lib"
+  - "testing", has forced low impact
+  - "tools", has forced low impact
 
 Find changed sections:
 
-cat <<EOF
-sections:
-$(gh pr diff   $PULL_REQUEST_NUMBER   |
+gh pr diff   $PULL_REQUEST_NUMBER   |
   egrep "([+]{3}|[-]{3}) [ab]/" |
   cut -d/ -f2- |
   sed 's#^ee/##' |
@@ -59,8 +61,6 @@ $(gh pr diff   $PULL_REQUEST_NUMBER   |
   cut -d/ -f1 |
   sort |
   uniq
-)
-EOF
 
 Find all possible sections (excluding ci):
 
