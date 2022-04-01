@@ -27,7 +27,7 @@
 ```changes
 section: <kebab-case of a modules/*> | <1st level dir in the repo>
 type: fix | feature | chore
-summary: <what effectively changes in a single line>
+summary: <ONE LINE of what effectively changes for a user>
 impact_level: low | high* <this is an impact for users, not deckhouse>
 impact: <what to expect for users, possibly multi-line>, required if impact_level is high
 ```
