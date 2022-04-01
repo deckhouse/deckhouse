@@ -1,6 +1,6 @@
 # Changelog v1.31
 
-## Release digest
+## Know before update
 
 
  - All Daemonsets in `d8-*` namespaces are excluded from eviction on a down-scale and kept ready until node removal.
@@ -8,6 +8,9 @@
  - Ingress controllers of version >=0.33 will be restarted.
  - Kubernetes control-plane components and kubelet will restart for 1.20, 1.21 and 1.22 minor versions.
  - The new module - Linstor. It enables a replicated block storage solution in the cluster using the LINSTOR and the DRBD kernel module.
+ - node.kubernetes.io/exclude-from-external-load-balancers label will be deleted from the master node group. It also can not be set manually in the current release.
+    Without "node.kubernetes.io/exclude-from-external-load-balancers" label traffic can be directed to control plane nodes.
+    In the next release, migration will delete it, and users can add it manually if necessary.
 
 ## Features
 
@@ -64,12 +67,17 @@
  - **[extended-monitoring]** Start webserver immediately for the extended-monitoring-exporter [#1137](https://github.com/deckhouse/deckhouse/pull/1137)
  - **[ingress-nginx]** Fix ingress admission webhook [#1207](https://github.com/deckhouse/deckhouse/pull/1207)
  - **[ingress-nginx]** Proper validating webhook configuration for k8s 1.22+. [#637](https://github.com/deckhouse/deckhouse/pull/637)
+ - **[istio]** AuthURL fix in external_auth.go hook. [#1216](https://github.com/deckhouse/deckhouse/pull/1216)
  - **[istio]** Canary usage doc fix. [#731](https://github.com/deckhouse/deckhouse/pull/731)
  - **[kube-dns]** FAQ clarifications about changing `clusterDomain`, ServiceAccount tokens and Istio. [#686](https://github.com/deckhouse/deckhouse/pull/686)
  - **[linstor]** Add DRBD devices to blacklist on nodes. DRBD devices should not be queried by LVM and multipath commands So we add DRBD devices into blacklist for multipath and configure global_filter in lvm.conf for them. [#1153](https://github.com/deckhouse/deckhouse/pull/1153)
  - **[log-shipper]** Fire the alert only if there are more pods absent than allowed by the DaemonSet status. [#756](https://github.com/deckhouse/deckhouse/pull/756)
  - **[monitoring-applications]** Make dashboards immutable (that weren't already). [#840](https://github.com/deckhouse/deckhouse/pull/840)
  - **[monitoring-kubernetes-control-plane]** Proper kubectl command in alert description. [#741](https://github.com/deckhouse/deckhouse/pull/741)
+ - **[node-manager]** Add migration to remove "node.kubernetes.io/exclude-from-external-load-balancers" label from control-plane nodes [#1218](https://github.com/deckhouse/deckhouse/pull/1218)
+    node.kubernetes.io/exclude-from-external-load-balancers label will be deleted from the master node group. It also can not be set manually in the current release.
+    Without "node.kubernetes.io/exclude-from-external-load-balancers" label traffic can be directed to control plane nodes.
+    In the next release, migration will delete it, and users can add it manually if necessary.
  - **[prometheus]** Exposing API doc fixes. [#870](https://github.com/deckhouse/deckhouse/pull/870)
  - **[upmeter]** Make dashboards immutable (that weren't already). [#840](https://github.com/deckhouse/deckhouse/pull/840)
  - **[upmeter]** Rework scheduler with respect of cluster-autoscaler taints. [#793](https://github.com/deckhouse/deckhouse/pull/793)
