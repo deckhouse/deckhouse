@@ -23,6 +23,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-local-path-provisioner",
 	"d8-log-shipper",
 	"d8-metallb",
+	"d8-minecraft-server",
 	"d8-monitoring",
 	"d8-network-gateway",
 	"d8-okmeter",

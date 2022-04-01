@@ -1,0 +1,63 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cuberite
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cuberite")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cuberite
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: cuberite
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cuberite" )) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: cuberite
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cuberite
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cuberite" )) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cuberite
+  template:
+    metadata:
+      labels:
+        app: cuberite
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      containers:
+      - name: cuberite
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.minecraftServer.cuberite }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        - containerPort: 25565
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
