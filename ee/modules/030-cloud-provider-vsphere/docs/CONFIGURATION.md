@@ -4,6 +4,8 @@ title: "Cloud provider — VMware vSphere: configuration"
 
 The module is automatically enabled for all cloud clusters deployed in vSphere.
 
+If the cluster control plane is hosted on a virtual machines or bare-metal servers, the cloud provider uses the settings from the `cloud-provider-vsphere` module in the Deckhouse configuration (see below). Otherwise, if the cluster control plane is hosted in a cloud, the cloud provider uses the [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) structure for configuration.
+
 You can configure the number and parameters of ordering machines in the cloud via the [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) custom resource of the node-manager module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the `cloudInstances.ClassReference` parameter of NodeGroup). In the case of the vSphere cloud provider, the instance class is the [`VsphereInstanceClass`](cr.html#vsphereinstanceclass) custom resource that stores specific parameters of the machines.
 
 ## Parameters
@@ -11,37 +13,14 @@ You can configure the number and parameters of ordering machines in the cloud vi
 
 ## Storage
 
-The module automatically creates a StorageClass for each Datastore and DatastoreCluster in the zone(-s). Also, it can filter out the unnecessary StorageClasses (you can do this via the `exclude` parameter).
+The module automatically creates a StorageClass for each Datastore and DatastoreCluster in the zone (or zones). 
 
-* `exclude` — a list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster;
-* `default` — the name of StorageClass that will be used in the cluster by default. If the parameter is omitted, the default StorageClass is either:
-  * an arbitrary StorageClass present in the cluster that has the default annotation;
-  * the first (in lexicographic order) StorageClass of those created by the module.
-
-An example:
-```yaml
-cloudProviderVsphere: |
-  storageClass:
-    exclude:
-    - ".*-lun101-.*"
-    - slow-lun103-1c280603
-    default: fast-lun102-7d0bf578
-```
+Also, it can set the name of StorageClass that will be used in the cluster by default (the [default](#parameters-storageclass-default) parameter), and 
+filter out the unnecessary StorageClasses (the [exclude](#parameters-storageclass-exclude) parameter).
 
 ### CSI
 
-By default, the storage subsystem uses CNS volumes with the ability of online-resize. FCD volumes are also supported, but only in the legacy or migration modes.
-
-* `compatibilityFlag` — a flag allowing the use of the old CSI version. Possible values:
-  * `legacy` — use the old version of the driver. FCD discs only, no online-resizing;
-  * `migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.
-
-An example:
-```yaml
-cloudProviderVsphere: |
-  storageClass:
-    compatibilityFlag: legacy
-```
+By default, the storage subsystem uses CNS volumes with the ability of online-resize. FCD volumes are also supported, but only in the legacy or migration modes. You can set this via the [compatibilityFlag](#parameters-storageclass-compatibilityflag) parameter.
 
 ### Important information concerning the increase of the PVC size
 

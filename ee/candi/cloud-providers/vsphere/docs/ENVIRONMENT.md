@@ -30,9 +30,9 @@ export GOVC_INSECURE=1
 
 ### Creating tags and tag categories
 
-VMware vSphere doesn't have "regions" and "zones". It has Datacenters and ComputeClusters.
+VMware vSphere doesn't have *regions* and *zones*. It has Datacenters and ComputeClusters.
 
-To establish relation between these and "regions"/"zones" we'll use tags that fall into two tag categories. One for "region" tags and another for "zones tags".
+To establish relation between these and *regions*/*zones* we'll use tags that fall into two tag categories. One for *region* tags and another for *zones tags*.
 
 For example, here is how you can create two regions with two availability zones in each region:
 
