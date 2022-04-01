@@ -30,6 +30,8 @@ _on_containerd_config_changed() {
       {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
     {{- end }}
   {{- end }}
+
+discovered_node_ip="$(cat /var/lib/bashible/discovered-node-ip)"
 # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
 bb-sync-file /etc/containerd/config.toml - << "EOF"
 version = 2
@@ -58,7 +60,7 @@ oom_score = 0
   gid = 0
   level = ""
 [metrics]
-  address = ""
+  address = "${discovered_node_ip}:1338"
   grpc_histogram = false
 [cgroup]
   path = ""
