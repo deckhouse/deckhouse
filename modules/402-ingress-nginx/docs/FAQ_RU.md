@@ -202,3 +202,26 @@ HPA выставляется с помощью аттрибутов `minReplicas
 При CPU utilization > 50% HPA закажет новую реплику для `hpa-scaler` (в рамках minReplicas и maxReplicas).
 
 `hpa-scaler` deployment обладает HardPodAntiAffinity, поэтому он попытается заказать себе новый узел (если это возможно в рамках своей NodeGroup), куда автоматически будет размещен еще один ingress-controller.
+
+
+## Как использовать IngressClass с установленными IngressClassParameters
+
+Начиная с версии 1.1 IngressNginxController, Deckhouse создает объект IngressClass самостоятельно. Если вы хотите использовать свой IngressClass,
+например с установлеными IngressClassParameters, достаточно добавить к нему label `ingress-class.deckhouse.io/external: "true"`
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    ingress-class.deckhouse.io/external: "true"
+  name: my-super-ingress
+spec:
+  controller: ingress-nginx.deckhouse.io/my-super-ingress
+  parameters:
+    apiGroup: elbv2.k8s.aws
+    kind: IngressClassParams
+    name: awesome-class-cfg
+```
+
+В таком случае, при указании данного IngressClass в CRD IngressNginxController, Deckhouse не будет создавать объект, а использует уже существующий.
