@@ -13,7 +13,7 @@
 {{- end }}
 
 {{- $ingressClasses = $ingressClasses | uniq }}
-{{- range $ext := $ingressClasses $context.Values.ingressNginx.internal.externalIngressClasses }}
+{{- range $ext := $context.Values.ingressNginx.internal.externalIngressClasses }}
   {{- $ingressClasses = without $ingressClasses $ext }}
 {{- end }}
 
