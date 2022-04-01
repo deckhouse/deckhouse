@@ -58,8 +58,7 @@ $(gh pr diff   $PULL_REQUEST_NUMBER   |
   sed 's#[0-9][0-9][0-9]-##' |
   cut -d/ -f1 |
   sort |
-  uniq |
-  xargs -n 1 -- echo -
+  uniq
 )
 EOF
 
