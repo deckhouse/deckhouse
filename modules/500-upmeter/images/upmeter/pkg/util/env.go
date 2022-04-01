@@ -21,6 +21,11 @@ import (
 	"strconv"
 )
 
+const (
+	AgentUserAgent  = "UpmeterAgent/1.0"
+	ServerUserAgent = "Upmeter/1.0"
+)
+
 func GetenvInt64(name string) int {
 	s := os.Getenv(name)
 	if s == "" || s == "0" {
