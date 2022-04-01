@@ -33,7 +33,7 @@ _on_containerd_config_changed() {
 
 discovered_node_ip="$(cat /var/lib/bashible/discovered-node-ip)"
 # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
-bb-sync-file /etc/containerd/config.toml - << "EOF"
+bb-sync-file /etc/containerd/config.toml - << EOF
 version = 2
 root = "/var/lib/containerd"
 state = "/run/containerd"
