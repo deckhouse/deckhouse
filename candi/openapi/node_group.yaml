@@ -153,10 +153,10 @@ spec:
                 nodeType: &nodeType
                   description: |
                     The type of nodes this group provides.
-                    - Cloud — nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider.
-                    - Static — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
-                      node even of one of the cloud providers is enabled.
-                    - Hybrid – a static node (created manually or using any external tools) hosted in the cloud integrated with
+                    - `Cloud` — nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider;
+                    - `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
+                      node even of one of the cloud providers is enabled;
+                    - `Hybrid` – a static node (created manually or using any external tools) hosted in the cloud integrated with
                       one of the cloud providers; this node has the CSI running, and it is managed by the
                       cloud-controller-manager (the Node object automatically gets the information about the zone and region
                       based on the cloud data; if a node gets deleted from the cloud, its corresponding Node object
@@ -170,7 +170,7 @@ spec:
                   description: |
                     The desired minor version of Kubernetes.
 
-                    By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control-plane (if the global version is not defined).
+                    By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
                   example: '1.19'
                   enum:
@@ -189,8 +189,6 @@ spec:
                         Container runtime type.
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
-
-                        **Optional parameter.**
                       enum:
                         - "Docker"
                         - "Containerd"
@@ -211,7 +209,7 @@ spec:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
 
-                    **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
                   type: object
                   required:
                   - classReference
@@ -374,7 +372,8 @@ spec:
                           value:
                             type: string
                 static:
-                  description: Static node parameters
+                  description: |
+                    Static node parameters
                   type: object
                   properties:
                     internalNetworkCIDRs:
@@ -410,23 +409,26 @@ spec:
                       x-doc-default: '6h'
                 operatingSystem: &operatingSystem
                   type: object
-                  description: Operating System settings for nodes.
+                  description: |
+                    Operating System settings for nodes.
                   properties:
                     manageKernel:
                       type: boolean
-                      description: Enable kernel maintenance from bashible.
+                      description: |
+                        Enable kernel maintenance from bashible.
                       x-doc-default: true
                 disruptions: &disruptions
                   type: object
-                  description: Disruptions settings for nodes.
+                  description: |
+                    Disruptions settings for nodes.
                   required:
                     - approvalMode
                   properties:
                     approvalMode:
                       type: string
                       description: |
-                        The approval mode for disruptive updates.
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed.
+                        The approval mode for disruptive updates:
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed;
                         - `Automatic` —  automatically approve disruption-involving updates (the default value).
                       enum:
                         - Manual
@@ -455,15 +457,18 @@ spec:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
                                 example: '13:00'
-                                description: 'Start time of disruptive update window (UTC timezone).'
+                                description: |
+                                  'Start time of disruptive update window (UTC timezone).'
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
                                 example: '18:30'
-                                description: 'End time of disruptive update window (UTC timezone).'
+                                description: |
+                                  'End time of disruptive update window (UTC timezone).'
                               days:
                                 type: array
-                                description: 'Days of the week when node could be updated.'
+                                description: |
+                                  'Days of the week when node could be updated.'
                                 items:
                                   type: string
                                   enum:
@@ -483,24 +488,29 @@ spec:
                   properties:
                     maxConcurrentDownloads:
                       type: integer
-                      description: Set the max concurrent downloads for each pull.
+                      description: |
+                        Set the max concurrent downloads for each pull.
                       x-doc-default: 3
                     manage:
                       type: boolean
                       x-doc-default: true
-                      description: Enable Docker maintenance from bashible.
+                      description: |
+                        Enable Docker maintenance from bashible.
                 kubelet: &kubelet
                   type: object
-                  description: Kubelet settings for nodes.
+                  description: |
+                    Kubelet settings for nodes.
                   properties:
                     maxPods:
                       type: integer
-                      description: Set the max count of pods per node.
+                      description: |
+                        Set the max count of pods per node.
                       x-doc-default: 110
                     rootDir:
                       type: string
                       x-doc-default: '/var/lib/kubelet'
-                      description: Directory path for managing kubelet files (volume mounts,etc).
+                      description: |
+                        Directory path for managing kubelet files (volume mounts,etc).
                     containerLogMaxSize:
                       type: string
                       default: 50Mi
@@ -508,7 +518,7 @@ spec:
                       description: |
                         Maximum log file size before it is rotated.
 
-                        WARNING! This parameter does nothing if CRI type is Docker.
+                        > **WARNING!** This parameter does nothing if CRI type is Docker.
                     containerLogMaxFiles:
                       type: integer
                       minimum: 1
@@ -517,7 +527,7 @@ spec:
                       description: |
                         How many rotated log files to store before deleting them.
 
-                        WARNING! This parameter does nothing if CRI type is Docker.
+                        > **WARNING!** This parameter does nothing if CRI type is Docker.
     - name: v1alpha2
       served: true
       storage: true
@@ -548,23 +558,28 @@ spec:
                     containerd: *criContainerd
                     docker:
                       type: object
-                      description: Docker settings for nodes.
+                      description: |
+                        Docker settings for nodes.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
-                          description: Set the max concurrent downloads for each pull.
+                          description: |
+                            Set the max concurrent downloads for each pull.
                           x-doc-default: 3
                         manage:
                           type: boolean
                           x-doc-default: true
-                          description: Enable Docker maintenance from bashible.
+                          description: |
+                            Enable Docker maintenance from bashible.
                     notManaged: &notManaged
                       type: object
-                      description: Settings for not managed cri for nodes.
+                      description: |
+                        Settings for not managed CRI for nodes.
                       properties:
                         criSocketPath:
                           type: string
-                          description: Path to cri socket.
+                          description: |
+                            Path to CRI socket.
                   oneOf:
                     - properties:
                         type:
@@ -605,14 +620,14 @@ spec:
               properties:
                 nodeType:
                   description: |
-                    The type of nodes this group provides.
-                    - CloudEphemeral - nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider.
-                    - CloudPermanent - nodes from ProviderClusterConfiguration will be created via dhctl.
+                    The type of nodes this group provides:
+                    - CloudEphemeral - nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider;
+                    - CloudPermanent - nodes from ProviderClusterConfiguration will be created via dhctl;
                     - CloudStatic - a static node (created manually or using any external tools) hosted in the cloud integrated with
                       one of the cloud providers; this node has the CSI running, and it is managed by the
                       cloud-controller-manager (the Node object automatically gets the information about the zone and region
                       based on the cloud data; if a node gets deleted from the cloud, its corresponding Node object
-                      will be deleted in Kubernetes).
+                      will be deleted in Kubernetes);
                     - Static — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
                       node even if one of the cloud providers is enabled.
                   type: string
@@ -630,16 +645,19 @@ spec:
                     containerd: *criContainerd
                     docker:
                       type: object
-                      description: Docker settings for nodes.
+                      description: |
+                        Docker settings for nodes.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
-                          description: Set the max concurrent downloads for each pull.
+                          description: |
+                            Set the max concurrent downloads for each pull.
                           x-doc-default: 3
                         manage:
                           type: boolean
                           x-doc-default: true
-                          description: Enable Docker maintenance from bashible.
+                          description: |
+                            Enable Docker maintenance from bashible.
                     notManaged: *notManaged
                   oneOf:
                     - properties:
