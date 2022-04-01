@@ -64,6 +64,7 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	needStandby := false
 	maxPerZone := 0
 	if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral {
+		// No nil-checking for MaxPerZone and MinPerZone pointers as these fields are mandatory for CloudEphemeral NGs.
 		maxPerZone = int(*nodeGroup.Spec.CloudInstances.MaxPerZone)
 		if nodeGroup.Spec.CloudInstances.Standby != nil {
 			if nodeGroup.Spec.CloudInstances.Standby.String() != "0" {
