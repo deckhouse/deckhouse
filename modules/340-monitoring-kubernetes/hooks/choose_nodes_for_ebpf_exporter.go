@@ -43,7 +43,7 @@ type NodeEligibility struct {
 
 var (
 	kernelRegex              = regexp.MustCompile(`^(\d+\.\d+\.\d+).*$`)
-	minSupportedKernelSemVer = semver.MustParse("5.4.0")
+	minSupportedKernelSemVer = semver.MustParse("4.18.0")
 )
 
 func getNodeNameWithSupportedDistro(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
