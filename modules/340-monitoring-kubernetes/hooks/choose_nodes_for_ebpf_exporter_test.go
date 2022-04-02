@@ -57,12 +57,12 @@ metadata:
 apiVersion: v1
 kind: Node
 metadata:
-  name: test-ubuntu-kernel-4.18
+  name: test-ubuntu-kernel-5.3
   labels:
     node.deckhouse.io/group: test
 status:
   nodeInfo:
-    kernelVersion: 4.18.0-54-generic
+    kernelVersion: 5.3.0-54-generic
 ---
 apiVersion: v1
 kind: Node
@@ -103,17 +103,17 @@ status:
 		It("should label or unlabel nodes", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			ubuntu418Node := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-4.18")
+			ubuntu53Node := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-5.3")
 			ubuntu49Node := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-4.9")
 			unknown49NodeLabeled := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-4.9-labeled")
 			ubuntu54NodeWithManagedKernel := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-5.4-labeled-ng-managed-kernel")
 
-			Expect(ubuntu418Node.Exists()).To(BeTrue())
+			Expect(ubuntu53Node.Exists()).To(BeTrue())
 			Expect(ubuntu49Node.Exists()).To(BeTrue())
 			Expect(unknown49NodeLabeled.Exists()).To(BeTrue())
 			Expect(ubuntu54NodeWithManagedKernel.Exists()).To(BeTrue())
 
-			Expect(ubuntu418Node.Field("metadata.labels").Map()).To(HaveKey(ebpfSchedulingLabelKey))
+			Expect(ubuntu53Node.Field("metadata.labels").Map()).To(HaveKey(ebpfSchedulingLabelKey))
 			Expect(ubuntu49Node.Field("metadata.labels").Map()).To(Not(HaveKey(ebpfSchedulingLabelKey)))
 			Expect(unknown49NodeLabeled.Field("metadata.labels").Map()).To(Not(HaveKey(ebpfSchedulingLabelKey)))
 			Expect(ubuntu54NodeWithManagedKernel.Field("metadata.labels").Map()).To(Not(HaveKey(ebpfSchedulingLabelKey)))

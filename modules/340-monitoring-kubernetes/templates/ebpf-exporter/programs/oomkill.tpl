@@ -1,5 +1,5 @@
 {{- define "ebpf-exporter-program-oomkill-v1" }}
-#kernel-version-constraint >= 4.18.0, < 5.5.0
+#kernel-version-constraint >= 5.3.0, < 5.5.0
 - name: oomkill
   metrics:
     counters:
