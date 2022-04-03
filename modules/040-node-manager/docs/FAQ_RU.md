@@ -181,14 +181,14 @@ journalctl -fu bashible
 
 ## Как выделить узлы под специфические нагрузки?
 
-> ⛔ Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у `NodeGroup`. Он зарезервирован для компонентов **Deckhouse**. Следует отдавать предпочтение в пользу ключей `dedicated` или `dedicated.client.com`.
+> **Внимание!** Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у `NodeGroup`. Он зарезервирован для компонентов **Deckhouse**. Следует отдавать предпочтение в пользу ключей `dedicated` или `dedicated.client.com`.
 
 Для решений данной задачи существуют два механизма:
 
 - Установка меток в `NodeGroup` `spec.nodeTemplate.labels` для последующего использования их в `Pod` [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
 - Установка ограничений в `NodeGroup` `spec.nodeTemplate.taints` с дальнейшим снятием их в `Pod` [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих узлах.
 
-> ℹ Deckhouse по умолчанию tolerate'ит ключ `dedicated`, поэтому рекомендуется использовать ключ `dedicated` с любым `value` для taint'ов на ваших выделенных узлах.️
+> Deckhouse по умолчанию tolerate'ит ключ `dedicated`, поэтому рекомендуется использовать ключ `dedicated` с любым `value` для taint'ов на ваших выделенных узлах.️
 > Если необходимо использовать произвольные ключи для `taints` (например, `dedicated.client.com`), то нужно добавить в `ConfigMap` `d8-system/deckhouse` в секцию `global.modules.placement.customTolerationKeys` значение ключа. Таким образом мы разрешим системным компонентам (например `cni-flannel`) выезжать на эти выделенные узлы.
 
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
@@ -248,7 +248,7 @@ cloudInstances:
 
 ## Как выключить machine-controller-manager в случае выполнения потенциально деструктивных изменений в кластере?
 
-> ⛔ **_Внимание!!!_** Использовать эту настройку допустимо только тогда, когда вы четко понимаете зачем это необходимо!!!
+> **Внимание!** Использовать эту настройку допустимо только тогда, когда вы четко понимаете зачем это необходимо.
 
 Установить параметр:
 
@@ -333,7 +333,7 @@ spec:
   kubectl patch nodegroup <имя node-group> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
   ```
 
-> ⛔ **_Внимание!!!_** Нельзя устанавливать `cri.type` для node-group, созданных при помощи `dhctl`, например, node-group `master`.
+> **Внимание!** Нельзя устанавливать `cri.type` для node-group, созданных при помощи `dhctl`, например, node-group `master`.
 
 После настройки нового CRI для NodeGroup модуль node-manager по одному drain'ит узлы и устанавливает на них новый CRI. Обновление узла
 сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup модуль node-manager либо автоматически разрешает обновление
@@ -357,7 +357,7 @@ kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cl
 Если необходимо какую-то node-group оставить на другом CRI, то перед изменением `defaultCRI` необходимо установить CRI для этой node-group,
 как описано [здесь](#как-изменить-cri-для-node-group).
 
-> ⛔ **_Внимание!!!_** Изменение `defaultCRI` влечет за собой изменение CRI на всех узлах, включая master-узлы!!!
+> **Внимание!** Изменение `defaultCRI` влечет за собой изменение CRI на всех узлах, включая master-узлы.
 > Если master-узел один, данная операция является опасной и может привести к полной неработоспособности кластера!!!
 > Предпочтительный вариант - сделать multimaster и поменять тип CRI!!!
 

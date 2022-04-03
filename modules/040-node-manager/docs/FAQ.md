@@ -181,14 +181,14 @@ To force the redeployment of all Machines, you need to add/modify the `manual-ro
 
 ## How do I allocate nodes to specific loads?
 
-> ⛔ Note that you cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
+> **Note** that you cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
 
 There are two ways to solve this problem:
 
 - You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
 - You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
-> ℹ Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
+> Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
 > To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the `global.modules.placement.customTolerationKeys` field of the `d8-system/deckhouse` ConfigMap. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 
 ## How to allocate nodes to system components?
@@ -246,7 +246,7 @@ cloudInstances:
 
 ## How do I disable machine-controller-manager in the case of potentially cluster-damaging changes?
 
-> ⛔ **_Caution!!!_** Use this switch only if you know what you are doing and clearly understand the consequences!
+> **Note!** Use this switch only if you know what you are doing and clearly understand the consequences.
 
 Set the `mcmEmergencyBrake` parameter to true::
 
@@ -330,7 +330,7 @@ Also, this operation can be done with patch:
   kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
   ```
 
-> ⛔ **_Attention!!!_** You cannot set `cri.type` for node-groups, created using `dhctl`, node-group `master` for example.
+> **Note!** You cannot set `cri.type` for node-groups, created using `dhctl`, node-group `master` for example.
 
 After setting up a new CRI for NodeGroup, the node-manager module drains nodes one by one and installs a new CRI on them. Node update
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
@@ -354,7 +354,7 @@ kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cl
 If it is necessary to leave some node-group on another CRI, then before changing the `defaultCRI` it is necessary to set CRI for this node-group,
 as described [here](#how-to-change-cri-for-node-group).
 
-> ⛔ **_Attention!!!_** Changing `defaultCRI` entails changing CRI on all nodes, including master nodes!!!
+> **Note!** Changing `defaultCRI` entails changing CRI on all nodes, including master nodes.
 > If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!!!
 > The preferred option is to make a multi-master and change the CRI type!!!
 
