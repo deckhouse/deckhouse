@@ -12,26 +12,26 @@ properties:
               Список API audience'ов, которые следует добавить при создании токенов ServiceAccount.
       admissionPlugins:
         description: |
-          Включить дополнительные [admission plugin'ы](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+          Список включенных дополнительных [admission plugin'ов](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
 
-          Список admission plugin'ов, включенных всегда вдобавок к включенным в Kubernetes по умолчанию:
-          1. ExtendedResourceToleration.
-          2. EventRateLimit с конфигурацией:
+          **Обратите внимание**, что помимо включенных по умолчанию в Kubernetes admission plugin'ов, также всегда включены (без возможности отключения) следующие admission plugin'ы:
+          - `ExtendedResourceToleration`
+          - `EventRateLimit`, который использует следующую конфигурацию:
 
-              ```yaml
-              apiVersion: eventratelimit.admission.k8s.io/v1alpha1
-              kind: Configuration
-              limits:
-              - type: Namespace
-                qps: 50
-                burst: 100
-                cacheSize: 2000
-              ```
-          `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на пространстве имен.
+            ```yaml
+            apiVersion: eventratelimit.admission.k8s.io/v1alpha1
+            kind: Configuration
+            limits:
+            - type: Namespace
+              qps: 50
+              burst: 100
+              cacheSize: 2000
+            ```
 
+          > Admission plugin `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на пространстве имен (namespace'ах).
       bindToWildcard:
         description: |
-          Прослушивание `0.0.0.0`.
+          Прослушивание на `0.0.0.0`.
 
           По умолчанию API-сервер слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout).
       certSANs:
@@ -49,7 +49,9 @@ properties:
           * *hostIP*.
       authn:
         description: |
-          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/).
+          Опциональные параметры аутентификации клиентов Kubernetes API.
+
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/).
         properties:
           oidcIssuerURL:
             description: |
@@ -68,7 +70,9 @@ properties:
               CA аутентификационного webhook'a.
       authz:
         description: |
-          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://deckhouse.io/ru/documentation/v1/modules/140-user-authz/).
+          Параметры авторизации клиентов Kubernetes API.
+
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.io/ru/documentation/v1/modules/140-user-authz/).
         properties:
           webhookURL:
             description: |
@@ -78,7 +82,7 @@ properties:
               CA авторизациионного webhook'a.
       loadBalancer:
         description: |
-          Создание сервиса с типом `LoadBalancer` (`d8-control-plane-apiserver` в ns `kube-system`).
+          Создание сервиса `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.
         properties:
           annotations:
             description: |
@@ -91,29 +95,29 @@ properties:
               Облачный провайдер может не поддерживать данную опцию и игнорировать её.
           port:
             description: |
-              Внешний порт TCP балансировщика.
+              Внешний порт TCP-балансировщика.
       auditPolicyEnabled:
         description: |
-          Применять [дополнительные политики аудита](faq.html#как-настроить-дополнительные-политики-аудита) с конфигурацией из `Secret` (`audit-policy` в ns `kube-system`).
+          Применять [дополнительные политики аудита](faq.html#как-настроить-дополнительные-политики-аудита) с конфигурацией из Secret'а `kube-system/audit-policy`.
       basicAuditPolicyEnabled:
         description: |
           Применять базовые политики аудита Deckhouse.
-      auditPolicy:
+      auditLog:
         description: |
           Параметры аудита.
         properties:
           output:
             description: |
-              Вывод логов.
+              Тип потока для вывода журнала аудита.
           path:
             description: |
-              Путь к директории. Действует только в случае `output=file`.
+              Путь к директории. Действует только в случае `output: "File"`.
       encryptionEnabled:
         description: |
           Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
-          Генерирует secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
-          > **Важно!**  Этот режим нельзя отключить!!!
 
+          Генерирует Secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
+          > **Важно!** Этот режим нельзя отключить!
   etcd:
     description: |
       Параметры `etcd`.

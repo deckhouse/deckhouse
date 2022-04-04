@@ -24,22 +24,23 @@ properties:
       admissionPlugins:
         type: array
         description: |
-          Enable additional [admission plugins](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+          List of enabled additional [admission plugins](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
 
-          Always enabled admission plugins in addition to the ones enabled by Kubernetes itself:
-          1. ExtendedResourceToleration
-          2. EventRateLimit with the following config:
+          **Note**, that in addition to the admission plugins enabled by default in Kubernetes, the following admission plugins are also always enabled:
+          - `ExtendedResourceToleration`
+          - `EventRateLimit` with the following config:
 
-              ```yaml
-              apiVersion: eventratelimit.admission.k8s.io/v1alpha1
-              kind: Configuration
-              limits:
-              - type: Namespace
-                qps: 50
-                burst: 100
-                cacheSize: 2000
-              ```
-          Note that `PodNodeSelector` [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
+            ```yaml
+            apiVersion: eventratelimit.admission.k8s.io/v1alpha1
+            kind: Configuration
+            limits:
+            - type: Namespace
+              qps: 50
+              burst: 100
+              cacheSize: 2000
+            ```
+
+          > Note that th `PodNodeSelector` admission plugin [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
         x-examples:
           - ["AlwaysPullImages", "NamespaceAutoProvision"]
         items:
@@ -80,7 +81,9 @@ properties:
         type: object
         default: {}
         description: |
-          Optional authentication parameters for Kubernetes API clients. By default, they are taken from [`user-authn`](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module ConfigMap.
+          Optional authentication parameters for Kubernetes API clients.
+
+          By default, they are taken from [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module ConfigMap.
         properties:
           oidcIssuerURL:
             type: string
@@ -113,7 +116,9 @@ properties:
         type: object
         default: {}
         description: |
-          Optional authorization parameters for Kubernetes API clients. By default, they are taken from [`user-authz`](https://deckhouse.io/en/documentation/v1/modules/140-user-authz/) module ConfigMap.
+          Optional authorization parameters for Kubernetes API clients.
+
+          By default, they are taken from [user-authz](https://deckhouse.io/en/documentation/v1/modules/140-user-authz/) module ConfigMap.
         properties:
           webhookURL:
             type: string
@@ -128,7 +133,7 @@ properties:
       loadBalancer:
         type: object
         description: |
-          If set, a service of the `LoadBalancer` type will be created (`d8-control-plane-apiserver` in the `kube-system` ns).
+          If set, a service `kube-system/d8-control-plane-apiserver` of the `LoadBalancer` type will be created.
         properties:
           annotations:
             type: object
@@ -156,9 +161,8 @@ properties:
       auditPolicyEnabled:
         type: boolean
         default: false
-        # FIXME doc content
         description: |
-          Set the [audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
+          Set the [audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `kube-system/audit-policy` Secret.
       basicAuditPolicyEnabled:
         type: boolean
         default: true
@@ -193,8 +197,9 @@ properties:
         default: false
         description: |
           Enables [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
-          Generates secret `kube-system/d8-secret-encryption-key` with encryption key.
-          > **Note!** This mode cannot be disabled !!!
+
+          Generates `kube-system/d8-secret-encryption-key` Secret with encryption key.
+          > **Note!** This mode cannot be disabled!
   etcd:
     type: object
     description: |
