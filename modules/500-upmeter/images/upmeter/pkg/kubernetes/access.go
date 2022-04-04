@@ -124,7 +124,7 @@ func (a *Accessor) Init(config *Config) error {
 
 	a.cloudControllerManagerNamespace = config.CloudControllerManagerNamespace
 
-	a.kubernetesDomain = "kubernetes.default.svc." + config.ClusterDomain
+	a.kubernetesDomain = "kubernetes.default.svc." + config.ClusterDomain + "." // Trailing dot to avoid domain search
 
 	return nil
 }
