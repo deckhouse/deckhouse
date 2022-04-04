@@ -23,6 +23,7 @@ git:
   to: /available_hooks
   includePaths:
   - '*/webhooks/'
+  - '**/webhooks/'
 - add: /modules/020-deckhouse/images/webhook-handler/entrypoint.sh
   to: /entrypoint.sh
 docker:
