@@ -180,7 +180,7 @@ spec:
                                 Значение может быть абсолютным в байтах (например, `128974848`) или в Kubernetes-формате с суффиксами: `G`, `Gi`, `M`, `Mi` (например, `750Mi`).
                     classReference:
                       description: |
-                        Ссылка на объект `InstanceClass`. Уникален для каждого модуля cloud provider.
+                        Ссылка на объект `InstanceClass`. Уникален для каждого модуля `cloud-provider-*`.
                       properties:
                         kind:
                           description: |
@@ -236,7 +236,7 @@ spec:
                     approvalMode:
                       description: |
                         Режим выдачи разрешения на disruptive-обновление:
-                        - `Manual` — отключить автоматическую выдачу разрешений на disruption. Когда disruption потребуется – загорится специальный алерт;
+                        - `Manual` — отключить автоматическую выдачу разрешений на disruption. Когда disruption потребуется — загорится специальный алерт;
                         - `Automatic` —  автоматически выдавать разрешения на disruption при обновлении (значение по умолчанию).
                     automatic:
                       description: |

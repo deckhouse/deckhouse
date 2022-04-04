@@ -285,7 +285,7 @@ spec:
                               x-kubernetes-int-or-string: true
                     classReference:
                       description: |
-                        The reference to the `InstanceClass` object (unique for each `cloud-provider-` module).
+                        The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
                       type: object
                       properties:
                         kind:

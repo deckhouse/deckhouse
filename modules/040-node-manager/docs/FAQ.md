@@ -10,7 +10,7 @@ To add a new static node (e.g., VM or bare-metal server) to the cluster, you nee
 1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
 2. Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r`
 3. Before configuring Kubernetes on the node, make sure that you have performed all the necessary actions for the node to work correctly in the cluster:
-  - Added all the necessary mount points (nfs, ceph,...) to `/etc/fstab`;
+  - Added all the necessary mount points (NFS, Ceph,...) to `/etc/fstab`;
   - Installed the suitable `ceph-common` version on the node as well as other packages;
   - Configured the network in the cluster;
 4. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
@@ -185,8 +185,8 @@ To force the redeployment of all Machines, you need to add/modify the `manual-ro
 
 There are two ways to solve this problem:
 
-- You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
-- You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
+1. You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
+2. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
 > Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
 > To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the `global.modules.placement.customTolerationKeys` field of the `d8-system/deckhouse` ConfigMap. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
@@ -280,7 +280,7 @@ done
 ```
 
 You need to restart kubelet after pulling the images.
-Please, pay attention that you must delete the changes made to the `/root/.docker/config.json` file after restoring the master node!
+Please, pay attention that you must **delete the changes made to the `/root/.docker/config.json` file after restoring the master node!**
 
 ### Containerd
 
@@ -320,12 +320,12 @@ spec:
 
 Also, this operation can be done with patch:
 
-* Containerd:
+* For Containerd:
   ```shell
   kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
-* Docker:
+* For Docker:
   ```shell
   kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
   ```
@@ -340,56 +340,59 @@ node updates or requires manual confirmation.
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with patch:
-* Containerd
-```shell
-data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
-kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
-```
-* Docker
-```shell
-data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
-kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
-```
+* For Containerd
+  ```shell
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
+  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  ```
+* For Docker
+  ```shell
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
+  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  ```
 
 If it is necessary to leave some node-group on another CRI, then before changing the `defaultCRI` it is necessary to set CRI for this node-group,
 as described [here](#how-to-change-cri-for-node-group).
 
 > **Note!** Changing `defaultCRI` entails changing CRI on all nodes, including master nodes.
-> If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!!!
-> The preferred option is to make a multi-master and change the CRI type!!!
+> If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!
+> The preferred option is to make a multi-master and change the CRI type!
 
 When changing the CRI in the cluster, additional steps are required for the master nodes:
 
-* Docker -> Containerd
+* Additional steps for changing from Docker to Containerd
 
-* For each master node in turn, it will be necessary:
-1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
-```shell
-kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
-```
-2. Wait for the updated master node to switch to `Ready` state.
-* Containerd -> Docker
+  For each master node in turn, it will be necessary:
+  1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
+     ```shell
+     kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+     ```
+  2. Wait for the updated master node to switch to `Ready` state.
 
-Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
-```shell
-mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json | jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
-```
+* Additional steps for changing from Containerd to Docker
 
-For each master node in turn, it will be necessary:
-1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
-```shell
-kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
-```
-2. After updating the CRI and reboot, run the command:
-```shell
-for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-  docker pull $image
-done
-```
-3. Wait for the updated master node to switch to `Ready` state.
-4. Remove docker config from the updated master node:
-```shell
-rm -f ~/.docker/config.json
-```
+  Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
+  ```shell
+  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json | 
+  jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
+  ```
+  
+  For each master node in turn, it will be necessary:
+  1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
+     ```shell
+     kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+     ```
+  2. After updating the CRI and reboot, run the command:
+     ```shell
+     for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+       docker pull $image
+     done
+     ```
+  3. Wait for the updated master node to switch to `Ready` state.
+  4. Remove docker config from the updated master node:
+     ```shell
+     rm -f ~/.docker/config.json
+     ```
+  
 ## How to add node configuration step?
 Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.
