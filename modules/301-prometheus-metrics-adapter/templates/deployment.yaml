@@ -83,6 +83,10 @@ spec:
         env:
         - name: PROMETHEUS_URL
           value: "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
+        volumeMounts:
+        - mountPath: /etc/prometheus-reverse-proxy/
+          name: prometheus-metrics-adapter-config
+          readOnly: true
         livenessProbe:
           httpGet:
             path: /healthz
