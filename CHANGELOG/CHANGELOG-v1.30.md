@@ -32,7 +32,7 @@
  - #744 unknown section "global"
  - #809 unknown section "general"
 
-## Release digest
+## Know before update
 
 
  - Disable enforced namespace passing to a query. If your metric need to be selected with a specific namespace label value, you should set it directly in an HPA's label selector
