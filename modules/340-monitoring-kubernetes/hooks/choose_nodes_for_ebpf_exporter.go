@@ -25,10 +25,11 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/Masterminds/semver/v3"
-	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
-	ngHooks "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
+	ngHooks "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
 )
 
 const (
