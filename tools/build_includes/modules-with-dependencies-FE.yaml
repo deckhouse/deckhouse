@@ -431,8 +431,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/140-user-authz/webhooks/validating
-  to: /deckhouse/modules/140-user-authz/webhooks/validating
+- add: /ee/modules/140-user-authz/webhooks/validating/multitenancy
+  to: /deckhouse/modules/140-user-authz/webhooks/validating/multitenancy
   excludePaths:
     - images
     - templates

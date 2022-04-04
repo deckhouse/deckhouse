@@ -1,2 +1,2 @@
 templates/webhook
-webhooks/validating
+webhooks/validating/*
