@@ -8,6 +8,8 @@ issues:
   - ST1005.*
   - "should not use dot imports"
   - "don't use an underscore in package name"
+  max-issues-per-linter: 0
+  max-same-issues: 0
 
 linters-settings:
   gci:
