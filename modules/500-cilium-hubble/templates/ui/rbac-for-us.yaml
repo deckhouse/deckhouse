@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: "hubble-ui"
+  name: "cilium-hubble-ui"
   namespace: d8-cni-cilium
   {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: hubble-ui
+  name: d8:cilium-hubble:ui:reader
   {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
 rules:
   - apiGroups:
@@ -52,13 +52,13 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: hubble-ui
+  name: d8:cilium-hubble:ui:reader
   {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: hubble-ui
+  name: d8:cilium-hubble:ui:reader
 subjects:
   - kind: ServiceAccount
-    name: "hubble-ui"
+    name: cilium-hubble-ui
     namespace: d8-cni-cilium
