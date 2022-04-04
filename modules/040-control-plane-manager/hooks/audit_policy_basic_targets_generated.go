@@ -36,8 +36,6 @@ var auditPolicyBasicNamespaces = []string{
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{
-	""hubble-relay"",
-	""hubble-ui"",
 	"agent",
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
@@ -65,6 +63,8 @@ var auditPolicyBasicServiceAccounts = []string{
 	"events-exporter",
 	"extended-monitoring-exporter",
 	"grafana",
+	"hubble-relay",
+	"hubble-ui",
 	"image-availability-exporter",
 	"ingress-nginx",
 	"kiali",
