@@ -24,9 +24,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	v1alpha12 "github.com/deckhouse/deckhouse/go_lib/api/mcm/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/api/shared"
-	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -37,6 +34,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+
+	v1alpha12 "github.com/deckhouse/deckhouse/go_lib/api/mcm/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/api/shared"
+	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 )
 
 var (

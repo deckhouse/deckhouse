@@ -17,13 +17,14 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/api/mcm/v1alpha1"
-	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/api/mcm/v1alpha1"
+	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
