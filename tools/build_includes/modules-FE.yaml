@@ -35,6 +35,8 @@
   to: /deckhouse/modules/110-istio
 - add: /ee/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
+- add: /ee/modules/140-user-authz/webhooks/validating
+  to: /deckhouse/modules/140-user-authz/webhooks/validating
 - add: /ee/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
 - add: /ee/modules/380-metallb
