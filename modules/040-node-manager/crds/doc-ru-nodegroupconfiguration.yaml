@@ -23,11 +23,11 @@ spec:
             spec:
               properties:
                 content:
-                  description: Содержимое шага конфигурации, может быть или шаблоном go temaplate или bash скриптом.
+                  description: Содержимое шага конфигурации. Может быть или шаблоном Go Template или bash-скриптом.
                 weight:
                   description: Очередность выполнения шага конфигурации.
                 nodeGroups:
-                  description: Список NodeGroup к которым применять шаг конфигурации. Чтобы выбрать все NodeGroups нужно указать '*'.
+                  description: Список NodeGroup к которым применять шаг конфигурации. Для выбора всех NodeGroups нужно указать '*'.
                 bundles:
-                  description: Выполнять скрипт только для указанных bundles, например centos-7 / ubuntu-lts. Для всех bundles можно указать '*'.
+                  description: Список bundles, для которых выполнять скрипт. Для выбора всех bundles нужно указать `'*'`.
 

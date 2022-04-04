@@ -28,7 +28,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-  excludePaths: ['*/docs/internal/','110-istio/crds']
+  excludePaths: ['*/docs/internal/','110-istio/crds','040-node-manager']
 - add: /ee/modules/110-istio/crds
   to: /src/ee/modules/110-istio/crds
   owner: jekyll
