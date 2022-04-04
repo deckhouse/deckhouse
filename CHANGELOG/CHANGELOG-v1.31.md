@@ -58,6 +58,7 @@
 
  - **[candi]** Update Kubernetes components to the latest patch versions. [#770](https://github.com/deckhouse/deckhouse/pull/770)
     Kubernetes control-plane components and kubelet will restart for 1.20, 1.21 and 1.22 minor versions.
+ - **[cloud-provider-openstack]** Remove default `podNetworkMode` from the config-values. [#1248](https://github.com/deckhouse/deckhouse/pull/1248)
  - **[cloud-provider-vsphere]** Fix handle of compatibilityFlag in Deckhouse config [#1156](https://github.com/deckhouse/deckhouse/pull/1156)
  - **[common]** The `csi-controller` template requires NAMESPACE environment variable. [#864](https://github.com/deckhouse/deckhouse/pull/864)
  - **[deckhouse]** Remove additional print column applyAfter. [#805](https://github.com/deckhouse/deckhouse/pull/805)
@@ -65,6 +66,7 @@
  - **[deckhouse-web]** OpenAPI fix and copy_custom_certificate hook fix — do nothing if the https.mode isn't CustomCertificate, but there is <module>.https.customCertificate.secretName configured. [#755](https://github.com/deckhouse/deckhouse/pull/755)
  - **[dhctl]** Fix potential panic for bashible logs in `dhctl bootstrap` command. [#724](https://github.com/deckhouse/deckhouse/pull/724)
  - **[extended-monitoring]** Start webserver immediately for the extended-monitoring-exporter [#1137](https://github.com/deckhouse/deckhouse/pull/1137)
+ - **[ingress-nginx]** Make the VHost Detail dashboard show all locations by default [#1251](https://github.com/deckhouse/deckhouse/pull/1251)
  - **[ingress-nginx]** Fix ingress admission webhook [#1207](https://github.com/deckhouse/deckhouse/pull/1207)
  - **[ingress-nginx]** Proper validating webhook configuration for k8s 1.22+. [#637](https://github.com/deckhouse/deckhouse/pull/637)
  - **[istio]** AuthURL fix in external_auth.go hook. [#1216](https://github.com/deckhouse/deckhouse/pull/1216)
@@ -79,6 +81,7 @@
     Without "node.kubernetes.io/exclude-from-external-load-balancers" label traffic can be directed to control plane nodes.
     In the next release, migration will delete it, and users can add it manually if necessary.
  - **[prometheus]** Exposing API doc fixes. [#870](https://github.com/deckhouse/deckhouse/pull/870)
+ - **[prometheus-metrics-adapter]** Fix custom metrics workability [#1259](https://github.com/deckhouse/deckhouse/pull/1259)
  - **[upmeter]** Make dashboards immutable (that weren't already). [#840](https://github.com/deckhouse/deckhouse/pull/840)
  - **[upmeter]** Rework scheduler with respect of cluster-autoscaler taints. [#793](https://github.com/deckhouse/deckhouse/pull/793)
  - **[user-authn]** Do not set ingress TLS certificate secret name if HTTPS mode is the OnlyInURI [#1128](https://github.com/deckhouse/deckhouse/pull/1128)
