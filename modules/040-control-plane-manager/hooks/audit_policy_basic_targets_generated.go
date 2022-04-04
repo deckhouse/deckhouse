@@ -36,6 +36,8 @@ var auditPolicyBasicNamespaces = []string{
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{
+	""hubble-relay"",
+	""hubble-ui"",
 	"agent",
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
