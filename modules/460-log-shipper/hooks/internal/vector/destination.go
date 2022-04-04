@@ -124,6 +124,9 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 	}
 
 	// default labels
+	//
+	// Asterisk is required here to expand all pod labels
+	// See https://github.com/vectordotdev/vector/pull/12041
 	labels := map[string]string{
 		"namespace":    "{{ namespace }}",
 		"container":    "{{ container }}",

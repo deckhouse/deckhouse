@@ -9,7 +9,7 @@ RUN apt-get update \
 
 WORKDIR /vector
 COPY patches/loki-labels.patch patches/kubernetes-owner-reference.patch /
-RUN git clone --depth 1 --branch v0.20.0 https://github.com/timberio/vector.git \
+RUN git clone --depth 1 --branch v0.20.0 https://github.com/vectordotdev/vector.git \
     && cd vector \
     && git apply /kubernetes-owner-reference.patch \
     && git apply /loki-labels.patch
