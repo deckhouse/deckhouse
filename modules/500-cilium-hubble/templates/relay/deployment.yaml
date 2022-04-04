@@ -33,6 +33,7 @@ spec:
       labels:
         app: hubble-relay
     spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
@@ -81,7 +82,8 @@ spec:
                 matchLabels:
                   app: agent
                   module: cni-cilium
-      {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       volumes:
       - name: config
         configMap:

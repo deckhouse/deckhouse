@@ -8,4 +8,4 @@ spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
-      k8s-app: hubble-relay
+      app: hubble-relay
