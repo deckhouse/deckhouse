@@ -23,17 +23,16 @@ import (
 	"strconv"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/Masterminds/semver/v3"
 	cljson "github.com/clarketm/json"
-	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 

@@ -21,17 +21,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
 	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 

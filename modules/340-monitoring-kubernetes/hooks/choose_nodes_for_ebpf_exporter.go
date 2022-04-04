@@ -20,13 +20,12 @@ import (
 	"fmt"
 	"regexp"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 
 	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
 	ngHooks "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
