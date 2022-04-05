@@ -201,23 +201,19 @@ func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient) 
 	return m, m.Start()
 }
 
-func newDummyLogger() *log.Entry {
-	logger := log.New()
-
-	// logger.Level = log.DebugLevel
-	logger.SetOutput(ioutil.Discard)
-
-	return log.NewEntry(logger)
-}
-
-// newProbeLister returns registry that is not capable of loading runners, but it can list probes and groups
-func newProbeLister() *registry.Registry {
-	noLogger := newDummyLogger().Logger
+func newProbeLister() *registry.RegistryProbeLister {
+	noLogger := newDummyLogger()
 	noFilter := probe.NewProbeFilter([]string{})
 	noAccess := &kubernetes.Accessor{}
 
-	runnerLoader := probe.NewLoader(noFilter, noAccess, noLogger)
+	runLoader := probe.NewLoader(noFilter, noAccess, noLogger)
 	calcLoader := calculated.NewLoader(noFilter, noLogger)
 
-	return registry.NewNotLoading(runnerLoader, calcLoader)
+	return registry.NewProbeLister(runLoader, calcLoader)
+}
+
+func newDummyLogger() *log.Logger {
+	logger := log.New()
+	logger.SetOutput(ioutil.Discard)
+	return logger
 }

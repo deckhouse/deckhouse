@@ -17,6 +17,8 @@ limitations under the License.
 package registry
 
 import (
+	"sort"
+
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/probe"
 	"d8.io/upmeter/pkg/probe/calculated"
@@ -28,13 +30,31 @@ type ProbeLister interface {
 	Probes() []check.ProbeRef
 }
 
-type Registry struct {
+// NewProbeLister returns the lister of known groups and probes
+func NewProbeLister(runLoader, calcLoader ProbeLister) *RegistryProbeLister {
+	return &RegistryProbeLister{
+		groups: collectGroups(runLoader, calcLoader),
+		probes: collectProbes(runLoader, calcLoader),
+	}
+}
+
+type RegistryProbeLister struct {
 	// groups contain loaded groups
 	groups []string
 
 	// probes refs of contain loaded probes
 	probes []check.ProbeRef
+}
 
+func (pl *RegistryProbeLister) Probes() []check.ProbeRef {
+	return pl.probes
+}
+
+func (pl *RegistryProbeLister) Groups() []string {
+	return pl.groups
+}
+
+type Registry struct {
 	// runners contains allowed check runners
 	runners []*check.Runner
 
@@ -42,20 +62,10 @@ type Registry struct {
 	calculators []*calculated.Probe
 }
 
-func NewNotLoading(runLoader, calcLoader ProbeLister) *Registry {
-	return &Registry{
-		groups: collectGroups(runLoader, calcLoader),
-		probes: collectProbes(runLoader, calcLoader),
-	}
-}
-
 func New(runLoader *probe.Loader, calcLoader *calculated.Loader) *Registry {
 	return &Registry{
 		runners:     runLoader.Load(),
 		calculators: calcLoader.Load(),
-
-		groups: collectGroups(runLoader, calcLoader),
-		probes: collectProbes(runLoader, calcLoader),
 	}
 }
 
@@ -65,14 +75,6 @@ func (r *Registry) Runners() []*check.Runner {
 
 func (r *Registry) Calculators() []*calculated.Probe {
 	return r.calculators
-}
-
-func (r *Registry) Probes() []check.ProbeRef {
-	return r.probes
-}
-
-func (r *Registry) Groups() []string {
-	return r.groups
 }
 
 func collectGroups(ls ...ProbeLister) []string {
@@ -86,9 +88,19 @@ func collectGroups(ls ...ProbeLister) []string {
 }
 
 func collectProbes(ls ...ProbeLister) []check.ProbeRef {
-	probes := []check.ProbeRef{}
+	refs := []check.ProbeRef{}
+	seen := set.New()
 	for _, prober := range ls {
-		probes = append(probes, prober.Probes()...)
+		for _, ref := range prober.Probes() {
+			if seen.Has(ref.Id()) {
+				continue
+			}
+			seen.Add(ref.Id())
+
+			refs = append(refs, ref)
+		}
 	}
-	return probes
+
+	sort.Sort(check.ByProbeRef(refs))
+	return refs
 }
