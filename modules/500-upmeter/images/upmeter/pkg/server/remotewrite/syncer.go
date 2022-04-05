@@ -27,9 +27,9 @@ import (
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 
 	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/constant"
 	v1 "d8.io/upmeter/pkg/crd/v1"
 	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/util"
 )
 
 var ErrSkip = fmt.Errorf("skip export")
@@ -220,7 +220,7 @@ func newExportConfig(rw *v1.RemoteWrite) exportingConfig {
 			BasicAuth:   rw.Spec.Config.BasicAuth,
 			BearerToken: rw.Spec.Config.BearerToken,
 			Headers: map[string]string{
-				"User-Agent": util.ServerUserAgent,
+				"User-Agent": constant.ServerUserAgent,
 			},
 		},
 		slotSize: time.Duration(rw.Spec.IntervalSeconds) * time.Second,

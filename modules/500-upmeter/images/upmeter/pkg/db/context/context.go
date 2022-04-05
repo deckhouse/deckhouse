@@ -20,8 +20,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"d8.io/upmeter/pkg/util"
+	"os"
+	"strconv"
 )
 
 const (
@@ -48,9 +48,22 @@ func (c *DbContext) Connect(path string) error {
 	return nil
 }
 
+func parseIntEnvVar(name string) int {
+	s := os.Getenv(name)
+	if s == "" || s == "0" {
+		return 0
+	}
+
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
 // ConnectWithPool creates a pool of DB connections.
 func (c *DbContext) ConnectWithPool(path string, opts map[string]string) error {
-	size := util.GetenvInt64("UPMETER_DB_POOL_SIZE") // FIXME bring out to the app arguments
+	size := parseIntEnvVar("UPMETER_DB_POOL_SIZE") // FIXME bring out to the app arguments
 	if size == 0 {
 		size = defaultPoolSize
 	}

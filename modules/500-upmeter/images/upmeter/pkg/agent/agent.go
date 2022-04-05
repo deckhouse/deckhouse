@@ -23,13 +23,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/agent/manager"
 	"d8.io/upmeter/pkg/agent/scheduler"
 	"d8.io/upmeter/pkg/agent/sender"
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/db"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/registry"
 )
 
 type Agent struct {
@@ -43,14 +45,10 @@ type Agent struct {
 }
 
 type Config struct {
-	Period time.Duration
-
-	Namespace string
-
-	ClientConfig *sender.ClientConfig
-
-	DatabasePath           string
-	DatabaseMigrationsPath string
+	DisabledProbes []string
+	Period         time.Duration
+	ClientConfig   *sender.ClientConfig
+	DatabasePath   string
 }
 
 // Return agent with magic configuration
@@ -71,13 +69,9 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	// Probe registry
-	registry := manager.New(kubeAccess, a.logger)
-	for _, probe := range registry.Runners() {
-		a.logger.Infof("Register probe %s", probe.ProbeRef().Id())
-	}
-	for _, calc := range registry.Calculators() {
-		a.logger.Infof("Register calculated probe %s", calc.ProbeRef().Id())
-	}
+	runnerLoader := probe.NewLoader(kubeAccess, a.logger)
+	calcLoader := calculated.NewLoader(a.logger)
+	registry := registry.New(runnerLoader, calcLoader, a.config.DisabledProbes)
 
 	// Database connection with pool
 	dbctx, err := db.Connect(a.config.DatabasePath, dbcontext.DefaultConnectionOptions())

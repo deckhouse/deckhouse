@@ -19,8 +19,6 @@ package check
 import (
 	"fmt"
 	"time"
-
-	utime "d8.io/upmeter/pkg/time"
 )
 
 // Episode with time counters and start aligned to 30s or 5m
@@ -82,10 +80,10 @@ func (e Episode) Combine(o Episode, slotSize time.Duration) Episode {
 
 	// Combined NoData is a minimum of unavailable seconds.
 	// Episodes can be incomplete, so use slotSize for proper calculation.
-	targetAvail := utime.Longest(e.Avail(), o.Avail())
+	targetAvail := longest(e.Avail(), o.Avail())
 	target.NoData = slotSize - targetAvail
 
-	target.Up = utime.Longest(e.Up, o.Up)
+	target.Up = longest(e.Up, o.Up)
 
 	failUnknown := targetAvail - target.Up
 
@@ -99,7 +97,7 @@ func (e Episode) Combine(o Episode, slotSize time.Duration) Episode {
 
 	// Success and Fail seconds are filling Unknown, but not more than
 	// maximum sum of known seconds.
-	maxKnown := utime.Longest(e.Known(), o.Known())
+	maxKnown := longest(e.Known(), o.Known())
 	allowedFail := maxKnown - target.Up
 
 	if allowedFail == failUnknown {
@@ -161,4 +159,11 @@ type Stats struct {
 
 func (s Stats) String() string {
 	return fmt.Sprintf("(Σ%d ↑%d ↓%d ?%d)", s.Expected, s.Up, s.Down, s.Unknown)
+}
+
+func longest(a, b time.Duration) time.Duration {
+	if a > b {
+		return a
+	}
+	return b
 }

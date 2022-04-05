@@ -27,7 +27,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/util"
+	"d8.io/upmeter/pkg/constant"
 )
 
 type Client struct {
@@ -68,7 +68,7 @@ func (c *Client) Send(reqBody []byte) error {
 		return fmt.Errorf("cannot create POST request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", util.AgentUserAgent)
+	req.Header.Set("User-Agent", constant.AgentUserAgent)
 
 	resp, err := c.client.Do(req)
 	if err != nil {

@@ -18,8 +18,6 @@ package ranges
 
 import (
 	"time"
-
-	"d8.io/upmeter/pkg/util"
 )
 
 type StepRange struct {
@@ -78,7 +76,7 @@ func alignStep(step int64) int64 {
 		minStep     = int64(300)
 		alignedStep = step - step%minStep
 	)
-	return util.Max(minStep, alignedStep)
+	return maxInt64(minStep, alignedStep)
 }
 
 // alignStep makes sure the
@@ -87,4 +85,11 @@ func alignEdge(to, step int64) int64 {
 		return to
 	}
 	return to - to%step + step
+}
+
+func maxInt64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
 }

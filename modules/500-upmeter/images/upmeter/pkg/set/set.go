@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package set
 
 import (
 	"sort"
 )
 
-func NewStringSet(xs ...string) StringSet {
+func New(xs ...string) StringSet {
 	s := StringSet{}
 	for _, x := range xs {
 		s.Add(x)

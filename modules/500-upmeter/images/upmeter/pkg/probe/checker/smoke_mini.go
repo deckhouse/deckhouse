@@ -29,8 +29,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/constant"
 	"d8.io/upmeter/pkg/probe/util"
-	uutil "d8.io/upmeter/pkg/util"
 )
 
 // SmokeMiniAvailable is a checker constructor and configurator
@@ -171,7 +171,7 @@ func (c *smokeMiniChecker) request(ctx context.Context, ip string) error {
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
-	req.Header.Set("User-Agent", uutil.AgentUserAgent)
+	req.Header.Set("User-Agent", constant.AgentUserAgent)
 	if err != nil {
 		return err
 	}

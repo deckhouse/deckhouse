@@ -14,27 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package time
 
 import (
-	"os"
-	"strconv"
+	"time"
 )
 
-const (
-	AgentUserAgent  = "UpmeterAgent/1.0"
-	ServerUserAgent = "Upmeter/1.0"
-)
+// DoWithTimer runs jobCb in background and waits until it is done. When timerDuration
+// is passed and job is not done yet, onTimerCb is executed.
+func DoWithTimer(interval time.Duration, jobCb, onTimerCb func()) {
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
 
-func GetenvInt64(name string) int {
-	s := os.Getenv(name)
-	if s == "" || s == "0" {
-		return 0
-	}
+	// Start job in background
+	doneCh := make(chan struct{})
+	go func() {
+		jobCb()
+		close(doneCh)
+	}()
 
-	n, err := strconv.Atoi(s)
-	if err != nil {
-		return 0
+	// Wait for closed doneCh or for timeout signal.
+	for {
+		select {
+		case <-timer.C:
+			onTimerCb()
+		case <-doneCh:
+			return
+		}
 	}
-	return n
 }

@@ -21,8 +21,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"d8.io/upmeter/pkg/check"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/server/ranges"
@@ -77,52 +75,6 @@ func (d *EpisodeDao5m) GetBySlotAndProbe(slot time.Time, ref check.ProbeRef) (En
 	}
 
 	return records[0], nil
-}
-
-// TODO (e.shevchenko): can be DRYed ? ?
-func (d *EpisodeDao5m) ListByRange(from, to int64) ([]Entity, error) {
-	const query = selectEntityStmt + `
-	FROM    episodes_5m
-	WHERE   timeslot >= ? AND timeslot < ?
-	`
-
-	rows, err := d.DbCtx.StmtRunner().Query(query, from, to)
-	if err != nil {
-		return nil, fmt.Errorf("select for TimeslotRange: %v", err)
-	}
-	defer rows.Close()
-
-	return parseEpisodeEntities(rows)
-}
-
-// TODO (e.shevchenko): can be DRYed ?
-func (d *EpisodeDao5m) ListGroupProbe() ([]check.ProbeRef, error) {
-	const query = `
-	SELECT DISTINCT
-		group_name, probe_name
-	FROM
-		episodes_5m
-	ORDER BY 1, 2
-	`
-
-	rows, err := d.DbCtx.StmtRunner().Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("select group and probe: %v", err)
-	}
-	defer rows.Close()
-
-	res := make([]check.ProbeRef, 0)
-	for rows.Next() {
-		ref := check.ProbeRef{}
-		err := rows.Scan(&ref.Group, &ref.Probe)
-		if err != nil {
-			return nil, fmt.Errorf("row to ProbeRef: %v", err)
-		}
-		res = append(res, ref)
-		log.Infof("got probeRef=%s", ref.Id())
-	}
-
-	return res, nil
 }
 
 // TODO (e.shevchenko): can be DRYed ?

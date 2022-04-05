@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/probe/util"
+	utime "d8.io/upmeter/pkg/time"
 )
 
 // Config is basically a checker constructor with verbose arguments
@@ -99,7 +99,7 @@ func (c *timeoutChecker) BusyWith() string {
 
 func (c *timeoutChecker) Check() check.Error {
 	var err check.Error
-	util.DoWithTimer(c.timeout,
+	utime.DoWithTimer(c.timeout,
 		func() {
 			err = c.checker.Check()
 		},

@@ -26,7 +26,7 @@ import (
 type Runner struct {
 	// defined by check
 	ref       *ProbeRef
-	CheckName string
+	checkName string
 	checker   Checker
 	period    time.Duration
 
@@ -43,7 +43,7 @@ func NewRunner(groupName, probeName, checkName string, period time.Duration, che
 	}
 	return &Runner{
 		ref:       ref,
-		CheckName: checkName,
+		checkName: checkName,
 		checker:   checker,
 		period:    period,
 		state:     &state{},
@@ -66,7 +66,7 @@ func (r *Runner) Run(start time.Time) Result {
 		r.logger.WithField("status", status).Errorf(err.Error())
 	}
 
-	return NewResult(*r.ref, r.CheckName, status)
+	return NewResult(*r.ref, r.checkName, status)
 }
 
 func (r *Runner) Period() time.Duration {

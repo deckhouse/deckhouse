@@ -29,7 +29,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/set"
 )
 
 // DaemonSetPodsReady is a checker constructor and configurator
@@ -128,7 +128,7 @@ type dsPodStateChecker struct {
 
 // deduceDaemonSetPodsStatus checks that all pods from desired nodes are ok
 func (c *dsPodStateChecker) Check() check.Error {
-	nodeNames := util.NewStringSet(c.nodeNames...)
+	nodeNames := set.New(c.nodeNames...)
 
 	for _, pod := range c.pods {
 		if !nodeNames.Has(pod.Spec.NodeName) {

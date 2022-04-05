@@ -26,7 +26,6 @@ import (
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/db"
 	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/util"
 )
 
 const originsSep = ":"
@@ -324,7 +323,7 @@ func getEarliestTimeSlot(ctx *dbcontext.DbContext, syncID string, originsCount i
 	}
 
 	// Slots are numbers there because this is not public interface
-	minSlot := util.Min(fulfilledSlot, commonSlot)
+	minSlot := minInt64(fulfilledSlot, commonSlot)
 	return minSlot, nil
 }
 
@@ -416,4 +415,11 @@ func getExportEpisodesBySyncIDAndSlot(ctx *dbcontext.DbContext, syncID string, s
 	defer rows.Close()
 
 	return parseExportEpisodeEntities(rows)
+}
+
+func minInt64(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
 }

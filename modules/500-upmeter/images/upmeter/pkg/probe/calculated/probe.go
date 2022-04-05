@@ -17,10 +17,23 @@ limitations under the License.
 package calculated
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/probe"
 )
 
-func Load() []*Probe {
+func NewLoader(logger *log.Logger) *Loader {
+	return &Loader{logger: logger}
+}
+
+type Loader struct {
+	logger *log.Logger
+	groups []string
+	probes []check.ProbeRef
+}
+
+func (l *Loader) Load(filter probe.Filter) []*Probe {
 	configs := []config{
 		{
 			group: "monitoring-and-autoscaling",
@@ -34,9 +47,27 @@ func Load() []*Probe {
 
 	probes := make([]*Probe, 0)
 	for _, c := range configs {
+		ref := check.ProbeRef{Group: c.group, Probe: c.probe}
+		if !filter.Enabled(ref) {
+			continue
+		}
+
 		probes = append(probes, c.Probe())
+
+		l.groups = append(l.groups, c.group)
+		l.probes = append(l.probes, ref)
+
+		l.logger.Infof("Register calculated probe %s", ref.Id())
 	}
 	return probes
+}
+
+func (l *Loader) Groups() []string {
+	return l.groups
+}
+
+func (l *Loader) Probes() []check.ProbeRef {
+	return l.probes
 }
 
 // config is a convenient wrapper to create calculated probe
