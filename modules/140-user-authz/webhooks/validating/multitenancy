@@ -15,7 +15,6 @@
 # limitations under the License.
 
 source /shell_lib.sh
-source /deckhouse/shell_lib.sh
 
 function __config__(){
   cat <<EOF
@@ -23,17 +22,30 @@ configVersion: v1
 kubernetesValidating:
 - name: d8-authz-multitenancy.deckhouse.io
   group: main
+  includeSnapshotsFrom: d8-authz-webhook-cm
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
     operations:  ["CREATE", "UPDATE"]
     resources:   ["clusterauthorizationrules"]
     scope:       "Cluster"
+- name: d8-authz-webhook-cm
+  apiVersion: v1
+  kind: ConfigMap
+  executeHookOnEvent: []
+  keepFullObjectsInMemory: false
+  nameSelector:
+    matchNames:
+    - user-authz-webhook
+  namespace:
+    nameSelector:
+      matchNames: ["d8-user-authz"]
 EOF
 }
 
 function __main__() {
-  enableMultiTenancy=$(values::get userAuthz.enableMultiTenancy)
+  enableMultiTenancy=$(context::jq -rc '.snapshots.d8-authz-webhook-cm[] | length > 0')
+  echo $enableMultiTenancy
   # don't check ClusterAuthorizationRule if MultiTenancy is enabled
   if [[ "$enableMultiTenancy" == "true" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
