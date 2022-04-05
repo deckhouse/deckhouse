@@ -54,10 +54,10 @@ type ProbeLister interface {
 }
 
 // NewProbeLister returns the lister of known groups and probes
-func NewProbeLister(runLoader, calcLoader ProbeLister) *RegistryProbeLister {
+func NewProbeLister(listers ...ProbeLister) *RegistryProbeLister {
 	return &RegistryProbeLister{
-		groups: collectGroups(runLoader, calcLoader),
-		probes: collectProbes(runLoader, calcLoader),
+		groups: collectGroups(listers...),
+		probes: collectProbes(listers...),
 	}
 }
 
