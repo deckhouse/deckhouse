@@ -42,6 +42,7 @@ rules:
     resources:
       - replicasets
     verbs:
+      - watch
       - get
       - list
   - apiGroups:

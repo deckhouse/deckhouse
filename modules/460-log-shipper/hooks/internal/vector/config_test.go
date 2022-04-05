@@ -19,7 +19,6 @@ package vector
 import (
 	"testing"
 
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +48,7 @@ func TestDestPatch(t *testing.T) {
 		gen := NewLogConfigGenerator()
 
 		source1 := NewKubernetesLogSource("s1", v1alpha1.KubernetesPodsSpec{}, false)
-		source2 := NewKubernetesLogSource("s2", v1alpha1.KubernetesPodsSpec{NamespaceSelector: types.NameSelector{MatchNames: []string{"n1", "n2"}}}, false)
+		source2 := NewKubernetesLogSource("s2", v1alpha1.KubernetesPodsSpec{NamespaceSelector: v1alpha1.NamespaceSelector{MatchNames: []string{"n1", "n2"}}}, false)
 		dest := NewLokiDestination("d1", v1alpha1.ClusterLogDestinationSpec{})
 
 		gen.AppendLogPipeline(source1, nil, []impl.LogDestination{dest})
@@ -62,8 +61,8 @@ func TestDestPatch(t *testing.T) {
 	t.Run("Namespaced", func(t *testing.T) {
 		gen := NewLogConfigGenerator()
 
-		source1 := NewKubernetesLogSource("s1", v1alpha1.KubernetesPodsSpec{NamespaceSelector: types.NameSelector{MatchNames: []string{"ns1"}}}, true)
-		source2 := NewKubernetesLogSource("s2", v1alpha1.KubernetesPodsSpec{NamespaceSelector: types.NameSelector{MatchNames: []string{"ns2"}}}, true)
+		source1 := NewKubernetesLogSource("s1", v1alpha1.KubernetesPodsSpec{NamespaceSelector: v1alpha1.NamespaceSelector{MatchNames: []string{"ns1"}}}, true)
+		source2 := NewKubernetesLogSource("s2", v1alpha1.KubernetesPodsSpec{NamespaceSelector: v1alpha1.NamespaceSelector{MatchNames: []string{"ns2"}}}, true)
 		dest := NewLokiDestination("d1", v1alpha1.ClusterLogDestinationSpec{})
 
 		gen.AppendLogPipeline(source1, nil, []impl.LogDestination{dest})
@@ -76,7 +75,7 @@ func TestDestPatch(t *testing.T) {
 
 func TestConfig_1(t *testing.T) {
 	src := NewKubernetesLogSource("testsource", v1alpha1.KubernetesPodsSpec{
-		NamespaceSelector: types.NameSelector{MatchNames: []string{"foot", "baar"}},
+		NamespaceSelector: v1alpha1.NamespaceSelector{MatchNames: []string{"foot", "baar"}},
 		LabelSelector: metav1.LabelSelector{
 			MatchLabels: map[string]string{"aaaa": "bbbb"},
 		},
@@ -96,80 +95,12 @@ func TestConfig_1(t *testing.T) {
 	conf, err := gen.GenerateConfig()
 	require.NoError(t, err)
 
-	assert.JSONEq(t, `
-{
-  "sources": {
-    "d8_clusterns_source_baar_testsource": {
-      "type": "kubernetes_logs",
-      "extra_label_selector": "aaaa=bbbb",
-      "extra_field_selector": "metadata.namespace=baar",
-      "annotation_fields": {
-        "container_image": "image",
-        "container_name": "container",
-        "pod_ip": "pod_ip",
-        "pod_labels": "pod_labels",
-        "pod_name": "pod",
-        "pod_namespace": "namespace",
-        "pod_node_name": "node",
-        "pod_owner": "pod_owner"
-      },
-      "glob_minimum_cooldown_ms": 1000
-    },
-    "d8_clusterns_source_foot_testsource": {
-      "type": "kubernetes_logs",
-      "extra_label_selector": "aaaa=bbbb",
-      "extra_field_selector": "metadata.namespace=foot",
-      "annotation_fields": {
-        "container_image": "image",
-        "container_name": "container",
-        "pod_ip": "pod_ip",
-        "pod_labels": "pod_labels",
-        "pod_name": "pod",
-        "pod_namespace": "namespace",
-        "pod_node_name": "node",
-        "pod_owner": "pod_owner"
-      },
-      "glob_minimum_cooldown_ms": 1000
-    }
-  },
-  "sinks": {
-    "d8_cluster_sink_testoutput": {
-      "type": "loki",
-      "inputs": [
-        "d8_clusterns_source_foot_testsource",
-        "d8_clusterns_source_baar_testsource"
-      ],
-      "encoding": {
-        "codec": "text",
-        "timestamp_format": "rfc3339",
-        "only_fields": ["message"]
-      },
-      "endpoint": "http://testmeip:9000",
-      "healthcheck": {
-        "enabled": false
-      },
-      "labels": {
-        "container": "{{ container }}",
-        "image": "{{ image }}",
-        "namespace": "{{ namespace }}",
-        "node": "{{ node }}",
-        "pod": "{{ pod }}",
-        "pod_ip": "{{ pod_ip }}",
-        "stream": "{{ stream }}",
-        "pod_labels": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}"
-      },
-      "remove_label_fields": true,
-      "out_of_order_action": "rewrite_timestamp"
-    }
-  }
-}
-`, string(conf))
+	assert.JSONEq(t, loadMock(t, "config", "config_1.json"), string(conf))
 }
 
 func TestConfig_2(t *testing.T) {
 	src := NewKubernetesLogSource("testsource", v1alpha1.KubernetesPodsSpec{
-		NamespaceSelector: types.NameSelector{MatchNames: []string{"foot", "baar"}},
+		NamespaceSelector: v1alpha1.NamespaceSelector{MatchNames: []string{"foot", "baar"}},
 		LabelSelector: metav1.LabelSelector{
 			MatchLabels: map[string]string{"aaaa": "bbbb"},
 			MatchExpressions: []metav1.LabelSelectorRequirement{{
@@ -198,70 +129,7 @@ func TestConfig_2(t *testing.T) {
 	conf, err := gen.GenerateConfig()
 	require.NoError(t, err)
 
-	assert.JSONEq(t, `
-{
-  "sources": {
-    "d8_clusterns_source_baar_testsource": {
-      "type": "kubernetes_logs",
-      "extra_label_selector": "aaaa=bbbb,baz in (norf,qux)",
-      "extra_field_selector": "metadata.namespace=baar",
-      "annotation_fields": {
-        "container_image": "image",
-        "container_name": "container",
-        "pod_ip": "pod_ip",
-        "pod_labels": "pod_labels",
-        "pod_name": "pod",
-        "pod_namespace": "namespace",
-        "pod_node_name": "node",
-        "pod_owner": "pod_owner"
-      },
-      "glob_minimum_cooldown_ms": 1000
-    },
-    "d8_clusterns_source_foot_testsource": {
-      "type": "kubernetes_logs",
-      "extra_label_selector": "aaaa=bbbb,baz in (norf,qux)",
-      "extra_field_selector": "metadata.namespace=foot",
-      "annotation_fields": {
-        "container_image": "image",
-        "container_name": "container",
-        "pod_ip": "pod_ip",
-        "pod_labels": "pod_labels",
-        "pod_name": "pod",
-        "pod_namespace": "namespace",
-        "pod_node_name": "node",
-        "pod_owner": "pod_owner"
-      },
-      "glob_minimum_cooldown_ms": 1000
-    }
-  },
-  "sinks": {
-    "d8_cluster_sink_testoutput": {
-      "type": "socket",
-      "inputs": [
-        "d8_clusterns_source_foot_testsource",
-        "d8_clusterns_source_baar_testsource"
-      ],
-      "address": "192.168.0.1:9000",
-      "mode": "tcp",
-      "encoding": {
-        "codec": "json",
-        "timestamp_format": "rfc3339"
-      },
-      "healthcheck": {
-        "enabled": false
-      },
-      "tls": {
-          "ca_file": "-----BEGIN CERTIFICATE-----\nMIIC0DCCAbigAwIBAgIUSmTpJQESJpl0nCQPkHpoO/wslhUwDQYJKoZIhvcNAQEL\nBQAwETEPMA0GA1UEAwwGdWJ1bnR1MB4XDTIwMDMxNTExMzcwN1oXDTMwMDMxMzEx\nMzcwN1owETEPMA0GA1UEAwwGdWJ1bnR1MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nMIIBCgKCAQEAzNjtX5hklYzf+Obx52Paq0gIP4S/u1OKhS+zx1xDGlqPYtjL7p3a\neBFzDRppXcra8YWL97JtnaPzvduyoEEiTYvkWrrwM6szH8+dGH1MTfCRGKZQrXHL\nnT6HRv7s/TFcJ6Fg2R505vzPS+bxWgvfdZR1cTmALwd2YNde1p4wPfW+89MJxYX0\ndXrM/VM88cpRsVRlP6HyLLs562BnPsWJYTAeLpmI/NW/a3zc1Czh0nPruOoQ84dE\nVTjbuNL0yH3Yj3OW/KhlIbRn1zoYXxPwQgKl2xKgHHXyDAD/fr3/KNH8+gh+6QMA\nu6sPY1Xf2GXCJkXZuURG3mpidfYzzjU/+wIDAQABoyAwHjAJBgNVHRMEAjAAMBEG\nA1UdEQQKMAiCBnVidW50dTANBgkqhkiG9w0BAQsFAAOCAQEAIcBO2GzXEMYlu510\nD22JZqdtyALuER+fDptwnKHKeRawiYNYNJWATeRXsF1IINxHYRQcye8G8TMhbMVk\nvOhV0DzE1Qv4HY2jSJ6mydhAhQKAQSeHVvHou7/Al3FT5Oz92iFore4B+aFFYyI6\nayKtYvW/LpOu1i07Ty/DVY0TB7/0oc+wn3zPTdWvcUJ/Ka+SiMJXvfqhRgDx+AQT\nsnY2JzFHSiY/V7UccAHlZaQO7rscv9gfCDtDg/AU1RmB+L9h3cru0ki16ISxLo6P\nRlc+xbMFjJ0fhbyrJt8sJhQkfzrHf6IUzf/xiNmPGekOj/eZG1l089DrFLhOpM6R\nvukJXQ==\n-----END CERTIFICATE-----\n",
-          "crt_file": "-----BEGIN CERTIFICATE-----\nMIIC0DCCAbigAwIBAgIUSmTpJQESJpl0nCQPkHpoO/wslhUwDQYJKoZIhvcNAQEL\nBQAwETEPMA0GA1UEAwwGdWJ1bnR1MB4XDTIwMDMxNTExMzcwN1oXDTMwMDMxMzEx\nMzcwN1owETEPMA0GA1UEAwwGdWJ1bnR1MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nMIIBCgKCAQEAzNjtX5hklYzf+Obx52Paq0gIP4S/u1OKhS+zx1xDGlqPYtjL7p3a\neBFzDRppXcra8YWL97JtnaPzvduyoEEiTYvkWrrwM6szH8+dGH1MTfCRGKZQrXHL\nnT6HRv7s/TFcJ6Fg2R505vzPS+bxWgvfdZR1cTmALwd2YNde1p4wPfW+89MJxYX0\ndXrM/VM88cpRsVRlP6HyLLs562BnPsWJYTAeLpmI/NW/a3zc1Czh0nPruOoQ84dE\nVTjbuNL0yH3Yj3OW/KhlIbRn1zoYXxPwQgKl2xKgHHXyDAD/fr3/KNH8+gh+6QMA\nu6sPY1Xf2GXCJkXZuURG3mpidfYzzjU/+wIDAQABoyAwHjAJBgNVHRMEAjAAMBEG\nA1UdEQQKMAiCBnVidW50dTANBgkqhkiG9w0BAQsFAAOCAQEAIcBO2GzXEMYlu510\nD22JZqdtyALuER+fDptwnKHKeRawiYNYNJWATeRXsF1IINxHYRQcye8G8TMhbMVk\nvOhV0DzE1Qv4HY2jSJ6mydhAhQKAQSeHVvHou7/Al3FT5Oz92iFore4B+aFFYyI6\nayKtYvW/LpOu1i07Ty/DVY0TB7/0oc+wn3zPTdWvcUJ/Ka+SiMJXvfqhRgDx+AQT\nsnY2JzFHSiY/V7UccAHlZaQO7rscv9gfCDtDg/AU1RmB+L9h3cru0ki16ISxLo6P\nRlc+xbMFjJ0fhbyrJt8sJhQkfzrHf6IUzf/xiNmPGekOj/eZG1l089DrFLhOpM6R\nvukJXQ==\n-----END CERTIFICATE-----\n",
-          "key_file": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDM2O1fmGSVjN/4\n5vHnY9qrSAg/hL+7U4qFL7PHXEMaWo9i2Mvundp4EXMNGmldytrxhYv3sm2do/O9\n27KgQSJNi+RauvAzqzMfz50YfUxN8JEYplCtccudPodG/uz9MVwnoWDZHnTm/M9L\n5vFaC991lHVxOYAvB3Zg117WnjA99b7z0wnFhfR1esz9UzzxylGxVGU/ofIsuznr\nYGc+xYlhMB4umYj81b9rfNzULOHSc+u46hDzh0RVONu40vTIfdiPc5b8qGUhtGfX\nOhhfE/BCAqXbEqAcdfIMAP9+vf8o0fz6CH7pAwC7qw9jVd/YZcImRdm5REbeamJ1\n9jPONT/7AgMBAAECggEAf2cLe0EUjc6oHe3E1dzMy2ppdtfhR2iV5m/cqElBkspw\nE1Iyw515muN/Ys7iaWsY8M3WV5+pfTnTBmn1lqXr577xr1xEuF3p1gcR9YE4S+Eq\n3OHTm4wCzzFsgUNbsb1ZS2ybB25h1qe1ZcekpBRuTnqe8GSKzLUfcuuAGIsaBe4K\n0MwfuJyHRsjBI5+8gNPTh+j/dubLPpMZCW/wgtwfTi1PzONNPYXSF80AVnO2pfpg\nowvNpHGadGQP+dUVGLQE8luB891AR7zNTL4w9nMxDDD2xrjp4EIBu064GpXXemie\n5yJnHhxKPLuuyZy1VcArHjo4hgUkReYmJ59jWEtrwQKBgQD/5myGVfBhdx2nnzpi\n8a/5U5A83NTtaH/r/PYFZnF+ln89I67u6cGpEZ22LgkyDdEZrxrjzBU3YzOu9hGG\nkuOQq87RvIw2SdS+eDFFBH1+cT4mtSRaMsmf3q4Ysgkt8T8X1w2n/41BSHsdDySt\ntGec12sF9I8idO7lVYMttK5BJwKBgQDM7WacU+wypwmJx87KBNLrT3fWycO1smes\nahAt+WkujU/38NHRSfo2n54u0Tl2Bo0sZUc1StKt5NCkG05s95fIhwnjJn1uksEh\njGJTs5ioljgXseqNGmMAJK3GIcjaKMA1R4zdCeWkXH1NY/J/DP7+lDXHdO7CXUHu\nsfmppnknDQKBgCS6L41APFXgwLLUGY8l3PnN0n/Jug2w19tI3Q59W4CtnOlre6ny\nhsb7LkV9afhzHzWueg+DtO/UHxDXZECKSHr1DaPwibco9Y24tmmPcWt6WU845FTF\nwUZesWH9+29KlqGXTfB0rxNVkcXj7IG5yL0r9cJPDVQGsFrd4QvoSLI1AoGBAKGw\nSn7b5IhOrULtyOYyiiypxfdNuMJa4lvyT5PGr0vQqaEKfLIyOV7x8AAmirzqDGdT\n/aw5viMAX/KrrORjMnpAufdkviEJX6LVvhsmoDOcWuOvOE5e3HAXgJjMvUoMTyN6\nsdURYwSdCSyPyJygJ228iPY3986ZgFUSTdeihwLdAoGAOjGd45RkSeMjJnhJJkj5\nGElkOkzx+Ao720WC9Fh0wOU3xABrp/mYqyqoftJcJiZx93aIr/V9jHC0jWuuuSqF\n1w+pQws9UWwZ+K4LYdc/NzxIdQ1tJbtwc7bkTI96Rn1rfvLsR7+oKKMeQSDoGQWa\nGZREgFbmcvHckfWfWdXqTFc=\n-----END PRIVATE KEY-----\n",
-          "enabled": true,
-          "verify_certificate": false,
-          "verify_hostname": false
-      }
-    }
-  }
-}
-`, string(conf))
+	assert.JSONEq(t, loadMock(t, "config", "config_2.json"), string(conf))
 }
 
 func TestConfig_3(t *testing.T) {
@@ -287,44 +155,5 @@ func TestConfig_3(t *testing.T) {
 	conf, err := gen.GenerateConfig()
 	require.NoError(t, err)
 
-	assert.JSONEq(t, `
-{
-  "sources": {
-    "testfile": {
-      "type": "file",
-      "include": [
-		  "/var/log/*log",
-		  "/var/log/nginx/*.access.log"
-	   ],
-	  "exclude": [ "/var/log/syslog" ]
-    }
-  },
-  "sinks": {
-    "d8_cluster_sink_testoutput": {
-      "type": "elasticsearch",
-      "inputs": [
-        "testfile"
-      ],
-      "endpoint": "https://192.168.0.1:9200",
-      "encoding": {
-        "timestamp_format": "rfc3339"
-      },
-      "tls": {
-        "verify_hostname": true
-      },
-      "batch": {
-          "timeout_secs": 1,
-          "max_bytes": 10485760
-      },
-      "healthcheck": {
-        "enabled": false
-      },
-	  "compression": "gzip",
-    "bulk_action": "index",
-    "index": "{{ kubernetes.namespace }}-%F",
-    "pipeline": "test-pipe"
-    }
-  }
-}
-`, string(conf))
+	assert.JSONEq(t, loadMock(t, "config", "config_3.json"), string(conf))
 }

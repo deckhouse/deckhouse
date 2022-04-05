@@ -23,14 +23,16 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
 )
 
-// engine names
-const DestElasticsearch = "Elasticsearch"
-const DestLogstash = "Logstash"
-const DestLoki = "Loki"
+const (
+	DestElasticsearch = "Elasticsearch"
+	DestLogstash      = "Logstash"
+	DestLoki          = "Loki"
+)
 
-// source names
-const SourceKubernetesPods = "KubernetesPods"
-const SourceFile = "File"
+const (
+	SourceKubernetesPods = "KubernetesPods"
+	SourceFile           = "File"
+)
 
 type ClusterLoggingConfig struct {
 	metav1.TypeMeta `json:",inline"`
@@ -113,7 +115,6 @@ type LogstashEncoding struct {
 	TimestampFormat string   `json:"timestamp_format,omitempty"`
 }
 
-// TLS configuration. Can be set for loki and ES
 type CommonTLS struct {
 	CAFile         string `json:"ca_file,omitempty"`
 	CertFile       string `json:"crt_file,omitempty"`
@@ -122,11 +123,14 @@ type CommonTLS struct {
 	VerifyHostname bool   `json:"verify_hostname"`
 }
 
-// TLS configuration. Can be set for loki and ES
 type LogstashTLS struct {
 	CommonTLS         `json:",inline"`
 	VerifyCertificate bool `json:"verify_certificate"`
 	Enabled           bool `json:"enabled"`
+}
+
+type LogstashKeepalive struct {
+	TimeSecs int `json:"time_secs"`
 }
 
 type batch struct {
@@ -207,4 +211,6 @@ type logstashDestination struct {
 	Mode string `json:"mode"`
 
 	TLS LogstashTLS `json:"tls,omitempty"`
+
+	Keepalive LogstashKeepalive `json:"keepalive,omitempty"`
 }

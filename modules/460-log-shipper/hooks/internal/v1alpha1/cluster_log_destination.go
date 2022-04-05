@@ -77,21 +77,21 @@ type ElasticsearchAuthSpec struct {
 	AwsRegion     string `json:"awsRegion,omitempty"`
 }
 
-// TLS configuration. Client certificate
+// CommonTLSClientCert is a TLS configuration. Client certificate
 type CommonTLSClientCert struct {
 	CertFile string `json:"crtFile,omitempty"`
 	KeyFile  string `json:"keyFile,omitempty"`
 	KeyPass  string `json:"keyPass,omitempty"`
 }
 
-// TLS configuration. Can be set for loki and ES
+// CommonTLSSpec is a TLS configuration. Can be set for loki and ES
 type CommonTLSSpec struct {
 	CommonTLSClientCert `json:"clientCrt,omitempty"`
 	CAFile              string `json:"caFile,omitempty"`
 	VerifyHostname      bool   `json:"verifyHostname,omitempty"`
 }
 
-// TLS configuration. Can be setstrings.ToLower( for loki and ES
+// LogstashTLSSpec is a TLS configuration. Can be setstrings.ToLower( for loki and ES
 type LogstashTLSSpec struct {
 	CommonTLSSpec     `json:",inline"`
 	VerifyCertificate bool `json:"verifyCertificate,omitempty"`

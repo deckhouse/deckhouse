@@ -595,6 +595,10 @@ entries:
                     en: Usage
                   url: /modules/460-log-shipper/usage.html
                 - title:
+                    ru: Расширенная конфигурация
+                    en: Advanced Usage
+                  url: /modules/460-log-shipper/advanced_usage.html
+                - title:
                     ru: Справка
                     en: Reference
                   folders:

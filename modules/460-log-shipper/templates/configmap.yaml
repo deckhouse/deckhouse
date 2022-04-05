@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vector-daemon-config
+  name: log-shipper-config
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 data:
@@ -9,7 +9,7 @@ data:
     {
       "data_dir": "/vector-data",
       "api" : {
-        "address" : "0.0.0.0:8686",
+        "address" : "127.0.0.1:8686",
         "enabled" : true,
         "playground" : false
       },
