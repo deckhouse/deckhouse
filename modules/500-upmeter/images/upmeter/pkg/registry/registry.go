@@ -42,14 +42,17 @@ type Registry struct {
 	calculators []*calculated.Probe
 }
 
-func New(runLoader *probe.Loader, calcLoader *calculated.Loader, disabled []string) *Registry {
-	ftr := newSkippedFilter(disabled)
-	runners := runLoader.Load(ftr)
-	calculators := calcLoader.Load(ftr)
-
+func NewNotLoading(runLoader, calcLoader ProbeLister) *Registry {
 	return &Registry{
-		runners:     runners,
-		calculators: calculators,
+		groups: collectGroups(runLoader, calcLoader),
+		probes: collectProbes(runLoader, calcLoader),
+	}
+}
+
+func New(runLoader *probe.Loader, calcLoader *calculated.Loader) *Registry {
+	return &Registry{
+		runners:     runLoader.Load(),
+		calculators: calcLoader.Load(),
 
 		groups: collectGroups(runLoader, calcLoader),
 		probes: collectProbes(runLoader, calcLoader),
@@ -88,16 +91,4 @@ func collectProbes(ls ...ProbeLister) []check.ProbeRef {
 		probes = append(probes, prober.Probes()...)
 	}
 	return probes
-}
-
-func newSkippedFilter(disabled []string) filter {
-	return filter{refs: set.New(disabled...)}
-}
-
-type filter struct {
-	refs set.StringSet
-}
-
-func (f filter) Enabled(ref check.ProbeRef) bool {
-	return !(f.refs.Has(ref.Id()) || f.refs.Has(ref.Group) || f.refs.Has(ref.Group+"/"))
 }

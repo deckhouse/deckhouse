@@ -21,19 +21,31 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/set"
 )
 
-func NewLoader(logger *log.Logger) *Loader {
-	return &Loader{logger: logger}
+func NewLoader(filter probe.Filter, logger *log.Logger) *Loader {
+	return &Loader{
+		filter: filter,
+		logger: logger,
+	}
 }
 
 type Loader struct {
+	filter probe.Filter
 	logger *log.Logger
+
 	groups []string
 	probes []check.ProbeRef
+
+	configs []config
 }
 
-func (l *Loader) Load(filter probe.Filter) []*Probe {
+func (l *Loader) collectConfigs() []config {
+	if l.configs != nil {
+		return l.configs
+	}
+
 	configs := []config{
 		{
 			group: "monitoring-and-autoscaling",
@@ -45,28 +57,51 @@ func (l *Loader) Load(filter probe.Filter) []*Probe {
 		},
 	}
 
-	probes := make([]*Probe, 0)
+	l.configs = make([]config, 0)
 	for _, c := range configs {
 		ref := check.ProbeRef{Group: c.group, Probe: c.probe}
-		if !filter.Enabled(ref) {
+		if !l.filter.Enabled(ref) {
 			continue
 		}
+		l.configs = append(l.configs, c)
+	}
+	return l.configs
+}
 
-		probes = append(probes, c.Probe())
-
-		l.groups = append(l.groups, c.group)
-		l.probes = append(l.probes, ref)
-
-		l.logger.Infof("Register calculated probe %s", ref.Id())
+func (l *Loader) Load() []*Probe {
+	probes := make([]*Probe, 0)
+	for _, c := range l.collectConfigs() {
+		p := c.Probe()
+		probes = append(probes, p)
+		l.logger.Infof("Registered calculated probe %s", p.ProbeRef().Id())
 	}
 	return probes
 }
 
 func (l *Loader) Groups() []string {
+	if l.groups != nil {
+		return l.groups
+	}
+
+	groups := set.New()
+	for _, c := range l.collectConfigs() {
+		groups.Add(c.group)
+	}
+
+	l.groups = groups.Slice()
 	return l.groups
 }
 
 func (l *Loader) Probes() []check.ProbeRef {
+	if l.probes != nil {
+		return l.probes
+	}
+
+	l.probes = make([]check.ProbeRef, 0)
+	for _, c := range l.collectConfigs() {
+		l.probes = append(l.probes, *c.Probe().ref)
+	}
+
 	return l.probes
 }
 

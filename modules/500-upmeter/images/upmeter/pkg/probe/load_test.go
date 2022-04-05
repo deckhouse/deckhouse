@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package registry
+package probe
 
 import (
 	"testing"
@@ -24,8 +24,8 @@ import (
 	"d8.io/upmeter/pkg/check"
 )
 
-func Test_newSkippedFilter(t *testing.T) {
-	filter := newSkippedFilter([]string{"full/ref", "notslashed", "slashed/"})
+func Test_NewProbeFilter(t *testing.T) {
+	filter := NewProbeFilter([]string{"full/ref", "notslashed", "slashed/"})
 
 	// exact matches
 	assert.False(t, filter.Enabled(check.ProbeRef{Group: "full", Probe: "ref"}))

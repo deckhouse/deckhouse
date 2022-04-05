@@ -105,9 +105,10 @@ func (s *server) Start(ctx context.Context) error {
 	// Probe registry
 	silent := newDummyLogger()
 	kubeAccess := &kubernetes.Accessor{}
-	runnerLoader := probe.NewLoader(kubeAccess, silent.Logger)
-	calcLoader := calculated.NewLoader(silent.Logger)
-	registry := registry.New(runnerLoader, calcLoader, []string{})
+	filter := probe.NewProbeFilter([]string{})
+	runnerLoader := probe.NewLoader(filter, kubeAccess, silent.Logger)
+	calcLoader := calculated.NewLoader(filter, silent.Logger)
+	registry := registry.NewNotLoading(runnerLoader, calcLoader)
 
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")

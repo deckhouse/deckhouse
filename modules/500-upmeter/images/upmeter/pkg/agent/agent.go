@@ -69,9 +69,10 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	// Probe registry
-	runnerLoader := probe.NewLoader(kubeAccess, a.logger)
-	calcLoader := calculated.NewLoader(a.logger)
-	registry := registry.New(runnerLoader, calcLoader, a.config.DisabledProbes)
+	ftr := probe.NewProbeFilter(a.config.DisabledProbes)
+	runnerLoader := probe.NewLoader(ftr, kubeAccess, a.logger)
+	calcLoader := calculated.NewLoader(ftr, a.logger)
+	registry := registry.New(runnerLoader, calcLoader)
 
 	// Database connection with pool
 	dbctx, err := db.Connect(a.config.DatabasePath, dbcontext.DefaultConnectionOptions())
