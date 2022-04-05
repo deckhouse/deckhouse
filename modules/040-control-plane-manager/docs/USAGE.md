@@ -2,6 +2,8 @@
 title: "Managing control plane: usage"
 ---
 
+Below is a simple control plane configuration example:
+
 ```yaml
 controlPlaneManagerEnabled: "true"
 controlPlaneManager: |
