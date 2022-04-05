@@ -22,13 +22,14 @@ configVersion: v1
 kubernetesValidating:
 - name: d8-authz-multitenancy.deckhouse.io
   group: main
-  includeSnapshotsFrom: d8-authz-webhook-cm
+  includeSnapshotsFrom: "d8-authz-webhook-cm"
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
     operations:  ["CREATE", "UPDATE"]
     resources:   ["clusterauthorizationrules"]
     scope:       "Cluster"
+kubernetes:
 - name: d8-authz-webhook-cm
   apiVersion: v1
   kind: ConfigMap
