@@ -21,8 +21,7 @@ function __config__(){
 configVersion: v1
 kubernetesValidating:
 - name: d8-authz-multitenancy.deckhouse.io
-  group: main
-  includeSnapshotsFrom: "d8-authz-webhook-cm"
+  includeSnapshotsFrom: ["d8-authz-webhook-cm"]
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
@@ -34,6 +33,7 @@ kubernetes:
   apiVersion: v1
   kind: ConfigMap
   executeHookOnEvent: []
+  executeHookOnSynchronization: false
   keepFullObjectsInMemory: false
   nameSelector:
     matchNames:
