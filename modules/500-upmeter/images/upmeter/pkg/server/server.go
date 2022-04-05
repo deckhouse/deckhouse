@@ -63,7 +63,8 @@ type Config struct {
 
 	DatabasePath string
 
-	OriginsCount int
+	OriginsCount   int
+	DisabledProbes []string
 }
 
 func New(config *Config, logger *log.Logger) *server {
@@ -103,7 +104,7 @@ func (s *server) Start(ctx context.Context) error {
 	go cleanOld30sEpisodes(ctx, dbctx)
 
 	// Probe probeLister that can only list groups and probes
-	probeLister := newProbeLister()
+	probeLister := newProbeLister(s.config.DisabledProbes)
 
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")
@@ -201,9 +202,9 @@ func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient) 
 	return m, m.Start()
 }
 
-func newProbeLister() *registry.RegistryProbeLister {
+func newProbeLister(disabled []string) *registry.RegistryProbeLister {
 	noLogger := newDummyLogger()
-	noFilter := probe.NewProbeFilter([]string{})
+	noFilter := probe.NewProbeFilter(disabled)
 	noAccess := &kubernetes.Accessor{}
 
 	runLoader := probe.NewLoader(noFilter, noAccess, noLogger)

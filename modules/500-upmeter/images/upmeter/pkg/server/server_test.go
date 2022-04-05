@@ -26,7 +26,7 @@ import (
 
 // Test how all the known probes and groups are presented
 func Test_newProbeLister(t *testing.T) {
-	pl := newProbeLister()
+	pl := newProbeLister([]string{})
 
 	allProbesSorted := []check.ProbeRef{
 		{Group: "control-plane", Probe: "access"},
