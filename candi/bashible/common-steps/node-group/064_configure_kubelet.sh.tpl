@@ -230,7 +230,7 @@ volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248
 protectKernelDefaults: true
-{{- if eq .cri "Containerd" }}
+{{- if or (eq .cri "Containerd") (eq .cri "NotManaged") }}
 containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" }}
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 {{- end }}
