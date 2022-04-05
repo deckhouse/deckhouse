@@ -54,7 +54,7 @@ const (
 type PublicStatusHandler struct {
 	DbCtx           *dbcontext.DbContext
 	DowntimeMonitor *crd.DowntimeMonitor
-	Registry        *registry.Registry
+	ProbeLister     registry.ProbeLister
 }
 
 func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +105,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 		"InfrastructureAccident",
 	}
 
-	groups := h.Registry.Groups()
+	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0)
 	for _, group := range groups {
 		ref := check.ProbeRef{

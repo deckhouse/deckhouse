@@ -102,13 +102,13 @@ func (s *server) Start(ctx context.Context) error {
 
 	go cleanOld30sEpisodes(ctx, dbctx)
 
-	// Probe registry
-	registry := newListingRegistry()
+	// Probe probeLister that can only list groups and probes
+	probeLister := newProbeLister()
 
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")
 	listenAddr := s.config.ListenHost + ":" + s.config.ListenPort
-	s.server = initHttpServer(dbctx, s.downtimeMonitor, s.remoteWriteController, registry, listenAddr)
+	s.server = initHttpServer(dbctx, s.downtimeMonitor, s.remoteWriteController, probeLister, listenAddr)
 
 	err = s.server.ListenAndServe()
 	if err == http.ErrServerClosed {
@@ -155,13 +155,13 @@ func cleanOld30sEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
 	}
 }
 
-func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *crd.DowntimeMonitor, controller *remotewrite.Controller, registry *registry.Registry, addr string) *http.Server {
+func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *crd.DowntimeMonitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
 	mux := http.NewServeMux()
 
 	// Setup API handlers
-	mux.Handle("/api/probe", &api.ProbeListHandler{DbCtx: dbCtx, Registry: registry})
+	mux.Handle("/api/probe", &api.ProbeListHandler{DbCtx: dbCtx, ProbeLister: probeLister})
 	mux.Handle("/api/status/range", &api.StatusRangeHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor})
-	mux.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor, Registry: registry})
+	mux.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor, ProbeLister: probeLister})
 	mux.Handle("/downtime", &api.AddEpisodesHandler{DbCtx: dbCtx, RemoteWrite: controller})
 	mux.Handle("/stats", &api.StatsHandler{DbCtx: dbCtx})
 	// Kubernetes probes
@@ -210,8 +210,8 @@ func newDummyLogger() *log.Entry {
 	return log.NewEntry(logger)
 }
 
-// newListingRegistry returns registry that is not capable of loading runners, but it can list probes and groups
-func newListingRegistry() *registry.Registry {
+// newProbeLister returns registry that is not capable of loading runners, but it can list probes and groups
+func newProbeLister() *registry.Registry {
 	noLogger := newDummyLogger().Logger
 	noFilter := probe.NewProbeFilter([]string{})
 	noAccess := &kubernetes.Accessor{}

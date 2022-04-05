@@ -28,8 +28,8 @@ import (
 )
 
 type ProbeListHandler struct {
-	DbCtx    *dbcontext.DbContext
-	Registry *registry.Registry
+	DbCtx       *dbcontext.DbContext
+	ProbeLister registry.ProbeLister
 }
 
 func (h *ProbeListHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +41,7 @@ func (h *ProbeListHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	refs := h.Registry.Probes()
+	refs := h.ProbeLister.Probes()
 
 	out, err := json.Marshal(refs)
 	if err != nil {
