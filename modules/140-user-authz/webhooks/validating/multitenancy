@@ -34,7 +34,7 @@ EOF
   echo "$allowAccessToSystemNamespaces"
   if [[ "$allowAccessToSystemNamespaces" == "true" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources."}
+{"allowed":false, "message":"You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources (EE Only)."}
 EOF
     return 0
   fi
@@ -44,7 +44,7 @@ EOF
   echo "$limitNamespacesEnabled"
   if [[ "$limitNamespacesEnabled" == "true" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources."}
+{"allowed":false, "message":"You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources (EE Only)."}
 EOF
     return 0
   fi
