@@ -157,6 +157,11 @@ apiVersions:
                 type: object
                 additionalProperties:
                   type: string
+              acceleratedNetworking:
+                type: boolean
+                x-doc-default: true
+                description: |
+                  Accelerated Networking providing up to 30Gbps in networking throughput.
       nodeGroups:
         description: |
           An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).

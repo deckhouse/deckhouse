@@ -74,6 +74,11 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+                acceleratedNetworking:
+                  type: boolean
+                  default: true
+                  description: |
+                    Accelerated Networking providing up to 30Gbps in networking throughput.
     - name: v1
       served: true
       storage: false
