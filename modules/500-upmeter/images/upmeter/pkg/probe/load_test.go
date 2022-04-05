@@ -67,7 +67,12 @@ func TestLoader_Groups(t *testing.T) {
 		logger: newDummyLogger().Logger,
 	}
 
-	notAllGroups := []string{"control-plane", "load-balancing", "monitoring-and-autoscaling", "synthetic"}
+	notAllGroups := []string{
+		"control-plane",
+		"load-balancing",
+		"monitoring-and-autoscaling",
+		"synthetic",
+	}
 	assert.Equal(t, notAllGroups, filtered.Groups())
 }
 
@@ -115,13 +120,16 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "control-plane", Probe: "controller-manager"},
 		{Group: "control-plane", Probe: "namespace"},
 		{Group: "control-plane", Probe: "scheduler"},
+		// --    deckhouse/...
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},
+		// --    load-balancing/metallb
 		{Group: "monitoring-and-autoscaling", Probe: "key-metrics-present"},
 		{Group: "monitoring-and-autoscaling", Probe: "metrics-sources"},
 		{Group: "monitoring-and-autoscaling", Probe: "prometheus"},
 		{Group: "monitoring-and-autoscaling", Probe: "prometheus-metrics-adapter"},
 		{Group: "monitoring-and-autoscaling", Probe: "trickster"},
 		{Group: "monitoring-and-autoscaling", Probe: "vertical-pod-autoscaler"},
+		// --    scale/...
 		{Group: "synthetic", Probe: "access"},
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
