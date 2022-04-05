@@ -13,7 +13,7 @@ The module runs the standard `CoreDNS` server (as part of a DaemonSet) on all no
 The regular DNS usage in Kubernetes poses some problems that may lead to unnecessary degradation of the service's performance:
 - No request caching (in Linux, there is no caching right out-of-the-box; thus, pods also lack it out-of-the-box);
 - All the container-originated DNS requests result in a network request to the cluster DNS. Thus, even requests to resources within the same node result in network requests;
-- The Pod request is first resolved in the cluster DNS zones and only then channeled to external DNS servers. For example, the request to ya.ru is first resolved in cluster zones such as `cluster.local`, `svc.cluster.local`, `<namespace>.svc.cluster.local`, receives negative responses, and gets appropriately resolved only on the "second" attempt.
+- The Pod request is first resolved in the cluster DNS zones and only then channeled to external DNS servers. For example, the request to `ya.ru` is first resolved in cluster zones such as `cluster.local`, `svc.cluster.local`, `<namespace>.svc.cluster.local`, receives negative responses, and gets appropriately resolved only on the "second" attempt.
 
 Thus, even slight network delays may result in significant service performance degradation due to above problems.
 
@@ -31,8 +31,8 @@ The `Kubernetes / DNS (node local)` dashboard displays:
 ## How does it work?
 
 On each node:
-- there is the interface with the ClusterIP IP address of the `kube-dns` service,
-- a caching CoreDNS server is running that listens on this address,
+- there is the interface with the ClusterIP IP address of the `kube-dns` service;
+- a caching CoreDNS server is running that listens on this address;
 - there is a sophisticated iptables rule that uses a socket if it is open and ordinary K8s magic for clusterIP if it is not.
 
 And here is the rule itself that allows for an easy fallback:
