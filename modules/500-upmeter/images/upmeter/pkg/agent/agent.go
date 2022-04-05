@@ -23,11 +23,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/agent/executor"
 	"d8.io/upmeter/pkg/agent/manager"
+	"d8.io/upmeter/pkg/agent/scheduler"
 	"d8.io/upmeter/pkg/agent/sender"
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db/migrations"
+	"d8.io/upmeter/pkg/db"
+	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/kubernetes"
 )
 
@@ -38,7 +39,7 @@ type Agent struct {
 	logger *log.Logger
 
 	sender    *sender.Sender
-	scheduler *executor.ProbeExecutor
+	scheduler *scheduler.Scheduler
 }
 
 type Config struct {
@@ -79,7 +80,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	// Database connection with pool
-	dbctx, err := migrations.GetMigratedDatabase(ctx, a.config.DatabasePath, a.config.DatabaseMigrationsPath)
+	dbctx, err := db.Connect(a.config.DatabasePath, dbcontext.DefaultConnectionOptions())
 	if err != nil {
 		return fmt.Errorf("cannot connect to database: %v", err)
 	}
@@ -90,7 +91,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	storage := sender.NewStorage(dbctx)
 
 	a.sender = sender.New(client, ch, storage, a.config.Period)
-	a.scheduler = executor.New(registry, ch)
+	a.scheduler = scheduler.New(registry, ch)
 
 	a.sender.Start()
 	a.scheduler.Start()

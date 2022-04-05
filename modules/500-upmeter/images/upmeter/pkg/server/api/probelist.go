@@ -43,6 +43,11 @@ func (h *ProbeListHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	probeRefs, err := getRefs(h.DbCtx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
+		return
+	}
 
 	out, err := json.Marshal(probeRefs)
 	if err != nil {

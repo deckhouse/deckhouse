@@ -91,7 +91,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type statusFilter struct {
 	stepRange         ranges.StepRange
-	probe             check.ProbeRef
+	probeRef          check.ProbeRef
 	muteDowntimeTypes []string
 }
 
@@ -113,7 +113,7 @@ func parseFilter(r *http.Request) (*statusFilter, error) {
 
 	parsed := &statusFilter{
 		stepRange:         rng,
-		probe:             check.ProbeRef{Group: groupName, Probe: probeName},
+		probeRef:          check.ProbeRef{Group: groupName, Probe: probeName},
 		muteDowntimeTypes: muteDowntimeTypes,
 	}
 
@@ -127,12 +127,12 @@ func getStatus(dbctx *dbcontext.DbContext, monitor *crd.DowntimeMonitor, filter 
 		filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step,
 		rng.From, rng.To, rng.Step)
 
-	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probe.Group, rng)
+	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probeRef.Group, rng)
 	if err != nil {
 		return nil, err
 	}
 
-	statuses, err := entity.FetchStatuses(dbctx, filter.probe, rng, incidents)
+	statuses, err := entity.Statuses(dbctx, filter.probeRef, rng, incidents)
 	if err != nil {
 		return nil, err
 	}

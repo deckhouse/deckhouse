@@ -38,8 +38,7 @@ func (r Range) Diff() time.Duration {
 	return time.Duration(r.To-r.From) * time.Second
 }
 
-// NewStepRange adjust from, to and step and calculates
-// intermediate step ranges.
+// NewStepRange aligns range borders and calculates subranges.
 func NewStepRange(from, to, step int64) StepRange {
 	count := (to - from) / step
 	step = alignStep(step)
@@ -68,7 +67,6 @@ func NewStepRange(from, to, step int64) StepRange {
 			break
 		}
 		res.Subranges = append(res.Subranges, Range{From: stepStart, To: stepEnd})
-		// go to next step
 		stepStart = stepEnd
 	}
 	return res

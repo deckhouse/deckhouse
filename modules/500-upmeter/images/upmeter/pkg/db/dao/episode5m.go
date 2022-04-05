@@ -29,13 +29,12 @@ import (
 )
 
 const (
-	everyProbe       = "__all__"
-	groupAggregation = "__total__"
+	ProbeEnumeration = "__all__"
+	GroupAggregation = "__total__"
 )
 
-// __all__ and __total__ probes should select all probes
 func areAllProbesRequested(probe string) bool {
-	return probe == everyProbe || probe == groupAggregation
+	return probe == ProbeEnumeration
 }
 
 type EpisodeDao5m struct {
@@ -187,8 +186,8 @@ func (d *EpisodeDao5m) ListEpisodesByRange(from, to int64, ref check.ProbeRef) (
 		queryArgs = append(queryArgs, ref.Group)
 	}
 
-	// __all__ and __total__ probes should select all probes
 	if !areAllProbesRequested(ref.Probe) {
+		// Choose specific probe
 		query += " AND probe_name = ?"
 		queryArgs = append(queryArgs, ref.Probe)
 	}
@@ -232,11 +231,12 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.
 			groupBy = append(groupBy, "group_name")
 		}
 
-		// __all__ and __total__ probes should select all probes
 		if !areAllProbesRequested(ref.Probe) {
+			// Choose specific probe
 			where += " AND probe_name = ?"
 			queryArgs = append(queryArgs, ref.Probe)
 		}
+
 		selectPart += ", probe_name"
 		groupBy = append(groupBy, "probe_name")
 

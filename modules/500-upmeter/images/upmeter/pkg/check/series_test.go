@@ -177,12 +177,10 @@ func Test_StatusSeries_Merge(t *testing.T) {
 		wantStats Stats
 	}{
 		{
-			name:    "nodata 0/0 + 0/0",
-			wantErr: false,
+			name: "nodata 0/0 + 0/0",
 		},
 		{
-			name:    "nodata 0/1 + 0/1",
-			wantErr: false,
+			name: "nodata 0/1 + 0/1",
 			args: args{
 				dstSize: 1,
 				srcSize: 1,
@@ -190,8 +188,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			wantStats: Stats{Expected: 1},
 		},
 		{
-			name:    "nodata 0/5 + 0/5",
-			wantErr: false,
+			name: "nodata 0/5 + 0/5",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -199,8 +196,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			wantStats: Stats{Expected: 5},
 		},
 		{
-			name:    "nodata 0/5 + filled one",
-			wantErr: false,
+			name: "nodata 0/5 + filled one",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -213,8 +209,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "filled one + nodata 0/5",
-			wantErr: false,
+			name: "filled one + nodata 0/5",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -227,8 +222,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "One up 1/1 + 1/1 up",
-			wantErr: false,
+			name: "One up 1/1 + 1/1 up",
 			args: args{
 				dstSize: 1,
 				srcSize: 1,
@@ -241,8 +235,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "All up 3/5 + 3/5 up",
-			wantErr: false,
+			name: "All up 3/5 + 3/5 up",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -255,8 +248,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Up wins unknown from source 3/5 up + 3/5 unknown",
-			wantErr: false,
+			name: "Up wins unknown from source 3/5 up + 3/5 unknown",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -269,8 +261,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Up wins unknown from dest 3/5 unknown + 3/5 up",
-			wantErr: false,
+			name: "Up wins unknown from dest 3/5 unknown + 3/5 up",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -283,8 +274,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Up wins unknown when mixed 3/5 ↑? + 3/5 ↑?",
-			wantErr: false,
+			name: "Up wins unknown when mixed 3/5 ↑? + 3/5 ↑?",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -297,8 +287,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Down everywhere 3/5 ↓ + 3/5 ↓",
-			wantErr: false,
+			name: "Down everywhere 3/5 ↓ + 3/5 ↓",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -311,8 +300,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Down wins when mixed 3/5 ↑↓? + 3/5 ↓?↓",
-			wantErr: false,
+			name: "Down wins when mixed 3/5 ↑↓? + 3/5 ↓?↓",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -326,8 +314,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 		},
 
 		{
-			name:    "Source with extra 3/5 ... + 4/5 with down",
-			wantErr: false,
+			name: "Source with extra 3/5 ... + 4/5 with down",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -340,8 +327,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Source with extra 3/5 ... + 4/5 with unknown",
-			wantErr: false,
+			name: "Source with extra 3/5 ... + 4/5 with unknown",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -355,8 +341,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Source with extra 3/5 ... + 4/5 with up",
-			wantErr: false,
+			name: "Source with extra 3/5 ... + 4/5 with up",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -371,8 +356,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 		},
 
 		{
-			name:    "Destination with extra 4/5 with down + 3/5 ...",
-			wantErr: false,
+			name: "Destination with extra 4/5 with down + 3/5 ...",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -385,8 +369,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Destination with extra 4/5 with unknown + 3/5 ...",
-			wantErr: false,
+			name: "Destination with extra 4/5 with unknown + 3/5 ...",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -400,8 +383,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "Destination with extra 4/5 with up + 3/5 ...",
-			wantErr: false,
+			name: "Destination with extra 4/5 with up + 3/5 ...",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -415,8 +397,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "All the same 3/5 down + 4/5 up",
-			wantErr: false,
+			name: "All the same 3/5 down + 4/5 up",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -430,8 +411,7 @@ func Test_StatusSeries_Merge(t *testing.T) {
 			},
 		},
 		{
-			name:    "All the same 4/5 up + 3/5 down",
-			wantErr: false,
+			name: "All the same 4/5 up + 3/5 down",
 			args: args{
 				dstSize: 5,
 				srcSize: 5,
@@ -498,12 +478,6 @@ func Test_StatusSeries_Clean(t *testing.T) {
 func Test_MergeStatusSeries(t *testing.T) {
 	size := 10
 
-	type args struct {
-		a   *StatusSeries
-		b   *StatusSeries
-		ids []string
-	}
-
 	someData := NewStatusSeries(size)
 	misSized := NewStatusSeries(size + 1)
 	for i := 0; i < size; i++ {
@@ -514,46 +488,50 @@ func Test_MergeStatusSeries(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		args    args
+		args    []*StatusSeries
 		want    *StatusSeries
 		wantErr bool
 	}{
 		{
-			name: "all nodata returns nodata",
-			args: args{
-				a:   NewStatusSeries(size),
-				b:   NewStatusSeries(size),
-				ids: []string{"a", "b"},
+			name: "nodata returns nodata",
+			args: []*StatusSeries{},
+			want: NewStatusSeries(size),
+		},
+		{
+			name: "the single nodata is nodata",
+			args: []*StatusSeries{
+				NewStatusSeries(size),
 			},
-			want:    NewStatusSeries(size),
-			wantErr: false,
+			want: NewStatusSeries(size),
+		},
+		{
+			name: "the single data is the data",
+			args: []*StatusSeries{
+				someData,
+			},
+			want: someData,
+		},
+		{
+			name: "all nodata returns nodata",
+			args: []*StatusSeries{
+				NewStatusSeries(size),
+				NewStatusSeries(size),
+			},
+			want: NewStatusSeries(size),
 		},
 		{
 			name: "data with nodata returns the data",
-			args: args{
-				a:   NewStatusSeries(size),
-				b:   someData,
-				ids: []string{"a", "b"},
+			args: []*StatusSeries{
+				NewStatusSeries(size),
+				someData,
 			},
-			want:    someData,
-			wantErr: false,
-		},
-		{
-			name: "missing id returns nodata",
-			args: args{
-				// no "a"
-				b:   someData,
-				ids: []string{"a", "b"},
-			},
-			want:    NewStatusSeries(size),
-			wantErr: false,
+			want: someData,
 		},
 		{
 			name: "size mismatch results in error",
-			args: args{
-				a:   misSized,
-				b:   someData,
-				ids: []string{"a", "b"},
+			args: []*StatusSeries{
+				misSized,
+				someData,
 			},
 			want:    nil,
 			wantErr: true,
@@ -562,15 +540,7 @@ func Test_MergeStatusSeries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ss := map[string]*StatusSeries{}
-			if tt.args.a != nil {
-				ss["a"] = tt.args.a
-			}
-			if tt.args.b != nil {
-				ss["b"] = tt.args.b
-			}
-
-			got, err := MergeStatusSeries(size, ss, tt.args.ids)
+			got, err := MergeStatusSeries(size, tt.args)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error %v", err)

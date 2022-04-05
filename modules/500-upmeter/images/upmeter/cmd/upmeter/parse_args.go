@@ -45,11 +45,6 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
 
-	cmd.Flag("db-migrations-path", "Migrations dir.").
-		Envar("UPMETER_DB_MIGRATIONS_PATH").
-		Default(".").
-		StringVar(&config.DatabaseMigrationsPath)
-
 	// Origins count
 	cmd.Flag("origins", "The expected number of origins, used for exporting episodes as metrics when they are fulfilled by this number of agents.").
 		Required().
@@ -89,11 +84,6 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Envar("UPMETER_DB_PATH").
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
-
-	cmd.Flag("db-migrations-path", "Migrations dir.").
-		Envar("UPMETER_DB_MIGRATIONS_PATH").
-		Default(".").
-		StringVar(&config.DatabaseMigrationsPath)
 }
 
 func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {
