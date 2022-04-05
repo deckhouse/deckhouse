@@ -44,14 +44,14 @@ kubernetes:
 EOF
 }
 
+# This hook checks MultiTenancy flag for user-authz module
+# if flag is enabled - CM: user-authz-webhook is exists and we just exit
+# if flag is disabled - we check CR ClusterAuthorizationRule for 'allowAccessToSystemNamespaces' or 'limitNamespaces'
+#   if any of those exists - disallow creation because of MultiTenancy
+
 function __main__() {
-  echo "AAAAAAAAAAA"
-  # shellcheck disable=SC2046
-  echo $(context::jq -r '.snapshots.d8-authz-webhook-cm[]')
-  echo $(context::jq -rc '.snapshots.d8-authz-webhook-cm[]')
-  enableMultiTenancy=$(context::jq -r '.snapshots.d8-authz-webhook-cm[] | length > 0')
-  echo $enableMultiTenancy
   # don't check ClusterAuthorizationRule if MultiTenancy is enabled
+  enableMultiTenancy=$(context::jq -r '.snapshots.["d8-authz-webhook-cm"] | length > 0')
   if [[ "$enableMultiTenancy" == "true" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
@@ -60,7 +60,6 @@ EOF
   fi
 
   allowAccessToSystemNamespaces=$(context::jq -rc '.review.request.object.spec.allowAccessToSystemNamespaces')
-  echo "$allowAccessToSystemNamespaces"
   if [[ "$allowAccessToSystemNamespaces" == "true" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources (EE Only)."}
@@ -70,7 +69,6 @@ EOF
 
 
   limitNamespacesEnabled=$(context::jq -rc '.review.request.object.spec.limitNamespaces // [] | length > 0')
-  echo "$limitNamespacesEnabled"
   if [[ "$limitNamespacesEnabled" == "true" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources (EE Only)."}
