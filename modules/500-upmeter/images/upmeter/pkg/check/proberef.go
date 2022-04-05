@@ -28,3 +28,10 @@ type ProbeRef struct {
 func (p ProbeRef) Id() string {
 	return fmt.Sprintf("%s/%s", p.Group, p.Probe)
 }
+
+// ByProbeRef implements sort.Interface based on the probe reference ID.
+type ByProbeRef []ProbeRef
+
+func (a ByProbeRef) Len() int           { return len(a) }
+func (a ByProbeRef) Less(i, j int) bool { return a[i].Id() < a[j].Id() }
+func (a ByProbeRef) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

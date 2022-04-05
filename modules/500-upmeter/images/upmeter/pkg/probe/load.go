@@ -17,6 +17,7 @@ limitations under the License.
 package probe
 
 import (
+	"sort"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -108,17 +109,21 @@ func (l *Loader) Probes() []check.ProbeRef {
 		return l.probes
 	}
 
+	seen := set.New()
 	l.probes = make([]check.ProbeRef, 0)
 	for _, rc := range l.collectConfigs() {
 		ref := rc.Ref()
 		if !l.filter.Enabled(ref) {
 			continue
 		}
-
+		if seen.Has(ref.Id()) {
+			continue
+		}
+		seen.Add(ref.Id())
 		l.probes = append(l.probes, ref)
 
 	}
-
+	sort.Sort(check.ByProbeRef(l.probes))
 	return l.probes
 }
 
