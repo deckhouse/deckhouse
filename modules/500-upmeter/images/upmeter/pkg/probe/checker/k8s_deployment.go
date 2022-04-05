@@ -205,7 +205,6 @@ func createDeploymentObject(agentId string) *appsv1.Deployment {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"app":           "upmeter-agent",
 				agentLabelKey:   agentId,
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "controller-manager",
