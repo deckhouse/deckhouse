@@ -19,6 +19,8 @@ package hooks
 import (
 	"fmt"
 
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -55,6 +57,22 @@ func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints 
 	return dc.GetEtcdClient(endpoints, etcd.WithClientCert(clientCert, caCert), etcd.WithInsecureSkipVerify())
 }
 
+func getETCDClientFromSnapshots(input *go_hook.HookInput, dc dependency.Container) (etcd.Client, error) {
+	snap := input.Snapshots["etcd_pods"]
+
+	if len(snap) == 0 {
+		return nil, fmt.Errorf("empty etc endpoints")
+	}
+
+	endpoints := make([]string, 0, len(snap))
+
+	for _, e := range snap {
+		endpoints = append(endpoints, e.(string))
+	}
+
+	return getETCDClient(input, dc, endpoints)
+}
+
 var (
 	etcdSecretK8sConfig = go_hook.KubernetesConfig{
 		Name:       "etcd-certificate",
@@ -70,7 +88,58 @@ var (
 		ExecuteHookOnEvents:          pointer.BoolPtr(false),
 		FilterFunc:                   syncEtcdFilter,
 	}
+
+	etcdEndpointsConfig = getEtcdEndpointConfig(func(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+		var pod corev1.Pod
+
+		err := sdk.FromUnstructured(unstructured, &pod)
+		if err != nil {
+			return nil, err
+		}
+
+		var ip string
+		if pod.Spec.HostNetwork {
+			ip = pod.Status.HostIP
+		} else {
+			ip = pod.Status.PodIP
+		}
+
+		return etcdEndpointString(ip), nil
+	})
 )
+
+func getEtcdEndpointConfig(filter go_hook.FilterFunc) go_hook.KubernetesConfig {
+	return go_hook.KubernetesConfig{
+		Name:       "etcd_endpoints",
+		ApiVersion: "v1",
+		Kind:       "Pod",
+		NamespaceSelector: &types.NamespaceSelector{
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"kube-system"},
+			},
+		},
+		LabelSelector: &v1.LabelSelector{
+			MatchLabels: map[string]string{
+				"component": "etcd",
+				"tier":      "control-plane",
+			},
+		},
+		FieldSelector: &types.FieldSelector{
+			MatchExpressions: []types.FieldSelectorRequirement{
+				{
+					Field:    "status.phase",
+					Operator: "Equals",
+					Value:    "Running",
+				},
+			},
+		},
+		FilterFunc: filter,
+	}
+}
+
+func etcdEndpointString(ip string) string {
+	return fmt.Sprintf("https://%s:2379", ip)
+}
 
 func syncEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sec corev1.Secret
