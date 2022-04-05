@@ -1,11 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ env "BASE_NGINX_ALPINE" }}
-import:
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: setup
 git:
 - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/kubernetes-api-proxy-reloader
   to: /kubernetes-api-proxy-reloader

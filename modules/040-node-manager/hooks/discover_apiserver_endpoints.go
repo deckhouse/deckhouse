@@ -19,7 +19,9 @@ package hooks
 import (
 	"errors"
 	"fmt"
+	"net"
 	"sort"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -27,6 +29,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const apiserverPort = 6443
@@ -108,7 +112,7 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 		for _, addrObj := range s.Addresses {
 			for _, port := range ports {
-				addr := fmt.Sprintf("%s:%d", addrObj.IP, port)
+				addr := net.JoinHostPort(addrObj.IP, strconv.Itoa(int(port)))
 				addresses = append(addresses, addr)
 			}
 		}
@@ -117,22 +121,13 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func handleAPIEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := make(map[string]struct{})
-	for _, ep := range input.Snapshots["kube_apiserver"] {
-		if ep != nil {
-			endpointsSet[ep.(string)] = struct{}{}
-		}
-	}
+	endpointsSet := set.NewFromSnapshot(input.Snapshots["kube_apiserver"])
 
 	for _, ep := range input.Snapshots["apiserver_endpoints"] {
-		for _, e := range ep.([]string) {
-			endpointsSet[e] = struct{}{}
-		}
+		endpointsSet.Add(ep.([]string)...)
 	}
-	endpointsList := make([]string, 0, len(endpointsSet))
-	for ep := range endpointsSet {
-		endpointsList = append(endpointsList, ep)
-	}
+
+	endpointsList := endpointsSet.Slice()
 
 	sort.Strings(endpointsList)
 
