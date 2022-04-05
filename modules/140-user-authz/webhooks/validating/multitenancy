@@ -45,7 +45,11 @@ EOF
 }
 
 function __main__() {
-  enableMultiTenancy=$(context::jq -rc '.snapshots.d8-authz-webhook-cm[] | length > 0')
+  echo "AAAAAAAAAAA"
+  # shellcheck disable=SC2046
+  echo $(context::jq -r '.snapshots.d8-authz-webhook-cm[]')
+  echo $(context::jq -rc '.snapshots.d8-authz-webhook-cm[]')
+  enableMultiTenancy=$(context::jq -r '.snapshots.d8-authz-webhook-cm[] | length > 0')
   echo $enableMultiTenancy
   # don't check ClusterAuthorizationRule if MultiTenancy is enabled
   if [[ "$enableMultiTenancy" == "true" ]]; then
