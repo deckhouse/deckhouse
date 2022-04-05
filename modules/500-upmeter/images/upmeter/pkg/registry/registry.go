@@ -25,6 +25,29 @@ import (
 	"d8.io/upmeter/pkg/set"
 )
 
+type Registry struct {
+	// runners contains allowed check runners
+	runners []*check.Runner
+
+	// calculators contains calculators probes definitions
+	calculators []*calculated.Probe
+}
+
+func New(runLoader *probe.Loader, calcLoader *calculated.Loader) *Registry {
+	return &Registry{
+		runners:     runLoader.Load(),
+		calculators: calcLoader.Load(),
+	}
+}
+
+func (r *Registry) Runners() []*check.Runner {
+	return r.runners
+}
+
+func (r *Registry) Calculators() []*calculated.Probe {
+	return r.calculators
+}
+
 type ProbeLister interface {
 	Groups() []string
 	Probes() []check.ProbeRef
@@ -52,29 +75,6 @@ func (pl *RegistryProbeLister) Probes() []check.ProbeRef {
 
 func (pl *RegistryProbeLister) Groups() []string {
 	return pl.groups
-}
-
-type Registry struct {
-	// runners contains allowed check runners
-	runners []*check.Runner
-
-	// calculators contains calculators probes definitions
-	calculators []*calculated.Probe
-}
-
-func New(runLoader *probe.Loader, calcLoader *calculated.Loader) *Registry {
-	return &Registry{
-		runners:     runLoader.Load(),
-		calculators: calcLoader.Load(),
-	}
-}
-
-func (r *Registry) Runners() []*check.Runner {
-	return r.runners
-}
-
-func (r *Registry) Calculators() []*calculated.Probe {
-	return r.calculators
 }
 
 func collectGroups(ls ...ProbeLister) []string {
