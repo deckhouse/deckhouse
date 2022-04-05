@@ -103,12 +103,7 @@ func (s *server) Start(ctx context.Context) error {
 	go cleanOld30sEpisodes(ctx, dbctx)
 
 	// Probe registry
-	silent := newDummyLogger()
-	kubeAccess := &kubernetes.Accessor{}
-	filter := probe.NewProbeFilter([]string{})
-	runnerLoader := probe.NewLoader(filter, kubeAccess, silent.Logger)
-	calcLoader := calculated.NewLoader(filter, silent.Logger)
-	registry := registry.NewNotLoading(runnerLoader, calcLoader)
+	registry := newListingRegistry()
 
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")
@@ -213,4 +208,16 @@ func newDummyLogger() *log.Entry {
 	logger.SetOutput(ioutil.Discard)
 
 	return log.NewEntry(logger)
+}
+
+// newListingRegistry returns registry that is not capable of loading runners, but it can list probes and groups
+func newListingRegistry() *registry.Registry {
+	noLogger := newDummyLogger().Logger
+	noFilter := probe.NewProbeFilter([]string{})
+	noAccess := &kubernetes.Accessor{}
+
+	runnerLoader := probe.NewLoader(noFilter, noAccess, noLogger)
+	calcLoader := calculated.NewLoader(noFilter, noLogger)
+
+	return registry.NewNotLoading(runnerLoader, calcLoader)
 }
