@@ -205,6 +205,12 @@ properties:
     description: |
       `etcd` parameters.
     properties:
+      corruptionCheckInterval:
+        type: string
+        default: "1h"
+        pattern: '[0-9]+[smhd]$'
+        description: |
+          Corruption data check interval. 0s - disable check
       externalMembersNames:
         type: array
         description: |

@@ -79,6 +79,11 @@
 {{- if hasKey .Values.controlPlaneManager.internal "secretEncryptionKey" }}
 {{- $_ := set $tpl_context.apiserver "secretEncryptionKey" .Values.controlPlaneManager.internal.secretEncryptionKey }}
 {{- end }}
+{{- if hasKey .Values.controlPlaneManager "etcd" }}
+  {{- if .Values.controlPlaneManager.etcd.corruptionCheckInterval }}
+    {{ $_ := set $tpl_context.etcd "corruptionCheckInterval" .Values.controlPlaneManager.etcd.corruptionCheckInterval }}
+  {{- end }}
+{{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
 {{- define "control_plane_config" }}
