@@ -94,11 +94,6 @@ defaults:
     values:
       versionType: ee
   - scope:
-      path: "*/031-linstor"
-      type: "pages"
-    values:
-      versionType: experimental
-  - scope:
       path: "*/340-extended-monitoring"
       type: "pages"
     values:
