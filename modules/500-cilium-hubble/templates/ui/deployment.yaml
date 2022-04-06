@@ -1,0 +1,121 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: hubble-ui
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui" )) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: hubble-ui
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: hubble-ui
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui" )) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  selector:
+    matchLabels:
+      app: hubble-ui
+  template:
+    metadata:
+      annotations:
+        cilium.io/hubble-ui-envoy-configmap-checksum: {{ include (print $.Template.BasePath "/ui/configmap.yaml") . | sha256sum | quote }}
+      labels:
+        app: hubble-ui
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
+      serviceAccountName: "hubble-ui"
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+      - name: frontend
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiFrontend }}
+        ports:
+        - name: http
+          containerPort: 8080
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+      - name: backend
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiBackend }}
+        env:
+        - name: EVENTS_SERVER_PORT
+          value: "8090"
+        - name: FLOWS_API_ADDR
+          value: "hubble-relay:443"
+        - name: TLS_TO_RELAY_ENABLED
+          value: "true"
+        - name: TLS_RELAY_SERVER_NAME
+          value: ui.hubble-relay.cilium.io
+        - name: TLS_RELAY_CA_CERT_FILES
+          value: /var/lib/hubble-ui/certs/hubble-relay-ca.crt
+        - name: TLS_RELAY_CLIENT_CERT_FILE
+          value: /var/lib/hubble-ui/certs/client.crt
+        - name: TLS_RELAY_CLIENT_KEY_FILE
+          value: /var/lib/hubble-ui/certs/client.key
+        ports:
+        - name: grpc
+          containerPort: 8090
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+        - name: hubble-ui-client-certs
+          mountPath: /var/lib/hubble-ui/certs
+          readOnly: true
+      - name: proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiProxy }}
+        command: [envoy]
+        args:
+        - -c
+        - /etc/envoy.yaml
+        - -l
+        - info
+        ports:
+        - name: http
+          containerPort: 8081
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+        - name: hubble-ui-envoy-yaml
+          mountPath: /etc/envoy.yaml
+          subPath: envoy.yaml
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      volumes:
+      - name: hubble-ui-envoy-yaml
+        configMap:
+          name: hubble-ui-envoy
+      - emptyDir:
+          medium: Memory
+        name: tmp
+      - name: hubble-ui-client-certs
+        projected:
+          defaultMode: 0400
+          sources:
+          - secret:
+              name: hubble-ui-client-certs
+              items:
+              - key: ca.crt
+                path: hubble-relay-ca.crt
+              - key: tls.crt
+                path: client.crt
+              - key: tls.key
+                path: client.key

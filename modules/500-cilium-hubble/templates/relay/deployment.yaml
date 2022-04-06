@@ -1,0 +1,127 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: hubble-relay
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-relay" )) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: hubble-relay
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hubble-relay
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-relay")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  selector:
+    matchLabels:
+      app: hubble-relay
+  template:
+    metadata:
+      annotations:
+        cilium.io/hubble-relay-configmap-checksum: {{ include (print $.Template.BasePath "/relay/configmap.yaml") . | sha256sum | quote }}
+      labels:
+        app: hubble-relay
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+        - name: hubble-relay
+          {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
+          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.relay }}
+          command:
+            - hubble-relay
+          args:
+            - serve
+          {{- if .Values.debugLogging }}
+            - --debug
+          {{- end }}
+          ports:
+            - name: grpc
+              containerPort: 4245
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          env:
+          - name: GOPS_CONFIG_DIR
+            value: /tmp/gops
+          volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+          - name: hubble-sock-dir
+            mountPath: /var/run/cilium
+            readOnly: true
+          - name: config
+            mountPath: /etc/hubble-relay
+            readOnly: true
+          - name: root-config
+            mountPath: /.config
+          - name: tls
+            mountPath: /var/lib/hubble-relay/tls
+            readOnly: true
+      serviceAccountName: "cilium-hubble-relay"
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 1
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: agent
+                  module: cni-cilium
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: hubble-relay-config
+          items:
+          - key: config.yaml
+            path: config.yaml
+      - name: hubble-sock-dir
+        hostPath:
+          path: /var/run/cilium
+          type: Directory
+      - name: root-config
+        emptyDir:
+          medium: Memory
+      - name: tls
+        projected:
+          defaultMode: 0400
+          sources:
+          - secret:
+              name: hubble-relay-client-certs
+              items:
+              - key: ca.crt
+                path: hubble-server-ca.crt
+              - key: tls.crt
+                path: client.crt
+              - key: tls.key
+                path: client.key
+          - secret:
+              name: hubble-relay-server-certs
+              items:
+              - key: tls.crt
+                path: server.crt
+              - key: tls.key
+                path: server.key
