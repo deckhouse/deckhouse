@@ -73,3 +73,37 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
     storageClass: linstor-data-r2
   ```
 - Дождаться перезапуска Pod'ов Prometheus.
+
+## Под не может запуститься с ошибкой FailedMount
+
+Если ваш под завис на стадии ContainerCreating, а в `kubectl describe` вы видите следующие ошибки:
+
+```
+rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking for exclusive open failed: wrong medium type, check device health
+```
+
+Значит ваше устройство всё ещё смонтированно на одной из других нод, проверьте:
+
+```
+linstor r l -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
+```
+
+Флаг `InUse` укажет на какаой ноде используется девайс.
+
+---
+
+В случае если вы видите ошибки вида:
+
+```
+Input/output error
+```
+
+Обычно они возникают на стадии создания файловой системы (mkfs):
+
+Проверьте `dmesg` на ноде где запускается ваш под:
+
+```
+dmesg | grep 'Remote failed to finish a request within'
+```
+
+Если вы видите данное сообщение, то скорее всего ваша дисковая подсистема слишком медленная для нормального функционирования DRBD.
