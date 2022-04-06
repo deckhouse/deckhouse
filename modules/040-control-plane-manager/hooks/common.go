@@ -34,8 +34,14 @@ import (
 )
 
 const (
-	moduleQueue = "/modules/control-plane-manager"
+	moduleQueue        = "/modules/control-plane-manager"
+	defaultEtcdMaxSize = 2 * 1024 * 1024 * 1024 // 2GB
 )
+
+type maintenanceEtc struct {
+	endpoint  string
+	maxDbSize int64
+}
 
 func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints []string) (etcd.Client, error) {
 	snap := input.Snapshots["etcd-certificate"]
@@ -89,7 +95,7 @@ var (
 		FilterFunc:                   syncEtcdFilter,
 	}
 
-	etcdEndpointsConfig = getEtcdEndpointConfig(func(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	etcdMaintenanceConfig = getEtcdEndpointConfig(func(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		var pod corev1.Pod
 
 		err := sdk.FromUnstructured(unstructured, &pod)
@@ -102,6 +108,16 @@ var (
 			ip = pod.Status.HostIP
 		} else {
 			ip = pod.Status.PodIP
+		}
+
+		for _, c := range pod.Spec.Containers {
+			if c.Name != "etcd" {
+				continue
+			}
+
+			for _, arg := range c.Command {
+				if
+			}
 		}
 
 		return etcdEndpointString(ip), nil
