@@ -205,15 +205,6 @@ properties:
     description: |
       `etcd` parameters.
     properties:
-      periodicCorruptCheckDisable:
-        type: boolean
-        default: false
-        x-examples: [true, false]
-        description: |
-          Periodic corruption data check disable.
-          By default every 2 hours check will be executed by the cluster leader in a cluster that is already running.
-          Leader will compare it’s persistent state vs other members and raise a CORRUPT ALARM if there is a mismatch.
-          See more informaion [here](https://etcd.io/docs/v3.5/op-guide/data_corruption).
       externalMembersNames:
         type: array
         description: |

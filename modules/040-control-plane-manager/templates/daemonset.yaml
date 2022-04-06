@@ -16,7 +16,7 @@
 {{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
 {{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
 {{- $_ := set $tpl_context "runType" "Normal" }}
-{{- $_ := set $tpl_context "etcd" (dict "existingCluster" true "periodicCorruptCheckEnabled" true) }}
+{{- $_ := set $tpl_context "etcd" (dict "existingCluster" true) }}
 {{- $_ := set $tpl_context "images" (dict "controlPlaneManager" $images) }}
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
@@ -78,11 +78,6 @@
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "secretEncryptionKey" }}
 {{- $_ := set $tpl_context.apiserver "secretEncryptionKey" .Values.controlPlaneManager.internal.secretEncryptionKey }}
-{{- end }}
-{{- if hasKey .Values.controlPlaneManager "etcd" }}
-  {{- if hasKey .Values.controlPlaneManager.etcd "periodicCorruptCheckDisable" }}
-    {{ $_ := set $tpl_context.etcd "periodicCorruptCheckEnabled" .Values.controlPlaneManager.etcd.periodicCorruptCheckDisable }}
-  {{- end }}
 {{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
