@@ -122,6 +122,12 @@ properties:
     description: |
       Параметры `etcd`.
     properties:
+      periodicCorruptCheckDisable:
+        description: |
+          Выключить периодическую проверку данных.
+          По умолчанию, каждые 2 часа etcd-лидер будет сравнивать свои данные с данными других участников и поднимет CORRUPT ALARM,
+          если есть несоответствие.
+          Более подробную информацию смотрите [здесь](https://etcd.io/docs/v3.5/op-guide/data_corruption).
       externalMembersNames:
         description: |
           Массив имен внешних etcd member'ов (эти member'ы не будут удаляться).

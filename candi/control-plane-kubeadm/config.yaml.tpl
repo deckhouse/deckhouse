@@ -169,10 +169,8 @@ etcd:
       # without this parameter, when restarting etcd, and /var/lib/etcd/member does not exist, it'll start with a new empty cluster
       initial-cluster-state: existing
       experimental-initial-corrupt-check: "true"
-      {{- if hasKey .etcd "corruptionCheckInterval" }}
-        {{- if and .etcd.corruptionCheckInterval (ne .etcd.corruptionCheckInterval "0s") }}
-      experimental-corrupt-check-time: "{{.etcd.corruptionCheckInterval}}"
-        {{- end }}
+      {{- if hasKey .etcd "periodicCorruptCheckEnabled" }}
+      experimental-corrupt-check-time: "1h"
       {{- end }}
     {{- end }}
   {{- end }}
