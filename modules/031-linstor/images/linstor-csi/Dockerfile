@@ -26,6 +26,8 @@ RUN apt-get update \
       xfsprogs \
       e2fsprogs \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && ln -sf /proc/mounts /etc/mtab
+
 COPY --from=builder /linstor-csi /linstor-wait-until /
 ENTRYPOINT ["/linstor-csi"]
