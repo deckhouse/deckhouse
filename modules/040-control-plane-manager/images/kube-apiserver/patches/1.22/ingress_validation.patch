@@ -1,0 +1,16 @@
+diff --git a/pkg/apis/networking/validation/validation.go b/pkg/apis/networking/validation/validation.go
+index 2091a2cff2e..06ca3983242 100644
+--- a/pkg/apis/networking/validation/validation.go
++++ b/pkg/apis/networking/validation/validation.go
+@@ -244,11 +244,6 @@ func ValidateIngressCreate(ingress *networking.Ingress, requestGV schema.GroupVe
+ 		AllowInvalidWildcardHostRule: allowInvalidWildcardHostRule(requestGV, nil),
+ 	}
+ 	allErrs = append(allErrs, validateIngress(ingress, opts, requestGV)...)
+-	annotationVal, annotationIsSet := ingress.Annotations[annotationIngressClass]
+-	if annotationIsSet && ingress.Spec.IngressClassName != nil {
+-		annotationPath := field.NewPath("annotations").Child(annotationIngressClass)
+-		allErrs = append(allErrs, field.Invalid(annotationPath, annotationVal, "can not be set when the class field is also set"))
+-	}
+ 	return allErrs
+ }
+ 
