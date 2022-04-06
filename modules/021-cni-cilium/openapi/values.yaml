@@ -1,0 +1,41 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      hubble:
+        type: object
+        default: {}
+        properties:
+          certs:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: object
+                default: {}
+                properties:
+                  cert:
+                    type: string
+                    x-examples: ["---CERT PEM---"]
+                  key:
+                    type: string
+                    x-examples: ["---KEY PEM---"]
+              server:
+                type: object
+                default: {}
+                properties:
+                  cert:
+                    type: string
+                    x-examples: ["---CERT PEM---"]
+                  key:
+                    type: string
+                    x-examples: ["---KEY PEM---"]
+                  ca:
+                    type: string
+                    x-examples: ["---ROOT PEM---"]
+
+

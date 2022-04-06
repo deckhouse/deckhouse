@@ -38,7 +38,7 @@ func isSystemNamespace(actual string) bool {
 }
 
 func isDeckhouseSystemNamespace(actual string) bool {
-	return actual == "d8-monitoring" || actual == "d8-system"
+	return actual == "d8-monitoring" || actual == "d8-system" || actual == "d8-cni-cilium"
 }
 
 func ObjectRBACPlacement(m utils.Module, object storage.StoreObject) errors.LintRuleError {
