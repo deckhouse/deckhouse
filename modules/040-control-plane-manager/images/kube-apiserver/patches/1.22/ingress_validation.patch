@@ -1,7 +1,6 @@
 diff --git a/pkg/apis/networking/validation/validation.go b/pkg/apis/networking/validation/validation.go
-index 2091a2cff2e..06ca3983242 100644
---- a/pkg/apis/networking/validation/validation.go
-+++ b/pkg/apis/networking/validation/validation.go
+--- pkg/apis/networking/validation/validation.go
++++ pkg/apis/networking/validation/validation.go
 @@ -244,11 +244,6 @@ func ValidateIngressCreate(ingress *networking.Ingress, requestGV schema.GroupVe
  		AllowInvalidWildcardHostRule: allowInvalidWildcardHostRule(requestGV, nil),
  	}
@@ -13,4 +12,4 @@ index 2091a2cff2e..06ca3983242 100644
 -	}
  	return allErrs
  }
- 
+
