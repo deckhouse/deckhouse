@@ -20,7 +20,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['config-values.yaml','doc-ru-config-values.yaml']
-{{- if or (eq .Env "EE") (eq .Env "FE") }}
+{{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
 - add: /ee/modules
   to: /src/ee/modules
   owner: jekyll
@@ -57,7 +57,7 @@
   stageDependencies:
     setup: ['**/*']
 {{- end }}
-{{- if eq .Env "FE" }}
+{{- if or (eq .Env "FE") (eq .Env "development")  }}
 - add: /ee/fe/modules
   to: /src/fe/modules
   owner: jekyll
