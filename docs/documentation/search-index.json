@@ -6,6 +6,7 @@ sitemap_include: false
 ---
 
 [
+{%- unless jekyll.environment == "development" %}
 {%- assign searchedpages = site.pages | where: "searchable", true %}
 {%- for page in searchedpages %}
 {%- unless page.searchable == false %}
@@ -20,4 +21,5 @@ sitemap_include: false
 {%- unless forloop.last %},{% endunless %}
 {%- endunless %}
 {%- endfor %}
+{%- endunless %}
 ]
