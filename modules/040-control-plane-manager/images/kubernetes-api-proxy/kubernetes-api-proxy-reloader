@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if bb-is-centos-version? 7 ; then
-  bb-rp-install "nginx:{{ .images.registrypackages.nginxCentos71202 }}"
-fi
-if bb-is-centos-version? 8 ; then
-  bb-rp-install "nginx:{{ .images.registrypackages.nginxCentos81202 }}"
-fi
+# shellcheck disable=SC2174
+
+set -Eeuo pipefail
+shopt -s inherit_errexit
+shopt -s failglob
+
+function nginx_reload() {
+  if ! >&2 diff -u /etc/nginx/nginx.conf /etc/nginx/nginx_new.conf && nginx -t -c /etc/nginx/nginx_new.conf; then
+    >&2 echo "nginx.conf changed!"
+    cp /etc/nginx/nginx_new.conf /etc/nginx/nginx.conf
+    kill -s SIGHUP $(pidof nginx)
+  fi
+}
+
+while true; do
+  nginx_reload
+  inotifywait -q -e modify,move_self /etc/nginx/nginx_new.conf
+done

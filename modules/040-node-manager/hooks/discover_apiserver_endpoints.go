@@ -19,19 +19,44 @@ package hooks
 import (
 	"errors"
 	"fmt"
+	"net"
+	"sort"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
+
+const apiserverPort = 6443
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "kube_api_ep",
+			Name:       "kube_apiserver",
+			ApiVersion: "v1",
+			Kind:       "Pod",
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"component": "kube-apiserver",
+					"tier":      "control-plane",
+				},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			FilterFunc: apiserverPodFilter,
+		},
+		{
+			Name:       "apiserver_endpoints",
 			ApiVersion: "v1",
 			Kind:       "Endpoints",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -47,45 +72,70 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleAPIEndpoints)
 
-type apiEndpoints struct {
-	HostPort []string
+func apiserverPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var isReady bool
+
+	pod := &corev1.Pod{}
+	err := sdk.FromUnstructured(obj, pod)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse pod object from unstructured: %v", err)
+	}
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			isReady = true
+			break
+		}
+	}
+	if !isReady {
+		return nil, nil
+	}
+	return fmt.Sprintf("%s:%d", pod.Status.PodIP, apiserverPort), nil
 }
 
 func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var endpoint corev1.Endpoints
-	err := sdk.FromUnstructured(obj, &endpoint)
+	var endpoints corev1.Endpoints
+
+	err := sdk.FromUnstructured(obj, &endpoints)
 	if err != nil {
 		return nil, err
 	}
 
-	var apiEP apiEndpoints
+	addresses := make([]string, 0)
 
-	for _, subset := range endpoint.Subsets {
-		for _, address := range subset.Addresses {
-			ip := address.IP
-			for _, port := range subset.Ports {
-				apiEP.HostPort = append(apiEP.HostPort, fmt.Sprintf("%s:%d", ip, port.Port))
+	for _, s := range endpoints.Subsets {
+		ports := make([]int32, 0)
+		for _, port := range s.Ports {
+			if port.Name == "https" {
+				ports = append(ports, port.Port)
+			}
+		}
+
+		for _, addrObj := range s.Addresses {
+			for _, port := range ports {
+				addr := net.JoinHostPort(addrObj.IP, strconv.Itoa(int(port)))
+				addresses = append(addresses, addr)
 			}
 		}
 	}
-
-	return apiEP, nil
+	return addresses, nil
 }
 
 func handleAPIEndpoints(input *go_hook.HookInput) error {
-	snap := input.Snapshots["kube_api_ep"]
-	if len(snap) == 0 {
-		input.LogEntry.Error("kubernetes endpoints not found")
-		return nil
+	endpointsSet := set.NewFromSnapshot(input.Snapshots["kube_apiserver"])
+
+	for _, ep := range input.Snapshots["apiserver_endpoints"] {
+		endpointsSet.Add(ep.([]string)...)
 	}
 
-	apiEndpoints := snap[0].(apiEndpoints)
+	endpointsList := endpointsSet.Slice()
 
-	if len(apiEndpoints.HostPort) == 0 {
+	sort.Strings(endpointsList)
+
+	if len(endpointsList) == 0 {
 		return errors.New("no kubernetes apiserver endpoints host:port specified")
 	}
 
-	input.Values.Set("nodeManager.internal.clusterMasterAddresses", apiEndpoints.HostPort)
+	input.Values.Set("nodeManager.internal.clusterMasterAddresses", endpointsList)
 
 	return nil
 }
