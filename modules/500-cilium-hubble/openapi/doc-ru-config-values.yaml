@@ -1,0 +1,59 @@
+type: object
+properties:
+  debugLogging:
+    description: Включает отладочный уровень логирования для компонентов Hubble.
+  auth:
+    description: |
+      Опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу Hubble.
+    properties:
+      externalAuthentication:
+        description: |
+          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+        properties:
+          authURL:
+            description: |
+              URL сервиса аутентификации.
+
+              Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+          authSignInURL:
+            description: |
+              URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+      password:
+        description: |
+          Пароль для HTTP-авторизации пользователя `admin` (генерируется автоматически, но можно менять).
+
+          Используется, если не включен параметр `externalAuthentication`.
+      allowedUserGroups:
+        description: |
+          Список групп, пользователям которых разрешен доступ к web-интерфейсу Hubble.
+
+          Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
+      whitelistSourceRanges:
+        description: Список адресов (CIDR) которым разрешен доступ к web-интерфейсу Hubble.
+  https:
+    description: |
+      Тип используемого сертификата.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`;
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`;
+          - `Disabled` — доступ только по HTTP;
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед web-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
+      certManager:
+        description: "Настройки для certmanager."
+        properties:
+          clusterIssuerName:
+            description: |
+              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но возможно определить свои).
+      customCertificate:
+        description: Настройки для использования пользовательского сертификата.
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса Hubble.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).

@@ -1,0 +1,63 @@
+{{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hubble-ui
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
+  annotations:
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-name: d8-hubble-affinity
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ciliumHubble.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.ciliumHubble.auth.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.ciliumHubble.auth.externalAuthentication.authURL | quote }}
+    {{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: hubble-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+      {{- end }}
+    {{- if .Values.ciliumHubble.auth.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ciliumHubble.auth.whitelistSourceRanges | join "," }}
+    {{- end }}
+spec:
+  rules:
+    - host: {{ include "helm_lib_module_public_domain" (list . "hubble") }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: hubble-ui
+                port:
+                  name: http
+            path: /
+            pathType: ImplementationSpecific
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+    - hosts:
+        - {{ include "helm_lib_module_public_domain" (list . "hubble") }}
+      secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: hubble
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cilium-hubble")) | nindent 2 }}
+spec:
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  dnsNames:
+    - {{ include "helm_lib_module_public_domain" (list . "hubble") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+{{- end }}
+{{- end }}
