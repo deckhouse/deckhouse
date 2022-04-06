@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hubble-relay
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-relay")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: hubble-relay
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 4245

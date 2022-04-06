@@ -1,0 +1,90 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilium-config
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  identity-allocation-mode: crd
+  cluster-name: default # make sense only for cluster mesh
+
+  debug: {{ .Values.cniCilium.debugLogging | quote }}
+
+  agent-health-port: "9876"
+  prometheus-serve-addr: "127.0.0.1:9090"
+  operator-prometheus-serve-addr: "127.0.0.1:9092"
+  operator-api-serve-addr: "127.0.0.1:9234"
+  enable-metrics: "true"
+
+  enable-ipv4: "true"
+  enable-ipv6: "false"
+
+  clean-cilium-state: {{ .Values.cniCilium.cleanState | quote }}
+  enable-bpf-tproxy: "true"
+
+  bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
+
+  tunnel: "disabled"
+
+  enable-ipv4-masquerade: "true"
+  enable-bpf-masquerade: "true"
+
+  enable-xt-socket-fallback: "true"
+  install-iptables-rules: "true"
+  install-no-conntrack-iptables-rules: "true"
+
+  auto-direct-node-routes: {{ .Values.cniCilium.createNodeRoutes | quote }}
+  enable-bandwidth-manager: "true"
+
+  enable-local-redirect-policy: "true"
+
+  ipv4-native-routing-cidr: {{ .Values.global.discovery.podSubnet }}
+
+  enable-host-firewall: "true"
+
+  kube-proxy-replacement: "strict"
+  kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
+
+  enable-host-reachable-services: "true"
+  bpf-lb-sock-hostns-only: "true"
+  enable-health-check-nodeport: "true"
+  node-port-bind-protection: "true"
+  enable-auto-protect-node-port-range: "true"
+  bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
+  bpf-lb-algorithm: "random"
+  enable-service-topology: "true"
+  netfilter-compatible-mode: "true"
+
+  enable-session-affinity: "true"
+  enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
+
+  sockops-enable: "true"
+  enable-icmp-rules: "true"
+  enable-endpoint-health-checking: "true"
+  enable-health-checking: "true"
+  policy-audit-mode: {{ .Values.cniCilium.policyAuditMode | quote }}
+
+  ipam: kubernetes
+  k8s-require-ipv4-pod-cidr: "true"
+
+  enable-ipv4-egress-gateway: "true"
+
+  enable-k8s-endpoint-slice: "true"
+
+  enable-cilium-endpoint-slice: "true"
+
+  enable-k8s-terminating-endpoint: "true"
+  enable-remote-node-identity: "true"
+
+  bpf-map-dynamic-size-ratio: "0.005"
+
+  # Local hubble sever section
+  enable-hubble: "true"
+  hubble-socket-path: "/var/run/cilium/hubble.sock"
+  hubble-listen-address: ":4244"
+
+  hubble-disable-tls: "false"
+  hubble-tls-cert-file: /var/lib/cilium/tls/hubble/server.crt
+  hubble-tls-key-file: /var/lib/cilium/tls/hubble/server.key
+  hubble-tls-client-ca-files: /var/lib/cilium/tls/hubble/client-ca.crt

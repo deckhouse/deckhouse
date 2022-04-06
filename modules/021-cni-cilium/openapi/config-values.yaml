@@ -1,0 +1,38 @@
+type: object
+properties:
+  debugLogging:
+    type: boolean
+    default: false
+    description: Enabled debug logging for Cilium components.
+  cleanState:
+    type: boolean
+    default: false
+    description: |
+      Clean all persistent state.
+
+      Must be reverted ASAP once all components are started with fresh state.
+  createNodeRoutes:
+    type: boolean
+    default: false
+    description: |
+      Create routes to Pods on other Nodes.
+
+      All Nodes must be located in the same L2 domain.
+  svcSourceRangeCheck:
+    type: boolean
+    default: false
+    description: |
+      Check source IP and validate it against Service's "loadBalancerSourceRanges".
+
+      Do not enable behind a load balancer that performs any form of SNAT.
+  policyAuditMode:
+    type: boolean
+    default: false
+    description: |
+      Do not enforce any Network Policy. Only log allowed/disallowed connections.
+  bpfLBMode:
+    type: string
+    default: "Hybrid"
+    enum: ["SNAT", "Hybrid", "DSR"]
+    description: |
+      eBPF LoadBalancer mode.

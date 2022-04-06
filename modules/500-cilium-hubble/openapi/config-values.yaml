@@ -1,0 +1,104 @@
+type: object
+properties:
+  debugLogging:
+    type: boolean
+    default: false
+    description: Enabled debug logging for Cilium Hubble component.
+  auth:
+    type: object
+    default: {}
+    description: Options related to authentication or authorization in the Hubble web UI.
+    properties:
+      externalAuthentication:
+        type: object
+        description: |
+          A set of parameters to enable external authentication (it is based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > The `externalAuthentication` parameters are set automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            x-examples: [ "https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth" ]
+            description: The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
+            x-examples: [ "https://myhost.ru/dex/sign_in" ]
+            description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      password:
+        type: string
+        format: password
+        description: |
+          The password for http authorization of the `admin` user (it is generated automatically, but you can change it).
+
+          This parameter is used if the `externalAuthentication` is not enabled.
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access Hubble web UI.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) one.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - [ "1.1.1.1/32" ]
+        description: An array if CIDRs that are allowed to authenticate in Hubble web UI.
+  https:
+    type: object
+    x-examples:
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "CertManager"
+        description: |
+          The HTTPS usage mode:
+          - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter;
+          - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace;
+          - `Disabled` — in this mode, the documentation web UI can only be accessed over HTTP;
+          - `OnlyInURI` — the documentation web UI will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        description: |
+          Parameters for certmanager.
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            x-examples: ["letsencrypt", "letsencrypt-staging", "selfsigned"]
+            description: |
+              What ClusterIssuer to use for getting an SSL certificate (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
+      customCertificate:
+        type: object
+        default: {}
+        description: |
+          Parameters for custom certificate usage.
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with the Hubble web UI.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+

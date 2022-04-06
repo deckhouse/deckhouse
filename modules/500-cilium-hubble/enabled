@@ -17,7 +17,13 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  echo "true" > $MODULE_ENABLED_RESULT
+  enabled::disable_module_if_cluster_is_not_bootstraped
+
+  if values::array_has global.enabledModules "cni-cilium" ; then
+    echo "true" > $MODULE_ENABLED_RESULT
+  else
+    echo "false" > $MODULE_ENABLED_RESULT
+  fi
 }
 
 enabled::run $@
