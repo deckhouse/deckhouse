@@ -18,10 +18,8 @@ package hooks
 
 import (
 	"context"
-
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 
@@ -29,7 +27,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 )
 
-const lastDefragTimestampAnnotationKey = "etcd.deckhouse.io/last-defrag-triggered"
+type etc
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:     moduleQueue + "/automatic_defragmentation",
@@ -41,35 +39,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:                         "last_defrag_ds",
-			ApiVersion:                   "apps/v1",
-			Kind:                         "DaemonSet",
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-control-plane-manager"},
-			},
-			FilterFunc: lastDefragTimestampFilter,
-		},
-		etcdEndpointsConfig,
+		getEtcdEndpointConfig(func(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+			var pod corev1.Pod
+
+			err := sdk.FromUnstructured(unstructured, &pod)
+			if err != nil {
+				return nil, err
+			}
+
+			var ip string
+			if pod.Spec.HostNetwork {
+				ip = pod.Status.HostIP
+			} else {
+				ip = pod.Status.PodIP
+			}
+
+			return etcdEndpointString(ip), nil
+		}),
 		etcdSecretK8sConfig,
 	},
 }, dependency.WithExternalDependencies(handleTriggerETCDAutomaticDefragmentation))
-
-func lastDefragTimestampFilter(ds *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	annotations := ds.GetAnnotations()
-	if annotations == nil {
-		return "", nil
-	}
-
-	return annotations[lastDefragTimestampAnnotationKey], nil
-}
 
 func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc dependency.Container) error {
 	if len(input.Snapshots["last_defrag_ds"]) == 0 {
