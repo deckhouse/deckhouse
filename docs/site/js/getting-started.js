@@ -106,13 +106,18 @@ function update_domain_parameters() {
     update_parameter((sessionStorage.getItem('dhctl-domain') || 'example.com').replace('%s.', ''), null, 'example.com', null, '[resources-yml]');
 }
 
-function update_parameter(sourceDataName, searchKey, replacePattern, value = null, snippetSelector = '') {
+function update_parameter(sourceDataName, searchKey, replacePattern, value = null, snippetSelector = '', multilineIndent = 0) {
     var objectToModify, sourceData;
 
     if (sourceDataName && sourceDataName.match(/^dhctl-/)) {
         sourceData = sessionStorage.getItem(sourceDataName);
     } else {
         sourceData = sourceDataName;
+    }
+
+    if (multilineIndent > 0) {
+        value = (value ? value : sourceData).replace(/^/gm, ' '.repeat(multilineIndent));
+        value = "|\n" + value;
     }
 
     if (sourceData && sourceData.length > 0) {
