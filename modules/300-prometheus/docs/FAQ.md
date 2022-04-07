@@ -96,7 +96,9 @@ spec:
 ### How do I provision additional Grafana data sources?
 The `GrafanaAdditionalDatasource` allows you to provision additional Grafana data sources.
 
-A detailed description of the resource parameters is available in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+A detailed description of the resource parameters is available in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). 
+
+See the datasource type in the documentation for the specific [datasource](https://grafana.com/docs/grafana/latest/datasources/).
 
 An example:
 ```yaml
