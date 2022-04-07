@@ -55,11 +55,12 @@ spec:
           - name: INIT_CONTAINER_IMAGE
             value: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeDns.stsPodsHostsAppenderInitContainer }}
           ports:
-          - containerPort: 8080
+          - containerPort: 4443
           readinessProbe:
             httpGet:
               path: /healthz
-              port: 8042
+              port: 4443
+              scheme: HTTPS
             initialDelaySeconds: 5
             failureThreshold: 2
             periodSeconds: 1

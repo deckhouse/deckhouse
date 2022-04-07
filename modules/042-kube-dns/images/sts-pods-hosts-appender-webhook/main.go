@@ -165,14 +165,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	go func() {
-		http.HandleFunc("/healthz", httpHandlerHealthz)
-		logger.Infof("Listening /healthz on :8042")
-		http.ListenAndServe(":8042", nil)
-	}()
+	mux := http.NewServeMux()
+	mux.Handle("/", whHandler)
+	mux.HandleFunc("/healthz", httpHandlerHealthz)
 
-	logger.Infof("Listening on :8080")
-	err = http.ListenAndServeTLS(":8080", cfg.certFile, cfg.keyFile, whHandler)
+	logger.Infof("Listening on :4443")
+	err = http.ListenAndServeTLS(":4443", cfg.certFile, cfg.keyFile, mux)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error serving webhook: %s", err)
 		os.Exit(1)
