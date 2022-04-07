@@ -30,8 +30,8 @@ spec:
       action: keep
   selector:
     matchLabels:
-      app: d8-snapshot-controller
+      app: snapshot-controller
   namespaceSelector:
     matchNames:
-    - kube-system
+    - d8-{{ .Chart.Name }}
 {{- end }}

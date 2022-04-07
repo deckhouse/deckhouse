@@ -2,15 +2,15 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: d8-snapshot-controller-snapshot-controller
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller")) | nindent 2 }}
+  name: snapshot-controller-snapshot-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller")) | nindent 2 }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:snapshot-controller:snapshot-controller:runner
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller")) | nindent 2 }}
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -44,8 +44,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: snapshot-controller:snapshot-controller:leader-election
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller")) | nindent 2 }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller")) | nindent 2 }}
 rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
@@ -55,39 +55,39 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: snapshot-controller:snapshot-controller:leader-election
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller")) | nindent 2 }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: snapshot-controller:snapshot-controller:leader-election
 subjects:
 - kind: ServiceAccount
-  name: d8-snapshot-controller-snapshot-controller
+  name: snapshot-controller-snapshot-controller
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:snapshot-controller:snapshot-controller:runner
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8:snapshot-controller:snapshot-controller:runner
 subjects:
 - kind: ServiceAccount
-  name: d8-snapshot-controller-snapshot-controller
-  namespace: kube-system
+  name: snapshot-controller-snapshot-controller
+  namespace: d8-{{ .Chart.Name }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:snapshot-controller:snapshot-controller:rbac-proxy
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller")) | nindent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: d8-snapshot-controller-snapshot-controller
-    namespace: kube-system
+    name: snapshot-controller-snapshot-controller
+    namespace: d8-{{ .Chart.Name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

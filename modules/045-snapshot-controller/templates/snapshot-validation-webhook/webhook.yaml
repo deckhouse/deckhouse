@@ -2,7 +2,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: validation-webhook.snapshot.storage.k8s.io
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-validation-webhook")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-validation-webhook")) | nindent 2 }}
 webhooks:
 - name: validation-webhook.snapshot.storage.k8s.io
   rules:
@@ -13,8 +13,8 @@ webhooks:
     scope:       "*"
   clientConfig:
     service:
-      namespace: "kube-system"
-      name: "d8-snapshot-validation-webhook"
+      namespace: "d8-{{ .Chart.Name }}"
+      name: "snapshot-validation-webhook"
       path: "/volumesnapshot"
       port: 4443
     caBundle: {{ .Values.snapshotController.internal.webhookCert.ca | b64enc }}

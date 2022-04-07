@@ -3,14 +3,14 @@
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: d8-snapshot-controller
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  name: snapshot-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: d8-snapshot-controller
+    name: snapshot-controller
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
@@ -21,31 +21,31 @@ metadata:
   annotations:
     helm.sh/hook: post-upgrade, post-install
     helm.sh/hook-delete-policy: before-hook-creation
-  name: d8-snapshot-controller
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller" )) | nindent 2 }}
+  name: snapshot-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller" )) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
-      app: d8-snapshot-controller
+      app: snapshot-controller
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: d8-snapshot-controller
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-snapshot-controller")) | nindent 2 }}
+  name: snapshot-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller")) | nindent 2 }}
 spec:
   minReadySeconds: 15
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   selector:
     matchLabels:
-      app: d8-snapshot-controller
+      app: snapshot-controller
   template:
     metadata:
       labels:
-        app: d8-snapshot-controller
+        app: snapshot-controller
     spec:
       imagePullSecrets:
         - name: deckhouse-registry
@@ -53,7 +53,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "d8-snapshot-controller")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "snapshot-controller")) | nindent 6 }}
       containers:
       - name: snapshot-controller
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
@@ -90,13 +90,13 @@ spec:
                 path: /metrics
                 authorization:
                   resourceAttributes:
-                    namespace: kube-system
+                    namespace: d8-{{ .Chart.Name }}
                     apiGroup: apps
                     apiVersion: v1
                     resource: deployments
                     subresource: prometheus-metrics
-                    name: d8-snapshot-controller
+                    name: snapshot-controller
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-      serviceAccountName: d8-snapshot-controller
+      serviceAccountName: snapshot-controller
