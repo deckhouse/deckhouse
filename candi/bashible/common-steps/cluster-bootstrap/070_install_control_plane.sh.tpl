@@ -21,13 +21,11 @@ kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }} /var/lib/bashible/kubeadm/patches
 kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }} /var/lib/bashible/kubeadm/patches
-
-# Add necessary labels to node
-# we do not use 'kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml'
-# because this phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
-# with this label we cannot use target load balancers to control-plane nodes
-if ! bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(hostname)" node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=; then
-  echo "Cannot mark-control-plane" 1>&2
+kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
+# This phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
+# with this label we cannot use target load balancers to control-plane nodes, so we manually remove them
+if ! bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(hostname)" node.kubernetes.io/exclude-from-external-load-balancers-; then
+  echo "Cannot remove node.kubernetes.io/exclude-from-external-load-balancers label from node" 1>&2
   exit 1
 fi
 
