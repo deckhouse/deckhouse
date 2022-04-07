@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sort"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -87,7 +86,7 @@ func apiserverPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		}
 	}
 	if !isReady {
-		return nil, nil
+		return "", nil
 	}
 	return fmt.Sprintf("%s:%d", pod.Status.PodIP, apiserverPort), nil
 }
@@ -126,10 +125,9 @@ func handleAPIEndpoints(input *go_hook.HookInput) error {
 	for _, ep := range input.Snapshots["apiserver_endpoints"] {
 		endpointsSet.Add(ep.([]string)...)
 	}
+	endpointsSet.Delete("") // clean faulty pods
 
-	endpointsList := endpointsSet.Slice()
-
-	sort.Strings(endpointsList)
+	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {
 		return errors.New("no kubernetes apiserver endpoints host:port specified")
