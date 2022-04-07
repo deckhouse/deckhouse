@@ -20,6 +20,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
+  ingressClassName: {{ .Values.userAuthn.publishAPI.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" . ) }}
   tls:
   - hosts:

@@ -72,6 +72,7 @@ metadata:
   name: example-com
   namespace: default
 spec:
+  ingressClassName: nginx
   rules:
   - host: example.com
     http:

@@ -9,6 +9,7 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:
@@ -44,6 +45,7 @@ metadata:
     threshold.extended-monitoring.flant.com/5xx-critical: "100"
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:

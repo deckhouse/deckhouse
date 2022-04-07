@@ -81,6 +81,7 @@ metadata:
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
 spec:
+  ingressClassName: nginx
   rules:
   - host: prometheus-api.example.com
     http:

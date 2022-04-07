@@ -1,8 +1,8 @@
-diff --git a/rootfs/etc/nginx/lua/balancer.lua b/rootfs/etc/nginx/lua/balancer.lua
-index e9fcb32bc..d002a59bf 100644
+diff --git a/etc/nginx/lua/balancer.lua b/etc/nginx/lua/balancer.lua
+index 2c6a83a..d515564 100644
 --- a/etc/nginx/lua/balancer.lua
 +++ b/etc/nginx/lua/balancer.lua
-@@ -85,6 +85,13 @@ local function sync_backend(backend)
+@@ -120,6 +120,13 @@ local function sync_backend(backend)
 
    if not balancer then
      balancers[backend.name] = implementation:new(backend)
@@ -16,9 +16,9 @@ index e9fcb32bc..d002a59bf 100644
      return
    end
 
-@@ -95,6 +102,13 @@ local function sync_backend(backend)
-     ngx.log(ngx.INFO,
-       string.format("LB algorithm changed from %s to %s, resetting the instance", balancer.name, implementation.name))
+@@ -131,6 +138,13 @@ local function sync_backend(backend)
+         string.format("LB algorithm changed from %s to %s, resetting the instance",
+                       balancer.name, implementation.name))
      balancers[backend.name] = implementation:new(backend)
 +    if backend.ingress then
 +      balancers[backend.name]["ingress_name"] = backend.ingress.metadata.name
@@ -30,7 +30,7 @@ index e9fcb32bc..d002a59bf 100644
      return
    end
 
-@@ -229,6 +243,12 @@ function _M.balance()
+@@ -330,6 +344,12 @@ function _M.balance()
      return
    end
 

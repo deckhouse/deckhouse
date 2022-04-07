@@ -33,9 +33,3 @@ Without always option toggled, ingress-nginx does not set the cookie in case if 
 
 https://github.com/kubernetes/ingress-nginx/pull/8213
 
-### Deny locations with the invalid auth URL
-
-There is a problem, that when you set an invalid URL as a value for the nginx.ingress.kubernetes.io/auth-url annotation, the ingress controller allows accessing upstreams without authentication.
-Thus, this is considered a security hole. Users can accidentally set an invalid URL by hand or because of an error in helm templates.
-
-https://github.com/kubernetes/ingress-nginx/pull/8256

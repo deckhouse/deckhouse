@@ -4,6 +4,6 @@ properties:
     default: "0.33"
     oneOf:
       - type: string
-        enum: ["0.25", "0.26", "0.33", "0.46", "0.48", "0.49"]
+        enum: ["0.25", "0.26", "0.33", "0.46", "0.48", "0.49", "1.1"]
     description: |
       The version of the ingress-nginx controller that is used for all controllers by default if the `controllerVersion` parameter is omitted in the IngressNginxController CR.

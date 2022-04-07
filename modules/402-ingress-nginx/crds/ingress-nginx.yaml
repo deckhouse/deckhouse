@@ -33,7 +33,7 @@ spec:
 
                     Using this option, you can create several controllers to use with a single ingress
 
-                    **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation will also be handled.
+                    **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   example: 'nginx'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                 inlet:
@@ -58,7 +58,7 @@ spec:
                     One of the supported NGINX Ingress Controller versions.
 
                     **By default**: the version in the module settings is used.
-                  enum: ['0.25', '0.26', '0.33', '0.46', '0.48', '0.49']
+                  enum: ['0.25', '0.26', '0.33', '0.46', '0.48', '0.49', '1.1']
                 enableIstioSidecar:
                   type: boolean
                   description: |
