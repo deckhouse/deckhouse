@@ -1,0 +1,10 @@
+positive:
+  values:
+    - auth:
+        externalAuthentication:
+          authSignInURL: test
+          authURL: test
+      internal:
+        deployDexAuthenticator: true
+        effectiveStorageClass: test
+      loadBalancer: { }
