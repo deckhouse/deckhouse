@@ -16,7 +16,6 @@ apiVersions:
         type: string
         description: |
           A public key for accessing nodes.
-        x-doc-required: true
       tags:
         type: object
         additionalProperties:
@@ -129,12 +128,10 @@ apiVersions:
               type: string
               description: |
                 The name of the NodeGroup to use for generating node names.
-              x-doc-required: true
             replicas:
               type: integer
               description: |
                 The number of nodes to create.
-              x-doc-required: true
             nodeTemplate:
               additionalProperties: false
               description: |
@@ -261,8 +258,12 @@ apiVersions:
             properties:
               zone:
                 type: string
+                description: |
+                  The zone to create an instance for the bastion node.
               volumeType:
                 type: string
+                description: |
+                  Root disk type.
               instanceClass:
                 description: |
                   Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
