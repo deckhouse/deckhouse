@@ -14,7 +14,7 @@
 
 {{- if eq .cri "Docker" }}
 
-bb-event-on 'bb-sync-file-changed' '_on_docker_config_changed'
+bb-event-on 'docker-config-changed' '_on_docker_config_changed'
 _on_docker_config_changed() {
 {{ if ne .runType "ImageBuilding" -}}
   bb-deckhouse-get-disruptive-update-approval
@@ -23,7 +23,7 @@ _on_docker_config_changed() {
 }
 
 mkdir -p /etc/docker
-bb-sync-file /etc/docker/daemon.json - << "EOF"
+bb-sync-file /etc/docker/daemon.json - docker-config-changed << "EOF"
 {
 {{- $max_concurrent_downloads := 3 }}
 {{- if hasKey .nodeGroup.cri "docker" }}
@@ -44,6 +44,19 @@ EOF
 mkdir -p /etc/docker/certs.d/{{ .registry.address }}
 bb-sync-file /etc/docker/certs.d/{{ .registry.address }}/ca.crt  - << "EOF"
 {{ .registry.ca }}
+EOF
+{{- end }}
+
+{{- if .registry.auth }}
+mkdir -p /.docker
+bb-sync-file /.docker/config.json - << "EOF"
+{
+	"auths": {
+		"{{ .registry.address }}": {
+			"auth": "{{ .registry.auth }}"
+		}
+	}
+}
 EOF
 {{- end }}
 
