@@ -125,9 +125,9 @@ func handleAPIEndpoints(input *go_hook.HookInput) error {
 	for _, ep := range input.Snapshots["apiserver_endpoints"] {
 		endpointsSet.Add(ep.([]string)...)
 	}
-	endpointsSet.Delete("") // clean fauly pods
+	endpointsSet.Delete("") // clean faulty pods
 
-	endpointsList := endpointsSet.Slice()
+	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {
 		return errors.New("no kubernetes apiserver endpoints host:port specified")
