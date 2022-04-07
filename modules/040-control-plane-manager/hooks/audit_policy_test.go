@@ -183,7 +183,7 @@ rules:
 
 			listRule := policy.Rules[len(policy.Rules)-1]
 			Expect(listRule.Level).To(Equal(audit.LevelMetadata))
-			Expect(listRule.Namespaces).To(Equal([]string{}) )
+			Expect(listRule.Namespaces).To(BeEmpty())
 		})
 	})
 })
