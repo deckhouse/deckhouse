@@ -74,34 +74,31 @@ To configure Prometheus to use LINSTOR for storing data:
   ```
 - Wait for the restart of Prometheus Pods.
 
-## Pod cannot start with FailedMount error
+## Pod cannot start with the `FailedMount` error
 
-If your Pod is stuck in the ContainerCreating phase and you see the following errors in `kubectl describe`:
+### Pod is stuck in the `ContainerCreating` phase
+If the Pod is stuck in the `ContainerCreating` phase and you see the following errors in `kubectl describe`:
 
 ```
 rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking for exclusive open failed: wrong medium type, check device health
 ```
 
-This means that your device is still mounted on one of the other nodes, check:
+It means that device is still mounted on one of the other nodes. To check it, use the following command:
 
-```
+```shell
 linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
 
 The `InUse` flag will indicate which node the device is being used on.
 
----
+### Errors like `Input/output error`
 
-Otherwise, if you see errors like this:
+Such errors usually occur at the stage of creating the file system (mkfs). 
 
-```
-input/output error
-```
+Check `dmesg` on the node where your Pod is running:
 
-They usually occur at the stage of creating the file system (mkfs). Check `dmesg` on the node where your pod is running:
-
-```
+```shell
 dmesg | grep 'Remote failed to finish a request within'
 ```
 
-If you see this message, then most likely your disk subsystem is too slow for the normal functioning of DRBD.
+If you get any output (there are lines with the "Remote failed to finish a request within ..." parts in the `dmesg` output), then most likely, your disk subsystem is too slow for the normal functioning of DRBD.
