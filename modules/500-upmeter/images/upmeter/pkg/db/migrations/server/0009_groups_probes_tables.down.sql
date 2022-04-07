@@ -1,7 +1,0 @@
-/*
-
- ...
- */
-BEGIN IMMEDIATE;
-
-COMMIT;
