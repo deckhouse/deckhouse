@@ -8,6 +8,6 @@ properties:
   auth:
     type: object
     default: { }
-  loadBalancer: {}
+  loadBalancer:
     type: object
     default: { }
