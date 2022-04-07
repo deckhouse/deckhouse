@@ -16,7 +16,11 @@ limitations under the License.
 
 package set
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func Test_NewAndHas(t *testing.T) {
 	tests := []struct {
@@ -185,4 +189,11 @@ func Test_Delete(t *testing.T) {
 			t.Errorf("expected empty set")
 		}
 	}
+}
+
+func Test_Slice(t *testing.T) {
+	// the slice is sorted
+	s := New("x", "z", "1", "f", "a", "g", "n")
+	expected := []string{"1", "a", "f", "g", "n", "x", "z"}
+	assert.Equal(t, expected, s.Slice(), "Slice() must sort strings")
 }
