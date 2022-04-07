@@ -81,6 +81,15 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation
+    - name: "Generate cluster configuration schemas"
+      shell: |
+        export MODULES_DIR=modules_en
+        bash ./generate_cluster_configuration.sh
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
+        bash ./generate_cluster_configuration.sh
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation
     - name: "Generate CR schemas"
       shell: |
         export MODULES_DIR=modules_en
