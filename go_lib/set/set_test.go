@@ -165,3 +165,24 @@ func Test_AddSet(t *testing.T) {
 		})
 	}
 }
+
+func Test_Delete(t *testing.T) {
+	{
+		// deletion actually works
+		s := New()
+		s.Add("")
+		s.Delete("")
+		if s.Size() > 0 {
+			t.Errorf("expected empty set")
+		}
+	}
+
+	{
+		// deletion ignores absent items
+		s := New()
+		s.Delete("")
+		if s.Size() > 0 {
+			t.Errorf("expected empty set")
+		}
+	}
+}
