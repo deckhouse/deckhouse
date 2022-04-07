@@ -68,6 +68,7 @@ spec:
             httpGet:
               path: /healthz
               port: 4443
+              scheme: HTTPS
             periodSeconds: 1
             failureThreshold: 3
           volumeMounts:
