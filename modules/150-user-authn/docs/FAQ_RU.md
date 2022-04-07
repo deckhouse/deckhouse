@@ -70,7 +70,7 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 
 ## Как я могу сгенерировать kubeconfig для доступа к Kubernetes API?
 
-Для начала, в CM `deckhouse` настройте `publishAPI`:
+Для начала, в ConfigMap `deckhouse` настройте `publishAPI`:
 
 {% raw %}
 ```yaml

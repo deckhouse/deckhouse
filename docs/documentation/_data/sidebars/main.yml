@@ -872,6 +872,26 @@ entries:
         ru: Поддержка Bare Metal
       versionType: ee
       folders:
+        - title: ceph-csi
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/099-ceph-csi/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/099-ceph-csi/usage.html
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/099-ceph-csi/configuration.html
+                - title: Custom Resources
+                  url: /modules/099-ceph-csi/cr.html
         - title: keepalived
           versionType: experimental
           folders:

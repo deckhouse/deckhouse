@@ -4,27 +4,21 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Параметры подключения к ceph-кластеру и настройка StorageClasses.
+            Параметры подключения к Ceph-кластеру и настройка StorageClass'ов.
           properties:
             spec:
-              required:
-                - clusterID
-                - userID
-                - userKey
-                - monitors
               properties:
                 clusterID:
                   description: |
-                    FSID/UUID ceph-кластера
-                    ```shell
-                    ceph fsid
-                    ```
+                    FSID/UUID Ceph-кластера
+
+                    Получить FSID/UUID Ceph-кластера можно с помощью команды `ceph fsid`.
                 userID:
                   description: |
-                    Имя пользователя без `client.`
+                    Имя пользователя без `client.`.
                 userKey:
                   description: |
-                    Ключ авторизации
+                    Ключ авторизации, соответствующий `userID`.
                 monitors:
                   description: |
                     Список IP-адресов ceph-mon'ов в формате `10.0.0.10:6789`.
@@ -37,18 +31,22 @@ spec:
                         properties:
                           namePostfix:
                             description: |
-                              Часть имени StorageClass после `-`. В качестве первой части используется имя из CustomResource CephCSIDriver.
+                              Часть имени StorageClass после `-`.
+
+                              В качестве первой части используется имя из CustomResource `CephCSIDriver`.
                           pool:
                             description: |
                               Название пула в котором будут создаваться RBD-образы.
                           reclaimPolicy:
                             description: |
-                              Политика возврата для PersistentVolume
-                              https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming
+                              Политика возврата для PersistentVolume.
+
+                              [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
                           allowVolumeExpansion:
                             description: |
-                              Включает возможность изменять размер тома, редактируя соответствующий объект PersistentVolumeClaim
-                              https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion
+                              Включает возможность изменять размер тома, редактируя соответствующий объект PersistentVolumeClaim.
+
+                              [Подробнее...](https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion)
                           mountOptions:
                             description: |
                               Список опций монтирования.
@@ -62,7 +60,7 @@ spec:
                   properties:
                     subvolumeGroup:
                       description: |
-                        Имя группы для subvolumes.
+                        Имя группы для subvolumes CephFS.
                     storageClasses:
                       description: |
                         Описание StorageClass'ов для CephFS.
@@ -70,7 +68,9 @@ spec:
                         properties:
                           namePostfix:
                             description: |
-                              Часть имени StorageClass после `-`. В качестве первой части используется имя из CustomResource CephCSIDriver. 
+                              Часть имени StorageClass после `-`.
+
+                              В качестве первой части используется имя из CustomResource `CephCSIDriver`.
                           pool:
                             description: |
                               Название пула в котором будут создаваться RBD-образы.

@@ -11,7 +11,7 @@ data:
 
 ## Parameters
 
-The module has the following parameters in the `deckhouse` CM:
+The module has the following parameters in the `deckhouse` ConfigMap:
 
 * `nodeSelector` — selects nodes that will be used to configure iptables rules and to run the DHCP server;
     * Format — a [dictionary](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector) of label-value pairs. The instance's pods inherit this field as-is;
