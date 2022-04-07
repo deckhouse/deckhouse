@@ -79,7 +79,7 @@ vmFolderPath: test
 regionTagCategory: test
 zoneTagCategory: test
 region: test
-internalNetworkCIDR: test
+internalNetworkCIDR: 192.168.199.0/24
 sshPublicKey: test
 internalNetworkNames: [test1, test2]
 externalNetworkNames: [test1, test2]
@@ -134,7 +134,7 @@ disableTimesync: false
 externalNetworkNames:
 - override1
 - override2
-internalNetworkCIDR: test
+internalNetworkCIDR: 192.168.199.0/24
 internalNetworkNames:
 - override1
 - override2
