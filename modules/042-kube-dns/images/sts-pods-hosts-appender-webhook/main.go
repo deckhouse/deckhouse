@@ -173,7 +173,6 @@ func main() {
 
 	logger.Infof("Listening on :8080")
 	err = http.ListenAndServeTLS(":8080", cfg.certFile, cfg.keyFile, whHandler)
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error serving webhook: %s", err)
 		os.Exit(1)
