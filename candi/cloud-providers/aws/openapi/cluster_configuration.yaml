@@ -193,11 +193,14 @@ apiVersions:
           The way resources are located in the cloud.
 
           Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
+
+          > **Note,** that the `Standard` layout is deprecated.
         enum: ['WithoutNAT', 'WithNAT', 'Standard']
       standard:
         type: object
         additionalProperties: false
         required: []
+        description: Layout is **deprecated**.
         properties:
           associatePublicIPToMasters:
             type: boolean
