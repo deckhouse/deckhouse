@@ -32,195 +32,195 @@ entries:
             - title: deckhouse
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/020-deckhouse/
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/020-deckhouse/usage.html
                 - title:
-                    ru: Справка
                     en: Reference
+                    ru: Справка
                   folders:
                     - title:
-                        ru: Настройки
                         en: Configuration
+                        ru: Настройки
                       url: /modules/020-deckhouse/configuration.html
                     - title: Custom Resources
                       url: /modules/020-deckhouse/cr.html
             - title: deckhouse-web
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/810-deckhouse-web/
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/810-deckhouse-web/usage.html
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/810-deckhouse-web/configuration.html
     - title:
         en: Kubernetes Cluster
         ru: Кластер Kubernetes
       folders:
         - title:
-            ru: Описание
             en: Description
+            ru: Описание
           url: /kubernetes.html
         - title: Cloud providers
           folders:
             - title: Amazon Web Services
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/030-cloud-provider-aws/
                 - title:
-                    ru: Установка
                     en: Installation
+                    ru: Установка
                   folders:
                     - title:
-                        ru: Подготовка окружения
                         en: Preparing environment
+                        ru: Подготовка окружения
                       url: /modules/030-cloud-provider-aws/environment.html
                     - title:
-                        ru: Схемы размещения
                         en: Layouts
+                        ru: Схемы размещения
                       url: /modules/030-cloud-provider-aws/layouts.html
                     - title:
-                        ru: Настройка провайдера
                         en: Provider configuration
+                        ru: Настройка провайдера
                       url: /modules/030-cloud-provider-aws/cluster_configuration.html
                 - title:
-                    ru: Справка
                     en: Reference
+                    ru: Справка
                   folders:
                     - title:
-                        ru: Настройки
                         en: Configuration
+                        ru: Настройки
                       url: /modules/030-cloud-provider-aws/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-aws/cr.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/030-cloud-provider-aws/usage.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-aws/faq.html
             - title: Google Cloud Platform
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/030-cloud-provider-gcp/
                 - title:
-                    ru: Установка
                     en: Installation
+                    ru: Установка
                   folders:
                     - title:
-                        ru: Подготовка окружения
                         en: Preparing environment
+                        ru: Подготовка окружения
                       url: /modules/030-cloud-provider-gcp/environment.html
                     - title:
-                        ru: Схемы размещения
                         en: Layouts
+                        ru: Схемы размещения
                       url: /modules/030-cloud-provider-gcp/layouts.html
                     - title:
-                        ru: Настройка провайдера
                         en: Provider configuration
+                        ru: Настройка провайдера
                       url: /modules/030-cloud-provider-gcp/cluster_configuration.html
                 - title:
-                    ru: Справка
                     en: Reference
+                    ru: Справка
                   folders:
                     - title:
-                        ru: Настройки
                         en: Configuration
+                        ru: Настройки
                       url: /modules/030-cloud-provider-gcp/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-gcp/cr.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/030-cloud-provider-gcp/usage.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-gcp/faq.html
             - title: Microsoft Azure
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/030-cloud-provider-azure/
                 - title:
-                    ru: Установка
                     en: Installation
+                    ru: Установка
                   folders:
                     - title:
-                        ru: Подготовка окружения
                         en: Preparing environment
+                        ru: Подготовка окружения
                       url: /modules/030-cloud-provider-azure/environment.html
                     - title:
-                        ru: Схемы размещения
                         en: Layouts
+                        ru: Схемы размещения
                       url: /modules/030-cloud-provider-azure/layouts.html
                     - title:
-                        ru: Настройка провайдера
                         en: Provider configuration
+                        ru: Настройка провайдера
                       url: /modules/030-cloud-provider-azure/cluster_configuration.html
                 - title:
                     ru: Справка
                     en: Reference
                   folders:
                     - title:
-                        ru: Настройки
                         en: Configuration
+                        ru: Настройки
                       url: /modules/030-cloud-provider-azure/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-azure/cr.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/030-cloud-provider-azure/usage.html
             - title: OpenStack
               versionType: ee
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/030-cloud-provider-openstack/
                 - title:
-                    ru: Установка
                     en: Installation
+                    ru: Установка
                   folders:
                     - title:
-                        ru: Подготовка окружения
                         en: Preparing environment
+                        ru: Подготовка окружения
                       url: /modules/030-cloud-provider-openstack/environment.html
                     - title:
-                        ru: Схемы размещения
                         en: Layouts
+                        ru: Схемы размещения
                       url: /modules/030-cloud-provider-openstack/layouts.html
                     - title:
-                        ru: Настройка провайдера
                         en: Provider configuration
+                        ru: Настройка провайдера
                       url: /modules/030-cloud-provider-openstack/cluster_configuration.html
                 - title:
-                    ru: Справка
                     en: Reference
+                    ru: Справка
                   folders:
                     - title:
-                        ru: Настройки
                         en: Configuration
+                        ru: Настройки
                       url: /modules/030-cloud-provider-openstack/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-openstack/cr.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/030-cloud-provider-openstack/usage.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-openstack/faq.html
@@ -228,185 +228,185 @@ entries:
               versionType: ee
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/030-cloud-provider-vsphere/
                 - title:
-                    ru: Установка
                     en: Installation
+                    ru: Установка
                   folders:
                     - title:
-                        ru: Подготовка окружения
                         en: Preparing environment
+                        ru: Подготовка окружения
                       url: /modules/030-cloud-provider-vsphere/environment.html
                     - title:
-                        ru: Схемы размещения
                         en: Layouts
+                        ru: Схемы размещения
                       url: /modules/030-cloud-provider-vsphere/layouts.html
                     - title:
-                        ru: Настройка провайдера
                         en: Provider configuration
+                        ru: Настройка провайдера
                       url: /modules/030-cloud-provider-vsphere/cluster_configuration.html
                 - title:
-                    ru: Справка
                     en: Reference
+                    ru: Справка
                   folders:
                     - title:
-                        ru: Настройки
                         en: Configuration
+                        ru: Настройки
                       url: /modules/030-cloud-provider-vsphere/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-vsphere/cr.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/030-cloud-provider-vsphere/usage.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vsphere/faq.html
             - title: Yandex.Cloud
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/030-cloud-provider-yandex/
                 - title:
-                    ru: Установка
                     en: Installation
+                    ru: Установка
                   folders:
                     - title:
-                        ru: Подготовка окружения
                         en: Preparing environment
+                        ru: Подготовка окружения
                       url: /modules/030-cloud-provider-yandex/environment.html
                     - title:
-                        ru: Схемы размещения
                         en: Layouts
+                        ru: Схемы размещения
                       url: /modules/030-cloud-provider-yandex/layouts.html
                     - title:
-                        ru: Настройка провайдера
                         en: Provider configuration
+                        ru: Настройка провайдера
                       url: /modules/030-cloud-provider-yandex/cluster_configuration.html
                 - title:
-                    ru: Справка
                     en: Reference
+                    ru: Справка
                   folders:
                     - title:
-                        ru: Настройки
                         en: Configuration
+                        ru: Настройки
                       url: /modules/030-cloud-provider-yandex/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-yandex/cr.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/030-cloud-provider-yandex/usage.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-yandex/faq.html
         - title:
-            ru: Управление control plane
             en: Control plane management
+            ru: Управление control plane
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/040-control-plane-manager/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/040-control-plane-manager/usage.html
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/040-control-plane-manager/configuration.html
             - title: FAQ
               url: /modules/040-control-plane-manager/faq.html
         - title:
-            ru: Управление узлами
             en: Node management
+            ru: Управление узлами
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/040-node-manager/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/040-node-manager/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/040-node-manager/configuration.html
                 - title: Custom Resources
                   url: /modules/040-node-manager/cr.html
             - title: FAQ
               url: /modules/040-node-manager/faq.html
         - title:
-            ru: Другие модули
             en: Other modules
+            ru: Другие модули
           folders:
             - title: cni-flannel
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/035-cni-flannel/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/035-cni-flannel/configuration.html
             - title: cni-simple-bridge
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/035-cni-simple-bridge/
             - title: kube-proxy
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/021-kube-proxy/
             - title: kube-dns
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/042-kube-dns/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/042-kube-dns/configuration.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/042-kube-dns/usage.html
             - title: node-local-dns
               versionType: ee
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/350-node-local-dns/
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/350-node-local-dns/usage.html
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/350-node-local-dns/configuration.html
             - title: terraform-manager
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/040-terraform-manager/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/040-terraform-manager/configuration.html
     - title:
         en: Accessing cluster
@@ -415,31 +415,31 @@ entries:
         - title: dashboard
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/500-dashboard/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/500-dashboard/usage.html
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/500-dashboard/configuration.html
         - title: openvpn
           versionType: experimental
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/500-openvpn/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/500-openvpn/usage.html
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/500-openvpn/configuration.html
     - title:
         en: Network Load Balancing
@@ -448,20 +448,20 @@ entries:
         - title: ingress-nginx
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/402-ingress-nginx/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/402-ingress-nginx/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/402-ingress-nginx/configuration.html
                 - title: Custom Resources
                   url: /modules/402-ingress-nginx/cr.html
@@ -471,16 +471,16 @@ entries:
           versionType: ee
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/110-istio/
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/110-istio/configuration.html
                 - title: Custom Resources
                   url: /modules/110-istio/cr.html
@@ -489,8 +489,8 @@ entries:
                     ru: "Custom Resources (от istio.io)"
                   url: /modules/110-istio/istio-cr.html
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/110-istio/usage.html
     - title:
         en: Monitoring
@@ -500,20 +500,20 @@ entries:
           url: /modules/300-prometheus/
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/300-prometheus/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/300-prometheus/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/300-prometheus/configuration.html
                 - title: Custom Resources
                   url: /modules/300-prometheus/cr.html
@@ -524,61 +524,61 @@ entries:
             ru: Мониторинг вашего приложения
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/340-monitoring-custom/
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/340-monitoring-custom/configuration.html
         - title: Targets
           folders:
             - title: monitoring-ping
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/340-monitoring-ping/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/340-monitoring-ping/configuration.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/340-monitoring-ping/usage.html
             - title: monitoring-kubernetes
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/340-monitoring-kubernetes/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/340-monitoring-kubernetes/configuration.html
             - title:
-                ru: Мониторинг control plane
                 en: Control plane monitoring
+                ru: Мониторинг control plane
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/340-monitoring-kubernetes-control-plane/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
             - title: extended-monitoring
               versionType: experimental
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/340-extended-monitoring/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/340-extended-monitoring/configuration.html
         - title:
             en: Other modules
@@ -587,54 +587,54 @@ entries:
             - title: log-shipper
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/460-log-shipper/
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/460-log-shipper/usage.html
                 - title:
-                    ru: Расширенная конфигурация
                     en: Advanced Usage
+                    ru: Расширенная конфигурация
                   url: /modules/460-log-shipper/advanced_usage.html
                 - title:
-                    ru: Справка
                     en: Reference
+                    ru: Справка
                   folders:
                     - title:
-                        ru: Настройки
                         en: Configuration
+                        ru: Настройки
                       url: /modules/460-log-shipper/configuration.html
                     - title: Custom Resources
                       url: /modules/460-log-shipper/cr.html
             - title: prometheus-pushgateway
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/303-prometheus-pushgateway/
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/303-prometheus-pushgateway/usage.html
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/303-prometheus-pushgateway/configuration.html
             - title: upmeter
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/500-upmeter/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/500-upmeter/configuration.html
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/500-upmeter/usage.html
     - title:
         en: Autoscaling & Managing resources
@@ -643,32 +643,32 @@ entries:
         - title: Priority classes
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/010-priority-class/
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/010-priority-class/configuration.html
         - title:
             en: Scaling by any metric
             ru: Масштабирование по метрикам
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/301-prometheus-metrics-adapter/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/301-prometheus-metrics-adapter/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/301-prometheus-metrics-adapter/configuration.html
                 - title: Custom resources
                   url: /modules/301-prometheus-metrics-adapter/cr.html
@@ -677,56 +677,56 @@ entries:
             ru: Вертикальное масштабирование
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/302-vertical-pod-autoscaler/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/302-vertical-pod-autoscaler/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/302-vertical-pod-autoscaler/configuration.html
                 - title: Custom resources
                   url: /modules/302-vertical-pod-autoscaler/cr.html
             - title: FAQ
               url: /modules/302-vertical-pod-autoscaler/faq.html
         - title:
-            ru: Другие модули
             en: Other modules
+            ru: Другие модули
           folders:
             - title: descheduler
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/400-descheduler/
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/400-descheduler/usage.html
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/400-descheduler/configuration.html
             - title: pod-reloader
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/465-pod-reloader/
                 - title:
-                    ru: Примеры
                     en: Usage
+                    ru: Примеры
                   url: /modules/465-pod-reloader/usage.html
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/465-pod-reloader/configuration.html
     - title:
         en: Security
@@ -735,20 +735,20 @@ entries:
         - title: User authentication
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/150-user-authn/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/150-user-authn/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/150-user-authn/configuration.html
                 - title: Custom Resources
                   url: /modules/150-user-authn/cr.html
@@ -761,56 +761,56 @@ entries:
                 ru: Описание
               url: /modules/140-user-authz/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/140-user-authz/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/140-user-authz/configuration.html
                 - title: Custom Resources
                   url: /modules/140-user-authz/cr.html
             - title: FAQ
               url: /modules/140-user-authz/faq.html
         - title:
-            ru: Другие модули
             en: Other modules
+            ru: Другие модули
           folders:
           - title: network-policy-engine
             folders:
               - title:
-                  ru: Описание
                   en: Description
+                  ru: Описание
                 url: /modules/050-network-policy-engine/
               - title:
-                  ru: Примеры
                   en: Usage
+                  ru: Примеры
                 url: /modules/050-network-policy-engine/usage.html
               - title:
-                  ru: Настройки
                   en: Configuration
+                  ru: Настройки
                 url: /modules/050-network-policy-engine/configuration.html
           - title: cert-manager
             folders:
               - title:
-                  ru: Описание
                   en: Description
+                  ru: Описание
                 url: /modules/101-cert-manager/
               - title:
-                  ru: Примеры
                   en: Usage
+                  ru: Примеры
                 url: /modules/101-cert-manager/usage.html
               - title:
-                  ru: Справка
                   en: Reference
+                  ru: Справка
                 folders:
                   - title:
-                      ru: Настройки
                       en: Configuration
+                      ru: Настройки
                     url: /modules/101-cert-manager/configuration.html
                   - title: Custom Resources
                     url: /modules/101-cert-manager/cr.html
@@ -824,48 +824,48 @@ entries:
           versionType: experimental
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/500-basic-auth/
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/500-basic-auth/configuration.html
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/500-basic-auth/usage.html
         - title: chrony
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/470-chrony/
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/470-chrony/configuration.html
         - title: namespace-configurator
           versionType: experimental
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/600-namespace-configurator/
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/600-namespace-configurator/configuration.html
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/600-namespace-configurator/usage.html
         - title: secret-copier
           versionType: experimental
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/600-secret-copier/
     - title:
         en: Bare Metal Support
@@ -876,40 +876,40 @@ entries:
           versionType: experimental
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/450-keepalived/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/450-keepalived/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/450-keepalived/configuration.html
                 - title: Custom Resources
                   url: /modules/450-keepalived/cr.html
         - title: local-path-provisioner
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/031-local-path-provisioner/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/031-local-path-provisioner/usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/031-local-path-provisioner/configuration.html
                 - title: Custom Resources
                   url: /modules/031-local-path-provisioner/cr.html
@@ -919,24 +919,24 @@ entries:
           versionType: experimental
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/031-linstor/
             - title:
-                ru: Примеры
                 en: Usage
+                ru: Примеры
               url: /modules/031-linstor/usage.html
             - title:
-                ru: Расширенная конфигурация
                 en: Advanced Usage
+                ru: Расширенная конфигурация
               url: /modules/031-linstor/advanced_usage.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/031-linstor/configuration.html
             - title: FAQ
               url: /modules/031-linstor/faq.html
@@ -944,25 +944,25 @@ entries:
           versionType: ee
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/380-metallb/
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/380-metallb/configuration.html
         - title: network-gateway
           versionType: experimental
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/450-network-gateway/
             - title:
-                ru: Настройки
                 en: Configuration
+                ru: Настройки
               url: /modules/450-network-gateway/configuration.html
     - title:
-        ru: Используемое ПО
         en: Used software
+        ru: Используемое ПО
       url: /oss_info.html

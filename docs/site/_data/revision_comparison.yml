@@ -132,8 +132,8 @@ sections:
           ee: partial
         hint:
           ee:
-            ru: Доступно в рамках услуги <a href='/ru/services/managed.html'>Managed Deckhouse</a>
             en: Available as a part of the <a href='/en/services/managed.html'>Managed Deckhouse</a> service
+            ru: Доступно в рамках услуги <a href='/ru/services/managed.html'>Managed Deckhouse</a>
         skipInDocumentation: true
   - id: other
     description:
