@@ -20,6 +20,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
@@ -27,13 +30,16 @@ import (
 	kwhmutating "github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/http"
-	"os"
 )
 
 type config struct {
 	certFile string
 	keyFile  string
+}
+
+//goland:noinspection SpellCheckingInspection
+func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Ok.")
 }
 
 func initFlags() config {
@@ -158,8 +164,16 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error creating webhook handler: %s", err)
 		os.Exit(1)
 	}
+
+	go func() {
+		http.HandleFunc("/healthz", httpHandlerHealthz)
+		logger.Infof("Listening /healthz on :8042")
+		http.ListenAndServe(":8042", nil)
+	}()
+
 	logger.Infof("Listening on :8080")
 	err = http.ListenAndServeTLS(":8080", cfg.certFile, cfg.keyFile, whHandler)
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error serving webhook: %s", err)
 		os.Exit(1)

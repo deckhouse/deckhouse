@@ -57,14 +57,16 @@ spec:
           ports:
           - containerPort: 8080
           readinessProbe:
-            tcpSocket:
-              port: 8080
+            httpGet:
+              path: /healthz
+              port: 8042
             initialDelaySeconds: 5
             failureThreshold: 2
             periodSeconds: 1
           livenessProbe:
-            tcpSocket:
-              port: 8080
+            httpGet:
+              path: /healthz
+              port: 8042
             periodSeconds: 1
             failureThreshold: 3
           volumeMounts:
