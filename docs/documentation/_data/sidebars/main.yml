@@ -408,7 +408,7 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/040-terraform-manager/configuration.html
-            - title: linstor
+            - title: snapshot-controller
               versionType: experimental
               folders:
                 - title:

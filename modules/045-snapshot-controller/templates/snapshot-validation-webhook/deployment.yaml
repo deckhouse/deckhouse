@@ -45,10 +45,12 @@ spec:
     metadata:
       labels:
         app: snapshot-validation-webhook
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/snapshot-validation-webhook/secret.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
         - name: deckhouse-registry
-      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}

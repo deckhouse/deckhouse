@@ -62,8 +62,8 @@ spec:
 
 ### CSI Volume Cloning
 
-Based on the concept of snapshots you can also perform cloning of persistent volumes - or to be more precise: of existing persistent volume claims (PVC).
-However the CSI specification mentions some restrictions regarding cloning PVCs in different namespace and storage classes than original PVC
+Based on the concept of snapshots, you can also perform cloning of persistent volumes - or, more precisely, existing persistent volume claims (PVC).
+However, the CSI specification mentions some restrictions regarding cloning PVCs in different namespace and storage classes than the original PVC
 (see [Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/volume-pvc-datasource/) for details).
 
 To clone a volume create a new PVC and define the origin PVC in the dataSource:

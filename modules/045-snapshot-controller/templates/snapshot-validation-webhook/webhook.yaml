@@ -21,4 +21,4 @@ webhooks:
   admissionReviewVersions: ["v1", "v1beta1"]
   sideEffects: None
   failurePolicy: Fail
-  timeoutSeconds: 2
+  timeoutSeconds: 10
