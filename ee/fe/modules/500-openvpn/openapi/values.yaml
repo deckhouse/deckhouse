@@ -5,6 +5,16 @@ properties:
   internal:
     type: object
     default: { }
+    properties:
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
   auth:
     type: object
     default: { }
