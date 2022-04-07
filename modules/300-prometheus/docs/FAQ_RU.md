@@ -96,7 +96,7 @@ spec:
 ### Как подключить дополнительные data source для Grafana?
 Для подключения дополнительных data source к Grafana существует специальный ресурс — `GrafanaAdditionalDatasource`.
 
-Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). Тип ресурса, смотрите в документации по конкретному [datasource](https://grafana.com/docs/grafana/latest/datasources/).
 
 Пример:
 ```yaml
