@@ -67,7 +67,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8042
+              port: 4443
             periodSeconds: 1
             failureThreshold: 3
           volumeMounts:
