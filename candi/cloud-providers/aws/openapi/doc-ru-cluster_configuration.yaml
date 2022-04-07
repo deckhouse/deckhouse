@@ -95,6 +95,10 @@ apiVersions:
           Название схемы размещения.
 
           [Подробнее](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
+
+          > Схема размещения `Standard` считается **устаревшей**, не используйте ее.
+      standard:
+        description: Схема размещения `Standard` считается **устаревшей**, не используйте ее.
       withNAT:
         properties:
           bastionInstance:
