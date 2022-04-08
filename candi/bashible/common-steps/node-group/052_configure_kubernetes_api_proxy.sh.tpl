@@ -54,7 +54,7 @@ stream {
 }
 EOF
 
-if ! -f /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf; then
+if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf ]]; then
   cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
 fi
 
@@ -74,11 +74,13 @@ spec:
   containers:
   - name: kubernetes-api-proxy
     image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    imagePullPolicy: IfNotPresent
     volumeMounts:
     - mountPath: /etc/nginx
       name: kubernetes-api-proxy-conf
   - name: kubernetes-api-proxy-reloader
     image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
     volumeMounts:
     - mountPath: /etc/nginx
