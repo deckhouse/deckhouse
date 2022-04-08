@@ -408,25 +408,6 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/040-terraform-manager/configuration.html
-            - title: snapshot-controller
-              versionType: experimental
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/045-snapshot-controller
-                - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/045-snapshot-controller/usage.html
-                - title:
-                    ru: Справка
-                    en: Reference
-                  folders:
-                    - title:
-                        ru: Настройки
-                        en: Configuration
-                      url: /modules/045-snapshot-controller/configuration.html
     - title:
         en: Accessing cluster
         ru: Доступ к кластеру
@@ -886,6 +867,21 @@ entries:
                 en: Description
                 ru: Описание
               url: /modules/600-secret-copier/
+        - title: snapshot-controller
+          versionType: experimental
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/045-snapshot-controller/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/045-snapshot-controller/usage.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/045-snapshot-controller/configuration.html
     - title:
         en: Bare Metal Support
         ru: Поддержка Bare Metal

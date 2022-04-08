@@ -5,13 +5,13 @@ title: "The snapshot-controller moule: configuration examples"
 ### Using snapshots
 
 To use snapshots, you need to specify a `VolumeSnapshotClass`.
-To get a list of available snapshot classes in your cluster, run:
+To get a list of available VolumeSnapshotClasses in your cluster, run:
 
-```
+```shell
 kubectl get volumesnapshotclasses.snapshot.storage.k8s.io
 ```
 
-You can then use snapshot class to create a snapshot from an existing PVC:
+You can then use VolumeSnapshotClass to create a snapshot from an existing PVC:
 
 ```yaml
 apiVersion: snapshot.storage.k8s.io/v1
@@ -32,7 +32,7 @@ $ kubectl describe volumesnapshots.snapshot.storage.k8s.io my-first-snapshot
 Spec:
   Source:
     Persistent Volume Claim Name:  my-first-snapshot
-  Volume Snapshot Class Name:      my-first-snapshot-class
+  Volume Snapshot Class Name:      linstor
 Status:
   Bound Volume Snapshot Content Name:  snapcontent-b6072ab7-6ddf-482b-a4e3-693088136d2c
   Creation Time:                       2020-06-04T13:02:28Z
