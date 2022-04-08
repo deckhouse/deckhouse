@@ -105,15 +105,14 @@ func (h *Hook) convergeLabelToNode(shouldExist bool) error {
 func (h *Hook) BeforeAction() (bool, error) {
 	err := log.Process(h.sourceCommandName, "Check deckhouse pod is not on converged node", func() error {
 		var pod *v1.Pod
-		err := retry.NewSilentLoop("Get deckhouse pod", 10, 3*time.Second).Run(func() error {
+		err := retry.NewSilentLoop("getting deckhouse pod", 10, 3*time.Second).Run(func() error {
 			var err error
 			pod, err = deckhouse.GetRunningPod(h.kubeCl)
-
 			return err
 		})
 
 		if err != nil {
-			return fmt.Errorf("Deckhouse pod did not get: %s", err)
+			return err
 		}
 
 		if pod.Spec.NodeName != h.nodeToConverge {

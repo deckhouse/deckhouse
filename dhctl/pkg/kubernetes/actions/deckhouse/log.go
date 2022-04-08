@@ -33,10 +33,12 @@ import (
 )
 
 var (
-	ErrListPods      = errors.New("No Deckhouse pod found.")
-	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
-	ErrRequestFailed = errors.New("Request failed. Probably pod was restarted during installation.")
-	ErrIncorrectNode = errors.New("Deckhouse on wrong node")
+	ErrPodListing     = errors.New("cannot list Deckhouse pods")
+	ErrPodNotFound    = errors.New("no Deckhouse pods found")
+	ErrTooManyPods    = errors.New("more than one Deckhouse pods found")
+	ErrTimeOut        = errors.New("timeout waiting for Deckhouse readiness")
+	ErrRequestFailed  = errors.New("request failed, probably the pod was restarted during installation")
+	ErrUnexpectedNode = errors.New("deckhouse is on unexpected node")
 )
 
 type logLine struct {
@@ -248,7 +250,7 @@ func (d *LogPrinter) checkDeckhousePodReady() (bool, error) {
 	}
 
 	if d.excludeNodeName != "" && runningPod.Spec.NodeName == d.excludeNodeName {
-		return false, ErrIncorrectNode
+		return false, ErrUnexpectedNode
 	}
 
 	ready := true
@@ -274,7 +276,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return false, ErrTimedOut
+			return false, ErrTimeOut
 		default:
 			ready, err := d.checkDeckhousePodReady()
 			if err != nil {

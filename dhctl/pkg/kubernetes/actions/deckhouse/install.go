@@ -362,7 +362,7 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 		for {
 			select {
 			case <-ctx.Done():
-				return ErrTimedOut
+				return ErrTimeOut
 			default:
 				ok, err := NewLogPrinter(kubeCl).
 					WaitPodBecomeReady().
@@ -370,7 +370,7 @@ func WaitForReadinessNotOnNode(kubeCl *client.KubernetesClient, excludeNode stri
 					Print(ctx)
 
 				if err != nil {
-					if errors.Is(err, ErrTimedOut) {
+					if errors.Is(err, ErrTimeOut) {
 						return err
 					}
 					log.InfoLn(err.Error())
