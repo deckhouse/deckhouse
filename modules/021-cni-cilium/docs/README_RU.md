@@ -7,4 +7,4 @@ title: "Модуль cni-cilium"
 ## Ограничения
 
 1. Модуль не поддерживает туннелирование.
-2. Сервисы с типом `NodePort` и `LoadBalancer` не работают с hostNetwork эндпоинтами в LB режиме `DSR`.
+2. Сервисы с типом `NodePort` и `LoadBalancer` не работают с hostNetwork-эндпоинтами в LB режиме `DSR`.
