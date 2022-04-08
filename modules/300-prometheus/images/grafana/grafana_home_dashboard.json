@@ -367,6 +367,7 @@
         {
           "exemplar": true,
           "expr": "sum by (version, edition) (deckhouse_build_info{job=\"deckhouse\"})",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{ version }} {{ edition }}",
           "refId": "A"
@@ -426,6 +427,7 @@
         {
           "exemplar": true,
           "expr": "sum by (git_version) (kubernetes_build_info{job=\"kube-apiserver\"})",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{ git_version }}",
           "refId": "A"
@@ -511,6 +513,7 @@
         {
           "exemplar": true,
           "expr": "sum by (container_runtime_version) (kube_node_info)",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{ container_runtime_version }}",
           "refId": "A"
