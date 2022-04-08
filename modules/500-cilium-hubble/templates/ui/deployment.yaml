@@ -34,7 +34,7 @@ spec:
         app: hubble-ui
     spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
-      serviceAccountName: "hubble-ui"
+      serviceAccountName: "cilium-hubble-ui"
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
