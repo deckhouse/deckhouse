@@ -25,7 +25,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-pools-importer" )) | nindent 2 }}
 spec:
-  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
   selector:
     matchLabels:
       app: linstor-pools-importer
@@ -46,7 +46,7 @@ spec:
         app: linstor-pools-importer
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
@@ -87,8 +87,7 @@ spec:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
       containers:
         - name: linstor-pools-importer
-          securityContext:
-            privileged: true
+          {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
           image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorPoolsImporter }}
           imagePullPolicy: "IfNotPresent"
           env:
@@ -113,14 +112,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           volumeMounts:
             - name: device-dir
               mountPath: /dev
@@ -132,12 +123,3 @@ spec:
           hostPath:
             path: /dev/
             type: ""
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 1
-            podAffinityTerm:
-              topologyKey: kubernetes.io/hostname
-              labelSelector:
-                matchLabels:
-                  app: linstor-pools-importer

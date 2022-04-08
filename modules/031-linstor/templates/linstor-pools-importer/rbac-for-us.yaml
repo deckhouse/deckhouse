@@ -13,6 +13,18 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-pools-importer")) | nindent 2 }}
 rules:
   - apiGroups:
+    - ""
+    resources:
+    - nodes
+    verbs:
+    - get
+  - apiGroups:
+    - ""
+    resources:
+    - events
+    verbs:
+    - create
+  - apiGroups:
     - storage.k8s.io
     resources:
     - storageclasses
@@ -35,39 +47,3 @@ roleRef:
   kind: ClusterRole
   name: d8:{{ .Chart.Name }}:linstor-pools-importer
   apiGroup: rbac.authorization.k8s.io
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: linstor-pools-importer
-  namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-pools-importer")) | nindent 2 }}
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - get
-  - apiGroups:
-      - ""
-    resources:
-      - events
-    verbs:
-      - create
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: linstor-pools-importer
-  namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-pools-importer")) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: linstor-pools-importer
-subjects:
-  - kind: ServiceAccount
-    name: linstor-pools-importer
-    namespace: d8-{{ .Chart.Name }}
-

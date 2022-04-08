@@ -13,6 +13,7 @@ spec:
   completions: 1
   template:
     spec:
+      backoffLimit: 1
       restartPolicy: Never
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
