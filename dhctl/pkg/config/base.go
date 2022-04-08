@@ -33,7 +33,7 @@ import (
 
 const (
 	candiDir                 = "/deckhouse/candi"
-	DefaultKubernetesVersion = "1.19"
+	DefaultKubernetesVersion = "1.21"
 )
 
 func numerateManifestLines(manifest []byte) string {
