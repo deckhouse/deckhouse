@@ -36,4 +36,5 @@ locals {
   network_security      = lookup(var.providerClusterConfiguration.standardWithNoRouter, "internalNetworkSecurity", true)
   image_name            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
   tags                  = lookup(var.providerClusterConfiguration, "tags", {})
+  ssh_allow_list        = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
 }

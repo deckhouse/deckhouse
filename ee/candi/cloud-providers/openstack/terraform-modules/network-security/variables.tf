@@ -13,3 +13,7 @@ variable "enabled" {
   type = bool
   default = true
 }
+
+variable "ssh_allow_list" {
+  type = list(string)
+}

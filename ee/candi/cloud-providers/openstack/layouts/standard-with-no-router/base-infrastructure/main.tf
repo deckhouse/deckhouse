@@ -2,10 +2,11 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 module "network_security" {
-  source = "../../../terraform-modules/network-security"
-  prefix = local.prefix
-  remote_ip_prefix = "0.0.0.0/0"
-  enabled = local.network_security
+  source            = "../../../terraform-modules/network-security"
+  prefix            = local.prefix
+  remote_ip_prefix  = "0.0.0.0/0"
+  ssh_allow_list    = local.ssh_allow_list
+  enabled           = local.network_security
 }
 
 module "keypair" {

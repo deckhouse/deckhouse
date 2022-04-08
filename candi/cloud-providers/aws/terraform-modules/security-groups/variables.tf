@@ -27,3 +27,11 @@ variable "vpc_id" {
 variable "tags" {
   type = map(string)
 }
+
+variable "providerClusterConfiguration" {
+  type = any
+}
+
+locals {
+  ssh_allow_list   = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
+}

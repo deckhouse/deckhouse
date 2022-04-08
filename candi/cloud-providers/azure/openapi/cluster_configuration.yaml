@@ -34,6 +34,14 @@ apiVersions:
         description: |
           Public key to access nodes as `azureuser`.
         type: string
+      sshAllowList:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDR's allowed to connect to nodes via ssh.
+
+          By default, `*`.
       vNetCIDR:
         description: |
           An address space of the virtual network in the [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) format.

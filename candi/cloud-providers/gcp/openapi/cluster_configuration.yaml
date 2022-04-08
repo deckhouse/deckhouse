@@ -19,6 +19,14 @@ apiVersions:
       sshKey:
         type: string
         description: A public key to access nodes as `user`.
+      sshAllowList:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDR's allowed to connect to nodes via ssh.
+
+          By default, from any.
       labels:
         type: object
         description: |

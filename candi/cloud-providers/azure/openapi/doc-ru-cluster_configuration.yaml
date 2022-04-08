@@ -19,6 +19,11 @@ apiVersions:
       sshPublicKey:
         description: |
           Публичный ключ для доступа на узлы под пользователем `azureuser`.
+      sshAllowList:
+        description: |
+          Список CIDR, разрешенных для подключения к узлам по ssh.
+
+          По умолчанию, `*`.
       vNetCIDR:
         description: |
           Адресное пространство виртуальной сети в формате [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing).

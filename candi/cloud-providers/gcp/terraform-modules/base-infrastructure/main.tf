@@ -61,6 +61,7 @@ module "firewall" {
   prefix            = local.prefix
   network_self_link = google_compute_network.kube.self_link
   pod_subnet_cidr   = local.pod_subnet_cidr
+  ssh_allow_list    = local.ssh_allow_list
 }
 
 locals {
