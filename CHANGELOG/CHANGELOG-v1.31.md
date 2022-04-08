@@ -56,8 +56,10 @@
 ## Fixes
 
 
+ - **[candi]** Added proper labels and taints on cluster bootstrap to master nodes. [#1287](https://github.com/deckhouse/deckhouse/pull/1287)
  - **[candi]** Update Kubernetes components to the latest patch versions. [#770](https://github.com/deckhouse/deckhouse/pull/770)
     Kubernetes control-plane components and kubelet will restart for 1.20, 1.21 and 1.22 minor versions.
+ - **[cloud-provider-aws]** The Standard layout is considered deprecated. [#1292](https://github.com/deckhouse/deckhouse/pull/1292)
  - **[cloud-provider-openstack]** Remove default `podNetworkMode` from the config-values. [#1248](https://github.com/deckhouse/deckhouse/pull/1248)
  - **[cloud-provider-vsphere]** Fix handle of compatibilityFlag in Deckhouse config [#1156](https://github.com/deckhouse/deckhouse/pull/1156)
  - **[common]** The `csi-controller` template requires NAMESPACE environment variable. [#864](https://github.com/deckhouse/deckhouse/pull/864)
