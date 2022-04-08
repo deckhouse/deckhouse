@@ -35,8 +35,10 @@ RUN apt-get update && apt-get install patch -y
 RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.2.tar.gz | tar xvz -C /tmp/cilium-repo
 WORKDIR /tmp/cilium-repo/cilium-1.11.2
 
-COPY 001-skip-masquerade-only-for-internalip.patch /
-RUN patch -p1 < /001-skip-masquerade-only-for-internalip.patch
+COPY 001-netfilter-compatibility-mode.patch /
+COPY 002-skip-masquerad-only-for-internalip.patch /
+RUN patch -p1 < /001-netfilter-compatibility-mode.patch && \
+    patch -p1 < /002-skip-masquerad-only-for-internalip.patch
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary

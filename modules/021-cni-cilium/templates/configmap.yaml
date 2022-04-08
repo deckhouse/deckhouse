@@ -54,11 +54,12 @@ data:
   bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
   bpf-lb-algorithm: "random"
   enable-service-topology: "true"
+  netfilter-compatible-mode: "true"
 
   enable-session-affinity: "true"
   enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
 
-  sockops-enable: "false"
+  sockops-enable: "true"
   enable-icmp-rules: "true"
   enable-endpoint-health-checking: "true"
   enable-health-checking: "true"
