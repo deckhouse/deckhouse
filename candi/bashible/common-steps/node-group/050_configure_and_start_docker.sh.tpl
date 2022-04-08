@@ -48,16 +48,9 @@ EOF
 {{- end }}
 
 {{- if .registry.auth }}
-mkdir -p /.docker
-bb-sync-file /.docker/config.json - << "EOF"
-{
-	"auths": {
-		"{{ .registry.address }}": {
-			"auth": "{{ .registry.auth }}"
-		}
-	}
-}
-EOF
+username="$(base64 -d <<< "{{ .registry.auth }}" | awk -F ":" '{print $1}')"
+password="$(base64 -d <<< "{{ .registry.auth }}" | awk -F ":" '{print $2}')"
+HOME=/ docker login --username "${username}" --password "${password}" {{ .registry.address }}
 {{- end }}
 
 {{- end }}
