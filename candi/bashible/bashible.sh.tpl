@@ -147,6 +147,11 @@ function main() {
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
     fi
+    read -r first_line < $BOOTSTRAP_DIR/bashible-new.sh
+    if [[ "$first_line" != '#!/usr/bin/env bash' ]] ; then
+      >&2 echo "ERROR: $BOOTSTRAP_DIR/bashible-new.sh is not a bash script."
+      exit 1
+    fi
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
     export BASHIBLE_SKIP_UPDATE=yes
     $BOOTSTRAP_DIR/bashible-new.sh --no-lock
