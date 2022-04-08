@@ -76,6 +76,7 @@ properties:
     type: object
     description: |
       Options related to authentication or authorization in the application:
+    default: { }
     properties:
       externalAuthentication:
         type: object
