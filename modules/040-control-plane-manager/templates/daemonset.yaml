@@ -8,7 +8,6 @@
 {{- end }}
 {{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.tags.controlPlaneManager.kubeApiserverHealthcheck }}
 {{- $_ := set $images "etcd" $.Values.global.modulesImages.tags.controlPlaneManager.etcd }}
-{{- $_ := set $images "kubernetesApiProxy" $.Values.global.modulesImages.tags.controlPlaneManager.kubernetesApiProxy }}
 
 {{- $registry := dict }}
 {{- $_ := set $registry "address" $.Values.global.modulesImages.registryAddress }}
