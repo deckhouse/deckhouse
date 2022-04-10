@@ -25,7 +25,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/global-hooks/discovery/internal"
+	"github.com/deckhouse/deckhouse/go_lib/filter"
 )
 
 const (
@@ -95,7 +95,7 @@ func applyClusterDomainFromConfigMapFilter(obj *unstructured.Unstructured) (go_h
 }
 
 func applyClusterDomainFromDNSPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return internal.GetArgFromUnstructuredPodWithRegexp(obj, clusterDomainFromPodRegexp, 1, "")
+	return filter.GetArgFromUnstructuredPodWithRegexp(obj, clusterDomainFromPodRegexp, 1, "")
 }
 
 func discoveryClusterDomain(input *go_hook.HookInput) error {
