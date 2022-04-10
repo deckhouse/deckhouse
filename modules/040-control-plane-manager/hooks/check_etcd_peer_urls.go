@@ -24,8 +24,10 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -34,7 +36,32 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue,
 	Kubernetes: []go_hook.KubernetesConfig{
-		getEtcdEndpointConfig(etcdPeersFilter),
+		{
+			Name:       "etcd_pods",
+			ApiVersion: "v1",
+			Kind:       "Pod",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"component": "etcd",
+					"tier":      "control-plane",
+				},
+			},
+			FieldSelector: &types.FieldSelector{
+				MatchExpressions: []types.FieldSelectorRequirement{
+					{
+						Field:    "status.phase",
+						Operator: "Equals",
+						Value:    "Running",
+					},
+				},
+			},
+			FilterFunc: etcdPeersFilter,
+		},
 		// common etcd certificate snapshot
 		etcdSecretK8sConfig,
 	},
