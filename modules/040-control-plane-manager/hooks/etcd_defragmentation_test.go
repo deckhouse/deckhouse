@@ -276,5 +276,138 @@ var _ = FDescribe("Modules :: controler-plane-manager :: hooks :: etcd-defragmen
 				})
 			})
 		})
+
+		Context("etcd has quota-backend-bytes parameter", func() {
+			manifest := func(data map[string]interface{}) string {
+				data["maxDbSize"] = 4 * 1024 * 1024 * 1024
+				return etcdPodManifest(data)
+			}
+
+			Context("etcd db size is 0 bytes", func() {
+				ip := "192.168.1.1"
+				endpoint := etcdEndpoint(ip)
+				BeforeEach(func() {
+					podManifest := manifest(map[string]interface{}{
+						"name":   "etcd-pod2-1",
+						"hostIP": ip,
+					})
+					endpointToDbSize[endpoint] = 0
+
+					JoinKubeResourcesAndSet(f, testETCDSecret, podManifest)
+					f.RunHook()
+				})
+
+				It("Defragmentation was not triggered", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					Expect(endpointTriggeredDefrag).ToNot(HaveKey(endpoint))
+				})
+			})
+
+			Context("etcd db size is between zero and maximum", func() {
+				ip := "192.168.1.2"
+				endpoint := etcdEndpoint(ip)
+				BeforeEach(func() {
+					podManifest := manifest(map[string]interface{}{
+						"name":   "etcd-pod2-2",
+						"hostIP": ip,
+					})
+					endpointToDbSize[endpoint] = 3 * 1024 * 1024 * 1024
+					JoinKubeResourcesAndSet(f, testETCDSecret, podManifest)
+
+					f.RunHook()
+				})
+
+				It("Defragmentation was not triggered", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					Expect(endpointTriggeredDefrag).ToNot(HaveKey(endpoint))
+				})
+			})
+
+			Context("etcd db size is 95% of maximum", func() {
+				ip := "192.168.1.3"
+				endpoint := etcdEndpoint(ip)
+				podName := "etcd-pod2-3"
+				BeforeEach(func() {
+					podManifest := manifest(map[string]interface{}{
+						"name":   podName,
+						"hostIP": ip,
+					})
+					endpointToDbSize[endpoint] = 4080218932
+					JoinKubeResourcesAndSet(f, testETCDSecret, podManifest)
+
+					f.RunHook()
+				})
+
+				It("Defragmentation was triggered", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					Expect(endpointTriggeredDefrag).To(HaveKey(endpoint))
+				})
+
+				It("Set success metric", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					assertSetSuccessMetric(f, podName)
+				})
+			})
+
+			Context("etcd db size is great than 95% and less than default maximum", func() {
+				ip := "192.168.1.4"
+				endpoint := etcdEndpoint(ip)
+				podName := "etcd-pod2-4"
+				BeforeEach(func() {
+					podManifest := manifest(map[string]interface{}{
+						"name":   podName,
+						"hostIP": ip,
+					})
+					endpointToDbSize[endpoint] = 4209067951
+					JoinKubeResourcesAndSet(f, testETCDSecret, podManifest)
+
+					f.RunHook()
+				})
+
+				It("Defragmentation was triggered", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					Expect(endpointTriggeredDefrag).To(HaveKey(endpoint))
+				})
+
+				It("Set success metric", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					assertSetSuccessMetric(f, podName)
+				})
+			})
+
+			Context("etcd db size is default maximum", func() {
+				ip := "192.168.1.5"
+				endpoint := etcdEndpoint(ip)
+				podName := "etcd-pod2-5"
+				BeforeEach(func() {
+					podManifest := manifest(map[string]interface{}{
+						"name":   podName,
+						"hostIP": ip,
+					})
+					endpointToDbSize[endpoint] = 4 * 1024 * 1024 * 1024
+					JoinKubeResourcesAndSet(f, testETCDSecret, podManifest)
+
+					f.RunHook()
+				})
+
+				It("Defragmentation was triggered", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					Expect(endpointTriggeredDefrag).To(HaveKey(endpoint))
+				})
+
+				It("Set success metric", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					assertSetSuccessMetric(f, podName)
+				})
+			})
+		})
 	})
 })
