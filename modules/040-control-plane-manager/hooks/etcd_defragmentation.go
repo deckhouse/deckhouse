@@ -18,16 +18,15 @@ package hooks
 
 import (
 	"context"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"errors"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"helm.sh/helm/v3/pkg/time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-)
 
-type etc
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:     moduleQueue + "/automatic_defragmentation",
@@ -39,64 +38,52 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
-		getEtcdEndpointConfig(func(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-			var pod corev1.Pod
-
-			err := sdk.FromUnstructured(unstructured, &pod)
-			if err != nil {
-				return nil, err
-			}
-
-			var ip string
-			if pod.Spec.HostNetwork {
-				ip = pod.Status.HostIP
-			} else {
-				ip = pod.Status.PodIP
-			}
-
-			return etcdEndpointString(ip), nil
-		}),
+		etcdMaintenanceConfig,
 		etcdSecretK8sConfig,
 	},
 }, dependency.WithExternalDependencies(handleTriggerETCDAutomaticDefragmentation))
 
 func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc dependency.Container) error {
-	if len(input.Snapshots["last_defrag_ds"]) == 0 {
-		return nil
-	}
-
-	defragDisabled := input.Values.Get("controlPlaneManager.disableAutoDefragmentation").Bool()
-	if defragDisabled {
-		return nil
-	}
-
 	etcdClient, err := getETCDClientFromSnapshots(input, dc)
 	if err != nil {
+		if errors.Is(err, ErrEmptyEtcdSnapshot) {
+			return nil
+		}
+
 		return err
 	}
 	defer etcdClient.Close()
 
-	var lastErr error
-	var dbSize int64
-	for _, endpointRaw := range input.Snapshots["etcd_endpoints"] {
-		lastErr = nil
-		status, err := etcdClient.Status(context.TODO(), endpointRaw.(string))
+	for _, endpointRaw := range input.Snapshots[etcdEndpointsSnapshotName] {
+		instance := endpointRaw.(*etcdInstance)
+		status, err := etcdClient.Status(context.TODO(), instance.Endpoint)
 		if err != nil {
-			lastErr = err
+			input.LogEntry.Errorf("cannot get current db usage from %s: %v", err, instance.PodName)
 			continue
 		}
 
-		dbSize = status.DbSize
-		break
-	}
+		if float64(status.DbSize)/float64(instance.MaxDbSize) < 0.95 {
+			input.LogEntry.Debugf("Etcd instanse '%s' does not need to defrag", instance.PodName)
+			continue
+		}
 
-	if lastErr != nil {
-		input.LogEntry.Errorf("Cannot get db size: %v", lastErr)
-		return nil
-	}
+		input.LogEntry.Warnf("Start defrag etcd instanse '%s' %d/%d", instance.PodName, status.DbSize, instance.MaxDbSize)
+		_, err = etcdClient.Defragment(context.TODO(), instance.Endpoint)
+		if err != nil {
+			input.MetricsCollector.Set("etcd_defragmentation_failed", float64(time.Now().Unix()), map[string]string{
+				"pod_name":     instance.PodName,
+				"defrag_error": err.Error(),
+			})
+			input.LogEntry.Errorf("Defrag etcd '%s' instanse finished with err: %v", instance.PodName, err)
+			continue
+		}
 
-	lastDefragTime := input.Snapshots["last_defrag_ds"][0].(string)
-	input.Values.Set("controlPlaneManager.internal.lastDefragTime", lastDefragTime)
+		input.MetricsCollector.Set("etcd_defragmentation_success", float64(time.Now().Unix()), map[string]string{
+			"pod_name": instance.PodName,
+		})
+
+		input.LogEntry.Infof("Defrag etcd '%s' instanse finished successfully", instance.PodName)
+	}
 
 	return nil
 }

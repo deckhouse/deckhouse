@@ -18,29 +18,37 @@ package hooks
 
 import (
 	"fmt"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"regexp"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
+	"github.com/deckhouse/deckhouse/go_lib/filter"
 )
 
 const (
-	moduleQueue        = "/modules/control-plane-manager"
-	defaultEtcdMaxSize = 2 * 1024 * 1024 * 1024 // 2GB
+	moduleQueue                     = "/modules/control-plane-manager"
+	defaultEtcdMaxSize        int64 = 2 * 1024 * 1024 * 1024 // 2GB
+	etcdEndpointsSnapshotName       = "etcd_endpoints"
 )
 
-type maintenanceEtc struct {
-	endpoint  string
-	maxDbSize int64
+var (
+	ErrEmptyEtcdSnapshot = fmt.Errorf("empty etcd pods snapshot")
+)
+
+type etcdInstance struct {
+	Endpoint  string
+	MaxDbSize int64
+	PodName   string
 }
 
 func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints []string) (etcd.Client, error) {
@@ -64,22 +72,25 @@ func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints 
 }
 
 func getETCDClientFromSnapshots(input *go_hook.HookInput, dc dependency.Container) (etcd.Client, error) {
-	snap := input.Snapshots["etcd_pods"]
+	snap := input.Snapshots[etcdEndpointsSnapshotName]
 
 	if len(snap) == 0 {
-		return nil, fmt.Errorf("empty etc endpoints")
+		return nil, ErrEmptyEtcdSnapshot
 	}
 
 	endpoints := make([]string, 0, len(snap))
 
-	for _, e := range snap {
-		endpoints = append(endpoints, e.(string))
+	for _, eRaw := range snap {
+		e := eRaw.(*etcdInstance)
+		endpoints = append(endpoints, e.Endpoint)
 	}
 
 	return getETCDClient(input, dc, endpoints)
 }
 
 var (
+	maxDbSizeRegExp = regexp.MustCompile(`(^|\s+)--quota-backend-bytes=(\d+)$`)
+
 	etcdSecretK8sConfig = go_hook.KubernetesConfig{
 		Name:       "etcd-certificate",
 		ApiVersion: "v1",
@@ -95,38 +106,8 @@ var (
 		FilterFunc:                   syncEtcdFilter,
 	}
 
-	etcdMaintenanceConfig = getEtcdEndpointConfig(func(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-		var pod corev1.Pod
-
-		err := sdk.FromUnstructured(unstructured, &pod)
-		if err != nil {
-			return nil, err
-		}
-
-		var ip string
-		if pod.Spec.HostNetwork {
-			ip = pod.Status.HostIP
-		} else {
-			ip = pod.Status.PodIP
-		}
-
-		for _, c := range pod.Spec.Containers {
-			if c.Name != "etcd" {
-				continue
-			}
-
-			for _, arg := range c.Command {
-				if
-			}
-		}
-
-		return etcdEndpointString(ip), nil
-	})
-)
-
-func getEtcdEndpointConfig(filter go_hook.FilterFunc) go_hook.KubernetesConfig {
-	return go_hook.KubernetesConfig{
-		Name:       "etcd_endpoints",
+	etcdMaintenanceConfig = go_hook.KubernetesConfig{
+		Name:       etcdEndpointsSnapshotName,
 		ApiVersion: "v1",
 		Kind:       "Pod",
 		NamespaceSelector: &types.NamespaceSelector{
@@ -149,11 +130,42 @@ func getEtcdEndpointConfig(filter go_hook.FilterFunc) go_hook.KubernetesConfig {
 				},
 			},
 		},
-		FilterFunc: filter,
+		FilterFunc: maintenanceEtcdFilter,
 	}
+)
+
+func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var pod corev1.Pod
+
+	err := sdk.FromUnstructured(unstructured, &pod)
+	if err != nil {
+		return nil, err
+	}
+
+	var ip string
+	if pod.Spec.HostNetwork {
+		ip = pod.Status.HostIP
+	} else {
+		ip = pod.Status.PodIP
+	}
+
+	curMaxDbSize := defaultEtcdMaxSize
+	maxBytesStr := filter.GetArgPodWithRegexp(&pod, maxDbSizeRegExp, 1, "")
+	if maxBytesStr != "" {
+		curMaxDbSize, err = strconv.ParseInt(maxBytesStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get quota-backend-bytes from etcd argument, got %s: %v", maxBytesStr, err)
+		}
+	}
+
+	return &etcdInstance{
+		Endpoint:  etcdEndpoint(ip),
+		MaxDbSize: curMaxDbSize,
+		PodName:   pod.GetName(),
+	}, nil
 }
 
-func etcdEndpointString(ip string) string {
+func etcdEndpoint(ip string) string {
 	return fmt.Sprintf("https://%s:2379", ip)
 }
 
