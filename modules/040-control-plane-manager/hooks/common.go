@@ -37,6 +37,7 @@ import (
 
 const (
 	moduleQueue                     = "/modules/control-plane-manager"
+	etcdMaintenanceQueue            = moduleQueue + "/etcd_maintenance"
 	defaultEtcdMaxSize        int64 = 2 * 1024 * 1024 * 1024 // 2GB
 	etcdEndpointsSnapshotName       = "etcd_endpoints"
 )

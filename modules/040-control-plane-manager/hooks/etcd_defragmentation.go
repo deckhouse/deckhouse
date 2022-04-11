@@ -27,7 +27,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:     moduleQueue + "/automatic_defragmentation",
+	Queue:     etcdMaintenanceQueue,
 	OnStartup: &go_hook.OrderedConfig{Order: 5},
 	Schedule: []go_hook.ScheduleConfig{
 		{
