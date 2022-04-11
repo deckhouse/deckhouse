@@ -19,12 +19,11 @@ package template_tests
 import (
 	"encoding/base64"
 
-	"github.com/deckhouse/deckhouse/testing/library/object_store"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
