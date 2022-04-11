@@ -1,0 +1,9 @@
+openvpn:
+  fixes:
+    - summary: Fixed DexAuthenticator applicationDomain.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1309
+prometheus:
+  fixes:
+    - summary: Handle path prefix for `CustomAlertmanager`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1308
+

@@ -82,6 +82,8 @@
     node.kubernetes.io/exclude-from-external-load-balancers label will be deleted from the master node group. It also can not be set manually in the current release.
     Without "node.kubernetes.io/exclude-from-external-load-balancers" label traffic can be directed to control plane nodes.
     In the next release, migration will delete it, and users can add it manually if necessary.
+ - **[openvpn]** Fixed DexAuthenticator applicationDomain. [#1309](https://github.com/deckhouse/deckhouse/pull/1309)
+ - **[prometheus]** Handle path prefix for `CustomAlertmanager`. [#1308](https://github.com/deckhouse/deckhouse/pull/1308)
  - **[prometheus]** Exposing API doc fixes. [#870](https://github.com/deckhouse/deckhouse/pull/870)
  - **[prometheus-metrics-adapter]** Fix custom metrics workability [#1259](https://github.com/deckhouse/deckhouse/pull/1259)
  - **[upmeter]** Make dashboards immutable (that weren't already). [#840](https://github.com/deckhouse/deckhouse/pull/840)
