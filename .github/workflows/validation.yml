@@ -250,7 +250,7 @@ jobs:
       # </template: checkout_step>
 
       - name: Restore diff artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: pr_diff
 
@@ -279,7 +279,7 @@ jobs:
       # </template: checkout_step>
 
       - name: Restore diff artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: pr_diff
 
@@ -308,7 +308,7 @@ jobs:
       # </template: checkout_step>
 
       - name: Restore diff artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: pr_diff
 
