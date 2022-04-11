@@ -63,3 +63,57 @@ linstor-data-r3        linstor.csi.linbit.com       142s
 Каждый из них можно использовать для создания томов с 1, 2 или 3 репликами в ваших пулах хранения.
 
 При необходимости вы всегда можете обратиться к [расширенной конфигурации LINSTOR](advanced_usage.html), но мы крайне рекомендуем придерживаться этого упрощённого руководства.
+
+## Data Locality
+
+В случае гиперконвергентной инфраструктуры вы можете захотеть чтобы ваши поды запускались на тех же нодах что и данные для них. Модуль **linstor** предоставляет кастомный kube-scheduler для таких задач.
+
+Создайте под с указанием `schedulerName: linstor` для того чтобы приоретизировать размещение пода «поближе к данным» и получить максимальную производительность дисковой подсистемы.
+Пример такого пода:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+  namespace: default
+spec:
+  schedulerName: linstor
+  containers:
+  - name: busybox
+    image: busybox
+    command: ["tail", "-f", "/dev/null"]
+    volumeMounts:
+    - name: my-first-linstor-volume
+      mountPath: /data
+    ports:
+    - containerPort: 80
+  volumes:
+  - name: my-first-linstor-volume
+    persistentVolumeClaim:
+      claimName: "test-volume"
+```
+
+## Fencing
+
+В случае если ваше приложение не умеет работать в режиме высокой доступности вы можете добавить специальную аннотацию, которая позволит **linstor** автоматически удалять под вашего приложения с упавшей ноды. Это позволит Kubernetes безопасно перезапустить ваше приложение на новой ноде.
+
+Привер StatefulSet с такой аннотацией:
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-stateful-app
+spec:
+  serviceName: my-stateful-app
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: my-stateful-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: my-stateful-app
+        linstor.csi.linbit.com/on-storage-lost: remove
+    ...
+```

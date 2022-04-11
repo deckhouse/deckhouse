@@ -63,3 +63,58 @@ linstor-data-r3        linstor.csi.linbit.com       142s
 Each of them can be used to create volumes with 1, 2 or 3 replicas in your storage pools.
 
 You can always refer to [Advanced LINSTOR Configuration](advanced_usage.html) if needed, but we strongly recommend sticking to this simplified guide. 
+
+## Data Locality
+
+In a hyperconverged infrastructure you may want your pods to run on the same nodes as their data volumes. The **linstor** module provides a custom kube-scheduler for such tasks.
+
+Create a pod with `schedulerName: linstor` in order to prioritize placing the pod "closer to the data" and get the best performance from the disk subsystem.
+
+An example of such a pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+  namespace: default
+spec:
+  schedulerName: linstor
+  containers:
+  - name: busybox
+    image: busybox
+    command: ["tail", "-f", "/dev/null"]
+    volumeMounts:
+    - name: my-first-linstor-volume
+      mountPath: /data
+    ports:
+    - containerPort: 80
+  volumes:
+  - name: my-first-linstor-volume
+    persistentVolumeClaim:
+      claimName: "test-volume"
+```
+
+## Fencing
+
+In case your application does not support high availability, you can add a special annotation that will allow **linstor** to automatically remove your application's pod from the failed node. This will allow Kubernetes to safely restart your application on the new node.
+
+Example StatefulSet with this annotation:
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-stateful-app
+spec:
+  serviceName: my-stateful-app
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: my-stateful-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: my-stateful-app
+        linstor.csi.linbit.com/on-storage-lost: remove
+    ...
+```
