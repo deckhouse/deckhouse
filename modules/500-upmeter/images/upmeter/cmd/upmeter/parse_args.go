@@ -92,16 +92,16 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Default("1s").
 		DurationVar(&config.Period)
 
-	cmd.Flag("disabled-probes", "The list of disabled comma-separated groups and/or probes.").
-		Envar("UPMETER_DISABLED_PROBES").
-		Default("").
-		StringsVar(&config.DisabledProbes)
-
 	// Database
 	cmd.Flag("db-path", "SQLite file path.").
 		Envar("UPMETER_DB_PATH").
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
+
+	cmd.Flag("disabled-probes", "The list of disabled comma-separated groups and/or probes.").
+		Envar("UPMETER_DISABLED_PROBES").
+		Default("").
+		StringsVar(&config.DisabledProbes)
 
 	// User-Agent
 	// TODO generate from CI?
