@@ -42,6 +42,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleTriggerETCDAutomaticDefragmentation))
 
 func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc dependency.Container) error {
+	disabled := input.Values.Get("controlPlaneManager.etcd.disableAutoDefragmentation")
+	if disabled.Exists() && disabled.Bool() {
+		input.LogEntry.Infof("Etcd defragmentation disabled from config")
+		return nil
+	}
+
 	etcdClient, err := getETCDClientFromSnapshots(input, dc)
 	if err != nil {
 		if errors.Is(err, ErrEmptyEtcdSnapshot) {

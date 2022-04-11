@@ -119,14 +119,15 @@ properties:
           Генерирует Secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
           > **Важно!** Этот режим нельзя отключить!
   etcd:
-    disableAutoDefragmentation:
-      type: boolean
-      default: false
-      description: |
-        Выключить автоматическую дефрагментацию, если у etcd остается меньше 5% доступного пространства.
     description: |
       Параметры `etcd`.
     properties:
+      disableAutoDefragmentation:
+        type: boolean
+        default: false
+        description: |
+          Выключить автоматическую дефрагментацию, если у etcd остается меньше 10% доступного пространства.
+          **Экспериментальный**. Может быть удален в будущем.
       externalMembersNames:
         description: |
           Массив имен внешних etcd member'ов (эти member'ы не будут удаляться).

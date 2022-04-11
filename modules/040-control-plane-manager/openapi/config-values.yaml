@@ -201,15 +201,16 @@ properties:
           Generates `kube-system/d8-secret-encryption-key` Secret with encryption key.
           > **Note!** This mode cannot be disabled!
   etcd:
-    disableAutoDefragmentation:
-      type: boolean
-      default: false
-      description: |
-        Disable automatic defragmentation if etcd storage usage less than 5% free space left.
     type: object
     description: |
       `etcd` parameters.
     properties:
+      disableAutoDefragmentation:
+        type: boolean
+        default: false
+        description: |
+          Disable automatic defragmentation if etcd storage usage less than 10% free space left.
+          **Experimental**. It can be removed in the future.
       externalMembersNames:
         type: array
         description: |
