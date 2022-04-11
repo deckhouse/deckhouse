@@ -353,7 +353,7 @@ var _ = FDescribe("Modules :: controler-plane-manager :: hooks :: etcd-defragmen
 				})
 			})
 
-			Context("etcd db size is great than 95% and less than default maximum", func() {
+			Context("etcd db size is great than 95% and less than current maximum", func() {
 				ip := "192.168.1.4"
 				endpoint := etcdEndpoint(ip)
 				podName := "etcd-pod2-4"
@@ -381,7 +381,7 @@ var _ = FDescribe("Modules :: controler-plane-manager :: hooks :: etcd-defragmen
 				})
 			})
 
-			Context("etcd db size is default maximum", func() {
+			Context("etcd db size is current maximum", func() {
 				ip := "192.168.1.5"
 				endpoint := etcdEndpoint(ip)
 				podName := "etcd-pod2-5"
