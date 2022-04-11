@@ -99,6 +99,9 @@ metadata:
   name: {{ .name }}
   namespace: kube-system
 spec:
+  {{- if .nodeName }}
+  nodeName: {{ .nodeName }}
+  {{- end }}
   containers:
   - command:
     - etcd
