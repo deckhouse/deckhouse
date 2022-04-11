@@ -42,114 +42,190 @@ anchors_disabled: true
     </p>
     <table class="table">
       <tbody>
-        <tr>
-          <td class="table__cell_left-title"></td>
-          <td class="table__cell_top-title">
-            <div>Business</div>
-          </td>
-          <td class="table__cell_top-title">
-            <div>Enterprise</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>Support time</div>
-          </td>
-          <td class="table__cell_default">
-            <div>
-              8 &times; 5<br>
-              <small>(9:00 &mdash; 17:00 CET)</small>
-            </div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>24 &times; 7</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>24 &times; 7</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>Reaction time</div>
-          </td>
-          <td class="table__cell_default">
-            <div>1 hour</div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>15 mins</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>5 mins</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>Resolution time</div>
-          </td>
-          <td class="table__cell_default">
-            <div>Next business day</div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>4 hours</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>As soon as possible</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>Communication channel</div>
-          </td>
-          <td class="table__cell_default">
-            <div>Email, Slack</div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>Email, Slack</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>Email, Slack, Remote access</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>SLA for clusters*</div>
-          </td>
-          <td class="table__cell_default">
-            <div>99.9</div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>99.95</div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>99.95</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="table__cell_left-title">
-            <div>SLA for applications**</div>
-          </td>
-          <td class="table__cell_default">
-            <div>
-              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-            </div>
-          </td>
-          <!-- <td class="table__cell_default">
-            <div>
-              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-            </div>
-          </td> -->
-          <td class="table__cell_default">
-            <div>
-              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-            </div>
-          </td>
-        </tr>
+      <tr>
+        <td class="table__cell_left-title"></td>
+        <td class="table__cell_top-title">
+          <div>Standard*</div>
+        </td>
+        <td class="table__cell_top-title">
+          <div>Enterprise**</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Support time</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            8 &times; 5
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>24 &times; 7</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Reaction time</div>
+        </td>
+        <td class="table__cell_default">
+          <div>Next business day</div>
+        </td>
+        <td class="table__cell_default">
+          <div>As per the regulations</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Resolution time</div>
+        </td>
+        <td class="table__cell_default">
+          <div>No regulations</div>
+        </td>
+        <td class="table__cell_default">
+          <div>As per the regulations</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Communication channels</div>
+        </td>
+        <td class="table__cell_default">
+          <div>Email, Slack</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            Email, Slack, Google Meet, remote access
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Unlimited number of requests</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Platform updates</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Personal manager</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>SLAs for applications</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            As agreed***
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Support for deploying the platform in custom environments</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Advice on the infrastructure adaptation/modification required for platform deployment</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Assistance in identifying and troubleshooting workload problems in the cluster</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="table__cell_left-title">
+          <div>Requests for new platform features</div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+          </div>
+        </td>
+        <td class="table__cell_default">
+          <div>
+            <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+          </div>
+        </td>
+      </tr>
       </tbody>
     </table>
     <div style="max-width: 810px; margin-top: 25px;">
       <p class="text">
-        <em>* SLA for clusters means we guarantee that this is the level of availability you will enjoy and we will respond in a timely fashion to help you to achieve these numbers.</em><br />
-        <em>** SLA for applications means integration enabling you to enrich our application metrics with your own custom metrics, helping to resolve any issues that may appear on the cluster.</em>
+        <em>* Included in the license fee.</em><br />
+        <em>** To be purchased separately.</em><br />
+        <em>*** We will coordinate with you on application business metrics and facilitate the resolution of any incidents in the cluster that prevent you from achieving your desired SLA level.</em>
       </p>
       <p class="text text_big">
         EE source code is open, but it’s neither Open Source nor free to use. If your subscription runs out, you can still

@@ -46,10 +46,10 @@ anchors_disabled: true
         <tr>
           <td class="table__cell_left-title"></td>
           <td class="table__cell_top-title">
-            <div>Business</div>
+            <div>Standard*</div>
           </td>
           <td class="table__cell_top-title">
-            <div>Enterprise</div>
+            <div>Enterprise**</div>
           </td>
         </tr>
         <tr>
@@ -58,13 +58,9 @@ anchors_disabled: true
           </td>
           <td class="table__cell_default">
             <div>
-              8 &times; 5<br>
-              <small>(9:00 &mdash; 17:00 MSK)</small>
+              8 &times; 5
             </div>
           </td>
-          <!-- <td class="table__cell_default">
-            <div>24 &times; 7</div>
-          </td> -->
           <td class="table__cell_default">
             <div>24 &times; 7</div>
           </td>
@@ -74,13 +70,10 @@ anchors_disabled: true
             <div>Время реакции</div>
           </td>
           <td class="table__cell_default">
-            <div>1 час</div>
+            <div>Следующий бизнес-день</div>
           </td>
-          <!-- <td class="table__cell_default">
-            <div>15 минут</div>
-          </td> -->
           <td class="table__cell_default">
-            <div>5 минут</div>
+            <div><a href="https://script.google.com/a/macros/flant.com/s/AKfycbyK2yfRKf6mrhXjwriIx6UHLg7zY5v_I6xNuh6ycpqUDt445JvIhL0GpCBTuorl1vgjVw/exec#deckhouse_regulations" target="_blank">По регламенту</a></div>
           </td>
         </tr>
         <tr>
@@ -88,13 +81,10 @@ anchors_disabled: true
             <div>Время решения</div>
           </td>
           <td class="table__cell_default">
-            <div>Следующий бизнес-день</div>
+            <div>Не регламентировано</div>
           </td>
-          <!-- <td class="table__cell_default">
-            <div>4 часа</div>
-          </td> -->
           <td class="table__cell_default">
-            <div>Минимально возможное</div>
+            <div><a href="https://script.google.com/a/macros/flant.com/s/AKfycbyK2yfRKf6mrhXjwriIx6UHLg7zY5v_I6xNuh6ycpqUDt445JvIhL0GpCBTuorl1vgjVw/exec#deckhouse_regulations" target="_blank">По регламенту</a></div>
           </td>
         </tr>
         <tr>
@@ -104,41 +94,126 @@ anchors_disabled: true
           <td class="table__cell_default">
             <div>Email, Slack</div>
           </td>
-          <!-- <td class="table__cell_default">
-            <div>Email, Slack</div>
-          </td> -->
           <td class="table__cell_default">
-            <div>Email, Slack, удалённый доступ</div>
+            <div>
+              Email, Slack, Google Meet, удалённый доступ
+            </div>
           </td>
         </tr>
         <tr>
           <td class="table__cell_left-title">
-            <div>SLA для кластеров*</div>
+            <div>Неограниченное количество обращений</div>
           </td>
           <td class="table__cell_default">
-            <div>99,9</div>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
           </td>
-          <!-- <td class="table__cell_default">
-            <div>99,95</div>
-          </td> -->
           <td class="table__cell_default">
-            <div>99,95</div>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
           </td>
         </tr>
         <tr>
           <td class="table__cell_left-title">
-            <div>SLA для приложений**</div>
+            <div>Получение обновлений платформы</div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_left-title">
+            <div>Персональный менеджер</div>
           </td>
           <td class="table__cell_default">
             <div>
               <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
             </div>
           </td>
-          <!-- <td class="table__cell_default">
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_left-title">
+            <div>SLA для приложений</div>
+          </td>
+          <td class="table__cell_default">
             <div>
               <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
             </div>
-          </td> -->
+          </td>
+          <td class="table__cell_default">
+            <div>
+              По согласованию***
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_left-title">
+            <div>Поддержка при развёртывании платформы в нестандартных окружениях</div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_left-title">
+            <div>Рекомендации по необходимой адаптации/модификации инфраструктуры для развёртывания платформы</div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_left-title">
+            <div>Помощь в локализации и устранении проблем с рабочими нагрузками в кластере</div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_left-title">
+            <div>Запросы на разработку новой функциональности в платформе</div>
+          </td>
+          <td class="table__cell_default">
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
           <td class="table__cell_default">
             <div>
               <img src="{{ site.baseurl }}/images/icons/supported.svg" />
@@ -149,8 +224,9 @@ anchors_disabled: true
     </table>
     <div style="max-width: 810px; margin-top: 25px;">
       <p class="text">
-        <em>* SLA для кластеров означает, что мы гарантируем этот уровень доступности для них и будем своевременно реагировать на инциденты для его достижения.</em><br />
-        <em>** SLA для приложений означает, что наши метрики для приложений будут дополнены вашими (кастомными) и мы будем способствовать решению всех инцидентов в кластере, препятствующих достижению нужного уровня SLA.</em>
+        <em>* Входит в стоимость лицензии.</em><br />
+        <em>** Приобретается отдельно.</em><br />
+        <em>*** Мы согласуем с вами бизнес-метрики для приложений и мы будем способствовать решению всех инцидентов в кластере, препятствующих достижению нужного уровня SLA.</em>
       </p>
       <p class="text text_big">
         Исходный код EE открыт, но не является Open Source и не бесплатен для использования. Когда подписка заканчивается,
