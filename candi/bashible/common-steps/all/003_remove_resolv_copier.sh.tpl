@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO Remove after release (migration) !!!
-if [[ -d /var/cache/registrypackages/containerd.io ]]; then
-  mv /var/cache/registrypackages/containerd.io /var/cache/registrypackages/containerd-io
-fi
+# TODO remove after next release !!!
 
-if [[ -d /var/cache/registrypackages/containerd-werf-edition ]]; then
-  mv /var/cache/registrypackages/containerd-werf-edition /var/cache/registrypackages/containerd-flant-edition
+if systemctl list-units --no-legend --plain --no-pager | grep -q resolv-copier.service; then
+  systemctl stop resolv-copier.service
+  systemctl disable resolv-copier.service
+  rm -rf /var/lib/bashible/resolv
+  rm -f /usr/local/bin/d8-resolv-copier /etc/systemd/system/resolv-copier.service
+  systemctl daemon-reload
 fi
