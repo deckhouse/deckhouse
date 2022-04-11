@@ -19,6 +19,8 @@ package template_tests
 import (
 	"encoding/base64"
 
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -81,6 +83,33 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSetFromYaml("controlPlaneManager", moduleValues)
+	})
+
+	Context("Prometheus rules", func() {
+		assertSpecDotGroupsArray := func(rule object_store.KubeObject, length int) {
+			Expect(rule.Exists()).To(BeTrue())
+
+			groups := rule.Field("spec.groups")
+
+			Expect(groups.IsArray()).To(BeTrue())
+			Expect(groups.Array()).To(HaveLen(length))
+
+		}
+
+		Context("For etcd main", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus-crd"]`)
+				f.HelmRender()
+			})
+
+			It("spec.groups should be empty array", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				rule := f.KubernetesResource("PrometheusRule", "d8-system", "control-plane-manager-etcd-maintenance")
+
+				assertSpecDotGroupsArray(rule, 1)
+			})
+		})
 	})
 
 	Context("Two NGs with standby", func() {
