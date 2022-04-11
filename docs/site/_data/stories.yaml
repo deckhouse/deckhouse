@@ -29,11 +29,6 @@ en:
     business: "DIY retailer (home improvement and gardening)."
     challenge: "The retailer had a bunch of Kubernetes clusters hosted in various data centers and clouds. The challenge was to find a cost-effective way to manage its infrastructure."
     solution: "Leroy Merlin Russia has selected Deckhouse Platform as a tool to manage all their clusters in 4 different data centers and clouds (OpenStack, vSphere, Yandex.Cloud). Ever since it was put into implementation, the customer has benefitted from enormous observability and single-window control."
-  - id: "rabota-ua"
-    flag: "UA"
-    business: "Ukraine's largest job search portal."
-    challenge: "Implement a robust Kubernetes-based platform to meet the growing needs in scalability and fault tolerance."
-    solution: "The rabota.ua's team opted for the Deckhouse NoOps Kubernetes platform. It took less than two weeks to deploy the platform to the servers and successfully migrate services to the new infrastructure. Even a relatively short-time experience of using Deckhouse allowed the team to appreciate the platform's manageability and monitoring capabilities available out-of-the-box."
 ru:
   - id: "vse-instrumenty"
     flag: "RU"
