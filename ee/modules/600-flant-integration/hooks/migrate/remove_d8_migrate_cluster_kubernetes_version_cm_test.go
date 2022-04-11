@@ -6,8 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package migrate
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -32,7 +30,7 @@ metadata:
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
-	Context(fmt.Sprintf("Configmap about migration absent"), func() {
+	Context("Configmap about migration absent", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
@@ -45,7 +43,7 @@ metadata:
 		})
 	})
 
-	Context(fmt.Sprintf("Configmap about migration present"), func() {
+	Context("Configmap about migration present", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(configMapTemplate))
 			f.RunHook()
