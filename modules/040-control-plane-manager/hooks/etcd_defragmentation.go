@@ -20,8 +20,6 @@ import (
 	"context"
 	"errors"
 
-	"helm.sh/helm/v3/pkg/time"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -70,16 +68,17 @@ func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc depe
 		input.LogEntry.Warnf("Start defrag etcd instanse '%s' %d/%d", instance.PodName, status.DbSize, instance.MaxDbSize)
 		_, err = etcdClient.Defragment(context.TODO(), instance.Endpoint)
 		if err != nil {
-			input.MetricsCollector.Set("etcd_defragmentation_failed", float64(time.Now().Unix()), map[string]string{
-				"pod_name":     instance.PodName,
-				"defrag_error": err.Error(),
+			input.MetricsCollector.Inc("etcd_defragmentation_failed_total", map[string]string{
+				"pod_name": instance.PodName,
+				"node":     instance.Node,
 			})
 			input.LogEntry.Errorf("Defrag etcd '%s' instanse finished with err: %v", instance.PodName, err)
 			continue
 		}
 
-		input.MetricsCollector.Set("etcd_defragmentation_success", float64(time.Now().Unix()), map[string]string{
+		input.MetricsCollector.Inc("etcd_defragmentation_success_total", map[string]string{
 			"pod_name": instance.PodName,
+			"node":     instance.Node,
 		})
 
 		input.LogEntry.Infof("Defrag etcd '%s' instanse finished successfully", instance.PodName)

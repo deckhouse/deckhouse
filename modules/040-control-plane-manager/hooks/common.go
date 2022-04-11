@@ -49,6 +49,7 @@ type etcdInstance struct {
 	Endpoint  string
 	MaxDbSize int64
 	PodName   string
+	Node      string
 }
 
 func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints []string) (etcd.Client, error) {
@@ -162,6 +163,7 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 		Endpoint:  etcdEndpoint(ip),
 		MaxDbSize: curMaxDbSize,
 		PodName:   pod.GetName(),
+		Node:      pod.Spec.NodeName,
 	}, nil
 }
 
