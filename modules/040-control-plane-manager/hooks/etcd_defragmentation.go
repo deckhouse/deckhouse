@@ -62,7 +62,7 @@ func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc depe
 			continue
 		}
 
-		if float64(status.DbSize)/float64(instance.MaxDbSize) < 0.95 {
+		if float64(status.DbSize)/float64(instance.MaxDbSize) < 0.9 {
 			input.LogEntry.Debugf("Etcd instanse '%s' does not need to defrag", instance.PodName)
 			continue
 		}
