@@ -54,7 +54,7 @@ spec:
       initContainers:
         - name: wait-for-linstor
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorPoolsImporter }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorPoolsImporter }}"
           imagePullPolicy: "IfNotPresent"
           command:
             - /linstor-wait-until
@@ -88,7 +88,7 @@ spec:
       containers:
         - name: linstor-pools-importer
           {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorPoolsImporter }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorPoolsImporter }}"
           imagePullPolicy: "IfNotPresent"
           env:
             - name: LS_CONTROLLERS
