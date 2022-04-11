@@ -609,4 +609,54 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 			})
 		})
 	})
+
+	Context("Defragmentation disabled from config", func() {
+		ip := "192.168.20.1"
+		endpoint := etcdEndpoint(ip)
+
+		BeforeEach(func() {
+			podManifest := etcdPodManifest(map[string]interface{}{
+				"name":     "etcd-pod20",
+				"hostIP":   ip,
+				"nodeName": "node-20-0",
+			})
+			endpointToDbSize[endpoint] = defaultEtcdMaxSize - 100
+
+			f.ValuesSetFromYaml("controlPlaneManager.etcd", []byte(`{"disableAutoDefragmentation": true}`))
+
+			JoinKubeResourcesAndSet(f, testETCDSecret, podManifest)
+			f.RunHook()
+		})
+
+		It("Does not trigger auto defragmentation", func() {
+			Expect(f).Should(ExecuteSuccessfully())
+
+			Expect(endpointTriggeredDefrag).ToNot(HaveKey(endpoint))
+		})
+	})
+
+	Context("Defragmentation enabled from config", func() {
+		ip := "192.168.20.2"
+		endpoint := etcdEndpoint(ip)
+
+		BeforeEach(func() {
+			podManifest := etcdPodManifest(map[string]interface{}{
+				"name":     "etcd-pod20",
+				"hostIP":   ip,
+				"nodeName": "node-21-0",
+			})
+			endpointToDbSize[endpoint] = defaultEtcdMaxSize - 100
+
+			f.ValuesSetFromYaml("controlPlaneManager.etcd", []byte(`{"disableAutoDefragmentation": false}`))
+
+			JoinKubeResourcesAndSet(f, testETCDSecret, podManifest)
+			f.RunHook()
+		})
+
+		It("Does not trigger auto defragmentation", func() {
+			Expect(f).Should(ExecuteSuccessfully())
+
+			Expect(endpointTriggeredDefrag).To(HaveKey(endpoint))
+		})
+	})
 })
