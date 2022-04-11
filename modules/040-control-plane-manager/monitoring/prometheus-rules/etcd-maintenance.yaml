@@ -1,0 +1,36 @@
+- name: d8.etcd-maintenance.defragmentation
+  rules:
+    - alert: D8EtcdDefragmentationTriggeredTooOften
+      expr: max by (node) (increase(etcd_defragmentation_success_total[5h]) >= 4)
+      labels:
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: Etcd defragmentation triggered too often
+        description: |
+          For etcd node {{ $labels.node }} defragmentation triggered more than 4 time for last 5 hours.
+
+          Every hour deckhouse check etcd db size and trigger db defragmentation if etcd use more 90% of available size.
+
+          Frequent triggering indicates that the defragmentation process is not effective and that it is necessary to increase `quota-backend-bytes`
+
+    - alert: D8EtcdDefragmentationFailed
+      expr: max by (node) (increase(etcd_defragmentation_failed_total[3h]) >= 2)
+      labels:
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: Etcd defragmentation was failed
+        description: |
+          For etcd node {{ $labels.node }} last 2 defragmentation procedures over 3 hours was failed.
+
+          Every hour deckhouse check etcd db size and trigger db defragmentation if etcd use more 90% of available size.
+
+          Please check Deckhouse logs by running `kubectl -n d8-system logs -f -l app=deckhouse`.
+
