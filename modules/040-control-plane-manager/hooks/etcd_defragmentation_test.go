@@ -20,27 +20,30 @@ import (
 	"context"
 	"fmt"
 
-	clientv3 "go.etcd.io/etcd/client/v3"
-
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: controler-plane-manager :: hooks :: etcd-defragmentation ::", func() {
+var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragmentation ::", func() {
 	var (
 		initValuesString        = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 		endpointToDbSize        = make(map[string]int64)
 		endpointTriggeredDefrag = make(map[string]struct{})
 		endpointDefragError     = make(map[string]string)
 	)
-	const (
-		initConfigValuesString = ``
-	)
 
-	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	AfterEach(func() {
+		endpointToDbSize = make(map[string]int64)
+		endpointTriggeredDefrag = make(map[string]struct{})
+		endpointDefragError = make(map[string]string)
+	})
+
+	f := HookExecutionConfigInit(initValuesString, "")
 	testHelperRegisterEtcdMemberUpdate()
 
 	dependency.TestDC.EtcdClient.StatusMock.Set(func(ctx context.Context, endpoint string) (sp1 *clientv3.StatusResponse, err error) {
@@ -65,32 +68,34 @@ var _ = FDescribe("Modules :: controler-plane-manager :: hooks :: etcd-defragmen
 		return &clientv3.DefragmentResponse{}, nil
 	})
 
+	assertSuccessMetricCorrect := func(metric operation.MetricOperation, podName string) {
+		Expect(metric.Name).To(Equal("etcd_defragmentation_success"))
+		Expect(metric.Labels).To(HaveKey("pod_name"))
+		Expect(metric.Labels["pod_name"]).To(Equal(podName))
+	}
+
 	assertSetSuccessMetric := func(f *HookExecutionConfig, podName string) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 
 		Expect(metrics).To(HaveLen(1))
-		Expect(metrics[0].Name).To(Equal("etcd_defragmentation_success"))
-		Expect(metrics[0].Labels).To(HaveKey("pod_name"))
-		Expect(metrics[0].Labels["pod_name"]).To(Equal(podName))
+		assertSuccessMetricCorrect(metrics[0], podName)
+	}
+
+	assertErrorMetricCorrect := func(metric operation.MetricOperation, podName, errMsg string) {
+		Expect(metric.Name).To(Equal("etcd_defragmentation_failed"))
+		Expect(metric.Labels).To(HaveKey("pod_name"))
+		Expect(metric.Labels["pod_name"]).To(Equal(podName))
+		Expect(metric.Labels["defrag_error"]).To(Equal(errMsg))
 	}
 
 	assertSetErrorMetric := func(f *HookExecutionConfig, podName string, errMsg string) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 
 		Expect(metrics).To(HaveLen(1))
-		Expect(metrics[0].Name).To(Equal("etcd_defragmentation_failed"))
-		Expect(metrics[0].Labels).To(HaveKey("pod_name"))
-		Expect(metrics[0].Labels["pod_name"]).To(Equal(podName))
-		Expect(metrics[0].Labels["defrag_error"]).To(Equal(errMsg))
+		assertErrorMetricCorrect(metrics[0], podName, errMsg)
 	}
 
 	Context("Single master", func() {
-		AfterEach(func() {
-			endpointToDbSize = make(map[string]int64)
-			endpointTriggeredDefrag = make(map[string]struct{})
-			endpointDefragError = make(map[string]string)
-		})
-
 		Context("etcd does not have quota-backend-bytes parameter", func() {
 			Context("etcd db size is 0 bytes", func() {
 				ip := "192.168.0.1"
@@ -406,6 +411,174 @@ var _ = FDescribe("Modules :: controler-plane-manager :: hooks :: etcd-defragmen
 					Expect(f).Should(ExecuteSuccessfully())
 
 					assertSetSuccessMetric(f, podName)
+				})
+			})
+		})
+	})
+
+	Context("Multi-master", func() {
+		manifests := func(ips []string, namePrefix string) []string {
+			res := make([]string, 0, len(ips))
+			for i, ip := range ips {
+				res = append(res, etcdPodManifest(map[string]interface{}{
+					"name":   fmt.Sprintf("%s-%d", namePrefix, i),
+					"hostIP": ip,
+				}))
+			}
+
+			return res
+		}
+
+		Context("all instances don't have quota-backend-bytes", func() {
+			Context("all instances have current db size less than 95%", func() {
+				ips := []string{"192.18.10.1", "192.18.10.2", "192.18.10.3"}
+				BeforeEach(func() {
+					resources := manifests(ips, "etcd-pod-10")
+					resources = append(resources, testETCDSecret)
+
+					for _, ip := range ips {
+						endpointToDbSize[ip] = 500 * 1024 * 1024
+					}
+
+					JoinKubeResourcesAndSet(f, resources...)
+
+					f.RunHook()
+				})
+
+				It("should not trigger defrag for all instances", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					for _, ip := range ips {
+						Expect(endpointTriggeredDefrag).ToNot(HaveKey(etcdEndpoint(ip)))
+					}
+				})
+
+				It("should not set any metrics", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					metrics := f.MetricsCollector.CollectedMetrics()
+					Expect(metrics).To(HaveLen(0))
+				})
+			})
+
+			Context("two instances have current db size greater than 95%", func() {
+				ips := []string{"192.18.11.1", "192.18.11.2", "192.18.11.3"}
+				BeforeEach(func() {
+					resources := manifests(ips, "etcd-pod-11")
+					resources = append(resources, testETCDSecret)
+					JoinKubeResourcesAndSet(f, resources...)
+
+					endpointToDbSize[etcdEndpoint(ips[0])] = 2 * 1024 * 1024 * 1024
+					endpointToDbSize[etcdEndpoint(ips[1])] = 2 * 1024 * 1024 * 1024
+
+					f.RunHook()
+				})
+
+				It("should trigger defrag for instances have current db size greater than 95%", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[0])))
+					Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[1])))
+				})
+
+				It("should not trigger defrag for instance has current db size less than 95%", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					Expect(endpointTriggeredDefrag).ToNot(HaveKey(etcdEndpoint(ips[2])))
+				})
+
+				It("should set success metrics for or instances have current db size greater than 95%", func() {
+					Expect(f).Should(ExecuteSuccessfully())
+
+					metrics := f.MetricsCollector.CollectedMetrics()
+					Expect(metrics).To(HaveLen(2))
+
+					assertSuccessMetricCorrect(metrics[0], "etcd-pod-11-0")
+					assertSuccessMetricCorrect(metrics[1], "etcd-pod-11-1")
+				})
+			})
+
+			Context("all instances have current db size greater than 95%", func() {
+				Context("one instance has defrag error", func() {
+					errMsg := "defrag error"
+					ips := []string{"192.18.12.1", "192.18.12.2", "192.18.12.3"}
+					BeforeEach(func() {
+						resources := manifests(ips, "etcd-pod-12")
+						resources = append(resources, testETCDSecret)
+						JoinKubeResourcesAndSet(f, resources...)
+
+						for _, ip := range ips {
+							endpointToDbSize[etcdEndpoint(ip)] = 2 * 1024 * 1024 * 1024
+						}
+
+						endpointDefragError[etcdEndpoint(ips[1])] = errMsg
+
+						f.RunHook()
+					})
+
+					It("should trigger defrag for all instances", func() {
+						Expect(f).Should(ExecuteSuccessfully())
+
+						for _, ip := range ips {
+							Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ip)))
+						}
+					})
+
+					It("should set success metrics for two instances", func() {
+						Expect(f).Should(ExecuteSuccessfully())
+
+						metrics := f.MetricsCollector.CollectedMetrics()
+						Expect(metrics).To(HaveLen(3))
+
+						assertSuccessMetricCorrect(metrics[0], "etcd-pod-12-0")
+						assertSuccessMetricCorrect(metrics[2], "etcd-pod-12-2")
+					})
+
+					It("should set error metric for second instance", func() {
+						Expect(f).Should(ExecuteSuccessfully())
+
+						metrics := f.MetricsCollector.CollectedMetrics()
+						Expect(metrics).To(HaveLen(3))
+
+						assertErrorMetricCorrect(metrics[1], "etcd-pod-12-1", errMsg)
+					})
+				})
+
+				Context("one instance returned status error", func() {
+					ips := []string{"192.18.13.1", "192.18.13.2", "192.18.13.3"}
+					BeforeEach(func() {
+						resources := manifests(ips, "etcd-pod-13")
+						resources = append(resources, testETCDSecret)
+						JoinKubeResourcesAndSet(f, resources...)
+
+						endpointToDbSize[etcdEndpoint(ips[1])] = 2 * 1024 * 1024 * 1024
+						endpointToDbSize[etcdEndpoint(ips[2])] = 2 * 1024 * 1024 * 1024
+
+						f.RunHook()
+					})
+
+					It("should trigger defrag for instances without status error", func() {
+						Expect(f).Should(ExecuteSuccessfully())
+
+						Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[1])))
+						Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[2])))
+					})
+
+					It("should not trigger defrag for instance with status error", func() {
+						Expect(f).Should(ExecuteSuccessfully())
+
+						Expect(endpointTriggeredDefrag).ToNot(HaveKey(etcdEndpoint(ips[0])))
+					})
+
+					It("should set success metrics for two instances", func() {
+						Expect(f).Should(ExecuteSuccessfully())
+
+						metrics := f.MetricsCollector.CollectedMetrics()
+						Expect(metrics).To(HaveLen(2))
+
+						assertSuccessMetricCorrect(metrics[0], "etcd-pod-13-1")
+						assertSuccessMetricCorrect(metrics[1], "etcd-pod-13-2")
+					})
 				})
 			})
 		})
