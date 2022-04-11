@@ -7245,7 +7245,11 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": "default",
+          "value": "default"
+        },
         "description": null,
         "error": null,
         "hide": 0,
