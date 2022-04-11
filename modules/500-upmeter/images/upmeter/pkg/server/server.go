@@ -60,6 +60,7 @@ type server struct {
 type Config struct {
 	ListenHost string
 	ListenPort string
+	UserAgent  string
 
 	DatabasePath string
 

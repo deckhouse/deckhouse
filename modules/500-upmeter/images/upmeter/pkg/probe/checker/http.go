@@ -23,7 +23,6 @@ import (
 	"net/http"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/constant"
 )
 
 // httpChecker implements the checker for HTTP endpoints
@@ -71,13 +70,13 @@ type httpVerifier interface {
 }
 
 // newGetRequest prepares request object for given URL with auth token
-func newGetRequest(endpoint, authToken string) (*http.Request, check.Error) {
+func newGetRequest(endpoint, authToken, userAgent string) (*http.Request, check.Error) {
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, check.ErrUnknown("cannot create request: %s", err)
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
-	req.Header.Set("User-Agent", constant.AgentUserAgent)
+	req.Header.Set("User-Agent", userAgent)
 
 	return req, nil
 }

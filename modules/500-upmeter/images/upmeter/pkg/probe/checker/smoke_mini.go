@@ -29,7 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/constant"
+	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/util"
 )
 
@@ -78,6 +78,7 @@ type smokeMiniChecker struct {
 	path        string
 	httpTimeout time.Duration
 	client      *http.Client
+	access      kubernetes.Access
 
 	logger *log.Entry
 }
@@ -171,7 +172,7 @@ func (c *smokeMiniChecker) request(ctx context.Context, ip string) error {
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
-	req.Header.Set("User-Agent", constant.AgentUserAgent)
+	req.Header.Set("User-Agent", c.access.UserAgent())
 	if err != nil {
 		return err
 	}

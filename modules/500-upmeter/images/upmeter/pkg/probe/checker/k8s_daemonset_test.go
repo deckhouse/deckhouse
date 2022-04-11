@@ -48,6 +48,10 @@ func (a *FakeAccess) ServiceAccountToken() string {
 	return "pewpew"
 }
 
+func (a *FakeAccess) UserAgent() string {
+	return "UpmeterTestClient/1.0"
+}
+
 func (a *FakeAccess) SchedulerProbeImage() *k8saccess.ProbeImage {
 	return createTestProbeImage("test-image:latest", nil)
 }

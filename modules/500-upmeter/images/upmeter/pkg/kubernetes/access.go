@@ -31,6 +31,7 @@ const DefaultAlpineImage = "alpine:3.12"
 type Access interface {
 	Kubernetes() kube.KubernetesClient
 	ServiceAccountToken() string
+	UserAgent() string
 
 	// probe-specific
 
@@ -89,8 +90,9 @@ type Config struct {
 
 // Accessor provides Kubernetes access in pod
 type Accessor struct {
-	client  kube.KubernetesClient
-	saToken string
+	client    kube.KubernetesClient
+	saToken   string
+	userAgent string
 
 	schedulerProbeImage *ProbeImage
 	schedulerProbeNode  string
@@ -100,7 +102,7 @@ type Accessor struct {
 	kubernetesDomain string
 }
 
-func (a *Accessor) Init(config *Config) error {
+func (a *Accessor) Init(config *Config, userAgent string) error {
 	// Kubernetes client
 	a.client = kube.NewKubernetesClient()
 	a.client.WithContextName(config.Context)
@@ -125,6 +127,7 @@ func (a *Accessor) Init(config *Config) error {
 	a.cloudControllerManagerNamespace = config.CloudControllerManagerNamespace
 
 	a.kubernetesDomain = "kubernetes.default.svc." + config.ClusterDomain + "." // Trailing dot to avoid domain search
+	a.userAgent = userAgent
 
 	return nil
 }
@@ -135,6 +138,10 @@ func (a *Accessor) Kubernetes() kube.KubernetesClient {
 
 func (a *Accessor) ServiceAccountToken() string {
 	return a.saToken
+}
+
+func (a *Accessor) UserAgent() string {
+	return a.userAgent
 }
 
 func (a *Accessor) SchedulerProbeImage() *ProbeImage {

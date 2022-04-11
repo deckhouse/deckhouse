@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/constant"
 	v1 "d8.io/upmeter/pkg/crd/v1"
 	"d8.io/upmeter/pkg/db/dao"
 )
@@ -204,7 +203,7 @@ type exportingConfig struct {
 	slotSize       time.Duration
 }
 
-func newExportConfig(rw *v1.RemoteWrite) exportingConfig {
+func newExportConfig(rw *v1.RemoteWrite, headers map[string]string) exportingConfig {
 	var labels []*prompb.Label
 	for k, v := range rw.Spec.AdditionalLabels {
 		labels = append(labels, &prompb.Label{
@@ -219,9 +218,7 @@ func newExportConfig(rw *v1.RemoteWrite) exportingConfig {
 			Endpoint:    rw.Spec.Config.Endpoint,
 			BasicAuth:   rw.Spec.Config.BasicAuth,
 			BearerToken: rw.Spec.Config.BearerToken,
-			Headers: map[string]string{
-				"User-Agent": constant.ServerUserAgent,
-			},
+			Headers:     headers,
 		},
 		slotSize: time.Duration(rw.Spec.IntervalSeconds) * time.Second,
 		labels:   labels,
