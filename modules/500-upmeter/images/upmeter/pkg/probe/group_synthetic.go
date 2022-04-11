@@ -42,6 +42,7 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 				Path:        "/",
 				DnsTimeout:  2 * time.Second,
 				HttpTimeout: 2 * time.Second,
+				Access:      access,
 				Logger: entry.
 					WithField("probe", "access").
 					WithField("checker", "SmokeMiniAvailable"),
@@ -55,6 +56,7 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 				Path:        "/dns",
 				DnsTimeout:  2 * time.Second,
 				HttpTimeout: 2 * time.Second,
+				Access:      access,
 				Logger: entry.
 					WithField("probe", "dns").
 					WithField("check", "smoke").
@@ -82,6 +84,7 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 				Path:        "/neighbor",
 				DnsTimeout:  2 * time.Second,
 				HttpTimeout: 4 * time.Second,
+				Access:      access,
 				Logger: entry.
 					WithField("probe", "neighbor").
 					WithField("checker", "SmokeMiniAvailable"),
@@ -95,6 +98,7 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 				Path:        "/neighbor-via-service",
 				DnsTimeout:  2 * time.Second,
 				HttpTimeout: 4 * time.Second,
+				Access:      access,
 				Logger: entry.
 					WithField("probe", "service").
 					WithField("checker", "SmokeMiniAvailable"),

@@ -39,6 +39,7 @@ type SmokeMiniAvailable struct {
 	DnsTimeout  time.Duration
 	HttpTimeout time.Duration
 	Logger      *log.Entry
+	Access      kubernetes.Access
 }
 
 func (s SmokeMiniAvailable) Checker() check.Checker {
@@ -64,6 +65,7 @@ func (s SmokeMiniAvailable) Checker() check.Checker {
 		path:        s.Path,
 		httpTimeout: s.HttpTimeout,
 		client:      client,
+		access:      s.Access,
 
 		logger: s.Logger,
 	}
