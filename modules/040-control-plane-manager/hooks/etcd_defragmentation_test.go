@@ -139,7 +139,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				})
 			})
 
-			Context("etcd db size is 95% of default maximum", func() {
+			Context("etcd db size is 90% of default maximum", func() {
 				ip := "192.168.0.3"
 				endpoint := etcdEndpoint(ip)
 				podName := "etcd-pod3"
@@ -148,7 +148,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 						"name":   podName,
 						"hostIP": ip,
 					})
-					endpointToDbSize[endpoint] = 2040109466
+					endpointToDbSize[endpoint] = 1932735284
 					JoinKubeResourcesAndSet(f, testETCDSecret, podManifest)
 
 					f.RunHook()
@@ -167,7 +167,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				})
 			})
 
-			Context("etcd db size is great than 95% and less than default maximum", func() {
+			Context("etcd db size is great than 90% and less than default maximum", func() {
 				ip := "192.168.0.4"
 				endpoint := etcdEndpoint(ip)
 				podName := "etcd-pod4"
@@ -330,7 +330,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				})
 			})
 
-			Context("etcd db size is 95% of maximum", func() {
+			Context("etcd db size is 90% of maximum", func() {
 				ip := "192.168.1.3"
 				endpoint := etcdEndpoint(ip)
 				podName := "etcd-pod2-3"
@@ -358,7 +358,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				})
 			})
 
-			Context("etcd db size is great than 95% and less than current maximum", func() {
+			Context("etcd db size is great than 90% and less than current maximum", func() {
 				ip := "192.168.1.4"
 				endpoint := etcdEndpoint(ip)
 				podName := "etcd-pod2-4"
@@ -430,7 +430,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 		}
 
 		Context("all instances don't have quota-backend-bytes", func() {
-			Context("all instances have current db size less than 95%", func() {
+			Context("all instances have current db size less than 90%", func() {
 				ips := []string{"192.18.10.1", "192.18.10.2", "192.18.10.3"}
 				BeforeEach(func() {
 					resources := manifests(ips, "etcd-pod-10")
@@ -461,7 +461,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				})
 			})
 
-			Context("two instances have current db size greater than 95%", func() {
+			Context("two instances have current db size greater than 90%", func() {
 				ips := []string{"192.18.11.1", "192.18.11.2", "192.18.11.3"}
 				BeforeEach(func() {
 					resources := manifests(ips, "etcd-pod-11")
@@ -474,20 +474,20 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 					f.RunHook()
 				})
 
-				It("should trigger defrag for instances have current db size greater than 95%", func() {
+				It("should trigger defrag for instances have current db size greater than 90%", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
 					Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[0])))
 					Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[1])))
 				})
 
-				It("should not trigger defrag for instance has current db size less than 95%", func() {
+				It("should not trigger defrag for instance has current db size less than 90%", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
 					Expect(endpointTriggeredDefrag).ToNot(HaveKey(etcdEndpoint(ips[2])))
 				})
 
-				It("should set success metrics for or instances have current db size greater than 95%", func() {
+				It("should set success metrics for or instances have current db size greater than 90%", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
 					metrics := f.MetricsCollector.CollectedMetrics()
@@ -498,7 +498,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				})
 			})
 
-			Context("all instances have current db size greater than 95%", func() {
+			Context("all instances have current db size greater than 90%", func() {
 				Context("one instance has defrag error", func() {
 					errMsg := "defrag error"
 					ips := []string{"192.18.12.1", "192.18.12.2", "192.18.12.3"}
