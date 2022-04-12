@@ -58,7 +58,7 @@ spec:
       initContainers:
         - name: wait-for-linstor
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.piraeusHaController }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.piraeusHaController }}"
           imagePullPolicy: "IfNotPresent"
           command:
             - /linstor-wait-until
@@ -84,7 +84,7 @@ spec:
       containers:
         - name: piraeus-ha-controller
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.piraeusHaController }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.piraeusHaController }}"
           imagePullPolicy: "IfNotPresent"
           args:
             - --leader-election=true

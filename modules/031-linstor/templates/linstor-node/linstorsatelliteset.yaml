@@ -29,7 +29,7 @@ spec:
   drbdRepoCred: deckhouse-registry
   imagePullPolicy: IfNotPresent
   serviceAccountName: linstor-node
-  satelliteImage: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.linstorServer }}
+  satelliteImage: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.linstorServer }}"
   linstorHttpsClientSecret: linstor-client-https-cert
   controllerEndpoint: https://linstor.d8-{{ .Chart.Name }}.svc:3371
   automaticStorageType: None
@@ -37,9 +37,9 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
-  monitoringImage: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdReactor }}
+  monitoringImage: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdReactor }}"
   monitoringBindAddress: 127.0.0.1
-  kernelModuleInjectionImage: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdDriverLoader }}
+  kernelModuleInjectionImage: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdDriverLoader }}"
   kernelModuleInjectionMode: Compile
   kernelModuleInjectionResources: {}
   additionalEnv: null

@@ -10,10 +10,10 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-test" )) | nindent 2 }}
 spec:
+  backoffLimit: 1
   completions: 1
   template:
     spec:
-      backoffLimit: 1
       restartPolicy: Never
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -25,7 +25,7 @@ spec:
       containers:
         - name: test
           {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
-          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.linstorServer }}
+          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.linstorServer }}"
           imagePullPolicy: "IfNotPresent"
           command: [ "/bin/bash" ]
           args:

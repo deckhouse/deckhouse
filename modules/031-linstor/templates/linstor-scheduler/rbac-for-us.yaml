@@ -6,65 +6,33 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-scheduler")) | nindent 2 }}
 ---
-kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: d8:{{ .Chart.Name }}:linstor-scheduler
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-scheduler")) | nindent 2 }}
-rules:
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["create", "patch", "update"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods", "namespaces"]
-    verbs: ["delete", "get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["bindings", "pods/binding"]
-    verbs: ["create"]
-  - apiGroups: [""]
-    resources: ["pods/status"]
-    verbs: ["patch", "update"]
-  - apiGroups: [""]
-    resources: ["replicationcontrollers", "services"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["*"]
-    resources: ["replicasets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["statefulsets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["policy"]
-    resources: ["poddisruptionbudgets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["persistentvolumeclaims", "persistentvolumes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["storageclasses", "csinodes","csidrivers", "csistoragecapacities"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["events.k8s.io"]
-    resources: ["events"]
-    verbs: ["create"]
----
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: d8:{{ .Chart.Name }}:linstor-scheduler
+  name: d8:{{ .Chart.Name }}:linstor-scheduler-kube-scheduler
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-scheduler")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-scheduler
 subjects:
   - kind: ServiceAccount
     name: linstor-scheduler
     namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:{{ .Chart.Name }}:linstor-scheduler-volume-scheduler
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-scheduler")) | nindent 2 }}
 roleRef:
-  kind: ClusterRole
-  name: d8:{{ .Chart.Name }}:linstor-scheduler
   apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:volume-scheduler
+subjects:
+  - kind: ServiceAccount
+    name: linstor-scheduler
+    namespace: d8-{{ .Chart.Name }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -73,14 +41,14 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-scheduler")) | nindent 2 }}
 rules:
-  - apiGroups:
-      - coordination.k8s.io
-    resources:
-      - leases
-    verbs:
-      - create
-      - get
-      - update
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "get", "update"]
+  {{- if semverCompare "< 1.22" .Values.global.discovery.kubernetesVersion }}
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -92,6 +60,21 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: linstor-scheduler
+subjects:
+  - kind: ServiceAccount
+    name: linstor-scheduler
+    namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:linstor:linstor-scheduler:extension-apiserver-authentication-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-scheduler" )) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
 subjects:
   - kind: ServiceAccount
     name: linstor-scheduler

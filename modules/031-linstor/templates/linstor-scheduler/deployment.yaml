@@ -67,7 +67,7 @@ spec:
           - --policy-configmap=linstor-scheduler
           - --policy-configmap-namespace=d8-{{ .Chart.Name }}
           {{- end }}
-          - --leader-elect=true 
+          - --leader-elect=true
           - --leader-elect-resource-name=linstor-scheduler
           - --leader-elect-resource-namespace=$(NAMESPACE)
           env:
@@ -75,7 +75,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          image: {{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.controlPlaneManager (list "kubeScheduler" $kubeVersion.Major $kubeVersion.Minor | join "") }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.controlPlaneManager (list "kubeScheduler" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
           imagePullPolicy: IfNotPresent
           startupProbe:
             failureThreshold: 24
@@ -107,7 +107,7 @@ spec:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
         - name: linstor-scheduler-extender
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorSchedulerExtender }}
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorSchedulerExtender }}"
           imagePullPolicy: IfNotPresent
           args:
           - --verbose=true

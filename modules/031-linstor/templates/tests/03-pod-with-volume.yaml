@@ -13,6 +13,7 @@ spec:
   completions: 1
   template:
     spec:
+      schedulerName: linstor
       restartPolicy: Never
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -23,7 +24,7 @@ spec:
       containers:
         - name: test
           {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
-          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.linstorServer }}
+          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.linstorServer }}"
           imagePullPolicy: "IfNotPresent"
           command: [ "/bin/bash" ]
           args:

@@ -76,17 +76,17 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-csi-controller")) | nindent 2 }}
 spec:
   imagePullSecret: deckhouse-registry
-  linstorPluginImage: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorCsi }}
+  linstorPluginImage: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorCsi }}"
   imagePullPolicy: IfNotPresent
   csiControllerServiceAccountName: csi
   csiNodeServiceAccountName: default
   {{- with .Values.global.modulesImages }}
-  csiAttacherImage: {{ .registry }}:{{ index .tags.common (list "csiExternalAttacher" $kubeVersion.Major $kubeVersion.Minor | join "") }}
-  csiLivenessProbeImage: {{ .registry }}:{{ index .tags.common (list "csiLivenessprobe" $kubeVersion.Major $kubeVersion.Minor | join "") }}
-  csiNodeDriverRegistrarImage: {{ .registry }}:{{ index .tags.common (list "csiNodeDriverRegistrar" $kubeVersion.Major $kubeVersion.Minor | join "") }}
-  csiProvisionerImage: {{ .registry }}:{{ index .tags.common (list "csiExternalProvisioner" $kubeVersion.Major $kubeVersion.Minor | join "") }}
-  csiResizerImage: {{ .registry }}:{{ index .tags.common (list "csiExternalResizer" $kubeVersion.Major $kubeVersion.Minor | join "") }}
-  csiSnapshotterImage: {{ .registry }}:{{ index .tags.common (list "csiExternalSnapshotter" $kubeVersion.Major $kubeVersion.Minor | join "") }}
+  csiAttacherImage: "{{ .registry }}:{{ index .tags.common (list "csiExternalAttacher" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
+  csiLivenessProbeImage: "{{ .registry }}:{{ index .tags.common (list "csiLivenessprobe" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
+  csiNodeDriverRegistrarImage: "{{ .registry }}:{{ index .tags.common (list "csiNodeDriverRegistrar" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
+  csiProvisionerImage: "{{ .registry }}:{{ index .tags.common (list "csiExternalProvisioner" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
+  csiResizerImage: "{{ .registry }}:{{ index .tags.common (list "csiExternalResizer" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
+  csiSnapshotterImage: "{{ .registry }}:{{ index .tags.common (list "csiExternalSnapshotter" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
   {{- end }}
   linstorHttpsClientSecret: linstor-client-https-cert
   priorityClassName: ""
