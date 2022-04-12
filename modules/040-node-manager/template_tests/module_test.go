@@ -928,7 +928,7 @@ ccc: ddd
 		})
 	})
 
-	FContext("Vsphere", func() {
+	Context("Vsphere", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerVsphere)
 			setBashibleAPIServerTLSValues(f)
