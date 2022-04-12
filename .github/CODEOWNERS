@@ -1,0 +1,14 @@
+*                           @konstantin-axenov @nabokihms
+150-user-authn/             @nabokihms
+402-ingress-nginx/          @nabokihms
+460-log-shipper/            @nabokihms
+500-upmeter/                @shvgn
+dhctl/                      @name212
+# cilium/                   @zuzzas
+csi/                        @zuzzas
+500-openvpn/                @vitaliy-sn
+bashible-apiserver/         @RomanenkoDenys
+470-chrony/                 @RomanenkoDenys
+031-local-path-provisioner/ @RomanenkoDenys
+110-istio/                  @apolovov
+031-linstor/                @kvaps
