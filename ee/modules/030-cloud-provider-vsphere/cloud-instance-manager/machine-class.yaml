@@ -37,7 +37,11 @@ spec:
 {{ $_ := set .nodeGroup.instanceClass "runtimeOptions" dict }}
 {{- end }}
   runtimeOptions:
-    nestedHardwareVirtualization: {{ .nodeGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization | default true }}
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "nestedHardwareVirtualization" }}
+    nestedHardwareVirtualization: {{ .nodeGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization }}
+  {{- else }}
+    nestedHardwareVirtualization: true
+  {{- end }}
     resourceAllocationInfo:
 {{- if .nodeGroup.instanceClass.runtimeOptions.cpuShares }}
       cpuShares: {{ .nodeGroup.instanceClass.runtimeOptions.cpuShares }}

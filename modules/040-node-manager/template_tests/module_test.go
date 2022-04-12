@@ -404,6 +404,33 @@ internal:
       zones:
       - zonea
       - zoneb
+  - name: worker-with-disabled-nested-virt
+    instanceClass:
+      flavorName: m1.large
+      imageName: ubuntu-18-04-cloud-amd64
+      numCPUs: 3
+      memory: 3
+      rootDiskSize: 42
+      template: dev/test
+      mainNetwork: mymainnetwork
+      additionalNetworks: [aaa, bbb]
+      datastore: lun-111
+      runtimeOptions: # optional
+        nestedHardwareVirtualization: false
+        memoryReservation: 42
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.19"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VsphereInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 2
+      zones:
+      - zonea
+      - zoneb
   machineControllerManagerEnabled: true
 `
 
@@ -939,7 +966,14 @@ ccc: ddd
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
-			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+			machineClassAWitoutNestedVirt := f.KubernetesResource("VsphereMachineClass", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-02320933")
+			machineClassSecretAWitoutNestedVirt := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-02320933")
+			machineDeploymentAWitoutNestedVirt := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-with-disabled-nested-virt-02320933")
+			machineClassBWitoutNestedVirt := f.KubernetesResource("VsphereMachineClass", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-6bdb5b0d")
+			machineClassSecretBWitoutNestedVirt := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-6bdb5b0d")
+			machineDeploymentBWitoutNestedVirt := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-with-disabled-nested-virt-6bdb5b0d")
+
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB, machineDeploymentAWitoutNestedVirt, machineDeploymentBWitoutNestedVirt)).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -980,6 +1014,22 @@ ccc: ddd
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
+
+			Expect(machineClassAWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineClassSecretAWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineDeploymentAWitoutNestedVirt.Exists()).To(BeTrue())
+
+			Expect(machineClassBWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineClassSecretBWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineDeploymentBWitoutNestedVirt.Exists()).To(BeTrue())
+
+			nestedVirtA := machineClassAWitoutNestedVirt.Field("spec.runtimeOptions.nestedHardwareVirtualization")
+			Expect(nestedVirtA.Exists()).To(BeTrue())
+			Expect(nestedVirtA.Bool()).To(BeFalse())
+
+			nestedVirtB := machineClassBWitoutNestedVirt.Field("spec.runtimeOptions.nestedHardwareVirtualization")
+			Expect(nestedVirtB.Exists()).To(BeTrue())
+			Expect(nestedVirtB.Bool()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
