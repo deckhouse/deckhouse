@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO remove this step in next release
-rm -f /etc/apt/sources.list.d/apt.kubernetes.io.list /etc/apt/sources.list.d/download.docker.com.list /etc/apt/sources.list.d/nginx.org.list
-# We will install jq from registry repo
-bb-apt-remove jq
+# TODO remove after next release !!!
+
+if systemctl list-units --no-legend --plain --no-pager | grep -q resolv-copier.service; then
+  systemctl stop resolv-copier.service
+  systemctl disable resolv-copier.service
+  rm -rf /var/lib/bashible/resolv
+  rm -f /usr/local/bin/d8-resolv-copier /etc/systemd/system/resolv-copier.service
+  systemctl daemon-reload
+fi
