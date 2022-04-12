@@ -1,7 +1,9 @@
 #!/bin/bash
 
-lockfile-remove /tmp/lock
-rm -f /tmp/shutting_down
+# Copyright 2021 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+set -Eeuo pipefail
 
 # Setup interface
 dev_name="nodelocaldns"
@@ -16,15 +18,17 @@ if ! ip -json addr show "$dev_name" | jq -re "any(.[].addr_info[]?.local; . == \
 fi
 
 # Setup iptables
-if ! iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p tcp -m tcp --sport 53 -j NOTRACK >/dev/null 2>&1; then
-  iptables -w 600 -t raw -A OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p tcp -m tcp --sport 53 -j NOTRACK
+if ! iptables -w 60 -t raw -C OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p tcp -m tcp --sport 53 -j NOTRACK >/dev/null 2>&1; then
+  iptables -w 60 -t raw -A OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p tcp -m tcp --sport 53 -j NOTRACK
 fi
-if ! iptables -w 600 -t raw -C OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p udp -m udp --sport 53 -j NOTRACK >/dev/null 2>&1; then
-  iptables -w 600 -t raw -A OUTPUT -s ${KUBE_DNS_SVC_IP}/32 -p udp -m udp --sport 53 -j NOTRACK
+if ! iptables -w 60 -t raw -C OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p udp -m udp --sport 53 -j NOTRACK >/dev/null 2>&1; then
+  iptables -w 60 -t raw -A OUTPUT -s "${KUBE_DNS_SVC_IP}/32" -p udp -m udp --sport 53 -j NOTRACK
 fi
-if iptables -w 600 -t raw -C PREROUTING -d ${KUBE_DNS_SVC_IP}/32 -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
-  # Remove. Will be added later, in liveness probe
-  iptables -w 600 -t raw -D PREROUTING -d ${KUBE_DNS_SVC_IP}/32 -m socket --nowildcard -j NOTRACK >/dev/null 2>&1
+if iptables -w 60 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
+  # Remove. Will be added later.
+  iptables -w 60 -t raw -D PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1
 fi
+
+echo -n "not-ready" > /tmp/coredns-readiness
 
 exec /coredns -conf /etc/coredns/Corefile

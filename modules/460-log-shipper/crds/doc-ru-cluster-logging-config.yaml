@@ -21,6 +21,11 @@ spec:
                   properties:
                     namespaceSelector:
                       description: Задать фильтр по Namespace.
+                      properties:
+                        matchNames:
+                          description: Собирать логи только с указанных Namespace.
+                        excludeNames:
+                          description: Собирать логи со всех Namespace кроме указанных в списке.
                     labelSelector:
                       description: |
                         Настройка `labelSelector` позволяет задать фильтр по Pod Labels.

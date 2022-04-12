@@ -121,6 +121,7 @@ pull_request_info:
           const response = await github.rest.pulls.list({
             owner: context.repo.owner,
             repo: context.repo.repo,
+            state: 'all',
             head: head_label
           });
           if (response.status != 200) {

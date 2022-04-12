@@ -178,6 +178,7 @@ RUN printf 'Package: *\nPin: release a=%s\nPin-Priority: %s\n\n' stable 700 test
  && apt-get remove -y udev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
+ && ln -sf /proc/mounts /etc/mtab \
  && sed -i 's/udev_rules.*=.*/udev_rules=0/ ; s/udev_sync.*=.*/udev_sync=0/ ; s/obtain_device_list_from_udev.*=.*/obtain_device_list_from_udev=0/' /etc/lvm/lvm.conf \
  && sed -i '/^devices {/a global_filter = [ "r|^/dev/drbd|" ]' /etc/lvm/lvm.conf
 

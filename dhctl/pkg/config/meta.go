@@ -82,6 +82,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
 
+		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
+		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
+
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
@@ -216,9 +219,8 @@ func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
 		},
 		"nodeTemplate": map[string]interface{}{
 			"labels": map[string]interface{}{
-				"node-role.kubernetes.io/master":                          "",
-				"node-role.kubernetes.io/control-plane":                   "",
-				"node.kubernetes.io/exclude-from-external-load-balancers": "",
+				"node-role.kubernetes.io/master":        "",
+				"node-role.kubernetes.io/control-plane": "",
 			},
 			"taints": []map[string]interface{}{
 				{

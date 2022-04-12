@@ -20,8 +20,6 @@ import (
 	"sort"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"d8.io/upmeter/pkg/check"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
@@ -89,9 +87,7 @@ func (a ByTimeSlot) Less(i, j int) bool {
 	return a[i].TimeSlot < a[j].TimeSlot
 }
 
-const TotalProbeName = "__total__"
-
-func FetchStatuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
+func Statuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.StepRange, incidents []check.DowntimeIncident) (map[string]map[string][]EpisodeSummary, error) {
 	daoCtx := dbctx.Start()
 	defer daoCtx.Stop()
 
@@ -108,15 +104,14 @@ func FetchStatuses(dbctx *dbcontext.DbContext, ref check.ProbeRef, rng ranges.St
 /**
 calculateStatuses returns arrays of EpisodeSummary objects for each group and probe.
 Each EpisodeSummary object is combined from Episodes for a step range.
-If grouping is "group", then all probes in group are summed up and
-probe name is "__total__".
 
-Method considers that there is only one Episode for probe and Start.
+It is expected that there is only one Episode for probe and Start.
+
+Returned structure is map[group][probe][dataByTime]
 
 Example output:
-
-testGroup:
-  testProbe:
+aGroup:
+  aProbe:
   - timeslot: 0
     up: 300
     down: 0
@@ -130,13 +125,14 @@ testGroup:
 func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
 	episodes = filterDisabledProbesFromEpisodes(episodes)
 
-	// Combine multiple episodes for the same probe and timeslot.
+	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce
+	// one single episode from possible alternatives.
 	episodes = combineEpisodesByTimeslot(episodes)
 
 	// Create table with empty statuses for each probe
 	//     Group  ->  Probe  ->  Slot -> *EpisodeSummary
 	// map[string]map[string]map[int64]*EpisodeSummary
-	statuses := newSummaryTable(episodes, stepRanges, ref)
+	statuses := newSummaryTable(episodes, stepRanges)
 
 	// Sum up episodes for each probe by Start within each step range.
 	// TODO various optimizations can be applied here.
@@ -148,7 +144,6 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 
 			statuses[episode.ProbeRef.Group][episode.ProbeRef.Probe][stepRange.From].addEpisode(episode)
 		}
-		calculateTotalForStepRange(statuses, stepRange)
 	}
 
 	updateMute(statuses, incidents, stepRanges)
@@ -161,6 +156,8 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 
 // Each group/probe should have only 1 Episode per Start.
 func combineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
+	// It could have been a more shallow map map[string][]check.Episode, the key being
+	//           fmt.Sprintf("%s-%d", probeId, start)
 	idx := make(map[string]map[int64][]int)
 	for i, episode := range episodes {
 		probeId := episode.ProbeRef.Id()
@@ -186,58 +183,6 @@ func combineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
 	}
 
 	return newEpisodes
-}
-
-// calculateTotalForStepRange calculates a group episode for a range. It combines group's probes
-// into one "__total__" probe. In webui it is presented as a cloumn summary for probes in a group.
-//
-// The total episode calculation statuses:
-//      - up      - min uptime within probes
-//      - down    - longest possible downtime
-//      - unknown - max measured time excluding up and down calculated above
-//      - nodata  - unoccupied time left after other three calculations
-//
-// NOTE: this episode summary is just a representation. It cannot be used for further uptime
-// calculation of a group in a given timerange. Total summary varies depending on the chosen set of
-// steps within the same time period.
-func calculateTotalForStepRange(statuses map[string]map[string]map[int64]*EpisodeSummary, stepRange ranges.Range) {
-	for group, probes := range statuses {
-		totalStatusInfo := newEpisodeSummary(stepRange)
-
-		var (
-			uptimes, downtimes []time.Duration
-			maxKnown, maxAvail time.Duration
-		)
-
-		for probe, infos := range probes {
-			if probe == TotalProbeName {
-				continue
-			}
-			if _, ok := infos[stepRange.From]; !ok {
-				log.Errorf("Runner %s/%s has no timestamp %d!", group, probe, stepRange.From)
-			}
-
-			info := infos[stepRange.From]
-
-			uptimes = append(uptimes, info.Up)
-			downtimes = append(downtimes, info.Down)
-
-			maxKnown = utime.Longest(maxKnown, info.Known())
-			maxAvail = utime.Longest(maxAvail, info.Avail())
-		}
-
-		totalStatusInfo.Up = utime.Shortest(uptimes...)
-		// down should not be less then known and not more then avail.
-		totalStatusInfo.Down = utime.ClampToRange(utime.Longest(downtimes...), 0, maxAvail-totalStatusInfo.Up)
-		totalStatusInfo.Unknown = maxAvail - totalStatusInfo.Up - totalStatusInfo.Down
-		totalStatusInfo.NoData = stepRange.Diff() - maxAvail
-
-		if _, ok := statuses[group][TotalProbeName]; !ok {
-			statuses[group][TotalProbeName] = map[int64]*EpisodeSummary{}
-		}
-
-		statuses[group][TotalProbeName][stepRange.From] = totalStatusInfo
-	}
 }
 
 // MuteDuration returns the count of seconds between 'from' and 'to'
@@ -366,7 +311,7 @@ func calculateTotalForPeriod(statuses map[string]map[string]map[int64]*EpisodeSu
 
 // Create empty statuses for each probe.
 // Group -> Probe -> Slot -> *EpisodeSummary
-func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string]map[int64]*EpisodeSummary {
+func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range) map[string]map[string]map[int64]*EpisodeSummary {
 	statuses := map[string]map[string]map[int64]*EpisodeSummary{}
 
 	for _, episode := range episodes {
@@ -388,27 +333,10 @@ func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range, ref ch
 		}
 	}
 
-	// Create empty statuses for groupName and probeName if there are no episodes and probeName is __total__.
-	if ref.Probe == TotalProbeName {
-		group := ref.Group
-
-		if _, ok := statuses[group]; !ok {
-			statuses[group] = map[string]map[int64]*EpisodeSummary{}
-		}
-
-		if _, ok := statuses[group][TotalProbeName]; !ok {
-			statuses[group][TotalProbeName] = map[int64]*EpisodeSummary{}
-		}
-
-		for _, stepRange := range stepRanges {
-			statuses[group][TotalProbeName][stepRange.From] = newEpisodeSummary(stepRange)
-		}
-	}
-
 	return statuses
 }
 
-// transformTimestampedMapsToSortedArrays transforms each map timestamp -> EpisodeSummary into sorted array.
+// transformTimestampedMapsToSortedArrays transforms each map[timestamp]EpisodeSummary into sorted array.
 // TODO can be splited into SelectTotal|Probes and TransformToSortedArrays
 func transformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[int64]*EpisodeSummary, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
 	// Transform maps "step->EpisodeSummary" in statuses to sorted arrays in StatusResponse
@@ -417,15 +345,17 @@ func transformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[i
 		if _, ok := res[group]; !ok {
 			res[group] = map[string][]EpisodeSummary{}
 		}
-		if ref.Probe == TotalProbeName {
-			res[group][TotalProbeName] = make([]EpisodeSummary, 0)
-			for _, info := range statuses[group][TotalProbeName] {
-				res[group][TotalProbeName] = append(res[group][TotalProbeName], *info)
+		if ref.Probe == dao.GroupAggregation {
+			// Only group stats were requested
+			res[group][dao.GroupAggregation] = make([]EpisodeSummary, 0)
+			for _, info := range statuses[group][dao.GroupAggregation] {
+				res[group][dao.GroupAggregation] = append(res[group][dao.GroupAggregation], *info)
 			}
-			sort.Sort(ByTimeSlot(res[group][TotalProbeName]))
+			sort.Sort(ByTimeSlot(res[group][dao.GroupAggregation]))
 		} else {
+			// All probes in detail were requested
 			for probe, infos := range probes {
-				if probe == TotalProbeName {
+				if probe == dao.GroupAggregation {
 					continue
 				}
 				if _, ok := res[group][probe]; !ok {
@@ -445,6 +375,7 @@ func filterDisabledProbesFromEpisodes(episodes []check.Episode) []check.Episode 
 	res := make([]check.Episode, 0)
 
 	for _, episode := range episodes {
+		// FIXME side-effect magic
 		if check.IsProbeEnabled(episode.ProbeRef.Id()) {
 			res = append(res, episode)
 		}

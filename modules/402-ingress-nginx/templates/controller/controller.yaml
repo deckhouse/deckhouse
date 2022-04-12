@@ -82,7 +82,6 @@ spec:
     updateMode: "Off"
     {{- end }}
 {{- end }}
-
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -233,6 +232,12 @@ spec:
         {{- end }}
         {{- if $defaultSSLCertificateSecretRef.name }}
         - --default-ssl-certificate={{ printf "%s/%s" $defaultSSLCertificateSecretRef.namespace $defaultSSLCertificateSecretRef.name }}
+        {{- end }}
+        {{- if semverCompare ">=1.1" $controllerVersion }}
+        - --controller-class={{ printf "ingress-nginx.deckhouse.io/%s" $crd.spec.ingressClass }}
+        {{- if eq "nginx" $crd.spec.ingressClass }}
+        - --watch-ingress-without-class=true
+        {{- end }}
         {{- end }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}

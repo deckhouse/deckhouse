@@ -2,81 +2,51 @@
 title: "Cloud provider — VMware vSphere: настройки"
 ---
 
-Модуль автоматически включается для всех облачных кластеров развёрнутых в vSphere.
+Модуль автоматически включается для всех облачных кластеров, развёрнутых в vSphere. 
 
-Количество и параметры процесса заказа машин в облаке настраиваются в Custom Resource [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) модуля node-manager, в котором также указывается название используемого для этой группы узлов instance-класса (параметр `cloudInstances.classReference` NodeGroup). Instance-класс для cloud-провайдера vSphere — это Custom Resource [`VsphereInstanceClass`](cr.html#vsphereinstanceclass), в котором указываются конкретные параметры самих машин.
+Если control plane кластера размещен на виртуальных машинах или серверах bare-metal, то cloud-провайдер использует настройки модуля `cloud-provider-vsphere` в конфигурации Deckhouse (см. ниже). Иначе, если control plane кластера размещен в облаке, то cloud-провайдер использует структуру [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) для настройки.
+
+Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) модуля node-manager, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера vSphere — это custom resource [`VsphereInstanceClass`](cr.html#vsphereinstanceclass), в котором указываются конкретные параметры самих машин.
 
 ## Параметры
 <!-- SCHEMA -->
 
 ## Storage
 
-Модуль автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster из зон(-ы). А также позволяет отфильтровать ненужные, указанием их в параметре `exclude`.
+Модуль автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster из зон (зоны). 
 
-* `exclude` — полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
-  * Формат — массив строк.
-  * Опциональный параметр.
-* `default` — имя StorageClass, который будет использоваться в кластере по умолчанию.
-  * Формат — строка.
-  * Опциональный параметр.
-  * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
-    * Присутствующий в кластере произвольный StorageClass с default аннотацией.
-    * Лексикографически первый StorageClass из создаваемых модулем.
-
-```yaml
-cloudProviderVsphere: |
-  storageClass:
-    exclude:
-    - ".*-lun101-.*"
-    - slow-lun103-1c280603
-    default: fast-lun102-7d0bf578
-```
+Также он позволяет настроить имя StorageClass'а, который будет использоваться в кластере по умолчанию (параметр [default](#parameters-storageclass-default)) и отфильтровать ненужные StorageClass'ы (параметр [exclude](#parameters-storageclass-exclude)).
 
 ### CSI
 
-Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на-лету. Но также поддерживается работа и в legacy-режиме, с использованием FCD-дисков.
-
-* `compatibilityFlag` — флаг, позволяющий использовать старую версию CSI.
-  * Формат — строка.
-  * Возможные значения:
-      * `legacy` — использовать старую версию драйвера. Только FCD диски без изменения размера на-лету.
-      * `migration` — в этом случае в кластере будут одновременно доступны оба драйвера. Данный режим используется для миграции со старого драйвера.
-  * Опциональный параметр.
-
-```yaml
-cloudProviderVsphere: |
-  storageClass:
-    compatibilityFlag: legacy
-```
+Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение настраивается параметром [compatibilityFlag](#parameters-storageclass-compatibilityflag). 
 
 ### Важная информация об увеличении размера PVC
 
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и vSphere API, после увеличения размера PVC нужно:
+Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и vSphere API после увеличения размера PVC нужно:
 
 1. Выполнить `kubectl cordon узел_где_находится_pod`;
 2. Удалить Pod;
-3. Убедиться, что ресайз произошёл успешно. В объекте PVC *не будет* condition `Resizing`. **Внимание!** `FileSystemResizePending` не является проблемой;
+3. Убедиться, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`. **Внимание!** Состояние `FileSystemResizePending` не является проблемой;
 4. Выполнить `kubectl uncordon узел_где_находится_pod`.
 
 ## Требования к окружениям
 
-1. Требования к версии vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
-2. vCenter, до которого есть доступ изнутри кластера с master-узлов.
-3. Создать Datacenter, в котором создать:
-
-    1. VirtualMachine template со [специальным](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource внутри.
-       * Образ ВМ должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).
-    2. Network, доступную на всех ESXi, на которых будут создаваться VirtualMachines.
-    3. Datastore (или несколько), подключённый ко всем ESXi, на которых будут создаваться VirtualMachines.
-        * На Datastore-ы **необходимо** "повесить" тэг из категории тэгов, указанный в `zoneTagCategory` (по умолчанию, `k8s-zone`). Этот тэг будет обозначать **зону**. Все Cluster'а из конкретной зоны должны иметь доступ ко всем Datastore'ам, с идентичной зоной.
-    4. Cluster, в который добавить необходимые используемые ESXi.
-        * На Cluster **необходимо** "повесить" тэг из категории тэгов, указанный в `zoneTagCategory` (по умолчанию, `k8s-zone`). Этот тэг будет обозначать **зону**.
-    5. Folder для создаваемых VirtualMachines.
-        * Опциональный. По умолчанию будет использоваться root vm папка.
-    6. Роль с необходимым [набором](#список-привилегий-для-использования-модуля) прав.
-    7. Пользователя, привязав к нему роль из пункта #6.
-
-4. На созданный Datacenter **необходимо** "повесить" тэг из категории тэгов, указанный в `regionTagCategory` (по умолчанию, `k8s-region`). Этот тэг будет обозначать **регион**.
+* Требования к версии vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`);
+* vCenter, до которого есть доступ изнутри кластера с master-узлов;
+* Создать Datacenter, в котором создать:
+  1. VirtualMachine template [со специальным](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource внутри.
+     * Образ ВМ должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).
+  2. Network, доступную на всех ESXi, на которых будут создаваться VirtualMachines.
+  3. Datastore (или несколько), подключённый ко всем ESXi, на которых будут создаваться VirtualMachines.
+     * На Datastore'ы **необходимо** «повесить» тег из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию, `k8s-zone`). Этот тег будет обозначать **зону**. Все Cluster'ы из конкретной зоны должны иметь доступ ко всем Datastore'ам с идентичной зоной.
+  4. Cluster, в который добавить необходимые используемые ESXi.
+     * На Cluster **необходимо** «повесить» тег из категории тегов, указанных в [zoneTagCategory](#parameters-zonetagcategory) (по умолчанию, `k8s-zone`). Этот тег будет обозначать **зону**.
+  5. Folder для создаваемых VirtualMachines.
+     * Опциональный. По умолчанию будет использоваться root vm каталог.
+  6. Роль с необходимым [набором](#список-привилегий-для-использования-модуля) прав.
+  7. Пользователя, привязав к нему роль из п.6.
+* На созданный Datacenter **необходимо** *повесить* тег из категории тегов, указанный в [regionTagCategory](#parameters-regiontagcategory) (по умолчанию, `k8s-region`). Этот тег будет обозначать **регион**.
 
 ## Список привилегий для использования модуля
 

@@ -1,6 +1,7 @@
-GO_VERSION=1.16.3
-GOLANGCI_LINT_VERSION=1.39.0
-GOFUMPT_VERSION=0.1.1
+# https://github.com/golangci/golangci-lint
+GOLANGCI_LINT_VERSION=1.45.2
+# https://github.com/mvdan/gofumpt
+GOFUMPT_VERSION=0.3.1
 GOARCH=amd64
 UNAME=$(shell uname -s)
 

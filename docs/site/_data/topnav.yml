@@ -8,17 +8,12 @@ topnav:
       - title: Documentation
         url: /documentation/v1/
       - title: Community
-        url: '#'
-        items:
-        - title: About
-          url: /community/about.html
-        - title: Deckhouse Platform CE
-          url: /community/community_edition.html
-        - title: Used software
-          url: /documentation/v1/oss_info.html
+        url: /community/about.html
       - title: Products
         url: '#'
         items:
+        - title: Deckhouse Platform CE
+          url: /community/community_edition.html
         - title: Deckhouse Platform EE
           url: /products/enterprise_edition.html
         - title: Deckhouse Commander
@@ -30,8 +25,13 @@ topnav:
           url: /services/managed.html
         - title: Training & Consulting
           url: /services/training.html
-      - title: About us
-        url: /about_us.html
+      - title: Resources
+        url: '#'
+        items:
+          - title: Deckhouse Security
+            url: /security.html
+          - title: Deckhouse vs KaaS
+            url: /deckhouse_vs_kaas.html
   ru:
     - title: Topnav
       items:
@@ -40,17 +40,12 @@ topnav:
       - title: Документация
         url: /documentation/v1/
       - title: Сообщество
-        url: '#'
-        items:
-        - title: О сообществе
-          url: /community/about.html
-        - title: Deckhouse Platform CE
-          url: /community/community_edition.html
-        - title: Используемое ПО
-          url: /documentation/v1/oss_info.html
+        url: /community/about.html
       - title: Продукты
         url: '#'
         items:
+        - title: Deckhouse Platform CE
+          url: /community/community_edition.html
         - title: Deckhouse Platform EE
           url: /products/enterprise_edition.html
         - title: Deckhouse Commander
@@ -62,5 +57,10 @@ topnav:
           url: /services/managed.html
         - title: Обучение и консультации
           url: /services/training.html
-      - title: О нас
-        url: /about_us.html
+      - title: Информация
+        url: '#'
+        items:
+          - title: Безопасность Deckhouse
+            url: /security.html
+          - title: Сравнение с KaaS
+            url: /deckhouse_vs_kaas.html

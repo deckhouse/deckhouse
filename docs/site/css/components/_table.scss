@@ -8,7 +8,8 @@
     line-height: 1.3;
     border-spacing: 0;
     a {
-        color: $color-inverse;
+        color: $color-alt;
+        text-decoration: underline;
     }
     a:hover {
         text-decoration: none;
@@ -41,6 +42,9 @@
                 // padding-bottom: 15px;
                 // border-bottom: 2px solid #FFFFFF;
                 text-align: left;
+            }
+            a {
+                color: $color-inverse;
             }
         }
         &_top-title {

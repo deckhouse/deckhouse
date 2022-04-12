@@ -20,7 +20,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['config-values.yaml','doc-ru-config-values.yaml']
-{{- if or (eq .Env "EE") (eq .Env "FE") }}
+{{- if or (eq .Env "EE") (eq .Env "FE") (eq .Env "development") }}
 - add: /ee/modules
   to: /src/ee/modules
   owner: jekyll
@@ -28,7 +28,7 @@
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-  excludePaths: ['*/docs/internal/','110-istio/crds']
+  excludePaths: ['*/docs/internal/','110-istio/crds','040-node-manager']
 - add: /ee/modules/110-istio/crds
   to: /src/ee/modules/110-istio/crds
   owner: jekyll
@@ -54,10 +54,18 @@
   to: /src/ee/modules/030-cloud-provider-vsphere/crds
   owner: jekyll
   group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/vsphere/openapi
+  to: /src/ee/modules/030-cloud-provider-vsphere/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
 {{- end }}
-{{- if eq .Env "FE" }}
+{{- if or (eq .Env "FE") (eq .Env "development")  }}
 - add: /ee/fe/modules
   to: /src/fe/modules
   owner: jekyll

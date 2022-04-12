@@ -12,7 +12,7 @@ data:
 
 ## Parameters
 
-The module has the following parameters in the `deckhouse` CM:
+The module has the following parameters in the `deckhouse` ConfigMap:
 
 * `speaker` — parameters of the `speaker` component that announces services (using `bgp` or `layer2` (LVS) routing protocol) and routes application traffic to its node.
     * `nodeSelector` — selects nodes where the `speaker` DaemonSet is active.

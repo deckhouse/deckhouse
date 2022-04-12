@@ -202,3 +202,26 @@ HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxCon
 If CPU utilization > 50% HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect of `minReplicas` and `maxReplicas`).
 
 `hpa-scaler` Deployment has HardPodAntiAffinity and it will order a new Node (inside it's NodeGroup), where one more ingress-controller will be set.
+
+
+## How to use IngressClass with IngressClassParameters
+
+Since version 1.1 IngressNginxController Deckhouse creates an IngressClass object. If you want to use your own IngressClass
+with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    ingress-class.deckhouse.io/external: "true"
+  name: my-super-ingress
+spec:
+  controller: ingress-nginx.deckhouse.io/my-super-ingress
+  parameters:
+    apiGroup: elbv2.k8s.aws
+    kind: IngressClassParams
+    name: awesome-class-cfg
+```
+
+In this case Deckhouse will not create an IngressClass object and will use your own.

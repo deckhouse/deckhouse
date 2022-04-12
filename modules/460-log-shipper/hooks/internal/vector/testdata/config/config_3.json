@@ -1,0 +1,38 @@
+{
+  "sources": {
+    "testfile": {
+      "type": "file",
+      "include": [
+        "/var/log/*log",
+        "/var/log/nginx/*.access.log"
+      ],
+      "exclude": [ "/var/log/syslog" ]
+    }
+  },
+  "sinks": {
+    "d8_cluster_sink_testoutput": {
+      "type": "elasticsearch",
+      "inputs": [
+        "testfile"
+      ],
+      "endpoint": "https://192.168.0.1:9200",
+      "encoding": {
+        "timestamp_format": "rfc3339"
+      },
+      "tls": {
+        "verify_hostname": true
+      },
+      "batch": {
+        "timeout_secs": 1,
+        "max_bytes": 10485760
+      },
+      "healthcheck": {
+        "enabled": false
+      },
+      "compression": "gzip",
+      "bulk_action": "index",
+      "index": "{{ kubernetes.namespace }}-%F",
+      "pipeline": "test-pipe"
+    }
+  }
+}

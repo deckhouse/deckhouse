@@ -113,7 +113,7 @@
 
   <div class="form__row">
     <label class="label" title="Укажите префикс имени образов контейнеров Deckhouse">
-      Префикс имени образов контейнеров Deckhouse (например, для публичных образов Deckhouse редакции CE — <code>registry.deckhouse.io/deckhouse/ce/</code>).
+      Префикс имени образов контейнеров Deckhouse (например, для публичных образов Deckhouse редакции CE — <code>registry.deckhouse.io/deckhouse/ce</code>).
     </label>
     <input
       class="textfield"
@@ -157,11 +157,14 @@
     <label class="label" title="Корневой сертификат, которым можно проверить сертификат хранилища образов контейнеров (например, если хранилище использует самоподписанный сертификат)">
       Корневой SSL-сертификат, которым можно проверить SSL-сертификат хранилища образов контейнеров (например, если хранилище использует самоподписанный сертификат).
     </label>
-    <input
+    <textarea
+      id="registryCA"
       class="textfield"
-      type="text" id="registryCA"
-      name="registryCA" placeholder=""
-      autocomplete="off" />
+      name="registryCA" placeholder="" rows="10" cols="80" placeholder="-----BEGIN CERTIFICATE-----
+.....
+.....
+.....
+-----END CERTIFICATE-----" autocomplete="off"></textarea>
     <span class="info">
        Оставьте пустым, если хранилище образов контейнеров использует SSL-сертификат публичных центров сертификации.
     </span>

@@ -23,7 +23,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -36,7 +35,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/log-shipper/generate_config",
+	Queue:        "/modules/log-shipper/generate_config",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cluster_log_source",
@@ -129,7 +129,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Spec.DestinationRefs = make([]string, 1)
 				newSource.Spec.DestinationRefs[0] = dest
 				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateMultiLinaeTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
 				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultTransforms(destMap[dest])...)
 				filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
 				if err != nil {
@@ -140,7 +140,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				clusterSources = append(clusterSources, newSource)
 			}
 		} else {
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateMultiLinaeTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(destMap[sourceConfig.Spec.DestinationRefs[0]])...)
 			filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
 			if err != nil {
@@ -172,7 +172,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Spec.ClusterDestinationRefs = make([]string, 1)
 				newSource.Spec.ClusterDestinationRefs[0] = dest
 				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateMultiLinaeTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
 				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultTransforms(destMap[dest])...)
 				filterTransforms, err := vector.CreateTransformsFromFilter(tmpPogSpec.Spec.LogFilters)
 				if err != nil {
@@ -187,7 +187,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 			if err != nil {
 				return err
 			}
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateMultiLinaeTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(destMap[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
@@ -331,7 +331,7 @@ func pipelinePartsFromNamespacedSource(generator *vector.LogConfigGenerator, des
 
 	// set namespace selector to config namespace. It's only 1 namespace available for Namespaced config
 	kubeSpec := v1alpha1.KubernetesPodsSpec{
-		NamespaceSelector: types.NameSelector{MatchNames: []string{sourceConfig.Namespace}},
+		NamespaceSelector: v1alpha1.NamespaceSelector{MatchNames: []string{sourceConfig.Namespace}},
 		LabelSelector:     sourceConfig.Spec.LabelSelector,
 	}
 	source = vector.NewKubernetesLogSource(sourceConfig.Name, kubeSpec, true)

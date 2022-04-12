@@ -164,8 +164,8 @@ steps:
       TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
       # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
-      # Encode as base64 to avoid github's secrets filter error: "Skip output since it may contain secret".
-      echo "::set-output name=tests_image_name::$(echo ${TESTS_IMAGE_NAME} | base64 -w0)"
+      # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+      echo "::set-output name=tests_image_name::$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)"
 
   - name: Cleanup
     if: ${{ always() }}

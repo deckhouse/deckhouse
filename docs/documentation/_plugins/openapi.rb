@@ -304,7 +304,7 @@ module Jekyll
                 # object items
                 result.push('<ul>')
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
-                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath))
+                    result.push(format_schema(item_key, item_value, attributes, get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath))
                 end
                 result.push('</ul>')
             else
@@ -534,6 +534,13 @@ module Jekyll
     def format_cluster_configuration(input)
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
         result = []
+
+        if ( @context.registers[:page]["lang"] == 'en' )
+            fallbackLanguageName = 'ru'
+        else
+            fallbackLanguageName = 'en'
+        end
+
         result.push('<div markdown="0">')
         result.push(converter.convert('## '+ input["kind"]))
 
@@ -542,6 +549,18 @@ module Jekyll
           item=input["apiVersions"][i]["openAPISpec"]
           item["i18n"]={}
           item["i18n"]["ru"]=get_hash_value(input,"i18n","ru","apiVersions",i,"openAPISpec")
+          item["i18n"]["en"]=get_hash_value(input,"apiVersions",i,"openAPISpec")
+
+          if get_hash_value(item, 'description')
+             if get_hash_value(item['i18n'][@context.registers[:page]["lang"]],"description") then
+                 result.push(converter.convert(get_hash_value(item['i18n'][@context.registers[:page]["lang"]],"description")))
+             elsif get_hash_value(item['i18n'][fallbackLanguageName],"description") then
+                 result.push(converter.convert(item['i18n'][fallbackLanguageName]["description"]))
+             else
+                 result.push(converter.convert(item["description"]))
+             end
+          end
+
           result.push(format_configuration(item))
         end
         result.push('</div>')

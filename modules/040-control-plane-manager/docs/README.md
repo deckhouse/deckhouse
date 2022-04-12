@@ -5,10 +5,10 @@ title: Managing control plane
 The `control-plane-manager` (CPM) module is responsible for managing the cluster's control plane components. It runs on all master nodes of the cluster (nodes that have the `node-role.kubernetes.io/master: ""` label).
 
 The control-plane-manager:
-- **Manages certificates** required for the operation of the control plane (renews certificates and re-issues them in response to configuration changes, among other things). This feature allows the CPM to automatically maintain a secure control plane configuration and quickly add additional SANs for organizing secure access to the Kubernetes API.
-- **Configures components**. The CPM module automatically creates the required configs and manifests of the control plane components.
-- **Upgrades/downgrades components**. Makes sure that the versions of the components in the cluster are the same.
-- **Manages the configuration of the etcd cluster** and its members. The CPM module scales master nodes and migrates the cluster from single-master to multi-master (and vice versa).
+- **Manages certificates** required for the operation of the control plane (renews certificates and re-issues them in response to configuration changes, among other things). This feature allows the CPM to automatically maintain a secure control plane configuration and quickly add additional SANs for organizing secure access to the Kubernetes API;
+- **Configures components**. The CPM module automatically creates the required configs and manifests of the control plane components;
+- **Upgrades/downgrades components**. Makes sure that the versions of the components in the cluster are the same;
+- **Manages the configuration of the etcd cluster** and its members. The CPM module scales master nodes and migrates the cluster from single-master to multi-master (and vice versa);
 - **Configures kubeconfig**. The CPM module maintains an up-to-date configuration for smooth kubectl operation. It generates, renews, updates kubeconfig with the cluster-admin rights, and creates a symlink for the root user so that kubeconfig can be used by default.
 
 ## Managing certificates
@@ -20,12 +20,12 @@ The CPM module manages certificates of the `control-plane` components, such as:
   - the RSA certificate and the key for signing Service Accounts (`sa.pub` & `sa.key`),
   - the root CA certificate for the extension API servers (`front-proxy-ca.key` & `front-proxy-ca.crt`).
 - Client certificates for connecting `control-plane` components to each other. The CPM module issues, renews, and re-issues if something has changed (e.g., the SAN list). These certificates are stored on the nodes only:
-  - The server-side API server certificate (`apiserver.crt` & `apiserver.key`),
-  - The client-side certificate for connecting `kube-apiserver` to `kubelet` (`apiserver-kubelet-client.crt` & `apiserver-kubelet-client.key`),
-  - The client-side certificate for connecting `kube-apiserver` to `etcd` (`apiserver-etcd-client.crt` & `apiserver-etcd-client.key`),
-  - The client-side certificate for connecting `kube-apiserver` to the extension API servers (`front-proxy-client.crt` & `front-proxy-client.key`),
-  - The server-side `etcd` certificate (`etcd/server.crt` & `etcd/server.key`),
-  - The client-side certificate for connecting `etcd` to other cluster members (`etcd/peer.crt` & `etcd/peer.key`),
+  - The server-side API server certificate (`apiserver.crt` & `apiserver.key`);
+  - The client-side certificate for connecting `kube-apiserver` to `kubelet` (`apiserver-kubelet-client.crt` & `apiserver-kubelet-client.key`);
+  - The client-side certificate for connecting `kube-apiserver` to `etcd` (`apiserver-etcd-client.crt` & `apiserver-etcd-client.key`);
+  - The client-side certificate for connecting `kube-apiserver` to the extension API servers (`front-proxy-client.crt` & `front-proxy-client.key`);
+  - The server-side `etcd` certificate (`etcd/server.crt` & `etcd/server.key`);
+  - The client-side certificate for connecting `etcd` to other cluster members (`etcd/peer.crt` & `etcd/peer.key`);
   - The client-side certificate for connecting `kubelet` to `etcd` for performing health-checks  (`etcd/healthcheck-client.crt` & `etcd/healthcheck-client.key`).
 
 Also, the CPM module lets you add the additional SANs to certificates (this way, you can quickly and effortlessly add more "entry points" to the Kubernetes API).
@@ -63,7 +63,7 @@ The upgrade of a **minor version** of any control plane component is performed i
 - When downgrading:
   - The downgrade is performed **sequentially**, one minor version at a time: 1.22 -> 1.21, 1.21 -> 1.20, 1.20 -> 1.19;
   - Master nodes cannot have a lower version than workers: the downgrade isn't possible if the kubelet versions on the nodes aren't downgraded yet;
-  - When downgrading, the component version can only be one version behind the highest ever used minor version of the control plane components.
+  - When downgrading, the component version can only be one version behind the highest ever used minor version of the control plane components:
     - Suppose, `maxUsedControlPlaneVersion = 1.20`. In this case, the lowest possible version of the control plane components is `1.19`.
 
 [List of supported Kubernetes versions...](../../supported_versions.html#kubernetes)

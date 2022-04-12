@@ -35,7 +35,9 @@ spec:
               properties:
                 clusterID:
                   description: |
-                    Ceph FSID/UUID.
+                    Ceph cluster FSID/UUID.
+
+                    Use `ceph fsid` to get Ceph cluster FSID/UUID.
                   type: string
                 userID:
                   description: |
@@ -43,7 +45,7 @@ spec:
                   type: string
                 userKey:
                   description: |
-                    Ceph auth key corresponding to userID.
+                    Ceph auth key corresponding to the `userID`.
                   type: string
                 monitors:
                   description: |
@@ -65,7 +67,9 @@ spec:
                         properties:
                           namePostfix:
                             description: |
-                              Part of the StorageClass name after `-`. The name from the CustomResource CephCSIDriver is used as the first part.
+                              Part of the StorageClass name after `-`.
+
+                              The name from the CustomResource `CephCSIDriver` is used as the first part.
                             type: string
                           pool:
                             description: |
@@ -74,7 +78,8 @@ spec:
                           reclaimPolicy:
                             description: |
                               The reclaim policy for a PersistentVolume.
-                              More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming
+
+                              [More info...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
                             type: string
                             enum:
                               - Delete
@@ -83,6 +88,8 @@ spec:
                           allowVolumeExpansion:
                             description: |
                               Allows the users to resize the volume by editing the corresponding PVC object.
+
+                              [More info...](https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion)
                             type: boolean
                             default: true
                           mountOptions:
@@ -108,6 +115,8 @@ spec:
                       type: string
                     storageClasses:
                       type: array
+                      description: |
+                        CephFS StorageClasses.
                       items:
                         type: object
                         required:
@@ -116,11 +125,13 @@ spec:
                         properties:
                           namePostfix:
                             description: |
-                              Part of the StorageClass name after `-`. The name from the CustomResource CephCSIDriver is used as the first part.
+                              Part of the StorageClass name after `-`.
+
+                              The name from the CustomResource `CephCSIDriver` is used as the first part.
                             type: string
                           pool:
                             description: |
-                              Ceph pool into which volume data shall be stored.
+                              Ceph pool name into which volume data shall be stored.
                             type: string
                           reclaimPolicy:
                             description: |

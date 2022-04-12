@@ -1,4 +1,6 @@
-{{ $_ := set . "Env" "FE" }}
+{{- if ne $.Env "development" -}}
+{{- $_ := set . "Env" "FE" }}
+{{- end }}
 
 project: deckhouse-web
 configVersion: 1
@@ -115,7 +117,11 @@ ansible:
         chdir: /srv/jekyll-data/documentation/
     - shell: |
         mkdir -m 777 -p /app/_site/
+        {{- if eq $.Env "development" }}
+        JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
+        {{- else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/
+        {{- end }}
       args:
         warn: false
         executable: /bin/bash

@@ -58,11 +58,20 @@ spec:
                   default: {}
                   properties:
                     namespaceSelector:
+                      oneOf:
+                      - required: [matchNames]
+                      - required: [excludeNames]
                       type: object
                       description: Specifies the Namespace selector to filter Pods with.
                       properties:
                         matchNames:
                           type: array
+                          description: "Include only a particular set of namespaces."
+                          items:
+                            type: string
+                        excludeNames:
+                          type: array
+                          description: "Include all namespaces except a particular set."
                           items:
                             type: string
                     labelSelector:
@@ -80,7 +89,7 @@ spec:
                         matchLabels:
                           type: object
                           description: List of labels which Pod should have.
-                          example: { "foo": "bar", "baz": "whooo" }
+                          example: { "foo": "bar", "baz": "who" }
                           additionalProperties:
                             type: string
                         matchExpressions:
@@ -152,7 +161,7 @@ spec:
                       - staging
                     - field: foo
                       operator: NotIn
-                      values: 
+                      values:
                       - dev
                       - 42
                       - "true"

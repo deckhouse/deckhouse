@@ -13,6 +13,6 @@ up: network
 		werf compose up --follow --docker-compose-command-options='-d'
 
 dev: network
-		werf compose up --follow --docker-compose-command-options='-d' --dev
+		werf compose up --follow --docker-compose-command-options='-d' --dev --env development
 
 .PHONY: up dev

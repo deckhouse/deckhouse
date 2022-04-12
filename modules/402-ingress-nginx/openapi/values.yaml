@@ -265,3 +265,8 @@ properties:
                           type: string
                         namespace:
                           type: string
+      externalIngressClasses:
+        type: array
+        default: []
+        items:
+          type: string

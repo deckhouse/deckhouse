@@ -8,4 +8,6 @@ toc: false
 comparable: false
 ---
 
+{%- unless jekyll.environment == "development" %}
 {% include search.html %}
+{%- endunless %}

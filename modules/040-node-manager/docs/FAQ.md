@@ -7,39 +7,40 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 
 To add a new static node (e.g., VM or bare-metal server) to the cluster, you need to:
 
-- Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
-- Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r`
-- Before configuring Kubernetes on the node, make sure that you have performed all the necessary actions for the node to work correctly in the cluster:
-  - Added all the necessary mount points (nfs, ceph,...) to `/etc/fstab`;
+1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
+2. Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r`
+3. Before configuring Kubernetes on the node, make sure that you have performed all the necessary actions for the node to work correctly in the cluster:
+  - Added all the necessary mount points (NFS, Ceph,...) to `/etc/fstab`;
   - Installed the suitable `ceph-common` version on the node as well as other packages;
   - Configured the network in the cluster;
-- Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
+4. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
 
 ## How to put an existing cluster node under the node-manager's control?
 
 To make an existing Node controllable by the `node-manager`, perform the following steps:
 
-- Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
-- Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."adopt.sh"' -r`
-- Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
+1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
+2. Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."adopt.sh"' -r`
+3. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
 
 ## How do I change the node-group of a static node?
 
 To switch an existing static node to another node-group, you need to change its group label:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<group_name>-
+kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 The changes will not be applied instantly. One of the deckhouse hooks is responsible for updating the state of NodeGroup objects. It subscribes to node changes.
 
 ## How do I take a node out of the node-manager's control?
 
-- Stop the bashible service and timer: `systemctl stop bashible.timer bashible.service`
-- Delete bashible scripts: `rm -rf /var/lib/bashible`
-- Remove annotations and labels from the node:
+To take a node out of `node-manager` control, you need to:
 
+1. Stop the bashible service and timer: `systemctl stop bashible.timer bashible.service`.
+2. Delete bashible scripts: `rm -rf /var/lib/bashible`;
+3. Remove annotations and labels from the node:
 ```shell
 kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- update.node.deckhouse.io/waiting-for-approval- update.node.deckhouse.io/disruption-approved- update.node.deckhouse.io/disruption-required- update.node.deckhouse.io/approved- update.node.deckhouse.io/draining- update.node.deckhouse.io/drained-
 kubectl label node <node_name> node.deckhouse.io/group-
@@ -73,7 +74,7 @@ This is only needed if you have to move a static node from one cluster to anothe
    rm -rf /var/cache/registrypackages
    rm -rf /etc/kubernetes
    rm -rf /var/lib/kubelet
-   rm -rf /var/lib/docker 
+   rm -rf /var/lib/docker
    rm -rf /var/lib/containerd
    rm -rf /etc/cni
    rm -rf /var/lib/cni
@@ -180,14 +181,14 @@ To force the redeployment of all Machines, you need to add/modify the `manual-ro
 
 ## How do I allocate nodes to specific loads?
 
-> ⛔ Note that you cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
+> **Note** that you cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
 
 There are two ways to solve this problem:
 
-- You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
-- You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
+1. You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
+2. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
-> ℹ Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
+> Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
 > To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the `global.modules.placement.customTolerationKeys` field of the `d8-system/deckhouse` ConfigMap. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 
 ## How to allocate nodes to system components?
@@ -245,7 +246,7 @@ cloudInstances:
 
 ## How do I disable machine-controller-manager in the case of potentially cluster-damaging changes?
 
-> ⛔ **_Caution!!!_** Use this switch only if you know what you are doing and clearly understand the consequences!
+> **Note!** Use this switch only if you know what you are doing and clearly understand the consequences.
 
 Set the `mcmEmergencyBrake` parameter to true::
 
@@ -255,9 +256,9 @@ mcmEmergencyBrake: true
 
 ## How do I restore the master node if kubelet cannot load the control plane components?
 
-Such a situation may occur if images of the `control plane` components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/docker` (`/var/lib/containerd`) was deleted if docker (container) is used). In this case, `kubelet` cannot pull images of the `control plane` components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
+Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/docker` (`/var/lib/containerd`) was deleted if Docker (container) is used). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
 
-Here is how you can restore the master node:
+Below is an instruction on how you can restore the master node.
 
 ### Docker
 
@@ -270,7 +271,7 @@ jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.i
 ```
 
 Copy the output of the command and add it to the `/root/.docker/config.json` file on the corrupted master.
-Next, you need to pull images of `control plane` components to the corrupted master:
+Next, you need to pull images of control plane components to the corrupted master:
 
 ```
 for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
@@ -278,8 +279,8 @@ for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
 done
 ```
 
-You need to restart `kubelet` after pulling the images.
-Please, pay attention that you must delete the changes made to the `/root/.docker/config.json` file after restoring the master node!
+You need to restart kubelet after pulling the images.
+Please, pay attention that you must **delete the changes made to the `/root/.docker/config.json` file after restoring the master node!**
 
 ### Containerd
 
@@ -319,17 +320,17 @@ spec:
 
 Also, this operation can be done with patch:
 
-* Containerd:
+* For Containerd:
   ```shell
   kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
-* Docker:
+* For Docker:
   ```shell
   kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
   ```
 
-> ⛔ **_Attention!!!_** You cannot set `cri.type` for node-groups, created using `dhctl`, node-group `master` for example.
+> **Note!** You cannot set `cri.type` for node-groups, created using `dhctl`, node-group `master` for example.
 
 After setting up a new CRI for NodeGroup, the node-manager module drains nodes one by one and installs a new CRI on them. Node update
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
@@ -339,56 +340,59 @@ node updates or requires manual confirmation.
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with patch:
-* Containerd
-```shell
-data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
-kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
-```
-* Docker
-```shell
-data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
-kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
-```
+* For Containerd
+  ```shell
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
+  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  ```
+* For Docker
+  ```shell
+  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
+  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  ```
 
 If it is necessary to leave some node-group on another CRI, then before changing the `defaultCRI` it is necessary to set CRI for this node-group,
 as described [here](#how-to-change-cri-for-node-group).
 
-> ⛔ **_Attention!!!_** Changing `defaultCRI` entails changing CRI on all nodes, including master nodes!!!
-> If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!!!
-> The preferred option is to make a multi-master and change the CRI type!!!
+> **Note!** Changing `defaultCRI` entails changing CRI on all nodes, including master nodes.
+> If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!
+> The preferred option is to make a multi-master and change the CRI type!
 
 When changing the CRI in the cluster, additional steps are required for the master nodes:
 
-* Docker -> Containerd
+* Additional steps for changing from Docker to Containerd
 
-* For each master node in turn, it will be necessary:
-1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
-```shell
-kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
-```
-2. Wait for the updated master node to switch to Ready state.
-* Containerd -> Docker
+  For each master node in turn, it will be necessary:
+  1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
+     ```shell
+     kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+     ```
+  2. Wait for the updated master node to switch to `Ready` state.
 
-Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
-```shell
-mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json | jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
-```
+* Additional steps for changing from Containerd to Docker
 
-For each master node in turn, it will be necessary:
-1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
-```shell
-kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
-```
-2. After updating the CRI and reboot, run the command:
-```shell
-for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-  docker pull $image
-done
-```
-3. Wait for the updated master node to switch to Ready state.
-4. Remove docker config from the updated master node:
-```shell
-rm -f ~/.docker/config.json
-```
+  Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
+  ```shell
+  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json | 
+  jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
+  ```
+  
+  For each master node in turn, it will be necessary:
+  1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
+     ```shell
+     kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+     ```
+  2. After updating the CRI and reboot, run the command:
+     ```shell
+     for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+       docker pull $image
+     done
+     ```
+  3. Wait for the updated master node to switch to `Ready` state.
+  4. Remove docker config from the updated master node:
+     ```shell
+     rm -f ~/.docker/config.json
+     ```
+  
 ## How to add node configuration step?
-Additional node configuration steps are set by CR `NodeGroupConfiguration`.
+Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.

@@ -32,6 +32,9 @@ from: {{ env "BASE_GOLANG_16_ALPINE" }}
 git:
 - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

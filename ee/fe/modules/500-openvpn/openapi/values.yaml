@@ -1,0 +1,25 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: { }
+    properties:
+      migrated:
+        type: boolean
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
+  auth:
+    type: object
+    default: { }
+  loadBalancer:
+    type: object
+    default: { }

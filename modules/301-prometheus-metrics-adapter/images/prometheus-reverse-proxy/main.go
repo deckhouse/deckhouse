@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -194,6 +195,10 @@ func httpProxyPass(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	listenAddr := "0.0.0.0:8000"
+
+	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
+		logger.Fatalf("Config file %s does not exist", configPath)
+	}
 
 	initHttpTransport()
 

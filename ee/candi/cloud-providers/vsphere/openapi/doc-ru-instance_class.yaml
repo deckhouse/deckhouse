@@ -42,9 +42,9 @@ spec:
                     Путь до Datastore, на котором будут созданы склонированные виртуальные машины.
                 disableTimesync:
                   description: >
-                    Отключить синхронизацию времени в гостевой ВМ.
+                    Отключение синхронизации времени в гостевой ВМ.
 
-                    **Внимание!**  Не отключает работу NTP-служб в гостевой ОС, — отключает только синхронизацию времени с ESXi.
+                    > **Внимание!** Не отключает работу NTP-служб в гостевой ОС, отключает только синхронизацию времени с ESXi.
                 resourcePool:
                   description: |
                     Путь до Resource Pool, в котором будут созданные склонированные виртуальные машины.
@@ -54,12 +54,10 @@ spec:
                   properties:
                     nestedHardwareVirtualization:
                       description: |
-                        Включить [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах.
+                        Включение [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах.
                     cpuShares:
                       description: |
                         Относительная величина CPU Shares для создаваемых виртуальных машин.
-
-                        По умолчанию: `1000` на каждый vCPU.
                     cpuLimit:
                       description: |
                         Верхний лимит (в MHz) потребляемой частоты процессоров для создаваемых виртуальных машин.
@@ -69,8 +67,6 @@ spec:
                     memoryShares:
                       description: |
                         Относительная величина Memory Shares для создаваемых виртуальных машин.
-
-                        По умолчанию: `10` shares на мегабайт.
                     memoryLimit:
                       description: |
                         Верхний лимит (в мегабайтах) потребляемой памяти для создаваемых виртуальных машин.

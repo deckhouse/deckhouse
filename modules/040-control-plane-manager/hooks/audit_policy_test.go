@@ -168,17 +168,22 @@ rules:
 			var policy audit.Policy
 			_ = yaml.UnmarshalStrict(data, &policy)
 
-			// All rules, except last two are dropping rules.
-			for i := 0; i < len(policy.Rules)-2; i++ {
+			// All rules, except last three are dropping rules.
+			for i := 0; i < len(policy.Rules)-3; i++ {
 				Expect(policy.Rules[i].Level).To(Equal(audit.LevelNone))
 			}
 
-			saRule := policy.Rules[len(policy.Rules)-2]
+			saRule := policy.Rules[len(policy.Rules)-3]
 			Expect(saRule.Level).To(Equal(audit.LevelMetadata))
 			Expect(saRule.Users).To(Equal(auditPolicyBasicServiceAccounts))
-			namespaceRule := policy.Rules[len(policy.Rules)-1]
+
+			namespaceRule := policy.Rules[len(policy.Rules)-2]
 			Expect(namespaceRule.Level).To(Equal(audit.LevelMetadata))
 			Expect(namespaceRule.Namespaces).To(Equal(auditPolicyBasicNamespaces))
+
+			listRule := policy.Rules[len(policy.Rules)-1]
+			Expect(listRule.Level).To(Equal(audit.LevelMetadata))
+			Expect(listRule.Namespaces).To(BeEmpty())
 		})
 	})
 })

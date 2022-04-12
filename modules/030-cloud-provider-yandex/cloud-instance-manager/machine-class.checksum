@@ -10,7 +10,9 @@
 {{- end -}}
 {{- $_ := set $options "diskType" .nodeGroup.instanceClass.diskType -}}
 {{- if hasKey .nodeGroup.instanceClass "diskSizeGB" -}}
-  {{- $_ := set $options "diskSizeGB" .nodeGroup.instanceClass.diskSizeGB -}}
+  {{- if ne .nodeGroup.instanceClass.diskSizeGB 50.0 -}}
+    {{- $_ := set $options "diskSizeGB" .nodeGroup.instanceClass.diskSizeGB -}}
+  {{- end }}
 {{- end -}}
 {{- $_ := set $options "imageID" .nodeGroup.instanceClass.imageID -}}
 {{- if hasKey .nodeGroup.instanceClass "mainSubnet" }}

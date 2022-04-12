@@ -30,6 +30,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/probe/util"
+	uutil "d8.io/upmeter/pkg/util"
 )
 
 // SmokeMiniAvailable is a checker constructor and configurator
@@ -170,6 +171,7 @@ func (c *smokeMiniChecker) request(ctx context.Context, ip string) error {
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
+	req.Header.Set("User-Agent", uutil.AgentUserAgent)
 	if err != nil {
 		return err
 	}
@@ -200,26 +202,24 @@ func (d DnsAvailable) Checker() check.Checker {
 		timeout: d.DnsTimeout,
 	}
 	return &dnsChecker{
-		domain:   d.Domain,
 		lookuper: lkp,
-		logger:   d.Logger,
+		logger:   d.Logger.WithField("domain", d.Domain),
 	}
 }
 
 type dnsChecker struct {
 	lookuper lookuper
-	domain   string
 	logger   *log.Entry
 }
 
 func (c *dnsChecker) BusyWith() string {
-	return "resolving " + c.domain
+	return "resolving"
 }
 
 func (c *dnsChecker) Check() check.Error {
 	_, err := c.lookuper.Lookup()
 	if err != nil {
-		return check.ErrFail("cannot resolve %s", c.domain)
+		return check.ErrFail("resolve: %w", err)
 	}
 	return nil
 }
@@ -256,10 +256,10 @@ func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, e
 	// lookup
 	ips, err := util.LookupIPs(name, resolveTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("resolve '%s': %v", name, err)
+		return nil, fmt.Errorf("cannot resolve '%s': %v", name, err)
 	}
 	if len(ips) == 0 {
-		return nil, fmt.Errorf("resolve get 0 IPs for '%s'", name)
+		return nil, fmt.Errorf("resolved no addresses for '%s'", name)
 	}
 
 	// shuffle
