@@ -53,7 +53,6 @@ properties:
   auth:
     description: |
       Опции, связанные с аутентификацией или авторизацией в приложении:
-    default: { }
     properties:
       externalAuthentication:
         description: |
