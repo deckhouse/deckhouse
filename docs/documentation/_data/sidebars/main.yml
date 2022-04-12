@@ -49,6 +49,8 @@ entries:
                       url: /modules/020-deckhouse/configuration.html
                     - title: Custom Resources
                       url: /modules/020-deckhouse/cr.html
+                - title: FAQ
+                  url: /modules/020-deckhouse/faq.html
             - title: deckhouse-web
               folders:
                 - title:
