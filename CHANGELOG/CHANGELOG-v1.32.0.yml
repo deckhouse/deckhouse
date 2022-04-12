@@ -189,6 +189,8 @@ openvpn:
     - summary: Added OpenAPI specs
       pull_request: https://github.com/deckhouse/deckhouse/pull/1282
   fixes:
+    - summary: Fixed OpenAPI
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1307
     - summary: >-
         Web interface changed to https://github.com/flant/ovpn-admin. Persistent storage has been
         replaced with Kubernetes secrets. Added HostPort inlet.
