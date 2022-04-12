@@ -5,20 +5,27 @@
 
  - Add alerts with the recommended course of action to monitor LINSTOR, Piraeus-operator, capacity of storage-pools and resources states
  - Added Grafana dashboard to monitor LINSTOR cluster and DRBD resources
- - By default, all Kubernetes v1.19 clusters will update to v1.21
  - Etcd will be restarted.
+ - For clusters with automatic Kubernetes version selection, Kubernetes v1.21 becomes the default version.
+    * The Kubernetes version update in such clusters will be done during the Deckhouse version update.
+    * Updating the Kubernetes version will cause the restart of the cluster Control Plane components.
+    * Run the following command to find out if the cluster has enabled automatic Kubernetes version selection: `kubectl -n kube-system get secret d8-cluster-configuration -o json | jq '.data."cluster-configuration.yaml"' -r | base64 -d | grep kubernetesVersion`. If the result is ‘kubernetesVersion: Automatic’ — the cluster has enabled automatic Kubernetes version selection.
  - Multimaster clusters will automatically turn LINSTOR into HA-mode
  - Now LVM pools will automatically be added to the LINSTOR cluster and StorageClasses generated
  - OpenVPN will be migrated from using PVC to store certificates to Kubernetes secrets. PVC will still remain in the cluster as a backup. If you don't need it, you should manually delete it from the cluster.
- - This module enables snapshots functionality in Kubernetes cluster
+ - The new module - ceph-csi. Manages the creation of Ceph volumes (RBD and CephFS) and attaches them to workloads.
+ - The new module - snapshot-controller. Enables snapshot support for compatible CSI drivers in a Kubernetes cluster.
 
 ## Features
 
 
  - **[candi]** Automatic update of Kubernetes version from 1.19 to 1.21. [#1288](https://github.com/deckhouse/deckhouse/pull/1288)
-    By default, all Kubernetes v1.19 clusters will update to v1.21
+    For clusters with automatic Kubernetes version selection, Kubernetes v1.21 becomes the default version.
+    * The Kubernetes version update in such clusters will be done during the Deckhouse version update.
+    * Updating the Kubernetes version will cause the restart of the cluster Control Plane components.
+    * Run the following command to find out if the cluster has enabled automatic Kubernetes version selection: `kubectl -n kube-system get secret d8-cluster-configuration -o json | jq '.data."cluster-configuration.yaml"' -r | base64 -d | grep kubernetesVersion`. If the result is ‘kubernetesVersion: Automatic’ — the cluster has enabled automatic Kubernetes version selection.
  - **[ceph-csi]** Added new module ceph-csi [#426](https://github.com/deckhouse/deckhouse/pull/426)
-    CephCSI allows dynamically provisioning Ceph volumes (RBD and CephFS) and attaching them to workloads.
+    The new module - ceph-csi. Manages the creation of Ceph volumes (RBD and CephFS) and attaches them to workloads.
  - **[ingress-nginx]** Add 1.1 IngressNginxController version which is "must have" for clusters with k8s version > 1.21 [#1209](https://github.com/deckhouse/deckhouse/pull/1209)
  - **[linstor]** Added more alerts for LINSTOR. [#1055](https://github.com/deckhouse/deckhouse/pull/1055)
  - **[linstor]** Grafana dashboard for LINSTOR [#1035](https://github.com/deckhouse/deckhouse/pull/1035)
@@ -39,7 +46,7 @@
  - **[prometheus]** Fixed retention calculation for localstorage.
     prometheus_disk hook rewritten in Go. [#813](https://github.com/deckhouse/deckhouse/pull/813)
  - **[snapshot-controller]** New module: snapshot-controller [#1068](https://github.com/deckhouse/deckhouse/pull/1068)
-    This module enables snapshots functionality in Kubernetes cluster
+    The new module - snapshot-controller. Enables snapshot support for compatible CSI drivers in a Kubernetes cluster.
 
 ## Fixes
 
