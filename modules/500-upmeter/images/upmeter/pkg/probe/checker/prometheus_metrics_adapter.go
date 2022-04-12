@@ -38,7 +38,7 @@ func (c MetricsAdapterApiAvailable) Checker() check.Checker {
 		endpoint:     c.Endpoint,
 		kubeAccessor: c.Access,
 	}
-	checker := newHTTPChecker(insecureClient, verifier)
+	checker := newHTTPChecker(newInsecureClient(3*c.Timeout), verifier)
 	return withTimeout(checker, c.Timeout)
 }
 
