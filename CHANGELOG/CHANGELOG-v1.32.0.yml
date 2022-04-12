@@ -156,9 +156,7 @@ linstor:
       pull_request: https://github.com/deckhouse/deckhouse/pull/982
     - summary: Autoimport LVM pools based on tags
       pull_request: https://github.com/deckhouse/deckhouse/pull/923
-      impact: >-
-        Now LVM pools will automatically be added to the LINSTOR cluster and StorageClasses
-        generated
+      impact: Now LVM pools can automatically be added to the LINSTOR cluster and StorageClasses generated
   fixes:
     - summary: fix mtab warning for mkfs commands
       pull_request: https://github.com/deckhouse/deckhouse/pull/1275
@@ -235,8 +233,8 @@ snapshot-controller:
     - summary: 'New module: snapshot-controller'
       pull_request: https://github.com/deckhouse/deckhouse/pull/1068
       impact: >-
-        The new module - snapshot-controller. Enables snapshot support for compatible CSI drivers in
-        a Kubernetes cluster.
+        The new module - snapshot-controller. Enables snapshot support for compatible CSI drivers
+        and cloud providers.
 testing:
   features:
     - summary: Support x-required-for-helm, add x-test-focus
