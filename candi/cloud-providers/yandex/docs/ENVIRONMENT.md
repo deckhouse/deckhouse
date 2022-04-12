@@ -4,30 +4,32 @@ title: "Cloud provider — Yandex.Cloud: Preparing environment"
 
 You need to create a service account with the editor role with the cloud provider so that Deckhouse can manage cloud resources. The detailed instructions for creating a service account with Yandex.Cloud are available in the provider's [documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
 
-- Create a user named `deckhouse`. The command response will contain its parameters:
-```yaml
-yc iam service-account create --name deckhouse
-id: <userID>
-folder_id: <folderID>
-created_at: "YYYY-MM-DDTHH:MM:SSZ"
-name: candi
-```
-- Assign the `editor` role to the newly created user:
-```yaml
-yc resource-manager folder add-access-binding --id <folderID> --role editor --subject serviceAccount:<userID>
-```
-- Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
-```yaml
-yc iam key create --service-account-name deckhouse --output candi-sa-key.json
-```
+1. Create a user named `deckhouse`. The command response will contain its parameters:
+   ```yaml
+   yc iam service-account create --name deckhouse
+   id: <userID>
+   folder_id: <folderID>
+   created_at: "YYYY-MM-DDTHH:MM:SSZ"
+   name: deckhouse
+   ```
+2. Assign the `editor` role to the newly created user:
+   ```yaml
+   yc resource-manager folder add-access-binding --id <folderID> --role editor --subject serviceAccount:<userID>
+   ```
+3. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
+   ```yaml
+   yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
+   ```
 
 > You may need to increase [quotas](#quotas).
 
-> [Reserve](faq.html#reserving-a-public-ip-address) a public IP address if necessary.
+> [Reserve](faq.html#how-to-reserve-a-public-ip-address) a public IP address if necessary.
 
 ## Quotas
 
-Note that you need to increase the quotas using the Yandex console when provisioning a new cluster. Recommended parameters:
+Note that you need to increase the quotas using the Yandex console when provisioning a new cluster. 
+
+Recommended quotas for a new cluster:
 * The number of virtual processors: 64;
 * The total volume of SSD disks: 2000 GB;
 * The number of virtual machines: 25;

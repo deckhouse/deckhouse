@@ -8,7 +8,7 @@ title: "Cloud provider — Yandex.Cloud: схемы размещения"
 
 В данной схеме размещения узлы не будут иметь публичных адресов, а будут выходить в интернет через Yandex.Cloud NAT.
 
-> ⚠️ **Внимание!** На момент конца 2020 года функция Yandex.Cloud NAT находится на стадии Preview. Для того, чтобы появилась возможность включения Cloud NAT в вашем облаке, необходимо заранее (лучше за неделю) обратиться в поддержку Yandex.Cloud и запросить у них доступ.
+> **Внимание!** На текущий момент (2022г.) функция Yandex.Cloud NAT находится на стадии Preview. Для того чтобы появилась возможность включения Cloud NAT в вашем облаке, необходимо заранее (за неделю) обратиться в поддержку Yandex.Cloud и запросить у них доступ.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vTSpvzjcEBpD1qad9u_UgvsOrYT_Xtnxwg6Pzb64HQHLqQWcZi6hhCNRPKVUdYKX32nXEVJeCzACVRG/pub?w=812&h=655)
 <!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
@@ -20,8 +20,8 @@ apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: Standard
 provider:
-  cloudID: dsafsafewf
-  folderID: enh1233214367
+  cloudID: <CLOUD_ID>
+  folderID: <FOLDER_ID>
   serviceAccountJSON: |
     {"test": "test"}
 masterNodeGroup:
@@ -36,7 +36,7 @@ masterNodeGroup:
     externalIPAddresses:
     - "198.51.100.5"
     - "Auto"
-    externalSubnetID: tewt243tewsdf
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
     additionalLabels:
       takes: priority
 nodeGroups:
@@ -52,14 +52,14 @@ nodeGroups:
     externalIPAddresses:
     - "198.51.100.5"
     - "Auto"
-    externalSubnetID: tewt243tewsdf
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
     additionalLabels:
       toy: example
 labels:
   billing: prod
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: tewt243tewsdf
+existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
@@ -89,8 +89,8 @@ apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: WithoutNAT
 provider:
-  cloudID: dsafsafewf
-  folderID: enh1233214367
+  cloudID: <CLOUD_ID>
+  folderID: <FOLDER_ID>
   serviceAccountJSON: |
     {"test": "test"}
 masterNodeGroup:
@@ -98,11 +98,11 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     externalIPAddresses:
     - "198.51.100.5"
     - "Auto"
-    externalSubnetID: tewt243tewsdf
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
     - ru-central1-a
     - ru-central1-b
@@ -122,12 +122,12 @@ nodeGroups:
     - ru-central1-a
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: tewt243tewsdf
+existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 213.177.96.1
-  - 231.177.97.1
+  - 8.8.8.8
+  - 8.8.4.4
 ```
 
 ## WithNATInstance
@@ -150,12 +150,12 @@ apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: WithNATInstance
 withNATInstance:
-  natInstanceExternalAddress: 30.11.34.45
-  internalSubnetID: sjfwefasjdfadsfj
-  externalSubnetID: etasjflsjdfiorej
+  natInstanceExternalAddress: <NAT_INSTANCE_EXTERNAL_ADDRESS>
+  internalSubnetID: <INTERNAL_SUBNET_ID>
+  externalSubnetID: <EXTERNAL_SUBNET_ID>
 provider:
-  cloudID: dsafsafewf
-  folderID: enh1233214367
+  cloudID: <CLOUD_ID>
+  folderID: <FOLDER_ID>
   serviceAccountJSON: |
     {"test": "test"}
 masterNodeGroup:
@@ -163,11 +163,11 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     externalIPAddresses:
-    - "198.51.100.5"
+    - "1.1.1.1"
     - "Auto"
-    externalSubnetID: tewt243tewsdf
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
     - ru-central1-a
     - ru-central1-b
@@ -177,20 +177,20 @@ nodeGroups:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "198.51.100.5"
+    - "1.1.1.1"
     - "Auto"
-    externalSubnetID: tewt243tewsdf
+    externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
     - ru-central1-a
 sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: tewt243tewsdf
+existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 213.177.96.1
-  - 231.177.97.1
+  - 8.8.8.8
+  - 8.8.4.4
 ```
