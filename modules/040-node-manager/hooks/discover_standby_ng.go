@@ -36,6 +36,7 @@ import (
 
 type StandbyNodeGroupInfo struct {
 	Name                    string
+	NeedStandby             bool
 	MaxPerZone              int
 	ZonesCount              int
 	Standby                 *intstr.IntOrString
@@ -50,11 +51,6 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		return nil, err
 	}
 
-	maxPerZone := 1
-	if nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
-		maxPerZone = int(*nodeGroup.Spec.CloudInstances.MaxPerZone)
-	}
-
 	var zonesCount int
 	if nodeGroup.Spec.CloudInstances.Zones != nil {
 		zonesCount = len(nodeGroup.Spec.CloudInstances.Zones)
@@ -65,8 +61,23 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		taints = make([]v1.Taint, 0)
 	}
 
+	needStandby := false
+	maxPerZone := 0
+	if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral {
+		// No nil-checking for MaxPerZone and MinPerZone pointers as these fields are mandatory for CloudEphemeral NGs.
+		maxPerZone = int(*nodeGroup.Spec.CloudInstances.MaxPerZone)
+		if nodeGroup.Spec.CloudInstances.Standby != nil {
+			if nodeGroup.Spec.CloudInstances.Standby.String() != "0" {
+				if int(*nodeGroup.Spec.CloudInstances.MinPerZone) != int(*nodeGroup.Spec.CloudInstances.MaxPerZone) {
+					needStandby = true
+				}
+			}
+		}
+	}
+
 	return StandbyNodeGroupInfo{
 		Name:                    nodeGroup.GetName(),
+		NeedStandby:             needStandby,
 		MaxPerZone:              maxPerZone,
 		ZonesCount:              zonesCount,
 		Standby:                 nodeGroup.Spec.CloudInstances.Standby,
@@ -188,8 +199,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 	for _, node := range input.Snapshots["node_groups"] {
 		ng := node.(StandbyNodeGroupInfo)
 
-		// Ignore node groups without standby parameter, or having it zero.
-		if ng.Standby == nil || ng.Standby.String() == "0" {
+		if !ng.NeedStandby {
 			setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, nil)
 			continue
 		}

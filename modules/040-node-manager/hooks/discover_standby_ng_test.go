@@ -35,6 +35,9 @@ metadata:
   name: normal
 spec:
   nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 5
 status: {}
 `
 		nodeGroupWithZeroStandbyAsString = `
@@ -47,6 +50,8 @@ spec:
   nodeType: CloudEphemeral
   cloudInstances:
     standby: "0"
+    minPerZone: 1
+    maxPerZone: 5
 status: {}
 `
 		nodeGroupWithZeroStandbyAsInt = `
@@ -59,6 +64,8 @@ spec:
   nodeType: CloudEphemeral
   cloudInstances:
     standby: 0
+    minPerZone: 1
+    maxPerZone: 5
 status: {}
 `
 		nodeGroupStandbyAbsolute = `
@@ -121,6 +128,28 @@ spec:
       - zone2
       - zone3
     standby: 20%
+  nodeTemplate:
+    taints:
+    - effect: NoExecute
+      key: ship-class
+      value: frigate
+status: {}
+`
+		nodeGroupStandbyMinEqMax = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: standby-absolute-min-eq-max
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 5
+    zones:
+      - zone1
+      - zone2
+    standby: 5
   nodeTemplate:
     taints:
     - effect: NoExecute
@@ -291,6 +320,18 @@ status:
 	Context("Cluster with NG without standby", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(nodeGroupWithoutStandby))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; no standby NGs should be discovered", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups").Array()).To(BeEmpty())
+		})
+	})
+
+	Context("Cluster with NG with standby as int but min == max", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupStandbyMinEqMax))
 			f.RunHook()
 		})
 

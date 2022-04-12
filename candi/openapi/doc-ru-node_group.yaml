@@ -69,7 +69,7 @@ spec:
                 upToDate:
                   description: "Number of up-to-date nodes in the group."
                 standby:
-                  description: "Number of overprovisioned instances in the group."
+                  description: "The summary number of overprovisioned Nodes for this NodeGroup in all zones."
                 error:
                   description: "Error message about possible problems with the group handling."
                 lastMachineFailures:
@@ -157,7 +157,7 @@ spec:
                         Количество одновременно создаваемых инстансов при scale-up.
                     standby:
                       description: |
-                        Количество *подогретых* инстансов для этой `NodeGroup`.
+                        Суммарное количество *подогретых* инстансов для этой `NodeGroup` во всех зонах.
 
                         Значение может быть абсолютным (например, `2`) или процентом желаемых узлов (например, `10%`). Абсолютное значение рассчитывается из процента от максимального количества узлов путем округления в меньшую сторону, но минимум — `1`.
                     standbyHolder:

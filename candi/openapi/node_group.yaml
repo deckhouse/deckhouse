@@ -253,7 +253,7 @@ spec:
                       minimum: 0
                     standby:
                       description: |
-                        The number of overprovisioned Nodes for this NodeGroup.
+                        The summary number of overprovisioned Nodes for this NodeGroup in all zones.
 
                         The value can be an absolute number (for example, 2) or a percentage of desired Nodes (for example, 10%).
                         The absolute number is calculated from percentage of maximum Nodes amount by rounding down.
