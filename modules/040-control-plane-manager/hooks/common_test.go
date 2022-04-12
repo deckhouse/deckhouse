@@ -30,6 +30,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+func gb(n int64) int64 {
+	return n * 1024 * 1024 * 1024
+}
+
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
