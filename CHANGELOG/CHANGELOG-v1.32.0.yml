@@ -2,7 +2,21 @@ candi:
   features:
     - summary: Automatic update of Kubernetes version from 1.19 to 1.21.
       pull_request: https://github.com/deckhouse/deckhouse/pull/1288
-      impact: By default, all Kubernetes v1.19 clusters will update to v1.21
+      impact: >-
+        For clusters with automatic Kubernetes version selection, Kubernetes v1.21 becomes the
+        default version.
+
+        * The Kubernetes version update in such clusters will be done during the Deckhouse version
+        update.
+
+        * Updating the Kubernetes version will cause the restart of the cluster Control Plane
+        components.
+
+        * Run the following command to find out if the cluster has enabled automatic Kubernetes
+        version selection: `kubectl -n kube-system get secret d8-cluster-configuration -o json | jq
+        '.data."cluster-configuration.yaml"' -r | base64 -d | grep kubernetesVersion`. If the result
+        is ‘kubernetesVersion: Automatic’ — the cluster has enabled automatic Kubernetes version
+        selection.
     - summary: added kubelet container logs parameters for notManaged mode
       pull_request: https://github.com/deckhouse/deckhouse/pull/1263
     - summary: refactor kubernetes-api-proxy
@@ -23,8 +37,8 @@ ceph-csi:
     - summary: Added new module ceph-csi
       pull_request: https://github.com/deckhouse/deckhouse/pull/426
       impact: >-
-        CephCSI allows dynamically provisioning Ceph volumes (RBD and CephFS) and attaching them to
-        workloads.
+        The new module - ceph-csi. Manages the creation of Ceph volumes (RBD and CephFS) and
+        attaches them to workloads.
 chrony:
   fixes:
     - summary: chrony's container livenessProbe's timeout increased from 5 to 15 seconds
@@ -220,7 +234,9 @@ snapshot-controller:
   features:
     - summary: 'New module: snapshot-controller'
       pull_request: https://github.com/deckhouse/deckhouse/pull/1068
-      impact: This module enables snapshots functionality in Kubernetes cluster
+      impact: >-
+        The new module - snapshot-controller. Enables snapshot support for compatible CSI drivers in
+        a Kubernetes cluster.
 testing:
   features:
     - summary: Support x-required-for-helm, add x-test-focus
