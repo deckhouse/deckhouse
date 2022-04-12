@@ -17,9 +17,5 @@ properties:
             type: string
           ca.crt:
             type: string
-  auth:
-    type: object
-    default: { }
-  loadBalancer:
-    type: object
-    default: { }
+      deployDexAuthenticator:
+        type: boolean

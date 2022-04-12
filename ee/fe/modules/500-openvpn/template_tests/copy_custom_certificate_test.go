@@ -45,6 +45,8 @@ discovery:
 const customCertificatePresent = `
 https:
   mode: CustomCertificate
+auth:
+  password: test
 internal:
   migrated: true
   customCertificateData:
