@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -29,13 +27,16 @@ import (
 )
 
 type etcdNode struct {
-	memory      int64
+	memory int64
+	// isDedicated - indicate that node has taint
+	//   - effect: NoSchedule
+	//    key: node-role.kubernetes.io/master
+	// it means that on node can be scheduled only control-plane components
 	isDedicated bool
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        etcdMaintenanceQueue,
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	Queue: etcdMaintenanceQueue,
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "master_nodes",
@@ -49,7 +50,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: etcdQuotaFilterNode,
 		},
 		etcdMaintenanceConfig,
-		etcdSecretK8sConfig,
 	},
 }, etcdQuotaBackendBytesHandler)
 
@@ -77,39 +77,89 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
-
+func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
+	var currentQuotaBytes int64
+	var nodeWithMaxQuota string
 	for _, endpointRaw := range input.Snapshots[etcdEndpointsSnapshotName] {
-		instance := endpointRaw.(*etcdInstance)
-		status, err := etcdClient.Status(context.TODO(), instance.Endpoint)
-		if err != nil {
-			input.LogEntry.Errorf("cannot get current db usage from %s: %v", err, instance.PodName)
-			continue
+		endpoint := endpointRaw.(*etcdInstance)
+		quotaForInstance := endpoint.MaxDbSize
+		if quotaForInstance > currentQuotaBytes {
+			currentQuotaBytes = quotaForInstance
+			nodeWithMaxQuota = endpoint.Node
 		}
-
-		if float64(status.DbSize)/float64(instance.MaxDbSize) < 0.9 {
-			input.LogEntry.Debugf("Etcd instance '%s' does not need to defrag", instance.PodName)
-			continue
-		}
-
-		input.LogEntry.Warnf("Start defrag etcd instance '%s' %d/%d", instance.PodName, status.DbSize, instance.MaxDbSize)
-		_, err = etcdClient.Defragment(context.TODO(), instance.Endpoint)
-		if err != nil {
-			input.MetricsCollector.Inc("etcd_defragmentation_failed_total", map[string]string{
-				"pod_name": instance.PodName,
-				"node":     instance.Node,
-			})
-			input.LogEntry.Errorf("Defrag etcd '%s' instance finished with err: %v", instance.PodName, err)
-			continue
-		}
-
-		input.MetricsCollector.Inc("etcd_defragmentation_success_total", map[string]string{
-			"pod_name": instance.PodName,
-			"node":     instance.Node,
-		})
-
-		input.LogEntry.Infof("Defrag etcd '%s' instanse finished successfully", instance.PodName)
 	}
+
+	if currentQuotaBytes == 0 {
+		currentQuotaBytes = defaultEtcdMaxSize
+		nodeWithMaxQuota = "default"
+	}
+
+	return currentQuotaBytes, nodeWithMaxQuota
+}
+
+func getNodeWithMinimalMemory(input *go_hook.HookInput) *etcdNode {
+	snapshots := input.Snapshots["master_nodes"]
+	if len(snapshots) == 0 {
+		return nil
+	}
+
+	node := snapshots[0].(*etcdNode)
+	for i := 1; i < len(snapshots); i++ {
+		n := snapshots[i].(*etcdNode)
+		// for not dedicated nodes we will not set new quota
+		if !n.isDedicated {
+			return n
+		}
+
+		if n.memory < node.memory {
+			node = n
+		}
+	}
+
+	return node
+}
+
+func calcNewQuota(minimalMemoryNodeBytes int64, currentQuotaBytes int64) int64 {
+	const minimalNodeSizeForCalc = 16 * 1024 * 1024 * 1024 // 16 GB
+	const nodeSizeStepForAdd = 8 * 1024 * 1024 * 1024      // every 8 GB memory
+	const quotaStep = 1 * 1024 * 1024 * 1024               // every 1 GB etcd memory every nodeSizeStepForAdd
+	const maxEtcdQuota = 8 * 1024 * 1024 * 1024            // 8 GB memory, if quota > 8Gb etcd will start with warning
+
+	if minimalMemoryNodeBytes < minimalNodeSizeForCalc {
+		return currentQuotaBytes
+	}
+
+	if currentQuotaBytes == maxEtcdQuota {
+		return maxEtcdQuota
+	}
+
+	increaseSteps := []int{
+		16 * 1024 * 1024 * 1024, // 2 + 1 = 3GB
+		24 * 1024 * 1024 * 1024, // 4GB
+		32 * 1024 * 1024 * 1024, // 5GB
+		48 * 1024 * 1024 * 1024, // 6GB
+		64 * 1024 * 1024 * 1024, // 7GB
+		96 * 1024 * 1024 * 1024, // 8GB
+	}
+	// for 16 gb add one gb
+	newQuota := defaultEtcdMaxSize + quotaStep
+
+}
+
+func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
+	currentQuotaBytes, nodeWithMaxQuota := getCurrentEtcdQuotaBytes(input)
+
+	input.LogEntry.Infof("Current etcd quota: %d. Getting from %s", currentQuotaBytes, nodeWithMaxQuota)
+
+	node := getNodeWithMinimalMemory(input)
+
+	newQuotaBytes := currentQuotaBytes
+
+	if node.isDedicated {
+		newQuotaBytes = calcNewQuota(node.memory, currentQuotaBytes)
+	}
+
+	input.Values.Set("controlPlaneManager.internal.etcdQuotaBackendBytes", newQuotaBytes)
 
 	return nil
 }
