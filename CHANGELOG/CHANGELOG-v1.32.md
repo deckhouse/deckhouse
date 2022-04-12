@@ -65,6 +65,7 @@
 
 
  - **[cert-manager]** Bump to version 1.7.1. Fix a possible bug with ACME solvers when you don't have a default ingress class like nginx (a very rare case). Minor bug fixes [#1082](https://github.com/deckhouse/deckhouse/pull/1082)
+ - **[docs]** Remove ingressClassName from the site Ingress templates [#1336](https://github.com/deckhouse/deckhouse/pull/1336)
  - **[upmeter]** Remove redundant smoke-mini Ingress [#1237](https://github.com/deckhouse/deckhouse/pull/1237)
  - **[upmeter]** Add User-Agent header to all requests [#1213](https://github.com/deckhouse/deckhouse/pull/1213)
 
