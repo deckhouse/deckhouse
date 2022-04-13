@@ -50,6 +50,7 @@ apiVersions:
                 description: |
                   The type of virtual machine to create.
                 type: string
+                default: standard-v2
               cores:
                 description: |
                   Amount of CPU cores to provision on a Yandex Compute Instance.
