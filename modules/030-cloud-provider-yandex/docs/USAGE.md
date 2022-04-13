@@ -2,6 +2,8 @@
 title: "Cloud provider — Yandex.Cloud: usage"
 ---
 
+Below is an example of the Yandex.Cloud cloud provider configuration.
+
 ## An example of the module configuration
 
 ```yaml
@@ -11,7 +13,7 @@ cloudProviderYandex: |
   - enp6t4snovl2ko4p15em
 ```
 
-## An example of the `YandexInstanceClass` CR
+## An example of the `YandexInstanceClass` custom resource
 
 ```yaml
 apiVersion: deckhouse.io/v1

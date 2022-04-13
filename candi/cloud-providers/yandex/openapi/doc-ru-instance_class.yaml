@@ -1,243 +1,114 @@
 spec:
-  group: deckhouse.io
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
           description: |
             Параметры группы Yandex Instance'ов, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
-          required:
-            - spec
           properties:
             spec:
-              type: object
-              required:
-                - cores
-                - memory
               properties:
                 cores:
                   description: |
                     Количество ядер у создаваемых инстансов.
-                  example: 4
-                  type: integer
                 coreFraction:
                   description: |
                     Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
-                  example: 20
-                  x-doc-default: 100
-                  enum: [ 0,5,20,50,100 ]
-                  type: integer
                 gpus:
                   description: |
                     Количество графических адаптеров у создаваемых инстансов.
-                  example: 4
-                  x-doc-default: 0
-                  type: integer
                 memory:
                   description: |
                     Количество оперативной памяти (в мегабайтах) у создаваемых инстансов.
-                  example: 8192
-                  type: integer
                 imageID:
                   description: |
-                    Идентификатор образа, который будет установлен в заказанные instance'ы.
+                    Идентификатор образа, который будет установлен в заказанные инстансы.
 
                     По умолчанию: образ из `masterInstanceClass` из `providerClusterConfiguration`.
-                  example: fd8nb7ecsbvj76dfaa8b
-                  type: string
                 platformID:
                   description: |
                     ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
-                  x-doc-default: standard-v2
-                  type: string
                 preemptible:
                   description: |
-                    Заказывать ли preemptible instance.
-                  type: boolean
-                  x-doc-default: false
+                    Необходимость заказа preemptible instance.
                 diskType:
                   description: |
                     Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
-                  example: "network-hdd"
-                  x-doc-default: "network-ssd"
-                  type: string
-                  enum:
-                  - "network-ssd"
-                  - "network-hdd"
                 diskSizeGB:
                   description: |
                     Размер диска (в гигабайтах) у инстансов.
-                  example: 20
-                  x-doc-default: 50
-                  type: integer
                 assignPublicIPAddress:
                   description: |
                     Присваивать ли публичные IP-адреса инстансам.
-                  example: false
-                  x-doc-default: false
-                  type: boolean
                 mainSubnet:
                   description: |
-                    Позволяет переопределить имя основного subnet, к которому будет подключен инстанс.
+                    Переопределение имени основного subnet, к которому будет подключен инстанс.
 
                     По умолчанию: subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
-                  example: e9bnc7g9mu9mper9clk4
-                  type: string
                 additionalSubnets:
                   description: |
                     Список subnet, которые будут подключены к инстансу.
-                  example:
-                    - b0csh41c1or82vuch89v
-                    - e2lgddi5svochh5fbq96
-                  type: array
-                  items:
-                    type: string
                 additionalLabels:
-                  type: object
                   description: |
-                    Дополнительные label'ы, которые будут присвоены созданным инстансам.
-                  x-doc-example: |
-                    ```yaml
-                    project: cms-production
-                    severity: critical
-                    ```
-                  x-kubernetes-preserve-unknown-fields: true
-                  additionalProperties:
-                    type: string
+                    Дополнительные лейблы, которые будут присвоены созданным инстансам.
                 networkType:
-                  type: string
-                  enum:
-                  - STANDARD
-                  - SOFTWARE_ACCELERATED
-                  default: STANDARD
                   description: |
-                    Тип сети: STANDARD или SOFTWARE_ACCELERATED
+                    Тип сети: STANDARD или SOFTWARE_ACCELERATED.
     - name: v1
-      served: true
-      storage: false
       schema:
         openAPIV3Schema:
-          type: object
           description: |
             Параметры группы Yandex Instance'ов, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
-          required:
-            - spec
           properties:
             spec:
-              type: object
-              required:
-                - cores
-                - memory
               properties:
                 cores:
                   description: |
                     Количество ядер у создаваемых инстансов.
-                  example: 4
-                  type: integer
                 coreFraction:
                   description: |
                     Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
-                  example: 20
-                  x-doc-default: 100
-                  enum: [ 0,5,20,50,100 ]
-                  type: integer
                 gpus:
                   description: |
                     Количество графических адаптеров у создаваемых инстансов.
-                  example: 4
-                  x-doc-default: 0
-                  type: integer
                 memory:
                   description: |
                     Количество оперативной памяти (в мегабайтах) у создаваемых инстансов.
-                  example: 8192
-                  type: integer
                 imageID:
                   description: |
-                    Идентификатор образа, который будет установлен в заказанные instance'ы.
+                    Идентификатор образа, который будет установлен в заказанные инстансы.
 
                     По умолчанию: образ из `masterInstanceClass` из `providerClusterConfiguration`.
-                  example: fd8nb7ecsbvj76dfaa8b
-                  type: string
                 platformID:
                   description: |
                     ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
-                  x-doc-default: standard-v2
-                  type: string
                 preemptible:
                   description: |
-                    Заказывать ли preemptible instance.
-                  type: boolean
-                  x-doc-default: false
+                    Необходимость заказа preemptible instance.
                 diskType:
                   description: |
                     Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
-                  example: "network-hdd"
-                  x-doc-default: "network-ssd"
-                  type: string
-                  enum:
-                    - "network-ssd"
-                    - "network-hdd"
                 diskSizeGB:
                   description: |
                     Размер диска (в гигабайтах) у инстансов.
-                  example: 20
-                  x-doc-default: 50
-                  type: integer
                 assignPublicIPAddress:
                   description: |
-                    Присваивать ли публичные IP-адреса инстансам.
-                  example: false
-                  x-doc-default: false
-                  type: boolean
+                    Необходимость присвоения публичных IP-адресов инстансам.
                 mainSubnet:
                   description: |
-                    Позволяет переопределить имя основного subnet, к которому будет подключен инстанс.
+                    Переопределение имени основного subnet, к которому будет подключен инстанс.
 
                     По умолчанию: subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
-                  example: e9bnc7g9mu9mper9clk4
-                  type: string
                 additionalSubnets:
                   description: |
                     Список subnet, которые будут подключены к инстансу.
-                  example:
-                    - b0csh41c1or82vuch89v
-                    - e2lgddi5svochh5fbq96
-                  type: array
-                  items:
-                    type: string
                 additionalLabels:
-                  type: object
                   description: |
-                    Дополнительные label'ы, которые будут присвоены созданным инстансам.
-                  x-doc-example: |
-                    ```yaml
-                    project: cms-production
-                    severity: critical
-                    ```
-                  x-kubernetes-preserve-unknown-fields: true
-                  additionalProperties:
-                    type: string
+                    Дополнительные лейблы, которые будут присвоены созданным инстансам.
                 networkType:
-                  type: string
-                  enum:
-                    - Standard
-                    - SoftwareAccelerated
-                  default: Standard
                   description: |
                     Тип сети: Standard или SoftwareAccelerated
-  scope: Cluster
-  names:
-    plural: yandexinstanceclasses
-    singular: yandexinstanceclass
-    kind: YandexInstanceClass
-    categories:
-      - cloudinstanceclasses

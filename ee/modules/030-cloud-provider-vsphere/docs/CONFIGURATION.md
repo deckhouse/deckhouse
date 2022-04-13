@@ -26,10 +26,11 @@ By default, the storage subsystem uses CNS volumes with the ability of online-re
 
 Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44) f volume-resizer, CSI, and vSphere API, you have to do the following after increasing the PVC size:
 
-1. Run the `kubectl cordon node_where_pod_is_hosted` command;
+1. On the node where the Pod is located, run the `kubectl cordon <node_name>` command;
 2. Delete the Pod;
-3. Make sure that the resize was successful. The PVC object must *not have* the `Resizing` condition. **Note** that the `FileSystemResizePending` state is OK;
-4. Run the `kubectl uncordon node_where_pod_is_hosted` command.
+3. Make sure that the resize was successful. The PVC object must *not have* the `Resizing` condition;
+   > The `FileSystemResizePending` state is OK.
+4. On the node where the Pod is located, run the `kubectl uncordon <node_name>` command.
 
 ## Environment requirements
 

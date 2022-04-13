@@ -14,19 +14,23 @@ apiVersions:
         enum: [YandexClusterConfiguration]
       sshPublicKey:
         type: string
-        description: A public key for accessing nodes.
+        description: |
+          A public key for accessing nodes.
       masterNodeGroup:
         type: object
-        description: The definition of the master's NodeGroup.
+        description: |
+          The definition of the master's NodeGroup.
         additionalProperties: false
         required: [replicas, instanceClass]
         properties:
           replicas:
-            description: The number of master nodes to create.
+            description: |
+              The number of master nodes to create.
             type: integer
             minimum: 1
           zones:
-            description: A limited set of zones in which nodes can be created.
+            description: |
+              A limited set of zones in which nodes can be created.
             x-doc-required: false
             type: array
             items:
@@ -44,21 +48,23 @@ apiVersions:
             properties: &instanceClassProperties
               platform:
                 description: |
-                  The type of virtual machine to create. The default is 'standard-v2'.
+                  The type of virtual machine to create.
                 type: string
               cores:
                 description: |
                   Amount of CPU cores to provision on a Yandex Compute Instance.
                 type: integer
               coreFraction:
-                description: Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                description: |
+                  Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
                 type: integer
                 example: 20
                 x-doc-default: 100
                 enum: [ 0,5,20,50,100 ]
               memory:
                 type: integer
-                description: Amount of primary memory in MB provision on a Yandex Compute Instance.
+                description: |
+                  Amount of primary memory in MB provision on a Yandex Compute Instance.
                 example: 8192
               imageID:
                 type: string
@@ -67,7 +73,8 @@ apiVersions:
                 example: fd8nb7ecsbvj76dfaa8b
               diskSizeGB:
                 type: integer
-                description: Yandex Compute Instance disk size in gigabytes.
+                description: |
+                  Yandex Compute Instance disk size in gigabytes.
                 example: 20
                 x-doc-default: 50
               externalIPAddresses:
@@ -83,7 +90,8 @@ apiVersions:
                   pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
               externalSubnetID:
                 type: string
-                description: If specified, an additional network interface will be added to the node (the latter will use it as a default route).
+                description: |
+                  If specified, an additional network interface will be added to the node (the latter will use it as a default route).
                 x-doc-deprecated: true
               externalSubnetIDs:
                 type: array
@@ -108,7 +116,8 @@ apiVersions:
                   type: string
               networkType:
                 type: string
-                description: Network type.
+                description: |
+                  Network type.
                 x-doc-default: Standard
                 enum:
                   - Standard
@@ -122,10 +131,12 @@ apiVersions:
           required: [name, replicas, instanceClass]
           properties:
             name:
-              description: The name of the NodeGroup to use for generating node names.
+              description: |
+                The name of the NodeGroup to use for generating node names.
               type: string
             replicas:
-              description: The number of nodes to create.
+              description: |
+                The number of nodes to create.
               type: integer
             zones:
               type: array
@@ -138,7 +149,8 @@ apiVersions:
                 - ru-central1-c
               uniqueItems: true
             nodeTemplate:
-              description: Parameters of Node objects in Kubernetes to add after registering the node.
+              description: |
+                Parameters of Node objects in Kubernetes to add after registering the node.
               properties:
                 labels:
                   type: object
@@ -148,8 +160,6 @@ apiVersions:
                     The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
-
-                    Format — `key: value`.
                   x-doc-example: |
                     ```yaml
                     labels:
@@ -162,7 +172,6 @@ apiVersions:
                   type: object
                   description: |
                     The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
-
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -175,7 +184,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
 
-                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |
                     ```yaml
                     taints:
@@ -202,7 +211,8 @@ apiVersions:
                 <<: *instanceClassProperties
       existingNetworkID:
         type: string
-        description: The ID of the existing VPC Network.
+        description: |
+          The ID of the existing VPC Network.
       nodeNetworkCIDR:
         type: string
         description: |
@@ -213,12 +223,11 @@ apiVersions:
         type: object
         description: |
           One or more pre-existing subnets mapped to respective zone.
-
-              ```yaml
-              ru-central1-a: e2lu8r1tbbtryhdpa9ro
-              ru-central1-b: e2lu8r1tbbtryhdpa9ro
-              ru-central1-c: e2lu8r1tbbtryhdpa9ro
-              ```
+          ```yaml
+          ru-central1-a: e2lu8r1tbbtryhdpa9ro
+          ru-central1-b: e2lu8r1tbbtryhdpa9ro
+          ru-central1-c: e2lu8r1tbbtryhdpa9ro
+          ```
         additionalProperties:
           type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -238,11 +247,13 @@ apiVersions:
           Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).
         properties:
           domainName:
-            description: The name of the search domain.
+            description: |
+              The name of the search domain.
             type: string
           domainNameServers:
             type: array
-            description: A list of recursive DNS addresses.
+            description: |
+              A list of recursive DNS addresses.
             items:
               type: string
               pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
@@ -255,11 +266,13 @@ apiVersions:
         enum: [Standard, WithoutNAT, WithNATInstance]
       withNATInstance:
         type: object
-        description: Settings for the [`WithNATInstance`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance) layout.
+        description: |
+          Settings for the [`WithNATInstance`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance) layout.
         additionalProperties: false
         properties:
           natInstanceExternalAddress:
-            description: A [reserved external IP address](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/faq.html#reserving-a-public-ip-address) (or `externalSubnetID` address if specified).
+            description: |
+              A [reserved external IP address](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/faq.html#reserving-a-public-ip-address) (or `externalSubnetID` address if specified).
             type: string
             pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
           natInstanceInternalAddress:
@@ -269,10 +282,12 @@ apiVersions:
             pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
             x-doc-deprecated: true
           internalSubnetID:
-            description: ID of a subnet for the internal interface.
+            description: |
+              ID of a subnet for the internal interface.
             type: string
           externalSubnetID:
-            description: If specified, an additional network interface will be added to the node (the node will use it as a default route).
+            description: |
+              If specified, an additional network interface will be added to the node (the node will use it as a default route).
             type: string
       provider:
         type: object
@@ -281,13 +296,16 @@ apiVersions:
         additionalProperties: false
         properties:
           cloudID:
-            description: The cloud ID.
+            description: |
+              The cloud ID.
             type: string
           folderID:
-            description: ID of the directory.
+            description: |
+              ID of the directory.
             type: string
           serviceAccountJSON:
-            description: A JSON key generated by [yc iam key create](environment.html) (formatted as a single line).
+            description: |
+              A JSON key generated by [yc iam key create](environment.html) (formatted as a single line).
             type: string
         required:
         - cloudID
@@ -295,7 +313,8 @@ apiVersions:
         - serviceAccountJSON
       zones:
         type: array
-        description: The globally restricted set of zones that this Cloud Provider works with.
+        description: |
+          The globally restricted set of zones that this Cloud Provider works with.
         items:
           enum:
             - ru-central1-a

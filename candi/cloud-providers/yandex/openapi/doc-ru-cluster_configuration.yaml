@@ -1,283 +1,168 @@
 apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
-    type: object
-    additionalProperties: false
-    required: [apiVersion, kind, masterNodeGroup, nodeNetworkCIDR, sshPublicKey, layout, provider]
     properties:
-      apiVersion:
-        type: string
-        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
-      kind:
-        type: string
-        enum: [YandexClusterConfiguration]
       sshPublicKey:
-        type: string
-        description: Публичный ключ для доступа на узлы.
+        description: |
+          Публичный ключ для доступа на узлы.
       masterNodeGroup:
-        type: object
-        description: Спецификация для описания NodeGroup master-узлов.
-        additionalProperties: false
-        required: [replicas, instanceClass]
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
         properties:
           replicas:
-            description: Сколько master-узлов создавать.
-            type: integer
-            minimum: 1
+            description: |
+              Количество создаваемых master-узлов.
           zones:
-            description: Список зон, в которых допустимо создавать узлы.
-            x-doc-required: false
-            type: array
-            items:
-              enum:
-              - ru-central1-a
-              - ru-central1-b
-              - ru-central1-c
-            uniqueItems: true
+            description: |
+              Список зон, в которых допустимо создавать узлы.
           instanceClass:
-            type: object
             description: |
               Частичное содержимое полей [YandexInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
-            additionalProperties: false
-            required: [cores, memory, imageID]
             properties: &instanceClassProperties_ru
               platform:
                 description: |
-                  Платформа виртуальной машины. По умолчанию 'standard-v2'.
+                  Платформа виртуальной машины.
               cores:
                 description: |
                   Количество ядер у создаваемых инстансов.
-                type: integer
               coreFraction:
-                description: Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее...](https://cloud.yandex.ru/docs/compute/concepts/performance-levels)
-                type: integer
+                description: |
+                  Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее...](https://cloud.yandex.ru/docs/compute/concepts/performance-levels)
               memory:
-                type: integer
                 description: |
                   Количество оперативной памяти (в мегабайтах) у создаваемых инстансов.
-                example: 8192
               imageID:
-                type: string
                 description: |
                   Идентификатор образа, который будет установлен в заказанные инстансы.
-                example: fd8nb7ecsbvj76dfaa8b
               diskSizeGB:
-                type: integer
-                description: Размер диска (в гигабайтах) у инстансов.
-                example: 20
-                x-doc-default: 50
+                description: |
+                  Размер диска (в гигабайтах) у инстансов.
               externalIPAddresses:
-                type: array
                 description: |
-                  Список внешних адресов. Количество элементов массива должно соответствовать `replicas`.
+                  Список внешних IP-адресов. Количество элементов массива должно соответствовать `replicas`.
 
-                  При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные публичные IP адреса](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или константу `Auto`.
+                  При отсутствии опции `externalSubnetID` необходимо использовать или [зарезервированные публичные IP-адреса](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или константу `Auto`.
 
-                  При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP из указанной подсети.
-                items:
-                  type: string
-                  pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
+                  При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP-адреса из указанной подсети.
               externalSubnetID:
-                type: string
-                description: При указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
-                x-doc-deprecated: true
-              externalSubnetIDs:
-                type: array
                 description: |
-                  При указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
+                  Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
+              externalSubnetIDs:
+                description: |
+                  Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
 
                   Также будет добавлен маршрут для internal-интерфейса узла на всю подсеть, указанную в `nodeNetworkCIDR`.
 
                   Количество элементов массива должно соответствовать `replicas`.
-                items:
-                  type: string
               additionalLabels:
-                type: object
                 description: |
-                  Дополнительные label'ы, которые будут присвоены созданным инстансам.
-                x-doc-example: |
-                  ```yaml
-                  project: cms-production
-                  severity: critical
-                  ```
-                additionalProperties:
-                  type: string
+                  Дополнительные лейблы, которые будут присвоены созданным инстансам.
               networkType:
-                type: string
-                description: Тип сети.
-                x-doc-default: Standard
-                enum:
-                  - Standard
-                  - SoftwareAccelerated
+                description: |
+                  Тип сети.
       nodeGroups:
-        type: array
         description: |
           Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных frontend-узлов или шлюзов).
         items:
-          type: object
-          required: [name, replicas, instanceClass]
           properties:
             name:
-              description: Имя NodeGroup, будет использоваться для генерации имен узлов.
-              type: string
+              description: |
+                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
             replicas:
-              description: Количество узлов.
-              type: integer
+              description: |
+                Количество узлов.
             zones:
-              type: array
-              description: Список зон, в которых допустимо создавать узлы.
-              items:
-                enum:
-                - ru-central1-a
-                - ru-central1-b
-                - ru-central1-c
-              uniqueItems: true
+              description: |
+                Список зон, в которых допустимо создавать узлы.
             nodeTemplate:
-              description: Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла.
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла.
               properties:
                 labels:
-                  type: object
                   description: |
-                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
 
-                    Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
-
-                    Формат — `key: value`.
-                  x-doc-example: |
-                    ```yaml
-                    labels:
-                      environment: production
-                      app: warp-drive-ai
-                    ```
-                  additionalProperties:
-                    type: string
+                    Если поменять теги в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
                 annotations:
-                  type: object
                   description: |
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
-                  x-doc-example: |
-                    ```yaml
-                    annotations:
-                      ai.fleet.com/discombobulate: "true"
-                    ```
-                  additionalProperties:
-                    type: string
                 taints:
-                  type: array
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
-                    **Внимание!** Доступны только поля `effect`, `key`, `values`.
-                  x-doc-example: |
-                    ```yaml
-                    taints:
-                    - effect: NoExecute
-                      key: ship-class
-                      value: frigate
-                    ```
-                  items:
-                    type: object
-                    properties:
-                      effect:
-                        type: string
-                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
-                      key:
-                        type: string
-                      value:
-                        type: string
+                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
-              required: [cores, memory, imageID]
-              type: object
               description: |
                 Частичное содержимое полей [YandexInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
       existingNetworkID:
-        type: string
-        description: ID существующей VPC Network.
+        description: |
+          ID существующей VPC Network.
       nodeNetworkCIDR:
-        type: string
         description: |
           Данная подсеть будет разделена на **три** равных части и использована для создания подсетей в трёх зонах Yandex.Cloud.
-        pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+      existingZoneToSubnetIDMap:
+        description: |
+          Одна или несколько ранее существовавших подсетей, сопоставленных с соответствующей зоной.
+          ```yaml
+          ru-central1-a: e2lu8r1tbbtryhdpa9ro
+          ru-central1-b: e2lu8r1tbbtryhdpa9ro
+          ru-central1-c: e2lu8r1tbbtryhdpa9ro
+          ```
       labels:
         description: |
           Лейблы, проставляемые на ресурсы, создаваемые в Yandex.Cloud.
 
-          Если поменять лейблы в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
-        type: object
-        additionalProperties:
-          type: string
+          Если поменять лейблы в рабочем кластере, то после применения изменений необходимо пересоздать все машины.
       dhcpOptions:
-        type: object
         description: |
           Список DHCP-опций, которые будут установлены на все подсети.
 
           [Возможные проблемы](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
         properties:
           domainName:
-            description: Search-домен.
-            type: string
+            description: |
+              Search-домен.
           domainNameServers:
-            type: array
-            description: Список адресов рекурсивных DNS.
-            items:
-              type: string
-              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+            description: |
+              Список адресов рекурсивных DNS.
       layout:
-        type: string
         description: |
           Название схемы размещения.
 
           [Подробнее](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
-        enum: [Standard, WithoutNAT, WithNATInstance]
       withNATInstance:
-        type: object
-        description: Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance).
-        additionalProperties: false
+        description: |
+          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance).
         properties:
           natInstanceExternalAddress:
-            description: Внешний [зарезервированный IP адрес](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
-            type: string
+            description: |
+              Внешний [зарезервированный IP-адрес](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
           natInstanceInternalAddress:
-            type: string
             description: |
               Лучше не использовать эту опцию, а использовать автоматически назначаемые адреса.
-            pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
-            x-doc-deprecated: true
           internalSubnetID:
-            description: ID подсети для внутреннего интерфейса.
-            type: string
+            description: |
+              ID подсети для внутреннего интерфейса.
           externalSubnetID:
-            description: При указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
-            type: string
+            description: |
+              Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
       provider:
-        type: object
         description: |
           [Параметры подключения](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/environment.html) к API Yandex.Cloud.
-        additionalProperties: false
         properties:
           cloudID:
-            description: Идентификатор облака.
-            type: string
+            description: |
+              Идентификатор облака.
           folderID:
-            description: Идентификатор директории.
-            type: string
+            description: |
+              Идентификатор директории.
           serviceAccountJSON:
-            description: JSON, выдаваемый [yc iam key create](environment.html) (отформатированный в одну строку).
-            type: string
-        required:
-        - cloudID
-        - folderID
-        - serviceAccountJSON
+            description: |
+              JSON, выдаваемый [yc iam key create](environment.html) (отформатированный в одну строку).
       zones:
-        type: array
-        description: Глобальное ограничение набора зон, с которыми работает данный cloud-provider.
-        items:
-          enum:
-            - ru-central1-a
-            - ru-central1-b
-            - ru-central1-c
-        uniqueItems: true
+        description: |
+          Глобальное ограничение набора зон, с которыми работает данный cloud-provider.

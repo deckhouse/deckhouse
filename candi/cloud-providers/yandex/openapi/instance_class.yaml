@@ -34,7 +34,8 @@ spec:
                   example: 4
                   type: integer
                 coreFraction:
-                  description: Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  description: |
+                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
                   example: 20
                   x-doc-default: 100
                   enum: [ 0,5,20,50,100 ]
@@ -46,7 +47,8 @@ spec:
                   x-doc-default: 0
                   type: integer
                 memory:
-                  description: Amount of primary memory in MB provision on a Yandex Compute Instance.
+                  description: |
+                    Amount of primary memory in MB provision on a Yandex Compute Instance.
                   example: 8192
                   type: integer
                 imageID:
@@ -76,12 +78,14 @@ spec:
                   - "network-hdd"
                   - "network-ssd-nonreplicated"
                 diskSizeGB:
-                  description: Yandex Compute Instance disk size in gigabytes.
+                  description: |
+                    Yandex Compute Instance disk size in gigabytes.
                   example: 20
                   x-doc-default: 50
                   type: integer
                 assignPublicIPAddress:
-                  description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
+                  description: |
+                    Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
                   example: false
                   x-doc-default: false
                   type: boolean
@@ -92,7 +96,8 @@ spec:
                   example: e9bnc7g9mu9mper9clk4
                   type: string
                 additionalSubnets:
-                  description: Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
+                  description: |
+                    Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
                   example:
                     - b0csh41c1or82vuch89v
                     - e2lgddi5svochh5fbq96
@@ -144,7 +149,8 @@ spec:
                   example: 4
                   type: integer
                 coreFraction:
-                  description: Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  description: |
+                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
                   example: 20
                   x-doc-default: 100
                   enum: [ 0,5,20,50,100 ]
@@ -156,7 +162,8 @@ spec:
                   x-doc-default: 0
                   type: integer
                 memory:
-                  description: Amount of primary memory in MB provision on a Yandex Compute Instance.
+                  description: |
+                    Amount of primary memory in MB provision on a Yandex Compute Instance.
                   example: 8192
                   type: integer
                 imageID:
@@ -172,7 +179,8 @@ spec:
                   x-doc-default: standard-v2
                   type: string
                 preemptible:
-                  description: Should a provisioned Yandex Compute Instance be preemtible.
+                  description: |
+                    Should a provisioned Yandex Compute Instance be preemtible.
                   type: boolean
                   x-doc-default: false
                 diskType:
@@ -186,12 +194,14 @@ spec:
                     - "network-hdd"
                     - "network-ssd-nonreplicated"
                 diskSizeGB:
-                  description: Yandex Compute Instance disk size in gigabytes.
+                  description: |
+                    Yandex Compute Instance disk size in gigabytes.
                   example: 20
                   x-doc-default: 50
                   type: integer
                 assignPublicIPAddress:
-                  description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
+                  description: |
+                    Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
                   example: false
                   x-doc-default: false
                   type: boolean
@@ -202,7 +212,8 @@ spec:
                   example: e9bnc7g9mu9mper9clk4
                   type: string
                 additionalSubnets:
-                  description: Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
+                  description: |
+                    Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
                   example:
                     - b0csh41c1or82vuch89v
                     - e2lgddi5svochh5fbq96
