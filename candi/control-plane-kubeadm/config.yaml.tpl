@@ -169,6 +169,9 @@ etcd:
       # without this parameter, when restarting etcd, and /var/lib/etcd/member does not exist, it'll start with a new empty cluster
       initial-cluster-state: existing
       experimental-initial-corrupt-check: "true"
+      {{- if hasKey .etcd "quotaBackendBytes" }}
+      quota-backend-bytes: "{{.etcd.quotaBackendBytes}}"
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
