@@ -34,3 +34,31 @@
 
           Please check Deckhouse logs by running `kubectl -n d8-system logs -f -l app=deckhouse`.
 
+- name: d8.etcd-maintenance.quota-backend-bytes
+  rules:
+    - alert: D8EtcdCannotDecreaseQuotaBackendBytes
+      expr: max by (node) (increase(etcd_defragmentation_success_total[5h]) >= 4)
+      labels:
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: Deckhouse considers that quote-backend-bytes should be reduced.
+        description: |
+          Deckhouse can increase `quote-backend-bytes` only.
+
+          It happends when control-plane nodes memory was reduced.
+
+          If is true, you should set quote-backend-bytes manually with `controlPlaneManager.etcd.maxDbSize` configuration parameter.
+
+          Before set new value, please check current DB usage on every control-plane node:
+          ```
+          kubectl -n kube-system exec -ti etcd-MASTER_NODE_HERE -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.c/etc/kubernetes/pki/etcd/ca.key endpoint status -w json' | jq -r '.[0].Status.dbSize'
+          ```
+          Recommendations:
+          - `controlPlaneManager.etcd.maxDbSize` maximum value is 8 GB.
+          - If control-plane nodes have less than 24 GB, use 2 GB for `controlPlaneManager.etcd.maxDbSize`.
+          - For >= 24GB increase value on 1GB every extra 8 GB.
+
