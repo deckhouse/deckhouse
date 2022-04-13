@@ -305,7 +305,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/config/config.go b/config/config.go
 --- a/config/config.go	(revision a6d9ecb2eff34eeaefbd4fc3f64d7704a1052697)
-+++ b/config/config.go	(date 1649835396469)
++++ b/config/config.go	(date 1649860265412)
 @@ -3,7 +3,11 @@
  import (
  	"errors"
@@ -332,18 +332,18 @@ diff --git a/config/config.go b/config/config.go
 -	Code           string            `yaml:"code"`
 -	Cflags         []string          `yaml:"cflags"`
 -	Kaddrs         []string          `yaml:"kaddrs"`
-+	Enabled                 bool
-+	Name                    string            `yaml:"name"`
-+	KernelVersionConstraint string            `yaml:"kernelVersionConstraint"`
-+	Metrics                 Metrics           `yaml:"metrics"`
-+	Kprobes                 map[string]string `yaml:"kprobes"`
-+	Kretprobes              map[string]string `yaml:"kretprobes"`
-+	Tracepoints             map[string]string `yaml:"tracepoints"`
-+	RawTracepoints          map[string]string `yaml:"raw_tracepoints"`
-+	PerfEvents              []PerfEvent       `yaml:"perf_events"`
-+	Code                    string            `yaml:"code"`
-+	Cflags                  []string          `yaml:"cflags"`
-+	Kaddrs                  []string          `yaml:"kaddrs"`
++	Enabled                  bool
++	Name                     string            `yaml:"name"`
++	KernelVersionConstraints string            `yaml:"kernel_version_constraints"`
++	Metrics                  Metrics           `yaml:"metrics"`
++	Kprobes                  map[string]string `yaml:"kprobes"`
++	Kretprobes               map[string]string `yaml:"kretprobes"`
++	Tracepoints              map[string]string `yaml:"tracepoints"`
++	RawTracepoints           map[string]string `yaml:"raw_tracepoints"`
++	PerfEvents               []PerfEvent       `yaml:"perf_events"`
++	Code                     string            `yaml:"code"`
++	Cflags                   []string          `yaml:"cflags"`
++	Kaddrs                   []string          `yaml:"kaddrs"`
  }
 
  // PerfEvent describes perf_event to attach to
@@ -368,10 +368,10 @@ diff --git a/config/config.go b/config/config.go
 -			return fmt.Errorf("program (%s) has no probes, tracepoints, or perf events", program.Name)
 +			DisableProgramAndReason(&program, fmt.Sprintf("program (%s) has no probes, tracepoints, or perf events", program.Name))
 +		}
-+		if program.KernelVersionConstraint != "" {
-+			constraints, err := kernel_version.ParseKernelVersionConstraint(program.KernelVersionConstraint)
++		if program.KernelVersionConstraints != "" {
++			constraints, err := kernel_version.ParseKernelVersionConstraint(program.KernelVersionConstraints)
 +			if err != nil {
-+				DisableProgramAndReason(&program, fmt.Sprintf("failed to parse kernel version constraint %q: %s", program.KernelVersionConstraint, err))
++				DisableProgramAndReason(&program, fmt.Sprintf("failed to parse kernel version constraint %q: %s", program.KernelVersionConstraints, err))
 +			}
 +
 +			if !kernel_version.ApplyKernelVersionConstraint(kernelVersion, constraints) {
