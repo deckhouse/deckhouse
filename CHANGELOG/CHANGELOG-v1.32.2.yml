@@ -1,0 +1,7 @@
+openvpn:
+  fixes:
+    - summary: Fixed statefulSet apiVersion in a migration hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1354
+    - summary: Set default value for loadbalancer object in the OpenAPI schema.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1353
+

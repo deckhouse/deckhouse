@@ -61,6 +61,8 @@
     Multimaster clusters will automatically turn LINSTOR into HA-mode
  - **[node-local-dns]** Reworked health checking logic [#388](https://github.com/deckhouse/deckhouse/pull/388)
     Now Pods shouldn't crash unexpectedly now due to poor implementation of locking/probing.
+ - **[openvpn]** Fixed statefulSet apiVersion in a migration hook. [#1354](https://github.com/deckhouse/deckhouse/pull/1354)
+ - **[openvpn]** Set default value for loadbalancer object in the OpenAPI schema. [#1353](https://github.com/deckhouse/deckhouse/pull/1353)
  - **[openvpn]** Add forgotten param effectiveStorageClass to openapi spec [#1344](https://github.com/deckhouse/deckhouse/pull/1344)
  - **[openvpn]** Fixed OpenAPI [#1307](https://github.com/deckhouse/deckhouse/pull/1307)
  - **[openvpn]** Web interface changed to https://github.com/flant/ovpn-admin. Persistent storage has been replaced with Kubernetes secrets. Added HostPort inlet. [#522](https://github.com/deckhouse/deckhouse/pull/522)
