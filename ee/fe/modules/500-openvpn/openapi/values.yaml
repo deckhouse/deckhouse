@@ -19,3 +19,7 @@ properties:
             type: string
       deployDexAuthenticator:
         type: boolean
+      effectiveStorageClass:
+        oneOf:
+          - type: string
+          - type: boolean
