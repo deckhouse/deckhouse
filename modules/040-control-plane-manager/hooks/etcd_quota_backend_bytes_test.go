@@ -111,7 +111,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 		for _, c := range casesIncrementalIncrease {
 			c := c
 			It(fmt.Sprintf("Node size %d", c.nodeSize/1024/1024/1024), func() {
-				newQuota := calcNewQuota(c.nodeSize)
+				newQuota := calcNewQuotaForMemory(c.nodeSize)
 
 				Expect(newQuota).To(Equal(c.newQuota))
 			})
@@ -347,6 +347,24 @@ status:
 		Expect(metrics[1].Group).To(Equal(etcdBackendBytesGroup))
 		Expect(metrics[1].Value).To(Equal(pointer.Float64Ptr(1.0)))
 	}
+
+	Context("User set quota in config", func() {
+		userValue := gb(4)
+		BeforeEach(func() {
+			etcdConf := fmt.Sprintf(`{"maxDbSize": %d}`, userValue)
+
+			f.ValuesSetFromYaml("controlPlaneManager.etcd", []byte(etcdConf))
+
+			f.RunHook()
+		})
+
+		It("set quota-backend-bytes from config", func() {
+			Expect(f).Should(ExecuteSuccessfully())
+
+			assertNewQuotaBackends(f, userValue)
+		})
+
+	})
 
 	Context("Single master", func() {
 		Context("etcd does not have quota-backend-bytes parameter", func() {

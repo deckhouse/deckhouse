@@ -128,6 +128,17 @@ properties:
         description: |
           Выключить автоматическую дефрагментацию, если у etcd остается меньше 10% доступного пространства.
           **Экспериментальный**. Может быть удален в будущем.
+      maxDbSize:
+        description: |
+          (quota-backend-bytes)[https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit] параметр.
+          Декхауз автоматически управляет `quota-backend-bytes` параметром.
+          Если параметер `maxDbSize` установлен, то декхауз будет использовать это значение для параметра `quota-backend-bytes` etcd.
+
+          Минимальное значение: 512MB.
+
+          Максимальное значение: 8GB.
+
+          **Экспериментальный**. Может быть удален в будущем.
       externalMembersNames:
         description: |
           Массив имен внешних etcd member'ов (эти member'ы не будут удаляться).

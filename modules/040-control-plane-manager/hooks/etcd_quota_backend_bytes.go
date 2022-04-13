@@ -121,7 +121,7 @@ func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
 	return node
 }
 
-func calcNewQuota(minimalMemoryNodeBytes int64) int64 {
+func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 	const (
 		minimalNodeSizeForCalc = 16 * 1024 * 1024 * 1024 // 24 GB
 		nodeSizeStepForAdd     = 8 * 1024 * 1024 * 1024  // every 8 GB memory
@@ -144,9 +144,7 @@ func calcNewQuota(minimalMemoryNodeBytes int64) int64 {
 	return newQuota
 }
 
-func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
-	input.MetricsCollector.Expire(etcdBackendBytesGroup)
-
+func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 	currentQuotaBytes, nodeWithMaxQuota := getCurrentEtcdQuotaBytes(input)
 
 	input.LogEntry.Debugf("Current etcd quota: %d. Getting from %s", currentQuotaBytes, nodeWithMaxQuota)
@@ -156,7 +154,7 @@ func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
 	newQuotaBytes := currentQuotaBytes
 
 	if node.isDedicated {
-		newQuotaBytes = calcNewQuota(node.memory)
+		newQuotaBytes = calcNewQuotaForMemory(node.memory)
 		if newQuotaBytes < currentQuotaBytes {
 			newQuotaBytes = currentQuotaBytes
 
@@ -172,6 +170,21 @@ func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
 		input.LogEntry.Debugf("New backend quota bytes calculated: %d", newQuotaBytes)
 	} else {
 		input.LogEntry.Debugf("Found not dedicated control-plane node. Skip calculate backend quota. Use current: %d", newQuotaBytes)
+	}
+
+	return newQuotaBytes
+}
+
+func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire(etcdBackendBytesGroup)
+
+	var newQuotaBytes int64
+
+	userQuotaBytes := input.Values.Get("controlPlaneManager.etcd.maxDbSize")
+	if userQuotaBytes.Exists() {
+		newQuotaBytes = userQuotaBytes.Int()
+	} else {
+		newQuotaBytes = calcEtcdQuotaBackendBytes(input)
 	}
 
 	input.Values.Set("controlPlaneManager.internal.etcdQuotaBackendBytes", newQuotaBytes)
