@@ -106,7 +106,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 				rule := f.KubernetesResource("PrometheusRule", "d8-system", "control-plane-manager-etcd-maintenance")
 
-				assertSpecDotGroupsArray(rule, 1)
+				assertSpecDotGroupsArray(rule, 2)
 			})
 		})
 	})
