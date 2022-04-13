@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Check PR
         id: pr
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6.0.0
         with:
           result-encoding: string
           script: |

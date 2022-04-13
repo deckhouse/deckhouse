@@ -39,7 +39,7 @@ jobs:
 
       # </template: checkout_step>
       - name: Find latest milestone and issue
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |

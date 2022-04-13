@@ -35,7 +35,7 @@ jobs:
       ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
     steps:
       - name: Close PR
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.0.0
         with:
           github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           script: |
@@ -69,7 +69,7 @@ jobs:
       - name: Check if allow to run tests
         id: check
         if: ${{ startsWith(github.event_name, 'pull_request') }}
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.0.0
         with:
           script: |
             if (!context.payload.pull_request) {
@@ -159,7 +159,7 @@ jobs:
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
         if: steps.changes.outputs.dangerous == 'true'
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.0.0
         with:
           script: |
             core.setFailed('External PR contains dangerous changes.')
@@ -167,7 +167,7 @@ jobs:
       # Set output.
       - name: Return PR head commit ref
         id: ref
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.0.0
         with:
           script: |
             let ref = context.ref;
@@ -209,7 +209,7 @@ jobs:
       # </template: checkout_step>
       - id: on_push
         name: Check labels on push
-        uses: actions/github-script@v5.0.0
+        uses: actions/github-script@v6.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
