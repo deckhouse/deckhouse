@@ -18,6 +18,7 @@ properties:
     type: object
     description: |
       A section of optional parameters of the `LoadBalancer` inlet.
+    default: { }
     properties:
       annotations:
         type: object
