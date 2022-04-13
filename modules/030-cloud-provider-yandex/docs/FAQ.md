@@ -8,9 +8,9 @@ Attach the following annotation to the service:
 ```
 yandex.cpi.flant.com/listener-subnet-id: SubnetID
 ```
-The annotation links the LB with the appropriate Subnet.
+The annotation links the LoadBalancer with the appropriate Subnet.
 
-## Reserving a public IP address
+## How to reserve a public IP address?
 
 This on is used in `externalIPAddresses` and `natInstanceExternalAddress`.
 
@@ -32,9 +32,13 @@ Using DNS servers that differ from those provided by yandex cloud in the DHCP se
 
 ### Editing parameters
 
+Pay attention to the following nuances:
+
 1. When changing parameters, you need to invoke `netplan apply` or a similar command that forces the update of the DHCP lease.
 2. You will need to restart all hostNetwork Pods (especially `kube-dns`) for the new `resolv.conf` settings to take effect.
 
 ### Aspects of the use
 
-If the dhcpOptions parameter is set, all DNS are routed to the DNS servers specified. These DNS servers **must** serve DNS requests to the Internet and (if needed) resolve intranet resources. **Do not use** this option if the recursive DNSs specified cannot resolve the same list of zones that the recursive DNSs in the Yandex.Cloud subnet can resolve.
+If the dhcpOptions parameter is set, all DNS are routed to the DNS servers specified. These DNS servers **must** serve DNS requests to the Internet and (if needed) resolve intranet resources. 
+
+**Do not use** this option if the recursive DNSs specified cannot resolve the same list of zones that the recursive DNSs in the Yandex.Cloud subnet can resolve.

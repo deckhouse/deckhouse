@@ -25,10 +25,11 @@ title: "Cloud provider — VMware vSphere: настройки"
 
 Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и vSphere API после увеличения размера PVC нужно:
 
-1. Выполнить `kubectl cordon узел_где_находится_pod`;
+1. На узле, где находится Pod, выполнить команду `kubectl cordon <имя_узла>`;
 2. Удалить Pod;
-3. Убедиться, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`. **Внимание!** Состояние `FileSystemResizePending` не является проблемой;
-4. Выполнить `kubectl uncordon узел_где_находится_pod`.
+3. Убедиться, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`;
+   > Состояние `FileSystemResizePending` не является проблемой.
+4. На узле, где находится Pod, выполнить команду `kubectl uncordon <имя_узла>`.
 
 ## Требования к окружениям
 
