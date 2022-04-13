@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -104,7 +105,7 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	return StorageClassFilter{
 		Name:                 sc.Name,
-		AllowVolumeExpansion: *sc.AllowVolumeExpansion && sc.Annotations["storageclass.deckhouse.io/volume-expansion-mode"] != "offline",
+		AllowVolumeExpansion: pointer.BoolPtrDerefOr(sc.AllowVolumeExpansion, false) && sc.Annotations["storageclass.deckhouse.io/volume-expansion-mode"] != "offline",
 	}, nil
 }
 
