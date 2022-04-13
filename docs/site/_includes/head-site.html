@@ -37,6 +37,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
 <script src="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<script>
+  $(document).ready(function() {
+    tippy('[title]', {
+      content(reference) {
+        const title = reference.getAttribute('title');
+        reference.removeAttribute('title');
+        return title;
+      },
+    });
+  });
+</script>
+
 {% asset jquery.navgoco.min.js %}
 {% asset bootstrap.min.js %}
 {% asset anchor.min.js %}
