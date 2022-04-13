@@ -1,0 +1,9 @@
+openvpn:
+  fixes:
+    - summary: Add forgotten param effectiveStorageClass to openapi spec
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1344
+prometheus:
+  fixes:
+    - summary: Fix null pointer dereference in prometheus_disk.go hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1345
+
