@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
-	"github.com/deckhouse/deckhouse/go_lib/filter"
+	dh_etcd "github.com/deckhouse/deckhouse/go_lib/etcd"
 )
 
 const (
@@ -62,7 +62,7 @@ func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints 
 }
 
 func getETCDClientFromSnapshots(input *go_hook.HookInput, dc dependency.Container) (etcd.Client, error) {
-	snap := input.Snapshots[filter.EtcdEndpointsSnapshotName]
+	snap := input.Snapshots[dh_etcd.EndpointsSnapshotName]
 
 	if len(snap) == 0 {
 		return nil, ErrEmptyEtcdSnapshot
@@ -71,7 +71,7 @@ func getETCDClientFromSnapshots(input *go_hook.HookInput, dc dependency.Containe
 	endpoints := make([]string, 0, len(snap))
 
 	for _, eRaw := range snap {
-		e := eRaw.(*filter.EtcdInstance)
+		e := eRaw.(*dh_etcd.Instance)
 		endpoints = append(endpoints, e.Endpoint)
 	}
 

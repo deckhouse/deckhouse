@@ -1,25 +1,26 @@
-package filter
+package etcd
 
 import (
 	"fmt"
 	"regexp"
 	"strconv"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/deckhouse/deckhouse/go_lib/filter"
 )
 
 const (
-	EtcdDefaultMaxSize        int64 = 2 * 1024 * 1024 * 1024 // 2GB
-	EtcdEndpointsSnapshotName       = "etcd_endpoints"
+	DefaultMaxSize        int64 = 2 * 1024 * 1024 * 1024 // 2GB
+	EndpointsSnapshotName       = "etcd_endpoints"
 )
 
-type EtcdInstance struct {
+type Instance struct {
 	Endpoint  string
 	MaxDbSize int64
 	PodName   string
@@ -29,8 +30,8 @@ type EtcdInstance struct {
 var (
 	maxDbSizeRegExp = regexp.MustCompile(`(^|\s+)--quota-backend-bytes=(\d+)$`)
 
-	EtcdMaintenanceConfig = go_hook.KubernetesConfig{
-		Name:       EtcdEndpointsSnapshotName,
+	MaintenanceConfig = go_hook.KubernetesConfig{
+		Name:       EndpointsSnapshotName,
 		ApiVersion: "v1",
 		Kind:       "Pod",
 		NamespaceSelector: &types.NamespaceSelector{
@@ -72,8 +73,8 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 		ip = pod.Status.PodIP
 	}
 
-	curMaxDbSize := EtcdDefaultMaxSize
-	maxBytesStr := GetArgPodWithRegexp(&pod, maxDbSizeRegExp, 1, "")
+	curMaxDbSize := DefaultMaxSize
+	maxBytesStr := filter.GetArgPodWithRegexp(&pod, maxDbSizeRegExp, 1, "")
 	if maxBytesStr != "" {
 		curMaxDbSize, err = strconv.ParseInt(maxBytesStr, 10, 64)
 		if err != nil {
@@ -81,14 +82,14 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 		}
 	}
 
-	return &EtcdInstance{
-		Endpoint:  EtcdEndpoint(ip),
+	return &Instance{
+		Endpoint:  Endpoint(ip),
 		MaxDbSize: curMaxDbSize,
 		PodName:   pod.GetName(),
 		Node:      pod.Spec.NodeName,
 	}, nil
 }
 
-func EtcdEndpoint(ip string) string {
+func Endpoint(ip string) string {
 	return fmt.Sprintf("https://%s:2379", ip)
 }

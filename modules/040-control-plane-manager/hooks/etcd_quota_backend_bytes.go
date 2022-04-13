@@ -17,16 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/go_lib/filter"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
+	dhetcd "github.com/deckhouse/deckhouse/go_lib/etcd"
 )
 
 type etcdNode struct {
@@ -54,7 +52,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: etcdQuotaFilterNode,
 		},
-		filter.EtcdMaintenanceConfig,
+		dhetcd.MaintenanceConfig,
 	},
 }, etcdQuotaBackendBytesHandler)
 
@@ -85,8 +83,8 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 	var currentQuotaBytes int64
 	var nodeWithMaxQuota string
-	for _, endpointRaw := range input.Snapshots[filter.EtcdEndpointsSnapshotName] {
-		endpoint := endpointRaw.(*filter.EtcdInstance)
+	for _, endpointRaw := range input.Snapshots[dhetcd.EndpointsSnapshotName] {
+		endpoint := endpointRaw.(*dhetcd.Instance)
 		quotaForInstance := endpoint.MaxDbSize
 		if quotaForInstance > currentQuotaBytes {
 			currentQuotaBytes = quotaForInstance
@@ -95,7 +93,7 @@ func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 	}
 
 	if currentQuotaBytes == 0 {
-		currentQuotaBytes = filter.EtcdDefaultMaxSize
+		currentQuotaBytes = dhetcd.DefaultMaxSize
 		nodeWithMaxQuota = "default"
 	}
 
@@ -132,12 +130,12 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 	)
 
 	if minimalMemoryNodeBytes <= minimalNodeSizeForCalc {
-		return filter.EtcdDefaultMaxSize
+		return dhetcd.DefaultMaxSize
 	}
 
 	steps := (minimalMemoryNodeBytes - minimalNodeSizeForCalc) / nodeSizeStepForAdd
 
-	newQuota := steps*quotaStep + filter.EtcdDefaultMaxSize
+	newQuota := steps*quotaStep + dhetcd.DefaultMaxSize
 
 	if newQuota > maxQuota {
 		newQuota = maxQuota
