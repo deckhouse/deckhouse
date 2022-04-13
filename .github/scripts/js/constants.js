@@ -106,6 +106,7 @@ const kubernetesVersions = [
   '1.20',
   '1.21',
   '1.22',
+  '1.23',
 ];
 module.exports.knownKubernetesVersions = kubernetesVersions;
 
