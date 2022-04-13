@@ -37,7 +37,7 @@
 - name: d8.etcd-maintenance.quota-backend-bytes
   rules:
     - alert: D8EtcdCannotDecreaseQuotaBackendBytes
-      expr: max by (node) (increase(etcd_defragmentation_success_total[5h]) >= 4)
+      expr: max(d8_etcd_quota_backend_should_decrease) > 0
       labels:
         tier: cluster
         d8_component: control-plane-manager
