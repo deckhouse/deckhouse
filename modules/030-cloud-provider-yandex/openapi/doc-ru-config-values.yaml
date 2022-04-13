@@ -1,32 +1,15 @@
-type: object
 properties:
   additionalExternalNetworkIDs:
-    type: array
-    items:
-      type: string
-    default: []
-    description: Список Network ID, которые будут считаться `ExternalIP` при перечислении адресов у Node. Опциональный параметр.
+    description: Список Network ID, которые будут считаться `ExternalIP` при перечислении адресов у Node.
   storageClass:
-    type: object
     properties:
       exclude:
-        type: array
-        items:
-          type: string
         description: |
           Полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
-            * Формат — массив строк.
-            * Опциональный параметр.
-        x-examples:
-        - ["network-ssd-.*", "network-hdd"]
       default:
-        type: string
         description: |
           Имя StorageClass, который будет использоваться в кластере по умолчанию.
-            * Формат — строка.
-            * Опциональный параметр.
-            * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
-              * Присутствующий в кластере произвольный StorageClass с default аннотацией.
-              * Первый StorageClass из создаваемых модулем (в порядке из таблицы выше).
-        x-examples:
-        - "network-hdd"
+
+          Если параметр не задан, фактическим StorageClass'ом по умолчанию будет один из следующих:
+            * Присутствующий в кластере произвольный StorageClass с default аннотацией;
+            * Лексикографически первый StorageClass из [создаваемых модулем](#storage).
