@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/deckhouse/deckhouse/go_lib/filter"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -36,7 +38,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
-		etcdMaintenanceConfig,
+		filter.EtcdMaintenanceConfig,
 		etcdSecretK8sConfig,
 	},
 }, dependency.WithExternalDependencies(handleTriggerETCDAutomaticDefragmentation))
@@ -58,8 +60,8 @@ func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc depe
 	}
 	defer etcdClient.Close()
 
-	for _, endpointRaw := range input.Snapshots[etcdEndpointsSnapshotName] {
-		instance := endpointRaw.(*etcdInstance)
+	for _, endpointRaw := range input.Snapshots[filter.EtcdEndpointsSnapshotName] {
+		instance := endpointRaw.(*filter.EtcdInstance)
 		status, err := etcdClient.Status(context.TODO(), instance.Endpoint)
 		if err != nil {
 			input.LogEntry.Errorf("cannot get current db usage from %s: %v", err, instance.PodName)

@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/filter"
+
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -100,7 +102,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 		Context("etcd does not have quota-backend-bytes parameter", func() {
 			Context("etcd db size is 0 bytes", func() {
 				ip := "192.168.0.1"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				node := "node-1"
 				BeforeEach(func() {
 					podManifest := etcdPodManifest(map[string]interface{}{
@@ -123,7 +125,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is between zero and default maximum", func() {
 				ip := "192.168.0.2"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				node := "node-2"
 				BeforeEach(func() {
 					podManifest := etcdPodManifest(map[string]interface{}{
@@ -146,7 +148,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is 90% of default maximum", func() {
 				ip := "192.168.0.3"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				podName := "etcd-pod3"
 				node := "node-3"
 				BeforeEach(func() {
@@ -176,7 +178,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is great than 90% and less than default maximum", func() {
 				ip := "192.168.0.4"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				podName := "etcd-pod4"
 				node := "node-4"
 				BeforeEach(func() {
@@ -206,7 +208,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is default maximum", func() {
 				ip := "192.168.0.5"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				podName := "etcd-pod5"
 				node := "node-5"
 				BeforeEach(func() {
@@ -236,7 +238,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("defragmentation returns error", func() {
 				ip := "192.168.0.6"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				podName := "etcd-pod6"
 				errMsg := "some connection error"
 				node := "node-6"
@@ -268,7 +270,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("getting endpoint status returns error", func() {
 				ip := "192.168.0.7"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				podName := "etcd-pod7"
 				node := "node-7"
 				BeforeEach(func() {
@@ -305,7 +307,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is 0 bytes", func() {
 				ip := "192.168.1.1"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				node := "node-1-1"
 				BeforeEach(func() {
 					podManifest := manifest(map[string]interface{}{
@@ -328,7 +330,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is between zero and maximum", func() {
 				ip := "192.168.1.2"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				node := "node-2-2"
 				BeforeEach(func() {
 					podManifest := manifest(map[string]interface{}{
@@ -351,7 +353,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is 90% of maximum", func() {
 				ip := "192.168.1.3"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				podName := "etcd-pod2-3"
 				node := "node-2-1"
 				BeforeEach(func() {
@@ -381,7 +383,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is great than 90% and less than current maximum", func() {
 				ip := "192.168.1.4"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				podName := "etcd-pod2-4"
 				node := "node-2-4"
 				BeforeEach(func() {
@@ -411,7 +413,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 			Context("etcd db size is current maximum", func() {
 				ip := "192.168.1.5"
-				endpoint := etcdEndpoint(ip)
+				endpoint := filter.EtcdEndpoint(ip)
 				podName := "etcd-pod2-5"
 				node := "node-2-5"
 				BeforeEach(func() {
@@ -475,7 +477,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 					Expect(f).Should(ExecuteSuccessfully())
 
 					for _, ip := range ips {
-						Expect(endpointTriggeredDefrag).ToNot(HaveKey(etcdEndpoint(ip)))
+						Expect(endpointTriggeredDefrag).ToNot(HaveKey(filter.EtcdEndpoint(ip)))
 					}
 				})
 
@@ -494,8 +496,8 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 					resources = append(resources, testETCDSecret)
 					JoinKubeResourcesAndSet(f, resources...)
 
-					endpointToDbSize[etcdEndpoint(ips[0])] = 2 * 1024 * 1024 * 1024
-					endpointToDbSize[etcdEndpoint(ips[1])] = 2 * 1024 * 1024 * 1024
+					endpointToDbSize[filter.EtcdEndpoint(ips[0])] = 2 * 1024 * 1024 * 1024
+					endpointToDbSize[filter.EtcdEndpoint(ips[1])] = 2 * 1024 * 1024 * 1024
 
 					f.RunHook()
 				})
@@ -503,14 +505,14 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				It("should trigger defrag for instances have current db size greater than 90%", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[0])))
-					Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[1])))
+					Expect(endpointTriggeredDefrag).To(HaveKey(filter.EtcdEndpoint(ips[0])))
+					Expect(endpointTriggeredDefrag).To(HaveKey(filter.EtcdEndpoint(ips[1])))
 				})
 
 				It("should not trigger defrag for instance has current db size less than 90%", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					Expect(endpointTriggeredDefrag).ToNot(HaveKey(etcdEndpoint(ips[2])))
+					Expect(endpointTriggeredDefrag).ToNot(HaveKey(filter.EtcdEndpoint(ips[2])))
 				})
 
 				It("should set success metrics for or instances have current db size greater than 90%", func() {
@@ -534,10 +536,10 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 						JoinKubeResourcesAndSet(f, resources...)
 
 						for _, ip := range ips {
-							endpointToDbSize[etcdEndpoint(ip)] = 2 * 1024 * 1024 * 1024
+							endpointToDbSize[filter.EtcdEndpoint(ip)] = 2 * 1024 * 1024 * 1024
 						}
 
-						endpointDefragError[etcdEndpoint(ips[1])] = errMsg
+						endpointDefragError[filter.EtcdEndpoint(ips[1])] = errMsg
 
 						f.RunHook()
 					})
@@ -546,7 +548,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 						Expect(f).Should(ExecuteSuccessfully())
 
 						for _, ip := range ips {
-							Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ip)))
+							Expect(endpointTriggeredDefrag).To(HaveKey(filter.EtcdEndpoint(ip)))
 						}
 					})
 
@@ -577,8 +579,8 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 						resources = append(resources, testETCDSecret)
 						JoinKubeResourcesAndSet(f, resources...)
 
-						endpointToDbSize[etcdEndpoint(ips[1])] = 2 * 1024 * 1024 * 1024
-						endpointToDbSize[etcdEndpoint(ips[2])] = 2 * 1024 * 1024 * 1024
+						endpointToDbSize[filter.EtcdEndpoint(ips[1])] = 2 * 1024 * 1024 * 1024
+						endpointToDbSize[filter.EtcdEndpoint(ips[2])] = 2 * 1024 * 1024 * 1024
 
 						f.RunHook()
 					})
@@ -586,14 +588,14 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 					It("should trigger defrag for instances without status error", func() {
 						Expect(f).Should(ExecuteSuccessfully())
 
-						Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[1])))
-						Expect(endpointTriggeredDefrag).To(HaveKey(etcdEndpoint(ips[2])))
+						Expect(endpointTriggeredDefrag).To(HaveKey(filter.EtcdEndpoint(ips[1])))
+						Expect(endpointTriggeredDefrag).To(HaveKey(filter.EtcdEndpoint(ips[2])))
 					})
 
 					It("should not trigger defrag for instance with status error", func() {
 						Expect(f).Should(ExecuteSuccessfully())
 
-						Expect(endpointTriggeredDefrag).ToNot(HaveKey(etcdEndpoint(ips[0])))
+						Expect(endpointTriggeredDefrag).ToNot(HaveKey(filter.EtcdEndpoint(ips[0])))
 					})
 
 					It("should set success metrics for two instances", func() {
@@ -612,7 +614,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 	Context("Defragmentation disabled from config", func() {
 		ip := "192.168.20.1"
-		endpoint := etcdEndpoint(ip)
+		endpoint := filter.EtcdEndpoint(ip)
 
 		BeforeEach(func() {
 			podManifest := etcdPodManifest(map[string]interface{}{
@@ -620,7 +622,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				"hostIP":   ip,
 				"nodeName": "node-20-0",
 			})
-			endpointToDbSize[endpoint] = defaultEtcdMaxSize - 100
+			endpointToDbSize[endpoint] = filter.EtcdDefaultMaxSize - 100
 
 			f.ValuesSetFromYaml("controlPlaneManager.etcd", []byte(`{"disableAutoDefragmentation": true}`))
 
@@ -637,7 +639,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 
 	Context("Defragmentation enabled from config", func() {
 		ip := "192.168.20.2"
-		endpoint := etcdEndpoint(ip)
+		endpoint := filter.EtcdEndpoint(ip)
 
 		BeforeEach(func() {
 			podManifest := etcdPodManifest(map[string]interface{}{
@@ -645,7 +647,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 				"hostIP":   ip,
 				"nodeName": "node-21-0",
 			})
-			endpointToDbSize[endpoint] = defaultEtcdMaxSize - 100
+			endpointToDbSize[endpoint] = filter.EtcdDefaultMaxSize - 100
 
 			f.ValuesSetFromYaml("controlPlaneManager.etcd", []byte(`{"disableAutoDefragmentation": false}`))
 

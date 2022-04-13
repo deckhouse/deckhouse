@@ -21,6 +21,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/filter"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -52,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: etcdQuotaFilterNode,
 		},
-		etcdMaintenanceConfig,
+		filter.EtcdMaintenanceConfig,
 	},
 }, etcdQuotaBackendBytesHandler)
 
@@ -83,8 +85,8 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 	var currentQuotaBytes int64
 	var nodeWithMaxQuota string
-	for _, endpointRaw := range input.Snapshots[etcdEndpointsSnapshotName] {
-		endpoint := endpointRaw.(*etcdInstance)
+	for _, endpointRaw := range input.Snapshots[filter.EtcdEndpointsSnapshotName] {
+		endpoint := endpointRaw.(*filter.EtcdInstance)
 		quotaForInstance := endpoint.MaxDbSize
 		if quotaForInstance > currentQuotaBytes {
 			currentQuotaBytes = quotaForInstance
@@ -93,7 +95,7 @@ func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 	}
 
 	if currentQuotaBytes == 0 {
-		currentQuotaBytes = defaultEtcdMaxSize
+		currentQuotaBytes = filter.EtcdDefaultMaxSize
 		nodeWithMaxQuota = "default"
 	}
 
@@ -130,12 +132,12 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 	)
 
 	if minimalMemoryNodeBytes <= minimalNodeSizeForCalc {
-		return defaultEtcdMaxSize
+		return filter.EtcdDefaultMaxSize
 	}
 
 	steps := (minimalMemoryNodeBytes - minimalNodeSizeForCalc) / nodeSizeStepForAdd
 
-	newQuota := steps*quotaStep + defaultEtcdMaxSize
+	newQuota := steps*quotaStep + filter.EtcdDefaultMaxSize
 
 	if newQuota > maxQuota {
 		newQuota = maxQuota
