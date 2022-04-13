@@ -61,9 +61,11 @@
     Multimaster clusters will automatically turn LINSTOR into HA-mode
  - **[node-local-dns]** Reworked health checking logic [#388](https://github.com/deckhouse/deckhouse/pull/388)
     Now Pods shouldn't crash unexpectedly now due to poor implementation of locking/probing.
+ - **[openvpn]** Add forgotten param effectiveStorageClass to openapi spec [#1344](https://github.com/deckhouse/deckhouse/pull/1344)
  - **[openvpn]** Fixed OpenAPI [#1307](https://github.com/deckhouse/deckhouse/pull/1307)
  - **[openvpn]** Web interface changed to https://github.com/flant/ovpn-admin. Persistent storage has been replaced with Kubernetes secrets. Added HostPort inlet. [#522](https://github.com/deckhouse/deckhouse/pull/522)
     OpenVPN will be migrated from using PVC to store certificates to Kubernetes secrets. PVC will still remain in the cluster as a backup. If you don't need it, you should manually delete it from the cluster.
+ - **[prometheus]** Fix null pointer dereference in prometheus_disk.go hook [#1345](https://github.com/deckhouse/deckhouse/pull/1345)
  - **[prometheus]** Set Grafana sample limit to 5000 [#1215](https://github.com/deckhouse/deckhouse/pull/1215)
  - **[upmeter]** Upmeter no longer exposes DNS queries to the Internet [#1256](https://github.com/deckhouse/deckhouse/pull/1256)
  - **[upmeter]** Fixed the calculation of groups uptime [#1144](https://github.com/deckhouse/deckhouse/pull/1144)
