@@ -1,6 +1,6 @@
 diff --git a/pkg/apis/networking/validation/validation.go b/pkg/apis/networking/validation/validation.go
---- pkg/apis/networking/validation/validation.go
-+++ pkg/apis/networking/validation/validation.go
+--- a/pkg/apis/networking/validation/validation.go
++++ b/pkg/apis/networking/validation/validation.go
 @@ -245,11 +245,6 @@ func ValidateIngressCreate(ingress *networking.Ingress, requestGV schema.GroupVe
  		AllowInvalidWildcardHostRule: allowInvalidWildcardHostRule(requestGV, nil),
  	}

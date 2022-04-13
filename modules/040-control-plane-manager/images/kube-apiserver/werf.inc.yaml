@@ -24,11 +24,13 @@ docker:
   ENTRYPOINT: ["/usr/bin/kube-apiserver"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  {{- if semverCompare "<1.21" $version }}
-from: {{ env "BASE_GOLANG_ALPINE" }}
-  {{- else }}
+    {{- if semverCompare ">=1.23" $version }}
+from: {{ env "BASE_GOLANG_17_ALPINE" }}
+    {{- else if semverCompare ">=1.21" $version }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
-  {{- end }}
+    {{- else }}
+from: {{ env "BASE_GOLANG_ALPINE" }}
+    {{- end }}
 git:
 - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -56,6 +58,6 @@ shell:
     EOF
   - export KUBE_GIT_VERSION_FILE=.kube-version
   {{- end }}
-  - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p0 < ${patchfile}; done
+  - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - make all WHAT=cmd/kube-apiserver
 {{- end }}

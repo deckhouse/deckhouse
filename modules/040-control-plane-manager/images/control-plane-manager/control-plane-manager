@@ -88,7 +88,7 @@ if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksu
 fi
 
 # verify Kubernetes version
-declare -A supported_kubernetes_versions=( ["1.19"]="1.19" ["1.20"]="1.20" ["1.21"]="1.21" ["1.22"]="1.22" )
+declare -A supported_kubernetes_versions=( ["1.19"]="1.19" ["1.20"]="1.20" ["1.21"]="1.21" ["1.22"]="1.22" ["1.23"]="1.23" )
 if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
   echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
   exit 1
@@ -319,18 +319,18 @@ function converge_component() {
 
   case $KUBERNETES_VERSION in
     1.19 | 1.20 | 1.21)
-      experimental_option="--experimental-patches"
+      experimental_option="--experimental-patches $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
       ;;
     *)
-      experimental_option="--patches"
+      experimental_option=""
       ;;
   esac
 
   if [[ "$component" != "etcd" ]] ; then
-    kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
+    kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml $experimental_option"
   else
-    kubeadm_cmd="$kubeadm_binary init phase etcd local --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
-    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
+    kubeadm_cmd="$kubeadm_binary init phase etcd local --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml $experimental_option"
+    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml $experimental_option"
   fi
 
   echo "Converge $component"
