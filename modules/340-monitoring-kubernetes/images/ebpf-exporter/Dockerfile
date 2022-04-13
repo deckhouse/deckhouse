@@ -1,35 +1,48 @@
 ARG BASE_UBUNTU
-ARG BASE_GOLANG_17_ALPINE
 
-FROM $BASE_GOLANG_17_ALPINE as kernel-version-parser
+FROM $BASE_UBUNTU as builder
 
-WORKDIR /go/src/
-COPY kernel-version-parser .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-w -s -extldflags "-static"' -o kernel-version-parser main.go
+WORKDIR /
+
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential fakeroot pbuilder aptitude git ca-certificates libelf1 software-properties-common
+
+RUN git clone --branch=v0.22.0 --depth=1 https://github.com/iovisor/bcc.git /root/bcc && \
+    git -C /root/bcc submodule update --init --recursive
+
+RUN cd /root/bcc && \
+    /usr/lib/pbuilder/pbuilder-satisfydepends && \
+    PARALLEL=$(nproc) ./scripts/build-deb.sh release
+
+RUN add-apt-repository ppa:longsleep/golang-backports && \
+    apt-get install -y --no-install-recommends golang-1.17-go patch
+ENV PATH="/usr/lib/go-1.17/bin:$PATH"
+
+WORKDIR /ebpf-exporter
+
+RUN wget -O - https://github.com/cloudflare/ebpf_exporter/archive/refs/tags/v1.2.5.tar.gz | tar -xzv --strip-components=1
+
+COPY 001-kernel-version-detection-and-individual-program-failure.patch /
+RUN patch -p1 < /001-kernel-version-detection-and-individual-program-failure.patch
+
+RUN mv /root/bcc/libbcc_*.deb /tmp/libbcc.deb
+RUN dpkg -i /tmp/libbcc.deb
+
+RUN GOPROXY="off" GOFLAGS="-mod=vendor" go build -o /ebpf_exporter -v -ldflags=" \
+    -X github.com/prometheus/common/version.Version=$(git describe) \
+    -X github.com/prometheus/common/version.Branch=$(git rev-parse --abbrev-ref HEAD) \
+    -X github.com/prometheus/common/version.Revision=$(git rev-parse --short HEAD) \
+    -X github.com/prometheus/common/version.BuildUser=docker@$(hostname) \
+    -X github.com/prometheus/common/version.BuildDate=$(date --iso-8601=seconds) \
+    " ./cmd/ebpf_exporter
 
 
 FROM $BASE_UBUNTU
 
-RUN apt-get update && apt-get -y install wget bison build-essential cmake flex git libedit-dev \
-  libllvm6.0 llvm-6.0-dev libclang-6.0-dev python zlib1g-dev libelf-dev libfl-dev python3-distutils
+RUN apt-get update && apt-get install -y --no-install-recommends libelf1
 
-RUN apt-get clean autoclean && apt-get autoremove --yes && rm -rf /var/lib/{apt,dpkg,cache,log}/
+COPY --from=builder /tmp/libbcc.deb /tmp/libbcc.deb
+COPY --from=builder /ebpf_exporter /usr/local/bin/
 
-RUN mkdir bcc && cd bcc && \
-    wget -O - https://github.com/iovisor/bcc/releases/download/v0.23.0/bcc-src-with-submodule.tar.gz | tar -xz --strip-components=1 && \
-    mkdir build; cd build  && \
-    cmake ..  && \
-    make  && \
-    make install
+RUN dpkg -i /tmp/libbcc.deb
 
-RUN rm -rf bcc/
-RUN apt-get purge -y bison cmake flex libedit-dev libllvm6.0 llvm-6.0-dev libclang-6.0-dev zlib1g-dev libelf-dev python3-distutils libfl-dev
-
-RUN wget -O /usr/local/bin/ebpf_exporter https://github.com/cloudflare/ebpf_exporter/releases/download/v1.2.5/ebpf_exporter.x86_64 && \
-  chmod +x /usr/local/bin/ebpf_exporter
-RUN apt-get purge -y wget
-
-COPY --from=kernel-version-parser /go/src/kernel-version-parser /usr/local/bin/
-COPY entrypoint.sh /
-
-ENTRYPOINT [ "/entrypoint.sh" ]
+ENTRYPOINT [ "/usr/local/bin/ebpf_exporter" ]
