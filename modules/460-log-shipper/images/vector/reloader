@@ -96,7 +96,7 @@ function reload_once() {
 reload_once
 log "Start watching the $sample_config file"
 while true; do
-  event=$(inotifywait -q -e close,delete "$sample_config")
+  event=$(inotifywait -q -e modify,create,delete,move "$sample_config")
   log "Received $event event"
   reload_once || true
 done
