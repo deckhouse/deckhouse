@@ -134,7 +134,7 @@ jobs:
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
         if: ${{ startsWith(github.event_name, 'pull_request') }}
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.0
         with:
           ref: "refs/pull/${{ github.event.number }}/head"
 
@@ -203,7 +203,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.0
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -244,7 +244,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.0
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -273,7 +273,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.0
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
@@ -302,7 +302,7 @@ jobs:
 
       # <template: checkout_step>
       - name: Checkout sources
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3.0.0
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
