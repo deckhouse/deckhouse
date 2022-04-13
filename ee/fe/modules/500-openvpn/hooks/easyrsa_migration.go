@@ -114,7 +114,7 @@ func migration(input *go_hook.HookInput) error {
 
 	if len(statefulsets) > 0 {
 		if migrated && statefulsets[0].(string) != "true" {
-			input.PatchCollector.Delete("v1", "StatefulSet", "d8-openvpn", "openvpn")
+			input.PatchCollector.Delete("apps/v1", "StatefulSet", "d8-openvpn", "openvpn")
 			input.LogEntry.Infof("statefulset/openvpn deleted (%t/%s)", migrated, statefulsets[0].(string))
 		}
 	}
