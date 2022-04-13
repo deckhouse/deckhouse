@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vector
+package transform
 
 import (
 	"os"
@@ -27,13 +27,20 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/model"
 )
 
-func loadMock(t *testing.T, parts ...string) string {
-	content, err := os.ReadFile(filepath.Join(append([]string{"testdata"}, parts...)...))
+func compareMock(t *testing.T, data []byte, parts ...string) {
+	filename := filepath.Join(append([]string{"testdata"}, parts...)...)
+	content, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	return string(content)
+	if os.Getenv("D8_LOG_SHIPPER_SAVE_TESTDATA") == "yes" {
+		err := os.WriteFile(filename, data, 0600)
+		require.NoError(t, err)
+	}
+
+	assert.JSONEq(t, string(content), string(data))
 }
 
 func TestTransformSnippet(t *testing.T) {
@@ -41,7 +48,7 @@ func TestTransformSnippet(t *testing.T) {
 		transforms := make([]impl.LogTransform, 0)
 		dest := v1alpha1.ClusterLogDestination{
 			Spec: v1alpha1.ClusterLogDestinationSpec{
-				Type: DestElasticsearch,
+				Type: model.DestElasticsearch,
 				ExtraLabels: map[string]string{
 					"foo": "bar",
 					"app": "{{ app }}",
@@ -54,16 +61,16 @@ func TestTransformSnippet(t *testing.T) {
 		transforms = append(transforms, defaultTransforms...)
 		transforms = append(transforms, CreateDefaultCleanUpTransforms(dest)...)
 
-		tr, err := BuildTransformsFromMapSlice("testit", transforms)
+		tr, err := BuildFromMapSlice("testit", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 5)
 		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
 
-		data, err := json.Marshal(tr)
+		data, err := json.MarshalIndent(tr, "", "\t")
 		require.NoError(t, err)
 
-		assert.JSONEq(t, loadMock(t, "transform", "transform-snippet.json"), string(data))
+		compareMock(t, data, "transform-snippet.json")
 	})
 
 	t.Run("Test filters", func(t *testing.T) {
@@ -84,20 +91,20 @@ func TestTransformSnippet(t *testing.T) {
 			},
 		})
 
-		filterTransforms, _ := CreateTransformsFromFilter(filters)
+		filterTransforms, _ := CreateLogFilterTransforms(filters)
 
 		transforms = append(transforms, filterTransforms...)
 
-		tr, err := BuildTransformsFromMapSlice("testit", transforms)
+		tr, err := BuildFromMapSlice("testit", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 2)
 		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
 
-		data, err := json.Marshal(tr)
+		data, err := json.MarshalIndent(tr, "", "\t")
 		require.NoError(t, err)
 
-		assert.JSONEq(t, loadMock(t, "transform", "filters.json"), string(data))
+		compareMock(t, data, "filters.json")
 	})
 
 	t.Run("Test extra labels", func(t *testing.T) {
@@ -111,18 +118,18 @@ func TestTransformSnippet(t *testing.T) {
 			"bdc": `{{ pay\.lo[3].te\.st }}`,
 		}
 
-		transforms = append(transforms, extraFieldTransform(extraLabels))
+		transforms = append(transforms, ExtraFieldTransform(extraLabels))
 
-		tr, err := BuildTransformsFromMapSlice("testit", transforms)
+		tr, err := BuildFromMapSlice("testit", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 1)
 		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
 
-		data, err := json.Marshal(tr)
+		data, err := json.MarshalIndent(tr, "", "\t")
 		require.NoError(t, err)
 
-		assert.JSONEq(t, loadMock(t, "transform", "extra-labels.json"), string(data))
+		compareMock(t, data, "extra-labels.json")
 	})
 
 	t.Run("Test multiline None", func(t *testing.T) {
@@ -130,7 +137,7 @@ func TestTransformSnippet(t *testing.T) {
 		transforms := make([]impl.LogTransform, 0)
 		transforms = append(transforms, multilineTransforms...)
 
-		tr, err := BuildTransformsFromMapSlice("testit", transforms)
+		tr, err := BuildFromMapSlice("testit", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 0)
@@ -148,15 +155,15 @@ func TestTransformSnippet(t *testing.T) {
 
 		transforms = append(transforms, multilineTransforms...)
 
-		tr, err := BuildTransformsFromMapSlice("testit", transforms)
+		tr, err := BuildFromMapSlice("testit", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 1)
 		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
 
-		data, err := json.Marshal(tr)
+		data, err := json.MarshalIndent(tr, "", "\t")
 		require.NoError(t, err)
 
-		assert.JSONEq(t, loadMock(t, "transform", "multiline.json"), string(data))
+		compareMock(t, data, "multiline.json")
 	})
 }

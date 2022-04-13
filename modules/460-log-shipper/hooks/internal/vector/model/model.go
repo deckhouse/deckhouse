@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vector
+package model
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +46,6 @@ type ClusterLoggingConfig struct {
 
 	// Most recently observed status of a cluster log source.
 	// Populated by the system.
-
 	Status v1alpha1.ClusterLoggingConfigStatus `json:"status,omitempty"`
 }
 

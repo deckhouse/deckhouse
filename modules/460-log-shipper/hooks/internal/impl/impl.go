@@ -16,11 +16,6 @@ limitations under the License.
 
 package impl
 
-type LogDestination interface {
-	GetName() string
-	AppendInputs([]string)
-}
-
 type LogSource interface {
 	GetName() string
 	// BuildSources in some cases you need to split source, for example: to match few namespaces
@@ -33,4 +28,9 @@ type LogTransform interface {
 	SetName(string)
 	SetInputs([]string)
 	GetInputs() []string
+}
+
+type LogDestination interface {
+	GetName() string
+	AppendInputs([]string)
 }

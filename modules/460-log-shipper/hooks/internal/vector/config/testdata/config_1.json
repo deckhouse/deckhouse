@@ -40,15 +40,17 @@
         "d8_clusterns_source_foot_testsource",
         "d8_clusterns_source_baar_testsource"
       ],
-      "encoding": {
-        "codec": "text",
-        "timestamp_format": "rfc3339",
-        "only_fields": ["message"]
-      },
-      "endpoint": "http://testmeip:9000",
       "healthcheck": {
         "enabled": false
       },
+      "encoding": {
+        "codec": "text",
+        "only_fields": [
+          "message"
+        ],
+        "timestamp_format": "rfc3339"
+      },
+      "endpoint": "http://testmeip:9000",
       "labels": {
         "container": "{{ container }}",
         "image": "{{ image }}",
@@ -56,9 +58,9 @@
         "node": "{{ node }}",
         "pod": "{{ pod }}",
         "pod_ip": "{{ pod_ip }}",
-        "stream": "{{ stream }}",
         "pod_labels_*": "{{ pod_labels }}",
-        "pod_owner": "{{ pod_owner }}"
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
       },
       "remove_label_fields": true,
       "out_of_order_action": "rewrite_timestamp"
