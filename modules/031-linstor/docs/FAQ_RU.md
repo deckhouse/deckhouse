@@ -77,18 +77,44 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
 ## Pod не может запуститься из-за ошибки `FailedMount`
 
 ### Pod завис на стадии `ContainerCreating`
-Если Pod завис на стадии `ContainerCreating`, а в выводе `kubectl describe` есть ошибки вида:
+Если Pod завис на стадии `ContainerCreating`, а в выводе `kubectl describe pod` есть ошибки вида:
 
 ```
 rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking for exclusive open failed: wrong medium type, check device health
 ```
 
-Значит устройство всё ещё смонтировано на одном из других узлов. Проверить это можно с помощью следующей команды:
+... значит устройство всё ещё смонтировано на одном из других узлов. Проверить это можно с помощью следующей команды:
 ```shell
-linstor r l -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
+linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
 
 Флаг `InUse` укажет на каком узле используется устройство.
+
+### Pod не может запуститься из-за отсутствия CSI-драйвера
+
+Пример ошибки в `kubectl describe pod`:
+
+```
+kubernetes.io/csi: attachment for pvc-be5f1991-e0f8-49e1-80c5-ad1174d10023 failed: CSINode b-node0 does not contain driver linstor.csi.linbit.com
+```
+
+Проверьте состояние Pod'ов `linstor-csi-node`:
+
+```shell
+kubectl get pod -n d8-linstor -l app.kubernetes.io/component=csi-node,app.kubernetes.io/instance=linstor,app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-csi
+```
+
+Наиболее вероятно, что они зависли в состоянии `Init`, ожидая пока узел сменит статус на `Online` в LINSTOR. Проверьте список узлов с помощью следующей команды:
+
+```shell
+linstor node list
+```
+
+Если вы видите какие-либо узлы в состоянии `EVICTED`, значит они были недоступны в течении 2‑х часов. Чтобы вернуть их в кластер, выполните:
+
+```shell
+linstor node rst <name>
+```
 
 ### Ошибки вида `Input/output error`
 

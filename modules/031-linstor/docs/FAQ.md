@@ -77,19 +77,45 @@ To configure Prometheus to use LINSTOR for storing data:
 ## Pod cannot start with the `FailedMount` error
 
 ### Pod is stuck in the `ContainerCreating` phase
-If the Pod is stuck in the `ContainerCreating` phase and you see the following errors in `kubectl describe`:
+If the Pod is stuck in the `ContainerCreating` phase, and you see the following errors in `kubectl describe pod`:
 
 ```
 rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking for exclusive open failed: wrong medium type, check device health
 ```
 
-It means that device is still mounted on one of the other nodes. To check it, use the following command:
+... it means that device is still mounted on one of the other nodes. To check it, use the following command:
 
 ```shell
 linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
 
 The `InUse` flag will indicate which node the device is being used on.
+
+### Pod cannot start due to missing CSI driver
+
+An example error in `kubectl describe pod`:
+
+```
+kubernetes.io/csi: attachment for pvc-be5f1991-e0f8-49e1-80c5-ad1174d10023 failed: CSINode b-node0 does not contain driver linstor.csi.linbit.com
+```
+
+Check the status of the `linstor-csi-node` Pods:
+
+```shell
+kubectl get pod -n d8-linstor -l app.kubernetes.io/component=csi-node,app.kubernetes.io/instance=linstor,app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-csi
+```
+
+Most likely they are stuck in the `Init` state, waiting for the node to change its status to `Online` in LINSTOR. Run the following command to check the list of nodes:
+
+```shell
+linstor node list
+```
+
+If you see any nodes in the `EVICTED` state, then they have been unavailable for 2 hours, to return them to the cluster, run:
+
+```shell
+linstor node rst <name>
+```
 
 ### Errors like `Input/output error`
 
