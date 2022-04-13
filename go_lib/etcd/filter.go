@@ -17,7 +17,7 @@ import (
 
 const (
 	DefaultMaxSize        int64 = 2 * 1024 * 1024 * 1024 // 2GB
-	EndpointsSnapshotName       = "etcd_endpoints"
+	endpointsSnapshotName       = "etcd_endpoints"
 )
 
 type Instance struct {
@@ -31,7 +31,7 @@ var (
 	maxDbSizeRegExp = regexp.MustCompile(`(^|\s+)--quota-backend-bytes=(\d+)$`)
 
 	MaintenanceConfig = go_hook.KubernetesConfig{
-		Name:       EndpointsSnapshotName,
+		Name:       endpointsSnapshotName,
 		ApiVersion: "v1",
 		Kind:       "Pod",
 		NamespaceSelector: &types.NamespaceSelector{
@@ -88,6 +88,17 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 		PodName:   pod.GetName(),
 		Node:      pod.Spec.NodeName,
 	}, nil
+}
+
+func InstancesFromSnapshot(input *go_hook.HookInput) []*Instance {
+	snap := input.Snapshots[endpointsSnapshotName]
+	res := make([]*Instance, 0, len(snap))
+
+	for _, raw := range snap {
+		res = append(res, raw.(*Instance))
+	}
+
+	return res
 }
 
 func Endpoint(ip string) string {

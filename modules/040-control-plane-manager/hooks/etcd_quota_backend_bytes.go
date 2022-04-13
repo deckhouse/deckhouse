@@ -80,26 +80,6 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
-	var currentQuotaBytes int64
-	var nodeWithMaxQuota string
-	for _, endpointRaw := range input.Snapshots[dhetcd.EndpointsSnapshotName] {
-		endpoint := endpointRaw.(*dhetcd.Instance)
-		quotaForInstance := endpoint.MaxDbSize
-		if quotaForInstance > currentQuotaBytes {
-			currentQuotaBytes = quotaForInstance
-			nodeWithMaxQuota = endpoint.Node
-		}
-	}
-
-	if currentQuotaBytes == 0 {
-		currentQuotaBytes = dhetcd.DefaultMaxSize
-		nodeWithMaxQuota = "default"
-	}
-
-	return currentQuotaBytes, nodeWithMaxQuota
-}
-
 func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
 	if len(snapshots) == 0 {
 		return nil
@@ -119,6 +99,25 @@ func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
 	}
 
 	return node
+}
+
+func currentEtcdQuotaBytes(snapshots []*dhetcd.Instance) (int64, string) {
+	var currentQuotaBytes int64
+	var nodeWithMaxQuota string
+	for _, endpoint := range snapshots {
+		quotaForInstance := endpoint.MaxDbSize
+		if quotaForInstance > currentQuotaBytes {
+			currentQuotaBytes = quotaForInstance
+			nodeWithMaxQuota = endpoint.Node
+		}
+	}
+
+	if currentQuotaBytes == 0 {
+		currentQuotaBytes = dhetcd.DefaultMaxSize
+		nodeWithMaxQuota = "default"
+	}
+
+	return currentQuotaBytes, nodeWithMaxQuota
 }
 
 func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
@@ -145,7 +144,7 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 }
 
 func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
-	currentQuotaBytes, nodeWithMaxQuota := getCurrentEtcdQuotaBytes(input)
+	currentQuotaBytes, nodeWithMaxQuota := currentEtcdQuotaBytes(dhetcd.InstancesFromSnapshot(input))
 
 	input.LogEntry.Debugf("Current etcd quota: %d. Getting from %s", currentQuotaBytes, nodeWithMaxQuota)
 

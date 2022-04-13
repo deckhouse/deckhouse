@@ -59,8 +59,7 @@ func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc depe
 	}
 	defer etcdClient.Close()
 
-	for _, endpointRaw := range input.Snapshots[dh_etcd.EndpointsSnapshotName] {
-		instance := endpointRaw.(*dh_etcd.Instance)
+	for _, instance := range dh_etcd.InstancesFromSnapshot(input) {
 		status, err := etcdClient.Status(context.TODO(), instance.Endpoint)
 		if err != nil {
 			input.LogEntry.Errorf("cannot get current db usage from %s: %v", err, instance.PodName)

@@ -62,16 +62,15 @@ func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints 
 }
 
 func getETCDClientFromSnapshots(input *go_hook.HookInput, dc dependency.Container) (etcd.Client, error) {
-	snap := input.Snapshots[dh_etcd.EndpointsSnapshotName]
+	instances := dh_etcd.InstancesFromSnapshot(input)
 
-	if len(snap) == 0 {
+	if len(instances) == 0 {
 		return nil, ErrEmptyEtcdSnapshot
 	}
 
-	endpoints := make([]string, 0, len(snap))
+	endpoints := make([]string, 0, len(instances))
 
-	for _, eRaw := range snap {
-		e := eRaw.(*dh_etcd.Instance)
+	for _, e := range instances {
 		endpoints = append(endpoints, e.Endpoint)
 	}
 
