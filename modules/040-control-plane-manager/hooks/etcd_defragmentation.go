@@ -87,7 +87,7 @@ func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc depe
 			"node":     instance.Node,
 		})
 
-		input.LogEntry.Infof("Defrag etcd '%s' instanse finished successfully", instance.PodName)
+		input.LogEntry.Infof("Defrag etcd '%s' instance finished successfully", instance.PodName)
 	}
 
 	return nil
