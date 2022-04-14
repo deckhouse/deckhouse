@@ -6,7 +6,7 @@ title: "Модуль cni-flannel: настройки"
 - [OpenStack](../../modules/030-cloud-provider-openstack/);
 - [VMware vSphere](../../modules/030-cloud-provider-vsphere/).
 
-Для включения в bare metal необходимо в configMap Deckhouse добавить:
+Для включения в bare metal необходимо в configMap `deckhouse` добавить:
 ```
 cniFlannelEnabled: "true"
 ```
