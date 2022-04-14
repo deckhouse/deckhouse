@@ -3,7 +3,7 @@
     "d8_cluster_source_test-source_test-es-dest": {
       "type": "kubernetes_logs",
       "extra_label_selector": "app=test",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_NODE_NAME,metadata.namespace=tests-whispers",
+      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=tests-whispers",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -19,7 +19,7 @@
     "d8_cluster_source_test-source_test-logstash-dest": {
       "type": "kubernetes_logs",
       "extra_label_selector": "app=test",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_NODE_NAME,metadata.namespace=tests-whispers",
+      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=tests-whispers",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -35,7 +35,7 @@
     "d8_cluster_source_test-source_test-loki-dest": {
       "type": "kubernetes_logs",
       "extra_label_selector": "app=test",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_NODE_NAME,metadata.namespace=tests-whispers",
+      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=tests-whispers",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
