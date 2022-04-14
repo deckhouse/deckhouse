@@ -215,7 +215,7 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		internalValuesPath = fmt.Sprintf("%s.internal.%s.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName), args.InternalValuesSubPath)
 	}
 
-	if len(effectiveStorageClass) == 0 {
+	if len(effectiveStorageClass) == 0 || effectiveStorageClass == "false" {
 		input.Values.Set(internalValuesPath, false)
 	} else {
 		input.Values.Set(internalValuesPath, effectiveStorageClass)
