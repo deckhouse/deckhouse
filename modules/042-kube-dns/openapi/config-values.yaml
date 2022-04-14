@@ -11,7 +11,7 @@ properties:
       pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}(:[0-9]{1,})?$'
   hosts:
     description: |
-      A static list of hosts similar to that of /etc/hosts.
+      A static list of hosts similar to that of `/etc/hosts`.
     x-doc-required: false
     type: array
     items:

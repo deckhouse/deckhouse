@@ -6,7 +6,7 @@ properties:
       По умолчанию - список из `/etc/resolv.conf`.
   hosts:
     description: |
-      Статический список хостов в стиле /etc/hosts.
+      Статический список хостов в стиле `/etc/hosts`.
   stubZones:
     description: |
       Список дополнительных зон для обслуживания CoreDNS.
@@ -23,7 +23,7 @@ properties:
             Максимальный TTL в секундах для успешных запросов.
   enableLogs:
     description: |
-      Позволяет включить логирование в CoreDNS.
+      Включение логирования в CoreDNS.
   clusterDomainAliases:
     description: |
-      Список альтернативных доменов кластера, разрешаются наравне с `global.discovery.clusterDomain`.
+      Список альтернативных доменов кластера, разрешающихся наравне с `global.discovery.clusterDomain`.
