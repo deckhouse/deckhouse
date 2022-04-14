@@ -24,7 +24,7 @@ You will need:
 
    Requirements:
 {% if page.platform_code == "bm-private" %}
-   - access to a proxy registry ([read more](../../documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
+   - access to a proxy registry ([read more](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
 {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry (it is also possible to use a [third-party registry](../bm-private/step2.html));
 {%- endif %}
