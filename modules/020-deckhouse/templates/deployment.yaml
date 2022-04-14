@@ -122,6 +122,8 @@ spec:
                   fieldPath: status.podIP
             - name: HELM3LIB
               value: "yes"
+            - name: HELM_HISTORY_MAX
+              value: "3"
             - name: DEBUG_UNIX_SOCKET
               value: /tmp/shell-operator-debug.socket
             - name: HISTFILE
