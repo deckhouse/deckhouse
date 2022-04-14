@@ -4,25 +4,25 @@ properties:
     type: boolean
     default: true
     description: |
-      Disables auto-applying of the terraform state.
+      Disables auto-applying of the Terraform state.
   autoConvergerPeriod:
     type: string
     default: "1h"
     pattern: '^\d+(?:m|h)$'
     description: |
-      After what period of time check the terraform state and apply it.
+      The time interval after which the state of Terraform is checked and applied.
   nodeSelector:
     type: object
     additionalProperties:
       type: string
     description: |
-      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+      The same as in the Pod's `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
-      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
     items:
