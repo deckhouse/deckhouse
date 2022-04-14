@@ -272,8 +272,8 @@ k8s:
       openstack: v1.23.1
       yandex: v0.23.0
       aws: v1.23.0-alpha.0
-      vsphere: deb37fdcadb446aee17f81183deeb22199ca4420
-      azure: v1.23.8
+      vsphere: cb5d4d1d047f3c1ff2d884ea009f33468a53e1ee #v1.23.0
+      azure: v1.23.9
       gcp: 61e23272eaea54e5deec9af5e5ad6f6bc23663ae
     csi:
       openstack: v1.23.1
