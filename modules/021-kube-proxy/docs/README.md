@@ -20,9 +20,4 @@ spec:
 ```
 
 
-**Note** that following the addition, deletion, or changing the annotation, you have to restart kube-proxy Pods manually.
-
-Configuration
-------------
-
-The module does not have configurable parameters.
+> **Note** that following the addition, deletion, or changing the annotation, you have to restart kube-proxy Pods manually.
