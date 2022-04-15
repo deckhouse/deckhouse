@@ -29,7 +29,7 @@ Description=Containerd cgroup config
 Before=network.target
 [Service]
 type=simple
-ExecStart=/bin/bash -c "echo 'cgroupfs' > /var/lib/bashible/cgroup_config"
+ExecStart=/bin/bash -c "if [ ! -f /var/lib/bashible/cgroup_config ]; then echo 'cgroupfs' > /var/lib/bashible/cgroup_config; rm -f /var/lib/bashible/configuration_checksum; fi"
 [Install]
 WantedBy=multi-user.target
 EOF

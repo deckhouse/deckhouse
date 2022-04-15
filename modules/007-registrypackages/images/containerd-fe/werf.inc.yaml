@@ -1,5 +1,4 @@
 {{- $version := "1.5.11" }}
-{{- $containerd_version := printf "v%s+werf-fix.2" $version }}
 {{- $image_version := $version | replace "." "-" }}
 
 ---
@@ -36,13 +35,13 @@ shell:
   - apt-get update
   - apt-get install -y patch libbtrfs-dev
   install:
-  - mkdir -p /go/src/github.com/containerd
-  - cd /go/src/github.com/containerd
+  - mkdir -p /src
+  - cd /src
   - git clone https://github.com/containerd/containerd.git
   - cd containerd
   - git checkout tags/v{{ $version }}
-  - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
-  - GO111MODULE=auto make bin/containerd
+  - git cherry-pick 5f3ce9512b74718ac9519196ba70dfb1ee075fbe # Do not append []string{""} to command to preserve Docker and Werf compatibility
+  - make bin/containerd
   - mv bin/containerd /containerd
   setup:
   - chmod +x /containerd /install /uninstall
