@@ -122,7 +122,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 		resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
 		if err != nil {
 			log.Errorf("cannot calculate status for group %s: %v", group, err)
-			return groupStatuses, StatusOutage, err
+			return nil, StatusOutage, err
 		}
 
 		summary, err := pickSummary(ref, resp.Statuses)
