@@ -188,5 +188,10 @@ func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
 
 	input.Values.Set("controlPlaneManager.internal.etcdQuotaBackendBytes", newQuotaBytes)
 
+	input.MetricsCollector.Set(
+		"d8_etcd_quota_backend_total",
+		float64(newQuotaBytes),
+		map[string]string{})
+
 	return nil
 }

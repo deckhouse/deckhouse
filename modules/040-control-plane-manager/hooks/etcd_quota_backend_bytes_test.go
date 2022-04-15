@@ -321,15 +321,28 @@ status:
 `, name, spec, memory)
 	}
 
-	assertNewQuotaBackends := func(f *HookExecutionConfig, newSize int64) {
+	assertNewQuotaBackendsWithMetric := func(f *HookExecutionConfig, newSize int64) {
 		size := f.ValuesGet("controlPlaneManager.internal.etcdQuotaBackendBytes").Int()
 		Expect(size).To(Equal(newSize))
+
+		metrics := f.MetricsCollector.CollectedMetrics()
+		Expect(metrics).ToNot(BeEmpty())
+
+		found := false
+		for _, m := range metrics {
+			if m.Name == "d8_etcd_quota_backend_total" {
+				Expect(*m.Value).To(Equal(float64(newSize)))
+				found = true
+			}
+		}
+
+		Expect(found).To(BeTrue())
 	}
 
 	assertClearMetrics := func(f *HookExecutionConfig) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 
-		Expect(metrics).To(HaveLen(1))
+		Expect(metrics).ToNot(BeEmpty())
 
 		Expect(metrics[0].Action).To(Equal("expire"))
 		Expect(metrics[0].Group).To(Equal(etcdBackendBytesGroup))
@@ -338,14 +351,22 @@ status:
 	assertAddErrorMetric := func(f *HookExecutionConfig) {
 		metrics := f.MetricsCollector.CollectedMetrics()
 
-		Expect(metrics).To(HaveLen(2))
+		Expect(metrics).ToNot(BeEmpty())
 
 		Expect(metrics[0].Action).To(Equal("expire"))
 		Expect(metrics[0].Group).To(Equal(etcdBackendBytesGroup))
 
-		Expect(metrics[1].Name).To(Equal("d8_etcd_quota_backend_should_decrease"))
-		Expect(metrics[1].Group).To(Equal(etcdBackendBytesGroup))
-		Expect(metrics[1].Value).To(Equal(pointer.Float64Ptr(1.0)))
+		found := false
+		for _, m := range metrics {
+			if m.Name == "d8_etcd_quota_backend_should_decrease" {
+				Expect(m.Group).To(Equal(etcdBackendBytesGroup))
+				Expect(m.Value).To(Equal(pointer.Float64Ptr(1.0)))
+
+				found = true
+			}
+		}
+
+		Expect(found).To(BeTrue())
 	}
 
 	Context("User set quota in config", func() {
@@ -361,7 +382,7 @@ status:
 		It("set quota-backend-bytes from config", func() {
 			Expect(f).Should(ExecuteSuccessfully())
 
-			assertNewQuotaBackends(f, userValue)
+			assertNewQuotaBackendsWithMetric(f, userValue)
 		})
 
 	})
@@ -387,7 +408,7 @@ status:
 				It("set default backend size as quota-backend-bytes", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(2))
+					assertNewQuotaBackendsWithMetric(f, gb(2))
 				})
 
 				It("clean all metrics in group", func() {
@@ -414,7 +435,7 @@ status:
 				It("set increase on 1 gb of default size as quota-backend-bytes", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(3))
+					assertNewQuotaBackendsWithMetric(f, gb(3))
 				})
 
 				It("clean all metrics in group", func() {
@@ -441,7 +462,7 @@ status:
 				It("set maximum size for quota-backend-bytes", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(8))
+					assertNewQuotaBackendsWithMetric(f, gb(8))
 				})
 
 				It("clean all metrics in group", func() {
@@ -468,7 +489,7 @@ status:
 				It("set default backend size as quota-backend-bytes", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(2))
+					assertNewQuotaBackendsWithMetric(f, gb(2))
 				})
 
 				It("clean all metrics in group", func() {
@@ -506,7 +527,7 @@ status:
 				It("does not change quota-backend-bytes", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(2))
+					assertNewQuotaBackendsWithMetric(f, gb(2))
 				})
 
 				It("clean all metrics in group", func() {
@@ -529,7 +550,7 @@ status:
 				It("increase on 1 gb of default size as quota-backend-bytes", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(3))
+					assertNewQuotaBackendsWithMetric(f, gb(3))
 				})
 
 				It("clean all metrics in group", func() {
@@ -552,7 +573,7 @@ status:
 				It("set maximum size for quota-backend-bytes", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(8))
+					assertNewQuotaBackendsWithMetric(f, gb(8))
 				})
 
 				It("clean all metrics in group", func() {
@@ -577,7 +598,7 @@ status:
 				It("set current backend size", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, quotaBackend)
+					assertNewQuotaBackendsWithMetric(f, quotaBackend)
 				})
 
 				It("clean all metrics in group", func() {
@@ -602,7 +623,7 @@ status:
 				It("set current backend size", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, quotaBackend)
+					assertNewQuotaBackendsWithMetric(f, quotaBackend)
 				})
 
 				It("clean all metrics in group", func() {
@@ -669,7 +690,7 @@ status:
 				It("set default backend quota", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(2))
+					assertNewQuotaBackendsWithMetric(f, gb(2))
 				})
 
 				It("clean all metrics in group", func() {
@@ -707,7 +728,7 @@ status:
 				It("set default backend quota", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(2))
+					assertNewQuotaBackendsWithMetric(f, gb(2))
 				})
 
 				It("clean all metrics in group", func() {
@@ -745,7 +766,7 @@ status:
 				It("increase quota backends on 1 gb (set 3gb)", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(3))
+					assertNewQuotaBackendsWithMetric(f, gb(3))
 				})
 
 				It("clean all metrics in group", func() {
@@ -783,7 +804,7 @@ status:
 				It("set default backend size", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(2))
+					assertNewQuotaBackendsWithMetric(f, gb(2))
 				})
 
 				It("clean all metrics in group", func() {
@@ -823,7 +844,7 @@ status:
 				It("set backend for 24Gb instance (3gb)", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(3))
+					assertNewQuotaBackendsWithMetric(f, gb(3))
 				})
 
 				It("clean all metrics in group", func() {
@@ -864,7 +885,7 @@ status:
 				It("does not change quota", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, etcdQuota)
+					assertNewQuotaBackendsWithMetric(f, etcdQuota)
 				})
 
 				It("clean all metrics in group", func() {
@@ -903,7 +924,7 @@ status:
 				It("increases quota (set 3gb)", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, gb(3))
+					assertNewQuotaBackendsWithMetric(f, gb(3))
 				})
 
 				It("clean all metrics in group", func() {
@@ -942,7 +963,7 @@ status:
 				It("stay current quota backend", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, etcdQuota)
+					assertNewQuotaBackendsWithMetric(f, etcdQuota)
 				})
 
 				It("clean all metrics in group", func() {
@@ -981,7 +1002,7 @@ status:
 				It("do not decrease quota backends stay as is", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, etcdQuota)
+					assertNewQuotaBackendsWithMetric(f, etcdQuota)
 				})
 
 				It("add decrease error metric", func() {
@@ -1020,7 +1041,7 @@ status:
 				It("stay quota backends as is (from instances)", func() {
 					Expect(f).Should(ExecuteSuccessfully())
 
-					assertNewQuotaBackends(f, etcdQuota)
+					assertNewQuotaBackendsWithMetric(f, etcdQuota)
 				})
 
 				It("clean all metrics in group", func() {
