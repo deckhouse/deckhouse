@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"strconv"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -185,7 +187,8 @@ func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
 		newQuotaBytes = calcEtcdQuotaBackendBytes(input)
 	}
 
-	input.Values.Set("controlPlaneManager.internal.etcdQuotaBackendBytes", newQuotaBytes)
+	// use string because helm render big number in scientific format
+	input.Values.Set("controlPlaneManager.internal.etcdQuotaBackendBytes", strconv.FormatInt(newQuotaBytes, 10))
 
 	input.MetricsCollector.Set(
 		"d8_etcd_quota_backend_total",

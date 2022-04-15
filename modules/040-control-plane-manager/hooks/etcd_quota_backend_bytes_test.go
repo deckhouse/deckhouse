@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
@@ -322,8 +323,8 @@ status:
 	}
 
 	assertNewQuotaBackendsWithMetric := func(f *HookExecutionConfig, newSize int64) {
-		size := f.ValuesGet("controlPlaneManager.internal.etcdQuotaBackendBytes").Int()
-		Expect(size).To(Equal(newSize))
+		size := f.ValuesGet("controlPlaneManager.internal.etcdQuotaBackendBytes").String()
+		Expect(size).To(Equal(strconv.FormatInt(newSize, 10)))
 
 		metrics := f.MetricsCollector.CollectedMetrics()
 		Expect(metrics).ToNot(BeEmpty())
