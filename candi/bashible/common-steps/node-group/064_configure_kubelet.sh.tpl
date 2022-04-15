@@ -27,6 +27,12 @@ mkdir -p /var/lib/kubelet
 # Check CRI type and set appropriated parameters.
 # cgroup default is `systemd`, only for docker cri we use `cgroupfs`.
 cgroup_driver="systemd"
+{{- if eq .cri "Containerd" }}
+# Overriding cgroup type from external config file
+if [ -f cat /var/lib/bashible/cgroup_config ]; then
+  cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
+fi
+{{- end }}
 
 {{- if eq .cri "NotManaged" }}
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
