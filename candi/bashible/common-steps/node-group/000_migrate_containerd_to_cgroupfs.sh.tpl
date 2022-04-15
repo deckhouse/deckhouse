@@ -13,8 +13,14 @@
 # limitations under the License.
 
 {{- if eq .cri "Containerd" }}
-if [[ "${FIRST_BASHIBLE_RUN}" == "yes" ]]; then
+# Migration already done
+if [ -f /var/lib/bashible/cgroup_config ]; then
+  exit 0
+fi
+# Bashible run on node bootstrap
+if [ "${FIRST_BASHIBLE_RUN}" == "yes" ]; then
   echo "cgroupfs" > /var/lib/bashible/cgroup_config
+  exit 0
 fi
 
 bb-event-on 'containerd-cgroup-migration-changed' '_containerd_cgroup_migration_service'
@@ -49,11 +55,15 @@ bb-sync-file /usr/local/bin/d8-containerd-cgroup-migration.sh - << "EOF"
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-if [ ! -f /var/lib/bashible/cgroup_config ]; then
-  echo 'cgroupfs' > /var/lib/bashible/cgroup_config
-  sed -i 's/SystemdCgroup = true/SystemdCgroup = false/g' /etc/containerd/config.toml
-  sed -i 's/cgroupDriver: systemd/cgroupDriver: cgroupfs/g' /var/lib/kubelet/config.yaml
+
+# Migration already done
+if [ -f /var/lib/bashible/cgroup_config ]; then
+  exit 0
 fi
+
+echo 'cgroupfs' > /var/lib/bashible/cgroup_config
+sed -i 's/SystemdCgroup = true/SystemdCgroup = false/g' /etc/containerd/config.toml
+sed -i 's/cgroupDriver: systemd/cgroupDriver: cgroupfs/g' /var/lib/kubelet/config.yaml
 EOF
 chmod +x /usr/local/bin/d8-containerd-cgroup-migration.sh
 {{- end }}
