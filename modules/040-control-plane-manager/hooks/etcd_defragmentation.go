@@ -74,7 +74,7 @@ func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc depe
 		input.LogEntry.Warnf("Start defrag etcd instance '%s' %d/%d", instance.PodName, status.DbSize, instance.MaxDbSize)
 		_, err = etcdClient.Defragment(context.TODO(), instance.Endpoint)
 		if err != nil {
-			input.MetricsCollector.Inc("etcd_defragmentation_failed_total", map[string]string{
+			input.MetricsCollector.Inc("d8_etcd_defragmentation_failed_total", map[string]string{
 				"pod_name": instance.PodName,
 				"node":     instance.Node,
 			})
@@ -82,7 +82,7 @@ func handleTriggerETCDAutomaticDefragmentation(input *go_hook.HookInput, dc depe
 			continue
 		}
 
-		input.MetricsCollector.Inc("etcd_defragmentation_success_total", map[string]string{
+		input.MetricsCollector.Inc("d8_etcd_defragmentation_success_total", map[string]string{
 			"pod_name": instance.PodName,
 			"node":     instance.Node,
 		})
