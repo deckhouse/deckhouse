@@ -128,6 +128,13 @@ spec:
                       is not set the default behavior is to delete the ENI on instance
                       termination.
                     type: boolean
+                  exclude-interface-tags:
+                    additionalProperties:
+                      type: string
+                    description: ExcludeInterfaceTags is the list of tags to use when
+                      excluding ENIs for Cilium IP allocation. Any interface matching
+                      this set of tags will not be managed by Cilium.
+                    type: object
                   first-interface-index:
                     description: FirstInterfaceIndex is the index of the first ENI
                       to use for IP allocation, e.g. if the node has eth0, eth1, eth2
@@ -244,6 +251,25 @@ spec:
                       the minimum base socket of addresses that must be available.
                       After reaching this watermark, the PreAllocate and MaxAboveWatermark
                       logic takes over to continue allocating IPs.
+                    minimum: 0
+                    type: integer
+                  pod-cidr-allocation-threshold:
+                    description: PodCIDRAllocationThreshold defines the minimum number
+                      of free IPs which must be available to this node via its pod
+                      CIDR pool. If the total number of IP addresses in the pod CIDR
+                      pool is less than this value, the pod CIDRs currently in-use
+                      by this node will be marked as depleted and cilium-operator
+                      will allocate a new pod CIDR to this node. This value effectively
+                      defines the buffer of IP addresses available immediately without
+                      requiring cilium-operator to get involved.
+                    minimum: 0
+                    type: integer
+                  pod-cidr-release-threshold:
+                    description: PodCIDRReleaseThreshold defines the maximum number
+                      of free IPs which may be available to this node via its pod
+                      CIDR pool. While the total number of free IP addresses in the
+                      pod CIDR pool is larger than this value, cilium-agent will attempt
+                      to release currently unused pod CIDRs.
                     minimum: 0
                     type: integer
                   podCIDRs:
@@ -471,6 +497,12 @@ spec:
                           description: Number is the interface index, it used in combination
                             with FirstInterfaceIndex
                           type: integer
+                        prefixes:
+                          description: Prefixes is the list of all /28 prefixes associated
+                            with the ENI
+                          items:
+                            type: string
+                          type: array
                         security-groups:
                           description: SecurityGroups are the security groups associated
                             with the ENI
@@ -488,6 +520,12 @@ spec:
                             id:
                               description: ID is the ID of the subnet
                               type: string
+                          type: object
+                        tags:
+                          additionalProperties:
+                            type: string
+                          description: Tags is the set of tags of the ENI. Used to
+                            detect ENIs which should not be managed by Cilium
                           type: object
                         vpc:
                           description: VPC is the VPC information to which the ENI
@@ -521,6 +559,23 @@ spec:
                         description: Error is the error message set by cilium-operator.
                         type: string
                     type: object
+                  release-ips:
+                    additionalProperties:
+                      description: IPReleaseStatus  defines the valid states in IP
+                        release handshake
+                      enum:
+                      - marked-for-release
+                      - ready-for-release
+                      - do-not-release
+                      - released
+                      type: string
+                    description: 'ReleaseIPs tracks the state for every IP considered
+                      for release. value can be one of the following string : * marked-for-release
+                      : Set by operator as possible candidate for IP * ready-for-release  :
+                      Acknowledged as safe to release by agent * do-not-release     :
+                      IP already in use / not owned by the node. Set by agent * released           :
+                      IP successfully released. Set by operator'
+                    type: object
                   used:
                     additionalProperties:
                       description: AllocationIP is an IP which is available for allocation,
@@ -543,6 +598,20 @@ spec:
                       type: object
                     description: Used lists all IPs out of Spec.IPAM.Pool which have
                       been allocated and are in use.
+                    type: object
+                  used-pod-cidrs:
+                    additionalProperties:
+                      properties:
+                        status:
+                          description: Status describes the status of a pod CIDR
+                          enum:
+                          - released
+                          - depleted
+                          - in-use
+                          type: string
+                      type: object
+                    description: UsedPodCIDRs lists the status of each pod CIDR allocated
+                      to this node.
                     type: object
                 type: object
             type: object
