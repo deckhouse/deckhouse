@@ -22,11 +22,6 @@ git:
   stageDependencies:
     setup:
     - '**/*'
-- add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
