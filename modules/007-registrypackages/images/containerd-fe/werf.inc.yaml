@@ -35,6 +35,7 @@ shell:
   - git clone https://github.com/containerd/containerd.git
   - cd containerd
   - git checkout tags/v{{ $version }}
+  - git config --global user.email "builder@deckhouse.io"
   - git cherry-pick 5f3ce9512b74718ac9519196ba70dfb1ee075fbe # Do not append []string{""} to command to preserve Docker and Werf compatibility
   - make bin/containerd
   - mv bin/containerd /containerd
