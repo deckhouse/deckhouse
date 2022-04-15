@@ -23,8 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	dhetcd "github.com/deckhouse/deckhouse/go_lib/etcd"
 )
 
 type etcdNode struct {
@@ -52,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: etcdQuotaFilterNode,
 		},
-		dhetcd.MaintenanceConfig,
+		etcdMaintenanceConfig,
 	},
 }, etcdQuotaBackendBytesHandler)
 
@@ -80,6 +78,26 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
+func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
+	var currentQuotaBytes int64
+	var nodeWithMaxQuota string
+	for _, endpointRaw := range input.Snapshots[etcdEndpointsSnapshotName] {
+		endpoint := endpointRaw.(*etcdInstance)
+		quotaForInstance := endpoint.MaxDbSize
+		if quotaForInstance > currentQuotaBytes {
+			currentQuotaBytes = quotaForInstance
+			nodeWithMaxQuota = endpoint.Node
+		}
+	}
+
+	if currentQuotaBytes == 0 {
+		currentQuotaBytes = defaultEtcdMaxSize
+		nodeWithMaxQuota = "default"
+	}
+
+	return currentQuotaBytes, nodeWithMaxQuota
+}
+
 func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
 	if len(snapshots) == 0 {
 		return nil
@@ -101,25 +119,6 @@ func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
 	return node
 }
 
-func currentEtcdQuotaBytes(snapshots []*dhetcd.Instance) (int64, string) {
-	var currentQuotaBytes int64
-	var nodeWithMaxQuota string
-	for _, endpoint := range snapshots {
-		quotaForInstance := endpoint.MaxDbSize
-		if quotaForInstance > currentQuotaBytes {
-			currentQuotaBytes = quotaForInstance
-			nodeWithMaxQuota = endpoint.Node
-		}
-	}
-
-	if currentQuotaBytes == 0 {
-		currentQuotaBytes = dhetcd.DefaultMaxSize
-		nodeWithMaxQuota = "default"
-	}
-
-	return currentQuotaBytes, nodeWithMaxQuota
-}
-
 func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 	const (
 		minimalNodeSizeForCalc = 16 * 1024 * 1024 * 1024 // 24 GB
@@ -129,12 +128,12 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 	)
 
 	if minimalMemoryNodeBytes <= minimalNodeSizeForCalc {
-		return dhetcd.DefaultMaxSize
+		return defaultEtcdMaxSize
 	}
 
 	steps := (minimalMemoryNodeBytes - minimalNodeSizeForCalc) / nodeSizeStepForAdd
 
-	newQuota := steps*quotaStep + dhetcd.DefaultMaxSize
+	newQuota := steps*quotaStep + defaultEtcdMaxSize
 
 	if newQuota > maxQuota {
 		newQuota = maxQuota
@@ -144,7 +143,7 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 }
 
 func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
-	currentQuotaBytes, nodeWithMaxQuota := currentEtcdQuotaBytes(dhetcd.InstancesFromSnapshot(input))
+	currentQuotaBytes, nodeWithMaxQuota := getCurrentEtcdQuotaBytes(input)
 
 	input.LogEntry.Debugf("Current etcd quota: %d. Getting from %s", currentQuotaBytes, nodeWithMaxQuota)
 
