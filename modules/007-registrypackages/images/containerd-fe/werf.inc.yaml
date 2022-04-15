@@ -1,4 +1,4 @@
-{{- $version := "1.4.6" }}
+{{- $version := "1.5.11" }}
 {{- $containerd_version := printf "v%s+werf-fix.2" $version }}
 {{- $image_version := $version | replace "." "-" }}
 
