@@ -13,7 +13,7 @@ properties:
       etcdQuotaBackendBytes:
         type: number
         format: int64
-        default: 0
+        x-examples: [ 123456789 ]
       effectiveKubernetesVersion:
         type: string
         enum: ["1.19", "1.20", "1.21", "1.22"]

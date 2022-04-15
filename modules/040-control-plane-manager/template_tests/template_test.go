@@ -101,12 +101,12 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 				f.HelmRender()
 			})
 
-			It("spec.groups should be empty array", func() {
+			It("spec.groups should not be empty array", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				rule := f.KubernetesResource("PrometheusRule", "d8-system", "control-plane-manager-etcd-maintenance")
 
-				assertSpecDotGroupsArray(rule, 3)
+				assertSpecDotGroupsArray(rule, 2)
 			})
 		})
 	})
