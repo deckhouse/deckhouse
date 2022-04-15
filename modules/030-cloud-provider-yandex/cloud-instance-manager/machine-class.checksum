@@ -2,7 +2,7 @@
 
 {{- $platformID := .nil }}
 {{- if hasKey .nodeGroup.instanceClass "platformID" }}
-  {{- if ne .nodeGroup.instanceClass.platformID "standard-v2" }}
+  {{- if ne .nodeGroup.instanceClass.platformID "standard-v3" }}
     {{- $platformID = .nodeGroup.instanceClass.platformID }}
   {{- end }}
 {{- end }}
