@@ -103,7 +103,7 @@ containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sS
 fi
 
 # Upgrade containerd-flant-edition if needed
-containerd_fe_tag="{{ index .images.registrypackages "containerdFe146" | toString }}"
+containerd_fe_tag="{{ index .images.registrypackages "containerdFe1511" | toString }}"
 if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
   systemctl stop containerd.service
   bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
