@@ -40,7 +40,7 @@ func (c PrometheusApiAvailable) Checker() check.Checker {
 		endpoint: c.Endpoint,
 		access:   c.Access,
 	}
-	checker := newHTTPChecker(insecureClient, verifier)
+	checker := newHTTPChecker(newInsecureClient(3*c.Timeout), verifier)
 	return withTimeout(checker, c.Timeout)
 }
 
@@ -100,9 +100,7 @@ func (c MetricPresentInPrometheus) Checker() check.Checker {
 		access:   c.Access,
 		endpoint: addMetricQuery(c.Endpoint, c.Metric),
 	}
-
-	checker := newHTTPChecker(insecureClient, verifier)
-
+	checker := newHTTPChecker(newInsecureClient(3*c.Timeout), verifier)
 	return withTimeout(checker, c.Timeout)
 }
 
