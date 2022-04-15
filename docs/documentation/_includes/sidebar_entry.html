@@ -9,9 +9,9 @@
 {%- assign skip_item = false %}
 {%- if entry.versionType == 'ee' and site.versionType == 'CE' %}
 {%- assign skip_item = true %}
-{%- elsif entry.versionType == 'experimental' and site.versionType == 'CE' %}
+{%- elsif entry.versionType == 'fe' and site.versionType == 'CE' %}
 {%- assign skip_item = true %}
-{%- elsif entry.versionType == 'experimental' and site.versionType == 'EE' %}
+{%- elsif entry.versionType == 'fe' and site.versionType == 'EE' %}
 {%- assign skip_item = true %}
 {%- endif %}
 
