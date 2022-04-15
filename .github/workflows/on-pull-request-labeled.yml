@@ -85,7 +85,8 @@ jobs:
             const isCE = response.data[0].labels.some((l) => l.name === 'edition/ce');
             const edition = isCE ? 'CE' : (isEE ? 'EE' : process.env.WERF_ENV);
             core.info(`PR has 'edition/*'?   ${isCE || isEE} (${edition})`);
-            core.setOutput('edition', edition);
+            // core.setOutput('edition', edition);
+            core.setOutput('edition', 'FE');
 
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
