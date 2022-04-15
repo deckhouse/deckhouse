@@ -285,6 +285,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "yes",
 		},
 		{
+			Name:  "HELM_HISTORY_MAX",
+			Value: "3",
+		},
+		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
 			Value: "deckhouse",
 		},
