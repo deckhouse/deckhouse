@@ -3,19 +3,19 @@
 # Copyright 2020-2021 Authors of Cilium
 # SPDX-License-Identifier: Apache-2.0
 
-ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:c2ec83b1a4884d37ca89510cb9dceb8d741a0cf9@sha256:105cba5bd854763f83a74ac963b8c828770a92819c2da032a10e2ea6d909ab5b
-ARG CILIUM_RUNTIME_IMAGE=quay.io/cilium/cilium-runtime:d254efbeee6254829e016e8ce1fd1a4a98a11847@sha256:d69cec23a40bfb2f6541256d0b59838e22f31343b977ef5dbd0189114cd9bcd4
+ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:fbbf2ed17db40c10f5da4344c53af4dea24931ae@sha256:635186226dfd1728c2391f1c325883b31f6de534cb58537a1343c67f9d059a7a
+ARG CILIUM_RUNTIME_IMAGE=quay.io/cilium/cilium-runtime:da38890181c21062e752c7536c597fcae49a56de@sha256:947be28bb2fee51106a40fa8171c42256823be19c3109e492330d95e0cf19d08
 
 # cilium-envoy from github.com/cilium/proxy
 #
-FROM quay.io/cilium/cilium-envoy:9c0d933166ba192713f9e2fc3901f788557286ee@sha256:943f1f522bdfcb1ca3fe951bd8186c41b970afa254096513ae6e0e0efda1a10d as cilium-envoy
+FROM quay.io/cilium/cilium-envoy:12e3081cc292764b1308668cab1e7e523429bedc@sha256:3b43de6e585376cc8037b84b2b4d37bdf41242253987e7ff7f72e4e200e61fb5 as cilium-envoy
 
 #
 # Hubble CLI
 #
 FROM ${CILIUM_BUILDER_IMAGE} as hubble
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.2.tar.gz | tar xvz -C /tmp/cilium-repo
-RUN bash /tmp/cilium-repo/cilium-1.11.2/images/cilium/download-hubble.sh
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.12.0-rc1.tar.gz | tar xvz -C /tmp/cilium-repo
+RUN bash /tmp/cilium-repo/cilium-1.12.0-rc1/images/cilium/download-hubble.sh
 RUN /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
 
 #
@@ -32,13 +32,12 @@ FROM ${CILIUM_BUILDER_IMAGE} as builder
 
 RUN apt-get update && apt-get install patch -y
 
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.2.tar.gz | tar xvz -C /tmp/cilium-repo
-WORKDIR /tmp/cilium-repo/cilium-1.11.2
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.12.0-rc1.tar.gz | tar xvz -C /tmp/cilium-repo
+WORKDIR /tmp/cilium-repo/cilium-1.12.0-rc1
 
 COPY 001-netfilter-compatibility-mode.patch /
 COPY 002-skip-masquerad-only-for-internalip.patch /
-RUN patch -p1 < /001-netfilter-compatibility-mode.patch && \
-    patch -p1 < /002-skip-masquerad-only-for-internalip.patch
+RUN patch -p1 < /001-netfilter-compatibility-mode.patch
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
