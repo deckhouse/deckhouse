@@ -252,12 +252,12 @@ apiVersions:
         type: string
         description: |
           The name of the tag category used to identify the region (vSphere Datacenter).
-        x-doc-default: "k8s-region"
+        default: "k8s-region"
       zoneTagCategory:
         type: string
         description: |
           The name of the tag category used to identify the zone (vSphere Cluster).
-        x-doc-default: "k8s-zone"
+        default: "k8s-zone"
       disableTimesync:
         type: boolean
         description: |

@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -37,7 +38,10 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 		return err
 	}
 
-	overrideValues(&providerClusterConfiguration, &moduleConfiguration)
+	err = overrideValues(&providerClusterConfiguration, &moduleConfiguration)
+	if err != nil {
+		return err
+	}
 	input.Values.Set("cloudProviderVsphere.internal.providerClusterConfiguration", providerClusterConfiguration)
 
 	var discoveryData v1.VsphereCloudDiscoveryData
@@ -64,7 +68,7 @@ func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{
 	return nil
 }
 
-func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModuleConfiguration) {
+func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModuleConfiguration) error {
 	if m.Host != nil {
 		if p.Provider == nil {
 			p.Provider = &v1.VsphereProvider{}
@@ -97,8 +101,16 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 		p.RegionTagCategory = m.RegionTagCategory
 	}
 
+	if p.RegionTagCategory == nil {
+		p.RegionTagCategory = pointer.StringPtr("k8s-region")
+	}
+
 	if m.ZoneTagCategory != nil {
 		p.ZoneTagCategory = m.ZoneTagCategory
+	}
+
+	if p.ZoneTagCategory == nil {
+		p.ZoneTagCategory = pointer.StringPtr("k8s-zone")
 	}
 
 	if m.DisableTimesync != nil {
@@ -125,6 +137,10 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 		p.Zones = m.Zones
 	}
 
+	if p.Zones == nil {
+		return errors.New("zones cannot be empty")
+	}
+
 	if m.VMFolderPath != nil {
 		p.VMFolderPath = m.VMFolderPath
 	}
@@ -136,4 +152,5 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	if m.Nsxt != nil {
 		p.Nsxt = m.Nsxt
 	}
+	return nil
 }
