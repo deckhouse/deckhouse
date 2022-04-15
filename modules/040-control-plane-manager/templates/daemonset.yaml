@@ -80,7 +80,7 @@
 {{- $_ := set $tpl_context.apiserver "secretEncryptionKey" .Values.controlPlaneManager.internal.secretEncryptionKey }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "etcdQuotaBackendBytes" }}
-{{ $_ := set $tpl_context.etcd "quotaBackendBytes" .Values.controlPlaneManager.etcd.internal.etcdQuotaBackendBytes }}
+{{ $_ := set $tpl_context.etcd "quotaBackendBytes" .Values.controlPlaneManager.internal.etcdQuotaBackendBytes }}
 {{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
