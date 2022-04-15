@@ -69,7 +69,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 	})
 
 	assertSuccessMetricCorrect := func(metric operation.MetricOperation, podName, node string) {
-		Expect(metric.Name).To(Equal("etcd_defragmentation_success_total"))
+		Expect(metric.Name).To(Equal("d8_etcd_defragmentation_success_total"))
 		Expect(metric.Labels).To(HaveKey("pod_name"))
 		Expect(metric.Labels["pod_name"]).To(Equal(podName))
 		Expect(metric.Labels["node"]).To(Equal(node))
@@ -83,7 +83,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-defragment
 	}
 
 	assertErrorMetricCorrect := func(metric operation.MetricOperation, podName, node, errMsg string) {
-		Expect(metric.Name).To(Equal("etcd_defragmentation_failed_total"))
+		Expect(metric.Name).To(Equal("d8_etcd_defragmentation_failed_total"))
 		Expect(metric.Labels).To(HaveKey("pod_name"))
 		Expect(metric.Labels["node"]).To(Equal(node))
 		Expect(metric.Labels["pod_name"]).To(Equal(podName))
