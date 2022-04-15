@@ -12,7 +12,7 @@ To configure, follow these steps:
 
 1. Switch to the region where vpc-a is running.
 1. CLick ` VPC` -> `VPC Peering Connections` -> `Create Peering Connection` and then configure a peering connection:
-  * Name: `vpc-a-vpc-b`;
+  * Name: `vpc-a-vpc-b`.
   * Fill in `Local` and `Another VPC` fields.
 1. Switch to the region where vpc-b is running.
 1. Click `VPC` -> `VPC Peering Connections`.

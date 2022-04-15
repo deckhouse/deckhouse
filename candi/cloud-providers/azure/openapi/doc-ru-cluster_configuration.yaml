@@ -80,7 +80,7 @@ apiVersions:
 
                   **По умолчанию:** образ из `AzureCloudDiscoveryData` (образ из которого был создан master при развертывании кластера).
 
-                  **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7`.
+                  > **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7`.
               enableExternalIP:
                 description: |
                   Разрешение назначения внешнего IP-адреса для инстанса.
@@ -139,7 +139,7 @@ apiVersions:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
-                    **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
                 Частичное содержимое полей [AzureInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).

@@ -6,9 +6,9 @@ The `cloud-provider-gcp` module is responsible for interacting with the [Google]
 
 The `cloud-provider-gcp` module:
 - Manages GCP resources using the `cloud-controller-manager` (CCM) module:
-    * The CCM module creates network routes for the `PodNetwork` network on the GCP side;
-    * The CCM module creates LoadBalancers for Kubernetes Service objects that have the `LoadBalancer` type;
-    * The CCM module updates the metadata of the cluster nodes according to the configuration parameters and deletes nodes that are no longer in GCP;
-- Provisions disks in GCP using the `CSI storage` component;
-- Enables the necessary CNI plugin (using the [simple bridge](../../modules/035-cni-simple-bridge/));
+    * The CCM module creates network routes for the `PodNetwork` network on the GCP side.
+    * The CCM module creates LoadBalancers for Kubernetes Service objects that have the `LoadBalancer` type.
+    * The CCM module updates the metadata of the cluster nodes according to the configuration parameters and deletes nodes that are no longer in GCP.
+- Provisions disks in GCP using the `CSI storage` component.
+- Enables the necessary CNI plugin (using the [simple bridge](../../modules/035-cni-simple-bridge/)).
 - Registers with the [node-manager](../../modules/040-node-manager/) module so that [GCPInstanceClasses](cr.html#gcpinstanceclass) can be used when creating the [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).

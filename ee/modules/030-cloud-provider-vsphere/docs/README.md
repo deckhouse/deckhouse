@@ -6,7 +6,7 @@ The `cloud-provider-vsphere` module is responsible for interacting with the [VMw
 
 The `cloud-provider-vsphere` module:
 - Manages vSphere resources using the `cloud-controller-manager` (CCM) module:
-    * The CCM module creates network routes for the `PodNetwork` network on the vSphere side;
-    * The CCM module updates the metadata of the vSphere VirtualMachines and Kubernetes Nodes and deletes nodes that are no longer in vSphere;
-- Provisions disks on datastore in vSphere via the First-Class Disk mechanism using the `CSI storage` component;
+    * The CCM module creates network routes for the `PodNetwork` network on the vSphere side.
+    * The CCM module updates the metadata of the vSphere VirtualMachines and Kubernetes Nodes and deletes nodes that are no longer in vSphere.
+- Provisions disks on datastore in vSphere via the First-Class Disk mechanism using the `CSI storage` component.
 - Registers with the [node-manager](../../modules/040-node-manager/) module so that [VsphereInstanceClasses](cr.html#vsphereinstanceclass) can be used when creating the [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).

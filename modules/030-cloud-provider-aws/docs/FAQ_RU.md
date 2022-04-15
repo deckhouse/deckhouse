@@ -13,7 +13,7 @@ title: "Cloud provider — AWS: FAQ"
 
 1. Перейдите в регион, где работает vpc-a.
 1. Нажмите `VPC` -> `VPC Peering Connections` -> `Create Peering Connection` и настройте пиринговое соединение:
-  * Name: `vpc-a-vpc-b`;
+  * Name: `vpc-a-vpc-b`.
   * Заполните `Local` и `Another VPC`.
 1. Перейдите в регион, где работает vpc-b.
 1. Нажмите `VPC` -> `VPC Peering Connections`.

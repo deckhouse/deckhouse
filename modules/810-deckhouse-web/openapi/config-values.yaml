@@ -50,7 +50,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the `DexProvider` config if this module is used together with the `user-authn` one.
+          > **Caution!** Note that you must add those groups to the appropriate field in the `DexProvider` config if this module is used together with the `user-authn` one.
         x-examples:
           - ["admin", "users"]
           - []
@@ -75,9 +75,9 @@ properties:
         default: "CertManager"
         description: |
           The HTTPS usage mode:
-          - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter;
-          - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace;
-          - `Disabled` — in this mode, the documentation web UI can only be accessed over HTTP;
+          - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace.
+          - `Disabled` — in this mode, the documentation web UI can only be accessed over HTTP.
           - `OnlyInURI` — the documentation web UI will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
         enum:
           - "Disabled"

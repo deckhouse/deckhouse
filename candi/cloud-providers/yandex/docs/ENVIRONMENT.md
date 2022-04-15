@@ -27,10 +27,10 @@ You need to create a service account with the editor role with the cloud provide
 
 ## Quotas
 
-Note that you need to increase the quotas using the Yandex console when provisioning a new cluster. 
+Note that you need to increase the quotas using the Yandex console when provisioning a new cluster.
 
 Recommended quotas for a new cluster:
-* The number of virtual processors: 64;
-* The total volume of SSD disks: 2000 GB;
-* The number of virtual machines: 25;
+* The number of virtual processors: 64.
+* The total volume of SSD disks: 2000 GB.
+* The number of virtual machines: 25.
 * The total amount of RAM of virtual machines: 256 GB.

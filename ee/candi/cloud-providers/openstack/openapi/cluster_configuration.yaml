@@ -70,7 +70,7 @@ apiVersions:
 
                   Use this command to get a list of available images: `openstack image list`.
 
-                  **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04` and `Centos 7` are supported and tested to work.
+                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04` and `Centos 7` are supported and tested to work.
                 type: string
                 x-doc-required: true
               rootDiskSize:
@@ -283,7 +283,7 @@ apiVersions:
 
                       Use this command to get a list of available images: `openstack image list`.
 
-                      **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
+                      > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
                     type: string
                     x-doc-required: true
                   rootDiskSize:
@@ -354,12 +354,12 @@ apiVersions:
           podNetworkMode:
             description: |
               Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
-              * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode);
+              * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (SecurityGroups are disabled in this mode).
 
-              **Caution!** After changing this parameter, you need to run `dhctl converge`.
+              > **Caution!** After changing this parameter, you need to run `dhctl converge`.
 
-              **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
+              > **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting]
             default: VXLAN
@@ -377,14 +377,14 @@ apiVersions:
           podNetworkMode:
             description: |
               Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
-              * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode);
+              * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
               * `DirectRoutingWithPortSecurityEnabled` — direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports:
                 * **Caution!** Make sure that the `username` can edit `AllowedAddressPairs` on Ports connected to the `internalNetworkName` network. Usually, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (`SecurityGroups` are disabled in this mode).
 
-              **Caution!** After changing this parameter, you need to run `dhctl converge`.
+              > **Caution!** After changing this parameter, you need to run `dhctl converge`.
 
-              **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
+              > **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
             default: DirectRoutingWithPortSecurityEnabled

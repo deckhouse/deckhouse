@@ -24,9 +24,9 @@ You can filter out the unnecessary StorageClasses via the [exclude](#parameters-
 
 Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44) of volume-resizer, CSI, and Yandex.Cloud API, you have to do the following after increasing the PVC size:
 
-1. On the node where the Pod is located, run the `kubectl cordon <node_name>` command;
-2. Delete the Pod;
-3. Make sure that the resize was successful. The PVC object *must not have* the `Resizing` state; 
+1. On the node where the Pod is located, run the `kubectl cordon <node_name>` command.
+2. Delete the Pod.
+3. Make sure that the resize was successful. The PVC object *must not have* the `Resizing` state.
   > The `FileSystemResizePending` state is OK.
 4. On the node where the Pod is located, run the `kubectl uncordon <node_name>` command.
 
