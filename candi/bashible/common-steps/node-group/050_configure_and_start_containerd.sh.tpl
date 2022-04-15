@@ -33,7 +33,7 @@ _on_containerd_config_changed() {
 
 systemd_cgroup=true
 # Overriding cgroup type from external config file
-if [ -f cat /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
+if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
   systemd_cgroup=false
 fi
 

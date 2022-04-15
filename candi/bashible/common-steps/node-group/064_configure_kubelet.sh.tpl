@@ -29,7 +29,7 @@ mkdir -p /var/lib/kubelet
 cgroup_driver="systemd"
 {{- if eq .cri "Containerd" }}
 # Overriding cgroup type from external config file
-if [ -f cat /var/lib/bashible/cgroup_config ]; then
+if [ -f /var/lib/bashible/cgroup_config ]; then
   cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
 fi
 {{- end }}
