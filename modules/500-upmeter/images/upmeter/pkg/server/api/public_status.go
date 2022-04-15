@@ -128,7 +128,7 @@ func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, e
 		summary, err := pickSummary(ref, resp.Statuses)
 		if err != nil {
 			log.Errorf("cannot parse status for group %s: %v", group, err)
-			return groupStatuses, StatusOutage, err
+			return nil, StatusOutage, err
 		}
 
 		gs := GroupStatus{
