@@ -1,3 +1,20 @@
+Index: daemon/cmd/kube_proxy_replacement.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/daemon/cmd/kube_proxy_replacement.go b/daemon/cmd/kube_proxy_replacement.go
+--- a/daemon/cmd/kube_proxy_replacement.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
++++ b/daemon/cmd/kube_proxy_replacement.go	(date 1650015825020)
+@@ -551,6 +551,8 @@
+ 		// Non-BPF masquerade requires netfilter and hence CT.
+ 		case option.Config.IptablesMasqueradingEnabled():
+ 			msg = fmt.Sprintf("BPF host routing requires %s.", option.EnableBPFMasquerade)
++		case option.Config.NetfilterCompatibleMode:
++			msg = fmt.Sprintf("BPF host routing is not supported with %s.", option.NetfilterCompatibleMode)
+ 		// All cases below still need to be implemented ...
+ 		case option.Config.EnableEndpointRoutes:
+ 			msg = fmt.Sprintf("BPF host routing is currently not supported with %s.", option.EnableEndpointRoutes)
 Index: pkg/datapath/linux/config/config.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -19,61 +36,6 @@ diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/con
  	const (
  		selectionRandom = iota + 1
  		selectionMaglev
-Index: daemon/cmd/kube_proxy_replacement.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/daemon/cmd/kube_proxy_replacement.go b/daemon/cmd/kube_proxy_replacement.go
---- a/daemon/cmd/kube_proxy_replacement.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/daemon/cmd/kube_proxy_replacement.go	(date 1650015825020)
-@@ -551,6 +551,8 @@
- 		// Non-BPF masquerade requires netfilter and hence CT.
- 		case option.Config.IptablesMasqueradingEnabled():
- 			msg = fmt.Sprintf("BPF host routing requires %s.", option.EnableBPFMasquerade)
-+		case option.Config.NetfilterCompatibleMode:
-+			msg = fmt.Sprintf("BPF host routing is not supported with %s.", option.NetfilterCompatibleMode)
- 		// All cases below still need to be implemented ...
- 		case option.Config.EnableEndpointRoutes:
- 			msg = fmt.Sprintf("BPF host routing is currently not supported with %s.", option.EnableEndpointRoutes)
-Index: pkg/option/config.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/option/config.go b/pkg/option/config.go
---- a/pkg/option/config.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/pkg/option/config.go	(date 1650015905293)
-@@ -1025,6 +1025,10 @@
- 	// state for endpoints in order to support graceful termination.
- 	EnableK8sTerminatingEndpoint = "enable-k8s-terminating-endpoint"
- 
-+	// NetfilterCompatibleMode guarantees the traffic will pass through kernel
-+	// netfilter. This option only affects NodePort traffic.
-+	NetfilterCompatibleMode = "netfilter-compatible-mode"
-+
- 	// EnableVTEP enables cilium VXLAN VTEP integration
- 	EnableVTEP = "enable-vtep"
- 
-@@ -1779,6 +1783,10 @@
- 	// NodePortNat46X64 indicates whether NAT46 / NAT64 can be used.
- 	NodePortNat46X64 bool
- 
-+	// NetfilterCompatibleMode guarantees the traffic will pass through kernel
-+	// netfilter. Currently, it only affects NodePort traffic.
-+	NetfilterCompatibleMode bool
-+
- 	// NodePortMode indicates in which mode NodePort implementation should run
- 	// ("snat", "dsr" or "hybrid")
- 	NodePortMode string
-@@ -2797,6 +2805,7 @@
- 	c.BGPAnnouncePodCIDR = viper.GetBool(BGPAnnouncePodCIDR)
- 	c.BGPConfigPath = viper.GetString(BGPConfigPath)
- 	c.ExternalClusterIP = viper.GetBool(ExternalClusterIPName)
-+	c.NetfilterCompatibleMode = viper.GetBool(NetfilterCompatibleMode)
- 	c.TCFilterPriority = viper.GetInt(TCFilterPriority)
- 
- 	c.EnableIPv4Masquerade = viper.GetBool(EnableIPv4Masquerade) && c.EnableIPv4
 Index: bpf/lib/nodeport.h
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -84,7 +46,7 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h	(date 1650015824956)
 @@ -877,7 +877,8 @@
  }
- 
+
  /* See comment in tail_rev_nodeport_lb4(). */
 -static __always_inline int rev_nodeport_lb6(struct __ctx_buff *ctx, int *ifindex)
 +static __always_inline int rev_nodeport_lb6(struct __ctx_buff *ctx, int *ifindex,
@@ -95,7 +57,7 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
 @@ -906,6 +907,10 @@
  	ret = ct_lookup6(get_ct_map6(&tuple), &tuple, ctx, l4_off, CT_INGRESS, &ct_state,
  			 &monitor);
- 
+
 +	/* See ipv4 equivalent for details */
 +	if (rev_dnat_at_netdev && !ct_state.node_port)
 +		return CTX_ACT_OK;
@@ -125,7 +87,7 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
 @@ -1974,6 +1980,14 @@
  	ret = ct_lookup4(get_ct_map4(&tuple), &tuple, ctx, l4_off, CT_INGRESS, &ct_state,
  			 &monitor);
- 
+
 +	/* When we do the rev-DNAT for a NodePort reply from a local service endpoint
 +	 * on the bpf_host's "to-netdev" instead of bpf_lxc, then this function is
 +	 * executed on all packets. Return early if we detect that a packet is not
@@ -145,11 +107,11 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
 +	ret = rev_nodeport_lb4(ctx, &ifindex, false);
  	if (IS_ERR(ret))
  		return send_drop_notify_error(ctx, 0, ret, CTX_ACT_DROP, METRIC_EGRESS);
- 
+
 @@ -2260,5 +2274,36 @@
  	return ret;
  }
- 
+
 +/* Wrapper function to call rev_nodeport_lb4/6.
 + * This function calls rev_nodeport_lb4/6, to perform conntrack lookup
 + * and reverse DNAT only if it is NodePort traffic.
@@ -183,6 +145,44 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
 +}
  #endif /* ENABLE_NODEPORT */
  #endif /* __NODEPORT_H_ */
+Index: pkg/option/config.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/option/config.go b/pkg/option/config.go
+--- a/pkg/option/config.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
++++ b/pkg/option/config.go	(date 1650015905293)
+@@ -1025,6 +1025,10 @@
+ 	// state for endpoints in order to support graceful termination.
+ 	EnableK8sTerminatingEndpoint = "enable-k8s-terminating-endpoint"
+
++	// NetfilterCompatibleMode guarantees the traffic will pass through kernel
++	// netfilter. This option only affects NodePort traffic.
++	NetfilterCompatibleMode = "netfilter-compatible-mode"
++
+ 	// EnableVTEP enables cilium VXLAN VTEP integration
+ 	EnableVTEP = "enable-vtep"
+
+@@ -1779,6 +1783,10 @@
+ 	// NodePortNat46X64 indicates whether NAT46 / NAT64 can be used.
+ 	NodePortNat46X64 bool
+
++	// NetfilterCompatibleMode guarantees the traffic will pass through kernel
++	// netfilter. Currently, it only affects NodePort traffic.
++	NetfilterCompatibleMode bool
++
+ 	// NodePortMode indicates in which mode NodePort implementation should run
+ 	// ("snat", "dsr" or "hybrid")
+ 	NodePortMode string
+@@ -2797,6 +2805,7 @@
+ 	c.BGPAnnouncePodCIDR = viper.GetBool(BGPAnnouncePodCIDR)
+ 	c.BGPConfigPath = viper.GetString(BGPConfigPath)
+ 	c.ExternalClusterIP = viper.GetBool(ExternalClusterIPName)
++	c.NetfilterCompatibleMode = viper.GetBool(NetfilterCompatibleMode)
+ 	c.TCFilterPriority = viper.GetInt(TCFilterPriority)
+
+ 	c.EnableIPv4Masquerade = viper.GetBool(EnableIPv4Masquerade) && c.EnableIPv4
 Index: pkg/datapath/linux/probes/probes.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -194,7 +194,7 @@ diff --git a/pkg/datapath/linux/probes/probes.go b/pkg/datapath/linux/probes/pro
 @@ -316,7 +316,7 @@
  	return &p.features.MapTypes
  }
- 
+
 -// GetMisc returns information about kernel misc.
 +// GetMisc returns information about miscellaneous eBPF features.
  func (p *ProbeManager) GetMisc() Misc {
@@ -218,7 +218,7 @@ diff --git a/bpf/Makefile b/bpf/Makefile
 +MAX_HOST_OPTIONS += -DNETFILTER_COMPAT_MODE=1
 +endif
  endif
- 
+
  bpf_host.ll: bpf_host.c $(LIB)
 Index: bpf/bpf_host.c
 IDEA additional info:
@@ -259,7 +259,7 @@ diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
 @@ -1053,6 +1053,15 @@
  	flags.Bool(option.EnableCustomCallsName, false, "Enable tail call hooks for custom eBPF programs")
  	option.BindEnv(option.EnableCustomCallsName)
- 
+
 +	flags.Bool(option.NetfilterCompatibleMode, false, "If set to true, guarantees that traffic will pass through netfilter and that iptable rules will be enforced. This mode may reduce network throughput. If set to false (default), it does not guarantee that all traffic will pass through netfilter. This option only affects NodePort traffic.")
 +	// Currently, NetfilterCompatibleMode guarantees only the nodeport traffic can pass through
 +	// netfilter. Once it guarantees all traffic can pass through netfilter,
@@ -271,7 +271,7 @@ diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
 +
  	flags.Bool(option.BGPAnnounceLBIP, false, "Announces service IPs of type LoadBalancer via BGP")
  	option.BindEnv(option.BGPAnnounceLBIP)
- 
+
 @@ -1601,6 +1610,19 @@
  			)
  		}
@@ -290,7 +290,7 @@ diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
 +		}
 +	}
  }
- 
+
  func (d *Daemon) initKVStore() {
 Index: bpf/bpf_lxc.c
 IDEA additional info:
@@ -302,7 +302,7 @@ diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
 +++ b/bpf/bpf_lxc.c	(date 1650015824988)
 @@ -275,6 +275,12 @@
  		policy_mark_skip(ctx);
- 
+
  #ifdef ENABLE_NODEPORT
 +#ifdef NETFILTER_COMPAT_MODE
 +		if (ct_state.node_port) {
@@ -313,9 +313,9 @@ diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
  # ifdef ENABLE_DSR
  		if (ct_state.dsr) {
  			ret = xlate_dsr_v6(ctx, &tuple, l4_off);
-@@ -749,6 +755,14 @@
+@@ -749,6 +755,15 @@
  		policy_mark_skip(ctx);
- 
+
  #ifdef ENABLE_NODEPORT
 +#ifdef NETFILTER_COMPAT_MODE
 +		if (ct_state.node_port) {
@@ -323,6 +323,7 @@ diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
 +			 * rev-DNAT at egress of the native device.
 +			 */
 +			return CTX_ACT_OK;
++		}
 +#endif /* NETFILTER_COMPAT_MODE */
 +
  # ifdef ENABLE_DSR
