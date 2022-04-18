@@ -223,8 +223,6 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		input.Values.Set(internalValuesPath, effectiveStorageClass)
 	}
 
-
-
 	input.MetricsCollector.Set(
 		"d8_emptydir_usage",
 		emptydirUsageMetricValue,
