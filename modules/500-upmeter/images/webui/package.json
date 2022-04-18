@@ -11,7 +11,7 @@
 		"chunks": "./node_modules/.bin/webpack --config webpack.prod.js --display-chunks",
 		"analyze": "mkdir -p dist && webpack --profile --json --config webpack.prod.js > dist/stats.json && npx webpack-bundle-analyzer dist/stats.json dist/",
 		"analyze:dev": "mkdir -p dist && webpack --profile --json --config webpack.dev.js > dist/stats.json && npx webpack-bundle-analyzer dist/stats.json dist/",
-		"fmt": "prettier -u --write ./src"
+		"fmt": "prettier -u --write ./src *.md *.js *.json *.yaml"
 	},
 	"keywords": [
 		"upmeter"

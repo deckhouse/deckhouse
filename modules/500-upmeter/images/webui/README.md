@@ -13,7 +13,7 @@ $ yarn install
 $ yarn run start:dev
 ```
 
-On success, it prints  "Compiled successfully". The page will be served on http://localhost:4800/ by default.
+On success, it prints "Compiled successfully". The page will be served on http://localhost:4800/ by default.
 
 To run upmeter backend, one needs Kuberetes cluster with CRDs. It might be easier to connect to existing cluster with
 upmeter
