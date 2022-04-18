@@ -58,8 +58,8 @@ var _ = sdk.RegisterFunc(
 	collectDisabledProbes,
 )
 
-type deploymentPresence struct {
-	ccm, mcm, bashible, autoscaler bool
+type presenceInCluster struct {
+	ccm, mcm, bashible, autoscaler, smokeMini bool
 }
 
 // collectDisabledProbes collects the references of probes (or probe groups) depending on enabled modules
@@ -67,17 +67,18 @@ type deploymentPresence struct {
 func collectDisabledProbes(input *go_hook.HookInput) error {
 	// Parse input
 	snapshot := set.NewFromSnapshot(input.Snapshots["deployments"])
-	presence := deploymentPresence{
+	presence := presenceInCluster{
 		ccm:        snapshot.Has("cloud-controller-manager"),
 		mcm:        snapshot.Has("machine-controller-manager"),
 		bashible:   snapshot.Has("bashible-apiserver"),
 		autoscaler: snapshot.Has("cluster-autoscaler"),
+		smokeMini:  !input.Values.Get("upmeter.smokeMiniDisabled").Bool(),
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	disabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
 
 	// Process the cluster state, `disabledProbes` is modified
-	disableSyntheticProbes(input.Values, disabledProbes)
+	disableSyntheticProbes(presence, disabledProbes)
 	disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes)
 	disableScalingProbes(presence, enabledModules, disabledProbes)
 	disableLoadBalancingProbes(presence, enabledModules, disabledProbes)
@@ -87,13 +88,13 @@ func collectDisabledProbes(input *go_hook.HookInput) error {
 	return nil
 }
 
-func disableSyntheticProbes(values *go_hook.PatchableValues, disabledProbes set.Set) {
-	if values.Get("upmeter.smokeMiniDisabled").Bool() {
+func disableSyntheticProbes(presence presenceInCluster, disabledProbes set.Set) {
+	if !presence.smokeMini {
 		disabledProbes.Add("synthetic/")
 	}
 }
 
-func disableLoadBalancingProbes(presence deploymentPresence, enabledModules, disabledProbes set.Set) {
+func disableLoadBalancingProbes(presence presenceInCluster, enabledModules, disabledProbes set.Set) {
 	if !enabledModules.Has("metallb") {
 		disabledProbes.Add("load-balancing/metallb")
 	}
@@ -102,7 +103,7 @@ func disableLoadBalancingProbes(presence deploymentPresence, enabledModules, dis
 	}
 }
 
-func disableScalingProbes(presence deploymentPresence, enabledModules, disabledProbes set.Set) {
+func disableScalingProbes(presence presenceInCluster, enabledModules, disabledProbes set.Set) {
 	if !enabledModules.Has("node-manager") {
 		// The whole probe group is useless
 		disabledProbes.Add("scaling/")
