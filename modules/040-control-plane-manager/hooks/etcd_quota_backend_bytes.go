@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"math"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -123,9 +124,9 @@ func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
 
 func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 	const (
-		minimalNodeSizeForCalc = 16 * 1024 * 1024 * 1024 // 24 GB
-		nodeSizeStepForAdd     = 8 * 1024 * 1024 * 1024  // every 8 GB memory
-		quotaStep              = 1 * 1024 * 1024 * 1024  // add 1 GB etcd memory every nodeSizeStepForAdd
+		minimalNodeSizeForCalc = 16 * 1024 * 1024 * 1024
+		nodeSizeStepForAdd     = 8 * 1024 * 1024 * 1024 // every 8 GB memory
+		quotaStep              = 1 * 1024 * 1024 * 1024 // add 1 GB etcd memory every nodeSizeStepForAdd
 		maxQuota               = 8 * 1024 * 1024 * 1024
 	)
 
@@ -133,7 +134,11 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 		return defaultEtcdMaxSize
 	}
 
-	steps := (minimalMemoryNodeBytes - minimalNodeSizeForCalc) / nodeSizeStepForAdd
+	// node capacity often less than set size
+	// for example for 24GB node size capacity can be 23.48GB
+	// for there cases we should round step value
+	stepsFloat := float64(minimalMemoryNodeBytes-minimalNodeSizeForCalc) / nodeSizeStepForAdd
+	steps := int64(math.Round(stepsFloat))
 
 	newQuota := steps*quotaStep + defaultEtcdMaxSize
 

@@ -49,8 +49,23 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 			},
 
 			{
+				nodeSize: gbFloat(19.69),
+				newQuota: gb(2),
+			},
+
+			{
+				nodeSize: gbFloat(23.48),
+				newQuota: gb(3),
+			},
+
+			{
 				nodeSize: gb(24),
 				newQuota: gb(3),
+			},
+
+			{
+				nodeSize: gbFloat(31.01),
+				newQuota: gb(4),
 			},
 
 			{
@@ -59,8 +74,18 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 			},
 
 			{
+				nodeSize: gbFloat(37.91),
+				newQuota: gb(5),
+			},
+
+			{
 				nodeSize: gb(40),
 				newQuota: gb(5),
+			},
+
+			{
+				nodeSize: gbFloat(45.64),
+				newQuota: gb(6),
 			},
 
 			{
@@ -69,12 +94,27 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 			},
 
 			{
+				nodeSize: gbFloat(54.21),
+				newQuota: gb(7),
+			},
+
+			{
 				nodeSize: gb(56),
 				newQuota: gb(7),
 			},
 
 			{
+				nodeSize: gbFloat(61.82),
+				newQuota: gb(8),
+			},
+
+			{
 				nodeSize: gb(64),
+				newQuota: gb(8),
+			},
+
+			{
+				nodeSize: gbFloat(69.52),
 				newQuota: gb(8),
 			},
 

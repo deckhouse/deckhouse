@@ -19,6 +19,7 @@ package hooks
 import (
 	"bytes"
 	"context"
+	"math"
 	"testing"
 	"text/template"
 
@@ -32,6 +33,10 @@ import (
 
 func gb(n int64) int64 {
 	return n * 1024 * 1024 * 1024
+}
+
+func gbFloat(n float64) int64 {
+	return int64(math.Floor(n * 1024 * 1024 * 1024))
 }
 
 func Test(t *testing.T) {
