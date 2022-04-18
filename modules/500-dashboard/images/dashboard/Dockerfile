@@ -19,7 +19,8 @@ RUN cat /public/logout_button.js >> /public/de/de.main.44ac5dc977e4fc4e.js && \
     cat /public/logout_button.js >> /public/ko/ko.main.44ac5dc977e4fc4e.js && \
     cat /public/logout_button.js >> /public/zh-Hans/zh-Hans.main.44ac5dc977e4fc4e.js && \
     cat /public/logout_button.js >> /public/zh-Hant/zh-Hant.main.44ac5dc977e4fc4e.js && \
-    cat /public/logout_button.js >> /public/zh-Hant-HK/zh-Hant-HK.main.44ac5dc977e4fc4e.js
+    cat /public/logout_button.js >> /public/zh-Hant-HK/zh-Hant-HK.main.44ac5dc977e4fc4e.js && \
+    rm /public/logout_button.js
 
 USER nonroot
 EXPOSE 9090 8443
