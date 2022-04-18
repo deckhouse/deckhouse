@@ -1,0 +1,17 @@
+candi:
+  fixes:
+    - summary: Renamed the centos-7 bundle to centos.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1398
+docs:
+  fixes:
+    - summary: Update the description of the feature types.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1384
+    - summary: 'Updated the "Kubernetes Cluster: Other modules" site pages'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1269
+    - summary: Review and fix the 'Yandex.Cloud' section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1222
+istio:
+  fixes:
+    - summary: The `istio.tracing.kiali.jaegerURLForUsers` parameter bugfix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1402
+
