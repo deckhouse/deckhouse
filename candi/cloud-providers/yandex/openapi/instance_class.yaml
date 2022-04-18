@@ -63,7 +63,6 @@ spec:
                     Paltform ID. [List of available platforms...](https://cloud.yandex.com/en-ru/docs/compute/concepts/vm-platforms)
                   x-doc-default: standard-v2
                   type: string
-                  default: standard-v2
                 preemptible:
                   description: Should a provisioned Yandex Compute Instance be preemtible.
                   type: boolean
