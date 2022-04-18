@@ -2,10 +2,6 @@
 title: "The linstor module: configuration examples"
 ---
 
-<div class="docs__information warning active">
-The module is actively developed, and it might significantly change in the future.
-</div>
-
 LINSTOR supports several different storage backends based on well-known and proven technologies such as LVM and ZFS.  
 Each volume created in LINSTOR will be placed on one or more nodes of your cluster and replicated using DRBD.
 

@@ -103,8 +103,11 @@ common:
     ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/ru/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
 features:
   experimental:
+    en: This feature is actively developed. It might significantly change in the future.
+    ru: Находится в процессе активного развития. Функциональность может существенно измениться.
+  fe:
     en: This feature is available in Enterprise Edition only. It might significantly change in the future. Currently, it's not intended to be used without special assistance from Flant.
-    ru: Эти возможности доступны только в Enterprise Edition. Их функциональность может существенно измениться. В настоящий момент не рекомендуется для самостоятельного использования.
+    ru: Доступно только в Enterprise Edition. Функциональность может существенно измениться. В настоящий момент не рекомендуется для самостоятельного использования.
   ee:
     en: This feature is available in Enterprise Edition only.
-    ru: Эти возможности доступны только в Enterprise Edition.
+    ru: Доступно только в Enterprise Edition.

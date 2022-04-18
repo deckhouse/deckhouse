@@ -124,7 +124,7 @@ The `x-doc-` prefix in the parameter names is reserved in the OpenAPI specificat
 A list of `x-doc-` parameters:
 - `x-doc-required:` (boolean). It is used to indicate explicitly on the site if a particular parameter is mandatory or optional.
 - `x-doc-default:` (arbitrary type). The default value to show on the site. It is helpful if you cannot specify the `default` parameter for some reason. The x-doc specification value must be of the same type as the target parameter, and it **cannot contain** markdown elements or arbitrary text (well, it can, but the rendering will be ugly). **Only** the value from the English version of the resource is used.
-- `x-doc-versionType` (array). This x-doc specification sets a limit on the Deckhouse version the target parameter can be used with. Possible values: `ee`,`experimental`.
+- `x-doc-versionType` (array). This x-doc specification sets a limit on the Deckhouse version the target parameter can be used with. Possible values: `ee`, `fe`, `experimental`.
 - `x-doc-example` (arbitrary type). Provides an example of the target parameter's value. If specified, it takes precedence over the `example` and `x-examples` parameters. The x-doc-example specification value can contain markdown elements or arbitrary text. **Only** the value from the English version of the resource is used.
 
 #### Running a site with the documentation locally
