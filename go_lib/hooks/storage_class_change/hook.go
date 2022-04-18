@@ -215,15 +215,19 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		internalValuesPath = fmt.Sprintf("%s.internal.%s.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName), args.InternalValuesSubPath)
 	}
 
+	emptydirUsageMetricValue := 0.0
 	if len(effectiveStorageClass) == 0 || effectiveStorageClass == "false" {
 		input.Values.Set(internalValuesPath, false)
+		emptydirUsageMetricValue = 1.0
 	} else {
 		input.Values.Set(internalValuesPath, effectiveStorageClass)
 	}
 
+
+
 	input.MetricsCollector.Set(
 		"d8_emptydir_usage",
-		float64(effectiveStorageClass == "false"),
+		emptydirUsageMetricValue,
 		map[string]string{
 			"namespace": args.Namespace,
 			"module_name": args.ModuleName,
