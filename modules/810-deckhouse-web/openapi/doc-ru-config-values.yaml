@@ -32,7 +32,7 @@ properties:
 
           Используется, если включен модуль `user-authn` или задан параметр `externalAuthentication`.
 
-          **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках `DexProvider`.
+          > **Внимание!** При использовании совместно с модулем `user-authn` необходимо также добавить разрешенные группы в соответствующее поле в настройках `DexProvider`.
   https:
     description: |
       Тип используемого сертификата.
@@ -42,9 +42,9 @@ properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`;
-          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`;
-          - `Disabled` — доступ только по HTTP;
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`.
+          - `Disabled` — доступ только по HTTP.
           - `OnlyInURI` — доступ по HTTP, подразумевая, что перед web-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
       certManager:
         description: "Настройки для certmanager."

@@ -59,10 +59,10 @@ kubectl get deckhousereleases
 ### Change the release channel
 
 * When switching to a **more stable** release channel (e.g., from `Alpha` to `EarlyAccess`), Deckhouse downloads release data from the release channel (the `EarlyAccess` release channel in the example) and compares it with the existing `DeckhouseReleases`:
-  * Deckhouse deletes *later* releases (by semver) that have not yet been applied (with the `Pending` status);
-  * if *the latest* releases have been already Deployed, then Deckhouse will hold the current release until a later release appears on the update channel (on the `EarlyAccess` release channel in the example).  
+  * Deckhouse deletes *later* releases (by semver) that have not yet been applied (with the `Pending` status).
+  * if *the latest* releases have been already Deployed, then Deckhouse will hold the current release until a later release appears on the update channel (on the `EarlyAccess` release channel in the example).
 * When switching to a less stable release channel (e.g., from `EarlyAcess` to `Alpha`), the following actions take place:
-  * Deckhouse downloads release data from the release channel (the `Alpha` release channel in the example) and compares it with the existing `DeckhouseReleases`;
+  * Deckhouse downloads release data from the release channel (the `Alpha` release channel in the example) and compares it with the existing `DeckhouseReleases`.
   * Then Deckhouse performs the update according to the [update parameters](modules/020-deckhouse/configuration.html#parameters-update).
 
 ## How do I run Deckhouse on a particular node?
@@ -87,7 +87,7 @@ Deckhouse can be configured to work with a third-party registry (e.g., a proxy r
 
 Define the following parameters in the `InitConfiguration` resource:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. The path to the Deckhouse image in the third-party registry matching the edition used (CE/EE/FE), for example `imagesRepo: registry.deckhouse.io/deckhouse/ce`.
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. The path to the Deckhouse image in the third-party registry matching the edition used (CE/EE/FE), for example `imagesRepo: registry.deckhouse.io/deckhouse/ce`;
 * `registryDockerCfg: <BASE64>`. Base64-encoded auth credentials of the third-party registry.
 
 Use the following `registryDockerCfg` if anonymous access to Deckhouse images is allowed in the third-party registry:
@@ -104,9 +104,9 @@ Use the following `registryDockerCfg` if authentication is required to access De
 {"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
 ```
 
-* `<PROXY_USERNAME>` — auth username for `<PROXY_REGISTRY>`;
-* `<PROXY_PASSWORD>` — auth password for `<PROXY_REGISTRY>`;
-* `<PROXY_REGISTRY>` — registry address: `<HOSTNAME>[:PORT]`;
+* `<PROXY_USERNAME>` — auth username for `<PROXY_REGISTRY>`.
+* `<PROXY_PASSWORD>` — auth password for `<PROXY_REGISTRY>`.
+* `<PROXY_REGISTRY>` — registry address: `<HOSTNAME>[:PORT]`.
 * `<AUTH_BASE64>` — Base64-encoded `<PROXY_USERNAME>:<PROXY_PASSWORD>` auth string.
 
 `registryDockerCfg` must be Base64-encoded.
@@ -128,13 +128,13 @@ Use the `dhctl`'s `--dont-use-public-control-plane-images` key to instruct Deckh
 
 The following parameters must be set if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
-* Enable `Docker Bearer Token Realm`
+* Enable `Docker Bearer Token Realm`:
   ![](images/registry/nexus/nexus1.png)
 
-* Enable anonymous registry access (otherwise, Bearer authentication [won't work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms))
+* Enable anonymous registry access (otherwise, Bearer authentication [won't work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms)):
   ![](images/registry/nexus/nexus2.png)
 
-* Set the `Maximum metadata age` to 0 (otherwise, the automatic update of Deckhouse will fail due to caching)
+* Set the `Maximum metadata age` to 0 (otherwise, the automatic update of Deckhouse will fail due to caching):
   ![](images/registry/nexus/nexus3.png)
 
 #### Harbor
@@ -142,18 +142,18 @@ The following parameters must be set if the [Nexus](https://github.com/sonatype/
 You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbor/harbor).
 
 * Create a Registry:
-  * `Administration -> Registries -> New Endpoint`;
-  * `Provider`: `Docker Registry`;
+  * `Administration -> Registries -> New Endpoint`.
+  * `Provider`: `Docker Registry`.
   * `Name` — specify any of your choice.
-  * `Endpoint URL`: `https://registry.deckhouse.io`;
+  * `Endpoint URL`: `https://registry.deckhouse.io`.
   * Specify the `Access ID` and `Access Secret` if you use Deckhouse Enterprise Edition; otherwise, leave them blank.
 
 ![](images/registry/harbor/harbor1.png)
 
 * Create a new Project:
-  * `Projects -> New Project`;
-  * `Project Name` will be used in the URL. You can choose any name, for example, `d8s`;
-  * `Access Level`: `Public`;
+  * `Projects -> New Project`.
+  * `Project Name` will be used in the URL. You can choose any name, for example, `d8s`.
+  * `Access Level`: `Public`.
   * `Proxy Cache` — enable and choose the Registry, created in the previous step.
 
 ![](images/registry/harbor/harbor2.png)
@@ -166,11 +166,11 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
 * Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry;
 * Edit the `d8-system/deckhouse-registry` secret (note that all parameters are Base64-encoded):
-  * Insert third-party registry credentials into `.dockerconfigjson`;
-  * Replace `address` with the third-party registry's host address (e.g., `registry.example.com`);
-  * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/fe`);
-  * If necessary, change `scheme` to `http` (if the third-party registry uses HTTP scheme);
-  * If necessary, change or add the `ca` field with the root CA certificate that validates the third-party registry's https certificate (if the third-party registry uses self-signed certificates);
-* Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state;
-* Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`;
+  * Insert third-party registry credentials into `.dockerconfigjson`.
+  * Replace `address` with the third-party registry's host address (e.g., `registry.example.com`).
+  * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/fe`).
+  * If necessary, change `scheme` to `http` (if the third-party registry uses HTTP scheme).
+  * If necessary, change or add the `ca` field with the root CA certificate that validates the third-party registry's https certificate (if the third-party registry uses self-signed certificates).
+* Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
+* Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * Only if Deckhouse won't be updated using a third-party registry, then you have to remove `releaseChannel` setting from configmap `d8-system/deckhouse`.

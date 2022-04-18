@@ -13,9 +13,9 @@ You can configure the number and parameters of ordering machines in the cloud vi
 
 ## Storage
 
-The module automatically creates a StorageClass for each Datastore and DatastoreCluster in the zone (or zones). 
+The module automatically creates a StorageClass for each Datastore and DatastoreCluster in the zone (or zones).
 
-Also, it can set the name of StorageClass that will be used in the cluster by default (the [default](#parameters-storageclass-default) parameter), and 
+Also, it can set the name of StorageClass that will be used in the cluster by default (the [default](#parameters-storageclass-default) parameter), and
 filter out the unnecessary StorageClasses (the [exclude](#parameters-storageclass-exclude) parameter).
 
 ### CSI
@@ -26,16 +26,16 @@ By default, the storage subsystem uses CNS volumes with the ability of online-re
 
 Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44) f volume-resizer, CSI, and vSphere API, you have to do the following after increasing the PVC size:
 
-1. On the node where the Pod is located, run the `kubectl cordon <node_name>` command;
-2. Delete the Pod;
-3. Make sure that the resize was successful. The PVC object must *not have* the `Resizing` condition;
+1. On the node where the Pod is located, run the `kubectl cordon <node_name>` command.
+2. Delete the Pod.
+3. Make sure that the resize was successful. The PVC object must *not have* the `Resizing` condition.
    > The `FileSystemResizePending` state is OK.
 4. On the node where the Pod is located, run the `kubectl uncordon <node_name>` command.
 
 ## Environment requirements
 
-* vSphere version required: `v7.0U2` ([required](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) for the `Online volume expansion` work);
-* vCenter to which master nodes can connect to from within the cluster;
+* vSphere version required: `v7.0U2` ([required](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) for the `Online volume expansion` work).
+* vCenter to which master nodes can connect to from within the cluster.
 * Datacenter with the following components:
   1. VirtualMachine template with a [specific](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource.
     * VM image should use `Virtual machines with hardware version 15 or later` (required for online resize to work).

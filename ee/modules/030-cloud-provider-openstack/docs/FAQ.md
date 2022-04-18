@@ -35,8 +35,8 @@ spec:
 
 There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
 
-* Allow VMs on a different subnet to connect to cluster nodes;
-* Allow connecting to the ports of the static node so that the application can work;
+* Allow VMs on a different subnet to connect to cluster nodes.
+* Allow connecting to the ports of the static node so that the application can work.
 * Restrict access to external resources or other VMs in the cloud for security reasons.
 
 For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
@@ -65,7 +65,7 @@ To set up a hybrid cluster, follow these steps:
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
 4. Create one or more [NodeManager](../../modules/040-node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
 
-**Caution!** Cloud-controller-manager synchronizes OpenStack and Kubernetes states by deleting Kubernetes nodes that are not in OpenStack. In a hybrid cluster, such behavior does not always make sense. That is why cloud-controller-manager automatically skips Kubernetes nodes that do not have the `--cloud-provider=external` parameter (Deckhouse inserts `static://` into nodes in `.spec.providerID`, and cloud-controller-manager ignores them).
+> **Caution!** Cloud-controller-manager synchronizes OpenStack and Kubernetes states by deleting Kubernetes nodes that are not in OpenStack. In a hybrid cluster, such behavior does not always make sense. That is why cloud-controller-manager automatically skips Kubernetes nodes that do not have the `--cloud-provider=external` parameter (Deckhouse inserts `static://` into nodes in `.spec.providerID`, and cloud-controller-manager ignores them).
 
 ### Attaching storage devices to instances in a hybrid cluster
 
@@ -216,15 +216,15 @@ You should check a documentation or ask the cloud provider administrator for sup
 
 Local disks have some limitations, and one of them is that VM can't migrate between hypervisors.
 But local disks are generally cheaper and faster than network disks. So we have the following recommendations:
-* For master node, it's preferred to use network disk;
-* For ephemeral node, local disk can be used;
+* For master node, it's preferred to use network disk.
+* For ephemeral node, local disk can be used.
 * Avoid using flavors with disk value set together with `rootDiskSize` parameter. Cloud providers can charge you for unused volume ordered, depending on flavor.
 
 In view of the above:
-- If the `rootDiskSize` is not set, an ephemeral disk with the size specified in flavor and the type specified by the cloud provider is used for the instance;
+- If the `rootDiskSize` is not set, an ephemeral disk with the size specified in flavor and the type specified by the cloud provider is used for the instance.
 - If the `rootDiskSize` is set, the instance will use the Cinder volume provisioned by OpenStack as a root disk (of the default OpenStack volume type and the specified size).
 But there are important notes further:
-  * Volume type from OpenStackClusterConfiguration's [volumeTypeMap](cluster_configuration.html#parameters-masternodegroup-volumetypemap) parameters is always used for master nodes;
+  * Volume type from OpenStackClusterConfiguration's [volumeTypeMap](cluster_configuration.html#parameters-masternodegroup-volumetypemap) parameters is always used for master nodes.
   * It is possible to [override](#how-to-override-a-default-volume-type-of-cloud-provider) default volume type of cloud provider.
 
 ## How to override a default volume type of cloud provider?

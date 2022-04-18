@@ -23,7 +23,7 @@ properties:
           The name of StorageClass that will be used by default in the cluster.
 
           If the parameter is omitted, the default StorageClass will be one of the following:
-            * An arbitrary StorageClass present in the cluster that has the default annotation;
+            * An arbitrary StorageClass present in the cluster that has the default annotation.
             * The first (in lexicographic order) StorageClass of those [created by the module](#storage).
 
         x-examples:

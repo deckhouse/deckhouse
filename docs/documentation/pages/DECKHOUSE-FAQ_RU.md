@@ -61,10 +61,10 @@ kubectl get deckhousereleases
 ### Что происходит при смене канала обновлений?
 
 * При смене канала обновлений на **более стабильный** (например с `Alpha` на `EarlyAccess`) Deckhouse скачивает данные о релизе (в примере — из канала `EarlyAccess`) и сравнивает их с данными из существующих в кластере custom resouce'ов `DeckhouseRelease`:
-  * Более *поздние* релизы, которые еще не были применены (в статусе `Pending`), — удаляются;
-  * Если более *поздние* релизы уже применены (в статусе `Deployed`), то смены релиза не происходит. В этом случае Deckhouse останется на таком релизе до тех пор, пока на канале обновлений `EarlyAccess` не появится более поздний релиз.  
+  * Более *поздние* релизы, которые еще не были применены (в статусе `Pending`), — удаляются.
+  * Если более *поздние* релизы уже применены (в статусе `Deployed`), то смены релиза не происходит. В этом случае Deckhouse останется на таком релизе до тех пор, пока на канале обновлений `EarlyAccess` не появится более поздний релиз.
 * При смене канала обновлений на **менее стабильный** (например с `EarlyAcess` на `Alpha`):
-  * Deckhouse скачивает данные о релизе (в примере — из канала `Alpha`) и сравнивает их с данными из существующих в кластере custom resource'ов `DeckhouseRelease`;
+  * Deckhouse скачивает данные о релизе (в примере — из канала `Alpha`) и сравнивает их с данными из существующих в кластере custom resource'ов `DeckhouseRelease`.
   * Затем Deckhouse выполняет обновление согласно установленным [параметрам обновления](modules/020-deckhouse/configuration.html#parameters-update).
 
 ## Как запускать Deckhouse на произвольном узле?
@@ -132,13 +132,13 @@ deckhouse: |
 
 При использовании [Nexus](https://github.com/sonatype/nexus-public) в режиме registry-прокси необходимо соблюдение нескольких условий:
 
-* Включить `Docker Bearer Token Realm`
+* Включить `Docker Bearer Token Realm`:
 ![](images/registry/nexus/nexus1.png)
 
-* Включить анонимный доступ к registry (иначе [не будет работать](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer token-авторизация)
+* Включить анонимный доступ к registry (иначе [не будет работать](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer token-авторизация):
 ![](images/registry/nexus/nexus2.png)
 
-* Установить `Maximum metadata age` в 0 (иначе автоматическое обновление Deckhouse не будет работать корректно из-за кеширования)
+* Установить `Maximum metadata age` в 0 (иначе автоматическое обновление Deckhouse не будет работать корректно из-за кеширования):
 ![](images/registry/nexus/nexus3.png)
 
 #### Harbor
@@ -146,18 +146,18 @@ deckhouse: |
 Необходимо использовать такой функционал [Harbor](https://github.com/goharbor/harbor), как Proxy Cache.
 
 * Настройте Registry:
-  * `Administration -> Registries -> New Endpoint`;
-  * `Provider`: `Docker Registry`;
-  * `Name` — укажите любое, на ваше усмотрение;
-  * `Endpoint URL`: `https://registry.deckhouse.io`;
+  * `Administration -> Registries -> New Endpoint`.
+  * `Provider`: `Docker Registry`.
+  * `Name` — укажите любое, на ваше усмотрение.
+  * `Endpoint URL`: `https://registry.deckhouse.io`.
   * Укажите `Access ID` и `Access Secret`, если используете Deckhouse Enterprise Edition, иначе оставьте пустыми.
 
 ![](images/registry/harbor/harbor1.png)
 
 * Создайте новый проект:
-  * `Projects -> New Project`;
-  * `Project Name` будет частью URL. Используйте любой, например, `d8s`;
-  * `Access Level`: `Public`;
+  * `Projects -> New Project`.
+  * `Project Name` будет частью URL. Используйте любой, например, `d8s`.
+  * `Access Level`: `Public`.
   * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге.
 
 ![](images/registry/harbor/harbor2.png)
@@ -170,11 +170,11 @@ deckhouse: |
 
 * Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry;
 * Изменить Secret `d8-system/deckhouse-registry` (все параметры хранятся в кодировке Base64):
-  * Исправить `.dockerconfigjson` с учетом авторизации в новом registry;
-  * Исправить `address` на адрес нового registry (например, `registry.example.com`);
-  * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/fe`);
-  * При необходимости изменить `scheme` на `http` (если используется HTTP registry);
+  * Исправить `.dockerconfigjson` с учетом авторизации в новом registry.
+  * Исправить `address` на адрес нового registry (например, `registry.example.com`).
+  * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/fe`).
+  * При необходимости изменить `scheme` на `http` (если используется HTTP registry).
   * Если registry использует самоподписные сертификаты, то изменить или добавить поле `ca`, куда внести корневой сертификат соответствующего сертификата registry;
-* Дождаться перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его;
-* Дождаться применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`;
+* Дождаться перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
+* Дождаться применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
 * Только если обновление Deckhouse через сторонний registry не планируется, то следует удалить `releaseChannel` из конфигмапа `d8-system/deckhouse`.

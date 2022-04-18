@@ -129,7 +129,7 @@ apiVersions:
                     description: |
                       Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
-                      **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                      > **Внимание!** Доступны только поля `effect`, `key`, `values`.
               zones:
                 description: Список зон, в которых допустимо создавать узлы.
               instanceClass:

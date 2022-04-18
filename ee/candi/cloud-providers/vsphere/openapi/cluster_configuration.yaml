@@ -214,7 +214,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
 
-                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-examples:
                   - - effect: NoExecute
                       key: ship-class

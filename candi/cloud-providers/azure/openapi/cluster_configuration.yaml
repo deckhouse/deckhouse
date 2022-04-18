@@ -120,7 +120,7 @@ apiVersions:
 
                   **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                  **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
+                  > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
                 type: string
               enableExternalIP:
                 description: |
@@ -225,7 +225,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
 
-                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |
                     ```yaml
                     taints:

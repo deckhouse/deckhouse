@@ -16,7 +16,7 @@ properties:
         description: |
           Имя StorageClass, который будет использоваться в кластере по умолчанию.
             * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
-              * Присутствующий в кластере StorageClass по умолчанию (имеющий аннотацию ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass));
+              * Присутствующий в кластере StorageClass по умолчанию (имеющий аннотацию ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
               * Первый StorageClass из создаваемых модулем (в порядке из таблицы выше).
         x-examples:
         - "pd-ssd-not-replicated"

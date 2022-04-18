@@ -7,7 +7,7 @@ lang: ru
 Deckhouse состоит из оператора Deckhouse и модулей. Модуль — набор helm-чартов, хуков, файлов и правил сборки компонентов модуля (компонентов Deckhouse).
 
 Поведение Deckhouse настраивается с помощью:
-- [Глобальных настроек](deckhouse-configure-global.html#параметры), хранящихся в параметре `global` [конфигурации Deckhouse](#конфигурация-deckhouse);
+- [Глобальных настроек](deckhouse-configure-global.html#параметры), хранящихся в параметре `global` [конфигурации Deckhouse](#конфигурация-deckhouse).
 - Настроек модулей, хранящихся в [конфигурации Deckhouse](#конфигурация-deckhouse) и custom resource'ах (для некоторых модулей Deckhouse).
 
 ## Конфигурация Deckhouse
@@ -38,11 +38,11 @@ data:
     externalTargets:
     - host: 8.8.8.8
   # Отключение модуля dashboard.
-  dashboardEnabled: "false"   
+  dashboardEnabled: "false"
 ```
 
 Обратите внимание на несколько важных нюансов в конфигурации:
-* Символ `|` (вертикальная черта) обязательно должен быть указан в параметрах настройки, т.к. передаваемое значение — многострочная строка (multi-line string), а не объект;
+* Символ `|` (вертикальная черта) обязательно должен быть указан в параметрах настройки, т.к. передаваемое значение — многострочная строка (multi-line string), а не объект.
 * Наименование модулей пишется в стиле *camelCase*.
 
 Чтобы изменить конфигурацию Deckhouse отредактируйте ConfigMap `deckhouse`, например, следующим способом:
@@ -50,7 +50,7 @@ data:
 kubectl -n d8-system edit cm/deckhouse
 ```
 
-После сохранения конфигурации Deckhouse изменения применяются автоматически. 
+После сохранения конфигурации Deckhouse изменения применяются автоматически.
 
 ### Настройка модуля
 
@@ -105,7 +105,7 @@ data:
 {%- for module in modules %}
 {%- assign moduleName = module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' %}
 {%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
-{%- if isExcluded.size > 0 %}{% continue %}{% endif %} 
+{%- if isExcluded.size > 0 %}{% continue %}{% endif %}
 {%- if module[1] != true %}{% continue %}{% endif %}
 <li>
 {{ module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' }}</li>
@@ -120,21 +120,21 @@ data:
 ## Выделение узлов под определенный вид нагрузки
 
 Если в параметрах модуля не указаны явные значения `nodeSelector/tolerations`, то для всех модулей используется следующая стратегия:
-1. Если параметр `nodeSelector` модуля не указан, то Deckhouse попытается вычислить `nodeSelector` автоматически. В этом случае, если в кластере присутствуют узлы с [лейблами из списка или лейблами определенного формата](#особенности-автоматики-зависящие-от-типа-модуля), Deckhouse укажет их в качестве `nodeSelector` ресурсам модуля;
-1. Если параметр `tolerations` модуля не указан, то Pod'ам модуля автоматически устанавливаются все возможные toleration'ы ([подробнее](#особенности-автоматики-зависящие-от-типа-модуля));
+1. Если параметр `nodeSelector` модуля не указан, то Deckhouse попытается вычислить `nodeSelector` автоматически. В этом случае, если в кластере присутствуют узлы с [лейблами из списка или лейблами определенного формата](#особенности-автоматики-зависящие-от-типа-модуля), Deckhouse укажет их в качестве `nodeSelector` ресурсам модуля.
+1. Если параметр `tolerations` модуля не указан, то Pod'ам модуля автоматически устанавливаются все возможные toleration'ы ([подробнее](#особенности-автоматики-зависящие-от-типа-модуля)).
 1. Отключить автоматическое вычисление параметров `nodeSelector` или `tolerations` можно, указав значение `false`.
 
 Возможность настройки `nodeSelector` и `tolerations` отключена для модулей:
-- которые работают на всех узлах кластера (например, `cni-flannel`, `monitoring-ping`); 
+- которые работают на всех узлах кластера (например, `cni-flannel`, `monitoring-ping`);
 - которые работают на всех master-узлах (например, `prometheus-metrics-adapter`, `vertical-pod-autoscaler`).
 
 ### Особенности автоматики, зависящие от типа модуля
 {% raw %}
 * Модули *monitoring* (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
   * Порядок поиска узлов (для определения `nodeSelector`):
-    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`;
-    * Наличие узла с лейблом `node-role.deckhouse.io/monitoring`;
-    * Наличие узла с лейблом `node-role.deckhouse.io/system`;
+    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
+    * Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
+    * Наличие узла с лейблом `node-role.deckhouse.io/system`.
   * Добавляемые toleration'ы (добавляются одновременно все):
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
 
@@ -143,20 +143,20 @@ data:
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`;
 * Модули *frontend* (исключительно модуль `ingress-nginx`):
     * Порядок поиска узлов (для определения `nodeSelector`):
-        * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`;
-        * Наличие узла с лейблом `node-role.deckhouse.io/frontend`;
+        * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
+        * Наличие узла с лейблом `node-role.deckhouse.io/frontend`.
     * Добавляемые toleration'ы (добавляются одновременно все):
         * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
         * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`;
 * Все остальные модули:
     * Порядок поиска узлов (для определения `nodeSelector`):
-        * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`;
+        * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
 
-          Например: `node-role.deckhouse.io/cert-manager`;
-        * Наличие узла с лейблом `node-role.deckhouse.io/system`;
+          Например: `node-role.deckhouse.io/cert-manager`.
+        * Наличие узла с лейблом `node-role.deckhouse.io/system`.
     * Добавляемые toleration'ы (добавляются одновременно все):
-        * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`; 
-        
+        * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
+
           Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`;
         * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
 {% endraw %}

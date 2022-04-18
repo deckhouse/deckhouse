@@ -7,5 +7,5 @@ title: "Cloud provider — OpenStack"
 Функционал модуля `cloud-provider-openstack`:
 - Управляет ресурсами OpenStack с помощью модуля `cloud-controller-manager`:
     * Актуализирует метаданные OpenStack Servers и Kubernetes Nodes. Удаляет из Kubernetes узлы, которых уже нет в OpenStack.
-- Заказывает диски в Cinder (block) OpenStack с помощью компонента `CSI storage`. Manilla (filesystem) пока не поддерживается;
+- Заказывает диски в Cinder (block) OpenStack с помощью компонента `CSI storage`. Manilla (filesystem) пока не поддерживается.
 - Регистрируется в модуле [node-manager](../../modules/040-node-manager/), чтобы [OpenStackInstanceClass'ы](cr.html#openstackinstanceclass) можно было использовать при описании [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).

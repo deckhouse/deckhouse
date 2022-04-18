@@ -363,22 +363,22 @@ spec:
 
 При изменении CRI в кластере для master-узлов необходимо выполнить дополнительные шаги:
 * Дополнительные шаги при переходе с Docker на Containerd
-  
+
   Для каждого master-узла по очереди необходимо будет:
   1. В случае, если для master node-group `approvalMode` установлен в `Manual`, подтвердить disruption:
      ```shell
      kubectl annotate node <имя master узла> update.node.deckhouse.io/disruption-approved=
      ```
   2. Дождаться перехода обновленного master-узла в `Ready`.
-  
+
 * Дополнительные шаги при переходе с Containerd на Docker
 
   Перед изменением `defaultCRI` необходимо на каждом master-узле сформировать Docker config:
   ```shell
-  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json | 
+  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json |
   jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
   ```
-  
+
   Для каждого master-узла по очереди необходимо будет:
   1. В случае, если для master node-group `approvalMode` установлен в `Manual`, подтвердить disruption:
      ```shell
@@ -395,6 +395,6 @@ spec:
      ```shell
      rm -f ~/.docker/config.json
      ```
-  
+
 ## Как добавить шаг для конфигурации узлов?
 Дополнительные шаги для конфигурации узлов задаются при помощи custom resource `NodeGroupConfiguration`.
