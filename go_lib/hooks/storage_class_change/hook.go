@@ -221,6 +221,16 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		input.Values.Set(internalValuesPath, effectiveStorageClass)
 	}
 
+	input.MetricsCollector.Set(
+		"d8_emptydir_usage",
+		float64(podFsSize),
+		map[string]string{
+			"namespace": args.Namespace,
+			"module_name": args.ModuleName,
+		},
+		metrics.WithGroup("storage_class_change"),
+	)
+
 	return effectiveStorageClass
 }
 
