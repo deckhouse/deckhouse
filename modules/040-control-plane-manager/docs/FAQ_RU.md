@@ -48,7 +48,7 @@ title: "Управление control plane: FAQ"
 1. Проверьте, нарушает ли удаление кворум:
 
    * Если удаление не нарушает кворум в etcd (в корректно функционирующем кластере это все ситуации, кроме перехода 2 -> 1):
-     * Если виртуальную машину с master-узлом можно удалять (на ней нет никаких других нужных сервисов), то можно удалить виртуальную машину обычным способом;
+     * Если виртуальную машину с master-узлом можно удалять (на ней нет никаких других нужных сервисов), то можно удалить виртуальную машину обычным способом.
      * Если удалять виртуальную машину с master-узлом нельзя, например, на ней настроены задания резервного копирования, выполняется деплой и т.п., то необходимо остановить используемый на узле Container Runtime:
 
        В случае использования Docker:
@@ -98,7 +98,7 @@ title: "Управление control plane: FAQ"
    ```shell
    ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list
    ```
- 
+
 ## Что делать, если что-то пошло не так?
 
 В процессе работы control-plane-manager оставляет резервные копии в `/etc/kubernetes/deckhouse/backup`, они могут помочь.
@@ -141,8 +141,8 @@ title: "Управление control plane: FAQ"
    ```
 
    Подробную информацию по настройке содержимого `audit-policy.yaml` можно получить по следующим ссылкам:
-   - [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy);
-   - [В нашей статье на Habr](https://habr.com/ru/company/flant/blog/468679/);
+   - [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy).
+   - [В нашей статье на Habr](https://habr.com/ru/company/flant/blog/468679/).
    - [Опираясь на код скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
 
    Создать Secret вручную из файла можно командой:
@@ -182,7 +182,7 @@ controlPlaneManager: |
 /var/log/kube-audit/audit.log
 ```
 Параметры ротации файла журнала предустановлены и их изменение не предусмотрено:
-- Максимальное занимаемое место на диске `1000 Мб`;
+- Максимальное занимаемое место на диске `1000 Мб`.
 - Максимальная глубина записи `7 дней`.
 
 В зависимости от настроек `Policy` и количества запросов к **apiserver** логов может быть очень много, соответственно глубина хранения может быть менее 30 минут.

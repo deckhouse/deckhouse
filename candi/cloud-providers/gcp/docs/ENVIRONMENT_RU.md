@@ -31,22 +31,22 @@ Network Management Admin
    export SERVICE_ACCOUNT_NAME=deckhouse
    ```
 2. Выберите project:
-   
+
    ```shell
    gcloud config set project $PROJECT
    ```
 3. Создайте service account:
-   
+
    ```shell
    gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME
    ```
 4. Присвойте роли созданному service account:
    ```shell
-   for role in roles/compute.admin roles/iam.serviceAccountUser roles/networkmanagement.admin; 
+   for role in roles/compute.admin roles/iam.serviceAccountUser roles/networkmanagement.admin;
    do gcloud projects add-iam-policy-binding ${PROJECT} --member=serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com \
       --role=${role}; done
    ```
-   
+
    Список необходимых ролей:
    ```
    roles/compute.admin

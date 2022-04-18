@@ -19,8 +19,8 @@ spec:
 
 There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in GCP:
 
-* Allow VMs on a different subnet to connect to cluster nodes;
-* Allow connecting to the ports of the static node so that the application can work;
+* Allow VMs on a different subnet to connect to cluster nodes.
+* Allow connecting to the ports of the static node so that the application can work.
 * Restrict access to external resources or other VMs in the cloud for security reasons.
 
 For all this, additional network tags should be used.

@@ -2,7 +2,7 @@
 title: "Cloud provider — VMware vSphere: настройки"
 ---
 
-Модуль автоматически включается для всех облачных кластеров, развёрнутых в vSphere. 
+Модуль автоматически включается для всех облачных кластеров, развёрнутых в vSphere.
 
 Если control plane кластера размещен на виртуальных машинах или серверах bare-metal, то cloud-провайдер использует настройки модуля `cloud-provider-vsphere` в конфигурации Deckhouse (см. ниже). Иначе, если control plane кластера размещен в облаке, то cloud-провайдер использует структуру [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) для настройки.
 
@@ -13,28 +13,28 @@ title: "Cloud provider — VMware vSphere: настройки"
 
 ## Storage
 
-Модуль автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster из зон (зоны). 
+Модуль автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster из зон (зоны).
 
 Также он позволяет настроить имя StorageClass'а, который будет использоваться в кластере по умолчанию (параметр [default](#parameters-storageclass-default)) и отфильтровать ненужные StorageClass'ы (параметр [exclude](#parameters-storageclass-exclude)).
 
 ### CSI
 
-Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение настраивается параметром [compatibilityFlag](#parameters-storageclass-compatibilityflag). 
+Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение настраивается параметром [compatibilityFlag](#parameters-storageclass-compatibilityflag).
 
 ### Важная информация об увеличении размера PVC
 
 Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и vSphere API после увеличения размера PVC нужно:
 
-1. На узле, где находится Pod, выполнить команду `kubectl cordon <имя_узла>`;
-2. Удалить Pod;
-3. Убедиться, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`;
+1. На узле, где находится Pod, выполнить команду `kubectl cordon <имя_узла>`.
+2. Удалить Pod.
+3. Убедиться, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
    > Состояние `FileSystemResizePending` не является проблемой.
 4. На узле, где находится Pod, выполнить команду `kubectl uncordon <имя_узла>`.
 
 ## Требования к окружениям
 
-* Требования к версии vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`);
-* vCenter, до которого есть доступ изнутри кластера с master-узлов;
+* Требования к версии vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
+* vCenter, до которого есть доступ изнутри кластера с master-узлов.
 * Создать Datacenter, в котором создать:
   1. VirtualMachine template [со специальным](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource внутри.
      * Образ ВМ должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).

@@ -11,9 +11,9 @@ properties:
     enum: ["Default", "Minimal", "Managed"]
     description: |
       The Deckhouse bundle defines a set of modules enabled by default.
-      - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs (the current list is available [here](https://github.com/deckhouse/deckhouse/blob/main/modules/values-default.yaml));
-      - `Minimal` — the minimum possible bundle option (includes a single module — this one);
-      - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine);
+      - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs (the current list is available [here](https://github.com/deckhouse/deckhouse/blob/main/modules/values-default.yaml)).
+      - `Minimal` — the minimum possible bundle option (includes a single module — this one).
+      - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
     default: "Default"
   releaseChannel:
     type: string

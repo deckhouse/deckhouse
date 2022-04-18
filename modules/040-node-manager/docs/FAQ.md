@@ -112,7 +112,7 @@ This is only needed if you have to move a static node from one cluster to anothe
 
 ## How do I know if something went wrong?
 
-The `node-manager` module creates the `bashible` service on each node. You can browse its logs using the following command: 
+The `node-manager` module creates the `bashible` service on each node. You can browse its logs using the following command:
 ```shell
 journalctl -fu bashible
 ```
@@ -373,10 +373,10 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
   Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
   ```shell
-  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json | 
+  mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json |
   jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
   ```
-  
+
   For each master node in turn, it will be necessary:
   1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
      ```shell
@@ -393,6 +393,6 @@ When changing the CRI in the cluster, additional steps are required for the mast
      ```shell
      rm -f ~/.docker/config.json
      ```
-  
+
 ## How to add node configuration step?
 Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.

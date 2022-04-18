@@ -142,7 +142,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
 
-                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |
                     ```yaml
                     taints:
@@ -279,8 +279,8 @@ apiVersions:
         description: |
           A subnet to use for cluster nodes.
 
-          * The IP range must overlap or match the VPC address range;
-          * The IP range will be evenly split into subnets, one per Availability Zone in your region;
+          * The IP range must overlap or match the VPC address range.
+          * The IP range will be evenly split into subnets, one per Availability Zone in your region.
           * An optional but recommended parameter. By default, it corresponds to the whole range of VPC addresses.
 
           > If a new VPC is created along with a new cluster and no `vpcNetworkCIDR` is provided, then the range from  `nodeNetworkCIDR` is used for the VPC.
@@ -293,7 +293,7 @@ apiVersions:
         description: |
           ID of the existing VPC to use for deploying.
 
-          * **A mandatory parameter** if the `vpcNetworkCIDR` is omitted;
+          * **A mandatory parameter** if the `vpcNetworkCIDR` is omitted.
           * **Caution!** If there is an Internet Gateway in the target VPC, the deployment of the basic infrastructure will fail with an error. Currently, an Internet Gateway cannot be adopted.
       sshPublicKey:
         type: string

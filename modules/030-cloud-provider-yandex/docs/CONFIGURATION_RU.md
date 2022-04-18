@@ -24,9 +24,9 @@ title: "Cloud provider — Yandex.Cloud: настройки"
 
 Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и Yandex.Cloud API, после увеличения размера PVC необходимо:
 
-1. На узле, где находится Pod, выполнить команду `kubectl cordon <имя_узла>`;
-2. Удалить Pod;
-3. Убедиться, что увеличение размера произошло успешно. В объекте PVC *не будет* condition `Resizing`; 
+1. На узле, где находится Pod, выполнить команду `kubectl cordon <имя_узла>`.
+2. Удалить Pod.
+3. Убедиться, что увеличение размера произошло успешно. В объекте PVC *не будет* condition `Resizing`.
    > Состояние `FileSystemResizePending` не является проблемой.
 4. На узле, где находится Pod, выполнить команду `kubectl uncordon <имя_узла>`.
 

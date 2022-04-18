@@ -158,7 +158,7 @@ properties:
             description: |
               The amount of resources (CPU and memory) allocated to Deckhouse components running on the master nodes (including control plane components, if they are managed by Deckhouse).
 
-              **Caution!** Deckhouse may not manage control plane components in KaaS clusters (Kubernetes as a Service, managed Kubernetes service, etc.). In such cases, all the specified resources are allocated to the Deckhouse components except the control plane.
+              > **Caution!** Deckhouse may not manage control plane components in KaaS clusters (Kubernetes as a Service, managed Kubernetes service, etc.). In such cases, all the specified resources are allocated to the Deckhouse components except the control plane.
             x-examples:
             - cpu: "1"
               memory: 150Mi

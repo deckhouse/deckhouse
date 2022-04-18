@@ -14,7 +14,7 @@ The following Linux Distributions are currently supported for nodes:
 {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
 {%- for osData in osItem[1] %}
 {%- assign osVersion = osData[0]  %}
-  - {{ osName }} {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}
+  - {{ osName }} {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}.
 {%- endfor %}
 {%- endfor %}
 

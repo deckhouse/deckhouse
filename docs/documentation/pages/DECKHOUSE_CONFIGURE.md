@@ -6,7 +6,7 @@ permalink: en/
 Deckhouse consists of a Deckhouse operator and modules. A module is a set of helm charts, hooks, files, and assembly rules for module components (Deckhouse components).
 
 You can configure Deckhouse using the:
-- [Global settings](deckhouse-configure-global.html#parameters) stored in the `global` parameters of the [Deckhouse configuration](#deckhouse-configuration);
+- [Global settings](deckhouse-configure-global.html#parameters) stored in the `global` parameters of the [Deckhouse configuration](#deckhouse-configuration).
 - Module settings stored in [Deckhouse configuration](#deckhouse-configuration) and custom resources (for some Deckhouse modules).
 
 ## Deckhouse configuration
@@ -43,7 +43,7 @@ data:
 ```
 
 Pay attention to the following:
-- The `|` sign — vertical bar glyph that must be specified when passing settings, because the parameter being passed is a multi-line string, not an object;
+- The `|` sign — vertical bar glyph that must be specified when passing settings, because the parameter being passed is a multi-line string, not an object.
 - A module name is in *camelCase* style.
 
 Use the following command to edit the `deckhouse` ConfigMap:
@@ -105,7 +105,7 @@ Depending on the [bundle used](./modules/020-deckhouse/configuration.html#parame
 {%- for module in modules %}
 {%- assign moduleName = module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' %}
 {%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
-{%- if isExcluded.size > 0 %}{% continue %}{% endif %} 
+{%- if isExcluded.size > 0 %}{% continue %}{% endif %}
 {%- if module[1] != true %}{% continue %}{% endif %}
 <li>
 {{ module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' }}</li>
@@ -120,8 +120,8 @@ Depending on the [bundle used](./modules/020-deckhouse/configuration.html#parame
 ## Advanced scheduling
 
 If no `nodeSelector/tolerations` are explicitly specified in the module parameters, the following strategy is used for all modules:
-1. If the `nodeSelector` module parameter is not set, then Deckhouse will try to calculate the `nodeSelector` automatically. Deckhouse looks for nodes with the specific labels in the cluster  (see the list below). If there are any, then the corresponding `nodeSelectors` are automatically applied to module resources;
-1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below);
+1. If the `nodeSelector` module parameter is not set, then Deckhouse will try to calculate the `nodeSelector` automatically. Deckhouse looks for nodes with the specific labels in the cluster  (see the list below). If there are any, then the corresponding `nodeSelectors` are automatically applied to module resources.
+1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below).
 1. You can set both parameters to `false` to disable their automatic calculation.
 
 You cannot set `nodeSelector` and `tolerations` for modules:
@@ -132,31 +132,31 @@ You cannot set `nodeSelector` and `tolerations` for modules:
 {% raw %}
 * The *monitoring*-related modules (operator-prometheus, prometheus and vertical-pod-autoscaler):
   * Deckhouse examines nodes to determine a nodeSelector in the following order:
-    * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster;
-    * It checks if a node with the <code>node-role.deckhouse.io/monitoring</code> label is present in the cluster;
-    * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster;
+    * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
+    * It checks if a node with the <code>node-role.deckhouse.io/monitoring</code> label is present in the cluster.
+    * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
   * Tolerations to add (note that tolerations are added all at once):
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
 
-      E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}</code>;
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}</code>;
-    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>;
+      E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}</code>.
+    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}</code>.
+    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>.
 * The *frontend*-related modules (nginx-ingress only):
     * Deckhouse examines nodes to determine a nodeSelector in the following order:
-        * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster;
-        * It checks if a node with the <code>node-role.deckhouse.io/frontend</code> label is present in the cluster;
+        * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
+        * It checks if a node with the <code>node-role.deckhouse.io/frontend</code> label is present in the cluster.
     * Tolerations to add (note that tolerations are added all at once):
-        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>;
-        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}</code>;
+        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>.
+        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}</code>.
 * Other modules:
     * Deckhouse examines nodes to determine a nodeSelector in the following order:
-        * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster; 
-        
+        * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster;
+
           E.g., <code>node-role.deckhouse.io/cert-manager</code>);
-        * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster;
+        * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
     * Tolerations to add (note that tolerations are added all at once):
-        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code> 
-        
+        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
+
           E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}</code>;
-        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>;
+        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>.
 {% endraw %}

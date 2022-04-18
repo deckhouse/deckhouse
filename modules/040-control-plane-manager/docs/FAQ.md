@@ -27,7 +27,7 @@ To add one or more master nodes to a cloud cluster, follow these steps:
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ee/install:v1.28.0 bash
    ```
    > Change the container registry address if necessary (e.g, if you use an internal container registry).
- 
+
 1. Run the following command inside the installer container (use the `--ssh-bastion-*` parameters if using a bastion host):
    ```shell
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
@@ -46,7 +46,7 @@ All the other actions are performed automatically. Wait until the master nodes a
 
 1. Check if the deletion lead to the etcd cluster losing its quorum:
    * If the deletion does not lead to the etcd cluster losing its quorum:
-     * If a virtual machine with a master node can be deleted (there are no other necessary services on it), then you can delete the virtual machine in the usual way;
+     * If a virtual machine with a master node can be deleted (there are no other necessary services on it), then you can delete the virtual machine in the usual way.
      * If you can't delete the master right away (for example, it is used for backups or it is involved in the deployment process), then you have to stop the Container Runtime on the node:
        In the case of Docker:
        ```shell
@@ -141,7 +141,7 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
    ```
 
    You can find the detailed information about configuring the `audit-policy.yaml` file at the following links:
-   - [The official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy);
+   - [The official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy).
    - [The code of the generator script used in GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
 
    Create a Secret from the file:
@@ -183,7 +183,7 @@ There must be some `log scraper` on master nodes  *([log-shipper](../460-log-shi
 ```
 
 The following fixed parameters of log rotation are in use:
-- The maximum disk space is limited to `1000 Mb`;
+- The maximum disk space is limited to `1000 Mb`.
 - Logs older than `7 days` will be deleted.
 
 Depending on the `Policy` settings and the number of requests to the **apiserver**, the amount of logs collected may be high. Thus, in some cases, logs can only be kept for less than 30 minutes.

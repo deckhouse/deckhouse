@@ -71,9 +71,9 @@ properties:
     type: string
     description: |
       Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
-        * `DirectRouting` — means that there is a direct routing between the nodes;
-        * `DirectRoutingWithPortSecurityEnabled` - direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports;
-          * **Caution!** Make sure that the `username` can edit AllowedAddressPairs on Ports connected to the `internalNetworkName` network. Generally, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set;
+        * `DirectRouting` — means that there is a direct routing between the nodes.
+        * `DirectRoutingWithPortSecurityEnabled` - direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports.
+          * **Caution!** Make sure that the `username` can edit AllowedAddressPairs on Ports connected to the `internalNetworkName` network. Generally, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
         * `VXLAN` — direct routing between the nodes isn't available; VXLAN should be used.
     enum: ["DirectRouting", "DirectRoutingWithPortSecurityEnabled", "VXLAN"]
   instances:
@@ -159,5 +159,5 @@ properties:
         description: |
           This feature enables driver to consider the topology constraints while creating the volume. It is used only during volume provisioning, existing PersistentVolumes are not affected.
 
-          **Attention!** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
+          > **Attention!** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
         default: true
