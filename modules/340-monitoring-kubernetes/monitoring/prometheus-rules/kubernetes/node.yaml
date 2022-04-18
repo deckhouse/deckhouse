@@ -83,3 +83,20 @@
         - `kubectl drain {{ $labels.node }}` that runs for more than 20 minutes
 
         Probably, this is due to the maintenance of this Node.
+
+  - alert: NodeUnreclaimMemoryTooHigh
+    expr: node_memory_SUnreclaim_bytes/node_memory_MemTotal_bytes > 0.3
+    for: 3h
+    labels:
+      severity_level: "8"
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_pending_until_firing_for: "20m"
+      summary: The {{ $labels.node }} Node unreclaimable memory too high.
+      description: |-
+        The {{ $labels.node }} Node unreclaimable memory too high.
+
+        To see memory statistics use `cat /proc/meminfo`.
+        One possible problem could be the use of systemd cgroups for containerd.
