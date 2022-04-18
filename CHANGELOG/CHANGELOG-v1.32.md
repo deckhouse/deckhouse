@@ -13,6 +13,7 @@
  - Multimaster clusters will automatically turn LINSTOR into HA-mode
  - Now LVM pools can automatically be added to the LINSTOR cluster and StorageClasses generated
  - OpenVPN will be migrated from using PVC to store certificates to Kubernetes secrets. PVC will still remain in the cluster as a backup. If you don't need it, you should manually delete it from the cluster.
+ - Restart etcd due to update to version 3.5.3.
  - The new module - ceph-csi. Manages the creation of Ceph volumes (RBD and CephFS) and attaches them to workloads.
  - The new module - snapshot-controller. Enables snapshot support for compatible CSI drivers and cloud providers.
 
@@ -26,6 +27,8 @@
     * Run the following command to find out if the cluster has enabled automatic Kubernetes version selection: `kubectl -n kube-system get secret d8-cluster-configuration -o json | jq '.data."cluster-configuration.yaml"' -r | base64 -d | grep kubernetesVersion`. If the result is ‘kubernetesVersion: Automatic’ — the cluster has enabled automatic Kubernetes version selection.
  - **[ceph-csi]** Added new module ceph-csi [#426](https://github.com/deckhouse/deckhouse/pull/426)
     The new module - ceph-csi. Manages the creation of Ceph volumes (RBD and CephFS) and attaches them to workloads.
+ - **[control-plane-manager]** Update etcd to 3.5.3 [#1387](https://github.com/deckhouse/deckhouse/pull/1387)
+    Restart etcd due to update to version 3.5.3.
  - **[ingress-nginx]** Add 1.1 IngressNginxController version which is "must have" for clusters with k8s version > 1.21 [#1209](https://github.com/deckhouse/deckhouse/pull/1209)
  - **[linstor]** Added more alerts for LINSTOR. [#1055](https://github.com/deckhouse/deckhouse/pull/1055)
  - **[linstor]** Grafana dashboard for LINSTOR [#1035](https://github.com/deckhouse/deckhouse/pull/1035)
@@ -52,11 +55,15 @@
 
 
  - **[candi]** Added imagePullPolicy: IfNotPresent to kubernetes-api-proxy static pod. Fixed kubernetes-api-proxy run in docker envs. [#1297](https://github.com/deckhouse/deckhouse/pull/1297)
+ - **[chrony]** Remove chronyd stale pid file on start [#1375](https://github.com/deckhouse/deckhouse/pull/1375)
  - **[cloud-provider-aws]** The necessary IAM policies for creating a peering connection have been added to the documentation. [#504](https://github.com/deckhouse/deckhouse/pull/504)
  - **[cloud-provider-vsphere]** Correct behavior of nestedHardwareVirtualization parameter for VsphereInstanceClass. [#1331](https://github.com/deckhouse/deckhouse/pull/1331)
     Node groups with VsphereInstanceClass runtimeOptions.nestedHardwareVirtualization set to false have to be manually updated for this setting to take place. New nodes will be created with disabled nested hardware virtualization if it is disabled in configuration.
  - **[control-plane-manager]** Add the `--experimental-initial-corrupt-check` flag for etcd. [#1267](https://github.com/deckhouse/deckhouse/pull/1267)
     Etcd will be restarted.
+ - **[deckhouse]** Fix kubernetes upgrades with feature gates and limits deckhouse modules revision up to 3 [#1377](https://github.com/deckhouse/deckhouse/pull/1377)
+ - **[deckhouse]** Fixed a bug for the case when the storage class is set to "false" [#1364](https://github.com/deckhouse/deckhouse/pull/1364)
+ - **[linstor]** automatically recover evicted nodes in LINSTOR [#1397](https://github.com/deckhouse/deckhouse/pull/1397)
  - **[linstor]** LINSTOR module now supports high-availability [#1147](https://github.com/deckhouse/deckhouse/pull/1147)
     Multimaster clusters will automatically turn LINSTOR into HA-mode
  - **[node-local-dns]** Reworked health checking logic [#388](https://github.com/deckhouse/deckhouse/pull/388)
