@@ -207,25 +207,10 @@ locals {
 
   subnet_id = local.zone_to_subnet_id_map[local.zone]
 
+  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
+
   root_volume_size = lookup(local.instance_class, "diskSizeGb", 20)
   root_volume_type = lookup(local.instance_class, "diskType", "gp2")
-}
-
-resource "aws_security_group" "ssh-accessible-bastion" {
-  count  = local.bastion_instance != {} ? 1 : 0
-  name   = "${local.prefix}-ssh-accessible-bastion"
-  vpc_id = module.vpc.id
-  tags   = local.tags
-}
-
-resource "aws_security_group_rule" "allow-ssh-bastion-for-everyone" {
-  count             = local.bastion_instance != {} ? 1 : 0
-  type              = "ingress"
-  from_port         = 22
-  to_port           = 22
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.ssh-accessible-bastion[0].id
 }
 
 resource "aws_instance" "bastion" {
@@ -234,7 +219,7 @@ resource "aws_instance" "bastion" {
   instance_type          = local.instance_class.instanceType
   key_name               = local.prefix
   subnet_id              = local.subnet_id
-  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, aws_security_group.ssh-accessible-bastion[0].id], local.additional_security_groups)
+  vpc_security_group_ids = local.vpc_security_group_ids
   source_dest_check      = false
   iam_instance_profile   = "${local.prefix}-node"
 
@@ -331,21 +316,4 @@ resource "aws_route" "target" {
   destination_cidr_block    = module.vpc.cidr_block
   vpc_peering_connection_id = aws_vpc_peering_connection.kube[count.index].id
   depends_on                = [aws_route_table.kube_internal]
-}
-
-// ssh access to master nodes
-
-resource "aws_security_group" "ssh-accessible" {
-  name   = "${local.prefix}-ssh-accessible"
-  vpc_id = module.vpc.id
-  tags   = local.tags
-}
-
-resource "aws_security_group_rule" "allow-ssh-for-everyone" {
-  type              = "ingress"
-  from_port         = 22
-  to_port           = 22
-  protocol          = "tcp"
-  cidr_blocks       = [local.bastion_instance != {} ? "${aws_instance.bastion[0].private_ip}/32" : "0.0.0.0/0"]
-  security_group_id = aws_security_group.ssh-accessible.id
 }
