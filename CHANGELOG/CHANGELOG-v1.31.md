@@ -56,6 +56,7 @@
 ## Fixes
 
 
+ - **[candi]** Renamed the centos-7 bundle to centos. [#1398](https://github.com/deckhouse/deckhouse/pull/1398)
  - **[candi]** Added proper labels and taints on cluster bootstrap to master nodes. [#1287](https://github.com/deckhouse/deckhouse/pull/1287)
  - **[candi]** Update Kubernetes components to the latest patch versions. [#770](https://github.com/deckhouse/deckhouse/pull/770)
     Kubernetes control-plane components and kubelet will restart for 1.20, 1.21 and 1.22 minor versions.
@@ -71,6 +72,7 @@
  - **[ingress-nginx]** Make the VHost Detail dashboard show all locations by default [#1251](https://github.com/deckhouse/deckhouse/pull/1251)
  - **[ingress-nginx]** Fix ingress admission webhook [#1207](https://github.com/deckhouse/deckhouse/pull/1207)
  - **[ingress-nginx]** Proper validating webhook configuration for k8s 1.22+. [#637](https://github.com/deckhouse/deckhouse/pull/637)
+ - **[istio]** The `istio.tracing.kiali.jaegerURLForUsers` parameter bugfix. [#1402](https://github.com/deckhouse/deckhouse/pull/1402)
  - **[istio]** AuthURL fix in external_auth.go hook. [#1216](https://github.com/deckhouse/deckhouse/pull/1216)
  - **[istio]** Canary usage doc fix. [#731](https://github.com/deckhouse/deckhouse/pull/731)
  - **[kube-dns]** FAQ clarifications about changing `clusterDomain`, ServiceAccount tokens and Istio. [#686](https://github.com/deckhouse/deckhouse/pull/686)
