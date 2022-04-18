@@ -6,12 +6,13 @@ export class EventsSrv {
 	}
 
 	fireEvent(eventName: string, data?: any) {
-		if (this.callbacks.has(eventName)) {
-			let evCallbacks = this.callbacks.get(eventName);
-			for (let id of evCallbacks.keys()) {
-				let cb = evCallbacks.get(id);
-				cb(data);
-			}
+		if (!this.callbacks.has(eventName)) {
+			return;
+		}
+		let evCallbacks = this.callbacks.get(eventName);
+		for (let id of evCallbacks.keys()) {
+			let cb = evCallbacks.get(id);
+			cb(data);
 		}
 	}
 

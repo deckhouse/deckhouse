@@ -41,7 +41,7 @@ const pieBoxWidth = 60;
 //  .attr("viewBox", [0, 0, width, height]);
 
 export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
-	let root = d3.select("#graph");
+	const root = d3.select("#graph");
 
 	// Always recreate everything
 	root.selectAll("*").remove();
@@ -56,12 +56,12 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 
 	updateTicks(dataset, settings);
 
-	let graphTable = root.append("div").attr("class", "graph-table");
+	const graphTable = root.append("div").attr("class", "graph-table");
 
-	let groups = graphTable.selectAll(".graph-row").data(settings.groupProbes);
+	const groups = graphTable.selectAll(".graph-row").data(settings.groupProbes);
 
 	// each group is a table row, so translate "g" element to proper y position
-	let groupsEnter = groups
+	const groupsEnter = groups
 		.enter()
 		.append("div")
 		.attr("data-group-id", (d) => d.group)
@@ -69,11 +69,18 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 		.attr("class", "graph-row");
 
 	// Labels for group and probes.
-	groupsEnter.each(function (item) {
-		let rowEl = d3.select(this);
-		let cellEl = rowEl.append("div").attr("class", "graph-cell graph-labels");
+	groupsEnter.each(function (probeData) {
+		// `group` and `probe` are names
+		// type is one of "group", "probe", "first-in-group", or "last-in-group"
+		const { group, probe, type: typ } = probeData;
 
-		if (item.probe === "__total__") {
+		// { expanded: boolean, probesLoaded: boolean }
+		const groupState = settings.groupState[group];
+
+		const rowEl = d3.select(this);
+		const cellEl = rowEl.append("div").attr("class", "graph-cell graph-labels");
+
+		if (probe === "__total__") {
 			// total is always visible
 			rowEl.classed("graph-row-visible", true);
 
@@ -86,18 +93,18 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 			cellEl.append("i").attr("class", "fas fa-fw fa-caret-right group-icon");
 
 			// Add label
-			const { title: groupTitle } = getGroupSpec(item.group);
+			const { title: groupTitle } = getGroupSpec(group);
 			cellEl.append("span").text(groupTitle).attr("class", "group-label");
 
 			cellEl.on("click", function (d) {
-				// TODO add visibility indicator to request probes data without additional clicks when change intervals.
+				// TODO add visibility indicator to request probes data without
+				// additional clicks when change intervals.
 
-				let probeRows = d3.selectAll(`#graph div[data-group-id=${item.group}].graph-row`);
+				let probeRows = d3.selectAll(`#graph div[data-group-id=${group}].graph-row`);
 
 				// invert expanded
-				let expanded = !settings.groupState[item.group].expanded;
-				settings.groupState[item.group].expanded = expanded;
-				getTimeRangeSrv().onExpandGroup(item.group, expanded);
+				groupState.expanded = !groupState.expanded;
+				getTimeRangeSrv().onExpandGroup(group, groupState.expanded);
 
 				probeRows.each(function () {
 					let rowEl = d3.select(this);
@@ -105,34 +112,34 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 					if (probeId === "__total__") {
 						return;
 					}
-					rowEl.classed("graph-row-hidden", !rowEl.classed("graph-row-hidden"));
-					rowEl.classed("graph-row-visible", !rowEl.classed("graph-row-visible"));
+					rowEl.classed("graph-row-hidden", !groupState.expanded);
+					rowEl.classed("graph-row-visible", groupState.expanded);
 				});
 
 				// toggle icon
 				let iconEl = cellEl.select(".group-icon svg[data-fa-i2svg]");
-				iconEl.classed("fa-caret-down", settings.groupState[item.group].expanded);
-				iconEl.classed("fa-caret-right", !settings.groupState[item.group].expanded);
+				iconEl.classed("fa-caret-right", !groupState.expanded);
+				iconEl.classed("fa-caret-down", groupState.expanded);
 
 				// trigger event to re-render graph
-				if (!settings.groupState[item.group]["probe-data-loaded"]) {
-					getEventsSrv().fireEvent("UpdateGroupProbes", { group: item.group });
+				if (!groupState.probesLoaded) {
+					getEventsSrv().fireEvent("UpdateGroupProbes", { group, settings });
 				}
 			});
 		} else {
 			rowEl.classed("graph-row-hidden", true);
-			rowEl.classed(`row-${item.type}`, true);
+			rowEl.classed(`row-${typ}`, true);
 			rowEl.classed(`row-probe`, true);
 
 			// Add label
-			const { title: probeTitle } = getProbeSpec(item.group, item.probe);
+			const { title: probeTitle } = getProbeSpec(group, probe);
 			cellEl.append("span").text(probeTitle).attr("class", "probe-label");
 		}
 
 		let infoEl = cellEl.append("div").attr("class", "group-probe-info");
 
 		ReactDOM.render(
-			<Tooltip content={<GroupProbeTooltip groupName={item.group} probeName={item.probe} />} placement="right-start">
+			<Tooltip content={<GroupProbeTooltip groupName={group} probeName={probe} />} placement="right-start">
 				<Icon name="fa-info-circle" className="group-probe-info" />
 			</Tooltip>,
 			infoEl.node(),
@@ -157,7 +164,12 @@ export function updateTicks(dataset: Dataset, settings: LegacySettings) {
 	const topTicks = calculateTopTicks(dataset, settings);
 
 	topTicks.forEach((tick) =>
-		root.append("div").attr("data-timeslot", tick.ts).attr("class", "top-tick").append("span").text(tick.text),
+		root //
+			.append("div")
+			.attr("data-timeslot", tick.ts)
+			.attr("class", "top-tick")
+			.append("span")
+			.text(tick.text),
 	);
 
 	// 'Total' label
@@ -165,28 +177,32 @@ export function updateTicks(dataset: Dataset, settings: LegacySettings) {
 }
 
 export function renderGroupData(_: Dataset, settings: any, group: string, data: StatusRange) {
-	let rowEl = d3.select(`#graph div[data-group-id=${group}][data-probe-id="__total__"]`);
+	const rowEl = d3.select(`#graph div[data-group-id=${group}][data-probe-id="__total__"]`);
 	rowEl.selectAll(".cell-data").remove();
-	if (!data["statuses"] || !data["statuses"][group]["__total__"]) {
+	const groupEpisodes = data.statuses && data.statuses[group]["__total__"];
+	if (!groupEpisodes) {
 		console.log("Bad group data", data);
 	}
-	data["statuses"][group]["__total__"].forEach(function (item, i) {
-		let cell = rowEl
+
+	for (const episode of groupEpisodes) {
+		const cell = rowEl
 			.append("div")
 			//.text("Data for group '" + group + "'")
 			.attr("class", "graph-cell cell-data");
 
 		const viewBox = [0, 0, pieBoxWidth, pieBoxWidth].join(" ");
 
-		let svg = cell.append("svg").attr("width", pieBoxWidth).attr("height", pieBoxWidth).attr("viewBox", viewBox);
+		const svg = cell //
+			.append("svg")
+			.attr("width", pieBoxWidth)
+			.attr("height", pieBoxWidth)
+			.attr("viewBox", viewBox);
 
-		drawOnePie(svg, settings, item, "group");
-	});
-
-	let piesCount = data["statuses"][group]["__total__"].length;
+		drawOnePie(svg, settings, episode, "group");
+	}
 
 	// add empty boxes into probe rows to prevent stripe background on expand
-	let rows = d3.selectAll(`#graph div[data-group-id=${group}].graph-row`);
+	const rows = d3.selectAll(`#graph div[data-group-id=${group}].graph-row`);
 	rows.each(function (item: any) {
 		if (item.probe === "__total__") {
 			return;
@@ -194,7 +210,7 @@ export function renderGroupData(_: Dataset, settings: any, group: string, data: 
 
 		let rowEl = d3.select(this);
 		rowEl.selectAll(".cell-data").remove();
-		for (let i = 0; i < piesCount; i++) {
+		for (let i = 0; i < groupEpisodes.length; i++) {
 			rowEl
 				.append("div")
 				.attr("class", "graph-cell cell-data")
@@ -206,23 +222,37 @@ export function renderGroupData(_: Dataset, settings: any, group: string, data: 
 }
 
 export function renderGroupProbesData(settings: LegacySettings, group: string, data: StatusRange) {
-	let root = d3.select("#graph");
+	const root = d3.select("#graph");
 
-	let statuses = data["statuses"];
+	const statuses = data.statuses;
 	for (const group in statuses) {
 		if (!statuses.hasOwnProperty(group)) {
 			continue;
 		}
-		let probes = statuses[group];
+
+		const unseenGroupProbes = new Set(
+			settings.groupProbes
+				.filter(({ group: g }) => g === group)
+				.filter(({ probe }) => probe !== "__total__")
+				.map(({ probe }) => probe),
+		);
+
+		const probes = statuses[group];
+		const getRowElement = (group: string, probe: string) => root.select(`div[data-group-id=${group}][data-probe-id=${probe}]`);
 		for (const probe in probes) {
 			if (!probes.hasOwnProperty(probe)) {
 				continue;
 			}
-			let rowEl = root.select(`div[data-group-id=${group}][data-probe-id=${probe}]`);
-			rowEl.selectAll(".cell-data").remove();
 
-			let cellCount = probes[probe].length;
-			probes[probe].forEach(function (item, i) {
+			// Track absent probes to hide empty rows
+			unseenGroupProbes.delete(probe)
+
+			// Render pies
+			const episodes = probes[probe]
+			const cellCount = probes[probe].length;
+			const rowEl = getRowElement(group, probe)
+			rowEl.selectAll(".cell-data").remove();
+			episodes.forEach(function (episode, i) {
 				const cell = rowEl.append("div").attr("class", "graph-cell cell-data");
 
 				if (i === 0) {
@@ -234,11 +264,20 @@ export function renderGroupProbesData(settings: LegacySettings, group: string, d
 
 				const viewBox = [0, 0, pieBoxWidth, pieBoxWidth].join(" ");
 
-				const svg = cell.append("svg").attr("width", pieBoxWidth).attr("height", pieBoxWidth).attr("viewBox", viewBox);
+				const svg = cell //
+					.append("svg")
+					.attr("width", pieBoxWidth)
+					.attr("height", pieBoxWidth)
+					.attr("viewBox", viewBox);
 
-				drawOnePie(svg, settings, item, "probe");
+				drawOnePie(svg, settings, episode, "probe");
 			});
 		}
+
+		for (const probe of unseenGroupProbes) {
+			getRowElement(group, probe).remove();
+		}
+
 	}
 }
 

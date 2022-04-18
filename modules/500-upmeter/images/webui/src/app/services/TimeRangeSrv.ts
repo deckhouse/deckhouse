@@ -306,6 +306,18 @@ export class TimeRangeSrv {
 		);
 	}
 
+	getFromToStep(): { from: number; to: number; step: number } {
+		return {
+			from: this.from,
+			to: this.to,
+			step: this.step,
+		};
+	}
+
+	getMuteTypes(): string[] {
+		return Array.from(this.muteSelection.keys()).filter((k) => this.muteSelection.get(k));
+	}
+
 	getMuteTypesAsUri(): string {
 		let res: string[] = [];
 		for (let k of this.muteSelection.keys()) {

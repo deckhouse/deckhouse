@@ -99,7 +99,7 @@ export class DatasetSrv {
 					});
 					me.groupState[refs.group] = {
 						expanded: false,
-						"probe-probeRefs-loaded": false,
+						probesLoaded: false,
 					};
 					me.groups.push(refs.group);
 				}
@@ -199,33 +199,44 @@ export class DatasetSrv {
 		});
 	};
 
-	requestGroupProbesData = (group: string) => {
+	requestGroupProbesData(group: string) {
 		let me = this;
-		let fromToStep = getTimeRangeSrv().getFromToStepAsUri();
-		let muteTypes = getTimeRangeSrv().getMuteTypesAsUri();
-		const url =
-			`/api/status/range` + `?${fromToStep}` + `&group=${group}&probe=__all__` + `&muteDowntimeTypes=${muteTypes}`;
 
-		d3.json(url).then((d: StatusRange) => {
-			if (!d || !d["statuses"] || !d.statuses[group]) {
+		const range = getTimeRangeSrv().getFromToStep();
+		const muted = getTimeRangeSrv().getMuteTypes();
+
+		const params = new URLSearchParams({
+			from: encodeURIComponent(range.from),
+			to: encodeURIComponent(range.to),
+			step: encodeURIComponent(range.step),
+			group,
+			probe: "__all__",
+			muteDowntimeTypes: muted.join("!"),
+		});
+
+		const path = "/api/status/range";
+		const query = `${path}?${params}`;
+
+		d3.json(query).then((d: StatusRange) => {
+			if (!d || !d.statuses || !d.statuses[group]) {
 				return;
 			}
 
-			me.dataset.forEach((item, i) => {
-				if (item.group === group && item["probes"]) {
-					for (let probe in d.statuses[group]) {
-						me.dataset.get(i).probes.push({
-							probe: probe,
-							statuses: d.statuses[group][probe],
-						});
-					}
+			me.dataset.forEach((groupData, i) => {
+				if (groupData.group !== group || !groupData.probes) {
+					return;
+				}
+
+				for (let probe in d.statuses[group]) {
+					const statuses = d.statuses[group][probe];
+					me.dataset.get(i).probes.push({ probe, statuses });
 				}
 			});
-			me.groupState[group]["probe-data-loaded"] = true;
+			me.groupState[group].probesLoaded = true;
 
 			renderGroupProbesData(me.getLegacySettings(), group, d);
 		});
-	};
+	}
 }
 
 let instance: DatasetSrv;

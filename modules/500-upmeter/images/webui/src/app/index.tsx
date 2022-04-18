@@ -33,8 +33,8 @@ function initApp() {
 	getEventsSrv().listenEvent("UpdateGraph", "main", (data: any) => {
 		getDatasetSrv().requestGroups();
 	});
-	getEventsSrv().listenEvent("UpdateGroupProbes", "main", (data: any) => {
-		getDatasetSrv().requestGroupProbesData(data.group);
+	getEventsSrv().listenEvent("UpdateGroupProbes", "main", ({ group, settings }) => {
+		getDatasetSrv().requestGroupProbesData(group);
 	});
 }
 
