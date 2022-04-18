@@ -238,19 +238,20 @@ export function renderGroupProbesData(settings: LegacySettings, group: string, d
 		);
 
 		const probes = statuses[group];
-		const getRowElement = (group: string, probe: string) => root.select(`div[data-group-id=${group}][data-probe-id=${probe}]`);
+		const getRowElement = (group: string, probe: string) =>
+			root.select(`div[data-group-id=${group}][data-probe-id=${probe}]`);
 		for (const probe in probes) {
 			if (!probes.hasOwnProperty(probe)) {
 				continue;
 			}
 
 			// Track absent probes to hide empty rows
-			unseenGroupProbes.delete(probe)
+			unseenGroupProbes.delete(probe);
 
 			// Render pies
-			const episodes = probes[probe]
+			const episodes = probes[probe];
 			const cellCount = probes[probe].length;
-			const rowEl = getRowElement(group, probe)
+			const rowEl = getRowElement(group, probe);
 			rowEl.selectAll(".cell-data").remove();
 			episodes.forEach(function (episode, i) {
 				const cell = rowEl.append("div").attr("class", "graph-cell cell-data");
@@ -277,7 +278,6 @@ export function renderGroupProbesData(settings: LegacySettings, group: string, d
 		for (const probe of unseenGroupProbes) {
 			getRowElement(group, probe).remove();
 		}
-
 	}
 }
 

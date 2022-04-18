@@ -298,14 +298,6 @@ export class TimeRangeSrv {
 		return secondsToHumanReadable(this.step);
 	};
 
-	getFromToStepAsUri(): string {
-		return (
-			`from=${encodeURIComponent(this.from)}` +
-			`&to=${encodeURIComponent(this.to)}` +
-			`&step=${encodeURIComponent(this.step)}`
-		);
-	}
-
 	getFromToStep(): { from: number; to: number; step: number } {
 		return {
 			from: this.from,
@@ -316,16 +308,6 @@ export class TimeRangeSrv {
 
 	getMuteTypes(): string[] {
 		return Array.from(this.muteSelection.keys()).filter((k) => this.muteSelection.get(k));
-	}
-
-	getMuteTypesAsUri(): string {
-		let res: string[] = [];
-		for (let k of this.muteSelection.keys()) {
-			if (this.muteSelection.get(k)) {
-				res.push(k);
-			}
-		}
-		return encodeURIComponent(res.join("!"));
 	}
 
 	isGroupExpanded = (group: string): boolean => {

@@ -161,12 +161,23 @@ export class DatasetSrv {
 
 	requestGroupData = (group: string) => {
 		let me = this;
-		let fromToStep = getTimeRangeSrv().getFromToStepAsUri();
-		let muteTypes = getTimeRangeSrv().getMuteTypesAsUri();
-		const url =
-			`/api/status/range` + `?${fromToStep}` + `&group=${group}&probe=__total__` + `&muteDowntimeTypes=${muteTypes}`;
 
-		d3.json(url).then((d: StatusRange) => {
+		const range = getTimeRangeSrv().getFromToStep();
+		const muted = getTimeRangeSrv().getMuteTypes();
+
+		const params = new URLSearchParams({
+			from: encodeURIComponent(range.from),
+			to: encodeURIComponent(range.to),
+			step: encodeURIComponent(range.step),
+			group,
+			probe: "__total__",
+			muteDowntimeTypes: muted.join("!"),
+		});
+
+		const path = "/api/status/range";
+		const query = `${path}?${params}`;
+
+		d3.json(query).then((d: StatusRange) => {
 			// Ignore empty response
 			if (!d || !d["statuses"] || !d.statuses[group]) {
 				return;
