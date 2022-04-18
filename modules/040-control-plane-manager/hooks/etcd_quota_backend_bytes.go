@@ -28,12 +28,12 @@ import (
 )
 
 type etcdNode struct {
-	memory int64
+	Memory int64
 	// isDedicated - indicate that node has taint
 	//   - effect: NoSchedule
 	//    key: node-role.kubernetes.io/master
 	// it means that on node can be scheduled only control-plane components
-	isDedicated bool
+	IsDedicated bool
 }
 
 const etcdBackendBytesGroup = "etcd_quota_backend_should_decrease"
@@ -75,8 +75,8 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	return &etcdNode{
-		memory:      memory,
-		isDedicated: isDedicated,
+		Memory:      memory,
+		IsDedicated: isDedicated,
 	}, nil
 }
 
@@ -109,11 +109,11 @@ func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
 	for i := 1; i < len(snapshots); i++ {
 		n := snapshots[i].(*etcdNode)
 		// for not dedicated nodes we will not set new quota
-		if !n.isDedicated {
+		if !n.IsDedicated {
 			return n
 		}
 
-		if n.memory < node.memory {
+		if n.Memory < node.Memory {
 			node = n
 		}
 	}
@@ -153,8 +153,8 @@ func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 
 	newQuotaBytes := currentQuotaBytes
 
-	if node.isDedicated {
-		newQuotaBytes = calcNewQuotaForMemory(node.memory)
+	if node.IsDedicated {
+		newQuotaBytes = calcNewQuotaForMemory(node.Memory)
 		if newQuotaBytes < currentQuotaBytes {
 			newQuotaBytes = currentQuotaBytes
 

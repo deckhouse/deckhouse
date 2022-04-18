@@ -129,12 +129,12 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 				title: "For single node always return this node",
 				nodes: []go_hook.FilterResult{
 					&etcdNode{
-						memory:      gb(8),
-						isDedicated: true,
+						Memory:      gb(8),
+						IsDedicated: true,
 					}},
 				expectedNode: &etcdNode{
-					memory:      gb(8),
-					isDedicated: true,
+					Memory:      gb(8),
+					IsDedicated: true,
 				},
 			},
 
@@ -142,18 +142,18 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 				title: "For all different nodes return with minimal memory",
 				nodes: []go_hook.FilterResult{
 					&etcdNode{
-						memory:      gb(8),
-						isDedicated: true,
+						Memory:      gb(8),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(12),
-						isDedicated: true,
+						Memory:      gb(12),
+						IsDedicated: true,
 					},
 				},
 
 				expectedNode: &etcdNode{
-					memory:      gb(8),
-					isDedicated: true,
+					Memory:      gb(8),
+					IsDedicated: true,
 				},
 			},
 
@@ -161,22 +161,22 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 				title: "For all different nodes return with minimal memory",
 				nodes: []go_hook.FilterResult{
 					&etcdNode{
-						memory:      gb(16),
-						isDedicated: true,
+						Memory:      gb(16),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(8),
-						isDedicated: true,
+						Memory:      gb(8),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(12),
-						isDedicated: true,
+						Memory:      gb(12),
+						IsDedicated: true,
 					},
 				},
 
 				expectedNode: &etcdNode{
-					memory:      gb(8),
-					isDedicated: true,
+					Memory:      gb(8),
+					IsDedicated: true,
 				},
 			},
 
@@ -184,22 +184,22 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 				title: "For all different nodes return with minimal memory",
 				nodes: []go_hook.FilterResult{
 					&etcdNode{
-						memory:      gb(16),
-						isDedicated: true,
+						Memory:      gb(16),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(12),
-						isDedicated: true,
+						Memory:      gb(12),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(8),
-						isDedicated: true,
+						Memory:      gb(8),
+						IsDedicated: true,
 					},
 				},
 
 				expectedNode: &etcdNode{
-					memory:      gb(8),
-					isDedicated: true,
+					Memory:      gb(8),
+					IsDedicated: true,
 				},
 			},
 
@@ -207,22 +207,22 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 				title: "For all different nodes return with minimal memory",
 				nodes: []go_hook.FilterResult{
 					&etcdNode{
-						memory:      gb(8),
-						isDedicated: true,
+						Memory:      gb(8),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(12),
-						isDedicated: true,
+						Memory:      gb(12),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(16),
-						isDedicated: true,
+						Memory:      gb(16),
+						IsDedicated: true,
 					},
 				},
 
 				expectedNode: &etcdNode{
-					memory:      gb(8),
-					isDedicated: true,
+					Memory:      gb(8),
+					IsDedicated: true,
 				},
 			},
 
@@ -230,22 +230,22 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 				title: "If have dedicated node, return dedicated node",
 				nodes: []go_hook.FilterResult{
 					&etcdNode{
-						memory:      gb(8),
-						isDedicated: true,
+						Memory:      gb(8),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(12),
-						isDedicated: false,
+						Memory:      gb(12),
+						IsDedicated: false,
 					},
 					&etcdNode{
-						memory:      gb(16),
-						isDedicated: true,
+						Memory:      gb(16),
+						IsDedicated: true,
 					},
 				},
 
 				expectedNode: &etcdNode{
-					memory:      gb(12),
-					isDedicated: false,
+					Memory:      gb(12),
+					IsDedicated: false,
 				},
 			},
 
@@ -253,22 +253,22 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 				title: "If have two dedicated nodes, return first dedicated node",
 				nodes: []go_hook.FilterResult{
 					&etcdNode{
-						memory:      gb(8),
-						isDedicated: true,
+						Memory:      gb(8),
+						IsDedicated: true,
 					},
 					&etcdNode{
-						memory:      gb(12),
-						isDedicated: false,
+						Memory:      gb(12),
+						IsDedicated: false,
 					},
 					&etcdNode{
-						memory:      gb(16),
-						isDedicated: false,
+						Memory:      gb(16),
+						IsDedicated: false,
 					},
 				},
 
 				expectedNode: &etcdNode{
-					memory:      gb(12),
-					isDedicated: false,
+					Memory:      gb(12),
+					IsDedicated: false,
 				},
 			},
 		}
