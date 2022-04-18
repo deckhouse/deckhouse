@@ -335,8 +335,8 @@ resource "aws_route" "target" {
 
 // ssh access to master nodes
 
-resource "aws_security_group" "ssh-accessible" {
-  name   = "${local.prefix}-ssh-accessible"
+resource "aws_security_group" "ssh-accessible-master" {
+  name   = "${local.prefix}-ssh-accessible-master"
   vpc_id = module.vpc.id
   tags   = local.tags
 }
@@ -347,5 +347,5 @@ resource "aws_security_group_rule" "allow-ssh-for-everyone" {
   to_port           = 22
   protocol          = "tcp"
   cidr_blocks       = [local.bastion_instance != {} ? "${aws_instance.bastion[0].private_ip}/32" : "0.0.0.0/0"]
-  security_group_id = aws_security_group.ssh-accessible.id
+  security_group_id = aws_security_group.ssh-accessible-master.id
 }

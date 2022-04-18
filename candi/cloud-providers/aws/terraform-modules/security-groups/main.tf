@@ -79,3 +79,9 @@ resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {
   security_group_id        = aws_security_group.loadbalancer.id
   source_security_group_id = aws_security_group.node.id
 }
+
+resource "aws_security_group" "ssh-accessible" {
+  name   = "${var.prefix}-ssh-accessible"
+  vpc_id = var.vpc_id
+  tags   = var.tags
+}

@@ -28,8 +28,8 @@ module "security-groups" {
   tags         = local.tags
 }
 
-resource "aws_security_group" "ssh-accessible" {
-  name   = "${local.prefix}-ssh-accessible"
+resource "aws_security_group" "ssh-accessible-master" {
+  name   = "${local.prefix}-ssh-accessible-master"
   vpc_id = module.vpc.id
   tags   = local.tags
 }
@@ -40,7 +40,7 @@ resource "aws_security_group_rule" "allow-ssh-for-everyone" {
   to_port           = 22
   protocol          = "tcp"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.ssh-accessible.id
+  security_group_id = aws_security_group.ssh-accessible-master.id
 }
 
 data "aws_availability_zones" "available" {}
