@@ -427,7 +427,7 @@ entries:
                 ru: Настройки
               url: /modules/500-dashboard/configuration.html
         - title: openvpn
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 en: Description
@@ -570,7 +570,7 @@ entries:
                     ru: Настройки
                   url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
             - title: extended-monitoring
-              versionType: experimental
+              versionType: fe
               folders:
                 - title:
                     en: Description
@@ -821,7 +821,7 @@ entries:
         ru: Приятные мелочи
       folders:
         - title: basic-auth
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 en: Description
@@ -846,7 +846,7 @@ entries:
                 ru: Настройки
               url: /modules/470-chrony/configuration.html
         - title: namespace-configurator
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 en: Description
@@ -861,14 +861,14 @@ entries:
                 ru: Примеры
               url: /modules/600-namespace-configurator/usage.html
         - title: secret-copier
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 en: Description
                 ru: Описание
               url: /modules/600-secret-copier/
         - title: snapshot-controller
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 en: Description
@@ -908,7 +908,7 @@ entries:
                 - title: Custom Resources
                   url: /modules/099-ceph-csi/cr.html
         - title: keepalived
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 en: Description
@@ -987,7 +987,7 @@ entries:
                 ru: Настройки
               url: /modules/380-metallb/configuration.html
         - title: network-gateway
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 en: Description

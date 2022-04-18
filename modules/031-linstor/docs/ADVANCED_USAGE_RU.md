@@ -2,10 +2,6 @@
 title: "Модуль linstor: примеры расширенной конфигурации"
 ---
 
-<div class="docs__information warning active">
-Модуль находится в процессе активного развития, и его функциональность может существенно измениться.
-</div>
-
 Чтобы продолжить рекомендуется установить плагин [kubectl-linstor](https://github.com/piraeusdatastore/kubectl-linstor) или добавить bash-алиас:
 
 ```

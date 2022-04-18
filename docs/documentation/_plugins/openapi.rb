@@ -125,6 +125,8 @@ module Jekyll
           case attributes['x-doc-versionType']
           when "ee"
             result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['ee'][lang].capitalize + '**'))
+          when "fe"
+            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['fe'][lang].capitalize + '**'))
           when "experimental"
             result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['experimental'][lang].capitalize + '**'))
           end

@@ -94,10 +94,15 @@ defaults:
     values:
       versionType: ee
   - scope:
-      path: "*/340-extended-monitoring"
+      path: "*/031-linstor"
       type: "pages"
     values:
       versionType: experimental
+  - scope:
+      path: "*/340-extended-monitoring"
+      type: "pages"
+    values:
+      versionType: fe
   - scope:
       path: "*/350-node-local-dns"
       type: "pages"
@@ -112,31 +117,31 @@ defaults:
       path: "*/450-keepalived"
       type: "pages"
     values:
-      versionType: experimental
+      versionType: fe
   - scope:
       path: "*/450-network-gateway"
       type: "pages"
     values:
-      versionType: experimental
+      versionType: fe
   - scope:
       path: "*/600-namespace-configurator"
       type: "pages"
     values:
-      versionType: experimental
+      versionType: fe
   - scope:
       path: "*/500-basic-auth"
       type: "pages"
     values:
-      versionType: experimental
+      versionType: fe
   - scope:
       path: "*/600-secret-copier"
       type: "pages"
     values:
-      versionType: experimental
+      versionType: fe
   - scope:
       path: "*/500-openvpn"
       type: "pages"
     values:
-      versionType: experimental
+      versionType: fe
 
 timezone: Europe/Moscow
