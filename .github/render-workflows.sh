@@ -38,6 +38,7 @@ cat <<'SCRIPT_END' | docker run -i --rm \
   -v $(pwd)/ci_templates:/in/ci_templates \
   -v $(pwd)/workflow_templates:/in/workflow_templates \
   -v $(pwd)/workflows:/out/workflows \
+  --user ${UID}:${GID} \
   --entrypoint=ash \
   hairyhenderson/gomplate:v3.10.0-alpine - || dockerExit=1
 
