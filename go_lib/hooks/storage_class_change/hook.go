@@ -228,7 +228,7 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		"d8_emptydir_usage",
 		emptydirUsageMetricValue,
 		map[string]string{
-			"namespace": args.Namespace,
+			"namespace":   args.Namespace,
 			"module_name": args.ModuleName,
 		},
 		metrics.WithGroup("storage_class_change"),
