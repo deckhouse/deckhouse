@@ -16,11 +16,6 @@
 
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
-  if bb-flag? there-was-containerd-installed; then
-    bb-log-info "Setting reboot flag due to containerd package being updated"
-    bb-flag-set reboot
-    bb-flag-unset there-was-containerd-installed
-  fi
   systemctl daemon-reload
   systemctl enable containerd.service
 {{ if ne .runType "ImageBuilding" -}}
@@ -75,11 +70,6 @@ if [[ "$version_in_use" == "$desired_version" ]]; then
 fi
 
 if [[ "$should_install_containerd" == true ]]; then
-  if bb-yum-package? containerd.io; then
-    bb-flag-set there-was-containerd-installed
-  fi
-
-  bb-deckhouse-get-disruptive-update-approval
 
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
   {{- $centosVersion := toString $key }}
