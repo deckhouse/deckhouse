@@ -23,3 +23,7 @@ output "load_balancer_security_group" {
 output "security_group_id_node" {
   value = aws_security_group.node.id
 }
+
+output "security_group_id_ssh_accessible" {
+  value = aws_security_group.ssh-accessible.id
+}
