@@ -38,7 +38,7 @@ RUN GOPROXY="off" GOFLAGS="-mod=vendor" go build -o /ebpf_exporter -v -ldflags="
 
 FROM $BASE_UBUNTU
 
-RUN apt-get update && apt-get install -y --no-install-recommends libelf1
+RUN apt-get update && apt-get install -y --no-install-recommends libelf1 && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /tmp/libbcc.deb /tmp/libbcc.deb
 COPY --from=builder /ebpf_exporter /usr/local/bin/
