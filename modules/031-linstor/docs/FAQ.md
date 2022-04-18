@@ -2,10 +2,6 @@
 title: "The linstor module: FAQ"
 ---
 
-<div class="docs__information warning active">
-The module is actively developed, and it might significantly change in the future.
-</div>
-
 ## What is difference between LVM and LVMThin?
 
 Briefly:

@@ -2,10 +2,6 @@
 title: "The linstor module: advanced configuration examples"
 ---
 
-<div class="docs__information warning active">
-The module is actively developed, and it might significantly change in the future.
-</div>
-
 To continue, it is recommended to install the [kubectl-linstor](https://github.com/piraeusdatastore/kubectl-linstor) plugin or add a bash-alias:
 
 ```shell

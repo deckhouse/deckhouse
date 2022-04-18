@@ -88,7 +88,7 @@ common:
     en: Search...
   warning_ee_version:
     ru: Доступно только в
-    en: Search...
+    en: Available only in
   version:
     ru: Версия
     en: Version
@@ -103,8 +103,11 @@ common:
     en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/en/documentation/v1/">go to the latest stable Deckhouse version</a>.
 features:
   experimental:
-    ru: Эти возможности доступны только в Enterprise Edition. Их функциональность может существенно измениться. В настоящий момент не рекомендуется для самостоятельного использования.
+    en: This feature is actively developed. It might significantly change in the future.
+    ru: Находится в процессе активного развития. Функциональность может существенно измениться.
+  fe:
     en: This feature is available in Enterprise Edition only. It might significantly change in the future. Currently, it's not intended to be used without special assistance from Flant.
+    ru: Доступно только в Enterprise Edition. Функциональность может существенно измениться. В настоящий момент не рекомендуется для самостоятельного использования.
   ee:
-    ru: Эти возможности доступны только в Enterprise Edition.
     en: This feature is available in Enterprise Edition only.
+    ru: Доступно только в Enterprise Edition.

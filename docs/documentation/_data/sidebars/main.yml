@@ -427,7 +427,7 @@ entries:
                 en: Configuration
               url: /modules/500-dashboard/configuration.html
         - title: openvpn
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 ru: Описание
@@ -570,7 +570,7 @@ entries:
                     en: Configuration
                   url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
             - title: extended-monitoring
-              versionType: experimental
+              versionType: fe
               folders:
                 - title:
                     ru: Описание
@@ -817,7 +817,7 @@ entries:
         ru: Приятные мелочи
       folders:
         - title: basic-auth
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 ru: Описание
@@ -842,7 +842,7 @@ entries:
                 en: Configuration
               url: /modules/470-chrony/configuration.html
         - title: namespace-configurator
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 ru: Описание
@@ -857,7 +857,7 @@ entries:
                 en: Usage
               url: /modules/600-namespace-configurator/usage.html
         - title: secret-copier
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 ru: Описание
@@ -869,7 +869,7 @@ entries:
       versionType: ee
       folders:
         - title: keepalived
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 ru: Описание
@@ -948,7 +948,7 @@ entries:
                 en: Configuration
               url: /modules/380-metallb/configuration.html
         - title: network-gateway
-          versionType: experimental
+          versionType: fe
           folders:
             - title:
                 ru: Описание
