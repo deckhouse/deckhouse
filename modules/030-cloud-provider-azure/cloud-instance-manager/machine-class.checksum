@@ -16,6 +16,12 @@
   {{- $_ := set $options "additionalTags" .nodeGroup.instanceClass.additionalTags -}}
 {{- end -}}
 
+{{- if hasKey .nodeGroup.instanceClass "acceleratedNetworking" -}}
+  {{- if ne .nodeGroup.instanceClass.acceleratedNetworking true -}}
+    {{- $_ := set $options "acceleratedNetworking" .nodeGroup.instanceClass.acceleratedNetworking -}}
+  {{- end -}}
+{{- end -}}
+
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}

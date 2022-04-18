@@ -102,6 +102,7 @@ apiVersions:
                 description: |
                   Список дополнительных тегов в формате `key: value`, которые будут назначены инстансам.
               acceleratedNetworking:
+                default: false
                 description: |
                   Accelerated Networking обеспечивает пропускную способность сети до 30 Гбит/с.
       nodeGroups:

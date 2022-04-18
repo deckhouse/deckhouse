@@ -159,7 +159,7 @@ apiVersions:
                   type: string
               acceleratedNetworking:
                 type: boolean
-                x-doc-default: true
+                default: false
                 description: |
                   Accelerated Networking providing up to 30Gbps in networking throughput.
       nodeGroups:
