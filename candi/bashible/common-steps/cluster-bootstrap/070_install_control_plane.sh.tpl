@@ -18,7 +18,7 @@
 {{- end }}
 
 mkdir -p /etc/kubernetes/deckhouse/kubeadm/patches/
-cp -r /var/lib/bashible/kubeadm/patches /etc/kubernetes/deckhouse/kubeadm/patches/
+cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches/
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }}
