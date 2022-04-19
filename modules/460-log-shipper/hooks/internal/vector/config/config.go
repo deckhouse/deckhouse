@@ -41,8 +41,16 @@ func NewVectorFile() *VectorFile {
 	}
 }
 
+func (v *VectorFile) empty() bool {
+	return len(v.Sources)+len(v.Sinks)+len(v.Transforms) == 0
+}
+
 // ConvertToJSON converts the vector file to the pretty-formatted JSON document.
 func (v *VectorFile) ConvertToJSON() ([]byte, error) {
+	if v.empty() {
+		return nil, nil
+	}
+
 	buf := bytes.NewBuffer(nil)
 
 	en := json.NewEncoder(buf)
@@ -86,8 +94,8 @@ func (g *LogConfigGenerator) AppendLogPipeline(pipeline *Pipeline) {
 	currentDest := g.destMap()
 
 	for _, dest := range pipeline.Destinations {
-		if cdst, ok := currentDest[dest.GetName()]; ok {
-			cdst.AppendInputs(destinationInputs)
+		if cDest, ok := currentDest[dest.GetName()]; ok {
+			cDest.AppendInputs(destinationInputs)
 			continue
 		}
 

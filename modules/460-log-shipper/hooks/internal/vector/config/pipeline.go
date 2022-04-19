@@ -21,15 +21,17 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/model"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/source"
 )
 
 func newLogSource(typ, name string, spec model.ClusterLoggingConfigSpec) impl.LogSource {
 	switch typ {
 	case model.SourceFile:
-		return model.NewFileLogSource(name, spec.File)
+		return source.NewFile(name, spec.File)
 	case model.SourceKubernetesPods:
-		return model.NewKubernetesLogSource(name, spec.KubernetesPods, false)
+		return source.NewKubernetes(name, spec.KubernetesPods, false)
 	}
 	return nil
 }
@@ -37,11 +39,11 @@ func newLogSource(typ, name string, spec model.ClusterLoggingConfigSpec) impl.Lo
 func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
 	switch typ {
 	case model.DestLoki:
-		return model.NewLokiDestination(name, spec)
+		return destination.NewLoki(name, spec)
 	case model.DestElasticsearch:
-		return model.NewElasticsearchDestination(name, spec)
+		return destination.NewElasticsearch(name, spec)
 	case model.DestLogstash:
-		return model.NewLogstashDestination(name, spec)
+		return destination.NewLogstash(name, spec)
 	}
 	return nil
 }
@@ -66,13 +68,13 @@ func NewPipelineNamespaced(generator *LogConfigGenerator, destMap map[string]v1a
 	var err error
 
 	// for each source looking for all cluster destinations
-	for _, dstRef := range sourceConfig.Spec.ClusterDestinationRefs {
-		cdest, ok := destMap[dstRef]
+	for _, destRef := range sourceConfig.Spec.ClusterDestinationRefs {
+		cDest, ok := destMap[destRef]
 		if !ok {
-			return nil, fmt.Errorf("clusterDestinationRef: %s for PodLoggingConfig: %s not found, skipping", dstRef, sourceConfig.Name)
+			return nil, fmt.Errorf("clusterDestinationRef: %s for PodLoggingConfig: %s not found, skipping", destRef, sourceConfig.Name)
 		}
 
-		dest := newLogDest(cdest.Spec.Type, cdest.Name, cdest.Spec)
+		dest := newLogDest(cDest.Spec.Type, cDest.Name, cDest.Spec)
 		pipeline.Destinations = append(pipeline.Destinations, dest)
 	}
 
@@ -90,7 +92,7 @@ func NewPipelineNamespaced(generator *LogConfigGenerator, destMap map[string]v1a
 		NamespaceSelector: v1alpha1.NamespaceSelector{MatchNames: []string{sourceConfig.Namespace}},
 		LabelSelector:     sourceConfig.Spec.LabelSelector,
 	}
-	pipeline.Source = model.NewKubernetesLogSource(sourceConfig.Name, kubeSpec, true)
+	pipeline.Source = source.NewKubernetes(sourceConfig.Name, kubeSpec, true)
 
 	return pipeline, nil
 }

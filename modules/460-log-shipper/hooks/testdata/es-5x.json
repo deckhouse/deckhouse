@@ -31,7 +31,7 @@
       "inputs": [
         "d8_tf_test-source_00_clean_up"
       ],
-      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
+      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n}",
       "type": "remap"
     },
     "d8_tf_test-source_02_elastic_dedot": {
@@ -82,13 +82,13 @@
       "type": "filter"
     },
     "d8_tf_test-source_08_log_filter": {
-      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
+      "condition": "match!(.parsed_data.foo, r'^wvrr')",
       "inputs": [
         "d8_tf_test-source_07_log_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_09_log_filter": {
+    "d8_tf_test-source_test-es-dest_09_log_filter": {
       "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
       "inputs": [
         "d8_tf_test-source_08_log_filter"
@@ -133,12 +133,9 @@
         "verify_hostname": false
       },
       "compression": "gzip",
-      "bulk": {
-        "action": "index",
-        "index": "logs-%F"
-      },
+      "index": "logs-%F",
       "pipeline": "testpipe",
-      "mode": "bulk",
+      "bulk_action": "index",
       "doc_type": "_doc"
     }
   }

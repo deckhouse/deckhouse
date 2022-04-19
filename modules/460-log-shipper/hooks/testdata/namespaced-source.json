@@ -50,6 +50,48 @@
       "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
       "type": "remap"
     },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_02_log_filter": {
+      "condition": "exists(.parsed_data.foo)",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_01_json_parse"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_03_log_filter": {
+      "condition": "!exists(.parsed_data.foo)",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_02_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_04_log_filter": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_03_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_05_log_filter": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_04_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_06_log_filter": {
+      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_05_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_07_log_filter": {
+      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_06_log_filter"
+      ],
+      "type": "filter"
+    },
     "d8_tf_tests-whispers_whispers-logs_test-es-dest_00_clean_up": {
       "drop_on_abort": false,
       "inputs": [
@@ -85,7 +127,49 @@
       "source": " .foo=\"bar\" \n",
       "type": "remap"
     },
-    "d8_tf_tests-whispers_whispers-logs_test-es-dest_04_del_parsed_data": {
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_04_log_filter": {
+      "condition": "exists(.parsed_data.foo)",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_03_extra_fields"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_05_log_filter": {
+      "condition": "!exists(.parsed_data.foo)",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_04_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_06_log_filter": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_05_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_07_log_filter": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_06_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_08_log_filter": {
+      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_07_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_09_log_filter": {
+      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_08_log_filter"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_10_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
         "d8_tf_tests-whispers_whispers-logs_test-es-dest_03_extra_fields"

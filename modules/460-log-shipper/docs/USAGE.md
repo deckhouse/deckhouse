@@ -160,7 +160,7 @@ Now you can create PodLogginConfig or ClusterPodLoggingConfig and send logs to *
 
 ## Adding Loki source to Deckhouse Grafana
 
-You can work with Loki from embedded to deckhouse Grafana. Just add [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource)
+You can work with Loki from embeded to deckhouse Grafana. Just add [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource)
 
 ```yaml
 apiVersion: deckhouse.io/v1
