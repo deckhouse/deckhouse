@@ -2,7 +2,7 @@ import { Dataset } from "./Dataset"
 
 import { renderGraphTable, renderGroupData, renderGroupProbesData, updateTicks } from "../graph/render"
 
-import * as d3 from "../libs/d3"
+import * as d3 from "d3"
 import { getTimeRangeSrv } from "./TimeRangeSrv"
 
 interface ProbeRef {

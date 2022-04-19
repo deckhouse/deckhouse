@@ -1,6 +1,6 @@
 import React from "react"
 import ReactDOM from "react-dom"
-import * as d3 from "../libs/d3"
+import * as d3 from "d3"
 
 // Components
 import { Tooltip } from "@grafana/ui"
@@ -42,11 +42,9 @@ const pieBoxWidth = 60
 
 export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
   // Group and probe data
-  const probesByGroup = (g: string) => {
-    const ret = settings.groupProbes.filter(({ group, probe }) => group === g && probe !== "__total__")
-    console.log("probesByGroup", ret)
-    return ret
-  }
+  const probesByGroup = (g: string) =>
+    settings.groupProbes.filter(({ group, probe }) => group === g && probe !== "__total__")
+
   const groupedData = settings.groupProbes
     .filter(({ probe }) => probe === "__total__")
     .map((x) => ({ ...x, probes: probesByGroup(x.group) }))
@@ -156,7 +154,7 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 
     selectProbeContainer(group)
       .selectAll("div")
-      .data((d) => probesByGroup(d.group))
+      .data((d: { group: string }) => probesByGroup(d.group))
       .enter()
       .append("div")
       .attr("data-group-id", (gp) => gp.group)
@@ -164,14 +162,15 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
       .attr("class", "graph-row")
       .classed("row-probe", true)
       .each(function ({ group, probe }) {
-        const probeChartRow = d3.select(this).classed("row-probe", true)
+        // Probe name and tooltip handle
+        const probeChartRow = d3.select(this) //.classed("row-probe", true)
         const probeLabelCell = probeChartRow.append("div").attr("class", "graph-cell graph-labels")
 
         const { title: probeTitle } = getProbeSpec(group, probe)
-        probeLabelCell.append("span").text(probeTitle).attr("class", "probe-label")
 
-        // Probe tooltip handle
+        probeLabelCell.append("span").text(probeTitle).attr("class", "probe-label")
         const infoEl = probeLabelCell.append("div").attr("class", "group-probe-info")
+
         ReactDOM.render(
           <Tooltip content={<GroupProbeTooltip groupName={group} probeName={probe} />} placement="right-start">
             <Icon name="fa-info-circle" className="group-probe-info" />
@@ -304,7 +303,7 @@ export function renderGroupProbesData(settings: LegacySettings, group: string, d
     }
 
     for (const probe of unseenGroupProbes) {
-      getRowElement(group, probe).remove()
+      getRowElement(group, probe).transition().duration(500).style("opacity", "0.9").remove()
     }
   }
 }

@@ -120,7 +120,7 @@
   display: table;
   table-layout: fixed;
   /* stripes to emulate dashed border between columns */
-  background: repeating-linear-gradient(transparent, transparent 2px, #d5d5d5 2px, #d5d5d5 7px) no-repeat;
+  // background: repeating-linear-gradient(transparent, transparent 2px, #d5d5d5 2px, #d5d5d5 7px) no-repeat;
   // for border-radius in cells;
   background-size: calc(100% - 24px);
   background-position-x: 12px;
@@ -135,6 +135,11 @@
   display: table-row;
 }
 .graph-row {
+  background: repeating-linear-gradient(transparent, transparent 2px, #d5d5d5 2px, #d5d5d5 7px) no-repeat;
+}
+
+div.row-probe {
+  transition: all 0.5s ease-in;
 }
 
 .graph-cell {

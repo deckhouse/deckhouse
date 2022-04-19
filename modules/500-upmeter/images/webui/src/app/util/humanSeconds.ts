@@ -1,4 +1,4 @@
-import * as d3 from "../libs/d3"
+import * as d3 from "d3"
 
 export function nanosecondsToHumanReadable(nanoseconds: number): string {
   return secondsToHumanReadable(Math.round(nanoseconds / 1e9))
