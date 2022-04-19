@@ -22,7 +22,7 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
-      {{- end }}
+    {{- end }}
     {{- if .Values.ciliumHubble.auth.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ciliumHubble.auth.whitelistSourceRanges | join "," }}
     {{- end }}
