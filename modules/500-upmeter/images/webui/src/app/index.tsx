@@ -23,49 +23,49 @@ import { DatasetSrv, getDatasetSrv, setDatasetSrv } from "./services/DatasetSrv"
 import { setupDebug } from "./debug";
 
 function initApp() {
-	// Instantiate Services
-	setSettingsStore(new SettingsStore());
-	setEventsSrv(new EventsSrv());
-	setTimeRangeSrv(new TimeRangeSrv());
-	setDatasetSrv(new DatasetSrv());
+  // Instantiate Services
+  setSettingsStore(new SettingsStore());
+  setEventsSrv(new EventsSrv());
+  setTimeRangeSrv(new TimeRangeSrv());
+  setDatasetSrv(new DatasetSrv());
 
-	// Setup Listeners for graph render.
-	getEventsSrv().listenEvent("UpdateGraph", "main", (data: any) => {
-		getDatasetSrv().requestGroups();
-	});
-	getEventsSrv().listenEvent("UpdateGroupProbes", "main", ({ group, settings }) => {
-		getDatasetSrv().requestGroupProbesData(group);
-	});
+  // Setup Listeners for graph render.
+  getEventsSrv().listenEvent("UpdateGraph", "main", (data: any) => {
+    getDatasetSrv().requestGroups();
+  });
+  getEventsSrv().listenEvent("UpdateGroupProbes", "main", ({ group, settings }) => {
+    getDatasetSrv().requestGroupProbesData(group);
+  });
 }
 
 export function startApp() {
-	let light = getTheme("light");
+  let light = getTheme("light");
 
-	// Load settings from address bar.
-	getTimeRangeSrv().init();
+  // Load settings from address bar.
+  getTimeRangeSrv().init();
 
-	let muteSelection = getTimeRangeSrv().getMuteSelection();
-	ReactDOM.render(
-		<ThemeContext.Provider value={light}>
-			<TopNavBar muteSelection={muteSelection} />
-		</ThemeContext.Provider>,
-		document.getElementById("topNavBar"),
-	);
+  let muteSelection = getTimeRangeSrv().getMuteSelection();
+  ReactDOM.render(
+    <ThemeContext.Provider value={light}>
+      <TopNavBar muteSelection={muteSelection} />
+    </ThemeContext.Provider>,
+    document.getElementById("topNavBar"),
+  );
 
-	getEventsSrv().fireEvent("UpdateGraph");
+  getEventsSrv().fireEvent("UpdateGraph");
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-	initApp();
-	startApp();
-	setupDebug();
+  initApp();
+  startApp();
+  setupDebug();
 });
 
 // 'Back' button
 window.onpopstate = function (event: any) {
-	// Load time range and mute selection from address bar,
-	// refresh TopNavBar and re-render graph.
-	getTimeRangeSrv().init();
-	getEventsSrv().fireEvent("Refresh");
-	getEventsSrv().fireEvent("UpdateGraph");
+  // Load time range and mute selection from address bar,
+  // refresh TopNavBar and re-render graph.
+  getTimeRangeSrv().init();
+  getEventsSrv().fireEvent("Refresh");
+  getEventsSrv().fireEvent("UpdateGraph");
 };

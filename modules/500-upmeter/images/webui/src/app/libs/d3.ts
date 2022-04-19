@@ -7,15 +7,15 @@ import { json } from "d3-fetch";
 import { transition } from "d3-transition";
 
 export {
-	select,
-	selectAll,
-	scaleLinear,
-	scaleTime,
-	scaleOrdinal,
-	schemeCategory10,
-	arc,
-	pie,
-	format,
-	json,
-	transition,
+  select,
+  selectAll,
+  scaleLinear,
+  scaleTime,
+  scaleOrdinal,
+  schemeCategory10,
+  arc,
+  pie,
+  format,
+  json,
+  transition,
 };
