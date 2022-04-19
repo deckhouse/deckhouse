@@ -198,9 +198,9 @@ div.graph-row > div.graph-cell:last-child {
 
 // inset shadow to highlight probe rows
 $shadow-color: #c0c0c0;
-$shadow-len: 0.6rem;
-$shadow-blur: 0.6rem;
-$shadow-spread: 0.6rem;
+$shadow-len: 10px;
+$shadow-blur: 10px;
+$shadow-spread: 10px;
 
 // border-radius ruins dashed lines.
 $probe-cell-border-radius: 0;
