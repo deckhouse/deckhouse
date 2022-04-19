@@ -19,5 +19,5 @@ package hooks
 import "github.com/deckhouse/deckhouse/go_lib/hooks/metrics"
 
 func init() {
-	metrics.RegisterD8WebInterfaceMetric("deckhouse")
+	metrics.RegisterD8WebInterfaceMetric("deckhouse", "deckhouse", "")
 }

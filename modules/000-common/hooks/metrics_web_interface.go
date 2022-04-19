@@ -16,8 +16,18 @@ limitations under the License.
 
 package hooks
 
-import "github.com/deckhouse/deckhouse/go_lib/hooks/metrics"
+import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+)
 
-func init() {
-	metrics.RegisterD8WebInterfaceMetric("dashboard", "dashboard", "")
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue:     "deckhouse_web_interfaces",
+	OnStartup: &go_hook.OrderedConfig{Order: 10},
+}, cleanMetrics)
+
+func cleanMetrics(input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire("deckhouse_web_interfaces")
+
+	return nil
 }
