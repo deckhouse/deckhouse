@@ -12,5 +12,19 @@
 			"d8_tf_testit_00_log_filter"
 		],
 		"type": "filter"
+	},
+	{
+		"condition": "match!(.parsed_data.namespace, r'^d8-.*$') || match!(.parsed_data.namespace, r'^kube-.*$')",
+		"inputs": [
+			"d8_tf_testit_01_log_filter"
+		],
+		"type": "filter"
+	},
+	{
+		"condition": "if exists(.parsed_data.namespace) \u0026\u0026 is_string(.parsed_data.namespace) {\n    matched = false\n    matched0, err = match(.parsed_data.namespace, r'^dev-.*$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    matched1, err = match(.parsed_data.namespace, r'^prod-.*$')\n    if err != null {\n        true\n    }\n    matched = matched || matched1\n    !matched\n} else {\n    true\n}",
+		"inputs": [
+			"d8_tf_testit_02_log_filter"
+		],
+		"type": "filter"
 	}
 ]

@@ -51,8 +51,9 @@ type ClusterLoggingConfigSpec struct {
 	// File describes spec for file source
 	File FileSpec `json:"file,omitempty"`
 
-	// Log filters array
-	LogFilters []LogFilter `json:"logFilter,omitempty"`
+	// Filters
+	LogFilters   []Filter `json:"logFilter,omitempty"`
+	LabelFilters []Filter `json:"labelFilter,omitempty"`
 
 	// Multiline parsers
 	MultiLineParser MultiLineParser `json:"multilineParser,omitempty"`

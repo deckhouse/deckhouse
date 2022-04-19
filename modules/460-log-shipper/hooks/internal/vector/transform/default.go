@@ -23,14 +23,14 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/vrl"
 )
 
-func CleanUpTransform() *DynamicTransform {
+func CleanUpAfterSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name: "clean_up",
 			Type: "remap",
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source":        vrl.CleanUpRule.String(),
+			"source":        vrl.CleanUpAfterSourceRule.String(),
 			"drop_on_abort": false,
 		},
 	}
@@ -51,7 +51,7 @@ func JSONParseTransform() *DynamicTransform {
 
 func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
 	transforms := []impl.LogTransform{
-		CleanUpTransform(),
+		CleanUpAfterSourceTransform(),
 		JSONParseTransform(),
 	}
 

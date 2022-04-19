@@ -48,7 +48,7 @@
       "inputs": [
         "d8_tf_test-source_00_clean_up"
       ],
-      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n}",
+      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
       "type": "remap"
     },
     "d8_tf_test-source_02_elastic_dedot": {

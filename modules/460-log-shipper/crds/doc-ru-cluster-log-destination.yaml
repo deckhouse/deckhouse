@@ -146,7 +146,7 @@ spec:
                     Некоторые ключи зарезервированы:
                     - parsed_data
                     - pod
-                    - pod_labels
+                    - pod_labels_*
                     - pod_ip
                     - namespace
                     - image

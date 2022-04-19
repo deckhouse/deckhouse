@@ -198,3 +198,31 @@ spec:
       user: elastic
       password: c2VjcmV0IC1uCg==
 ```
+
+## Фильтрация логов
+
+Отправлять только не debug и не json логи из определенного контейнера.
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: log-filters
+spec:
+  type: KubernetesPods
+  labelFilter:
+  - filed: container
+    operator: In
+    values:
+    - nginx
+  logFilter:
+  - operator: NotRegex
+    values:
+    - "DEBUG.*"
+  destinationRefs:
+  - loki-storage
+```
+
+> NOTE: Если вам нужны только логи одного или малой группы pod'ов, постарайтесь использовать настройки kubernetesPods, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
+

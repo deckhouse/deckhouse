@@ -16,14 +16,9 @@ limitations under the License.
 
 package vrl
 
-// ParsedDataCleanUpRule cleans up the temporary parsed data object.
-const ParsedDataCleanUpRule Rule = `
-if exists(.parsed_data) {
-    del(.parsed_data)
-}
-`
+// TODO(nabokihms): figure out why do we need this rule
 
-// StreamRule puts the vector timestamp to the label recognized by elasticsearch.
+// StreamRule puts the vector timestamp to the label recognized by Elasticsearch.
 const StreamRule Rule = `
 ."@timestamp" = del(.timestamp)
 `

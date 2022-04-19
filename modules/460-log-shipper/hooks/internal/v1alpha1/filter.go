@@ -16,19 +16,19 @@ limitations under the License.
 
 package v1alpha1
 
-type LogFilter struct {
-	Field    string            `json:"field"`
-	Operator LogFilterOperator `json:"operator"`
-	Values   []interface{}     `json:"values,omitempty"`
+type Filter struct {
+	Field    string         `json:"field"`
+	Operator FilterOperator `json:"operator"`
+	Values   []interface{}  `json:"values,omitempty"`
 }
 
-type LogFilterOperator string
+type FilterOperator string
 
 const (
-	LogFilterOpIn           LogFilterOperator = "In"
-	LogFilterOpNotIn        LogFilterOperator = "NotIn"
-	LogFilterOpExists       LogFilterOperator = "Exists"
-	LogFilterOpDoesNotExist LogFilterOperator = "DoesNotExist"
-	LogFilterOpRegex        LogFilterOperator = "Regex"
-	LogFilterOpNotRegex     LogFilterOperator = "NotRegex"
+	FilterOpIn           FilterOperator = "In"
+	FilterOpNotIn        FilterOperator = "NotIn"
+	FilterOpExists       FilterOperator = "Exists"
+	FilterOpDoesNotExist FilterOperator = "DoesNotExist"
+	FilterOpRegex        FilterOperator = "Regex"
+	FilterOpNotRegex     FilterOperator = "NotRegex"
 )

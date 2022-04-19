@@ -17,9 +17,12 @@ limitations under the License.
 package vrl
 
 // ParseJSONRule provides the message data as an object for future modifications/validations.
+// Parsed data will be equal to message to simplify further transformations, e.g., log filtration's.
 const ParseJSONRule Rule = `
 structured, err = parse_json(.message)
 if err == null {
     .parsed_data = structured
+} else {
+    .parsed_data = .message
 }
 `
