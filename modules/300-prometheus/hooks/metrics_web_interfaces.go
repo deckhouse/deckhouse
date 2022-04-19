@@ -29,6 +29,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+// This hook get all ingresses with labels `heritage: deckhouse` and  "deckhouse.io/export-domain"
+// and generate metrics for the Grafana home page (table of all enabled deckhouse resources with web interface)
+// you have to set name for resource via `deckhouse.io/export-domain` label for ingress, like:
+//   deckhouse.io/export-domain: "prometheus"
+//   deckhouse.io/export-domain: "cilium"
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/prometheus/web_interfaces",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -52,7 +58,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, domainMetricHandler)
 
-type exportedDomain struct {
+type exportedWebInterface struct {
 	Name string
 	URL  string
 }
@@ -83,13 +89,15 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}
 
 	if urlPath != "" {
+		// cut path regexp replacements like /prometheus(/|$)(.*)
+		// we don't need them for the main page
 		index := strings.Index(urlPath, "(")
 		if index > 0 {
 			urlPath = urlPath[:index]
 		}
 	}
 
-	return exportedDomain{
+	return exportedWebInterface{
 		Name: name,
 		URL:  path.Join(host, urlPath),
 	}, nil
@@ -104,7 +112,7 @@ func domainMetricHandler(input *go_hook.HookInput) error {
 			continue
 		}
 
-		domain := sn.(exportedDomain)
+		domain := sn.(exportedWebInterface)
 		input.MetricsCollector.Set("deckhouse_web_interfaces", 1, map[string]string{"name": domain.Name, "url": domain.URL}, metrics.WithGroup("deckhouse_exported_domains"))
 	}
 
