@@ -17,16 +17,19 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:     "deckhouse_web_interfaces",
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	OnStartup: &go_hook.OrderedConfig{Order: 5},
 }, cleanMetrics)
 
 func cleanMetrics(input *go_hook.HookInput) error {
+	fmt.Println("CLEANMET")
 	input.MetricsCollector.Expire("deckhouse_web_interfaces")
 
 	return nil
