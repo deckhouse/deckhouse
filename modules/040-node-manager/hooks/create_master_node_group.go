@@ -20,6 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	internalv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	internalschema "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
@@ -61,8 +62,25 @@ var defaultMasterNodeGroup = internalv1.NodeGroup{
 	},
 }
 
+func getDefaultMasterNg() (*unstructured.Unstructured, error) {
+	o, err := sdk.ToUnstructured(&defaultMasterNodeGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	unstructured.RemoveNestedField(o.Object, "spec", "cloudInstances")
+	unstructured.RemoveNestedField(o.Object, "spec", "cri")
+
+	return o, nil
+}
+
 func createMasterNodeGroup(input *go_hook.HookInput) error {
-	input.PatchCollector.Create(&defaultMasterNodeGroup, object_patch.IgnoreIfExists())
+	ng, err := getDefaultMasterNg()
+	if err != nil {
+		return err
+	}
+
+	input.PatchCollector.Create(ng, object_patch.IgnoreIfExists())
 
 	return nil
 }

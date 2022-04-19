@@ -73,7 +73,12 @@ spec:
 `
 	)
 
-	var masterNgDefaultYAMLBBytes, err = yaml.Marshal(defaultMasterNodeGroup)
+	masterNgUnstructured, err := getDefaultMasterNg()
+	if err != nil {
+		panic(err)
+	}
+	var masterNgDefaultYAMLBBytes []byte
+	masterNgDefaultYAMLBBytes, err = yaml.Marshal(masterNgUnstructured)
 	if err != nil {
 		panic(err)
 	}
