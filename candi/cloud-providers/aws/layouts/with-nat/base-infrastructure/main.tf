@@ -217,7 +217,7 @@ resource "aws_instance" "bastion" {
   instance_type          = local.instance_class.instanceType
   key_name               = local.prefix
   subnet_id              = local.subnet_id
-  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.ssh_accessible_security_group], local.additional_security_groups)
+  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
   source_dest_check      = false
   iam_instance_profile   = "${local.prefix}-node"
 
