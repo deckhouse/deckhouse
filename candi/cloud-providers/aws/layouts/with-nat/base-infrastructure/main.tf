@@ -322,10 +322,11 @@ data "aws_security_group" "ssh-accessible" {
 }
 
 resource "aws_security_group_rule" "allow-ssh-for-everyone" {
+  count             = local.bastion_instance == {} ? 0 : local.ssh_allow_list == ["0.0.0.0/0"] ? 0 : 1
   type              = "ingress"
   from_port         = 22
   to_port           = 22
   protocol          = "tcp"
-  cidr_blocks       = local.bastion_instance == {} ? local.ssh_allow_list : local.ssh_allow_list == ["0.0.0.0/0"] ? ["${aws_instance.bastion[0].private_ip}/32"] : concat(["${aws_instance.bastion[0].private_ip}/32"], local.ssh_allow_list)
+  cidr_blocks       = ["${aws_instance.bastion[0].private_ip}/32"]
   security_group_id = data.aws_security_group.ssh-accessible.id
 }
