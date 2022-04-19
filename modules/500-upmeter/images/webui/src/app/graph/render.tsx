@@ -152,7 +152,7 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
       infoEl.node(),
     )
 
-    selectProbeContainer(group)
+    /* const probeContainerEnter = */ selectProbeContainer(group)
       .selectAll("div")
       .data((d: { group: string }) => probesByGroup(d.group))
       .enter()
@@ -256,56 +256,52 @@ export function renderGroupData(_: Dataset, settings: any, group: string, data: 
 }
 
 export function renderGroupProbesData(settings: LegacySettings, group: string, data: StatusRange) {
-  const root = d3.select("#graph")
+  if (!data.statuses.hasOwnProperty(group)) {
+    console.warn(`no group=${group} in statuses`)
+    return
+  }
+  const probes = data.statuses[group]
 
-  const statuses = data.statuses
-  for (const group in statuses) {
-    if (!statuses.hasOwnProperty(group)) {
+  const expectedProbes = new Set<string>(
+    settings.groupProbes
+      .filter(({ group: g }) => g === group)
+      .filter(({ probe }) => probe !== "__total__")
+      .map(({ probe }) => probe),
+  )
+
+  const root = d3.select("#graph")
+  const getRowElement = (probe: string) => root.select(`div[data-group-id=${group}][data-probe-id=${probe}]`)
+  const getProbesContainer = () => root.select(`div[data-group-id=${group}].probes-container`)
+
+  for (const probe in probes) {
+    if (!probes.hasOwnProperty(probe)) {
       continue
     }
 
-    const unseenGroupProbes = new Set(
-      settings.groupProbes
-        .filter(({ group: g }) => g === group)
-        .filter(({ probe }) => probe !== "__total__")
-        .map(({ probe }) => probe),
-    )
-
-    const getRowElement = (group: string, probe: string) =>
-      root.select(`div[data-group-id=${group}][data-probe-id=${probe}]`)
-
-    const probes = statuses[group]
-    for (const probe in probes) {
-      if (!probes.hasOwnProperty(probe)) {
-        continue
-      }
-
-      // Track absent probes to hide empty rows
-      unseenGroupProbes.delete(probe)
-
-      // Render pies
-      const episodes = probes[probe]
-      const rowEl = getRowElement(group, probe)
-      rowEl.selectAll(".cell-data").remove()
-      episodes.forEach(function (episode, i) {
-        const cell = rowEl.append("div").attr("class", "graph-cell cell-data")
-
-        const viewBox = [0, 0, pieBoxWidth, pieBoxWidth].join(" ")
-
-        const svg = cell //
-          .append("svg")
-          .attr("width", pieBoxWidth)
-          .attr("height", pieBoxWidth)
-          .attr("viewBox", viewBox)
-
-        drawOnePie(svg, settings, episode, "probe")
-      })
+    if (!expectedProbes.has(probe)) {
+      // add missing row, the probe might be from the past
+      addProbeRow(getProbesContainer(), group, probe)
     }
 
-    for (const probe of unseenGroupProbes) {
-      getRowElement(group, probe).transition().duration(500).style("opacity", "0.9").remove()
-    }
+    // Render pies
+    const episodes = probes[probe]
+    const rowEl = getRowElement(probe)
+    rowEl.selectAll(".cell-data").remove()
+    episodes.forEach(function (episode, i) {
+      const cell = rowEl.append("div").attr("class", "graph-cell cell-data")
+
+      const viewBox = [0, 0, pieBoxWidth, pieBoxWidth].join(" ")
+
+      const svg = cell //
+        .append("svg")
+        .attr("width", pieBoxWidth)
+        .attr("height", pieBoxWidth)
+        .attr("viewBox", viewBox)
+
+      drawOnePie(svg, settings, episode, "probe")
+    })
   }
+  // }
 }
 
 // pie for each "g"
@@ -381,4 +377,31 @@ function drawOnePie(root: any, settings: LegacySettings, episode: Episode, pieTy
   const onClick = () => getTimeRangeSrv().drillDownStep(+episode.ts)
 
   ReactDOM.render(<PieBoundingRect size={pieBoxWidth} episode={episode} onClick={onClick} />, boundingRectRoot.node())
+}
+
+function addProbeRow(
+  probeContainer: d3.Selection<d3.BaseType, unknown, HTMLElement, any>,
+  group: string,
+  probe: string,
+) {
+  const probeChartRow = probeContainer
+    .append("div")
+    .attr("data-group-id", group)
+    .attr("data-probe-id", probe)
+    .attr("class", "graph-row")
+    .classed("row-probe", true)
+
+  const probeLabelCell = probeChartRow.append("div").attr("class", "graph-cell graph-labels")
+
+  const { title: probeTitle } = getProbeSpec(group, probe)
+
+  probeLabelCell.append("span").text(probeTitle).attr("class", "probe-label")
+  const infoEl = probeLabelCell.append("div").attr("class", "group-probe-info")
+
+  ReactDOM.render(
+    <Tooltip content={<GroupProbeTooltip groupName={group} probeName={probe} />} placement="right-start">
+      <Icon name="fa-info-circle" className="group-probe-info" />
+    </Tooltip>,
+    infoEl.node(),
+  )
 }
