@@ -193,8 +193,6 @@ resource "aws_key_pair" "ssh" {
 // bastion
 
 locals {
-  with_nat                   = lookup(var.providerClusterConfiguration, "withNAT", {})
-  bastion_instance           = lookup(local.with_nat, "bastionInstance", {})
   instance_class             = lookup(local.bastion_instance, "instanceClass", {})
   additional_security_groups = lookup(local.instance_class, "additionalSecurityGroups", [])
 
