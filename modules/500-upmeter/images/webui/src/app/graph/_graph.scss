@@ -119,8 +119,6 @@
 .graph-table {
   display: table;
   table-layout: fixed;
-  /* stripes to emulate dashed border between columns */
-  // background: repeating-linear-gradient(transparent, transparent 2px, #d5d5d5 2px, #d5d5d5 7px) no-repeat;
   // for border-radius in cells;
   background-size: calc(100% - 24px);
   background-position-x: 12px;
@@ -135,11 +133,8 @@
   display: table-row;
 }
 .graph-row {
+  /* stripes to emulate dashed border between columns */
   background: repeating-linear-gradient(transparent, transparent 2px, #d5d5d5 2px, #d5d5d5 7px) no-repeat;
-}
-
-div.row-probe {
-  transition: all 0.5s ease-in;
 }
 
 .graph-cell {
@@ -209,17 +204,6 @@ $shadow-spread: 10px;
 
 // border-radius ruins dashed lines.
 $probe-cell-border-radius: 0;
-
-// Probe label in the middle row.
-.graph-row.row-probe .graph-cell.graph-labels {
-}
-
-// Single probe in a group
-.graph-row.row-single-in-group .graph-cell {
-  // Bottom and top shadow
-  // box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color,
-  // inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
-}
 
 div.group-container,
 div.probes-container {
