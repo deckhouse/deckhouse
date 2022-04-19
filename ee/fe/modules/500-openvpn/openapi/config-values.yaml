@@ -25,6 +25,8 @@ properties:
         description: |
           Annotations to assign to the service for flexible configuration of the load balancer;
               * **Note** that module does not take into account the specifics of setting annotations in different clouds. If annotations for the provision of the load balancer are only used when the service is being created, then you need to restart the module (disable/enable it) to update them;
+        additionalProperties:
+          type: string
       sourceRanges:
         type: array
         items:
