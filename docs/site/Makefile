@@ -12,6 +12,9 @@ network:
 up: network
 		werf compose up --follow --docker-compose-command-options='-d'
 
+down:
+		werf compose down
+
 dev: network
 		werf compose up --follow --docker-compose-command-options='-d' --dev
 

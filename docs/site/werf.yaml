@@ -51,6 +51,7 @@ git:
   - .werf
   - .helm
   - backend
+  - Makefile
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     beforeSetup: '**/*'
@@ -75,7 +76,7 @@ ansible:
         chdir: /go/src/app
 git:
   - url: https://github.com/flant/web-router.git
-    tag: v1.0.9
+    tag: v1.0.10
     add: /
     to: /go/src/app
     stageDependencies:

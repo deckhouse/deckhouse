@@ -143,6 +143,7 @@ git:
     - '**/docker-compose.yml'
     - '**/.werf'
     - '**/.helm'
+    - Makefile
     - documentation/pages/internal
     - documentation/config
   stageDependencies:
