@@ -27,7 +27,7 @@ module "security-groups" {
   cluster_uuid = var.clusterUUID
   vpc_id = module.vpc.id
   tags = local.tags
-  ssh_allow_list = local.bastion_instance != null ? 1 : 0 local.ssh_allow_list
+  ssh_allow_list = local.bastion_instance != null ? ["${aws_instance.bastion[0].private_ip}/32"] : local.ssh_allow_list
 }
 
 data "aws_availability_zones" "available" {}
@@ -217,7 +217,7 @@ resource "aws_instance" "bastion" {
   instance_type          = local.instance_class.instanceType
   key_name               = local.prefix
   subnet_id              = local.subnet_id
-  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
+  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, aws_security_group.bastion-ssh-accessible.id], local.additional_security_groups)
   source_dest_check      = false
   iam_instance_profile   = "${local.prefix}-node"
 
@@ -249,6 +249,21 @@ resource "aws_eip_association" "bastion" {
   count         = local.bastion_instance != null ? 1 : 0
   instance_id   = aws_instance.bastion[0].id
   allocation_id = aws_eip.bastion[0].id
+}
+
+resource "aws_security_group" "bastion-ssh-accessible" {
+  name        = "${local.prefix}-bastion-ssh-accessible"
+  vpc_id      = module.vpc.id
+  tags        = local.tags
+}
+
+resource "aws_security_group_rule" "bastion-allow-ssh" {
+  type = "ingress"
+  from_port = 22
+  to_port = 22
+  protocol = "tcp"
+  cidr_blocks = local.ssh_allow_list
+  security_group_id = aws_security_group.bastion-ssh-accessible.id
 }
 
 // vpc peering
@@ -314,18 +329,4 @@ resource "aws_route" "target" {
   destination_cidr_block    = module.vpc.cidr_block
   vpc_peering_connection_id = aws_vpc_peering_connection.kube[count.index].id
   depends_on                = [aws_route_table.kube_internal]
-}
-
-data "aws_security_group" "ssh-accessible" {
-  name = "${local.prefix}-ssh-accessible"
-}
-
-resource "aws_security_group_rule" "allow-ssh-for-everyone" {
-  count             = local.bastion_instance == {} ? 0 : local.ssh_allow_list == ["0.0.0.0/0"] ? 0 : 1
-  type              = "ingress"
-  from_port         = 22
-  to_port           = 22
-  protocol          = "tcp"
-  cidr_blocks       = ["${aws_instance.bastion[0].private_ip}/32"]
-  security_group_id = data.aws_security_group.ssh-accessible.id
 }
