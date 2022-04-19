@@ -56,12 +56,16 @@ data "aws_security_group" "node" {
   name = "${var.prefix}-node"
 }
 
+locals {
+  base_security_groups = var.associate_ssh_accessible_sg == true ? [data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id] : [data.aws_security_group.node.id]
+}
+
 resource "aws_instance" "master" {
   ami             = var.node_group.instanceClass.ami
   instance_type   = var.node_group.instanceClass.instanceType
   key_name        = var.prefix
   subnet_id       = local.zone_to_subnet_id_map[local.zone]
-  vpc_security_group_ids = concat([data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id], var.additional_security_groups)
+  vpc_security_group_ids = concat(local.base_security_groups, var.additional_security_groups)
   source_dest_check = false
   user_data = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
   iam_instance_profile = "${var.prefix}-node"
