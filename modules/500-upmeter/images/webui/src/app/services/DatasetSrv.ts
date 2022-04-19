@@ -96,6 +96,8 @@ export class DatasetSrv {
 						group: refs.group,
 						probe: "__total__",
 						type: "group",
+						firstInGroup: false,
+						lastInGroup: false,
 					});
 					me.groupState[refs.group] = {
 						expanded: false,
@@ -107,30 +109,34 @@ export class DatasetSrv {
 					group: refs.group,
 					probe: refs.probe,
 					type: "probe",
+					firstInGroup: false,
+					lastInGroup: false,
 				});
 			}
 
-			let flag = false;
+			// Mark first and last probes in groups for styling
+			// FIXME Move to rendering, not the place for rendering decisions
+			let adjacent = false;
 			let count = me.groupProbes.length;
 			for (let i = 0; i < count; i++) {
 				if (me.groupProbes[i].type == "group") {
-					flag = true;
+					adjacent = true;
 					continue;
 				}
-				if (flag) {
-					me.groupProbes[i].type = "first-in-group";
-					flag = false;
+				if (adjacent) {
+					me.groupProbes[i].firstInGroup = true; // "first-in-group";
+					adjacent = false;
 				}
 			}
-			flag = true;
+			adjacent = true;
 			for (let i = count - 1; i >= 0; i--) {
 				if (me.groupProbes[i].type == "group") {
-					flag = true;
+					adjacent = true;
 					continue;
 				}
-				if (flag) {
-					me.groupProbes[i].type = "last-in-group";
-					flag = false;
+				if (adjacent) {
+					me.groupProbes[i].lastInGroup = true; // "last-in-group";
+					adjacent = false;
 				}
 			}
 

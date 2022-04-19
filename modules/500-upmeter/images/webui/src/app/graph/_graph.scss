@@ -269,12 +269,6 @@ $probe-cell-border-radius: 0;
 .graph-row.row-probe .graph-cell.last-in-row {
 }
 
-// Middle pies in the first row in group.
-.graph-row.row-first-in-group .graph-cell {
-	// Top shadow
-	box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
-}
-
 // Probe label in the first row in group.
 .graph-row.row-first-in-group .graph-cell.graph-labels {
 }
@@ -283,10 +277,45 @@ $probe-cell-border-radius: 0;
 .graph-row.row-first-in-group .graph-cell.last-in-row {
 }
 
+// Middle pies in the first row in group.
+.graph-row.row-first-in-group .graph-cell {
+	// Top shadow
+	// box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
+}
+
 // Middle pies in the last row in group.
 .graph-row.row-last-in-group .graph-cell {
 	// Bottom shadow
-	box-shadow: inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
+	// box-shadow: inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
+}
+
+// Single probe in a group
+.graph-row.row-single-in-group .graph-cell {
+	// Bottom and top shadow
+	// box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color,
+	// inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
+}
+
+div.graph-table > div[data-probe-id="__total__"] + div.row-probe > div.graph-cell {
+	// box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
+	box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) #ff00ff;
+}
+
+div.graph-table > div.row-probe + div[data-probe-id="__total__"] > div.graph-cell {
+	// box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
+	box-shadow: inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) #ff00ff;
+}
+
+div.group-container,
+div.probes-container {
+	margin: 0;
+	padding: 0;
+}
+div.probes-container {
+	margin: 0;
+	padding: 0;
+	box-shadow: inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) #00ffff,
+		inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) #ff00ff;
 }
 
 // Probe label in the last row in group.
