@@ -41,6 +41,17 @@ const pieBoxWidth = 60;
 //  .attr("viewBox", [0, 0, width, height]);
 
 export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
+	// Group and probe data
+	const probesByGroup = (g: string) => {
+		const ret = settings.groupProbes.filter(({ group, probe }) => group === g && probe !== "__total__");
+		console.log("probesByGroup", ret);
+		return ret;
+	};
+	const groupedData = settings.groupProbes
+		.filter(({ probe }) => probe === "__total__")
+		.map((x) => ({ ...x, probes: probesByGroup(x.group) }));
+
+
 	const root = d3.select("#graph");
 
 	// Always recreate everything
@@ -56,27 +67,14 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 
 	updateTicks(dataset, settings);
 
-	const graphTable = root.append("div").attr("class", "graph-table");
-	// const groups = graphTable.selectAll(".graph-row").data(settings.groupProbes);
-
-	// ========================== DATA  =============================
-	const probesByGroup = (g: string) => {
-		const ret = settings.groupProbes.filter(({ group, probe }) => group === g && probe !== "__total__");
-		console.log("probesByGroup", ret);
-		return ret;
-	};
-	const groupedData = settings.groupProbes
-		.filter(({ probe }) => probe === "__total__")
-		.map((x) => ({ ...x, probes: probesByGroup(x.group) }));
-
-	// ==================== END OF MINE  ==========================
-
 	// The container for group charts row and probes container
 	// table #graph
 	// 	group container   div[data-group-id=${group}].group-container
 	// 		group charts row   div[data-group-id=${group}][data-probe-id=__total__]
 	// 		probes container   div[data-group-id=${group}].probes-container
 	//			probes charts row   div[data-group-id=${group}][data-probe-id=${probe}]
+
+	const graphTable = root.append("div").attr("class", "graph-table");
 
 	// group container
 	const groupContainers = graphTable
@@ -85,51 +83,26 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 		.enter()
 		.append("div")
 		.attr("class", "group-container")
-		.attr("data-group-id", (gp) => gp.group)
+		.attr("data-group-id", (gp) => gp.group);
 
 	// group charts rows
 	const groupChartsRows = groupContainers
 		.append("div")
 		.attr("class", "graph-row")
 		.attr("data-group-id", (gp) => gp.group)
-		.attr("data-probe-id", "__total__")
+		.attr("data-probe-id", "__total__");
 
 	// probes containers
-	const probeContainers = groupContainers
+	/* const probeContainers = */ groupContainers
 		.append("div")
 		.attr("class", "probes-container")
-		.attr("data-group-id", (gp) => gp.group).style("display", "none");
+		.attr("data-group-id", (gp) => gp.group)
+		.style("display", "none");
 
-
-	const selectProbeContainer = (group: string) => d3
-		.select(`#graph div[data-group-id=${group}].probes-container`);
-	// .data(d => d.probes);
-
-	// .enter()
-	// .selectAll("div")
-	// .data(function (d) {
-	// 	const group = d3.select(this).select("div.probes-container").attr("data-group-id")
-	// 	console.log("detected group", group)
-	// 	return probesByGroup(group)
-	// })
-	// .append("div")
-	// .attr("data-group-id", (gp) => { console.log("gp.group", gp.group); return gp.group })
-	// .attr("data-probe-id", (gp) => { console.log("gp.probe", gp.probe); return gp.probe })
-	// .attr("class", "graph-row");
-
-	// .attr("data-group-id", (gp) => gp.group)
-	// .append("div")
-	// .attr("class", "probes-container")
-	// .data((gp) => gp.probes)
-	// .enter()
-	// .enter()
-	// .join('div', gp => gp.probes)
+	const selectProbeContainer = (group: string) => d3.select(`#graph div[data-group-id=${group}].probes-container`);
 
 	// Group rows charts
 	groupChartsRows.each(function ({ group }) {
-		// { expanded: boolean, probesLoaded: boolean }
-		const groupState = settings.groupState[group];
-
 		// Group row is always visible
 		const groupRow = d3.select(this).classed("graph-row-visible", true);
 		const groupLabel = groupRow.append("div").attr("class", "graph-cell graph-labels");
@@ -146,17 +119,20 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 		const { title: groupTitle } = getGroupSpec(group);
 		groupLabel.append("span").text(groupTitle).attr("class", "group-label");
 
+		// Switch show/hide probe stats
+		// { expanded: boolean, probesLoaded: boolean }
+		const groupState = settings.groupState[group];
 		groupLabel.on("click", () => {
 			// TODO add visibility indicator to request probes data without
 			// additional clicks when change intervals.
 
-			// invert expanded
+			// invert the expanded state
 			groupState.expanded = !groupState.expanded;
 			getTimeRangeSrv().onExpandGroup(group, groupState.expanded);
 
-			// probe container
-			const display = groupState.expanded ? "block" : "none"
-			selectProbeContainer(group).style("display", display)
+			// show/hide probe container
+			const display = groupState.expanded ? "block" : "none";
+			selectProbeContainer(group).style("display", display);
 
 			// toggle icon
 			groupLabel
@@ -170,56 +146,33 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 			}
 		});
 
+		// Group tooltip handle
+		const infoEl = groupLabel.append("div").attr("class", "group-probe-info");
+		ReactDOM.render(
+			<Tooltip content={<GroupProbeTooltip groupName={group} probeName="__total__" />} placement="right-start">
+				<Icon name="fa-info-circle" className="group-probe-info" />
+			</Tooltip>,
+			infoEl.node(),
+		);
+
 		selectProbeContainer(group)
 			.selectAll("div")
-			.data((d) => {
-				console.log("selectGroupContainer(group)", d);
-				return probesByGroup(d.group);
-			})
+			.data((d) => probesByGroup(d.group))
 			.enter()
 			.append("div")
-			.attr("data-group-id", (gp) => {
-				console.log("gp.group", gp.group);
-				return gp.group;
-			})
-			.attr("data-probe-id", (gp) => {
-				console.log("gp.probe", gp.probe);
-				return gp.probe;
-			})
+			.attr("data-group-id", (gp) => gp.group)
+			.attr("data-probe-id", (gp) => gp.probe)
 			.attr("class", "graph-row")
-			// .classed("graph-row-hidden", true)
 			.classed("row-probe", true)
 			.each(function ({ group, probe }) {
-				// ROW   // const groupRow = d3.select(this).classed("graph-row-visible", true);
-				// ROW   // const groupLabel = groupRow.append("div").attr("class", "graph-cell graph-labels");
-				// ROW   // groupLabel.append("i").attr("class", "fas fa-fw fa-caret-right group-icon");
-				// LABEL // const { title: groupTitle } = getGroupSpec(group);
-				// LABEL // groupLabel.append("span").text(groupTitle).attr("class", "group-label");
-
-				console.log("probe each ", group, probe);
-				console.log("probe each this", this);
-
-				const chartRow = d3.select(this).classed("row-probe", true);
-				const chartCell = chartRow.append("div").attr("class", "graph-cell graph-labels");
+				const probeChartRow = d3.select(this).classed("row-probe", true);
+				const probeLabelCell = probeChartRow.append("div").attr("class", "graph-cell graph-labels");
 
 				const { title: probeTitle } = getProbeSpec(group, probe);
-				chartCell.append("span").text(probeTitle).attr("class", "probe-label");
+				probeLabelCell.append("span").text(probeTitle).attr("class", "probe-label");
 
-				////
-				////
-				////
-				////
-				// const groupRow = d3.select(this)//.classed("graph-row-visible", true);
-				// const groupLabel = groupRow.append("div").attr("class", "graph-cell graph-labels");
-
-				// groupRow.classed("graph-row-hidden", true);
-				// groupRow.classed(`row-probe`, true);
-
-				// Add label
-				// groupLabel.append("span").text(probeTitle).attr("class", "probe-label");
-
-				let infoEl = chartCell.append("div").attr("class", "group-probe-info");
-
+				// Probe tooltip handle
+				const infoEl = probeLabelCell.append("div").attr("class", "group-probe-info");
 				ReactDOM.render(
 					<Tooltip content={<GroupProbeTooltip groupName={group} probeName={probe} />} placement="right-start">
 						<Icon name="fa-info-circle" className="group-probe-info" />
@@ -228,14 +181,7 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 				);
 			});
 
-		let infoEl = groupLabel.append("div").attr("class", "group-probe-info");
 
-		ReactDOM.render(
-			<Tooltip content={<GroupProbeTooltip groupName={group} probeName="__total__" />} placement="right-start">
-				<Icon name="fa-info-circle" className="group-probe-info" />
-			</Tooltip>,
-			infoEl.node(),
-		);
 	});
 
 	// Each row has empty cell to define initial height for empty rows
@@ -343,18 +289,10 @@ export function renderGroupProbesData(settings: LegacySettings, group: string, d
 
 			// Render pies
 			const episodes = probes[probe];
-			const cellCount = probes[probe].length;
 			const rowEl = getRowElement(group, probe);
 			rowEl.selectAll(".cell-data").remove();
 			episodes.forEach(function (episode, i) {
 				const cell = rowEl.append("div").attr("class", "graph-cell cell-data");
-
-				if (i === 0) {
-					cell.classed("first-in-row", true);
-				}
-				if (i === cellCount - 1) {
-					cell.classed("last-in-row", true);
-				}
 
 				const viewBox = [0, 0, pieBoxWidth, pieBoxWidth].join(" ");
 

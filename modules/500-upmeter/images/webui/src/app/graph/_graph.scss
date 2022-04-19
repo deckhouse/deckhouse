@@ -183,67 +183,11 @@
 	content: " ";
 }
 
-/*** classes for probe cells
-// Middle pies in the middle row.
-.graph-row.row-probe .graph-cell {
-background-color: red;
-}
-// Probe label in the middle row.
-.graph-row.row-probe .graph-cell.graph-labels
-{
-background-color: lightsalmon;
-}
-// First pie in the middle row.
-.graph-row.row-probe .graph-cell.first-in-row {
-background-color: salmon;
-}
-// Last pie in the middle row.
-.graph-row.row-probe .graph-cell.last-in-row
- {
-background-color: darkred;
-}
-
-// Middle pies in the first row in group.
-.graph-row.row-first-in-group .graph-cell {
-background-color: green;
-}
-// Probe label in the first row in group.
-.graph-row.row-first-in-group .graph-cell.graph-labels {
-background-color: lightgreen;
-}
-// First pie in the first row in group.
-.graph-row.row-first-in-group .graph-cell.first-in-row {
-background-color: springgreen;
-}
-// Last pie in the first row in group.
-.graph-row.row-first-in-group .graph-cell.last-in-row {
-background-color: darkgreen;
-}
-
-// Middle pies in the last row in group.
-.graph-row.row-last-in-group .graph-cell {
-background-color: blue;
-}
-// Probe label in the last row in group.
-.graph-row.row-last-in-group .graph-cell.graph-labels {
-background-color: lightblue;
-}
-// First pie in the last row in group.
-.graph-row.row-last-in-group .graph-cell.first-in-row {
-background-color: deepskyblue;
-}
-// Last pie in the last row in group.
-.graph-row.row-last-in-group .graph-cell.last-in-row {
-background-color: darkblue;
-}
-
-*/
-
 .graph-row .graph-cell.graph-labels {
 	padding-left: 10px;
 }
 
-.graph-row .graph-cell.last-in-row {
+div.graph-row > div.graph-cell:last-child {
 	padding-right: 10px;
 	width: 100%;
 }
@@ -263,30 +207,6 @@ $probe-cell-border-radius: 0;
 
 // Probe label in the middle row.
 .graph-row.row-probe .graph-cell.graph-labels {
-}
-
-// Last pie in the middle row.
-.graph-row.row-probe .graph-cell.last-in-row {
-}
-
-// Probe label in the first row in group.
-.graph-row.row-first-in-group .graph-cell.graph-labels {
-}
-
-// Last pie in the first row in group.
-.graph-row.row-first-in-group .graph-cell.last-in-row {
-}
-
-// Middle pies in the first row in group.
-.graph-row.row-first-in-group .graph-cell {
-	// Top shadow
-	// box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
-}
-
-// Middle pies in the last row in group.
-.graph-row.row-last-in-group .graph-cell {
-	// Bottom shadow
-	// box-shadow: inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
 }
 
 // Single probe in a group
@@ -314,18 +234,6 @@ div.group-container > div.probes-container > div:first-child:not(:only-child) > 
 div.group-container:not(:last-child) > div.probes-container > div:last-child:not(:only-child) > div.graph-cell {
 	box-shadow: inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
 }
-
-// Probe label in the last row in group.
-.graph-row.row-last-in-group .graph-cell.graph-labels {
-}
-
-// Last pie in the last row in group.
-.graph-row.row-last-in-group .graph-cell.last-in-row {
-}
-
-// .graph-row:last-child .graph-cell {
-// 	box-shadow: none !important;
-// }
 
 // graph-cell under 'Total' labels
 .graph-row .graph-cell:last-child {

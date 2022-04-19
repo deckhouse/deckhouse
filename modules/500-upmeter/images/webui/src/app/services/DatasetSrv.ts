@@ -114,32 +114,6 @@ export class DatasetSrv {
 				});
 			}
 
-			// Mark first and last probes in groups for styling
-			// FIXME Move to rendering, not the place for rendering decisions
-			let adjacent = false;
-			let count = me.groupProbes.length;
-			for (let i = 0; i < count; i++) {
-				if (me.groupProbes[i].type == "group") {
-					adjacent = true;
-					continue;
-				}
-				if (adjacent) {
-					me.groupProbes[i].firstInGroup = true; // "first-in-group";
-					adjacent = false;
-				}
-			}
-			adjacent = true;
-			for (let i = count - 1; i >= 0; i--) {
-				if (me.groupProbes[i].type == "group") {
-					adjacent = true;
-					continue;
-				}
-				if (adjacent) {
-					me.groupProbes[i].lastInGroup = true; // "last-in-group";
-					adjacent = false;
-				}
-			}
-
 			// Fill dataset with groups and probes.
 			me.dataset.clear();
 			me.groups.forEach((group) => {
