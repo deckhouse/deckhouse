@@ -239,13 +239,13 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 	});
 
 	// Each row has empty cell to define initial height for empty rows
-	// groupsEnter
-	// 	.append("div")
-	// 	//.text("Data for group '" + group + "'")
-	// 	.attr("class", "graph-cell cell-data")
-	// 	.append("svg")
-	// 	.attr("width", pieBoxWidth)
-	// 	.attr("height", pieBoxWidth);
+	groupChartsRows
+		.append("div")
+		//.text("Data for group '" + group + "'")
+		.attr("class", "graph-cell cell-data")
+		.append("svg")
+		.attr("width", pieBoxWidth)
+		.attr("height", pieBoxWidth);
 }
 
 export function updateTicks(dataset: Dataset, settings: LegacySettings) {
