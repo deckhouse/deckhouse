@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 module "vpc" {
   source          = "../../../terraform-modules/vpc"
   prefix          = local.prefix
@@ -26,7 +27,7 @@ module "security-groups" {
   cluster_uuid = var.clusterUUID
   vpc_id = module.vpc.id
   tags = local.tags
-  ssh_allow_list = local.ssh_allow_list
+  ssh_allow_list = local.bastion_instance != null ? 1 : 0 local.ssh_allow_list
 }
 
 data "aws_availability_zones" "available" {}
@@ -213,7 +214,7 @@ locals {
 }
 
 resource "aws_instance" "bastion" {
-  count                  = local.bastion_instance != {} ? 1 : 0
+  count                  = local.bastion_instance != null ? 1 : 0
   ami                    = local.instance_class.ami
   instance_type          = local.instance_class.instanceType
   key_name               = local.prefix
@@ -239,7 +240,7 @@ resource "aws_instance" "bastion" {
 }
 
 resource "aws_eip" "bastion" {
-  count = local.bastion_instance != {} ? 1 : 0
+  count = local.bastion_instance != null ? 1 : 0
   vpc   = true
   tags = merge(local.tags, {
     Name = "${local.prefix}-bastion"
@@ -247,7 +248,7 @@ resource "aws_eip" "bastion" {
 }
 
 resource "aws_eip_association" "bastion" {
-  count         = local.bastion_instance != {} ? 1 : 0
+  count         = local.bastion_instance != null ? 1 : 0
   instance_id   = aws_instance.bastion[0].id
   allocation_id = aws_eip.bastion[0].id
 }
