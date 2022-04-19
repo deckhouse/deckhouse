@@ -21,11 +21,12 @@ module "vpc" {
 }
 
 module "security-groups" {
-  source       = "../../../terraform-modules/security-groups"
-  prefix       = local.prefix
+  source = "../../../terraform-modules/security-groups"
+  prefix = local.prefix
   cluster_uuid = var.clusterUUID
-  vpc_id       = module.vpc.id
-  tags         = local.tags
+  vpc_id = module.vpc.id
+  tags = local.tags
+  ssh_allow_list = local.ssh_allow_list
 }
 
 data "aws_availability_zones" "available" {}

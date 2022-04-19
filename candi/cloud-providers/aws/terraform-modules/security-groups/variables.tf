@@ -28,10 +28,6 @@ variable "tags" {
   type = map(string)
 }
 
-variable "providerClusterConfiguration" {
+variable "ssh_allow_list" {
   type = any
-}
-
-locals {
-  ssh_allow_list   = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
 }

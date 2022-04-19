@@ -91,6 +91,6 @@ resource "aws_security_group_rule" "allow-ssh-for-everyone" {
   from_port = 22
   to_port = 22
   protocol = "tcp"
-  cidr_blocks = local.ssh_allow_list
+  cidr_blocks = var.ssh_allow_list
   security_group_id = aws_security_group.ssh-accessible.id
 }
