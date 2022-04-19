@@ -42,9 +42,13 @@ steps:
       CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-      CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
     run: |
-      ## Source: .gitlab/ci_templates/build.yml
+      # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+      REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+      if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+        # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+        REPO_SUFFIX=
+      fi
 
       # Put tags on produced images and push to dev and release repositories.
       #
@@ -96,12 +100,14 @@ steps:
         BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
         SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
       else
-        # DECKHOUSE_REGISTRY_HOST — this is not the main repo.
-        # Build using dev-registry as a single primary repo and push to Github Container Registry.
+        # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+        # Build using dev-registry as a single primary repo and push:
+        # - branches to Dev registry to run e2e tests.
+        # - semver tags to Github Container Registry for testing release process.
         werf build \
           --parallel=true --parallel-tasks-limit=5 \
           --report-path images_tags_werf.json
-        BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
         SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
         echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
       fi
@@ -109,8 +115,8 @@ steps:
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
         # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-        # Use it as image tag.
-        IMAGE_TAG=${CI_COMMIT_REF_SLUG}
+        # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
         echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 

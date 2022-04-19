@@ -547,6 +547,7 @@ function main() {
     exit 2
   fi
 
+
   exitCode=0
   case "${1}" in
     run-test)

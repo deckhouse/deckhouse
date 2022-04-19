@@ -54,7 +54,7 @@ jobs:
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
       ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
       ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
-      ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
+      ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
     # Skip the CI for automation PRs, e.g. changelog
     if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
@@ -64,22 +64,24 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
 
-            let githubBranch = '';
-            let githubTag = '';
-            let githubSHA = '';
-            let refName = '';
-            let refSlug = '';
+            let refSlug = ''
+            let refName = ''
+            let refFull = ''
+            let githubBranch = ''
+            let githubTag = ''
+            let githubSHA = ''
             if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
-              // workflow_dispatch run for pull request should have input 'pull_request_ref'.
-              // Note: value in inputs.pull_request_ref is for pull_request_info job.
+              // Trigger: workflow_dispatch with pull_request_ref.
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+
+              refSlug       = `pr${prNum}`
               refName       = context.payload.inputs.ci_commit_ref_name
+              refFull       = context.payload.inputs.pull_request_ref
               githubBranch  = refName
               githubSHA     = context.payload.inputs.pull_request_sha
-              // Extract pull request number from 'refs/pull/<NUM>/merge'
-              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
-              refSlug       = `pr${prNum}`;
               core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
             } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
@@ -89,31 +91,30 @@ jobs:
 
               refSlug = `pr${context.issue.number}`;
               refName = (prRepo === targetRepo) ? prRef : refSlug;
+              refFull = `refs/pull/${context.issue.number}/head`
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
             } else {
-              // Events: workflow_dispatch without pull_request_ref, schedule, push...
+              // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = GITHUB_REF_NAME
               refName       = GITHUB_REF_NAME
+              refFull       = GITHUB_REF
               githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
               githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
               githubSHA     = context.sha
-              // refName is 'main' or tag name, so slugification is not necessary.
-              refSlug       = refName
               core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
             }
 
-            core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
-            core.info(`output.ci_commit_ref_name: '${refName}'`)
-            core.info(`output.ci_commit_tag:      '${githubTag}'`)
-            core.info(`output.ci_commit_branch:   '${githubBranch}'`)
-            core.info(`output.github_sha:         '${githubSHA}'`)
-
+            core.setCommandEcho(true)
             core.setOutput('ci_commit_ref_slug', refSlug)
             core.setOutput('ci_commit_ref_name', refName)
             core.setOutput(`ci_commit_tag`, githubTag)
             core.setOutput(`ci_commit_branch`, githubBranch)
+            core.setOutput(`ref_full`, refFull)
             core.setOutput('github_sha', githubSHA)
+            core.setCommandEcho(false)
 
   # </template: git_info_job>
 

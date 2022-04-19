@@ -25,23 +25,20 @@
 {!{- end }!}
 run: |
   echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'docker run', using environment:
+    INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
     PREFIX=${PREFIX}
-    TMPPATH=${TMPPATH}
-    DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+    TMP_DIR_PATH=${TMP_DIR_PATH}
+    DEV_BRANCH=${DEV_BRANCH}
     PROVIDER=${PROVIDER}
     CRI=${CRI}
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
-    CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-    JOB_STATUS=${JOB_STATUS}
   "
 
   docker run --rm \
-    -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-    -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
-    -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+    -e DEV_BRANCH=${DEV_BRANCH} \
     -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
     -e CRI=${CRI} \
     -e PROVIDER=${PROVIDER:-not_provided} \
@@ -68,7 +65,7 @@ run: |
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
 {!{- end }!}
     -v $(pwd)/testing:/deckhouse/testing \
-    -v ${TMPPATH}:/tmp \
+    -v ${TMP_DIR_PATH}:/tmp \
     --user $(id -u):$(id -u) \
     -v /etc/group:/etc/group:ro \
     -v /etc/passwd:/etc/passwd:ro \

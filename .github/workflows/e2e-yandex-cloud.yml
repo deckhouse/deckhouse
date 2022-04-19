@@ -127,7 +127,7 @@ jobs:
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
       ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
       ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
-      ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
+      ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
     # Skip the CI for automation PRs, e.g. changelog
     if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
@@ -137,22 +137,24 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
 
-            let githubBranch = '';
-            let githubTag = '';
-            let githubSHA = '';
-            let refName = '';
-            let refSlug = '';
+            let refSlug = ''
+            let refName = ''
+            let refFull = ''
+            let githubBranch = ''
+            let githubTag = ''
+            let githubSHA = ''
             if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
-              // workflow_dispatch run for pull request should have input 'pull_request_ref'.
-              // Note: value in inputs.pull_request_ref is for pull_request_info job.
+              // Trigger: workflow_dispatch with pull_request_ref.
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+
+              refSlug       = `pr${prNum}`
               refName       = context.payload.inputs.ci_commit_ref_name
+              refFull       = context.payload.inputs.pull_request_ref
               githubBranch  = refName
               githubSHA     = context.payload.inputs.pull_request_sha
-              // Extract pull request number from 'refs/pull/<NUM>/merge'
-              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '');
-              refSlug       = `pr${prNum}`;
               core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
             } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
@@ -162,31 +164,30 @@ jobs:
 
               refSlug = `pr${context.issue.number}`;
               refName = (prRepo === targetRepo) ? prRef : refSlug;
+              refFull = `refs/pull/${context.issue.number}/head`
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
             } else {
-              // Events: workflow_dispatch without pull_request_ref, schedule, push...
+              // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = GITHUB_REF_NAME
               refName       = GITHUB_REF_NAME
+              refFull       = GITHUB_REF
               githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
               githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
               githubSHA     = context.sha
-              // refName is 'main' or tag name, so slugification is not necessary.
-              refSlug       = refName
               core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
             }
 
-            core.info(`output.ci_commit_ref_slug: '${refSlug}'`)
-            core.info(`output.ci_commit_ref_name: '${refName}'`)
-            core.info(`output.ci_commit_tag:      '${githubTag}'`)
-            core.info(`output.ci_commit_branch:   '${githubBranch}'`)
-            core.info(`output.github_sha:         '${githubSHA}'`)
-
+            core.setCommandEcho(true)
             core.setOutput('ci_commit_ref_slug', refSlug)
             core.setOutput('ci_commit_ref_name', refName)
             core.setOutput(`ci_commit_tag`, githubTag)
             core.setOutput(`ci_commit_branch`, githubBranch)
+            core.setOutput(`ref_full`, refFull)
             core.setOutput('github_sha', githubSHA)
+            core.setCommandEcho(false)
 
   # </template: git_info_job>
 
@@ -323,37 +324,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -361,29 +361,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.19"
         env:
@@ -393,37 +403,30 @@ jobs:
           KUBERNETES_VERSION: "1.19"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -433,7 +436,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -447,44 +450,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.19"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -494,7 +489,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -558,6 +553,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -700,37 +696,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -738,29 +733,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.20"
         env:
@@ -770,37 +775,30 @@ jobs:
           KUBERNETES_VERSION: "1.20"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -810,7 +808,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -824,44 +822,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.20"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -871,7 +861,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -935,6 +925,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -1077,37 +1068,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -1115,29 +1105,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.21"
         env:
@@ -1147,37 +1147,30 @@ jobs:
           KUBERNETES_VERSION: "1.21"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1187,7 +1180,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -1201,44 +1194,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1248,7 +1233,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -1312,6 +1297,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -1454,37 +1440,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -1492,29 +1477,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.22"
         env:
@@ -1524,37 +1519,30 @@ jobs:
           KUBERNETES_VERSION: "1.22"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1564,7 +1552,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -1578,44 +1566,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.22"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1625,7 +1605,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -1689,6 +1669,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -1831,37 +1812,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -1869,29 +1849,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Docker/1.23"
         env:
@@ -1901,37 +1891,30 @@ jobs:
           KUBERNETES_VERSION: "1.23"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -1941,7 +1924,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -1955,44 +1938,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Docker
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.23"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2002,7 +1977,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -2066,6 +2041,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -2208,37 +2184,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -2246,29 +2221,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.19"
         env:
@@ -2278,37 +2263,30 @@ jobs:
           KUBERNETES_VERSION: "1.19"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2318,7 +2296,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -2332,44 +2310,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.19"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2379,7 +2349,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -2443,6 +2413,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -2585,37 +2556,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -2623,29 +2593,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.20"
         env:
@@ -2655,37 +2635,30 @@ jobs:
           KUBERNETES_VERSION: "1.20"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2695,7 +2668,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -2709,44 +2682,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.20"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -2756,7 +2721,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -2820,6 +2785,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -2962,37 +2928,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -3000,29 +2965,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.21"
         env:
@@ -3032,37 +3007,30 @@ jobs:
           KUBERNETES_VERSION: "1.21"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -3072,7 +3040,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -3086,44 +3054,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -3133,7 +3093,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -3197,6 +3157,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -3339,37 +3300,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -3377,29 +3337,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.22"
         env:
@@ -3409,37 +3379,30 @@ jobs:
           KUBERNETES_VERSION: "1.22"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -3449,7 +3412,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -3463,44 +3426,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.22"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -3510,7 +3465,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -3574,6 +3529,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
@@ -3716,37 +3672,36 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          GITHUB_SHA: ${{needs.git_info.outputs.github_sha}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
         run: |
-          # Random delay to sparse 'update comment' steps in time.
-          delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
-          echo Delay for $delay
-          sleep $delay
-
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-          prefix=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-          echo "::set-output name=prefix::${prefix}"
-          echo "prefix=${prefix}"
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          tmppath=/mnt/cloud-layouts/layouts/${prefix}
-          if [[ -d "${tmppath}" ]] ; then
-            echo "Temporary dir already exists: ${tmppath}. ERROR!"
-            ls -la ${tmppath}
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
             exit 1
           else
-            echo "Create temporary dir for job: ${tmppath}."
-            mkdir -p "${tmppath}"
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
           fi
-          echo "::set-output name=tmppath::${tmppath}"
 
-          ## Deckhouse 'install' image name
           ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
 
           # Use dev-registry for Git branches.
           BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -3754,29 +3709,39 @@ jobs:
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            # Use Github Container Registry for test repositories.
-            BRANCH_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}/dev"
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
-          IMAGE_NAME=
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git branch ${CI_COMMIT_BRANCH}"
-          fi
-          if [[ -n $CI_COMMIT_TAG ]] ; then
-            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-            IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-            echo "Deckhouse Deployment will use image ${IMAGE_NAME} to test Git tag ${CI_COMMIT_TAG}"
-          fi
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          echo "::set-output name=install-image-name::${IMAGE_NAME}"
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Name: ${IMAGE_NAME}" | tr '[:lower:]' '[:upper:]'
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${IMAGE_NAME}'."
-          docker pull "${IMAGE_NAME}"
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
 
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.23"
         env:
@@ -3786,37 +3751,30 @@ jobs:
           KUBERNETES_VERSION: "1.23"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -3826,7 +3784,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -3840,44 +3798,36 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: always()
         env:
-          JOB_STATUS: ${{ job.status }}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.23"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
-          TMPPATH: ${{ steps.setup.outputs.tmppath}}
-          PREFIX: ${{ steps.setup.outputs.prefix}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             PREFIX=${PREFIX}
-            TMPPATH=${TMPPATH}
-            DEV_BRANCH=${CI_COMMIT_REF_SLUG}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
             PROVIDER=${PROVIDER}
             CRI=${CRI}
             LAYOUT=${LAYOUT}
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
-            CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
-            JOB_STATUS=${JOB_STATUS}
           "
 
           docker run --rm \
-            -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
-            -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
-            -e DEV_BRANCH=${CI_COMMIT_REF_SLUG} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
@@ -3887,7 +3837,7 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -v $(pwd)/testing:/deckhouse/testing \
-            -v ${TMPPATH}:/tmp \
+            -v ${TMP_DIR_PATH}:/tmp \
             --user $(id -u):$(id -u) \
             -v /etc/group:/etc/group:ro \
             -v /etc/passwd:/etc/passwd:ro \
@@ -3951,6 +3901,7 @@ jobs:
 
       - name: Check alerting credentials
         id: check_alerting
+        if: always()
         env:
           KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |

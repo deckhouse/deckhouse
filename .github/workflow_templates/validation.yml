@@ -113,7 +113,7 @@ jobs:
     name: Copyright Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 -}!}
 
-{!{/* Template for validation jobs. CI_COMMIT_REF_NAME and CI_PIPELINE_CREATED_AT are required for werf.yaml */}!}
+{!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}
 {!{- $ctx := index . 0 -}!}
 {!{- $type := index . 1 }!}
