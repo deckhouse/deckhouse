@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/iancoleman/strcase"
@@ -215,11 +216,23 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		internalValuesPath = fmt.Sprintf("%s.internal.%s.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName), args.InternalValuesSubPath)
 	}
 
+	emptydirUsageMetricValue := 0.0
 	if len(effectiveStorageClass) == 0 || effectiveStorageClass == "false" {
 		input.Values.Set(internalValuesPath, false)
+		emptydirUsageMetricValue = 1.0
 	} else {
 		input.Values.Set(internalValuesPath, effectiveStorageClass)
 	}
+
+	input.MetricsCollector.Set(
+		"d8_emptydir_usage",
+		emptydirUsageMetricValue,
+		map[string]string{
+			"namespace":   args.Namespace,
+			"module_name": args.ModuleName,
+		},
+		metrics.WithGroup("storage_class_change"),
+	)
 
 	return effectiveStorageClass
 }
