@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 module "vpc" {
   source          = "../../../terraform-modules/vpc"
   prefix          = local.prefix
@@ -217,7 +216,7 @@ resource "aws_instance" "bastion" {
   instance_type          = local.instance_class.instanceType
   key_name               = local.prefix
   subnet_id              = local.subnet_id
-  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, aws_security_group.bastion-ssh-accessible.id], local.additional_security_groups)
+  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, aws_security_group.bastion-ssh-accessible.id, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
   source_dest_check      = false
   iam_instance_profile   = "${local.prefix}-node"
 
