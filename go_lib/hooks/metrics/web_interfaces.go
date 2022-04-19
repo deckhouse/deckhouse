@@ -41,6 +41,7 @@ func RegisterD8WebInterfaceMetric(name, urlPrefix string, urlSuffix ...string) {
 		if len(urlSuffix) > 0 && urlSuffix[0] != "" {
 			u = path.Join(u, urlSuffix[0])
 		}
+		fmt.Println("SETMETRIC", name, u)
 		input.MetricsCollector.Set("deckhouse_web_interfaces", 1, map[string]string{"name": name, "url": u}, metrics.WithGroup("deckhouse_web_interfaces"))
 
 		return nil
