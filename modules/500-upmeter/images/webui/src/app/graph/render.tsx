@@ -75,7 +75,7 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 	// table #graph
 	// 	group container   div[data-group-id=${group}].group-container
 	// 		group charts row   div[data-group-id=${group}][data-probe-id=__total__]
-	// 		probes container   div[data-group-id=${group}].probe-container
+	// 		probes container   div[data-group-id=${group}].probes-container
 	//			probes charts row   div[data-group-id=${group}][data-probe-id=${probe}]
 
 	// group container
@@ -97,16 +97,18 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 	// probes containers
 	const probeContainers = groupContainers
 		.append("div")
-		.attr("class", "probe-container")
-		.attr("data-group-id", (gp) => gp.group)
-	// .data(d => { console.log(d); return d })
+		.attr("class", "probes-container")
+		.attr("data-group-id", (gp) => gp.group).style("display", "none");
 
-	const selectProbeContainer = (group: string) => d3.select(`#graph div[data-group-id=${group}].probe-container`);
+
+	const selectProbeContainer = (group: string) => d3
+		.select(`#graph div[data-group-id=${group}].probes-container`);
+	// .data(d => d.probes);
 
 	// .enter()
 	// .selectAll("div")
 	// .data(function (d) {
-	// 	const group = d3.select(this).select("div.probe-container").attr("data-group-id")
+	// 	const group = d3.select(this).select("div.probes-container").attr("data-group-id")
 	// 	console.log("detected group", group)
 	// 	return probesByGroup(group)
 	// })
@@ -123,7 +125,7 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 	// .enter()
 	// .join('div', gp => gp.probes)
 
-	// Labels for group and probes.
+	// Group rows charts
 	groupChartsRows.each(function ({ group }) {
 		// { expanded: boolean, probesLoaded: boolean }
 		const groupState = settings.groupState[group];
@@ -153,9 +155,8 @@ export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
 			getTimeRangeSrv().onExpandGroup(group, groupState.expanded);
 
 			// probe container
-			selectProbeContainer(group)
-				.classed("graph-row-hidden", !groupState.expanded)
-				.classed("graph-row-visible", groupState.expanded);
+			const display = groupState.expanded ? "block" : "none"
+			selectProbeContainer(group).style("display", display)
 
 			// toggle icon
 			groupLabel
