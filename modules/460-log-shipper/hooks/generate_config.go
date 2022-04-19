@@ -17,13 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +29,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/config"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/model"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transform"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -92,29 +92,26 @@ func filterClusterLogDestination(obj *unstructured.Unstructured) (go_hook.Filter
 	return dst, nil
 }
 
-type ClusterLogDestination struct {
-	Name string
-	Spec interface{}
-}
-
 func handleClusterLogs(input *go_hook.HookInput) error {
-	destMap := make(map[string]v1alpha1.ClusterLogDestination)
+	destNameToObject := make(map[string]v1alpha1.ClusterLogDestination)
 	snap := input.Snapshots["cluster_log_destination"]
 
 	// load all destinations into the destination map
 	for _, d := range snap {
 		dest := d.(v1alpha1.ClusterLogDestination)
-		destMap[dest.Name] = dest
+		destNameToObject[dest.Name] = dest
 	}
 
 	snap = input.Snapshots["cluster_log_source"]
-	clusterSources := make([]vector.ClusterLoggingConfig, 0, len(snap))
+	clusterSources := make([]model.ClusterLoggingConfig, 0, len(snap))
+
+	// TODO(nabokihms): refactor these blocks
 	for _, s := range snap {
 		tmpSpec := s.(v1alpha1.ClusterLoggingConfig)
-		sourceConfig := vector.ClusterLoggingConfig{
+		sourceConfig := model.ClusterLoggingConfig{
 			TypeMeta:   tmpSpec.TypeMeta,
 			ObjectMeta: tmpSpec.ObjectMeta,
-			Spec: vector.ClusterLoggingConfigSpec{
+			Spec: model.ClusterLoggingConfigSpec{
 				Type:            tmpSpec.Spec.Type,
 				KubernetesPods:  tmpSpec.Spec.KubernetesPods,
 				File:            tmpSpec.Spec.File,
@@ -129,37 +126,39 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Spec.DestinationRefs = make([]string, 1)
 				newSource.Spec.DestinationRefs[0] = dest
 				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultTransforms(destMap[dest])...)
-				filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[dest])...)
+				filterTransforms, err := transform.CreateLogFilterTransforms(tmpSpec.Spec.LogFilters)
 				if err != nil {
 					return err
 				}
 				newSource.Spec.Transforms = append(newSource.Spec.Transforms, filterTransforms...)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[dest])...)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[dest])...)
 				clusterSources = append(clusterSources, newSource)
 			}
 		} else {
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(destMap[sourceConfig.Spec.DestinationRefs[0]])...)
-			filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[sourceConfig.Spec.DestinationRefs[0]])...)
+			filterTransforms, err := transform.CreateLogFilterTransforms(tmpSpec.Spec.LogFilters)
 			if err != nil {
 				return err
 			}
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[sourceConfig.Spec.DestinationRefs[0]])...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[sourceConfig.Spec.DestinationRefs[0]])...)
 			clusterSources = append(clusterSources, sourceConfig)
 		}
 	}
 
 	snap = input.Snapshots["namespaced_log_source"]
-	namespacedSources := make([]vector.PodLoggingConfig, 0, len(snap))
+	namespacedSources := make([]model.PodLoggingConfig, 0, len(snap))
+
+	// TODO(nabokihms): refactor these blocks
 	for _, s := range snap {
 		tmpPogSpec := s.(v1alpha1.PodLoggingConfig)
-		sourceConfig := vector.PodLoggingConfig{
+		sourceConfig := model.PodLoggingConfig{
 			TypeMeta:   tmpPogSpec.TypeMeta,
 			ObjectMeta: tmpPogSpec.ObjectMeta,
-			Spec: vector.PodLoggingConfigSpec{
+			Spec: model.PodLoggingConfigSpec{
 				LabelSelector:          tmpPogSpec.Spec.LabelSelector,
 				ClusterDestinationRefs: tmpPogSpec.Spec.ClusterDestinationRefs,
 			},
@@ -172,69 +171,69 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Spec.ClusterDestinationRefs = make([]string, 1)
 				newSource.Spec.ClusterDestinationRefs[0] = dest
 				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultTransforms(destMap[dest])...)
-				filterTransforms, err := vector.CreateTransformsFromFilter(tmpPogSpec.Spec.LogFilters)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[dest])...)
+				filterTransforms, err := transform.CreateLogFilterTransforms(tmpPogSpec.Spec.LogFilters)
 				if err != nil {
 					return err
 				}
 				newSource.Spec.Transforms = append(newSource.Spec.Transforms, filterTransforms...)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[dest])...)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[dest])...)
 				namespacedSources = append(namespacedSources, newSource)
 			}
 		} else {
-			filterTransforms, err := vector.CreateTransformsFromFilter(tmpPogSpec.Spec.LogFilters)
+			filterTransforms, err := transform.CreateLogFilterTransforms(tmpPogSpec.Spec.LogFilters)
 			if err != nil {
 				return err
 			}
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(destMap[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
 			namespacedSources = append(namespacedSources, sourceConfig)
 		}
 	}
 
-	generator := vector.NewLogConfigGenerator()
-	var generatedPipelines int
+	generator := config.NewLogConfigGenerator()
+	var logShipperActivated bool
 
 	for _, source := range clusterSources {
-		source, transforms, destinations, err := pipelinePartsFromClusterSource(generator, destMap, &source)
+		pipeline, err := config.NewPipelineCluster(generator, destNameToObject, &source)
 		if err != nil {
 			input.LogEntry.Warn(err)
 			continue
 		}
-
-		generator.AppendLogPipeline(source, transforms, destinations)
-		generatedPipelines++
+		generator.AppendLogPipeline(pipeline)
+		logShipperActivated = true
 	}
 
 	for _, source := range namespacedSources {
-		source, transforms, destinations, err := pipelinePartsFromNamespacedSource(generator, destMap, &source)
+		pipeline, err := config.NewPipelineNamespaced(generator, destNameToObject, &source)
 		if err != nil {
 			input.LogEntry.Warn(err)
 			continue
 		}
-
-		generator.AppendLogPipeline(source, transforms, destinations)
-		generatedPipelines++
+		generator.AppendLogPipeline(pipeline)
+		logShipperActivated = true
 	}
 
-	if generatedPipelines == 0 {
-		input.Values.Set("logShipper.internal.activated", false)
-		input.PatchCollector.Delete("v1", "Secret", "d8-log-shipper", "d8-log-shipper-config", object_patch.InBackground())
+	input.Values.Set("logShipper.internal.activated", logShipperActivated)
+
+	if logShipperActivated {
+		configFile, err := generator.GenerateConfig()
+		if err != nil {
+			return err
+		}
+
+		createOrUpdateConfigAndEvent(input, configFile)
 		return nil
 	}
 
-	config, err := generator.GenerateConfig()
-	if err != nil {
-		return err
-	}
+	input.PatchCollector.Delete("v1", "Secret", "d8-log-shipper", "d8-log-shipper-config", object_patch.InBackground())
+	return nil
+}
 
-	// set activated value
-	input.Values.Set("logShipper.internal.activated", true)
-
-	// create secret with configuration
+func createOrUpdateConfigAndEvent(input *go_hook.HookInput, configFile []byte) {
 	secret := &corev1.Secret{
 		Type: corev1.SecretTypeOpaque,
 		TypeMeta: metav1.TypeMeta{
@@ -249,7 +248,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				"module":   "log-shipper",
 			},
 		},
-		Data: map[string][]byte{"vector.json": config},
+		Data: map[string][]byte{"vector.json": configFile},
 	}
 
 	input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
@@ -279,89 +278,4 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 	}
 
 	input.PatchCollector.Create(event)
-	return nil
-}
-
-func pipelinePartsFromClusterSource(generator *vector.LogConfigGenerator, destMap map[string]v1alpha1.ClusterLogDestination, sourceConfig *vector.ClusterLoggingConfig) (source impl.LogSource, transforms []impl.LogTransform, destinations []impl.LogDestination, err error) {
-	// for each source looking for all destinations
-	for _, dstRef := range sourceConfig.Spec.DestinationRefs {
-		cdest, ok := destMap[dstRef]
-		if !ok {
-			err = fmt.Errorf("destinationRef: %s for ClusterLoggingConfig: %s not found. Skipping", dstRef, sourceConfig.Name)
-			return
-		}
-		dest := newLogDest(cdest.Spec.Type, cdest.Name, cdest.Spec)
-		destinations = append(destinations, dest)
-	}
-
-	if len(sourceConfig.Spec.Transforms) > 0 {
-		transforms, err = generator.BuildTransformsFromMapSlice(sourceConfig.Name, sourceConfig.Spec.Transforms)
-		if err != nil {
-			err = errors.Wrap(err, "transforms build from snippet failed. Skipping")
-			return
-		}
-	}
-
-	source = newLogSource(sourceConfig.Spec.Type, sourceConfig.Name, sourceConfig.Spec)
-
-	return
-}
-
-func pipelinePartsFromNamespacedSource(generator *vector.LogConfigGenerator, destMap map[string]v1alpha1.ClusterLogDestination, sourceConfig *vector.PodLoggingConfig) (source impl.LogSource, transforms []impl.LogTransform, destinations []impl.LogDestination, err error) {
-	// for each source looking for all cluster destinations
-	for _, dstRef := range sourceConfig.Spec.ClusterDestinationRefs {
-		cdest, ok := destMap[dstRef]
-		if !ok {
-			err = fmt.Errorf("clusterDestinationRef: %s for PodLoggingConfig: %s not found. Skipping", dstRef, sourceConfig.Name)
-			return
-		}
-		dest := newLogDest(cdest.Spec.Type, cdest.Name, cdest.Spec)
-		destinations = append(destinations, dest)
-	}
-
-	namespacedName := fmt.Sprintf("%s_%s", sourceConfig.Namespace, sourceConfig.Name)
-	// prefer snippet over structured transforms
-	if len(sourceConfig.Spec.Transforms) > 0 {
-		transforms, err = generator.BuildTransformsFromMapSlice(namespacedName, sourceConfig.Spec.Transforms)
-		if err != nil {
-			err = errors.Wrap(err, "transforms build from snippet failed. Skipping")
-			return
-		}
-	}
-
-	// set namespace selector to config namespace. It's only 1 namespace available for Namespaced config
-	kubeSpec := v1alpha1.KubernetesPodsSpec{
-		NamespaceSelector: v1alpha1.NamespaceSelector{MatchNames: []string{sourceConfig.Namespace}},
-		LabelSelector:     sourceConfig.Spec.LabelSelector,
-	}
-	source = vector.NewKubernetesLogSource(sourceConfig.Name, kubeSpec, true)
-
-	return
-}
-
-func newLogSource(typ, name string, spec vector.ClusterLoggingConfigSpec) impl.LogSource {
-	switch typ {
-	case vector.SourceFile:
-		return vector.NewFileLogSource(name, spec.File)
-
-	case vector.SourceKubernetesPods:
-		return vector.NewKubernetesLogSource(name, spec.KubernetesPods, false)
-
-	default:
-		return nil
-	}
-}
-
-func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
-	switch typ {
-	case vector.DestLoki:
-		return vector.NewLokiDestination(name, spec)
-	case vector.DestElasticsearch:
-		return vector.NewElasticsearchDestination(name, spec)
-	case vector.DestLogstash:
-		return vector.NewLogstashDestination(name, spec)
-
-	default:
-		return nil
-	}
 }

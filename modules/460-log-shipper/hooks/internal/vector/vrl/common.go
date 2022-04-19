@@ -14,23 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package impl
+package vrl
 
-type LogSource interface {
-	GetName() string
-	// BuildSources in some cases you need to split source, for example: to match few namespaces
-	// For the single log source - just return the input
-	BuildSources() []LogSource
-}
+import (
+	"fmt"
+	"strings"
+)
 
-type LogTransform interface {
-	GetName() string
-	SetName(string)
-	SetInputs([]string)
-	GetInputs() []string
-}
+// Rule is a representation of a VRL rule.
+type Rule string
 
-type LogDestination interface {
-	GetName() string
-	AppendInputs([]string)
+// String returns formatted VRL rule.
+func (r Rule) String(args ...interface{}) string {
+	return strings.TrimSpace(
+		fmt.Sprintf(string(r), args...),
+	)
 }

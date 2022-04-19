@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
@@ -33,9 +34,6 @@ func assertConfig(secret object_store.KubeObject, testdataName string) {
 	config := secret.Field(`data`).Get("vector\\.json").String()
 	d, _ := base64.StdEncoding.DecodeString(config)
 
-	// In case of error we need to print the generated config to be able to copy it to the golden file.
-	By("Result JSON:\n" + string(d))
-
 	filename := filepath.Join("testdata", testdataName)
 	goldenFileData, err := ioutil.ReadFile(filename)
 	Expect(err).To(BeNil())
@@ -43,11 +41,11 @@ func assertConfig(secret object_store.KubeObject, testdataName string) {
 	// Automatically save generated configs to golden files.
 	// Use it only if you are aware of changes that caused a diff between generated configs and golden files.
 	if os.Getenv("D8_LOG_SHIPPER_SAVE_TESTDATA") == "yes" {
-		err := os.WriteFile(filename, d, 0644)
+		err := os.WriteFile(filename, d, 0600)
 		Expect(err).To(BeNil())
 	}
 
-	Expect(d).To(MatchJSON(goldenFileData))
+	assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
 }
 
 var _ = Describe("Log shipper :: generate config from crd ::", func() {

@@ -14,23 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package impl
+package vrl
 
-type LogSource interface {
-	GetName() string
-	// BuildSources in some cases you need to split source, for example: to match few namespaces
-	// For the single log source - just return the input
-	BuildSources() []LogSource
+// CleanUpRule is a general cleanup rule to sanitize the final message.
+// It should always be the first rule in the transforms chain.
+const CleanUpRule Rule = `
+if exists(.pod_labels."controller-revision-hash") {
+    del(.pod_labels."controller-revision-hash")
 }
-
-type LogTransform interface {
-	GetName() string
-	SetName(string)
-	SetInputs([]string)
-	GetInputs() []string
+if exists(.pod_labels."pod-template-hash") {
+    del(.pod_labels."pod-template-hash")
 }
-
-type LogDestination interface {
-	GetName() string
-	AppendInputs([]string)
+if exists(.kubernetes) {
+    del(.kubernetes)
 }
+if exists(.file) {
+    del(.file)
+}
+`

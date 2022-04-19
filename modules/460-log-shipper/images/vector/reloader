@@ -96,7 +96,8 @@ function reload_once() {
 reload_once
 log "Start watching the $sample_config file"
 while true; do
-  event=$(inotifywait -q -e close,delete "$sample_config")
-  log "Received $event event"
+  # In case of running inside a Kubernetes Pod, inotify wait exists on every configmap change.
+  inotifywait -q -e modify,create,delete,move "$sample_config" || true
+  # Diff returns a non-zero exit code if there is a diff.
   reload_once || true
 done

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vector
+package model
 
 import (
 	"fmt"
@@ -135,7 +135,7 @@ func (cs kubernetesLogSource) BuildSources() []impl.LogSource {
 }
 
 func (cs kubernetesLogSource) MarshalJSON() ([]byte, error) {
-	cs.fields = append(cs.fields, "metadata.name!=$VECTOR_SELF_NODE_NAME")
+	cs.fields = append(cs.fields, "metadata.name!=$VECTOR_SELF_POD_NAME")
 
 	if len(cs.namespaces) > 0 {
 		ns := cs.namespaces[0] // namespace should be denormalized here and have only one value

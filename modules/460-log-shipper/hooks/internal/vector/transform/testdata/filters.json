@@ -1,0 +1,16 @@
+[
+	{
+		"condition": "exists(.parsed_data.info)",
+		"inputs": [
+			"testit"
+		],
+		"type": "filter"
+	},
+	{
+		"condition": "if is_boolean(.parsed_data.severity) || is_float(.parsed_data.severity) {\n    data, err = to_string(.parsed_data.severity);\n    if err != null {\n        false;\n    } else {\n        includes([\"aaa\",42], data);\n    };\n} else {\n    includes([\"aaa\",42], .parsed_data.severity);\n}",
+		"inputs": [
+			"d8_tf_testit_00_log_filter"
+		],
+		"type": "filter"
+	}
+]
