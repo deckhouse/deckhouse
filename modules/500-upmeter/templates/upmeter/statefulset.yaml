@@ -109,6 +109,8 @@ spec:
             value: 127.0.0.1
           - name: UPMETER_LISTEN_PORT
             value: "8091"
+          - name: UPMETER_DISABLED_PROBES
+            value: '{{ .Values.upmeter.internal.disabledProbes | join "," }}'
           - name: LOG_LEVEL
             value: "info"
           - name: LOG_TYPE
