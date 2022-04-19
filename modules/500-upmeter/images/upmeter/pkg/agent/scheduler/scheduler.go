@@ -23,14 +23,14 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/agent/manager"
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/registry"
 )
 
 type Scheduler struct {
-	probeManager *manager.Manager
-	metrics      *metric_storage.MetricStorage
+	registry *registry.Registry
+	metrics  *metric_storage.MetricStorage
 
 	// to receive results from runners
 	recv    chan check.Result
@@ -49,7 +49,7 @@ type Scheduler struct {
 	done chan struct{}
 }
 
-func New(mgr *manager.Manager, send chan []check.Episode) *Scheduler {
+func New(reg *registry.Registry, send chan []check.Episode) *Scheduler {
 	const (
 		exportPeriod = 30 * time.Second
 		scrapePeriod = 200 * time.Millisecond // minimal probe interval
@@ -64,8 +64,8 @@ func New(mgr *manager.Manager, send chan []check.Episode) *Scheduler {
 		scrapePeriod: scrapePeriod,
 		seriesSize:   int(exportPeriod / scrapePeriod),
 
-		probeManager: mgr,
-		send:         send,
+		registry: reg,
+		send:     send,
 
 		stop: make(chan struct{}),
 		done: make(chan struct{}),
@@ -136,7 +136,7 @@ func (e *Scheduler) run() {
 	// rounding lets us avoid inaccuracies in time comparison
 	now := time.Now().Round(e.scrapePeriod)
 
-	for _, runner := range e.probeManager.Runners() {
+	for _, runner := range e.registry.Runners() {
 		if !runner.ShouldRun(now) {
 			continue
 		}
@@ -203,7 +203,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 	episodes := make([]check.Episode, 0, len(e.results))
 
 	// Collect episodes for calculated probes.
-	for _, calc := range e.probeManager.Calculators() {
+	for _, calc := range e.registry.Calculators() {
 		sss := make([]*check.StatusSeries, 0)
 		for _, id := range calc.MergeIds() {
 			if ss, ok := e.series[id]; ok {

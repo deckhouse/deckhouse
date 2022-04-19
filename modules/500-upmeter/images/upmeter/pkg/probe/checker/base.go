@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/probe/util"
 )
 
 // Config is basically a checker constructor with verbose arguments
@@ -99,7 +98,7 @@ func (c *timeoutChecker) BusyWith() string {
 
 func (c *timeoutChecker) Check() check.Error {
 	var err check.Error
-	util.DoWithTimer(c.timeout,
+	withTimer(c.timeout,
 		func() {
 			err = c.checker.Check()
 		},
@@ -146,4 +145,28 @@ func (c *retryChecker) Check() check.Error {
 	}
 
 	return err
+}
+
+// withTimer runs jobCb in background and waits until it is done. When timerDuration
+// is passed and job is not done yet, onTimerCb is executed.
+func withTimer(interval time.Duration, jobCb, onTimerCb func()) {
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+
+	// Start job in background
+	doneCh := make(chan struct{})
+	go func() {
+		jobCb()
+		close(doneCh)
+	}()
+
+	// Wait for closed doneCh or for timeout signal.
+	for {
+		select {
+		case <-timer.C:
+			onTimerCb()
+		case <-doneCh:
+			return
+		}
+	}
 }

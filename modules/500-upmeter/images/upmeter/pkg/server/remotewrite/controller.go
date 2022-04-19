@@ -72,17 +72,21 @@ func (cc *ControllerConfig) Controller() *Controller {
 // Controller links metrics syncers with configs from CR monitor
 type Controller struct {
 	kubeMonitor *crd.RemoteWriteMonitor
+	userAgent   string
 	syncers     *syncers
 	logger      *log.Entry
 }
 
 func (c *Controller) Start(ctx context.Context) error {
+	headers := map[string]string{"User-Agent": c.userAgent}
+
 	// Monitor tracks the exporter configuration in kubernetes. It is important to subscribe (add event callback)
 	// before monitor starts because informers are created during monitor.Start(ctx) call.
 	c.logger.Debugln("subscribing to k8s events")
 	c.kubeMonitor.Subscribe(&updateHandler{
 		syncers: c.syncers,
 		logger:  c.logger.WithField("who", "updateHandler"),
+		headers: headers,
 	})
 
 	c.logger.Debugln("starting k8s monitor")
@@ -101,7 +105,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	c.logger.Debugf("found %d k8s CRs", len(rws))
 	for _, rw := range rws {
 		c.logger.Debugf("adding %q syncer", rw.Name)
-		err = c.syncers.Add(ctx, newExportConfig(rw))
+		err = c.syncers.Add(ctx, newExportConfig(rw, headers))
 		if err != nil {
 			c.kubeMonitor.Stop()
 			c.syncers.stop()
@@ -131,23 +135,24 @@ func (c *Controller) Stop() {
 type updateHandler struct {
 	syncers *syncers
 	logger  *log.Entry
+	headers map[string]string
 }
 
 func (s *updateHandler) OnAdd(rw *v1.RemoteWrite) {
-	err := s.syncers.Add(context.Background(), newExportConfig(rw))
+	err := s.syncers.Add(context.Background(), newExportConfig(rw, s.headers))
 	if err != nil {
 		s.logger.Errorf("cannot add remote_write exporter %q: %v", rw.Name, err)
 	}
 }
 
 func (s *updateHandler) OnModify(rw *v1.RemoteWrite) {
-	err := s.syncers.Add(context.Background(), newExportConfig(rw))
+	err := s.syncers.Add(context.Background(), newExportConfig(rw, s.headers))
 	if err != nil {
 		s.logger.Errorf("cannot update remote_write exporter %q: %v", rw.Name, err)
 	}
 }
 
 func (s *updateHandler) OnDelete(rw *v1.RemoteWrite) {
-	config := newExportConfig(rw)
+	config := newExportConfig(rw, s.headers)
 	s.syncers.Delete(config) // TODO: ctx? final exporter requests can take some time
 }

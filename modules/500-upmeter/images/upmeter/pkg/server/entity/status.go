@@ -24,8 +24,6 @@ import (
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
 	"d8.io/upmeter/pkg/server/ranges"
-	utime "d8.io/upmeter/pkg/time"
-	"d8.io/upmeter/pkg/util"
 )
 
 type EpisodeSummary struct {
@@ -123,8 +121,6 @@ aGroup:
     down: 0
 */
 func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string][]EpisodeSummary {
-	episodes = filterDisabledProbesFromEpisodes(episodes)
-
 	// Combine multiple episodes into one for the same probe and timeslot. Basically, we deduce
 	// one single episode from possible alternatives.
 	episodes = combineEpisodesByTimeslot(episodes)
@@ -206,8 +202,8 @@ func calcMuteDuration(inc check.DowntimeIncident, rng ranges.Range, group string
 
 	// Calculate mute duration for range [from; to]
 	var (
-		start = util.Max(inc.Start, rng.From)
-		end   = util.Min(inc.End, rng.To)
+		start = maxInt64(inc.Start, rng.From)
+		end   = minInt64(inc.End, rng.To)
 	)
 
 	return time.Duration(end-start) * time.Second
@@ -229,7 +225,7 @@ func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incide
 				if m == 0 {
 					continue
 				}
-				muted = utime.Longest(muted, m)
+				muted = longest(muted, m)
 				relatedDowntimes = append(relatedDowntimes, incident)
 			}
 
@@ -371,15 +367,23 @@ func transformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[i
 	return res
 }
 
-func filterDisabledProbesFromEpisodes(episodes []check.Episode) []check.Episode {
-	res := make([]check.Episode, 0)
-
-	for _, episode := range episodes {
-		// FIXME side-effect magic
-		if check.IsProbeEnabled(episode.ProbeRef.Id()) {
-			res = append(res, episode)
-		}
+func minInt64(a, b int64) int64 {
+	if a < b {
+		return a
 	}
+	return b
+}
 
-	return res
+func maxInt64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func longest(a, b time.Duration) time.Duration {
+	if a > b {
+		return a
+	}
+	return b
 }

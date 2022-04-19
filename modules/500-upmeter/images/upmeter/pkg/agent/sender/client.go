@@ -26,13 +26,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"d8.io/upmeter/pkg/util"
 )
 
 type Client struct {
-	url    string
-	client *http.Client
+	url       string
+	client    *http.Client
+	UserAgent string
 }
 
 func getEndpoint(config *ClientConfig) string {
@@ -49,16 +48,18 @@ func getEndpoint(config *ClientConfig) string {
 }
 
 type ClientConfig struct {
-	Host   string
-	Port   string
-	CAPath string
-	TLS    bool
+	Host      string
+	Port      string
+	CAPath    string
+	TLS       bool
+	UserAgent string
 }
 
 func NewClient(config *ClientConfig, timeout time.Duration) *Client {
 	return &Client{
-		url:    getEndpoint(config),
-		client: NewHttpClient(config, timeout),
+		url:       getEndpoint(config),
+		client:    NewHttpClient(config, timeout),
+		UserAgent: config.UserAgent,
 	}
 }
 
@@ -68,7 +69,7 @@ func (c *Client) Send(reqBody []byte) error {
 		return fmt.Errorf("cannot create POST request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", util.AgentUserAgent)
+	req.Header.Set("User-Agent", c.UserAgent)
 
 	resp, err := c.client.Do(req)
 	if err != nil {

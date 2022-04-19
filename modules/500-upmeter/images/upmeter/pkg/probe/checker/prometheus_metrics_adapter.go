@@ -48,7 +48,7 @@ type metricsAdapterAPIVerifier struct {
 }
 
 func (v metricsAdapterAPIVerifier) Request() *http.Request {
-	req, err := newGetRequest(v.endpoint, v.kubeAccessor.ServiceAccountToken())
+	req, err := newGetRequest(v.endpoint, v.kubeAccessor.ServiceAccountToken(), v.kubeAccessor.UserAgent())
 	if err != nil {
 		panic(err)
 	}

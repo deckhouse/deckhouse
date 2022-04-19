@@ -88,34 +88,6 @@ func (d *EpisodeDao30s) ListByRange(start, end time.Time, ref check.ProbeRef) ([
 }
 
 // TODO (e.shevchenko): can be DRYed ?
-func (d *EpisodeDao30s) ListGroupProbe() ([]check.ProbeRef, error) {
-	const query = `
-	SELECT DISTINCT
-		group_name, probe_name
-	FROM
-		episodes_30s
-	ORDER BY 1, 2
-	`
-	rows, err := d.DbCtx.StmtRunner().Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("select group and probe: %v", err)
-	}
-	defer rows.Close()
-
-	res := make([]check.ProbeRef, 0)
-	for rows.Next() {
-		ref := check.ProbeRef{}
-		err := rows.Scan(&ref.Group, &ref.Probe)
-		if err != nil {
-			return nil, fmt.Errorf("row to ProbeRef: %v", err)
-		}
-		res = append(res, ref)
-	}
-
-	return res, nil
-}
-
-// TODO (e.shevchenko): can be DRYed ?
 func (d *EpisodeDao30s) Insert(episode check.Episode) error {
 	const query = `
 	INSERT INTO

@@ -50,6 +50,19 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 		Required().
 		Envar("UPMETER_ORIGINS").
 		IntVar(&config.OriginsCount)
+
+	// Disabled probes to omit from fetching
+	cmd.Flag("disabled-probes", "The comma-separated list of groups and/or probes to disable.").
+		Envar("UPMETER_DISABLED_PROBES").
+		Default("").
+		StringsVar(&config.DisabledProbes)
+
+	// User-Agent
+	// TODO generate from CI?
+	cmd.Flag("user-agent", "User Agent for HTTP client").
+		Envar("UPMETER_USER_AGENT").
+		Default("Upmeter/1.0").
+		StringVar(&config.UserAgent)
 }
 
 func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
@@ -84,6 +97,18 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Envar("UPMETER_DB_PATH").
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
+
+	cmd.Flag("disabled-probes", "The list of disabled comma-separated groups and/or probes.").
+		Envar("UPMETER_DISABLED_PROBES").
+		Default("").
+		StringsVar(&config.DisabledProbes)
+
+	// User-Agent
+	// TODO generate from CI?
+	cmd.Flag("user-agent", "User Agent for HTTP client").
+		Envar("UPMETER_USER_AGENT").
+		Default("UpmeterAgent/1.0").
+		StringVar(&config.UserAgent)
 }
 
 func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {

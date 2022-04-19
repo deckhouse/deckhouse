@@ -29,7 +29,6 @@ import (
 	"d8.io/upmeter/pkg/check"
 	v1 "d8.io/upmeter/pkg/crd/v1"
 	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/util"
 )
 
 var ErrSkip = fmt.Errorf("skip export")
@@ -204,7 +203,7 @@ type exportingConfig struct {
 	slotSize       time.Duration
 }
 
-func newExportConfig(rw *v1.RemoteWrite) exportingConfig {
+func newExportConfig(rw *v1.RemoteWrite, headers map[string]string) exportingConfig {
 	var labels []*prompb.Label
 	for k, v := range rw.Spec.AdditionalLabels {
 		labels = append(labels, &prompb.Label{
@@ -219,9 +218,7 @@ func newExportConfig(rw *v1.RemoteWrite) exportingConfig {
 			Endpoint:    rw.Spec.Config.Endpoint,
 			BasicAuth:   rw.Spec.Config.BasicAuth,
 			BearerToken: rw.Spec.Config.BearerToken,
-			Headers: map[string]string{
-				"User-Agent": util.ServerUserAgent,
-			},
+			Headers:     headers,
 		},
 		slotSize: time.Duration(rw.Spec.IntervalSeconds) * time.Second,
 		labels:   labels,

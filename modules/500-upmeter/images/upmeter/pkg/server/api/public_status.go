@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sort"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -29,6 +28,7 @@ import (
 	"d8.io/upmeter/pkg/crd"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/registry"
 	"d8.io/upmeter/pkg/server/entity"
 	"d8.io/upmeter/pkg/server/ranges"
 )
@@ -54,6 +54,7 @@ const (
 type PublicStatusHandler struct {
 	DbCtx           *dbcontext.DbContext
 	DowntimeMonitor *crd.DowntimeMonitor
+	ProbeLister     registry.ProbeLister
 }
 
 func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +66,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	statuses, status, err := getStatusSummary(h.DbCtx, h.DowntimeMonitor)
+	statuses, status, err := h.getStatusSummary()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error getting current status\n", http.StatusInternalServerError)
@@ -89,16 +90,11 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	w.Write(out)
 }
 
-// getStatusSummary returns total statuses for each group for the current partial 5m timeslot plus previous full 5m
-// timeslot.
-func getStatusSummary(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMonitor) ([]GroupStatus, PublicStatus, error) {
-	daoCtx := dbCtx.Start()
+// getStatusSummary returns total statuses for each group for the current partial 5m timeslot plus
+// previous full 5m timeslot.
+func (h *PublicStatusHandler) getStatusSummary() ([]GroupStatus, PublicStatus, error) {
+	daoCtx := h.DbCtx.Start()
 	defer daoCtx.Stop()
-
-	groups, err := ListGroups(daoCtx)
-	if err != nil {
-		return nil, "", fmt.Errorf("cannot list groups: %v", err)
-	}
 
 	rng := threeStepRange(time.Now())
 	log.Infof("Request public status from=%d to=%d at %d", rng.From, rng.To, time.Now().Unix())
@@ -109,6 +105,7 @@ func getStatusSummary(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMonitor) 
 		"InfrastructureAccident",
 	}
 
+	groups := h.ProbeLister.Groups()
 	groupStatuses := make([]GroupStatus, 0)
 	for _, group := range groups {
 		ref := check.ProbeRef{
@@ -122,16 +119,16 @@ func getStatusSummary(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMonitor) 
 			muteDowntimeTypes: muteTypes,
 		}
 
-		resp, err := getStatus(dbCtx, monitor, filter)
+		resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
 		if err != nil {
 			log.Errorf("cannot calculate status for group %s: %v", group, err)
-			continue
+			return nil, StatusOutage, err
 		}
 
 		summary, err := pickSummary(ref, resp.Statuses)
 		if err != nil {
 			log.Errorf("cannot parse status for group %s: %v", group, err)
-			continue
+			return nil, StatusOutage, err
 		}
 
 		gs := GroupStatus{
@@ -172,31 +169,6 @@ func pickSummary(ref check.ProbeRef, statuses map[string]map[string][]entity.Epi
 	}
 
 	return episodeSummaries[:3], nil
-}
-
-func ListGroups(dbctx *dbcontext.DbContext) ([]string, error) {
-	dao5m := dao.NewEpisodeDao5m(dbctx)
-
-	refs, err := dao5m.ListGroupProbe()
-	if err != nil {
-		return nil, err
-	}
-
-	refs = entity.FilterDisabledProbesFromGroupProbeList(refs)
-
-	groupsMap := map[string]struct{}{}
-	for _, probeRef := range refs {
-		groupsMap[probeRef.Group] = struct{}{}
-	}
-
-	groups := []string{}
-	for group := range groupsMap {
-		groups = append(groups, group)
-	}
-
-	sort.Strings(groups)
-
-	return groups, nil
 }
 
 // calculateStatus returns the status for a group.

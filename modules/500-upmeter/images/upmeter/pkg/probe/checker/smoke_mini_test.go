@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
@@ -123,6 +124,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 			checker := &smokeMiniChecker{
 				path:        "/",
 				httpTimeout: timeout,
+				access:      NewFake(kube.NewFakeKubernetesClient()),
 				lookuper: &dummyLookuper{
 					servers:  tt.servers,
 					addBogus: tt.cancel,

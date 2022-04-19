@@ -17,10 +17,35 @@ limitations under the License.
 package calculated
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/set"
 )
 
-func Load() []*Probe {
+func NewLoader(filter probe.Filter, logger *log.Logger) *Loader {
+	return &Loader{
+		filter: filter,
+		logger: logger,
+	}
+}
+
+type Loader struct {
+	filter probe.Filter
+	logger *log.Logger
+
+	groups []string
+	probes []check.ProbeRef
+
+	configs []config
+}
+
+func (l *Loader) collectConfigs() []config {
+	if l.configs != nil {
+		return l.configs
+	}
+
 	configs := []config{
 		{
 			group: "monitoring-and-autoscaling",
@@ -32,11 +57,52 @@ func Load() []*Probe {
 		},
 	}
 
-	probes := make([]*Probe, 0)
+	l.configs = make([]config, 0)
 	for _, c := range configs {
-		probes = append(probes, c.Probe())
+		ref := check.ProbeRef{Group: c.group, Probe: c.probe}
+		if !l.filter.Enabled(ref) {
+			continue
+		}
+		l.configs = append(l.configs, c)
+	}
+	return l.configs
+}
+
+func (l *Loader) Load() []*Probe {
+	probes := make([]*Probe, 0)
+	for _, c := range l.collectConfigs() {
+		p := c.Probe()
+		probes = append(probes, p)
+		l.logger.Infof("Registered calculated probe %s", p.ProbeRef().Id())
 	}
 	return probes
+}
+
+func (l *Loader) Groups() []string {
+	if l.groups != nil {
+		return l.groups
+	}
+
+	groups := set.New()
+	for _, c := range l.collectConfigs() {
+		groups.Add(c.group)
+	}
+
+	l.groups = groups.Slice()
+	return l.groups
+}
+
+func (l *Loader) Probes() []check.ProbeRef {
+	if l.probes != nil {
+		return l.probes
+	}
+
+	l.probes = make([]check.ProbeRef, 0)
+	for _, c := range l.collectConfigs() {
+		l.probes = append(l.probes, *c.Probe().ref)
+	}
+
+	return l.probes
 }
 
 // config is a convenient wrapper to create calculated probe

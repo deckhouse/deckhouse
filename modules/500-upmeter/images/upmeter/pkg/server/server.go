@@ -19,6 +19,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
@@ -32,6 +33,9 @@ import (
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/registry"
 	"d8.io/upmeter/pkg/server/api"
 	"d8.io/upmeter/pkg/server/remotewrite"
 )
@@ -56,11 +60,12 @@ type server struct {
 type Config struct {
 	ListenHost string
 	ListenPort string
+	UserAgent  string
 
-	DatabasePath           string
-	DatabaseMigrationsPath string
+	DatabasePath string
 
-	OriginsCount int
+	OriginsCount   int
+	DisabledProbes []string
 }
 
 func New(config *Config, logger *log.Logger) *server {
@@ -99,10 +104,13 @@ func (s *server) Start(ctx context.Context) error {
 
 	go cleanOld30sEpisodes(ctx, dbctx)
 
+	// Probe probeLister that can only list groups and probes
+	probeLister := newProbeLister(s.config.DisabledProbes)
+
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")
 	listenAddr := s.config.ListenHost + ":" + s.config.ListenPort
-	s.server = initHttpServer(dbctx, s.downtimeMonitor, s.remoteWriteController, listenAddr)
+	s.server = initHttpServer(dbctx, s.downtimeMonitor, s.remoteWriteController, probeLister, listenAddr)
 
 	err = s.server.ListenAndServe()
 	if err == http.ErrServerClosed {
@@ -149,13 +157,13 @@ func cleanOld30sEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
 	}
 }
 
-func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *crd.DowntimeMonitor, controller *remotewrite.Controller, addr string) *http.Server {
+func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *crd.DowntimeMonitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
 	mux := http.NewServeMux()
 
 	// Setup API handlers
-	mux.Handle("/api/probe", &api.ProbeListHandler{DbCtx: dbCtx})
+	mux.Handle("/api/probe", &api.ProbeListHandler{DbCtx: dbCtx, ProbeLister: probeLister})
 	mux.Handle("/api/status/range", &api.StatusRangeHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor})
-	mux.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor})
+	mux.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor, ProbeLister: probeLister})
 	mux.Handle("/downtime", &api.AddEpisodesHandler{DbCtx: dbCtx, RemoteWrite: controller})
 	mux.Handle("/stats", &api.StatsHandler{DbCtx: dbCtx})
 	// Kubernetes probes
@@ -193,4 +201,21 @@ func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient) 
 	m := crd.NewMonitor(ctx)
 	m.Monitor.WithKubeClient(kubeClient)
 	return m, m.Start()
+}
+
+func newProbeLister(disabled []string) *registry.RegistryProbeLister {
+	noLogger := newDummyLogger()
+	noFilter := probe.NewProbeFilter(disabled)
+	noAccess := &kubernetes.Accessor{}
+
+	runLoader := probe.NewLoader(noFilter, noAccess, noLogger)
+	calcLoader := calculated.NewLoader(noFilter, noLogger)
+
+	return registry.NewProbeLister(runLoader, calcLoader)
+}
+
+func newDummyLogger() *log.Logger {
+	logger := log.New()
+	logger.SetOutput(ioutil.Discard)
+	return logger
 }

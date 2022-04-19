@@ -23,13 +23,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/agent/manager"
 	"d8.io/upmeter/pkg/agent/scheduler"
 	"d8.io/upmeter/pkg/agent/sender"
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/db"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/registry"
 )
 
 type Agent struct {
@@ -43,14 +45,11 @@ type Agent struct {
 }
 
 type Config struct {
-	Period time.Duration
-
-	Namespace string
-
-	ClientConfig *sender.ClientConfig
-
-	DatabasePath           string
-	DatabaseMigrationsPath string
+	DisabledProbes []string
+	Period         time.Duration
+	ClientConfig   *sender.ClientConfig
+	DatabasePath   string
+	UserAgent      string
 }
 
 // Return agent with magic configuration
@@ -65,19 +64,16 @@ func New(config *Config, kubeConfig *kubernetes.Config, logger *log.Logger) *Age
 func (a *Agent) Start(ctx context.Context) error {
 	// Initialize kube client from kubeconfig and service account token from filesystem.
 	kubeAccess := &kubernetes.Accessor{}
-	err := kubeAccess.Init(a.kubeConfig)
+	err := kubeAccess.Init(a.kubeConfig, a.config.UserAgent)
 	if err != nil {
 		return fmt.Errorf("cannot init access to Kubernetes cluster: %v", err)
 	}
 
 	// Probe registry
-	registry := manager.New(kubeAccess, a.logger)
-	for _, probe := range registry.Runners() {
-		a.logger.Infof("Register probe %s", probe.ProbeRef().Id())
-	}
-	for _, calc := range registry.Calculators() {
-		a.logger.Infof("Register calculated probe %s", calc.ProbeRef().Id())
-	}
+	ftr := probe.NewProbeFilter(a.config.DisabledProbes)
+	runnerLoader := probe.NewLoader(ftr, kubeAccess, a.logger)
+	calcLoader := calculated.NewLoader(ftr, a.logger)
+	registry := registry.New(runnerLoader, calcLoader)
 
 	// Database connection with pool
 	dbctx, err := db.Connect(a.config.DatabasePath, dbcontext.DefaultConnectionOptions())

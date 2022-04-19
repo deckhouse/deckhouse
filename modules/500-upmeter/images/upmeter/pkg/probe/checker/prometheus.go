@@ -50,7 +50,7 @@ type prometheusAPIVerifier struct {
 }
 
 func (v prometheusAPIVerifier) Request() *http.Request {
-	req, err := newGetRequest(v.endpoint, v.access.ServiceAccountToken())
+	req, err := newGetRequest(v.endpoint, v.access.ServiceAccountToken(), v.access.UserAgent())
 	if err != nil {
 		panic(err)
 	}
@@ -110,7 +110,7 @@ type metricPresenceVerifier struct {
 }
 
 func (v *metricPresenceVerifier) Request() *http.Request {
-	req, err := newGetRequest(v.endpoint, v.access.ServiceAccountToken())
+	req, err := newGetRequest(v.endpoint, v.access.ServiceAccountToken(), v.access.UserAgent())
 	if err != nil {
 		panic(err)
 	}

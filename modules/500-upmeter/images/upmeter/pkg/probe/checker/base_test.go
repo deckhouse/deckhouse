@@ -14,18 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package checker
 
 import (
 	"testing"
 	"time"
 )
 
-func Test_DoWithTimer(t *testing.T) {
+func Test_withTimer(t *testing.T) {
 	{
 		msg := "timer #1 should not run out of time"
 		timeout := time.Millisecond
-		DoWithTimer(
+		withTimer(
 			timeout,
 			func() {
 				time.Sleep(timeout / 2)
@@ -40,7 +40,7 @@ func Test_DoWithTimer(t *testing.T) {
 		msg := "timer #2 should not ignore timeout callback"
 		timeoutCallbackCalled := make(chan struct{})
 		timeout := time.Millisecond
-		DoWithTimer(
+		withTimer(
 			timeout,
 			func() {
 				time.Sleep(2 * timeout)
