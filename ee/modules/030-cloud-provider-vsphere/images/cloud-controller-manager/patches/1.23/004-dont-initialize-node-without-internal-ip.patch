@@ -1,7 +1,7 @@
 diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vsphere/nodemanager.go
 --- a/pkg/cloudprovider/vsphere/nodemanager.go
 +++ b/pkg/cloudprovider/vsphere/nodemanager.go
-@@ -328,6 +328,17 @@ func (nm *NodeManager) DiscoverNode(nodeID string, searchBy cm.FindVM) error {
+@@ -340,6 +340,17 @@ func (nm *NodeManager) DiscoverNode(nodeID string, searchBy cm.FindVM) error {
  		}
  	}
 

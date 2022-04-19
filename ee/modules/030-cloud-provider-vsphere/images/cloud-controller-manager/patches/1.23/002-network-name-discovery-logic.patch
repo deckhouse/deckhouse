@@ -35,8 +35,8 @@ diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vspher
  	for _, v := range nonVNICDevices {
 -		klog.V(6).Infof("internalVMNetworkName = %s", internalVMNetworkName)
 -		klog.V(6).Infof("externalVMNetworkName = %s", externalVMNetworkName)
-+		klog.V(6).Infof("internalVMNetworkName = %s", internalVMNetworkNames)
-+		klog.V(6).Infof("externalVMNetworkName = %s", externalVMNetworkNames)
++		klog.V(6).Infof("internalVMNetworkNames = %s", internalVMNetworkNames)
++		klog.V(6).Infof("externalVMNetworkNames = %s", externalVMNetworkNames)
  		klog.V(6).Infof("v.Network = %s", v.Network)
 
 -		if (internalVMNetworkName != "" && !strings.EqualFold(internalVMNetworkName, v.Network)) &&
