@@ -39,7 +39,7 @@
         "content": "<center>\n  <img src=/public/img/deckhouse-logo.svg/>\n  <h1><b>Deckhouse</b></h1>\n</center>\n",
         "mode": "html"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "transparent": true,
       "type": "text"
     },
@@ -86,7 +86,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -143,7 +143,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -179,7 +179,7 @@
           "main"
         ]
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "tags": [],
       "title": "Main",
       "transparent": true,
@@ -224,7 +224,7 @@
       "options": {
         "showHeader": false
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -285,7 +285,7 @@
         "showStarred": false,
         "tags": []
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "tags": [],
       "title": "Deckhouse",
       "transparent": true,
@@ -312,7 +312,7 @@
           "ingress"
         ]
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "tags": [],
       "title": "Ingress Nginx",
       "transparent": true,
@@ -362,7 +362,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -422,7 +422,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -459,7 +459,7 @@
           "nodes"
         ]
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "tags": [],
       "title": "Nodes",
       "transparent": true,
@@ -508,7 +508,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -567,7 +567,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -628,7 +628,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -688,7 +688,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -703,6 +703,89 @@
       "transformations": [],
       "transparent": true,
       "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          },
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "name",
+              "url": "https://${__data.fields.url}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 9,
+        "x": 4,
+        "y": 18
+      },
+      "id": 22,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "8.2.6",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (name, url) (deckhouse_web_interfaces{job=\"deckhouse\"})",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Deckhouse web interfaces",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "name",
+                "url"
+              ]
+            }
+          }
+        }
+      ],
+      "type": "table"
     }
   ],
   "schemaVersion": 32,
