@@ -1,25 +1,25 @@
 export class Dataset {
-  data: any[] = [];
+  data: any[] = []
 
   constructor() {}
 
   clear() {
-    this.data = [];
+    this.data = []
   }
 
   length(): number {
-    return this.data.length;
+    return this.data.length
   }
 
   push(item: any) {
-    this.data.push(item);
+    this.data.push(item)
   }
 
   get(i: number): any {
-    return this.data[i];
+    return this.data[i]
   }
 
   forEach(fn: (item: any, i?: number) => void) {
-    this.data.forEach(fn);
+    this.data.forEach(fn)
   }
 }

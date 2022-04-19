@@ -1,4 +1,4 @@
-import { TimeOption } from "@grafana/data";
+import { TimeOption } from "@grafana/data"
 
 /**
  * Custom version of rangeOptions from @grafana/ui.
@@ -20,7 +20,7 @@ export const quickOptions: TimeOption[] = [
   { from: "now-1y", to: "now", display: "Last 1 year", section: 3 },
   { from: "now-2y", to: "now", display: "Last 2 years", section: 3 },
   { from: "now-5y", to: "now", display: "Last 5 years", section: 3 },
-];
+]
 
 export const otherOptions: TimeOption[] = [
   { from: "now-1d/d", to: "now-1d/d", display: "Yesterday", section: 3 },
@@ -37,4 +37,4 @@ export const otherOptions: TimeOption[] = [
   { from: "now/M", to: "now", display: "This month so far", section: 3 },
   { from: "now/y", to: "now/y", display: "This year", section: 3 },
   { from: "now/y", to: "now", display: "This year so far", section: 3 },
-];
+]

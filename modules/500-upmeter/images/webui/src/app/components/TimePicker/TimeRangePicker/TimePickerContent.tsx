@@ -4,21 +4,21 @@
  * - change breakpoint for isFullscreen from lg to md
  */
 
-import { GrafanaTheme, isDateTime, TimeOption, TimeRange, TimeZone } from "@grafana/data";
-import { css, cx } from "emotion";
-import React, { memo, useState } from "react";
-import { useMedia } from "react-use";
-import { stylesFactory, useTheme } from "@grafana/ui";
-import { CustomScrollbar } from "@grafana/ui";
-import { Icon } from "../../Icon";
-import { mapRangeToTimeOption } from "../../../../modules/@grafana/ui/components/TimePicker/TimeRangePicker/mapper";
-import { TimePickerTitle } from "../../../../modules/@grafana/ui/components/TimePicker/TimeRangePicker/TimePickerTitle";
-import { TimeRangeForm } from "../../../../modules/@grafana/ui/components/TimePicker/TimeRangePicker/TimeRangeForm";
-import { TimeRangeList } from "./TimeRangeList";
-import { TimePickerFooter } from "../../../../modules/@grafana/ui/components/TimePicker/TimeRangePicker/TimePickerFooter";
+import { GrafanaTheme, isDateTime, TimeOption, TimeRange, TimeZone } from "@grafana/data"
+import { css, cx } from "emotion"
+import React, { memo, useState } from "react"
+import { useMedia } from "react-use"
+import { stylesFactory, useTheme } from "@grafana/ui"
+import { CustomScrollbar } from "@grafana/ui"
+import { Icon } from "../../Icon"
+import { mapRangeToTimeOption } from "../../../../modules/@grafana/ui/components/TimePicker/TimeRangePicker/mapper"
+import { TimePickerTitle } from "../../../../modules/@grafana/ui/components/TimePicker/TimeRangePicker/TimePickerTitle"
+import { TimeRangeForm } from "../../../../modules/@grafana/ui/components/TimePicker/TimeRangePicker/TimeRangeForm"
+import { TimeRangeList } from "./TimeRangeList"
+import { TimePickerFooter } from "../../../../modules/@grafana/ui/components/TimePicker/TimeRangePicker/TimePickerFooter"
 
 const getStyles = stylesFactory((theme: GrafanaTheme, isReversed) => {
-  const containerBorder = theme.isDark ? theme.palette.dark9 : theme.palette.gray5;
+  const containerBorder = theme.isDark ? theme.palette.dark9 : theme.palette.gray5
 
   return {
     container: css`
@@ -63,11 +63,11 @@ const getStyles = stylesFactory((theme: GrafanaTheme, isReversed) => {
     spacing: css`
       margin-top: 16px;
     `,
-  };
-});
+  }
+})
 
 const getNarrowScreenStyles = stylesFactory((theme: GrafanaTheme) => {
-  const formBackground = theme.isDark ? theme.palette.gray15 : theme.palette.gray98;
+  const formBackground = theme.isDark ? theme.palette.gray15 : theme.palette.gray98
 
   return {
     header: css`
@@ -86,8 +86,8 @@ const getNarrowScreenStyles = stylesFactory((theme: GrafanaTheme) => {
     form: css`
       padding: 7px 9px 7px 9px;
     `,
-  };
-});
+  }
+})
 
 const getFullScreenStyles = stylesFactory((theme: GrafanaTheme) => {
   return {
@@ -105,11 +105,11 @@ const getFullScreenStyles = stylesFactory((theme: GrafanaTheme) => {
       flex-direction: column;
       justify-content: flex-end;
     `,
-  };
-});
+  }
+})
 
 const getEmptyListStyles = stylesFactory((theme: GrafanaTheme) => {
-  const formBackground = theme.isDark ? theme.palette.gray15 : theme.palette.gray98;
+  const formBackground = theme.isDark ? theme.palette.gray15 : theme.palette.gray98
 
   return {
     container: css`
@@ -125,38 +125,38 @@ const getEmptyListStyles = stylesFactory((theme: GrafanaTheme) => {
     link: css`
       color: ${theme.colors.linkExternal};
     `,
-  };
-});
+  }
+})
 
 interface Props {
-  value: TimeRange;
-  onChange: (timeRange: TimeRange) => void;
-  onChangeTimeZone: (timeZone: TimeZone) => void;
-  timeZone?: TimeZone;
-  quickOptions?: TimeOption[];
-  otherOptions?: TimeOption[];
-  history?: TimeRange[];
-  showHistory?: boolean;
-  className?: string;
-  hideTimeZone?: boolean;
+  value: TimeRange
+  onChange: (timeRange: TimeRange) => void
+  onChangeTimeZone: (timeZone: TimeZone) => void
+  timeZone?: TimeZone
+  quickOptions?: TimeOption[]
+  otherOptions?: TimeOption[]
+  history?: TimeRange[]
+  showHistory?: boolean
+  className?: string
+  hideTimeZone?: boolean
   /** Reverse the order of relative and absolute range pickers. Used to left align the picker in forms */
-  isReversed?: boolean;
+  isReversed?: boolean
 }
 
 interface PropsWithScreenSize extends Props {
-  isFullscreen: boolean;
+  isFullscreen: boolean
 }
 
 interface FormProps extends Omit<Props, "history"> {
-  visible: boolean;
-  historyOptions?: TimeOption[];
+  visible: boolean
+  historyOptions?: TimeOption[]
 }
 
 export const TimePickerContentWithScreenSize: React.FC<PropsWithScreenSize> = (props) => {
-  const theme = useTheme();
-  const styles = getStyles(theme, props.isReversed);
-  const historyOptions = mapToHistoryOptions(props.history, props.timeZone);
-  const { quickOptions = [], otherOptions = [], isFullscreen } = props;
+  const theme = useTheme()
+  const styles = getStyles(theme, props.isReversed)
+  const historyOptions = mapToHistoryOptions(props.history, props.timeZone)
+  const { quickOptions = [], otherOptions = [], isFullscreen } = props
 
   return (
     <div className={cx(styles.container, props.className)}>
@@ -187,25 +187,25 @@ export const TimePickerContentWithScreenSize: React.FC<PropsWithScreenSize> = (p
         <TimePickerFooter timeZone={props.timeZone} onChangeTimeZone={props.onChangeTimeZone} />
       )}
     </div>
-  );
-};
+  )
+}
 
 export const TimePickerContent: React.FC<Props> = (props) => {
-  const theme = useTheme();
-  const isFullscreen = useMedia(`(min-width: ${theme.breakpoints.md})`);
+  const theme = useTheme()
+  const isFullscreen = useMedia(`(min-width: ${theme.breakpoints.md})`)
 
-  return <TimePickerContentWithScreenSize {...props} isFullscreen={isFullscreen} />;
-};
+  return <TimePickerContentWithScreenSize {...props} isFullscreen={isFullscreen} />
+}
 
 const NarrowScreenForm: React.FC<FormProps> = (props) => {
   if (!props.visible) {
-    return null;
+    return null
   }
 
-  const theme = useTheme();
-  const styles = getNarrowScreenStyles(theme);
-  const isAbsolute = isDateTime(props.value.raw.from) || isDateTime(props.value.raw.to);
-  const [collapsed, setCollapsed] = useState(isAbsolute);
+  const theme = useTheme()
+  const styles = getNarrowScreenStyles(theme)
+  const isAbsolute = isDateTime(props.value.raw.from) || isDateTime(props.value.raw.to)
+  const [collapsed, setCollapsed] = useState(isAbsolute)
 
   return (
     <>
@@ -240,16 +240,16 @@ const NarrowScreenForm: React.FC<FormProps> = (props) => {
         </div>
       )}
     </>
-  );
-};
+  )
+}
 
 const FullScreenForm: React.FC<FormProps> = (props) => {
   if (!props.visible) {
-    return null;
+    return null
   }
 
-  const theme = useTheme();
-  const styles = getFullScreenStyles(theme);
+  const theme = useTheme()
+  const styles = getFullScreenStyles(theme)
 
   return (
     <>
@@ -278,12 +278,12 @@ const FullScreenForm: React.FC<FormProps> = (props) => {
         </div>
       )}
     </>
-  );
-};
+  )
+}
 
 const EmptyRecentList = memo(() => {
-  const theme = useTheme();
-  const styles = getEmptyListStyles(theme);
+  const theme = useTheme()
+  const styles = getEmptyListStyles(theme)
 
   return (
     <div className={styles.container}>
@@ -304,12 +304,12 @@ const EmptyRecentList = memo(() => {
         <span> to find out more about how to enter custom time ranges.</span>
       </div>
     </div>
-  );
-});
+  )
+})
 
 function mapToHistoryOptions(ranges?: TimeRange[], timeZone?: TimeZone): TimeOption[] {
   if (!Array.isArray(ranges) || ranges.length === 0) {
-    return [];
+    return []
   }
-  return ranges.slice(ranges.length - 4).map((range) => mapRangeToTimeOption(range, timeZone));
+  return ranges.slice(ranges.length - 4).map((range) => mapRangeToTimeOption(range, timeZone))
 }

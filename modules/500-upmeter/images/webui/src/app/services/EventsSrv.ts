@@ -1,27 +1,27 @@
 export class EventsSrv {
-  callbacks: Map<string, Map<string, (data?: any) => void>>;
+  callbacks: Map<string, Map<string, (data?: any) => void>>
 
   constructor() {
-    this.callbacks = new Map<string, Map<string, (data?: any) => void>>();
+    this.callbacks = new Map<string, Map<string, (data?: any) => void>>()
   }
 
   fireEvent(eventName: string, data?: any) {
     if (!this.callbacks.has(eventName)) {
-      return;
+      return
     }
-    let evCallbacks = this.callbacks.get(eventName);
+    let evCallbacks = this.callbacks.get(eventName)
     for (let id of evCallbacks.keys()) {
-      let cb = evCallbacks.get(id);
-      cb(data);
+      let cb = evCallbacks.get(id)
+      cb(data)
     }
   }
 
   listenEvent(eventName: string, id: string, callback: (data?: any) => void) {
     if (!this.callbacks.has(eventName)) {
-      this.callbacks.set(eventName, new Map<string, (data?: any) => void>());
+      this.callbacks.set(eventName, new Map<string, (data?: any) => void>())
     }
 
-    this.callbacks.get(eventName).set(id, callback);
+    this.callbacks.get(eventName).set(id, callback)
   }
 
   /**
@@ -30,20 +30,20 @@ export class EventsSrv {
    */
   unlistenEvent(eventName: string, id: string) {
     if (!this.callbacks.has(eventName)) {
-      return;
+      return
     }
     if (this.callbacks.get(eventName).has(id)) {
-      this.callbacks.get(eventName).delete(id);
+      this.callbacks.get(eventName).delete(id)
     }
   }
 }
 
-let instance: EventsSrv;
+let instance: EventsSrv
 
 export function setEventsSrv(srv: EventsSrv) {
-  instance = srv;
+  instance = srv
 }
 
 export function getEventsSrv(): EventsSrv {
-  return instance;
+  return instance
 }

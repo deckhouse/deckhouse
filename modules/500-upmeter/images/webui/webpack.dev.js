@@ -1,18 +1,18 @@
-const path = require("path");
-const webpack = require("webpack");
+const path = require("path")
+const webpack = require("webpack")
 
 //const CopyWebpackPlugin = require('copy-webpack-plugin');
-const HtmlWebpackPlugin = require("html-webpack-plugin");
-const AppManifestWebpackPlugin = require("app-manifest-webpack-plugin");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
-const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin")
+const AppManifestWebpackPlugin = require("app-manifest-webpack-plugin")
+const { CleanWebpackPlugin } = require("clean-webpack-plugin")
+const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin")
 
 const paths = {
   src: path.join(__dirname, "src"),
   dist: path.join(__dirname, "dist"),
   data: path.join(__dirname, "data"),
   vendor: path.join(__dirname, "vendor"),
-};
+}
 
 module.exports = {
   context: paths.src,
@@ -152,4 +152,4 @@ module.exports = {
       },
     }),
   ],
-};
+}

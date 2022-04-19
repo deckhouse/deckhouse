@@ -1,21 +1,21 @@
-import React, { Component } from "react";
-import { css, cx } from "emotion";
+import React, { Component } from "react"
+import { css, cx } from "emotion"
 
-import { Tooltip } from "@grafana/ui";
-import { getTimeRangeSrv } from "../services/TimeRangeSrv";
-import { PieTooltip } from "./PieTooltip";
-import { Episode } from "../services/DatasetSrv";
+import { Tooltip } from "@grafana/ui"
+import { getTimeRangeSrv } from "../services/TimeRangeSrv"
+import { PieTooltip } from "./PieTooltip"
+import { Episode } from "../services/DatasetSrv"
 
 export interface Props {
-  size: number;
-  onClick: () => void;
-  episode: Episode;
-  className?: string;
+  size: number
+  onClick: () => void
+  episode: Episode
+  className?: string
 }
 
 export class PieBoundingRect extends Component<Props, any> {
   constructor(props: Props) {
-    super(props);
+    super(props)
   }
 
   // let boundingRect = pieRoot.append("rect")
@@ -39,28 +39,28 @@ export class PieBoundingRect extends Component<Props, any> {
   // }
 
   onClick = () => {
-    let step = getTimeRangeSrv().step;
+    let step = getTimeRangeSrv().step
     if (step <= 300) {
-      return;
+      return
     }
-    this.props.onClick();
-  };
+    this.props.onClick()
+  }
 
   render() {
-    let step = getTimeRangeSrv().step;
-    let style = css``;
+    let step = getTimeRangeSrv().step
+    let style = css``
     if (step > 300) {
       style = css`
         cursor: zoom-in;
-      `;
+      `
     } else {
       style = css`
         cursor: default;
-      `;
+      `
     }
 
-    const tooltip = <PieTooltip episode={this.props.episode} />;
-    const { size, className } = this.props;
+    const tooltip = <PieTooltip episode={this.props.episode} />
+    const { size, className } = this.props
 
     return (
       <Tooltip content={tooltip} placement="right-start">
@@ -74,6 +74,6 @@ export class PieBoundingRect extends Component<Props, any> {
           onClick={this.onClick}
         />
       </Tooltip>
-    );
+    )
   }
 }

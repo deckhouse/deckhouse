@@ -1,10 +1,10 @@
 interface tooltipData {
-  title: string;
-  description: string;
-  reasonUp: string;
-  reasonDown: string;
-  reasonUnknown: string;
-  reasonNodata: string;
+  title: string
+  description: string
+  reasonUp: string
+  reasonDown: string
+  reasonUnknown: string
+  reasonNodata: string
 }
 
 /**
@@ -13,7 +13,7 @@ interface tooltipData {
  * Note the punctuation in status slots.
  */
 function tooltip(data: tooltipData): string {
-  const { title, description, reasonUp, reasonDown, reasonUnknown, reasonNodata } = data;
+  const { title, description, reasonUp, reasonDown, reasonUnknown, reasonNodata } = data
   return `
 <p><b>${title}</b></p>
 <p>${description}</p>
@@ -23,50 +23,50 @@ function tooltip(data: tooltipData): string {
     <li><i class="fa fa-fw fa-square tooltip-unknown"></i><b>Unknown</b>: ${reasonUnknown}</li>
     <li><i class="fa fa-fw fa-square tooltip-nodata"></i><b>Nodata</b>: ${reasonNodata}</li>
 </ul>
-`;
+`
 }
 
-const REASON_AGENTS_STOPPED = "agents were stopped";
-const REASON_APISERVER_UNAVAILABLE = "kube-apiserver is not available";
+const REASON_AGENTS_STOPPED = "agents were stopped"
+const REASON_APISERVER_UNAVAILABLE = "kube-apiserver is not available"
 const SYNTHETIC_REASONS = {
   reasonUp: "resolve is successful and all IPs are responded with 200 OK",
   reasonDown: "some IP responded with other code",
   reasonUnknown: "error during resolve or application is responded slow",
   reasonNodata: REASON_AGENTS_STOPPED,
-};
+}
 const GROUP_DEFAULT_TOOLTIP = {
   reasonUp: "all probes are up",
   reasonDown: "at least one probe is down",
   reasonUnknown: "uncertain result, see probe results for clues",
   reasonNodata: REASON_AGENTS_STOPPED,
-};
+}
 
 interface LangPack {
-  group: { [name: string]: tooltipData };
-  probe: { [name: string]: { [name: string]: tooltipData } };
-  mute: Mute;
+  group: { [name: string]: tooltipData }
+  probe: { [name: string]: { [name: string]: tooltipData } }
+  mute: Mute
 }
 
 interface MuteItem {
-  id: string;
-  label: string;
-  tooltip: string;
+  id: string
+  label: string
+  tooltip: string
 }
 
 interface MuteMenu {
-  label: string;
-  tooltip: string;
+  label: string
+  tooltip: string
 }
 
 interface Mute {
   items: {
-    Acd: MuteItem;
-    Mnt: MuteItem;
-    InfAcd: MuteItem;
-    InfMnt: MuteItem;
-  };
-  order: string[];
-  menu: MuteMenu;
+    Acd: MuteItem
+    Mnt: MuteItem
+    InfAcd: MuteItem
+    InfMnt: MuteItem
+  }
+  order: string[]
+  menu: MuteMenu
 }
 
 const langPack: LangPack = {
@@ -341,33 +341,33 @@ const langPack: LangPack = {
       tooltip: "Choose types of Downtime objects in cluster that will be used to mute Down seconds.",
     },
   },
-};
+}
 
 // Tooltips replicate the same structure as langPack but with rendered HTML for groups and probes
 function renderTooltips() {
-  const groupTooltips: { [group: string]: string } = {};
+  const groupTooltips: { [group: string]: string } = {}
 
   for (const [name, groupSpec] of Object.entries(langPack.group)) {
-    groupTooltips[name] = tooltip(groupSpec);
+    groupTooltips[name] = tooltip(groupSpec)
   }
 
-  const probeTooltips: { [group: string]: { [probe: string]: string } } = {};
+  const probeTooltips: { [group: string]: { [probe: string]: string } } = {}
 
   for (const [groupName, probesByName] of Object.entries(langPack.probe)) {
-    const groupedTooltips: { [probe: string]: string } = {};
+    const groupedTooltips: { [probe: string]: string } = {}
 
     for (const [probeName, probeSpec] of Object.entries(probesByName)) {
-      groupedTooltips[probeName] = tooltip(probeSpec);
+      groupedTooltips[probeName] = tooltip(probeSpec)
     }
 
-    probeTooltips[groupName] = groupedTooltips;
+    probeTooltips[groupName] = groupedTooltips
   }
 
   return {
     group: groupTooltips,
     probe: probeTooltips,
     mute: langPack.mute,
-  };
+  }
 }
 
 function fallbackTooltip(input: Partial<tooltipData>): tooltipData {
@@ -378,38 +378,38 @@ function fallbackTooltip(input: Partial<tooltipData>): tooltipData {
     reasonDown: "...",
     reasonUnknown: "...",
     reasonNodata: "...",
-  };
+  }
 
   return {
     ...fallbackTooltipData,
     ...input,
-  };
+  }
 }
 
 export function getGroupSpec(group: string): tooltipData {
-  const spec = langPack.group[group];
+  const spec = langPack.group[group]
   if (spec) {
-    return spec;
+    return spec
   }
 
-  return fallbackTooltip({ title: `Group ${group}` });
+  return fallbackTooltip({ title: `Group ${group}` })
 }
 
 export function getProbeSpec(group: string, probe: string): tooltipData {
-  const probeSpecs = langPack.probe[group];
+  const probeSpecs = langPack.probe[group]
   if (!probeSpecs) {
     // we might miss the group
-    return fallbackTooltip({ title: `${group}/${probe}` });
+    return fallbackTooltip({ title: `${group}/${probe}` })
   }
 
-  const spec = probeSpecs[probe];
+  const spec = probeSpecs[probe]
   if (!spec) {
     // we have the group, so the title of probe is the probe key
-    return fallbackTooltip({ title: probe });
+    return fallbackTooltip({ title: probe })
   }
 
-  return spec;
+  return spec
 }
 
-const tooltips = renderTooltips();
-export default tooltips;
+const tooltips = renderTooltips()
+export default tooltips

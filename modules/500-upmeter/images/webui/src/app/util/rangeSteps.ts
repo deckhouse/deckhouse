@@ -1,5 +1,5 @@
 export interface RangeStep {
-  step: number;
+  step: number
 }
 
 export const RangeStepsLadder: RangeStep[] = [
@@ -16,4 +16,4 @@ export const RangeStepsLadder: RangeStep[] = [
   { step: 60 * 60 * 24 * 30 + 60 * 60 * 12 }, // 1mon 12h Last 1y
   { step: 60 * 60 * 24 * 30 * 2 + 60 * 60 * 22 }, // 2mon 22h Last 2y
   { step: 60 * 60 * 24 * 30 * 5 + 60 * 60 * 24 * 2 + 60 * 60 * 6 }, // 5mon 2day 6h  Last 5y
-];
+]

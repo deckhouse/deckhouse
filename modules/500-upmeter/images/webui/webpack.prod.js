@@ -1,14 +1,14 @@
-const path = require("path");
-const glob = require("glob");
-const webpack = require("webpack");
+const path = require("path")
+const glob = require("glob")
+const webpack = require("webpack")
 
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const PurgecssPlugin = require("purgecss-webpack-plugin");
-const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
-const AppManifestWebpackPlugin = require("app-manifest-webpack-plugin");
-const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
-const BabelMinifyPlugin = require("babel-minify-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin")
+const PurgecssPlugin = require("purgecss-webpack-plugin")
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin")
+const HtmlWebpackPlugin = require("html-webpack-plugin")
+const AppManifestWebpackPlugin = require("app-manifest-webpack-plugin")
+const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin")
+const BabelMinifyPlugin = require("babel-minify-webpack-plugin")
 
 const paths = {
   modules: path.join(__dirname, "modules"),
@@ -16,7 +16,7 @@ const paths = {
   dist: path.join(__dirname, "dist"),
   data: path.join(__dirname, "data"),
   vendor: path.join(__dirname, "vendor"),
-};
+}
 
 module.exports = {
   mode: "production",
@@ -189,10 +189,10 @@ module.exports = {
     function () {
       this.hooks.done.tap("Done", function (stats) {
         if (stats.compilation.errors && stats.compilation.errors.length) {
-          console.log(stats.compilation.errors);
-          process.exit(1);
+          console.log(stats.compilation.errors)
+          process.exit(1)
         }
-      });
+      })
     },
   ],
-};
+}

@@ -1,15 +1,15 @@
-import React from "react";
+import React from "react"
 
-import { dateTime } from "@grafana/data";
-import { availabilityPercent, nanosecondsToHumanReadable, secondsToHumanReadable } from "../util/humanSeconds";
-import { cx } from "emotion";
-import { Episode } from "../services/DatasetSrv";
+import { dateTime } from "@grafana/data"
+import { availabilityPercent, nanosecondsToHumanReadable, secondsToHumanReadable } from "../util/humanSeconds"
+import { cx } from "emotion"
+import { Episode } from "../services/DatasetSrv"
 
 export function PieTooltip({ episode }: { episode: Episode }): JSX.Element {
-  const start = dateTime(episode.start);
-  const end = dateTime(episode.end);
-  const duration = secondsToHumanReadable(Math.floor(end.unix() - start.unix()));
-  const percent = availabilityPercent(episode.up, episode.down, episode.muted, 4);
+  const start = dateTime(episode.start)
+  const end = dateTime(episode.end)
+  const duration = secondsToHumanReadable(Math.floor(end.unix() - start.unix()))
+  const percent = availabilityPercent(episode.up, episode.down, episode.muted, 4)
 
   return (
     <>
@@ -43,25 +43,25 @@ export function PieTooltip({ episode }: { episode: Episode }): JSX.Element {
 
       <TooltipDowntimes downtimes={episode.downtimes} />
     </>
-  );
+  )
 }
 
 interface TooltipSecondsProps {
-  className: string;
-  label: string;
-  nanoseconds: number;
+  className: string
+  label: string
+  nanoseconds: number
 }
 
 function TooltipSeconds(props: React.PropsWithChildren<TooltipSecondsProps>) {
   // zero
   if (props.nanoseconds === 0) {
-    return null;
+    return null
   }
 
   // not sufficient to show
-  const durationString = nanosecondsToHumanReadable(props.nanoseconds);
+  const durationString = nanosecondsToHumanReadable(props.nanoseconds)
   if (!durationString) {
-    return null;
+    return null
   }
 
   return (
@@ -70,15 +70,15 @@ function TooltipSeconds(props: React.PropsWithChildren<TooltipSecondsProps>) {
       <br />
       <i className={cx("fas fa-fw fa-square", props.className)} /> {durationString}
     </li>
-  );
+  )
 }
 
 function TooltipDowntimes({ downtimes }: { downtimes: any[] }) {
   if (!downtimes || downtimes.length == 0) {
-    return null;
+    return null
   }
 
-  const descriptions = downtimes.map((item: any) => <li key={item.DowntimeName}>{item.Description}</li>);
+  const descriptions = downtimes.map((item: any) => <li key={item.DowntimeName}>{item.Description}</li>)
 
   return (
     <>
@@ -86,5 +86,5 @@ function TooltipDowntimes({ downtimes }: { downtimes: any[] }) {
       <br />
       <ul className="tooltip-downtimes">{descriptions}</ul>
     </>
-  );
+  )
 }

@@ -1,6 +1,6 @@
-semi: true
+semi: false
 arrowParens: always
-printWidth: 120
 trailingComma: all
 useTabs: false
 tabWidth: 2
+printWidth: 120
