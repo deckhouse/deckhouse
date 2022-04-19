@@ -15,16 +15,12 @@
 package hooks
 
 import (
-	"context"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	internalv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	internalschema "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
 )
@@ -32,7 +28,7 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// ensure crds hook has order 5, for creating node group we should use greater number
 	OnStartup: &go_hook.OrderedConfig{Order: 6},
-}, dependency.WithExternalDependencies(createMasterNodeGroup))
+}, createMasterNodeGroup)
 
 var defaultMasterNodeGroup = internalv1.NodeGroup{
 	TypeMeta: metav1.TypeMeta{
@@ -65,33 +61,8 @@ var defaultMasterNodeGroup = internalv1.NodeGroup{
 	},
 }
 
-func createMasterNodeGroup(input *go_hook.HookInput, dc dependency.Container) error {
-	client, err := dc.GetK8sClient()
-	if err != nil {
-		return err
-	}
-
-	gvr := schema.GroupVersionResource{
-		Group:    "deckhouse.io",
-		Version:  "v1",
-		Resource: "nodegroups",
-	}
-
-	_, err = client.Dynamic().Resource(gvr).Get(context.TODO(), "master", metav1.GetOptions{})
-
-	if err == nil {
-		// node group found. Nothing to do
-		return nil
-	}
-
-	if !errors.IsNotFound(err) {
-		// another error - return error. Hook will be restarted by addon-operator
-		return err
-	}
-
-	ngCopy := defaultMasterNodeGroup
-
-	input.PatchCollector.Create(&ngCopy)
+func createMasterNodeGroup(input *go_hook.HookInput) error {
+	input.PatchCollector.Create(&defaultMasterNodeGroup, object_patch.IgnoreIfExists())
 
 	return nil
 }
