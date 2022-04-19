@@ -745,12 +745,24 @@
                 "value": 200
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 434
+              }
+            ]
           }
         ]
       },
       "gridPos": {
         "h": 6,
-        "w": 9,
+        "w": 8,
         "x": 4,
         "y": 18
       },
