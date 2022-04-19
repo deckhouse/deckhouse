@@ -72,7 +72,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 				return err
 			}
 
-			return operations.InstallDeckhouse(kubeCl, installConfig, metaConfig.MasterNodeGroupManifest())
+			return operations.InstallDeckhouse(kubeCl, installConfig)
 		})
 	}
 
