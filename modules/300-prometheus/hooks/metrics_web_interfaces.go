@@ -19,6 +19,7 @@ package hooks
 import (
 	"errors"
 	"path"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -79,6 +80,13 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	urlPath := ""
 	if len(rule.HTTP.Paths) > 0 {
 		urlPath = rule.HTTP.Paths[0].Path
+	}
+
+	if urlPath != "" {
+		index := strings.Index(urlPath, "(")
+		if index > 0 {
+			urlPath = urlPath[:index]
+		}
 	}
 
 	return exportedDomain{
