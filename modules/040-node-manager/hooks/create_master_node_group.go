@@ -27,8 +27,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, createMasterNodeGroup)
 
 func getDefaultMasterNg(clusterType string) (*unstructured.Unstructured, error) {
-	// do not use internal type because it has none pointer struct fields
-	// this fields not skip due marshaling and validation will be fail
+	// do not use internal type because internal type has none pointer struct fields
+	// this fields not skip due marshaling and validation will be fail on fields
+	// CRI and CloudInstances
+	// CloudInstances is incorrect field for master nodes
 	spec := map[string]interface{}{
 		"nodeType": "CloudPermanent",
 		"disruptions": map[string]interface{}{
