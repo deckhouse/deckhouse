@@ -35,9 +35,9 @@ import (
 	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
-	v1alpha12 "github.com/deckhouse/deckhouse/go_lib/api/mcm/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/api/shared"
-	ngv1 "github.com/deckhouse/deckhouse/go_lib/api/v1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var (
@@ -125,7 +125,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleUpdateNGStatus)
 
 func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var md v1alpha12.MachineDeployment
+	var md v1alpha1.MachineDeployment
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
@@ -199,7 +199,7 @@ func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func updStatusFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var machine v1alpha12.Machine
+	var machine v1alpha1.Machine
 
 	err := sdk.FromUnstructured(obj, &machine)
 	if err != nil {
@@ -326,7 +326,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		maxPerZone := nodeGroup.MaxPerZone * zonesCount
 
 		var desiredMax int32
-		var lastMachineFailures []*v1alpha12.MachineSummary
+		var lastMachineFailures []*v1alpha1.MachineSummary
 
 		mds := mdMap[ngName]
 		for _, md := range mds {
@@ -477,7 +477,7 @@ func buildUpdateStatusPatch(
 	minPerZone, maxPerZone,
 	desiredMax, instancesNum int32,
 	nodeType ngv1.NodeType, statusMsg string,
-	lastMachineFailures []*v1alpha12.MachineSummary,
+	lastMachineFailures []*v1alpha1.MachineSummary,
 ) interface{} {
 	ready := "True"
 	if len(statusMsg) > 0 {
@@ -537,5 +537,5 @@ type statusMachineDeployment struct {
 	Name                string
 	Replicas            int32
 	NodeGroup           string
-	LastMachineFailures []*v1alpha12.MachineSummary
+	LastMachineFailures []*v1alpha1.MachineSummary
 }
