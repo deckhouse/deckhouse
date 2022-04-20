@@ -34,7 +34,7 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-metrics-exporter/secret-exporter-creds.yaml") . | sha256sum }}
     spec:
-      serviceAccountName: cloud-metrics-exporter
+      serviceAccountName: cloud-provider-yandex-cloud-metrics-exporter
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
