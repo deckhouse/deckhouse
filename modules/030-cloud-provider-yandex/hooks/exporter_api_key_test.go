@@ -38,7 +38,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: generate exporter api key ::", func() {
+var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: generate exporter api key ::", func() {
 	const (
 		initValuesString = `
 global:
@@ -169,6 +169,7 @@ data:
 
 	AfterEach(func() {
 		requestedCreateAPIKeysForSA = make(map[string]struct{})
+		requestedDeleteAPIKeysForSA = make(map[string]struct{})
 	})
 
 	mockRequests := func(apiKey, keyID string) {
@@ -253,32 +254,72 @@ data:
 		})
 
 		Context("Secret with exporter credentials not present", func() {
-			id := "id1"
-			saID := "saID1"
-			apiKey := "apikey" + saID
-			sa, checksum := serviceAccount(id, saID)
-			keyID := "apiKeyId1"
-			BeforeEach(func() {
-				mockRequests(apiKey, keyID)
+			Context("user API-key is not set", func() {
+				id := "id1"
+				saID := "saID1"
+				apiKey := "apikey" + saID
+				sa, checksum := serviceAccount(id, saID)
+				keyID := "apiKeyId1"
+				BeforeEach(func() {
+					mockRequests(apiKey, keyID)
 
-				JoinKubeResourcesAndSet(f, providerSecretForSa(sa))
+					JoinKubeResourcesAndSet(f, providerSecretForSa(sa))
 
-				f.RunHook()
+					f.RunHook()
+				})
+
+				It("requests new api-key", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(requestedCreateAPIKeysForSA).To(HaveKey(saID))
+				})
+
+				It("set api-key and service-account checksum into values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					assertCheckValues(f, apiKeySecret{
+						Key:                    apiKey,
+						KeyID:                  keyID,
+						ServiceAccountChecksum: checksum,
+					})
+				})
 			})
 
-			It("requests new api-key", func() {
-				Expect(f).To(ExecuteSuccessfully())
+			Context("user API-key sets", func() {
+				id := "id10"
+				saID := "saID10"
+				apiKey := "user-apikey"
+				sa, _ := serviceAccount(id, saID)
+				keyID := "apiKeyId1"
 
-				Expect(requestedCreateAPIKeysForSA).To(HaveKey(saID))
-			})
+				BeforeEach(func() {
+					mockRequests(apiKey, keyID)
 
-			It("set api-key and service-account checksum into values", func() {
-				Expect(f).To(ExecuteSuccessfully())
+					f.ValuesSet("cloudProviderYandex.cloudMetricsExporterAPIKey", apiKey)
 
-				assertCheckValues(f, apiKeySecret{
-					Key:                    apiKey,
-					KeyID:                  keyID,
-					ServiceAccountChecksum: checksum,
+					JoinKubeResourcesAndSet(f, providerSecretForSa(sa))
+
+					f.RunHook()
+				})
+
+				It("does not request new api-key", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(requestedCreateAPIKeysForSA).To(HaveLen(0))
+				})
+
+				It("set api-key only into values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					assertCheckValues(f, apiKeySecret{
+						Key: apiKey,
+					})
+				})
+
+				It("does not request deleting api-key", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(requestedDeleteAPIKeysForSA).To(HaveLen(0))
 				})
 			})
 		})
@@ -379,6 +420,44 @@ data:
 					})
 				})
 			})
+
+			Context("user API-key sets", func() {
+				id := "id11"
+				saID := "saID11"
+				apiKey := "user-apikey"
+				sa, _ := serviceAccount(id, saID)
+				keyID := "apiKeyId1"
+
+				BeforeEach(func() {
+					mockRequests(apiKey, keyID)
+
+					f.ValuesSet("cloudProviderYandex.cloudMetricsExporterAPIKey", apiKey)
+
+					JoinKubeResourcesAndSet(f, providerSecretForSa(sa), exporterSecret("folder", apiKey, checksum, keyID))
+
+					f.RunHook()
+				})
+
+				It("does not request new api-key", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(requestedCreateAPIKeysForSA).To(HaveLen(0))
+				})
+
+				It("set api-key only into values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					assertCheckValues(f, apiKeySecret{
+						Key: apiKey,
+					})
+				})
+
+				It("does request deleting api-key", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(requestedDeleteAPIKeysForSA).To(HaveKey(keyID))
+				})
+			})
 		})
 	})
 
@@ -398,6 +477,40 @@ data:
 				mockRequests(apiKey, keyID)
 
 				JoinKubeResourcesAndSet(f, providerSecretForSa(sa))
+
+				f.RunHook()
+			})
+
+			It("does not request request creating api-key", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(requestedCreateAPIKeysForSA).To(HaveLen(0))
+			})
+
+			It("does not request request deleting api-key", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(requestedDeleteAPIKeysForSA).To(HaveLen(0))
+			})
+
+			It("clean values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				assertCheckValues(f, apiKeySecret{})
+			})
+		})
+
+		Context("secret with api-key exists with user api-key", func() {
+			id := "id30"
+			saID := "sa30"
+			apiKey := "user-apikey"
+			sa, _ := serviceAccount(id, saID)
+			keyID := "apiKeyId3"
+
+			BeforeEach(func() {
+				mockRequests(apiKey, keyID)
+
+				JoinKubeResourcesAndSet(f, providerSecretForSa(sa), exporterSecret("folder", apiKey, "", ""))
 
 				f.RunHook()
 			})

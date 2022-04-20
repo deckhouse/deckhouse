@@ -112,39 +112,39 @@ func exporterAPIKeyHandler(input *go_hook.HookInput, dc dependency.Container) er
 		apiKey = snapExporterSecret[0].(*apiKeySecret)
 	}
 
-	exporterEnabled := input.Values.Get("cloudProviderYandex.cloudMetricsExporterEnabled").Bool()
-	if !exporterEnabled && apiKey == nil {
-		// set everything to empty
-		setAPIKeyValues(input, &apiKeySecret{})
-		return nil
-	}
-
 	provider, err := parseProvider(input)
 	if err != nil {
 		return err
 	}
 
-	if !exporterEnabled && apiKey != nil {
-		if apiKey.KeyID != "" {
-			// should delete apiKey
-			api, _, err := getAPI(provider.ServiceAccountJSON, dc.GetHTTPClient())
-			if err != nil {
-				return err
-			}
-
-			err = internal.WithRetry(3, 3*time.Second, func() error {
-				return api.DeleteAPIKey(apiKey.KeyID)
-			})
-
+	exporterEnabled := input.Values.Get("cloudProviderYandex.cloudMetricsExporterEnabled").Bool()
+	if !exporterEnabled {
+		if apiKey != nil {
+			err = deleteAPIKeyIfExistsKeyID(dc.GetHTTPClient(), apiKey, provider.ServiceAccountJSON)
 			if err != nil {
 				return err
 			}
 		}
 
-		// set everything to empty
 		setAPIKeyValues(input, &apiKeySecret{})
 		return nil
 	}
+
+	userApiKey := input.Values.Get("cloudProviderYandex.cloudMetricsExporterAPIKey").String()
+	if userApiKey != "" {
+		err = deleteAPIKeyIfExistsKeyID(dc.GetHTTPClient(), apiKey, provider.ServiceAccountJSON)
+		if err != nil {
+			return err
+		}
+
+		setAPIKeyValues(input, &apiKeySecret{
+			Key: userApiKey,
+		})
+
+		return nil
+	}
+
+	// create API key for provider cluster configuration service account
 
 	saCheckSumBytes := sha256.Sum256([]byte(provider.ServiceAccountJSON))
 	saCheckSum := fmt.Sprintf("%x", saCheckSumBytes)
@@ -176,6 +176,22 @@ func exporterAPIKeyHandler(input *go_hook.HookInput, dc dependency.Container) er
 	setAPIKeyValues(input, apiKey)
 
 	return nil
+}
+
+func deleteAPIKeyIfExistsKeyID(httpClient d8http.Client, apiKey *apiKeySecret, serviceAccount string) error {
+	if apiKey == nil || apiKey.KeyID == "" {
+		return nil
+	}
+
+	// should delete apiKey
+	api, _, err := getAPI(serviceAccount, httpClient)
+	if err != nil {
+		return err
+	}
+
+	return internal.WithRetry(3, 3*time.Second, func() error {
+		return api.DeleteAPIKey(apiKey.KeyID)
+	})
 }
 
 func parseProvider(input *go_hook.HookInput) (*yandexV1.Provider, error) {

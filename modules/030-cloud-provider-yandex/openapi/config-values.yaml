@@ -5,10 +5,19 @@ properties:
     default: false
     x-examples: [ true, false ]
     description: |
-      Deploys Yandex Cloud metrics exporter in the cluster. Creates an API key to collect metrics beforehand.
-      When using the `WithNatInstance` layout starts collecting metrics for the NAT-instance.
+      Deploys Yandex Cloud metrics exporter in the cluster.
+      If `cloudMetricsExporterAPIKey` parameter is not set, Deckhouse creates an API-key with ServiceAccount permissions to collect metrics.
+      When using the `WithNatInstance` layout, Deckhouse starts collecting metrics for the NAT-instance.
       NAT-instance metrics will have `nat_instance=true` label. Also, it will deploy Grafana dashboard for NAT-instance metrics.
-      Before usage, please see [pricing policy for Yandex Cloud Monitoring](https://cloud.yandex.ru/docs/monitoring/pricing)
+      Before usage, please see [pricing policy for Yandex Cloud Monitoring](https://cloud.yandex.ru/docs/monitoring/pricing).
+  cloudMetricsExporterAPIKey:
+    type: string
+    x-examples: [ "key" ]
+    description: |
+      API-key for cloud metrics exporter.
+      If parameter exists, Deckhouse will be using this API-key for cloud metrics exporter instead Deckhouse automatically created API-key.
+      See [this instruction](https://cloud.yandex.ru/docs/iam/operations/api-key/create) for creating API-key.
+      Service account should have `monitoring.viewer` role.
   additionalExternalNetworkIDs:
     type: array
     items:
