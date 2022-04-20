@@ -45,7 +45,7 @@ spec:
       containers:
       - name: exporter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.cloudProviderYandex.exporter }}"
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.cloudProviderYandex.cloudMetricsExporter }}"
         args:
         - "--listen-address=127.0.0.1:8081"
         - "--logger-type=json"
