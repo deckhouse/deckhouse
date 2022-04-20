@@ -20,7 +20,7 @@ spec:
       scrapeTimeout: "30s"
       metricRelabelings:
         - sourceLabels: [ resource_id ]
-          regex: {{ .Values.cloudProviderYandex.internal.natInstanceName }}
+          regex: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName }}
           action: keep
         - targetLabel: "nat_instance"
           replacement: "true"
