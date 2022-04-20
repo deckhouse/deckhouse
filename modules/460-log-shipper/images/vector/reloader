@@ -55,11 +55,11 @@ test_dir="/tmp/tmp_vector_conf"
 
 function reload_once() {
   if [[ ! -f "$sample_config" ]] ; then
-    log "No sample config found"
+    log "No sample config found."
     return
   fi
 
-  log "Start reloading a config"
+  log "Start reloading a config."
   vector_config=$(cat "$sample_config" | envsubst | base64 -w0)
 
   # Cleanup test directory
@@ -77,24 +77,22 @@ function reload_once() {
       if [[ -f "$dynamic_config_dir/vector.json" ]] ; then
         diff -u "$dynamic_config_dir/vector.json" "$test_dir/vector.json" || true
       fi
-
       mk_configs $dynamic_config_dir $vector_config
 
-      vector_pid=$(pidof vector)
-      if [[ "x$vector_pid" != "x" ]]; then
-        log "Reloading vector"
-        kill -SIGHUP "$vector_pid"
-      fi
+      # pkill exits with the code 1 if no process matches tgw patter,
+      # but our script will catch this error later in the main loop
+      pkill -SIGHUP vector
+      log "Vector config has been reloaded."
     else
       log "Configs are equal, doing nothing."
     fi
   else
-    log "Invalid config, skip running"
+    log "Invalid config, skip running."
   fi
 }
 
 reload_once
-log "Start watching the $sample_config file"
+log "Start watching the $sample_config file."
 while true; do
   # In case of running inside a Kubernetes Pod, inotify wait exists on every configmap change.
   inotifywait -q -e modify,create,delete,move "$sample_config" || true
