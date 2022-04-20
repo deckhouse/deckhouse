@@ -143,7 +143,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			deployment := h.KubernetesResource("Deployment", "d8-monitoring", "yandex-cloud-metrics-exporter")
 			Expect(deployment.Exists()).To(Equal(exists))
 
-			secret := h.KubernetesResource("Secret", "d8-monitoring", "d8-yandex-metrics-exporter-app-creds")
+			secret := h.KubernetesResource("Secret", "d8-monitoring", "d8-yandex-cloud-metrics-exporter-app-creds")
 			Expect(secret.Exists()).To(Equal(exists))
 			if exists {
 				Expect(secret.Field("data.api-key").String()).To(Equal("YXBpLWtleQ=="))

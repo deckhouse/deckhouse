@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-yandex-metrics-exporter-app-creds"},
+				MatchNames: []string{"d8-yandex-cloud-metrics-exporter-app-creds"},
 			},
 			FilterFunc: applyMetricsExporterSecret,
 		},

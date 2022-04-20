@@ -102,7 +102,7 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-yandex-metrics-exporter-app-creds
+  name: d8-yandex-cloud-metrics-exporter-app-creds
   namespace: d8-monitoring
   annotations:
     checksum/service-account: "%s"
