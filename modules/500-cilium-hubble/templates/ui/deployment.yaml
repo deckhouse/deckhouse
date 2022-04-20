@@ -104,8 +104,6 @@ spec:
         - name: hubble-ui-envoy-yaml
           mountPath: /etc/envoy.yaml
           subPath: envoy.yaml
-      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       volumes:
       - name: hubble-ui-envoy-yaml
         configMap:
