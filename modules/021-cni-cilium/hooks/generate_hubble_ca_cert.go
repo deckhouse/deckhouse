@@ -29,6 +29,9 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
 
+// Hubble is compiled into cilium agent, that's why we generate certificate for it.
+// We need this certificate inside agent to grant hubble-relay scrape data securely.
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Queue:        "/modules/cni-cilium/gen-cert",

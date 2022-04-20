@@ -121,12 +121,11 @@ metadata:
 `)
 			match := r.FindAllStringSubmatch(string(rbac), -1)
 			for _, m := range match {
-				saName := m[1]
-				if strings.HasPrefix(saName, `"`) && strings.HasSuffix(saName, `"`) || strings.HasPrefix(saName, `'`) && strings.HasSuffix(saName, `'`) {
-					saName, err = strconv.Unquote(m[1])
-					if err != nil {
-						return err
-					}
+				// ServiceAccount could be in double or single quotes
+				// Unquote it for versatility
+				saName, err := unquote(m[1])
+				if err != nil {
+					return err
 				}
 
 				saNames[modulePath] = append(saNames[modulePath], saName)
@@ -152,6 +151,18 @@ metadata:
 	}
 
 	return err
+}
+
+func unquote(s string) (string, error) {
+	var err error
+	if strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) || strings.HasPrefix(s, `'`) && strings.HasSuffix(s, `'`) {
+		s, err = strconv.Unquote(s)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return s, err
 }
 
 func main() {
