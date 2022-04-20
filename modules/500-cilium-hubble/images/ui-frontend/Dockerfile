@@ -5,5 +5,6 @@ FROM quay.io/cilium/hubble-ui:v0.8.5@sha256:4eaca1ec1741043cfba6066a165b3bf25159
 FROM $BASE_NGINX_ALPINE
 COPY --from=artifact /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=artifact /app /app
+RUN chown -R nobody /
 
 ENTRYPOINT ["nginx", "-g", "daemon off;"]
