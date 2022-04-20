@@ -130,15 +130,15 @@ func exporterAPIKeyHandler(input *go_hook.HookInput, dc dependency.Container) er
 		return nil
 	}
 
-	userApiKey := input.Values.Get("cloudProviderYandex.cloudMetricsExporterAPIKey").String()
-	if userApiKey != "" {
+	userAPIKey := input.Values.Get("cloudProviderYandex.cloudMetricsExporterAPIKey").String()
+	if userAPIKey != "" {
 		err = deleteAPIKeyIfExistsKeyID(dc.GetHTTPClient(), apiKey, provider.ServiceAccountJSON)
 		if err != nil {
 			return err
 		}
 
 		setAPIKeyValues(input, &apiKeySecret{
-			Key: userApiKey,
+			Key: userAPIKey,
 		})
 
 		return nil
