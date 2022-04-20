@@ -4,6 +4,34 @@ properties:
     type: boolean
     default: false
     description: Enabled debug logging for Cilium Hubble component.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      The same as `spec.tolerations` for the Kubernetes pod.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
   auth:
     type: object
     default: {}
