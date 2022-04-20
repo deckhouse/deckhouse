@@ -7,7 +7,5 @@ COPY --from=artifact /etc/envoy /etc/envoy
 RUN chown nobody /usr/local/bin/envoy
 RUN chmod +x /usr/local/bin/envoy
 
-RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
-
 USER nobody
 CMD ["envoy", "-c", "/etc/envoy/envoy.yaml"]
