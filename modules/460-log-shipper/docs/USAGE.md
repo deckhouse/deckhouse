@@ -202,27 +202,60 @@ spec:
 
 ## Logs filters
 
-Send logs only non-debug non-json logs from particular containers.
+Only nginx container logs:
 
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: log-filters
+  name: nginx-logs
 spec:
   type: KubernetesPods
   labelFilter:
-  - filed: container
+  - field: container
     operator: In
-    values:
-    - nginx
-  logFilter:
-  - operator: NotRegex
-    values:
-    - "DEBUG.*"
+    values: [nginx]
   destinationRefs:
   - loki-storage
 ```
+
+Non-debug non-json logs:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: non-debeg-logs
+spec:
+  logFilter:
+  - operator: NotRegex
+    values: ["DEBUG.*"]
+  destinationRefs:
+  - loki-storage
+```
+
+Only error logs of backend microservices:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: backend-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+  - field: pod_labels.app
+    operator: In
+    values: [web-server, queue-worker]
+  logFilter:
+  - field: error
+    operator: Exists
+  destinationRefs:
+  - loki-storage
+```
+
 
 > NOTE: If you need logs from only one or from a small group of a pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.

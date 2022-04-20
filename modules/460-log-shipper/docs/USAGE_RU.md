@@ -201,27 +201,59 @@ spec:
 
 ## Фильтрация логов
 
-Отправлять только не debug и не json логи из определенного контейнера.
+Только логи контейнера nginx
 
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: log-filters
+  name: nginx-logs
 spec:
   type: KubernetesPods
   labelFilter:
-  - filed: container
+  - field: container
     operator: In
-    values:
-    - nginx
-  logFilter:
-  - operator: NotRegex
-    values:
-    - "DEBUG.*"
+    values: [nginx]
   destinationRefs:
   - loki-storage
+```
+
+Не debug и не JSON логи:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: non-debeg-logs
+spec:
+  logFilter:
+  - operator: NotRegex
+    values: ["DEBUG.*"]
+  destinationRefs:
+  - loki-storage
+```
+
+Только ошибки микросервисов бекэнда:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: backend-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+    - field: pod_labels.app
+      operator: In
+      values: [web-server, queue-worker]
+  logFilter:
+    - field: error
+      operator: Exists
+  destinationRefs:
+    - loki-storage
 ```
 
 > NOTE: Если вам нужны только логи одного или малой группы pod'ов, постарайтесь использовать настройки kubernetesPods, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
