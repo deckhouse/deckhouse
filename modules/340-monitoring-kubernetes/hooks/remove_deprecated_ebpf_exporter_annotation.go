@@ -73,9 +73,7 @@ func unlabelNodes(input *go_hook.HookInput) error {
 				return nil, err
 			}
 
-			if _, ok := node.Labels[deprecatedEbpfSchedulingLabelKey]; ok {
-				delete(node.Labels, deprecatedEbpfSchedulingLabelKey)
-			}
+			delete(node.Labels, deprecatedEbpfSchedulingLabelKey)
 
 			return sdk.ToUnstructured(&node)
 		}, "v1", "Node", "", labeledNode.Name)
