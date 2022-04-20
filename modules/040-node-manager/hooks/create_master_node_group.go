@@ -18,12 +18,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	internalv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
-	internalschema "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -31,51 +26,51 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 6},
 }, createMasterNodeGroup)
 
-var defaultMasterNodeGroup = internalv1.NodeGroup{
-	TypeMeta: metav1.TypeMeta{
-		APIVersion: "deckhouse.io/v1",
-		Kind:       "NodeGroup",
-	},
-
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "master",
-	},
-
-	Spec: internalv1.NodeGroupSpec{
-		NodeType: internalv1.NodeTypeCloudPermanent,
-		Disruptions: internalv1.Disruptions{
-			ApprovalMode: "Manual",
+func getDefaultMasterNg(clusterType string) (*unstructured.Unstructured, error) {
+	// do not use internal type because it has none pointer struct fields
+	// this fields not skip due marshaling and validation will be fail
+	spec := map[string]interface{}{
+		"nodeType": "CloudPermanent",
+		"disruptions": map[string]interface{}{
+			"approvalMode": "Manual",
 		},
-
-		NodeTemplate: internalschema.NodeTemplate{
-			Labels: map[string]string{
+		"nodeTemplate": map[string]interface{}{
+			"labels": map[string]interface{}{
 				"node-role.kubernetes.io/master":        "",
 				"node-role.kubernetes.io/control-plane": "",
 			},
-			Taints: []v1.Taint{
+			"taints": []map[string]interface{}{
 				{
-					Key:    "node-role.kubernetes.io/master",
-					Effect: v1.TaintEffectNoSchedule,
+					"key":    "node-role.kubernetes.io/master",
+					"effect": "NoSchedule",
 				},
 			},
 		},
-	},
-}
+	}
+	if clusterType == "Static" {
+		spec["nodeType"] = "Static"
+	}
 
-func getDefaultMasterNg() (*unstructured.Unstructured, error) {
-	o, err := sdk.ToUnstructured(&defaultMasterNodeGroup)
+	ng := map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeGroup",
+		"metadata": map[string]interface{}{
+			"name": "master",
+		},
+		"spec": spec,
+	}
+	o, err := sdk.ToUnstructured(&ng)
 	if err != nil {
 		return nil, err
 	}
-
-	unstructured.RemoveNestedField(o.Object, "spec", "cloudInstances")
-	unstructured.RemoveNestedField(o.Object, "spec", "cri")
 
 	return o, nil
 }
 
 func createMasterNodeGroup(input *go_hook.HookInput) error {
-	ng, err := getDefaultMasterNg()
+	clusterType := input.Values.Get("global.clusterConfiguration.clusterType").String()
+
+	ng, err := getDefaultMasterNg(clusterType)
 	if err != nil {
 		return err
 	}

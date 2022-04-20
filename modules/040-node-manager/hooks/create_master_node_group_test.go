@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,7 +28,23 @@ import (
 )
 
 var _ = Describe("Global hooks :: migrate :: add_control_plane_role_to_master_ng_test ::", func() {
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	const initValues = `
+global:
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1alpha1
+    cloud:
+      prefix: sandbox
+      provider: OpenStack
+    clusterDomain: cluster.local
+    clusterType: Cloud
+    defaultCRI: Docker
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.21"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
+`
+	f := HookExecutionConfigInit(initValues, `{}`)
 
 	var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 	f.RegisterCRD(nodeGroupResource.Group, nodeGroupResource.Version, "NodeGroup", false)
@@ -73,136 +90,145 @@ spec:
 `
 	)
 
-	masterNgUnstructured, err := getDefaultMasterNg()
-	if err != nil {
-		panic(err)
-	}
-	var masterNgDefaultYAMLBBytes []byte
-	masterNgDefaultYAMLBBytes, err = yaml.Marshal(masterNgUnstructured)
-	if err != nil {
-		panic(err)
-	}
-
-	var masterNgDefaultYAML = string(masterNgDefaultYAMLBBytes)
-
 	assertCountNodeGroups := func(f *HookExecutionConfig, count int) {
 		nodeGroups, err := f.KubeClient().Dynamic().Resource(nodeGroupResource).Namespace("").List(context.TODO(), v1.ListOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(nodeGroups.Items).To(HaveLen(count))
 	}
 
-	assertDefaultMasterNodeGroupOnlyPresent := func(f *HookExecutionConfig) {
-		masterNg := f.KubernetesResource("NodeGroup", "", "master")
-		Expect(masterNg.ToYaml()).To(MatchYAML(masterNgDefaultYAML))
+	for _, clType := range []string{"Cloud", "Static"} {
+		clusterType := clType
+		Context(fmt.Sprintf("%s cluster", clType), func() {
+			masterNgUnstructured, err := getDefaultMasterNg(clusterType)
+			if err != nil {
+				panic(err)
+			}
+			var masterNgDefaultYAMLBBytes []byte
+			masterNgDefaultYAMLBBytes, err = yaml.Marshal(masterNgUnstructured)
+			if err != nil {
+				panic(err)
+			}
 
-		assertCountNodeGroups(f, 1)
-	}
+			var masterNgDefaultYAML = string(masterNgDefaultYAMLBBytes)
 
-	Context("Cluster without node groups", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(""))
-			f.RunHook()
-		})
-
-		It("Should create default master node group only", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			assertDefaultMasterNodeGroupOnlyPresent(f)
-		})
-	})
-
-	Context("Cluster has default master node group", func() {
-		Context("only", func() {
-			BeforeEach(func() {
-				JoinKubeResourcesAndSet(f, masterNgDefaultYAML)
-
-				f.RunHook()
-			})
-
-			It("should not change master node group", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				assertDefaultMasterNodeGroupOnlyPresent(f)
-			})
-		})
-
-		Context("with another ng", func() {
-			BeforeEach(func() {
-				JoinKubeResourcesAndSet(f, masterNgDefaultYAML, workerNgYAML)
-
-				f.RunHook()
-			})
-
-			It("should not change master node group", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
+			assertDefaultMasterNodeGroupOnlyPresent := func(f *HookExecutionConfig) {
 				masterNg := f.KubernetesResource("NodeGroup", "", "master")
 				Expect(masterNg.ToYaml()).To(MatchYAML(masterNgDefaultYAML))
-			})
-
-			It("should not change another node group", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				workerNg := f.KubernetesResource("NodeGroup", "", "worker")
-				Expect(workerNg.ToYaml()).To(MatchYAML(workerNgYAML))
-			})
-
-			It("should not create another node groups", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				assertCountNodeGroups(f, 2)
-			})
-		})
-	})
-
-	Context("Cluster has none default master node group only", func() {
-		Context("only", func() {
-			BeforeEach(func() {
-				JoinKubeResourcesAndSet(f, masterNgNoneDefault)
-
-				f.RunHook()
-			})
-
-			It("Should not change master node group", func() {
-				Expect(f).To(ExecuteSuccessfully())
-
-				masterNg := f.KubernetesResource("NodeGroup", "", "master")
-				Expect(masterNg.ToYaml()).To(MatchYAML(masterNgNoneDefault))
-			})
-
-			It("Should not create another node groups", func() {
-				Expect(f).To(ExecuteSuccessfully())
 
 				assertCountNodeGroups(f, 1)
-			})
-		})
+			}
 
-		Context("with another ng", func() {
 			BeforeEach(func() {
-				JoinKubeResourcesAndSet(f, masterNgNoneDefault, workerNgYAML)
-
-				f.RunHook()
+				f.ValuesSet("global.clusterConfiguration.clusterType", clusterType)
 			})
 
-			It("should not change master node group", func() {
-				Expect(f).To(ExecuteSuccessfully())
+			Context("Cluster without node groups", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(""))
+					f.RunHook()
+				})
 
-				masterNg := f.KubernetesResource("NodeGroup", "", "master")
-				Expect(masterNg.ToYaml()).To(MatchYAML(masterNgNoneDefault))
+				It("Should create default master node group only", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					assertDefaultMasterNodeGroupOnlyPresent(f)
+				})
 			})
 
-			It("should not change another node group", func() {
-				Expect(f).To(ExecuteSuccessfully())
+			Context("Cluster has default master node group", func() {
+				Context("only", func() {
+					BeforeEach(func() {
+						JoinKubeResourcesAndSet(f, masterNgDefaultYAML)
 
-				workerNg := f.KubernetesResource("NodeGroup", "", "worker")
-				Expect(workerNg.ToYaml()).To(MatchYAML(workerNgYAML))
+						f.RunHook()
+					})
+
+					It("should not change master node group", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						assertDefaultMasterNodeGroupOnlyPresent(f)
+					})
+				})
+
+				Context("with another ng", func() {
+					BeforeEach(func() {
+						JoinKubeResourcesAndSet(f, masterNgDefaultYAML, workerNgYAML)
+
+						f.RunHook()
+					})
+
+					It("should not change master node group", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						masterNg := f.KubernetesResource("NodeGroup", "", "master")
+						Expect(masterNg.ToYaml()).To(MatchYAML(masterNgDefaultYAML))
+					})
+
+					It("should not change another node group", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						workerNg := f.KubernetesResource("NodeGroup", "", "worker")
+						Expect(workerNg.ToYaml()).To(MatchYAML(workerNgYAML))
+					})
+
+					It("should not create another node groups", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						assertCountNodeGroups(f, 2)
+					})
+				})
 			})
 
-			It("should not create another node groups", func() {
-				Expect(f).To(ExecuteSuccessfully())
+			Context("Cluster has none default master node group only", func() {
+				Context("only", func() {
+					BeforeEach(func() {
+						JoinKubeResourcesAndSet(f, masterNgNoneDefault)
 
-				assertCountNodeGroups(f, 2)
+						f.RunHook()
+					})
+
+					It("Should not change master node group", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						masterNg := f.KubernetesResource("NodeGroup", "", "master")
+						Expect(masterNg.ToYaml()).To(MatchYAML(masterNgNoneDefault))
+					})
+
+					It("Should not create another node groups", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						assertCountNodeGroups(f, 1)
+					})
+				})
+
+				Context("with another ng", func() {
+					BeforeEach(func() {
+						JoinKubeResourcesAndSet(f, masterNgNoneDefault, workerNgYAML)
+
+						f.RunHook()
+					})
+
+					It("should not change master node group", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						masterNg := f.KubernetesResource("NodeGroup", "", "master")
+						Expect(masterNg.ToYaml()).To(MatchYAML(masterNgNoneDefault))
+					})
+
+					It("should not change another node group", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						workerNg := f.KubernetesResource("NodeGroup", "", "worker")
+						Expect(workerNg.ToYaml()).To(MatchYAML(workerNgYAML))
+					})
+
+					It("should not create another node groups", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						assertCountNodeGroups(f, 2)
+					})
+				})
 			})
 		})
-	})
+	}
 })
