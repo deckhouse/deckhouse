@@ -21,7 +21,7 @@ WORKDIR /ebpf-exporter
 
 RUN wget -O - https://github.com/cloudflare/ebpf_exporter/archive/refs/tags/v1.2.5.tar.gz | tar -xzv --strip-components=1
 
-COPY 001-kernel-version-detection-and-individual-program-failure.patch /
+COPY patches/001-kernel-version-detection-and-individual-program-failure.patch /
 RUN patch -p1 < /001-kernel-version-detection-and-individual-program-failure.patch
 
 RUN mv /root/bcc/libbcc_*.deb /tmp/libbcc.deb
