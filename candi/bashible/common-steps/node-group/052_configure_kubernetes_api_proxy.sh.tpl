@@ -54,7 +54,7 @@ stream {
 }
 EOF
 
-if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf ]]; then
+if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ]]; then
   cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
 fi
 
