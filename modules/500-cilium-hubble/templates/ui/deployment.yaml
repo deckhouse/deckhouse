@@ -47,6 +47,11 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+          - mountPath: /var/cache/nginx
+            name: cache
       - name: backend
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiBackend }}
@@ -100,6 +105,12 @@ spec:
       - name: hubble-ui-envoy-yaml
         configMap:
           name: hubble-ui-envoy
+      - emptyDir:
+          medium: Memory
+        name: tmp
+      - emptyDir:
+          medium: Memory
+        name: cache
       - name: hubble-ui-client-certs
         projected:
           defaultMode: 0400
