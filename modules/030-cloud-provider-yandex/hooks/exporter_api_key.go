@@ -44,11 +44,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-monitoring"},
+					MatchNames: []string{"d8-cloud-provider-yandex"},
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-yandex-cloud-metrics-exporter-app-creds"},
+				MatchNames: []string{"cloud-metrics-exporter-app-creds"},
 			},
 			FilterFunc: applyMetricsExporterSecret,
 		},

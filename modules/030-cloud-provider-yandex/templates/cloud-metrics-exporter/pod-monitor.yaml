@@ -26,8 +26,8 @@ spec:
           replacement: "true"
   selector:
     matchLabels:
-      app: yandex-cloud-metrics-exporter
+      app: cloud-metrics-exporter
   namespaceSelector:
     matchNames:
-      - d8-monitoring
+      - d8-cloud-provider-yandex
 {{- end }}

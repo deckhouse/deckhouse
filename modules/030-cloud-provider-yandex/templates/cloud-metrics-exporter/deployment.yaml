@@ -4,14 +4,14 @@
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: yandex-cloud-metrics-exporter
-  namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-cloud-metrics-exporter")) | nindent 2 }}
+  name: cloud-metrics-exporter
+  namespace: d8-cloud-provider-yandex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-metrics-exporter")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: yandex-cloud-metrics-exporter
+    name: cloud-metrics-exporter
   updatePolicy:
     updateMode: "Initial"
 {{- end }}
@@ -19,28 +19,28 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: yandex-cloud-metrics-exporter
-  namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-cloud-metrics-exporter")) | nindent 2 }}
+  name: cloud-metrics-exporter
+  namespace: d8-cloud-provider-yandex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-metrics-exporter")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
-      app: yandex-cloud-metrics-exporter
+      app: cloud-metrics-exporter
   template:
     metadata:
       labels:
-        app: yandex-cloud-metrics-exporter
+        app: cloud-metrics-exporter
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-metrics-exporter/secret-exporter-creds.yaml") . | sha256sum }}
     spec:
-      serviceAccountName: cloud-provider-yandex-cloud-metrics-exporter
+      serviceAccountName: cloud-metrics-exporter
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "yandex-cloud-metrics-exporter")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-metrics-exporter")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       containers:
       - name: exporter
@@ -53,12 +53,12 @@ spec:
         - name: API_KEY
           valueFrom:
             secretKeyRef:
-              name: d8-yandex-cloud-metrics-exporter-app-creds
+              name: cloud-metrics-exporter-app-creds
               key: api-key
         - name: FOLDER_ID
           valueFrom:
             secretKeyRef:
-              name: d8-yandex-cloud-metrics-exporter-app-creds
+              name: cloud-metrics-exporter-app-creds
               key: folder-id
         livenessProbe:
           httpGet:
@@ -99,12 +99,12 @@ spec:
                 path: /
                 authorization:
                   resourceAttributes:
-                    namespace: d8-monitoring
+                    namespace: d8-cloud-provider-yandex
                     apiGroup: apps
                     apiVersion: v1
                     resource: deployments
                     subresource: prometheus-metrics
-                    name: yandex-cloud-metrics-exporter
+                    name: cloud-metrics-exporter
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
