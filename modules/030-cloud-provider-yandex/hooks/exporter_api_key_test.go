@@ -38,7 +38,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: generate exporter api key ::", func() {
+var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: generate exporter api key ::", func() {
 	const (
 		initValuesString = `
 global:
