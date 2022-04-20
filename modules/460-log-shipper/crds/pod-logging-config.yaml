@@ -34,7 +34,7 @@ spec:
                 labelSelector:
                   type: object
                   description: |
-                    Specifies the label selector to filter pods.
+                    Specifies the label selector to filter Pods.
 
                     You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                   anyOf:
@@ -113,12 +113,12 @@ spec:
                         type: string
                         description: |
                           Operator for log field comparations:
-                          * `In` — finds a substring in string
-                          * `NotIn` — is a negative version of the `In` operator
-                          * `Regex` — is trying to match regexp over field, only log events with matching fields will pass
-                          * `NotRegex` — is a negative version of the `Regex` operator, log events without fields or with not matched fields will pass
-                          * `Exists` — drops log event if it contains some fields
-                          * `DoesNotExist` — drops log event if it does not contain some fields
+                          * `In` — finds a substring in a string.
+                          * `NotIn` — is a negative version of the `In` operator.
+                          * `Regex` — is trying to match regexp over the field; only log events with matching fields will pass.
+                          * `NotRegex` — is a negative version of the `Regex` operator; log events without fields or with not matched fields will pass.
+                          * `Exists` — drops log event if it contains some fields.
+                          * `DoesNotExist` — drops log event if it does not contain some fields.
                         enum:
                           - In
                           - NotIn
@@ -131,7 +131,7 @@ spec:
                         description: |
                           Array of values or regexes for corresponding operations. Does not work for `Exists` and `DoesNotExist` operations.
 
-                          Fields a with float or boolean values will be converted to strings during comparison.
+                          Fields with a float or boolean values will be converted to strings during comparison.
                         items:
                           x-kubernetes-int-or-string: true
                           anyOf:
@@ -179,18 +179,18 @@ spec:
                       - operator
                     properties:
                       field:
-                        description: Field name for filtering. Should be empty for non-json messages.
+                        description: Field name for filtering. It should be empty for non-JSON messages.
                         type: string
                       operator:
                         type: string
                         description: |
                           Operator for log field comparations:
-                          * `In` — finds a substring in string
-                          * `NotIn` — is a negative version of the `In` operator
-                          * `Regex` — is trying to match regexp over field, only log events with matching fields will pass
-                          * `NotRegex` — is a negative version of the `Regex` operator, log events without fields or with not matched fields will pass
-                          * `Exists` — drops log event if it contains some fields
-                          * `DoesNotExist` — drops log event if it does not contain some fields
+                          * `In` — finds a substring in a string.
+                          * `NotIn` — is a negative version of the `In` operator.
+                          * `Regex` — is trying to match regexp over the field; only log events with matching fields will pass.
+                          * `NotRegex` — is a negative version of the `Regex` operator; log events without fields or with not matched fields will pass.
+                          * `Exists` — drops log event if it contains some fields.
+                          * `DoesNotExist` — drops log event if it does not contain some fields.
                         enum:
                           - In
                           - NotIn
@@ -230,11 +230,11 @@ spec:
                       type: string
                       description: |
                         Parser types:
-                        * `None` — do not parse logs
-                        * `General` — tries to match general multiline logs with space or tabulation on extra lines
-                        * `Backslash` — tries to match bash style logs with backslash on all lines except the last event line
-                        * `LogWithTime` — tries to detect events by timestamp
-                        * `MultilineJSON` — tries to match JSON logs, assuming the event starts with the `{` symbol
+                        * `None` — do not parse logs.
+                        * `General` — tries to match general multiline logs with space or tabulation on extra lines.
+                        * `Backslash` — tries to match bash style logs with backslash on all lines except the last event line.
+                        * `LogWithTime` — tries to detect events by timestamp.
+                        * `MultilineJSON` — tries to match JSON logs, assuming the event starts with the `{` symbol.
                       enum:
                         - None
                         - General
