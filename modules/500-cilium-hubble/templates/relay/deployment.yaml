@@ -76,7 +76,7 @@ spec:
           - name: tls
             mountPath: /var/lib/hubble-relay/tls
             readOnly: true
-      serviceAccountName: "cilium-hubble-relay"
+      serviceAccountName: "hubble-relay"
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 1
       affinity:
