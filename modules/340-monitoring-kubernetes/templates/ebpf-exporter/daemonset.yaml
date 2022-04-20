@@ -52,8 +52,6 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       hostPID: true
-      nodeSelector:
-        monitoring-kubernetes.deckhouse.io/ebpf-supported: ""
       serviceAccountName: ebpf-exporter
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
