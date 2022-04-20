@@ -58,7 +58,7 @@ metadata:
 status:
   nodeInfo:
     kernelVersion: 5.4.0-54-generic
-`, 1))
+`, 2))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
