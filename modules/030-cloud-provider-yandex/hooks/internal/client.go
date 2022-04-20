@@ -191,8 +191,8 @@ func generateJWTKeyForGetIAMToken(sa *yandexV1.ServiceAccount) (string, error) {
 	}
 
 	now := time.Now()
-	nowUnix := now.Second()
-	expiredAt := now.Add(5 * time.Minute).Second()
+	nowUnix := now.Unix()
+	expiredAt := now.Add(5 * time.Minute).Unix()
 	payload := map[string]interface{}{
 		"iss": sa.ServiceAccountID,
 		"aud": "https://iam.api.cloud.yandex.net/iam/v1/tokens",
