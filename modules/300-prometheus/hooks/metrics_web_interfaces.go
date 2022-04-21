@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"errors"
 	"path"
 	"strings"
 
@@ -48,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      "deckhouse.io/export-domain",
+						Key:      "module",
 						Operator: v1.LabelSelectorOpExists,
 					},
 				},
@@ -71,35 +70,54 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		return nil, err
 	}
 
-	name := ing.Labels["deckhouse.io/export-domain"]
+	name := ing.Annotations["web.deckhouse.io/export-name"]
 	if name == "" {
-		return nil, errors.New("exported domain name required")
-	}
-
-	if len(ing.Spec.Rules) == 0 {
 		return nil, nil
 	}
 
-	rule := ing.Spec.Rules[0]
-
-	host := rule.Host
-	urlPath := ""
-	if len(rule.HTTP.Paths) > 0 {
-		urlPath = rule.HTTP.Paths[0].Path
+	icon := ing.Annotations["web.deckhouse.io/export-icon"]
+	if icon == "" {
+		icon = "?"
 	}
 
-	if urlPath != "" {
-		// cut path regexp replacements like /prometheus(/|$)(.*)
-		// we don't need them for the main page
-		index := strings.Index(urlPath, "(")
-		if index > 0 {
-			urlPath = urlPath[:index]
+	exportedHost := ing.Annotations["web.deckhouse.io/export-host"]
+
+	exportedPath := ing.Annotations["web.deckhouse.io/export-path"]
+
+	if exportedHost == "" {
+		// label is not set, get it from spec
+		if len(ing.Spec.Rules) == 0 {
+			return nil, nil
+		}
+
+		rule := ing.Spec.Rules[0]
+		exportedHost = rule.Host
+	}
+
+	if exportedPath == "" {
+		if len(ing.Spec.Rules) == 0 {
+			return nil, nil
+		}
+
+		rule := ing.Spec.Rules[0]
+
+		if len(rule.HTTP.Paths) > 0 {
+			exportedPath = rule.HTTP.Paths[0].Path
+		}
+
+		if exportedPath != "/" {
+			// cut path regexp replacements like /prometheus(/|$)(.*)
+			// we don't need them for the main page
+			index := strings.Index(exportedPath, "(")
+			if index > 0 {
+				exportedPath = exportedPath[:index]
+			}
 		}
 	}
 
 	return exportedWebInterface{
-		Name: name,
-		URL:  path.Join(host, urlPath),
+		Name: icon + " " + name,
+		URL:  path.Join(exportedHost, exportedPath),
 	}, nil
 }
 

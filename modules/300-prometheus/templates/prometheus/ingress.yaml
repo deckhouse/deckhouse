@@ -5,8 +5,9 @@ kind: Ingress
 metadata:
   name: prometheus
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus" "deckhouse.io/export-domain" "prometheus")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
   annotations:
+    web.deckhouse.io/export-name: "prometheus"
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if .Values.global.enabledModules | has "user-authn" }}
     nginx.ingress.kubernetes.io/auth-signin: {{ include "helm_lib_module_uri_scheme" . }}://$host/dex-authenticator/sign_in
