@@ -344,7 +344,7 @@ func calcDesiredSize(input *go_hook.HookInput, kubeClient k8s.Client, promName s
 
 		allowVolumeExpansion = isVolumeExpansionAllowed(input, pvc.StorageClass)
 
-		if diskSize == 0 || diskSize < pvc.RequestsStorage {
+		if diskSize < pvc.RequestsStorage {
 			diskSize = pvc.RequestsStorage
 		}
 	}
@@ -389,17 +389,13 @@ func calcDesiredSize(input *go_hook.HookInput, kubeClient k8s.Client, promName s
 		}
 	}
 
-	if diskSize < fsSize {
-		diskSize = fsSize
-	}
-
-	if isLocalStorage(input, kubeClient, promName) && fsSize > 0 {
+	if allowVolumeExpansion && !isLocalStorage(input, kubeClient, promName) && diskSize < fsSize {
 		diskSize = fsSize
 	}
 
 	input.LogEntry.Debugf("%s, allowVolumeExpansion: %t, fsUsed: %d", promName, allowVolumeExpansion, fsUsed)
 
-	if allowVolumeExpansion && fsUsed > 80 {
+	if allowVolumeExpansion && !isLocalStorage(input, kubeClient, promName) && fsUsed > 80 {
 		diskSize += 5
 	}
 
