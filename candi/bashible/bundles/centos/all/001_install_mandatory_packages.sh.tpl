@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # policycoreutils-python libseccomp - containerd.io dependencies
-SYSTEM_PACKAGES="curl wget virt-what bash-completion lvm2 parted sudo yum-utils yum-plugin-versionlock nfs-utils tar xz device-mapper-persistent-data net-tools libseccomp"
+SYSTEM_PACKAGES="curl wget virt-what bash-completion lvm2 parted sudo yum-utils nfs-utils tar xz device-mapper-persistent-data net-tools libseccomp checkpolicy"
 KUBERNETES_DEPENDENCIES="conntrack ebtables ethtool iproute iptables socat util-linux"
 if bb-is-centos-version? 7; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python"
@@ -21,14 +21,16 @@ if bb-is-centos-version? 8; then
   SYSTEM_PACKAGES="${SYSTEM_PACKAGES} policycoreutils-python-utils libcgroup"
 fi
 # yum-plugin-versionlock is needed for bb-yum-install
-bb-yum-install yum-plugin-versionlock
+if yum --version | grep -q dnf; then
+  bb-yum-install python3-dnf-plugin-versionlock
+else
+  bb-yum-install yum-plugin-versionlock
+fi
+
 bb-yum-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 
 bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl7800 }}"
 
-if bb-is-centos-version? 7; then
-  bb-rp-install "bash-completion-extras:{{ .images.registrypackages.bashCompletionExtrasCentos72111 }}" "inotify-tools:{{ .images.registrypackages.inotifyToolsCentos73149 }}"
-fi
 if bb-is-centos-version? 8; then
   bb-rp-install "inotify-tools:{{ .images.registrypackages.inotifyToolsCentos831419 }}"
 fi
