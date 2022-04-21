@@ -1,5 +1,5 @@
 ---
-title: "Модуль flant-integration"
+title: "The flant-integration module"
 ---
 
 Модуль выполняет функции по интеграции с различными сервисами Флант:
