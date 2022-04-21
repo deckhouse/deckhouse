@@ -2,13 +2,13 @@
   rules:
   - alert: KubernetesDnsTargetDown
     expr: absent(up{job="kube-dns"} == 1)
+    for: 5m
     labels:
       severity_level: "5"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
       description: |-
         Prometheus is unable to collect metrics from kube-dns. Thus its status is unknown.
 

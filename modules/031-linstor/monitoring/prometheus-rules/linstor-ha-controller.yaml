@@ -5,11 +5,13 @@
       labels:
         severity_level: "6"
         tier: cluster
+      for: 30m
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_pending_until_firing_for: "30m"
         plk_labels_as_annotations: "pod"
+        plk_create_group_if_not_exists__d8_linstor_ha_controller_health: "D8LinstorHaControllerHealth,tier=cluster,d8_module=linstor,d8_component=linstor-ha-controller"
+        plk_grouped_by__d8_linstor_ha_controller_health: "D8LinstorHaControllerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__main: "D8LinstorHaControllerHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-ha-controller Pod is NOT Ready.
         description: |
@@ -22,24 +24,14 @@
       labels:
         severity_level: "6"
         tier: cluster
+      for: 30m
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_pending_until_firing_for: "30m"
-        plk_grouped_by__main: "D8LinstorHaControllerHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_ha_controller_health: "D8LinstorHaControllerHealth,tier=cluster,d8_module=linstor,d8_component=linstor-ha-controller"
+        plk_grouped_by__d8_linstor_ha_controller_health: "D8LinstorHaControllerHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-ha-controller Pod is NOT Running.
         description: |
           The recommended course of action:
           1. Retrieve details of the Deployment: `kubectl -n d8-linstor describe deploy linstor-ha-controller`
           2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-linstor describe pod -l app=linstor-ha-controller`
-
-    - alert: D8LinstorHaControllerHealth
-      expr: count(ALERTS{alertname=~"D8LinstorHaControllerPodIsNotReady|D8LinstorHaControllerPodIsNotRunning", alertstate="firing"})
-      labels:
-        tier: cluster
-      annotations:
-        plk_protocol_version: "1"
-        plk_markup_format: "markdown"
-        plk_alert_type: "group"
-        summary: The linstor-ha-controller does not work.
-        description: Refer to the relevant alerts for more information.

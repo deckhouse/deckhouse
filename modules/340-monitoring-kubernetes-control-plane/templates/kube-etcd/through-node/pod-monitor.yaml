@@ -36,7 +36,7 @@ spec:
       action: keep
   selector:
     matchLabels:
-      control-plane-proxy-kube-etcd: ""
+      control-plane-proxy-kube-etcd-main: ""
   namespaceSelector:
     matchNames:
     - d8-monitoring

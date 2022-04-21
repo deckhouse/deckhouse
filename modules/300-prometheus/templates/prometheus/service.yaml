@@ -18,7 +18,7 @@ spec:
     protocol: TCP
     targetPort: https
   selector:
-    app: prometheus
+    app.kubernetes.io/name: prometheus
     prometheus: main
 {{- if (include "helm_lib_ha_enabled" .) }}
 ---
@@ -39,7 +39,7 @@ spec:
     port: 9090
     targetPort: https
   selector:
-    app: prometheus
+    app.kubernetes.io/name: prometheus
     prometheus: main
     statefulset.kubernetes.io/pod-name: prometheus-main-0
 ---
@@ -60,7 +60,7 @@ spec:
     port: 9090
     targetPort: https
   selector:
-    app: prometheus
+    app.kubernetes.io/name: prometheus
     prometheus: main
     statefulset.kubernetes.io/pod-name: prometheus-main-1
 {{- end }}

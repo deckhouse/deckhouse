@@ -5,7 +5,7 @@
       max by (node) (kube_node_info)
       unless
       max by (node) (up{job="node-local-dns"})
-    for: 15m
+    for: 5m
     labels:
       severity_level: "7"
       d8_module: node-local-dns
@@ -13,26 +13,11 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,prometheus=deckhouse,d8_module=node-local-dns,d8_component=node-local-dns"
+      plk_group_for__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,prometheus=deckhouse"
       summary: node-local-dns Pod cannot schedule on Node {{ $labels.node }}
       description: |
         node-local-dns Pod cannot schedule on Node {{ $labels.node }}.
 
         Consider checking state of the d8-system/node-local-dns DaemonSet.
         `kubectl -n d8-system get daemonset,pod --selector=app=node-local-dns`
-
-  - alert: D8NodeLocalDnsNotScheduledInCluster
-    expr: |
-      count(ALERTS{alertname="D8NodeLocalDnsNotScheduledOnNode"}) > 1
-    labels:
-      d8_module: node-local-dns
-      d8_component: node-local-dns
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_group_for__main: "D8NodeLocalDnsNotScheduledOnNode,prometheus=deckhouse"
-      summary: Pods of node-local-dns cannot be scheduled in the cluster
-      description: |
-        Pods of node-local-dns cannot be scheduled in the cluster.
-        Additional information can be found in linked alerts.

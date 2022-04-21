@@ -8,9 +8,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
-      plk_create_group_if_not_exists__main: D8CertManagerDeprecatedResources,tier=~tier
-      plk_grouped_by__main: D8CertManagerDeprecatedResources,tier=~tier
+      plk_create_group_if_not_exists__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier,d8_module=cert-manager,d8_component=cert-manager
+      plk_grouped_by__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier
       summary: Deprecated Certificates found.
       description: |
         Deprecated cert-manager Certificates found. `certificates.certmanager.k8s.io/v1alpha1` support is deprecated and will be removed in the nearest future.
@@ -25,9 +24,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
-      plk_create_group_if_not_exists__main: D8CertManagerDeprecatedResources,tier=~tier
-      plk_grouped_by__main: D8CertManagerDeprecatedResources,tier=~tier
+      plk_create_group_if_not_exists__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier,d8_module=cert-manager,d8_component=cert-manager
+      plk_grouped_by__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier
       summary: Deprecated Issuer found.
       description: |
         Deprecated cert-manager Issuers found. `issuers.certmanager.k8s.io/v1alpha1` support is deprecated and will be removed in the nearest future.
@@ -43,9 +41,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
-      plk_create_group_if_not_exists__main: D8CertManagerDeprecatedResources,tier=~tier
-      plk_grouped_by__main: D8CertManagerDeprecatedResources,tier=~tier
+      plk_create_group_if_not_exists__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier,d8_module=cert-manager,d8_component=cert-manager
+      plk_grouped_by__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier
       summary: Deprecated ClusterIssuer found.
       description: |
         Deprecated cert-manager ClusterIssuers found. `clusterissuers.certmanager.k8s.io/v1alpha1` support is deprecated and will be removed in the nearest future.
@@ -61,9 +58,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
-      plk_create_group_if_not_exists__main: D8CertManagerDeprecatedResources,tier=~tier
-      plk_grouped_by__main: D8CertManagerDeprecatedResources,tier=~tier
+      plk_create_group_if_not_exists__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier,d8_module=cert-manager,d8_component=cert-manager
+      plk_grouped_by__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier
       summary: Deprecated Ingress annotations found.
       description: |
         Deprecated cert-manager Ingress annotations found. `certmanager.k8s.io/v1alpha1` annotations support is deprecated and will be removed in the nearest future.

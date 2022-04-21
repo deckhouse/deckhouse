@@ -3,6 +3,7 @@
 
   - alert: D8CertExporterTargetDown
     expr: max by (job) (up{job="cert-exporter"} == 0)
+    for: 1m
     labels:
       severity_level: "8"
       d8_module: extended-monitoring
@@ -10,8 +11,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "1m"
-      plk_grouped_by__main: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_ignore_labels: "job"
       description: |
         Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
@@ -21,6 +22,7 @@
 
   - alert: D8CertExporterTargetAbsent
     expr: absent(up{job="cert-exporter"}) == 1
+    for: 15m
     labels:
       severity_level: "8"
       d8_module: extended-monitoring
@@ -28,9 +30,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "15m"
       plk_ignore_labels: "job"
-      plk_grouped_by__main: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       description: |
         Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
 
@@ -39,6 +41,7 @@
 
   - alert: D8CertExporterPodIsNotReady
     expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"cert-exporter-.*"}) != 1
+    for: 30m
     labels:
       severity_level: "8"
       d8_module: extended-monitoring
@@ -46,9 +49,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "30m"
       plk_labels_as_annotations: "pod"
-      plk_grouped_by__main: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       summary: The cert-exporter Pod is NOT Ready.
       description: |
         The recommended course of action:
@@ -57,6 +60,7 @@
 
   - alert: D8CertExporterPodIsNotRunning
     expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"cert-exporter-.*"})
+    for: 30m
     labels:
       severity_level: "8"
       d8_module: extended-monitoring
@@ -64,28 +68,13 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "30m"
-      plk_grouped_by__main: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       summary: The cert-exporter Pod is NOT Running.
       description: |
         The recommended course of action:
         1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy cert-exporter`
         2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=cert-exporter`
-
-  - alert: D8CertExporterUnavailable
-    expr: count(ALERTS{alertname=~"D8CertExporterTargetDown|D8CertExporterTargetAbsent", alertstate="firing"})
-    labels:
-      d8_module: extended-monitoring
-      d8_component: cert-exporter
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      summary: cert-exporter does not work.
-      description: |
-        `cert-exporter` does not work.
-
-        The detailed information is available in one of the relevant alerts.
 
 - name: d8.extended-monitoring.cert-exporter.malfunctioning
   rules:
@@ -93,6 +82,7 @@
   - alert: D8CertExporterStuck
     expr: |
       increase(promhttp_metric_handler_requests_total{job="cert-exporter", code="200"}[10m])
+    for: 20m
     labels:
       severity_level: "8"
       d8_module: extended-monitoring
@@ -100,25 +90,10 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "20m"
-      plk_grouped_by__main: "D8CertExporterMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         The `cert-exporter` failed to perform any checks for the certificates expiration for over 20 minutes.
 
         You need to analyze its logs: `kubectl -n d8-monitoring logs -l app=cert-exporter -c cert-exporter`
       summary: image-cert-exporter has crashed.
-
-  - alert: D8CertExporterMalfunctioning
-    expr: count(ALERTS{alertname=~"D8CertExporterStuck", alertstate="firing"})
-    labels:
-      d8_module: extended-monitoring
-      d8_component: cert-exporter
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      description: |
-        `cert-exporter` does not work as expected.
-
-        The detailed information is available in one of the relevant alerts.
-      summary: cert-exporter does not work as expected.

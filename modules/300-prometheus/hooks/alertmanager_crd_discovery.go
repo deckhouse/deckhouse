@@ -17,17 +17,18 @@ limitations under the License.
 package hooks
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"net/url"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -39,64 +40,48 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyAlertmanagerCRDFilter,
 		},
 		{
-			Name:                         "services",
-			ApiVersion:                   "v1",
-			Kind:                         "Service",
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			FilterFunc:                   applyAlertmanagerCRDServiceFilter,
-		},
-		{
 			// deprecated way to set alertmanagers - through the labeled service
-			Name:       "alertmanager_services",
+			Name:       "alertmanager_deprecated_services",
 			ApiVersion: "v1",
 			Kind:       "Service",
 			LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
 					Key:      "prometheus.deckhouse.io/alertmanager",
-					Operator: "Exists",
+					Operator: "In",
+					Values:   []string{"main"},
 				},
 			}},
 			FilterFunc: applyDeprecatedAlertmanagerServiceFilter,
 		},
 	},
-}, crdAlertmanagerHandler)
+}, dependency.WithExternalDependencies(crdAndServicesAlertmanagerHandler))
 
-type Alertmanager struct {
-	Name string                 `json:"name"`
-	Spec map[string]interface{} `json:"spec"`
-}
-
-type alertmanagerCRDService struct {
-	Name      string      `json:"name"`
-	Namespace string      `json:"namespace"`
-	Port      interface{} `json:"port"`
-}
-
-func applyAlertmanagerCRDServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var svc corev1.Service
-	err := sdk.FromUnstructured(obj, &svc)
+func applyDeprecatedAlertmanagerServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	service := &corev1.Service{}
+	as := &alertmanagerService{}
+	err := sdk.FromUnstructured(obj, service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot convert to service: %v", err)
 	}
 
-	crdService := alertmanagerCRDService{
-		Name:      svc.Name,
-		Namespace: svc.Namespace,
+	as.Namespace = service.ObjectMeta.Namespace
+	as.Name = service.ObjectMeta.Name
+
+	switch {
+	case len(service.Spec.Ports[0].Name) != 0:
+		as.Port = service.Spec.Ports[0].Name
+	case service.Spec.Ports[0].Port != 0:
+		as.Port = service.Spec.Ports[0].Port
+	default:
+		return nil, fmt.Errorf("can't find Name or Port in the first port of a Service %#+v", as)
 	}
 
-	if len(svc.Spec.Ports) > 0 {
-		switch {
-		case len(svc.Spec.Ports[0].Name) != 0:
-			crdService.Port = svc.Spec.Ports[0].Name
-		case svc.Spec.Ports[0].Port != 0:
-			crdService.Port = svc.Spec.Ports[0].Port
-		default:
-			return nil, spew.Errorf("Can't find Name or Port in the first port of a Service %#+v", svc)
-		}
+	as.PathPrefix = "/"
+	if prefix, ok := service.ObjectMeta.Annotations["prometheus.deckhouse.io/alertmanager-path-prefix"]; ok {
+		as.PathPrefix = prefix
 	}
 
-	return crdService, nil
+	return as, nil
 }
 
 func applyAlertmanagerCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -112,87 +97,80 @@ func applyAlertmanagerCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	return Alertmanager{Name: name, Spec: spec}, nil
 }
 
-func crdAlertmanagerHandler(input *go_hook.HookInput) error {
+func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.Container) error {
+	k8, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("can't init Kubernetes client: %v", err)
+	}
+
 	snap := input.Snapshots["alertmanager_crds"]
 
-	result := make([]alertmanagerValue, 0, len(snap))
-
-	serviceDeclaredAlertmanagers := make(map[string][]alertmanagerServiceInfo)
+	addressDeclaredAlertmanagers := make([]alertmanagerAddress, 0, len(snap))
+	serviceDeclaredAlertmanagers := make([]alertmanagerService, 0, len(snap))
+	internalDeclaredAlertmanagers := make([]alertmanagerInternal, 0, len(snap))
 
 	for _, s := range snap {
 		am := s.(Alertmanager)
 
-		address, _, _ := unstructured.NestedString(am.Spec, "external", "address")
-		if address != "" {
-			// parse static_sd_config with direct target
-			value, err := parseTargetCR(am)
-			if err != nil {
-				return err
-			}
-			result = append(result, value)
-		} else {
-			// parse service
-			old, err := parseServiceCR(am, input.Snapshots["services"])
-			if err != nil {
-				return err
-			}
-			if _, ok := serviceDeclaredAlertmanagers["main"]; !ok {
-				serviceDeclaredAlertmanagers["main"] = make([]alertmanagerServiceInfo, 0)
-			}
-			serviceDeclaredAlertmanagers["main"] = append(serviceDeclaredAlertmanagers["main"], old)
-		}
-	}
-
-	if len(result) > 0 {
-		input.Values.Set("prometheus.internal.alerting.alertmanagers", result)
-	} else {
-		input.Values.Remove("prometheus.internal.alerting.alertmanagers")
-	}
-
-	// service discovery through the deprecated labeled services
-	deprecatedServices := handleDeperecatedAlertmanagerServices(input)
-	if len(deprecatedServices) > 0 {
-		// merge old - service discovery AlertManagers and new CR
-		for gr, values := range deprecatedServices {
-			if gr == "main" {
-				if _, ok := serviceDeclaredAlertmanagers["main"]; !ok {
-					serviceDeclaredAlertmanagers["main"] = make([]alertmanagerServiceInfo, 0)
+		// External AlertManagers by service or address
+		if _, ok, _ := unstructured.NestedMap(am.Spec, "external"); ok {
+			address, _, _ := unstructured.NestedString(am.Spec, "external", "address")
+			if address != "" {
+				// parse static_sd_config with direct target
+				value, err := parseTargetCR(am)
+				if err != nil {
+					return err
 				}
-				serviceDeclaredAlertmanagers["main"] = append(serviceDeclaredAlertmanagers["main"], values...)
+				addressDeclaredAlertmanagers = append(addressDeclaredAlertmanagers, value)
 			} else {
-				serviceDeclaredAlertmanagers[gr] = values
+				// parse service
+				old, err := parseServiceCR(am, k8)
+				if err != nil {
+					return err
+				}
+				serviceDeclaredAlertmanagers = append(serviceDeclaredAlertmanagers, old)
 			}
+		}
+		// Internal AlertManager
+		if _, ok, _ := unstructured.NestedMap(am.Spec, "internal"); ok {
+			value, err := parseInternalCR(am)
+			if err != nil {
+				return err
+			}
+			internalDeclaredAlertmanagers = append(internalDeclaredAlertmanagers, value)
 		}
 	}
 
-	input.Values.Set("prometheus.internal.alertmanagers", serviceDeclaredAlertmanagers)
+	// External Alertmanagers by deprecated labeled services
+	deprecatedServiceDeclaredAlertmanagers := handleDeprecatedAlertmanagerServices(input)
+	serviceDeclaredAlertmanagers = append(serviceDeclaredAlertmanagers, deprecatedServiceDeclaredAlertmanagers...)
+
+	input.Values.Set("prometheus.internal.alertmanagers.byAddress", addressDeclaredAlertmanagers)
+	input.Values.Set("prometheus.internal.alertmanagers.byService", serviceDeclaredAlertmanagers)
+	input.Values.Set("prometheus.internal.alertmanagers.internal", internalDeclaredAlertmanagers)
 
 	return nil
 }
 
-func handleDeperecatedAlertmanagerServices(input *go_hook.HookInput) map[string][]alertmanagerServiceInfo {
-	snaps := input.Snapshots["alertmanager_services"]
-	alertManagers := make(map[string][]alertmanagerServiceInfo)
+func handleDeprecatedAlertmanagerServices(input *go_hook.HookInput) []alertmanagerService {
+	snaps := input.Snapshots["alertmanager_deprecated_services"]
+	alertManagers := make([]alertmanagerService, 0, len(snaps))
 	for _, svc := range snaps {
 		alertManagerService := svc.(*alertmanagerService)
-
-		if _, ok := alertManagers[alertManagerService.Prometheus]; !ok {
-			alertManagers[alertManagerService.Prometheus] = make([]alertmanagerServiceInfo, 0)
-		}
-		alertManagers[alertManagerService.Prometheus] = append(alertManagers[alertManagerService.Prometheus], alertManagerService.Service)
+		alertManagers = append(alertManagers, *alertManagerService)
 	}
 
 	return alertManagers
 }
 
-func parseServiceCR(am Alertmanager, snap []go_hook.FilterResult) (alertmanagerServiceInfo, error) {
-	var value alertmanagerServiceInfo
+func parseServiceCR(am Alertmanager, k8 k8s.Client) (alertmanagerService, error) {
+	var value alertmanagerService
 	serviceName, ok, err := unstructured.NestedString(am.Spec, "external", "service", "name")
 	if err != nil {
 		return value, err
 	}
 	if !ok {
-		return value, errors.New("service name required")
+		return value, fmt.Errorf("service name required: %v", am.Spec)
 	}
 
 	serviceNamespace, ok, err := unstructured.NestedString(am.Spec, "external", "service", "namespace")
@@ -200,7 +178,7 @@ func parseServiceCR(am Alertmanager, snap []go_hook.FilterResult) (alertmanagerS
 		return value, err
 	}
 	if !ok {
-		return value, errors.New("service namespace required")
+		return value, fmt.Errorf("service namespace required: %v", am.Spec)
 	}
 
 	pathPrefix, ok, err := unstructured.NestedString(am.Spec, "external", "service", "path")
@@ -208,26 +186,34 @@ func parseServiceCR(am Alertmanager, snap []go_hook.FilterResult) (alertmanagerS
 		pathPrefix = "/"
 	}
 
-	for _, s := range snap {
-		svc := s.(alertmanagerCRDService)
-		if svc.Name == serviceName && svc.Namespace == serviceNamespace {
-			value.Name = svc.Name
-			value.Namespace = svc.Namespace
-			value.Port = svc.Port
-			value.PathPrefix = pathPrefix
-			break
+	svc, err := k8.CoreV1().Services(serviceNamespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	if err != nil {
+		return value, err
+	}
+
+	value.Name = svc.Name
+	value.Namespace = svc.Namespace
+	if len(svc.Spec.Ports) > 0 {
+		switch {
+		case len(svc.Spec.Ports[0].Name) != 0:
+			value.Port = svc.Spec.Ports[0].Name
+		case svc.Spec.Ports[0].Port != 0:
+			value.Port = svc.Spec.Ports[0].Port
+		default:
+			return value, fmt.Errorf("can't find Name or Port in the first port of a Service %#+v", svc)
 		}
 	}
+	value.PathPrefix = pathPrefix
 
 	return value, nil
 }
 
-func parseTargetCR(am Alertmanager) (alertmanagerValue, error) {
-	var value alertmanagerValue
+func parseTargetCR(am Alertmanager) (alertmanagerAddress, error) {
+	var value alertmanagerAddress
 
 	address, ok, err := unstructured.NestedString(am.Spec, "external", "address")
 	if err != nil || !ok {
-		return value, errors.New("alertmanager address required")
+		return value, fmt.Errorf("alertmanager address required: %v", am.Spec)
 	}
 
 	parsedAddress, err := url.Parse(address)
@@ -249,7 +235,7 @@ func parseTargetCR(am Alertmanager) (alertmanagerValue, error) {
 
 	bearerToken, _, _ := unstructured.NestedString(am.Spec, "external", "auth", "bearerToken")
 
-	value = alertmanagerValue{
+	value = alertmanagerAddress{
 		Name:   am.Name,
 		Scheme: parsedAddress.Scheme,
 		Target: parsedAddress.Host,
@@ -270,37 +256,20 @@ func parseTargetCR(am Alertmanager) (alertmanagerValue, error) {
 	return value, nil
 }
 
-func applyDeprecatedAlertmanagerServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	service := &corev1.Service{}
-	err := sdk.FromUnstructured(obj, service)
+func parseInternalCR(am Alertmanager) (alertmanagerInternal, error) {
+	value, ok, err := unstructured.NestedMap(am.Spec, "internal")
 	if err != nil {
 		return nil, err
 	}
-
-	as := &alertmanagerService{}
-
-	as.Prometheus = service.ObjectMeta.Labels["prometheus.deckhouse.io/alertmanager"]
-	as.Service.Namespace = service.ObjectMeta.Namespace
-	as.Service.Name = service.ObjectMeta.Name
-
-	switch {
-	case len(service.Spec.Ports[0].Name) != 0:
-		as.Service.Port = service.Spec.Ports[0].Name
-	case service.Spec.Ports[0].Port != 0:
-		as.Service.Port = service.Spec.Ports[0].Port
-	default:
-		return nil, spew.Errorf("Can't find Name or Port in the first port of a Service %#+v", as.Service)
+	if !ok {
+		return nil, fmt.Errorf("internal spec field required: %v", am.Spec)
 	}
 
-	as.Service.PathPrefix = "/"
-	if prefix, ok := service.ObjectMeta.Annotations["prometheus.deckhouse.io/alertmanager-path-prefix"]; ok {
-		as.Service.PathPrefix = prefix
-	}
-
-	return as, nil
+	value["name"] = am.Name
+	return value, nil
 }
 
-type alertmanagerValue struct {
+type alertmanagerAddress struct {
 	Name        string    `json:"name" yaml:"name"`
 	Scheme      string    `json:"scheme" yaml:"scheme"`
 	Target      string    `json:"target" yaml:"target"`
@@ -323,13 +292,15 @@ type tlsConfig struct {
 }
 
 type alertmanagerService struct {
-	Prometheus string                  `json:"prometheus"`
-	Service    alertmanagerServiceInfo `json:"service"`
-}
-
-type alertmanagerServiceInfo struct {
 	Name       string      `json:"name"`
 	Namespace  string      `json:"namespace"`
 	PathPrefix string      `json:"pathPrefix"`
 	Port       interface{} `json:"port"`
 }
+
+type Alertmanager struct {
+	Name string                 `json:"name"`
+	Spec map[string]interface{} `json:"spec"`
+}
+
+type alertmanagerInternal map[string]interface{}

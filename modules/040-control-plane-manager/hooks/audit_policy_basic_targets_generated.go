@@ -39,6 +39,7 @@ var auditPolicyBasicNamespaces = []string{
 }
 var auditPolicyBasicServiceAccounts = []string{
 	"agent",
+	"alertmanager-internal",
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
 	"annotations-converter",

@@ -18,15 +18,16 @@
 
   - alert: PrometheusConfigReloadFailing
     expr: prometheus_config_last_reload_successful == 0
+    for: 10m
     labels:
       severity_level: "6"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
       plk_labels_as_annotations: "instance"
       plk_ignore_labels: "job"
-      plk_grouped_by__main: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=monitoring-applications,d8_component=applications"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
       description: Reloading Prometheus' configuration has failed for {{ $labels.namespace }}/{{ $labels.pod }}.
       summary: Reloading Prometheus' configuration failed.
 
@@ -40,7 +41,8 @@
       plk_protocol_version: "1"
       plk_labels_as_annotations: "instance"
       plk_ignore_labels: "job"
-      plk_grouped_by__main: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=monitoring-applications,d8_component=applications"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
       description: |
         Prometheus' alert notification queue is running full for Prometheus {{ $labels.namespace }}/{{ $labels.pod}}.
 
@@ -49,30 +51,32 @@
 
   - alert: PrometheusNotificationsDropping
     expr: increase(prometheus_notifications_dropped_total[__SCRAPE_INTERVAL_X_4__]) > 2
+    for: 10m
     labels:
       severity_level: "5"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
       plk_labels_as_annotations: "instance"
       plk_ignore_labels: "job"
-      plk_grouped_by__main: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=monitoring-applications,d8_component=applications"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
       description: |
         There's no properly functioning allertmanager in the cluster and the alerts are dropped.
       summary: There's no properly functioning allertmanager in the cluster and the alert notifications are dropping.
 
   - alert: PrometheusTSDBReloadsFailing
     expr: increase(prometheus_tsdb_reloads_failures_total[__SCRAPE_INTERVAL_X_4__]) > 0
+    for: 10m
     labels:
       severity_level: "7"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
       plk_labels_as_annotations: "instance"
       plk_ignore_labels: "job"
-      plk_grouped_by__main: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=monitoring-applications,d8_component=applications"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
       description: |-
         Prometheus {{ $labels.namespace }}/{{ $labels.pod}} had {{$value | humanize}}
         reload failures over the last two hours.
@@ -86,15 +90,16 @@
 
   - alert: PrometheusTSDBCompactionsFailing
     expr: increase(prometheus_tsdb_compactions_failed_total[__SCRAPE_INTERVAL_X_4__]) > 0
+    for: 10m
     labels:
       severity_level: "6"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
       plk_labels_as_annotations: "instance"
       plk_ignore_labels: "job"
-      plk_grouped_by__main: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=monitoring-applications,d8_component=applications"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
       description: |-
         Prometheus {{ $labels.namespace }}/{{ $labels.pod}} had {{$value | humanize}}
         compaction failures over the last two hours.
@@ -119,10 +124,10 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "5m"
       plk_labels_as_annotations: "instance"
       plk_ignore_labels: "job"
-      plk_grouped_by__main: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=monitoring-applications,d8_component=applications"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
       description: |
         Pod {{$labels.pod}} in namespace {{$labels.namespace}} has failing rule evaluations.
 
@@ -131,25 +136,14 @@
 
   - alert: PrometheusNotConnectedToAlertmanager
     expr: prometheus_notifications_alertmanagers_discovered < 1
+    for: 10m
     labels:
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
       plk_labels_as_annotations: "instance"
       plk_ignore_labels: "job"
-      plk_grouped_by__main: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=monitoring-applications,d8_component=applications"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }}"
       description: Prometheus {{ $labels.namespace }}/{{ $labels.pod }} is not connected to Alertmanager.
       summary: Prometheus is not connected to Alertmanager.
-
-  - alert: PrometheusMalfunctioning
-    expr: count by (namespace, service) (ALERTS{alertname=~"PrometheusTargetDown|PrometheusConfigReloadFailing|PrometheusNotificationQueueHasMoreTasksThanAlerts|PrometheusNotificationQueueRunningFull|PrometheusNotificationDropping|PrometheusTSDBReloadsFailing|PrometheusTSDBCompactionsFailing|PrometheusRuleEvaluationFailing|PrometheusNotConnectedToAlertmanager", alertstate="firing"}) > 0
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_alert_type: "group"
-      description: |
-        Prometheus is malfunctioning.
-
-        Refer to the relevant alerts for more information.
-      summary: Prometheus is malfunctioning.

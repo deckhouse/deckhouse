@@ -271,11 +271,14 @@ properties:
                 - action: keep
                   regex: "prometheus_build_.*"
                   sourceLabels: [ "__name__" ]
-      alerting:
+      alertmanagers:
         type: object
         default: {}
         properties:
-          alertmanagers:
+          byService:
+            additionalProperties:
+              type: array
+          byAddress:
             type: array
             items:
               type: object
@@ -309,21 +312,41 @@ properties:
                       type: string
                     insecureSkipVerify:
                       type: boolean
-      alertmanagers:
-        type: object
-        default: {}
-        additionalProperties:
-          type: array
+          internal:
+            additionalProperties:
+              type: array
         x-examples:
-          - main:
-              - name: mysvc1
-                namespace: myns1
-                pathPrefix: /myprefix/
-                port: 81
-              - name: mysvc2
-                namespace: myns1
-                pathPrefix: /myprefix/
-                port: test
+          - byService:
+            - name: mysvc1
+              namespace: myns1
+              pathPrefix: /myprefix/
+              port: 81
+            - name: mysvc2
+              namespace: myns1
+              pathPrefix: /myprefix/
+              port: test
+          - byAddress:
+            - name: myaddress11
+              scheme: http
+              target: 1.2.3.4
+              path: metrics
+          - internal:
+            - name: wechat
+              receivers:
+              - name: wechat-example
+                wechatConfigs:
+                - apiSecret:
+                    key: apiSecret
+                    name: wechat-config
+                  apiURL: http://wechatserver:8080/
+                  corpID: wechat-corpid
+              route:
+                groupBy:
+                - job
+                groupInterval: 5m
+                groupWait: 30s
+                receiver: wechat-example
+                repeatInterval: 12h
       customCertificateData:
         type: object
         default: {}

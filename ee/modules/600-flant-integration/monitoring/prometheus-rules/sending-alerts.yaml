@@ -31,9 +31,9 @@
         plk_enable_event_severity_change: "true"
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_pending_until_firing_for: "10m"
         plk_labels_as_annotations: "pod"
-        plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_prometheus_madison_integration_malfunctioning: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=flant-integration,d8_component=madison-proxy"
+        plk_grouped_by__d8_prometheus_madison_integration_malfunctioning: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
         plk_caused_by__kubernetes_deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,tier=cluster,prometheus=deckhouse,namespace=d8-monitoring,deployment={{ $labels.deployment }}"
         description: |
           Pometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} `madison-proxy`.
@@ -42,6 +42,7 @@
         summary: Pometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} `madison-proxy`.
 
     - alert: D8PrometheusMadisonErrorSendingAlerts
+      for: 10m
       expr: |
         count(
           max by (pod, madison_backend) (
@@ -73,8 +74,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_pending_until_firing_for: "10m"
-        plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_prometheus_madison_integration_malfunctioning: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=flant-integration,d8_component=madison-proxy"
+        plk_grouped_by__d8_prometheus_madison_integration_malfunctioning: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
         description: |
           Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
 
@@ -115,23 +116,5 @@
         summary: Prometheus is unable to deliver 100% alerts.
         plk_protocol_version: "1"
         plk_labels_as_annotations: "pod"
-        plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
-
-    - alert: D8PrometheusMadisonIntegrationMalfunctioning
-      expr: count(ALERTS{alertname=~"D8PrometheusMadisonErrorSendingAlertsToBackend|D8PrometheusMadisonErrorSendingAlerts", alertstate="firing"}) > 0
-      labels:
-        tier: cluster
-        d8_module: flant-integration
-        d8_component: madison-proxy
-      annotations:
-        plk_protocol_version: "1"
-        plk_alert_type: "group"
-        plk_markup_format: "markdown"
-        plk_group_for__missing_dead_mans_switch: "MissingDeadMansSwitch"
-        plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,namespace=d8-monitoring"
-        plk_ignore_labels: "deployment"
-        summary: The Prometheus and Madison integration is not working properly.
-        description: |
-          The Prometheus and Madison integration is not working properly.
-
-          Refer to the relevant alerts for more information.
+        plk_create_group_if_not_exists__d8_prometheus_madison_integration_malfunctioning: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=flant-integration,d8_component=madison-proxy"
+        plk_grouped_by__d8_prometheus_madison_integration_malfunctioning: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"

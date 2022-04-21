@@ -7,7 +7,6 @@
       severity_level: "7"
     annotations:
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
       plk_labels_as_annotations: "instance,pod"
       description: '{{ $labels.job }} target is down.'
       summary: Target is down

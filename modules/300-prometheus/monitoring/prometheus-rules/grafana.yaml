@@ -6,6 +6,7 @@
         kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
         * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-monitoring"}
       ) != 1
+    for: 5m
     labels:
       severity_level: "6"
       tier: cluster
@@ -14,7 +15,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse,d8_module=prometheus,db_component=grafana"
       plk_grouped_by__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
       summary: The Grafana Pod is NOT Ready.
@@ -31,6 +32,7 @@
           * on(pod) group_right() kube_pod_status_phase{namespace="d8-monitoring", phase="Running"} == 1
         )
       ) == 1
+    for: 5m
     labels:
       severity_level: "6"
       tier: cluster
@@ -39,7 +41,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse,d8_module=prometheus,db_component=grafana"
       plk_grouped_by__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "phase"
       summary: One or more Grafana Pods are NOT Running.
@@ -54,6 +56,7 @@
 
   - alert: D8GrafanaTargetDown
     expr: max by (job) (up{job="grafana", namespace="d8-monitoring"} == 0)
+    for: 5m
     labels:
       severity_level: "6"
       tier: cluster
@@ -62,7 +65,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse,d8_module=prometheus,db_component=grafana"
       plk_grouped_by__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       plk_ignore_labels: "job"
@@ -70,6 +73,7 @@
 
   - alert: D8GrafanaTargetAbsent
     expr: absent(up{job="grafana", namespace="d8-monitoring"} == 1)
+    for: 5m
     labels:
       severity_level: "6"
       tier: cluster
@@ -78,40 +82,18 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse,d8_module=prometheus,db_component=grafana"
       plk_grouped_by__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse"
       summary: There is no Grafana target in Prometheus.
       description: |-
         Grafana visualizes metrics collected by Prometheus. Grafana is critical for some tasks,
-        such as monitoring the state of applications and the cluster as a whole. Additionally, 
+        such as monitoring the state of applications and the cluster as a whole. Additionally,
         Grafana unavailability can negatively impact users who actively use it in their work.
 
         The recommended course of action:
         1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana`;
         2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana`;
         3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana`.
-
-  - alert: D8GrafanaUnavailable
-    expr: |
-      count(ALERTS{alertname=~"D8GrafanaPodIsNotReady|D8GrafanaDeploymentReplicasUnavailable|D8GrafanaTargetAbsent|D8GrafanaTargetDown", alertstate="firing"}) > 0
-      OR
-      count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-monitoring", deployment="grafana", alertstate="firing"}) > 0
-      OR
-      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-monitoring", deployment="grafana", alertstate="firing"}) > 0
-    labels:
-      tier: cluster
-      d8_module: prometheus
-      d8_component: grafana
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      plk_group_for__grafana_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,namespace=d8-monitoring,prometheus=deckhouse,deployment=grafana"
-      plk_group_for__grafana_stuck: "KubernetesDeploymentStuck,namespace=d8-monitoring,prometheus=deckhouse,deployment=grafana"
-      plk_grouped_by__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse"
-      summary: Grafana is down.
-      description: |
-        Grafana is down. The detailed information is available in one of the relevant alerts.
 
 - name: d8.grafana.malfunctioning
   rules:
@@ -132,6 +114,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=prometheus,db_component=grafana"
       plk_grouped_by__d8_grafana_malfunctioning: "D8GrafanaMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
       summary: Excessive Grafana restarts are detected.
@@ -141,24 +124,6 @@
         Excessive Grafana restarts indicate that something is wrong. Normally, Grafana should be up and running all the time.
 
         Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana -c grafana`.
-
-  - alert: D8GrafanaMalfunctioning
-    expr: |
-      count(ALERTS{alertname=~"D8GrafanaPodIsRestartingTooOften", alertstate="firing"}) > 0
-      OR
-      count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="grafana", alertstate="firing"}) > 0
-    labels:
-      tier: cluster
-      d8_module: prometheus
-      d8_component: grafana
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      plk_group_for__grafana_responses_5xx: "IngressResponses5xx,namespace=d8-monitoring,prometheus=deckhouse,service=grafana"
-      summary: Grafana does not work as expected.
-      description: |
-        Grafana does not work as expected. The detailed information is available in one of the relevant alerts.
 
   - alert: D8GrafanaDeprecatedCustomDashboardDefinition
     expr: |

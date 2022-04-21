@@ -9,12 +9,14 @@
         + on (namespace, deployment)
         kube_deployment_spec_strategy_rollingupdate_max_unavailable
       )
+    for: 5m
     labels:
       severity_level: "6"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,tier=cluster,d8_module=extended-monitoring,d8_component=extended-monitoring"
+      plk_group_for__deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
       summary: |-
         Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating "spec.strategy.rollingupdate.maxunavailable".
       description: |-
@@ -34,30 +36,20 @@
       (
         max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
       )
+    for: 5m
     labels:
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,tier=cluster,d8_module=extended-monitoring,d8_component=extended-monitoring"
+      plk_group_for__deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
       summary: |-
         Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
       description: |-
         Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
-
-  - alert: KubernetesDeploymentsMalfunctioning
-    expr: |
-      count by (namespace, deployment) (ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", alertstate="firing"}) > 0
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_alert_type: "group"
-      plk_group_for__deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
-      summary: Deployment {{ $labels.deployment }} is malfunctioning.
-      description: |
-        Examine groupped alerts to find the cause.
 
   - alert: KubernetesDaemonSetReplicasUnavailable
     expr: |
@@ -66,12 +58,14 @@
       (
         max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
       )
+    for: 5m
     labels:
       severity_level: "6"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__daemonset_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,tier=cluster,d8_module=extended-monitoring,d8_component=extended-monitoring"
+      plk_group_for__daemonset_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
       summary: |-
         Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} above threshold.
       description: |-
@@ -90,30 +84,20 @@
       (
         max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
       )
+    for: 5m
     labels:
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__daemonset_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,tier=cluster,d8_module=extended-monitoring,d8_component=extended-monitoring"
+      plk_group_for__daemonset_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
       summary: |-
         Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
       description: |-
         Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
-
-  - alert: KubernetesDaemonSetsMalfunctioning
-    expr: |
-      count by (namespace, daemonset) (ALERTS{alertname=~"KubernetesDaemonSetReplicasUnavailable", alertstate="firing"}) > 0
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_alert_type: "group"
-      plk_group_for__daemonset_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace={{ $labels.namespace }},daemonset={{ $labels.daemonset }}"
-      summary: DaemonSet {{ $labels.daemonset }} is malfunctioning.
-      description: |
-        Examine groupped alerts to find the cause.
 
   - alert: KubernetesDaemonSetNotUpToDate
     expr: |
@@ -124,7 +108,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__daemonset_not_up_to_date: "KubernetesDaemonSetNotUpToDate,tier=cluster,d8_module=extended-monitoring,d8_component=extended-monitoring"
+      plk_group_for__daemonset_not_up_to_date: "KubernetesDaemonSetNotUpToDate,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
       summary: |-
         There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} DaemonSet for the last 15 minutes.
       description: |-
@@ -133,7 +118,7 @@
         The recommended course of action:
         1. Check the DaemonSet's status: `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}`
         2. Analyze the DaemonSet's description: `kubectl -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}`
-        3. If the `Number of Nodes Scheduled with Up-to-date Pods` parameter does not match 
+        3. If the `Number of Nodes Scheduled with Up-to-date Pods` parameter does not match
         `Current Number of Nodes Scheduled`, check the DaemonSet's updateStrategy:
         `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}-o json | jq '.spec.updateStrategy'`
         4. Note that if the OnDelete updateStrategy is set, the DaemonSet gets only updated when Pods are deleted.
@@ -147,12 +132,14 @@
       (
         max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
       )
+    for: 5m
     labels:
       severity_level: "6"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__statefulset_replicas_unavailable: "KubernetesStatefulSetReplicasUnavailable,tier=cluster,d8_module=extended-monitoring,d8_component=extended-monitoring"
+      plk_group_for__statefulset_replicas_unavailable: "KubernetesStatefulSetReplicasUnavailable,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
       summary: |-
         Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
       description: |-
@@ -172,41 +159,17 @@
       (
         max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
       )
+    for: 5m
     labels:
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__statefulset_replicas_unavailable: "KubernetesStatefulSetReplicasUnavailable,tier=cluster,d8_module=extended-monitoring,d8_component=extended-monitoring"
+      plk_group_for__statefulset_replicas_unavailable: "KubernetesStatefulSetReplicasUnavailable,namespace={{ $labels.namespace }},deployment={{ $labels.deployment }}"
       summary: |-
         Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
       description: |-
         Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
-
-  - alert: KubernetesStatefulSetsMalfunctioning
-    expr: |
-      count by (namespace, statefulset) (ALERTS{alertname=~"KubernetesStatefulSetReplicasUnavailable", alertstate="firing"}) > 0
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_alert_type: "group"
-      plk_group_for__statefulset_replicas_unavailable: "KubernetesStatefulSetReplicasUnavailable,namespace={{ $labels.namespace }},statefulset={{ $labels.statefulset }}"
-      summary: StatefulSet {{ $labels.statefulset }} is malfunctioning.
-      description: |
-        Examine groupped alerts to find the cause.
-
-  - alert: KubernetesControllersMalfunctioningInNamespace
-    expr: |
-      count by (namespace) (ALERTS{alertname=~"KubernetesDeploymentsMalfunctioning|KubernetesDaemonSetsMalfunctioning|KubernetesStatefulSetsMalfunctioning", alertstate="firing"}) > 0
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_alert_type: "group"
-      plk_group_for__deployments_malfunctioning: "KubernetesDeploymentsMalfunctioning,namespace={{ $labels.namespace }}"
-      plk_group_for__daemonsets_malfunctioning: "KubernetesDaemonSetsMalfunctioning,namespace={{ $labels.namespace }}"
-      plk_group_for__statefulsets_malfunctioning: "KubernetesStatefulSetsMalfunctioning,namespace={{ $labels.namespace }}"
-      summary: Namespace {{ $labels.namespace }} has malfunctioning kubernetes controllers.
-      description: |
-        Examine groupped alerts to find the cause.

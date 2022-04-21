@@ -3,6 +3,7 @@
   rules:
   - alert: D8ClusterAutoscalerManagerPodIsNotReady
     expr: min by (pod) (kube_pod_status_ready{condition="false", namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}) > 0
+    for: 10m
     labels:
       severity_level: "8"
       tier: cluster
@@ -11,13 +12,14 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "10m"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
       summary: The {{`{{$labels.pod}}`}} Pod is NOT Ready.
 
   - alert: D8ClusterAutoscalerPodIsNotRunning
     expr: max by (namespace, pod, phase) (kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase!="Running",pod=~"cluster-autoscaler-.*"} > 0)
+    for: 10m
     labels:
       severity_level: "8"
       tier: cluster
@@ -26,7 +28,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "10m"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "phase"
       summary: The cluster-autoscaler Pod is NOT Running.
@@ -37,6 +39,7 @@
 
   - alert: D8ClusterAutoscalerTargetDown
     expr: max by (job) (up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 0)
+    for: 5m
     labels:
       severity_level: "8"
       tier: cluster
@@ -45,7 +48,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       plk_ignore_labels: "job"
@@ -53,6 +56,7 @@
 
   - alert: D8ClusterAutoscalerTargetAbsent
     expr: absent(up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 1)
+    for: 5m
     labels:
       severity_level: "8"
       tier: cluster
@@ -61,7 +65,7 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "5m"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       summary: There is no cluster-autoscaler target in Prometheus.
       description: |-
@@ -73,30 +77,6 @@
         1. Check the availability and status of cluster-autoscaler Pods: `kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler`
         2. Check whether the cluster-autoscaler deployment is present: `kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler`
         3. Check the status of the cluster-autoscaler deployment: `kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler`
-
-  - alert: D8ClusterAutoscalerUnavailable
-    expr: |
-      count(ALERTS{alertname=~"D8ClusterAutoscalerManagerPodIsNotReady|D8ClusterAutoscalerPodIsNotRunning|D8ClusterAutoscalerTargetAbsent|D8ClusterAutoscalerTargetDown", alertstate="firing"}) > 0
-      OR
-      count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-cloud-instance-manager", deployment="cluster-autoscaler", alertstate="firing"}) > 0
-      OR
-      count(ALERTS{alertname=~"KubernetesDeploymentStuck", namespace="d8-cloud-instance-manager", deployment="cluster-autoscaler", alertstate="firing"}) > 0
-    labels:
-      tier: cluster
-      d8_module: node-manager
-      d8_component: cluster-autoscaler
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      plk_group_for__cluster_autoscaler_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,namespace=d8-cloud-instance-manager,prometheus=deckhouse,deployment=cluster-autoscaler"
-      plk_group_for__cluster_autoscaler_stuck: "KubernetesDeploymentStuck,namespace=d8-cloud-instance-manager,prometheus=deckhouse,deployment=cluster-autoscaler"
-      plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
-      summary: Cluster-autoscaler is down.
-      description: |
-        Cluster-autoscaler is down.
-
-        The detailed information is available in one of the relevant alerts.
 
 - name: d8.cluster-autoscaler.malfunctioning
   rules:
@@ -110,6 +90,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
       summary: Too many cluster-autoscaler restarts have been detected.
@@ -131,6 +112,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance"
       summary: Cluster-autoscaler issues too many errors.
@@ -138,23 +120,6 @@
         Cluster-autoscaler's scaling attempt resulted in an error from the cloud provider.
 
         Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`.
-
-  - alert: D8ClusterAutoscalerMalfunctioning
-    expr: |
-      count(ALERTS{alertname=~"D8ClusterAutoscalerPodIsRestartingTooOften|D8ClusterAutoscalerTooManyErrors", alertstate="firing"}) > 0
-    labels:
-      tier: cluster
-      d8_module: node-manager
-      d8_component: cluster-autoscaler
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      summary: Cluster-autoscaler does not work as expected.
-      description: |
-        Cluster-autoscaler does not work as expected.
-
-        The detailed information is available in one of the relevant alerts.
 {{- else }}
 []
 {{- end }}

@@ -33,7 +33,7 @@ spec:
       - '{__name__="up", job="federate"}'
   selector:
     matchLabels:
-      app: prometheus
+      app.kubernetes.io/name: prometheus
       prometheus: longterm
   namespaceSelector:
     matchNames:

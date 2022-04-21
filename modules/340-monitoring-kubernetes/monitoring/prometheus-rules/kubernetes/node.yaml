@@ -67,13 +67,13 @@
 
   - alert: NodeUnschedulable
     expr: max by (node) (kube_node_spec_unschedulable) == 1
+    for: 20m
     labels:
       severity_level: "8"
       tier: cluster
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "20m"
       summary: The {{ $labels.node }} Node is cordon-protected; no new Pods can be scheduled onto it.
       description: |-
         The {{ $labels.node }} Node is cordon-protected; no new Pods can be scheduled onto it.

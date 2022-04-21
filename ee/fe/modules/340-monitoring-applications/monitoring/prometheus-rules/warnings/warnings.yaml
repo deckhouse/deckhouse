@@ -8,7 +8,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse,d8_module=monitoring-applications,d8_component=warnings"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
         Services with the `prometheus-target` label are used to collect metrics in the cluster.

@@ -4,7 +4,7 @@
   - alert: FlantPricingSucceededSamplesMetricIsAbsent
     expr: |
       absent(prometheus_remote_storage_queue_highest_sent_timestamp_seconds{job="pricing"}) == 1
-    for: 1h
+    for: 30m
     labels:
       severity_level: "6"
       tier: cluster
@@ -13,8 +13,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "30m"
-      plk_grouped_by__main: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=flant-integration,d8_component=pricing"
+      plk_grouped_by__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         There are no succeeded samples metric from the Grafana Agent.
 
@@ -27,7 +27,7 @@
   - alert: FlantPricingNotSendingSamples
     expr: |
       sum(increase(prometheus_remote_storage_queue_highest_sent_timestamp_seconds{job="pricing"}[10m])) == 0
-    for: 1h
+    for: 30m
     labels:
       severity_level: "6"
       tier: cluster
@@ -36,8 +36,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "30m"
-      plk_grouped_by__main: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=flant-integration,d8_component=pricing"
+      plk_grouped_by__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         Succeeded samples metric of the Grafana Agent is not increasing.
 
@@ -45,17 +45,3 @@
         - `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
         - `kubectl -n d8-flant-integration logs -l app=pricing -c pricing`
       summary: Flant-pricing cluster metrics are not being delivered
-
-  - alert: FlantPricingMalfunctioning
-    expr: count(ALERTS{alertname=~"FlantPricingSucceededSamplesMetricIsAbsent|FlantPricingNotSendingSamples", alertstate="firing"})
-    labels:
-      tier: cluster
-      d8_module: flant-integration
-      d8_component: pricing
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      description: |
-        To reach the problem, check grouped alerts.
-      summary: Flant-integration pricing module is failing.

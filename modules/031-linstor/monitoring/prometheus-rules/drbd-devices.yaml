@@ -9,7 +9,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_grouped_by__main: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: LINSTOR volume is not healthy
         description: |
           LINSTOR volume {{ $labels.resource }} on node {{ $labels.exported_node }} is not healthy
@@ -33,7 +34,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_grouped_by__main: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: DRBD device has no quorum
         description: |
           DRBD device {{ $labels.name }} on node {{ $labels.node }} has no quorum
@@ -62,7 +64,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_grouped_by__main: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: DRBD device is unintentional diskless
         description: |
           DRBD device {{ $labels.name }} on node {{ $labels.node }} unintentionally switched to diskless mode
@@ -93,7 +96,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_grouped_by__main: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: DRBD device has out-of-sync data
         description: |
           DRBD device {{ $labels.name }} on node {{ $labels.node }} has out-of-sync data with {{ $labels.conn_name }}
@@ -124,7 +128,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_grouped_by__main: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: DRBD device is not connected
         description: |
           DRBD device {{ $labels.name }} on node {{ $labels.node }} is not connected with {{ $labels.conn_name }}
@@ -145,14 +150,3 @@
              linstor resource-definition auto-place {{ $labels.name }}
              linstor resource-definition wait-sync {{ $labels.name }}
              ```
-
-    - alert: D8DrbdDeviceHealth
-      expr: count by (name) (ALERTS{alertname=~"D8DrbdDeviceHasNoQuorum|D8DrbdDeviceIsUnintentionalDiskless|D8DrbdPeerDeviceIsOutOfSync|D8DrbdDeviceIsNotConnected", alertstate="firing"} OR label_replace(ALERTS{alertname=~"D8LinstorVolumeIsNotHealthy", alertstate="firing"}, "name", "$1", "resource", "(.*)"))
-      labels:
-        tier: cluster
-      annotations:
-        plk_protocol_version: "1"
-        plk_markup_format: "markdown"
-        plk_alert_type: "group"
-        summary: Some DRBD devices are not healthy
-        description: Refer to the relevant alerts for more information.

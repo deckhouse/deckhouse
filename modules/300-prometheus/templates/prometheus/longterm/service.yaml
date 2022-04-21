@@ -19,6 +19,6 @@ spec:
     protocol: TCP
     targetPort: https
   selector:
-    app: prometheus
+    app.kubernetes.io/name: prometheus
     prometheus: longterm
 {{- end }}

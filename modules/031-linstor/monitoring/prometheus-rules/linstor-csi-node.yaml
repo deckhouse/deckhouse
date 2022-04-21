@@ -2,15 +2,16 @@
   rules:
     - alert: D8LinstorCsiNodePodIsNotReady
       expr: min by (pod) (avg by(node,pod,namespace)(kube_pod_info{}) * on(pod, namespace) group_right(node) kube_pod_status_ready{condition="true", namespace="d8-linstor", pod=~"linstor-csi-node-.*"}) != 1
+      for: 30m
       labels:
         severity_level: "6"
         tier: cluster
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_pending_until_firing_for: "30m"
         plk_labels_as_annotations: "pod"
-        plk_grouped_by__main: "D8LinstorCsiNodeHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_csi_node_health: "D8LinstorCsiNodeHealth,tier=cluster,d8_module=linstor,d8_component=linstor-csi-node"
+        plk_grouped_by__d8_linstor_csi_node_health: "D8LinstorCsiNodeHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-csi-node Pod is NOT Ready.
         description: |
           The recommended course of action:
@@ -19,27 +20,17 @@
 
     - alert: D8LinstorCsiNodePodIsNotRunning
       expr: absent(avg by(node,pod,namespace)(kube_pod_info{}) * on(pod, namespace) group_right(node) kube_pod_status_phase{namespace="d8-linstor",phase="Running",pod=~"linstor-csi-node-.*"})
+      for: 30m
       labels:
         severity_level: "6"
         tier: cluster
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_pending_until_firing_for: "30m"
-        plk_grouped_by__main: "D8LinstorCsiNodeHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_csi_node_health: "D8LinstorCsiNodeHealth,tier=cluster,d8_module=linstor,d8_component=linstor-csi-node"
+        plk_grouped_by__d8_linstor_csi_node_health: "D8LinstorCsiNodeHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-csi-node Pod is NOT Running.
         description: |
           The recommended course of action:
           1. Retrieve details of the DaemonSet: `kubectl -n d8-linstor describe daemonset linstor-csi-node`
           2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-linstor describe pod --field-selector=spec.nodeName={{ $labels.node }} -l app.kubernetes.io/component=csi-node,app.kubernetes.io/instance=linstor,app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-csi`
-
-    - alert: D8LinstorCsiNodeHealth
-      expr: count by (node) (ALERTS{alertname=~"D8LinstorCsiNodePodIsNotReady|D8LinstorCsiNodePodIsNotRunning", alertstate="firing"})
-      labels:
-        tier: cluster
-      annotations:
-        plk_protocol_version: "1"
-        plk_markup_format: "markdown"
-        plk_alert_type: "group"
-        summary: The linstor-csi-node does not work.
-        description: Refer to the relevant alerts for more information.
