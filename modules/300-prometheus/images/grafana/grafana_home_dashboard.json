@@ -245,7 +245,7 @@
               },
               {
                 "id": "custom.displayMode",
-                "value": "json-view"
+                "value": "image"
               }
             ]
           }

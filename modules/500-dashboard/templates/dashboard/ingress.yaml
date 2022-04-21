@@ -5,6 +5,7 @@ kind: Ingress
 metadata:
   annotations:
     web.deckhouse.io/export-name: "dashboard"
+    web.deckhouse.io/export-icon: "https://img.icons8.com/color/452/kubernetes.png"
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/affinity: cookie
