@@ -119,6 +119,9 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 		t := metav1.NewTime(d.lastErrorTime)
 		logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &t}
 	}
+	// kubelet certificate on master can be changed before finish Deckhouse installation
+	// and dhctl can not get logs from Deckhouse pod
+	logOptions.InsecureSkipTLSVerifyBackend = true
 
 	var result []byte
 
@@ -268,7 +271,15 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(5)}
+	logOptions := corev1.PodLogOptions{
+		Container: "deckhouse",
+		TailLines: int64Pointer(5),
+
+		// kubelet certificate on master can be changed before finish Deckhouse installation
+		// and dhctl can not get logs from Deckhouse pod
+		InsecureSkipTLSVerifyBackend: true,
+	}
+
 	defer func() { d.deckhousePod = nil }()
 
 	for {
