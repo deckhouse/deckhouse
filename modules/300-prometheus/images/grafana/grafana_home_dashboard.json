@@ -192,24 +192,11 @@
         "defaults": {
           "custom": {
             "align": "auto",
-            "displayMode": "auto"
+            "displayMode": "auto",
+            "filterable": false
           },
-          "links": [
-            {
-              "title": "",
-              "url": "https://${__data.fields.name}"
-            }
-          ],
-          "mappings": [
-            {
-              "options": {
-                "deckhouse": {
-                  "index": 0
-                }
-              },
-              "type": "value"
-            }
-          ],
+          "links": [],
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -224,7 +211,45 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "",
+                    "url": "https://${__data.fields.url}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "icon"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 25
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "json-view"
+              }
+            ]
+          }
+        ]
       },
       "fontSize": "100%",
       "gridPos": {
@@ -274,7 +299,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (name, url) (deckhouse_web_interfaces{job=\"deckhouse\"})",
+          "expr": "sum by (icon, name, url) (deckhouse_web_interfaces{job=\"deckhouse\"})",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -291,7 +316,8 @@
             "include": {
               "names": [
                 "name",
-                "url"
+                "url",
+                "icon"
               ]
             }
           }
@@ -300,6 +326,7 @@
           "id": "organize",
           "options": {
             "excludeByName": {
+              "icon": false,
               "url": true
             },
             "indexByName": {},
