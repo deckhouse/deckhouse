@@ -158,7 +158,7 @@ function main() {
 
     # At this step we already know that new version is functional
     mv $BOOTSTRAP_DIR/bashible-new.sh $BOOTSTRAP_DIR/bashible.sh
-    sync
+    sync $BOOTSTRAP_DIR/bashible.sh
     exit 0
   fi
 
