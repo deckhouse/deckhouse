@@ -210,40 +210,6 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface
 	return static
 }
 
-// MasterNodeGroupManifest prepares NodeGroup custom resource for master nodes
-func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
-	spec := map[string]interface{}{
-		"nodeType": "CloudPermanent",
-		"disruptions": map[string]interface{}{
-			"approvalMode": "Manual",
-		},
-		"nodeTemplate": map[string]interface{}{
-			"labels": map[string]interface{}{
-				"node-role.kubernetes.io/master":        "",
-				"node-role.kubernetes.io/control-plane": "",
-			},
-			"taints": []map[string]interface{}{
-				{
-					"key":    "node-role.kubernetes.io/master",
-					"effect": "NoSchedule",
-				},
-			},
-		},
-	}
-	if m.ClusterType == StaticClusterType {
-		spec["nodeType"] = "Static"
-	}
-
-	return map[string]interface{}{
-		"apiVersion": "deckhouse.io/v1",
-		"kind":       "NodeGroup",
-		"metadata": map[string]interface{}{
-			"name": "master",
-		},
-		"spec": spec,
-	}
-}
-
 // NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by Terraform
 func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]interface{} {
 	if terraNodeGroup.NodeTemplate == nil {

@@ -221,7 +221,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 	})
 }
 
-func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config, nodeGroupConfig map[string]interface{}) error {
+func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config) error {
 	return log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := deckhouse.CreateDeckhouseManifests(kubeCl, config)
 		if err != nil {
@@ -236,13 +236,6 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 		err = deckhouse.WaitForReadiness(kubeCl)
 		if err != nil {
 			return fmt.Errorf("deckhouse install: %v", err)
-		}
-
-		if len(config.ClusterConfig) > 0 {
-			err = converge.CreateNodeGroup(kubeCl, "master", nodeGroupConfig)
-			if err != nil {
-				return err
-			}
 		}
 
 		return nil

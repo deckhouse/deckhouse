@@ -69,6 +69,9 @@ func isErrorLine(line *logLine) bool {
 			// We cannot skip this error in hook,
 			// because kube version needs for next installation steps
 			"Not found k8s versions",
+			// hook with creating master run immediately after deploy crd
+			// and we can get this message one time
+			"Create object: deckhouse.io/v1/NodeGroup//master: apiVersion 'deckhouse.io/v1', kind 'NodeGroup' is not supported by cluster",
 		}
 		for _, p := range badSubStrings {
 			if strings.Contains(line.Message, p) {

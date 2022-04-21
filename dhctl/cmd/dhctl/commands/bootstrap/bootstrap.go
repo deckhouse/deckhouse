@@ -323,7 +323,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		if err := operations.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
+		if err := operations.InstallDeckhouse(kubeCl, deckhouseInstallConfig); err != nil {
 			return err
 		}
 
