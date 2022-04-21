@@ -57,5 +57,5 @@ locals {
   actual_zones           = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(["1", "2", "3"], var.providerClusterConfiguration.zones)) : ["1", "2", "3"]
   zones                  = lookup(local.node_group, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.node_group["zones"])) : local.actual_zones
   additional_tags        = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.node_group.instanceClass, "additionalTags", {}))
-  accelerated_networking = lookup(local.node_group.instanceClass, "acceleratedNetworking", true)
+  accelerated_networking = lookup(local.node_group.instanceClass, "acceleratedNetworking", false)
 }
