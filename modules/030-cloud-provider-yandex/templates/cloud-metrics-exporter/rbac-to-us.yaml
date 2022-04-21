@@ -3,7 +3,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: access-to-yandex-cloud-prometheus-metrics
+  name: access-to-cloud-metrics-exporter-role
   namespace: d8-cloud-provider-yandex
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-metrics-exporter")) | nindent 2 }}
 rules:
@@ -21,7 +21,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: access-to-yandex-cloud-prometheus-metrics
+  name: access-to-cloud-metrics-exporter-role
 subjects:
 - kind: User
   name: d8-monitoring:scraper
