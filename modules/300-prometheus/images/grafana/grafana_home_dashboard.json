@@ -203,15 +203,43 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "icon"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 1
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "image"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 1
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -222,30 +250,11 @@
                 "id": "links",
                 "value": [
                   {
+                    "targetBlank": true,
                     "title": "",
                     "url": "https://${__data.fields.url}"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "icon"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 25
-              },
-              {
-                "id": "custom.align",
-                "value": "center"
-              },
-              {
-                "id": "custom.displayMode",
-                "value": "image"
               }
             ]
           }
@@ -327,10 +336,12 @@
           "options": {
             "excludeByName": {
               "icon": false,
-              "url": true
+              "url": false
             },
             "indexByName": {},
-            "renameByName": {}
+            "renameByName": {
+              "url": ""
+            }
           }
         }
       ],
