@@ -28,11 +28,16 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// This hook get all ingresses with labels `heritage: deckhouse` and  "deckhouse.io/export-domain"
+// This hook get all ingresses with labels `heritage: deckhouse` and 'module'
+// then looking for "web.deckhouse.io/export-name" annotation
 // and generate metrics for the Grafana home page (table of all enabled deckhouse resources with web interface)
-// you have to set name for resource via `deckhouse.io/export-domain` label for ingress, like:
-//   deckhouse.io/export-domain: "prometheus"
-//   deckhouse.io/export-domain: "cilium"
+// you have to set name for resource via `web.deckhouse.io/export-name` label for ingress, like:
+//   web.deckhouse.io/export-name: "prometheus"
+//   web.deckhouse.io/export-name: "cilium"
+// Also you can set next annotations:
+//   web.deckhouse.io/export-host - custom host for service, if not set - will take it from ingress rule
+//   web.deckhouse.io/export-path - custom path for service; if not set - will take from ingress rule
+//   web.deckhouse.io/export-icon - set custom icon for service (will be placed in grafana table), best choice - service favicon
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/prometheus/web_interfaces",
@@ -78,7 +83,8 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 
 	icon := ing.Annotations["web.deckhouse.io/export-icon"]
 	if icon == "" {
-		icon = "?"
+		// unknown mark
+		icon = "https://cdn0.iconfinder.com/data/icons/basic-uses-symbol-vol-2/100/Help_Need_Suggestion_Question_Unknown-512.png"
 	}
 
 	exportedHost := ing.Annotations["web.deckhouse.io/export-host"]

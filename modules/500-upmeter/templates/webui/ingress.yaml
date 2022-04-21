@@ -8,7 +8,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "webui")) | nindent 2 }}
   annotations:
     web.deckhouse.io/export-name: "upmeter"
-    web.deckhouse.io/export-icon: "https://cdn2.vectorstock.com/i/1000x1000/07/96/thermometer-icon-isolated-on-white-background-vector-34560796.jpg"
+    web.deckhouse.io/export-icon: "https://upload.wikimedia.org/wikipedia/en/thumb/d/d5/Thermometer_icon.png/800px-Thermometer_icon.png"
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.webui.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.webui.externalAuthentication.authSignInURL }}
