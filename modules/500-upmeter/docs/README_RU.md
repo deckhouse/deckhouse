@@ -6,12 +6,6 @@ title: "Модуль upmeter"
 
 С помощью Custom Resource [UpmeterRemoteWrite](cr.html#upmeterremotewrite) модуль можно настроить на передачу метрик по протоколу [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/).
 
-Интерфейс upmeter:
-![](../../images/500-upmeter/image1.png)
-
-Графики по метрикам из upmeter в Grafana:
-![](../../images/500-upmeter/image2.png)
-
 Состав модуля:
 - **agent** — программа, которая периодически запускает пробы и отправляет результаты в агрегатор. Работает на мастер-узлах.
 - **upmeter** — агрегатор результатов и API-сервер для их извлечения. Умеет соединять историю результатов проб с CustomResource `Downtime`, где вручную описываются инциденты.
@@ -21,3 +15,9 @@ title: "Модуль upmeter"
 - **smoke-mini** — постоянное *smoke-тестирование* с помощью StatefulSet, похожего на настоящее приложение.
 
 Модуль отправляет примерно 100 sample'ов метрик каждые 5 минут, но это значение зависит от количества включенных модулей Deckhouse. 
+
+Интерфейс upmeter:
+![](../../images/500-upmeter/image1.png)
+
+Графики по метрикам из upmeter в Grafana:
+![](../../images/500-upmeter/image2.png)
