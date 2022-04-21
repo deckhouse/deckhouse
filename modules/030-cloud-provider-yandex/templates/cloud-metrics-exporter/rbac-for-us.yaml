@@ -18,6 +18,6 @@ roleRef:
   name: d8:rbac-proxy
 subjects:
   - kind: ServiceAccount
-    name: cloud-provider-yandex-cloud-metrics-exporter
+    name: cloud-metrics-exporter
     namespace: d8-cloud-provider-yandex
 {{- end }}
