@@ -16,7 +16,7 @@ searchable: false
 
 Для добавления новой версии:
 * Добавить images по аналогии с предыдущими версиями.
-* Добавить новую версию в values.yaml (`istio.internal.supportedVersions`).
+* Добавить новую версию в openapi/values.yaml (`istio.supportedVersions`) и поправить значение default у `globalVersion`.
 * Актуализировать crd-all.gen.yaml и crd-operator.yaml в папке crds.
 * Освежить дашборды графаны:
   * Извлечь json-описания дашборд из манифеста samples/addons/grafana.yaml, отформатировать их с помощью jq и сложить в соответствующие json-ки в /monitoring/grafana-dashboards/istio/XXX.json.

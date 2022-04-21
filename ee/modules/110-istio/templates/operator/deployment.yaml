@@ -77,6 +77,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+        ports:
+        - containerPort: 8383
+          name: http-metrics
+          protocol: TCP
         env:
           - name: WATCH_NAMESPACE
             value: d8-{{ $.Chart.Name }}

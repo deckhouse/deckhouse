@@ -1,4 +1,4 @@
-- name: kubernetes.istio.federation_metadata_endpoints
+- name: d8.istio.federation
   rules:
     - alert: D8IstioFederationMetadataEndpointDoesntWork
       expr: max by (federation_name, endpoint) (d8_istio_federation_metadata_endpoints_fetch_error_count == 1)
