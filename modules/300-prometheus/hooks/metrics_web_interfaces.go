@@ -58,6 +58,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, domainMetricHandler)
 
 type exportedWebInterface struct {
+	Icon string
 	Name string
 	URL  string
 }
@@ -116,7 +117,8 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}
 
 	return exportedWebInterface{
-		Name: icon + " " + name,
+		Icon: icon,
+		Name: name,
 		URL:  path.Join(exportedHost, exportedPath),
 	}, nil
 }
@@ -131,7 +133,7 @@ func domainMetricHandler(input *go_hook.HookInput) error {
 		}
 
 		domain := sn.(exportedWebInterface)
-		input.MetricsCollector.Set("deckhouse_web_interfaces", 1, map[string]string{"name": domain.Name, "url": domain.URL}, metrics.WithGroup("deckhouse_exported_domains"))
+		input.MetricsCollector.Set("deckhouse_web_interfaces", 1, map[string]string{"icon": domain.Icon, "name": domain.Name, "url": domain.URL}, metrics.WithGroup("deckhouse_exported_domains"))
 	}
 
 	return nil
