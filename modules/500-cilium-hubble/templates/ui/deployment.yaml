@@ -33,13 +33,16 @@ spec:
       labels:
         app: hubble-ui
     spec:
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
-      serviceAccountName: "cilium-hubble-ui"
+      serviceAccountName: "ui"
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
       - name: frontend
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiFrontend }}
         ports:
         - name: http
@@ -50,6 +53,10 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /var/cache/nginx
+            name: cache
+          - mountPath: /var/run
+            name: run
       - name: backend
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiBackend }}
@@ -97,8 +104,6 @@ spec:
         - name: hubble-ui-envoy-yaml
           mountPath: /etc/envoy.yaml
           subPath: envoy.yaml
-      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       volumes:
       - name: hubble-ui-envoy-yaml
         configMap:
@@ -106,6 +111,12 @@ spec:
       - emptyDir:
           medium: Memory
         name: tmp
+      - emptyDir:
+          medium: Memory
+        name: cache
+      - emptyDir:
+          medium: Memory
+        name: run
       - name: hubble-ui-client-certs
         projected:
           defaultMode: 0400

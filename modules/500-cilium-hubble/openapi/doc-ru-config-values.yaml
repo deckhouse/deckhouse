@@ -2,6 +2,16 @@ type: object
 properties:
   debugLogging:
     description: Включает отладочный уровень логирования для компонентов Hubble.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   auth:
     description: |
       Опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу Hubble.

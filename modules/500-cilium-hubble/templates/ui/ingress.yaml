@@ -4,7 +4,7 @@ kind: Ingress
 metadata:
   name: hubble-ui
   namespace: d8-cni-cilium
-  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui" "deckhouse.io/export-domain" "cilium")) | nindent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     nginx.ingress.kubernetes.io/affinity: cookie

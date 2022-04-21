@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: "cilium-hubble-ui"
+  name: "ui"
   namespace: d8-cni-cilium
   {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
 ---
@@ -60,5 +60,5 @@ roleRef:
   name: d8:cilium-hubble:ui:reader
 subjects:
   - kind: ServiceAccount
-    name: cilium-hubble-ui
+    name: ui
     namespace: d8-cni-cilium
