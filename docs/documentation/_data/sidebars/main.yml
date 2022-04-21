@@ -629,13 +629,19 @@ entries:
                     ru: Описание
                   url: /modules/500-upmeter/
                 - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/500-upmeter/configuration.html
-                - title:
                     en: Usage
                     ru: Примеры
                   url: /modules/500-upmeter/usage.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/500-upmeter/configuration.html
+                    - title: Custom Resources
+                      url: /modules/500-upmeter/cr.html
     - title:
         en: Autoscaling & Managing resources
         ru: Масштабирование и управление ресурсами
