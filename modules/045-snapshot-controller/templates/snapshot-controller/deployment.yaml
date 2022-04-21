@@ -25,7 +25,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller" )) | nindent 2 }}
 spec:
-  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
       app: snapshot-controller
@@ -38,7 +38,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-controller")) | nindent 2 }}
 spec:
   minReadySeconds: 15
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: snapshot-controller
