@@ -176,6 +176,13 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: infra-test3
+  labels:
+    heritage: upmeter
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: prod-ns2
   annotations:
     extended-monitoring.flant.com/enabled: "true"
@@ -203,7 +210,8 @@ metadata:
 			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
 			ns = f.KubernetesResource("Namespace", "", "prod-ns2")
 			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeTrue())
-
+			ns = f.KubernetesResource("Namespace", "", "infra-test3")
+			Expect(ns.Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
 		})
 	})
 

@@ -11,6 +11,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -21,6 +22,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "namespaces",
 			ApiVersion: "v1",
 			Kind:       "Namespace",
+			// Ignore upmeter probe fake namespaces, because upmeter deletes them immediately.
+			// They do not require any labels.
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "heritage",
+						Operator: metav1.LabelSelectorOpNotIn,
+						Values: []string{
+							"upmeter",
+						},
+					},
+				},
+			},
 			FilterFunc: applyNamespaceFilter,
 		},
 	},
