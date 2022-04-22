@@ -83,7 +83,7 @@ spec:
             - /upmeter
             - agent
             {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
-            --disable-probe={{ $probeRef | quote}}
+            - --disable-probe={{ $probeRef | quote}}
             {{- end }}
           volumeMounts:
           - mountPath: /db
