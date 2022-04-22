@@ -29,7 +29,7 @@ RUN cargo build \
 FROM $BASE_DEBIAN_BULLSEYE
 RUN mkdir -p /etc/vector \
     && apt-get update \
-    && apt-get install -yq ca-certificates tzdata inotify-tools gettext \
+    && apt-get install -yq ca-certificates tzdata inotify-tools gettext procps \
     && rm -rf /var/cache/apt/archives/*
 COPY --from=build /vector/vector/target/release/vector /usr/bin/vector
 COPY reloader /usr/bin/reloader
