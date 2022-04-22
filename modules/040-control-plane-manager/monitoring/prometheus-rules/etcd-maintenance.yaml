@@ -13,7 +13,7 @@
         description: |
           For etcd node {{ $labels.node }} defragmentation triggered more than 4 time for last 5 hours.
 
-          Every hour deckhouse check etcd db size and trigger db defragmentation if etcd use more 90% of available size.
+          Every hour deckhouse checks etcd db size and triggers db defragmentation if etcd uses more 90% of available size.
 
           Frequent triggering indicates that the defragmentation process is not effective and that it is necessary to increase `quota-backend-bytes`
 
@@ -28,9 +28,9 @@
         plk_markup_format: "markdown"
         summary: Etcd defragmentation was failed
         description: |
-          For etcd node {{ $labels.node }} last 2 defragmentation procedures over 3 hours was failed.
+          For etcd node {{ $labels.node }} last 2 defragmentation procedures over 3 hours were failed.
 
-          Every hour deckhouse check etcd db size and trigger db defragmentation if etcd use more 90% of available size.
+          Every hour deckhouse checks etcd db size and triggers db defragmentation if etcd uses more 90% of available size.
 
           Please check Deckhouse logs by running `kubectl -n d8-system logs -f -l app=deckhouse`.
 
@@ -64,7 +64,7 @@
         description: |
           Deckhouse can increase `quote-backend-bytes` only.
 
-          It happends when control-plane nodes memory was reduced.
+          It happens when control-plane nodes memory was reduced.
 
           If is true, you should set quote-backend-bytes manually with `controlPlaneManager.etcd.maxDbSize` configuration parameter.
 
