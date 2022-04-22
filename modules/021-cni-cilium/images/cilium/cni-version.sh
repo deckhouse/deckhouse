@@ -1,3 +1,8 @@
+#!/bin/bash
+
+# Copyright 2017-2020 Authors of Cilium
+# SPDX-License-Identifier: Apache-2.0
+
 cni_version="0.9.0"
 declare -A cni_sha512
 cni_sha512[amd64]="13a5274aa0b146e77a8fe3c2b37485af69b655d114bee46ebf0535bfda578865e76d2e4a2a9736f2168cf1c61348580c14656679ed874dcd3132ad83e6d5c2fb"

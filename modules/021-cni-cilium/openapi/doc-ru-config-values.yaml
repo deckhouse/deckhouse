@@ -1,4 +1,4 @@
-type: object # TODO
+type: object
 properties:
   debugLogging:
     description: Включает отладочный уровень логирования для компонентов Cilium.
