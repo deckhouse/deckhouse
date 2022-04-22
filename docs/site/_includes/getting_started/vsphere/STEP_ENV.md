@@ -111,7 +111,7 @@ VirtualMachine.Provisioning.MarkAsTemplate VirtualMachine.Provisioning.MarkAsVM 
 VirtualMachine.Provisioning.PromoteDisks VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
 VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot
 
-govc permissions.set  -principal имя_пользователя -role kubernetes /DC
+govc permissions.set  -principal username -role kubernetes /DC
 ```
 {% endsnippetcut %}
 
