@@ -4,9 +4,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/daemon/cmd/kube_proxy_replacement.go b/daemon/cmd/kube_proxy_replacement.go
---- a/daemon/cmd/kube_proxy_replacement.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/daemon/cmd/kube_proxy_replacement.go	(date 1650015825020)
-@@ -551,6 +551,8 @@
+--- a/daemon/cmd/kube_proxy_replacement.go	(revision 9d2546357ef7302514f87b04534933c995340ec6)
++++ b/daemon/cmd/kube_proxy_replacement.go	(date 1650624834136)
+@@ -550,6 +550,8 @@
  		// Non-BPF masquerade requires netfilter and hence CT.
  		case option.Config.IptablesMasqueradingEnabled():
  			msg = fmt.Sprintf("BPF host routing requires %s.", option.EnableBPFMasquerade)
@@ -21,9 +21,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
---- a/pkg/datapath/linux/config/config.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/pkg/datapath/linux/config/config.go	(date 1650015825028)
-@@ -405,6 +405,12 @@
+--- a/pkg/datapath/linux/config/config.go	(revision 9d2546357ef7302514f87b04534933c995340ec6)
++++ b/pkg/datapath/linux/config/config.go	(date 1650624834144)
+@@ -397,6 +397,12 @@
  		cDefinesMap["NATIVE_DEV_MAC_BY_IFINDEX(IFINDEX)"] = macByIfIndexMacro
  		cDefinesMap["IS_L3_DEV(ifindex)"] = isL3DevMacro
  	}
@@ -42,9 +42,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
---- a/bpf/lib/nodeport.h	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/bpf/lib/nodeport.h	(date 1650015824956)
-@@ -877,7 +877,8 @@
+--- a/bpf/lib/nodeport.h	(revision 9d2546357ef7302514f87b04534933c995340ec6)
++++ b/bpf/lib/nodeport.h	(date 1650624561882)
+@@ -863,7 +863,8 @@
  }
 
  /* See comment in tail_rev_nodeport_lb4(). */
@@ -54,7 +54,7 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
  {
  	int ret, fib_ret, ret2, l3_off = ETH_HLEN, l4_off, hdrlen;
  	struct ipv6_ct_tuple tuple = {};
-@@ -906,6 +907,10 @@
+@@ -892,6 +893,10 @@
  	ret = ct_lookup6(get_ct_map6(&tuple), &tuple, ctx, l4_off, CT_INGRESS, &ct_state,
  			 &monitor);
 
@@ -65,16 +65,16 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
  	if (ret == CT_REPLY && ct_state.node_port == 1 && ct_state.rev_nat_index != 0) {
  		ret2 = lb6_rev_nat(ctx, l4_off, &csum_off, ct_state.rev_nat_index,
  				   &tuple, REV_NAT_F_TUPLE_SADDR);
-@@ -1021,7 +1026,7 @@
+@@ -999,7 +1004,7 @@
  	 */
  	ctx_skip_host_fw_set(ctx);
  #endif
 -	ret = rev_nodeport_lb6(ctx, &ifindex);
 +	ret = rev_nodeport_lb6(ctx, &ifindex, false);
  	if (IS_ERR(ret))
- 		goto drop;
- 	if (!revalidate_data(ctx, &data, &data_end, &ip6))
-@@ -1922,7 +1927,8 @@
+ 		return send_drop_notify_error(ctx, 0, ret, CTX_ACT_DROP, METRIC_EGRESS);
+
+@@ -1875,7 +1880,8 @@
   * CILIUM_CALL_IPV{4,6}_NODEPORT_REVNAT is plugged into CILIUM_MAP_CALLS
   * of the bpf_host, bpf_overlay and of the bpf_lxc.
   */
@@ -84,7 +84,7 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
  {
  	struct ipv4_ct_tuple tuple = {};
  	void *data, *data_end;
-@@ -1974,6 +1980,14 @@
+@@ -1926,6 +1932,14 @@
  	ret = ct_lookup4(get_ct_map4(&tuple), &tuple, ctx, l4_off, CT_INGRESS, &ct_state,
  			 &monitor);
 
@@ -97,9 +97,9 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
 +		return CTX_ACT_OK;
 +
  	if (ret == CT_REPLY && ct_state.node_port == 1 && ct_state.rev_nat_index != 0) {
- 		reason = TRACE_REASON_CT_REPLY;
  		ret2 = lb4_rev_nat(ctx, l3_off, l4_off, &csum_off,
-@@ -2108,7 +2122,7 @@
+ 				   &ct_state, &tuple,
+@@ -2054,7 +2068,7 @@
  	 */
  	ctx_skip_host_fw_set(ctx);
  #endif
@@ -108,7 +108,7 @@ diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
  	if (IS_ERR(ret))
  		return send_drop_notify_error(ctx, 0, ret, CTX_ACT_DROP, METRIC_EGRESS);
 
-@@ -2260,5 +2274,36 @@
+@@ -2206,5 +2220,36 @@
  	return ret;
  }
 
@@ -151,22 +151,22 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/option/config.go b/pkg/option/config.go
---- a/pkg/option/config.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/pkg/option/config.go	(date 1650015905293)
-@@ -1025,6 +1025,10 @@
+--- a/pkg/option/config.go	(revision 9d2546357ef7302514f87b04534933c995340ec6)
++++ b/pkg/option/config.go	(date 1650624834188)
+@@ -999,6 +999,10 @@
+ 	// EnableK8sTerminatingEndpoint enables the option to auto detect terminating
  	// state for endpoints in order to support graceful termination.
  	EnableK8sTerminatingEndpoint = "enable-k8s-terminating-endpoint"
-
++
 +	// NetfilterCompatibleMode guarantees the traffic will pass through kernel
 +	// netfilter. This option only affects NodePort traffic.
 +	NetfilterCompatibleMode = "netfilter-compatible-mode"
-+
- 	// EnableVTEP enables cilium VXLAN VTEP integration
- 	EnableVTEP = "enable-vtep"
+ )
 
-@@ -1779,6 +1783,10 @@
- 	// NodePortNat46X64 indicates whether NAT46 / NAT64 can be used.
- 	NodePortNat46X64 bool
+ // Default string arguments
+@@ -1726,6 +1730,10 @@
+ 	// EnableHostLegacyRouting enables the old routing path via stack.
+ 	EnableHostLegacyRouting bool
 
 +	// NetfilterCompatibleMode guarantees the traffic will pass through kernel
 +	// netfilter. Currently, it only affects NodePort traffic.
@@ -175,23 +175,23 @@ diff --git a/pkg/option/config.go b/pkg/option/config.go
  	// NodePortMode indicates in which mode NodePort implementation should run
  	// ("snat", "dsr" or "hybrid")
  	NodePortMode string
-@@ -2797,6 +2805,7 @@
+@@ -2672,6 +2680,7 @@
  	c.BGPAnnouncePodCIDR = viper.GetBool(BGPAnnouncePodCIDR)
  	c.BGPConfigPath = viper.GetString(BGPConfigPath)
  	c.ExternalClusterIP = viper.GetBool(ExternalClusterIPName)
 +	c.NetfilterCompatibleMode = viper.GetBool(NetfilterCompatibleMode)
- 	c.TCFilterPriority = viper.GetInt(TCFilterPriority)
 
  	c.EnableIPv4Masquerade = viper.GetBool(EnableIPv4Masquerade) && c.EnableIPv4
+ 	c.EnableIPv6Masquerade = viper.GetBool(EnableIPv6Masquerade) && c.EnableIPv6
 Index: pkg/datapath/linux/probes/probes.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/datapath/linux/probes/probes.go b/pkg/datapath/linux/probes/probes.go
---- a/pkg/datapath/linux/probes/probes.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/pkg/datapath/linux/probes/probes.go	(date 1650015825032)
-@@ -316,7 +316,7 @@
+--- a/pkg/datapath/linux/probes/probes.go	(revision 9d2546357ef7302514f87b04534933c995340ec6)
++++ b/pkg/datapath/linux/probes/probes.go	(date 1650624834152)
+@@ -312,7 +312,7 @@
  	return &p.features.MapTypes
  }
 
@@ -206,9 +206,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/bpf/Makefile b/bpf/Makefile
---- a/bpf/Makefile	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/bpf/Makefile	(date 1650015824996)
-@@ -179,6 +179,11 @@
+--- a/bpf/Makefile	(revision 9d2546357ef7302514f87b04534933c995340ec6)
++++ b/bpf/Makefile	(date 1650624834104)
+@@ -174,6 +174,11 @@
  ifneq (,$(filter $(KERNEL),"54" "netnext"))
  MAX_HOST_OPTIONS += -DENABLE_EGRESS_GATEWAY=1
  endif
@@ -226,9 +226,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/bpf/bpf_host.c b/bpf/bpf_host.c
---- a/bpf/bpf_host.c	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/bpf/bpf_host.c	(date 1650015824976)
-@@ -1146,6 +1146,19 @@
+--- a/bpf/bpf_host.c	(revision 9d2546357ef7302514f87b04534933c995340ec6)
++++ b/bpf/bpf_host.c	(date 1650624561890)
+@@ -1081,6 +1081,19 @@
  	 (defined(ENABLE_DSR) && defined(ENABLE_DSR_HYBRID)) || \
  	 defined(ENABLE_MASQUERADE) || \
  	 defined(ENABLE_EGRESS_GATEWAY))
@@ -254,9 +254,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
---- a/daemon/cmd/daemon_main.go	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/daemon/cmd/daemon_main.go	(date 1650015825012)
-@@ -1053,6 +1053,15 @@
+--- a/daemon/cmd/daemon_main.go	(revision 9d2546357ef7302514f87b04534933c995340ec6)
++++ b/daemon/cmd/daemon_main.go	(date 1650624834124)
+@@ -1022,6 +1022,15 @@
  	flags.Bool(option.EnableCustomCallsName, false, "Enable tail call hooks for custom eBPF programs")
  	option.BindEnv(option.EnableCustomCallsName)
 
@@ -272,7 +272,7 @@ diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
  	flags.Bool(option.BGPAnnounceLBIP, false, "Announces service IPs of type LoadBalancer via BGP")
  	option.BindEnv(option.BGPAnnounceLBIP)
 
-@@ -1601,6 +1610,19 @@
+@@ -1550,6 +1559,19 @@
  			)
  		}
  	}
@@ -292,40 +292,3 @@ diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
  }
 
  func (d *Daemon) initKVStore() {
-Index: bpf/bpf_lxc.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
---- a/bpf/bpf_lxc.c	(revision c10ba7ccb5a170abb0fd8044bb30fc34bfc12fe8)
-+++ b/bpf/bpf_lxc.c	(date 1650015824988)
-@@ -275,6 +275,12 @@
- 		policy_mark_skip(ctx);
-
- #ifdef ENABLE_NODEPORT
-+#ifdef NETFILTER_COMPAT_MODE
-+		if (ct_state.node_port) {
-+			return CTX_ACT_OK;
-+		}
-+#endif /* NETFILTER_COMPAT_MODE */
-+
- # ifdef ENABLE_DSR
- 		if (ct_state.dsr) {
- 			ret = xlate_dsr_v6(ctx, &tuple, l4_off);
-@@ -749,6 +755,15 @@
- 		policy_mark_skip(ctx);
-
- #ifdef ENABLE_NODEPORT
-+#ifdef NETFILTER_COMPAT_MODE
-+		if (ct_state.node_port) {
-+			/* Pass the packet to the stack and let bpf_host perform
-+			 * rev-DNAT at egress of the native device.
-+			 */
-+			return CTX_ACT_OK;
-+		}
-+#endif /* NETFILTER_COMPAT_MODE */
-+
- # ifdef ENABLE_DSR
- 		if (ct_state.dsr) {
- 			ret = xlate_dsr_v4(ctx, &tuple, l4_off, has_l4_header);
