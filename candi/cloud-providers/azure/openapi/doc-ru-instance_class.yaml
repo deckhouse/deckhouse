@@ -45,5 +45,8 @@ spec:
                 additionalTags:
                   description: |
                     Дополнительные теги, которые будут присвоены созданным инстансам.
+                acceleratedNetworking:
+                  description: |
+                    Accelerated Networking обеспечивает пропускную способность сети до 30 Гбит/с.
     - name: v1
       schema: *schema

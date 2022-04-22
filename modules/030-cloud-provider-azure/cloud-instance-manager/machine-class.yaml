@@ -43,3 +43,5 @@ spec:
             path: /home/azureuser/.ssh/authorized_keys
             keyData: {{ .Values.nodeManager.internal.cloudProvider.azure.sshPublicKey }}
     zone: {{ .zoneName }}
+    networkProfile:
+      acceleratedNetworking: {{ .nodeGroup.instanceClass.acceleratedNetworking | default true }}
