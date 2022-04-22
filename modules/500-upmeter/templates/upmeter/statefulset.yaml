@@ -102,6 +102,9 @@ spec:
           - /upmeter
           - start
           - --origins={{ index .Values.global.discovery "clusterMasterCount" }}
+          {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
+          - --disable-probe={{ $probeRef }}
+          {{- end }}
         env:
           - name: UPMETER_DB_PATH
             value: "/db/downtime.db.sqlite"
@@ -109,8 +112,6 @@ spec:
             value: 127.0.0.1
           - name: UPMETER_LISTEN_PORT
             value: "8091"
-          - name: UPMETER_DISABLED_PROBES
-            value: '{{ .Values.upmeter.internal.disabledProbes | join "," }}'
           - name: LOG_LEVEL
             value: "info"
           - name: LOG_TYPE

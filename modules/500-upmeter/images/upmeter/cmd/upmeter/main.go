@@ -54,6 +54,8 @@ func main() {
 		setupLogger(logger, loggerConfig)
 
 		logger.Info("Starting upmeter server")
+		logger.Debugf("Logger config: %v", loggerConfig)
+		logger.Debugf("Server config: %v", serverConfig)
 
 		srv := server.New(serverConfig, logger)
 		startCtx, cancelStart := context.WithCancel(context.Background())
@@ -91,6 +93,9 @@ func main() {
 	agentCommand.Action(func(c *kingpin.ParseContext) error {
 		setupLogger(logger, loggerConfig)
 		logger.Infof("Starting upmeter agent. ID=%s", util.AgentUniqueId())
+		logger.Debugf("Logger config: %v", loggerConfig)
+		logger.Debugf("Agent config: %v", agentConfig)
+		logger.Debugf("Kubernetes config: %v", agentKubeConfig)
 
 		a := agent.New(agentConfig, agentKubeConfig, logger)
 

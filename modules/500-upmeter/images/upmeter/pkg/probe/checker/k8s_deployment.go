@@ -222,7 +222,7 @@ func createDeploymentObject(agentId string) *appsv1.Deployment {
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app":           "upmeter-agent",
+						"heritage":      "upmeter",
 						agentLabelKey:   agentId,
 						"upmeter-group": "control-plane",
 						"upmeter-probe": "controller-manager",
