@@ -51,7 +51,7 @@
 /* svg styling! */
 /* purgecss ignore */
 .pie-text-probe {
-  fill:  #fff;
+  fill: #fff;
   font-size: 10px;
   text-anchor: middle;
   alignment-baseline: central;
@@ -78,7 +78,7 @@
   padding-left: 20px; /* open/close icon width plus indent */
 }
 
-.top-ticks{
+.top-ticks {
   cursor: default;
   min-height: 30px;
   max-height: 30px;
@@ -94,12 +94,12 @@
   width: 13em;
   min-width: 13em;
 }
-.top-tick-left-spacer{
+.top-tick-left-spacer {
   display: block;
   width: 180px;
 }
 
-.top-tick{
+.top-tick {
   height: 32px;
   min-height: 32px;
   /*width: 66px; /* cell-data 60 + 3 padding*/
@@ -116,18 +116,9 @@
   display: block;
 }
 
-
-
 .graph-table {
   display: table;
   table-layout: fixed;
-  /* stripes to emulate dashed border between columns */
-  background:  repeating-linear-gradient(
-    transparent,
-    transparent 2px,
-    #d5d5d5 2px,
-    #d5d5d5 7px
-  ) no-repeat;
   // for border-radius in cells;
   background-size: calc(100% - 24px);
   background-position-x: 12px;
@@ -135,16 +126,22 @@
   background-clip: content-box;
 }
 
-.graph-row-hidden { display: none; }
-.graph-row-visible { display: table-row; }
-.graph-row {}
+.graph-row-hidden {
+  display: none;
+}
+.graph-row-visible {
+  display: table-row;
+}
+.graph-row {
+  /* stripes to emulate dashed border between columns */
+  background: repeating-linear-gradient(transparent, transparent 2px, #d5d5d5 2px, #d5d5d5 7px) no-repeat;
+}
 
 .graph-cell {
   display: table-cell;
   background-clip: padding-box;
   background-color: white;
 }
-
 
 .graph-cell.graph-labels {
   width: 15em;
@@ -154,13 +151,12 @@
   position: relative;
 }
 
-
 /* info icon in a top left corner */
 .group-probe-info {
   font-size: 14px;
   display: inline-block;
   margin-left: 3px;
-  color: #BBB;
+  color: #bbb;
   opacity: 1;
   transition: all 0.3s ease-in-out;
 }
@@ -168,8 +164,6 @@
 .group-probe-info:hover {
   color: #000;
 }
-
-
 
 .graph-cell.cell-data {
   padding: 3px;
@@ -186,70 +180,14 @@
 .cell-data-empty {
   width: 60px;
   height: 60px;
-  content: ' '
+  content: " ";
 }
-
-/*** classes for probe cells
-// Middle pies in the middle row.
-.graph-row.row-probe .graph-cell {
-background-color: red;
-}
-// Probe label in the middle row.
-.graph-row.row-probe .graph-cell.graph-labels
-{
-background-color: lightsalmon;
-}
-// First pie in the middle row.
-.graph-row.row-probe .graph-cell.first-in-row {
-background-color: salmon;
-}
-// Last pie in the middle row.
-.graph-row.row-probe .graph-cell.last-in-row
- {
-background-color: darkred;
-}
-
-// Middle pies in the first row in group.
-.graph-row.row-first-in-group .graph-cell {
-background-color: green;
-}
-// Probe label in the first row in group.
-.graph-row.row-first-in-group .graph-cell.graph-labels {
-background-color: lightgreen;
-}
-// First pie in the first row in group.
-.graph-row.row-first-in-group .graph-cell.first-in-row {
-background-color: springgreen;
-}
-// Last pie in the first row in group.
-.graph-row.row-first-in-group .graph-cell.last-in-row {
-background-color: darkgreen;
-}
-
-// Middle pies in the last row in group.
-.graph-row.row-last-in-group .graph-cell {
-background-color: blue;
-}
-// Probe label in the last row in group.
-.graph-row.row-last-in-group .graph-cell.graph-labels {
-background-color: lightblue;
-}
-// First pie in the last row in group.
-.graph-row.row-last-in-group .graph-cell.first-in-row {
-background-color: deepskyblue;
-}
-// Last pie in the last row in group.
-.graph-row.row-last-in-group .graph-cell.last-in-row {
-background-color: darkblue;
-}
-
-*/
 
 .graph-row .graph-cell.graph-labels {
   padding-left: 10px;
 }
 
-.graph-row .graph-cell.last-in-row {
+div.graph-row > div.graph-cell:last-child {
   padding-right: 10px;
   width: 100%;
 }
@@ -260,54 +198,36 @@ background-color: darkblue;
 
 // inset shadow to highlight probe rows
 $shadow-color: #c0c0c0;
-$shadow-len: 6px;
+$shadow-len: 10px;
 $shadow-blur: 10px;
-$shadow-spread: 6px;
+$shadow-spread: 10px;
 
 // border-radius ruins dashed lines.
 $probe-cell-border-radius: 0;
 
-// Probe label in the middle row.
-.graph-row.row-probe .graph-cell.graph-labels {}
+div.group-container,
+div.probes-container {
+  margin: 0;
+  padding: 0;
+}
 
-// Last pie in the middle row.
-.graph-row.row-probe .graph-cell.last-in-row {}
+div.group-container > div.probes-container > div:only-child > div.graph-cell {
+  box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color,
+    inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
+}
 
-// Middle pies in the first row in group.
-.graph-row.row-first-in-group .graph-cell {
-  // Top shadow
+div.group-container > div.probes-container > div:first-child:not(:only-child) > div.graph-cell {
   box-shadow: inset 0 ($shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
 }
 
-// Probe label in the first row in group.
-.graph-row.row-first-in-group .graph-cell.graph-labels {}
-
-// Last pie in the first row in group.
-.graph-row.row-first-in-group .graph-cell.last-in-row {}
-
-// Middle pies in the last row in group.
-.graph-row.row-last-in-group .graph-cell {
-  // Bottom shadow
+div.group-container:not(:last-child) > div.probes-container > div:last-child:not(:only-child) > div.graph-cell {
   box-shadow: inset 0 (-$shadow-len) ($shadow-blur) (-$shadow-spread) $shadow-color;
-}
-
-// Probe label in the last row in group.
-.graph-row.row-last-in-group .graph-cell.graph-labels {}
-
-// Last pie in the last row in group.
-.graph-row.row-last-in-group .graph-cell.last-in-row {
-
-}
-
-.graph-row:last-child .graph-cell {
-  box-shadow: none !important;
 }
 
 // graph-cell under 'Total' labels
 .graph-row .graph-cell:last-child {
- // width of top-tick and graph-cell is 67px, so 67 / 2 to align a graph-cell to a 'Total' label
+  // width of top-tick and graph-cell is 67px, so 67 / 2 to align a graph-cell to a 'Total' label
   padding-left: 34px;
 }
-
 
 /* purgecss end ignore */

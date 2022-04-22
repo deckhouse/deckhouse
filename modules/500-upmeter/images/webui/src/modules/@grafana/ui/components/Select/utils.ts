@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { SelectableValue } from '@grafana/data';
 import { SelectOptions } from './types';
 

@@ -9,27 +9,31 @@
  */
 
 // Libraries
-import React, { PureComponent, memo, FormEvent } from 'react';
-import { css, cx } from 'emotion';
+import React, { PureComponent, memo, FormEvent } from "react"
+import { css, cx } from "emotion"
 
 // Components
-import { Tooltip } from '@grafana/ui';
-import { Icon } from '../Icon';
-import { TimePickerContent } from './TimeRangePicker/TimePickerContent';
-import { StepIndicator } from "../StepIndicator";
-import { ClickOutsideWrapper } from '@grafana/ui';
+import { Tooltip } from "@grafana/ui"
+import { Icon } from "../Icon"
+import { TimePickerContent } from "./TimeRangePicker/TimePickerContent"
+import { StepIndicator } from "../StepIndicator"
+import { ClickOutsideWrapper } from "@grafana/ui"
 
 // Utils & Services
-import { stylesFactory } from '@grafana/ui';
-import { withTheme, useTheme } from '@grafana/ui';
+import { stylesFactory } from "@grafana/ui"
+import { withTheme, useTheme } from "@grafana/ui"
 
 // Types
 import {
   //isDateTime,
-  rangeUtil, GrafanaTheme, dateTimeFormat, timeZoneFormatUserFriendly } from '@grafana/data';
-import { TimeRange, TimeZone, dateMath } from '@grafana/data';
-import { Themeable } from '@grafana/ui';
-import { otherOptions, quickOptions } from './rangeOptions';
+  rangeUtil,
+  GrafanaTheme,
+  dateTimeFormat,
+  timeZoneFormatUserFriendly,
+} from "@grafana/data"
+import { TimeRange, TimeZone, dateMath } from "@grafana/data"
+import { Themeable } from "@grafana/ui"
+import { otherOptions, quickOptions } from "./rangeOptions"
 
 const getStyles = stylesFactory((theme: GrafanaTheme) => {
   return {
@@ -49,8 +53,8 @@ const getStyles = stylesFactory((theme: GrafanaTheme) => {
       label: noRightBorderStyle;
       border-right: 0;
     `,
-  };
-});
+  }
+})
 
 const getLabelStyles = stylesFactory((theme: GrafanaTheme) => {
   return {
@@ -63,49 +67,49 @@ const getLabelStyles = stylesFactory((theme: GrafanaTheme) => {
       padding: 3px;
       font-weight: ${theme.typography.weight.semibold};
     `,
-  };
-});
+  }
+})
 
 export interface Props extends Themeable {
-  hideText?: boolean;
-  value: TimeRange;
-  timeZone?: TimeZone;
-  timeSyncButton?: JSX.Element;
-  isSynced?: boolean;
-  onChange: (timeRange: TimeRange) => void;
-  onChangeTimeZone: (timeZone: TimeZone) => void;
-  onMoveBackward: () => void;
-  onMoveForward: () => void;
-  onZoom: () => void;
-  history?: TimeRange[];
-  hideZoomButton?: boolean;
-  step: string;
+  hideText?: boolean
+  value: TimeRange
+  timeZone?: TimeZone
+  timeSyncButton?: JSX.Element
+  isSynced?: boolean
+  onChange: (timeRange: TimeRange) => void
+  onChangeTimeZone: (timeZone: TimeZone) => void
+  onMoveBackward: () => void
+  onMoveForward: () => void
+  onZoom: () => void
+  history?: TimeRange[]
+  hideZoomButton?: boolean
+  step: string
 }
 
 export interface State {
-  isOpen: boolean;
+  isOpen: boolean
 }
 
 export class UnthemedTimeRangePicker extends PureComponent<Props, State> {
   state: State = {
     isOpen: false,
-  };
+  }
 
   onChange = (timeRange: TimeRange) => {
-    this.props.onChange(timeRange);
-    this.setState({ isOpen: false });
-  };
+    this.props.onChange(timeRange)
+    this.setState({ isOpen: false })
+  }
 
   onOpen = (event: FormEvent<HTMLButtonElement>) => {
-    const { isOpen } = this.state;
-    event.stopPropagation();
-    event.preventDefault();
-    this.setState({ isOpen: !isOpen });
-  };
+    const { isOpen } = this.state
+    event.stopPropagation()
+    event.preventDefault()
+    this.setState({ isOpen: !isOpen })
+  }
 
   onClose = () => {
-    this.setState({ isOpen: false });
-  };
+    this.setState({ isOpen: false })
+  }
 
   render() {
     const {
@@ -120,18 +124,18 @@ export class UnthemedTimeRangePicker extends PureComponent<Props, State> {
       history,
       onChangeTimeZone,
       hideZoomButton,
-      step
-    } = this.props;
+      step,
+    } = this.props
 
-    const { isOpen } = this.state;
-    const styles = getStyles(theme);
+    const { isOpen } = this.state
+    const styles = getStyles(theme)
     //const hasAbsolute = isDateTime(value.raw.from) || isDateTime(value.raw.to);
-    const syncedTimePicker = timeSyncButton && isSynced;
+    const syncedTimePicker = timeSyncButton && isSynced
     //const timePickerIconClass = cx({ ['icon-brand-gradient']: syncedTimePicker });
-    const timePickerButtonClass = cx('btn btn-outline-primary btn-sm', {
+    const timePickerButtonClass = cx("btn btn-outline-primary btn-sm", {
       [`btn--radius-right-0 ${styles.noRightBorderStyle}`]: !!timeSyncButton,
       [`explore-active-button`]: syncedTimePicker,
-    });
+    })
 
     return (
       <div className={styles.container}>
@@ -143,7 +147,9 @@ export class UnthemedTimeRangePicker extends PureComponent<Props, State> {
           <Tooltip content={<TimePickerTooltip timeRange={value} timeZone={timeZone} />} placement="bottom">
             <button aria-label="TimePicker Open Button" className={timePickerButtonClass} onClick={this.onOpen}>
               <TimePickerButtonLabel {...this.props} />
-              <span className={styles.caretIcon}>{<Icon name={isOpen ? 'fa-caret-up' : 'fa-caret-down'} size="lg" />}</span>
+              <span className={styles.caretIcon}>
+                {<Icon name={isOpen ? "fa-caret-up" : "fa-caret-down"} size="lg" />}
+              </span>
             </button>
           </Tooltip>
           {isOpen && (
@@ -168,10 +174,7 @@ export class UnthemedTimeRangePicker extends PureComponent<Props, State> {
             <Icon name="fa-step-forward" size="lg" />
           </button>
 
-          <StepIndicator
-            label="Step"
-            text={step}
-          />
+          <StepIndicator label="Step" text={step} />
 
           {!hideZoomButton && (
             <Tooltip content={ZoomOutTooltip} placement="bottom">
@@ -182,19 +185,15 @@ export class UnthemedTimeRangePicker extends PureComponent<Props, State> {
           )}
         </div>
       </div>
-    );
+    )
   }
 }
 
-const ZoomOutTooltip = () => (
-  <>
-    Time range zoom out
-  </>
-);
+const ZoomOutTooltip = () => <>Time range zoom out</>
 
 const TimePickerTooltip = ({ timeRange, timeZone }: { timeRange: TimeRange; timeZone?: TimeZone }) => {
-  const theme = useTheme();
-  const styles = getLabelStyles(theme);
+  const theme = useTheme()
+  const styles = getLabelStyles(theme)
 
   return (
     <>
@@ -205,17 +204,17 @@ const TimePickerTooltip = ({ timeRange, timeZone }: { timeRange: TimeRange; time
         <span className={styles.utc}>{timeZoneFormatUserFriendly(timeZone)}</span>
       </div>
     </>
-  );
-};
+  )
+}
 
-type LabelProps = Pick<Props, 'hideText' | 'value' | 'timeZone'>;
+type LabelProps = Pick<Props, "hideText" | "value" | "timeZone">
 
 export const TimePickerButtonLabel = memo<LabelProps>(({ hideText, value, timeZone }) => {
-  const theme = useTheme();
-  const styles = getLabelStyles(theme);
+  const theme = useTheme()
+  const styles = getLabelStyles(theme)
 
   if (hideText) {
-    return null;
+    return null
   }
 
   return (
@@ -223,15 +222,15 @@ export const TimePickerButtonLabel = memo<LabelProps>(({ hideText, value, timeZo
       <span>{formattedRange(value, timeZone)}</span>
       <span className={styles.utc}>{rangeUtil.describeTimeRangeAbbreviation(value, timeZone)}</span>
     </span>
-  );
-});
+  )
+})
 
 const formattedRange = (value: TimeRange, timeZone?: TimeZone) => {
   const adjustedTimeRange = {
     to: dateMath.isMathString(value.raw.to) ? value.raw.to : value.to,
     from: dateMath.isMathString(value.raw.from) ? value.raw.from : value.from,
-  };
-  return rangeUtil.describeTimeRange(adjustedTimeRange, timeZone);
-};
+  }
+  return rangeUtil.describeTimeRange(adjustedTimeRange, timeZone)
+}
 
-export const TimeRangePicker = withTheme(UnthemedTimeRangePicker);
+export const TimeRangePicker = withTheme(UnthemedTimeRangePicker)
