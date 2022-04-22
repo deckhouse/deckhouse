@@ -103,7 +103,7 @@ spec:
           - start
           - --origins={{ index .Values.global.discovery "clusterMasterCount" }}
           {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
-          - --disable-probe={{ $probeRef | quote}}
+          - --disable-probe={{ $probeRef }}
           {{- end }}
         env:
           - name: UPMETER_DB_PATH
