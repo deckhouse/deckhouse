@@ -52,7 +52,7 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 		IntVar(&config.OriginsCount)
 
 	// Disabled probes to omit from fetching
-	cmd.Flag("disabled-probes", "The comma-separated list of groups and/or probes to disable.").
+	cmd.Flag("disable-probe", "Group or probe to omit by default.").
 		Envar("UPMETER_DISABLED_PROBES").
 		Default("").
 		StringsVar(&config.DisabledProbes)
@@ -98,7 +98,7 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
 
-	cmd.Flag("disabled-probes", "The list of disabled comma-separated groups and/or probes.").
+	cmd.Flag("disable-probe", "Group or probe to disable.").
 		Envar("UPMETER_DISABLED_PROBES").
 		Default("").
 		StringsVar(&config.DisabledProbes)
