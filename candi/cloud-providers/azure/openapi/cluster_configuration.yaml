@@ -161,7 +161,7 @@ apiVersions:
                 type: boolean
                 default: false
                 description: |
-                  Accelerated Networking providing up to 30Gbps in networking throughput.
+                  Accelerated Networking provides up to 30Gbps in networking throughput.
       nodeGroups:
         description: |
           An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).

@@ -77,7 +77,7 @@ spec:
                 acceleratedNetworking:
                   type: boolean
                   description: |
-                    Accelerated Networking providing up to 30Gbps in networking throughput.
+                    Accelerated Networking provides up to 30Gbps in networking throughput.
                   x-doc-default: true
     - name: v1
       served: true
