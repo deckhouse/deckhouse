@@ -53,7 +53,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
   annotations:
     web.deckhouse.io/export-name: "istio"
-    web.deckhouse.io/export-icon: "https://istio.io/latest/favicons/favicon.ico"
+    web.deckhouse.io/export-icon: "/public/img/istio.ico"
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.istio.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.istio.auth.externalAuthentication.authSignInURL | quote }}
