@@ -120,6 +120,8 @@ spec:
           #   value: '{{ .Values.upmeter.internal.disabledProbes | join "," }}'
           - name: UPMETER_CLUSTER_DOMAIN
             value: {{ .Values.global.discovery.clusterDomain | quote }}
+          - name: LOG_LEVEL
+            value: "debug"
           - name: LOG_TYPE
             value: "json"
           resources:
