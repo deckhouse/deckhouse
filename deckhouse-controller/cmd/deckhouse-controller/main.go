@@ -77,6 +77,7 @@ func main() {
 			}
 
 			operator := deckhouse.DefaultDeckhouse()
+			operator.WithRuntimeConfig(runtimeConfig)
 			err := deckhouse.InitAndStart(operator)
 			if err != nil {
 				os.Exit(1)
