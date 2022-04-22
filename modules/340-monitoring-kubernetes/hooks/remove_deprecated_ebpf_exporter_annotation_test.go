@@ -25,6 +25,7 @@ import (
 
 var _ = Describe("Modules :: monitoring-kubernetes :: hooks :: choose nodes for ebpf exporter ::", func() {
 	f := HookExecutionConfigInit("", "")
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("0 node cluster", func() {
 		BeforeEach(func() {
@@ -36,14 +37,14 @@ var _ = Describe("Modules :: monitoring-kubernetes :: hooks :: choose nodes for 
 		})
 	})
 
-	Context("3 node cluster", func() {
+	Context("1 node cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: test-ubuntu-kernel-5.4
+  name: test-ubuntu-kernel-5.4-test-1
 status:
   nodeInfo:
     kernelVersion: 5.4.0-54-generic
@@ -51,21 +52,13 @@ status:
 apiVersion: v1
 kind: Node
 metadata:
-  name: test-ubuntu-kernel-4.9
-status:
-  nodeInfo:
-    kernelVersion: 4.9.0-51-generic
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: test-ubuntu-kernel-4.9-labeled
+  name: test-ubuntu-kernel-5.4-test-2
   labels:
     monitoring-kubernetes.deckhouse.io/ebpf-supported: ""
 status:
   nodeInfo:
-    kernelVersion: 4.9.0-51-generic
-`, 3))
+    kernelVersion: 5.4.0-54-generic
+`, 2))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
@@ -73,17 +66,14 @@ status:
 		It("should label or unlabel nodes", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			ubuntu54Node := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-5.4")
-			ubuntu49Node := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-4.9")
-			unknown49NodeLabeled := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-4.9-labeled")
+			test1Node := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-5.4-test-1")
+			test2Node := f.KubernetesGlobalResource("Node", "test-ubuntu-kernel-5.4-test-2")
 
-			Expect(ubuntu54Node.Exists()).To(BeTrue())
-			Expect(ubuntu49Node.Exists()).To(BeTrue())
-			Expect(unknown49NodeLabeled.Exists()).To(BeTrue())
+			Expect(test1Node.Exists()).To(BeTrue())
+			Expect(test2Node.Exists()).To(BeTrue())
 
-			Expect(ubuntu54Node.Field("metadata.labels").Map()).To(HaveKey(ebpfSchedulingLabelKey))
-			Expect(ubuntu49Node.Field("metadata.labels").Map()).To(Not(HaveKey(ebpfSchedulingLabelKey)))
-			Expect(unknown49NodeLabeled.Field("metadata.labels").Map()).To(Not(HaveKey(ebpfSchedulingLabelKey)))
+			Expect(test1Node.Field("metadata.labels").Map()).To(Not(HaveKey(deprecatedEbpfSchedulingLabelKey)))
+			Expect(test2Node.Field("metadata.labels").Map()).To(Not(HaveKey(deprecatedEbpfSchedulingLabelKey)))
 		})
 	})
 })

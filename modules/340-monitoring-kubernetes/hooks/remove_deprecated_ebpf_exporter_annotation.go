@@ -17,10 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-	"regexp"
-
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -28,18 +24,12 @@ import (
 )
 
 const (
-	ebpfSchedulingLabelKey = "monitoring-kubernetes.deckhouse.io/ebpf-supported"
+	deprecatedEbpfSchedulingLabelKey = "monitoring-kubernetes.deckhouse.io/ebpf-supported"
 )
 
-type NodeEligibility struct {
-	Name            string
-	IsEbpfSupported bool
+type NodeWithLabel struct {
+	Name string
 }
-
-var (
-	kernelRegex              = regexp.MustCompile(`^(\d+\.\d+\.\d+).*$`)
-	minSupportedKernelSemVer = semver.MustParse("5.4.0")
-)
 
 func getNodeNameWithSupportedDistro(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	node := &v1.Node{}
@@ -48,25 +38,11 @@ func getNodeNameWithSupportedDistro(obj *unstructured.Unstructured) (go_hook.Fil
 		return nil, err
 	}
 
-	nodeEligibility := &NodeEligibility{Name: node.Name}
-
-	matches := kernelRegex.FindStringSubmatch(node.Status.NodeInfo.KernelVersion)
-	if len(matches) != 2 {
-		return nil, fmt.Errorf("failed to match kernel semver in %q with regex %q",
-			node.Status.NodeInfo.KernelVersion, kernelRegex.String())
-	}
-	kernelSemVerStr := matches[1]
-
-	kernelSemVer, err := semver.NewVersion(kernelSemVerStr)
-	if err != nil {
-		return nil, fmt.Errorf("cannot use %q as semver: %s", kernelSemVerStr, err)
+	if _, ok := node.Labels[deprecatedEbpfSchedulingLabelKey]; ok {
+		return &NodeWithLabel{Name: node.Name}, nil
 	}
 
-	if kernelSemVer.GreaterThan(minSupportedKernelSemVer) || kernelSemVer.Equal(minSupportedKernelSemVer) {
-		nodeEligibility.IsEbpfSupported = true
-	}
-
-	return nodeEligibility, nil
+	return nil, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -79,15 +55,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: getNodeNameWithSupportedDistro,
 		},
 	},
-}, labelNodes)
+}, unlabelNodes)
 
-func labelNodes(input *go_hook.HookInput) error {
+func unlabelNodes(input *go_hook.HookInput) error {
+
 	snapshot := input.Snapshots["nodes"]
-	for _, nodeEligibilityRaw := range snapshot {
-		if nodeEligibilityRaw == nil {
+	for _, labeledNodeRaw := range snapshot {
+		if labeledNodeRaw == nil {
 			continue
 		}
-		nodeEligibility := nodeEligibilityRaw.(*NodeEligibility)
+		labeledNode := labeledNodeRaw.(*NodeWithLabel)
 
 		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			var node v1.Node
@@ -96,20 +73,10 @@ func labelNodes(input *go_hook.HookInput) error {
 				return nil, err
 			}
 
-			if !nodeEligibility.IsEbpfSupported {
-				delete(node.Labels, ebpfSchedulingLabelKey)
-
-				return sdk.ToUnstructured(&node)
-			}
-
-			if node.Labels == nil {
-				node.Labels = make(map[string]string, 1)
-			}
-			node.Labels[ebpfSchedulingLabelKey] = ""
+			delete(node.Labels, deprecatedEbpfSchedulingLabelKey)
 
 			return sdk.ToUnstructured(&node)
-		},
-			"v1", "Node", "", nodeEligibility.Name)
+		}, "v1", "Node", "", labeledNode.Name)
 	}
 
 	return nil

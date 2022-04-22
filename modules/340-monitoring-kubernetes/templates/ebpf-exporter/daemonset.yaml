@@ -52,8 +52,6 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       hostPID: true
-      nodeSelector:
-        monitoring-kubernetes.deckhouse.io/ebpf-supported: ""
       serviceAccountName: ebpf-exporter
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
@@ -63,7 +61,7 @@ spec:
         name: ebpf-exporter
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         args:
-        - --config.file=/config/config.yaml
+        - --config.file=/config/programs.yaml
         - --web.listen-address=127.0.0.1:9435
         volumeMounts:
         - name: config

@@ -1,24 +1,48 @@
 ARG BASE_UBUNTU
 
+FROM $BASE_UBUNTU as builder
+
+WORKDIR /
+
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential fakeroot pbuilder aptitude git ca-certificates libelf1 software-properties-common
+
+RUN git clone --branch=v0.22.0 --depth=1 https://github.com/iovisor/bcc.git /root/bcc && \
+    git -C /root/bcc submodule update --init --recursive
+
+RUN cd /root/bcc && \
+    /usr/lib/pbuilder/pbuilder-satisfydepends && \
+    PARALLEL=$(nproc) ./scripts/build-deb.sh release
+
+RUN add-apt-repository ppa:longsleep/golang-backports && \
+    apt-get install -y --no-install-recommends golang-1.17-go patch
+ENV PATH="/usr/lib/go-1.17/bin:$PATH"
+
+WORKDIR /ebpf-exporter
+
+RUN wget -O - https://github.com/cloudflare/ebpf_exporter/archive/refs/tags/v1.2.5.tar.gz | tar -xzv --strip-components=1
+
+COPY patches/001-kernel-version-detection-and-individual-program-failure.patch /
+RUN patch -p1 < /001-kernel-version-detection-and-individual-program-failure.patch
+
+RUN mv /root/bcc/libbcc_*.deb /tmp/libbcc.deb
+RUN dpkg -i /tmp/libbcc.deb
+
+RUN GOPROXY="off" GOFLAGS="-mod=vendor" go build -o /ebpf_exporter -v -ldflags=" \
+    -X github.com/prometheus/common/version.Version=$(git describe) \
+    -X github.com/prometheus/common/version.Branch=$(git rev-parse --abbrev-ref HEAD) \
+    -X github.com/prometheus/common/version.Revision=$(git rev-parse --short HEAD) \
+    -X github.com/prometheus/common/version.BuildUser=docker@$(hostname) \
+    -X github.com/prometheus/common/version.BuildDate=$(date --iso-8601=seconds) \
+    " ./cmd/ebpf_exporter
+
+
 FROM $BASE_UBUNTU
 
-RUN apt-get update && apt-get -y install wget bison build-essential cmake flex git libedit-dev \
-  libllvm6.0 llvm-6.0-dev libclang-6.0-dev python zlib1g-dev libelf-dev libfl-dev python3-distutils
+RUN apt-get update && apt-get install -y --no-install-recommends libelf1 && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get clean autoclean && apt-get autoremove --yes && rm -rf /var/lib/{apt,dpkg,cache,log}/
+COPY --from=builder /tmp/libbcc.deb /tmp/libbcc.deb
+COPY --from=builder /ebpf_exporter /usr/local/bin/
 
-RUN mkdir bcc && cd bcc && \
-    wget -O - https://github.com/iovisor/bcc/releases/download/v0.23.0/bcc-src-with-submodule.tar.gz | tar -xz --strip-components=1 && \
-    mkdir build; cd build  && \
-    cmake ..  && \
-    make  && \
-    make install
+RUN dpkg -i /tmp/libbcc.deb
 
-RUN rm -rf bcc/
-RUN apt-get purge -y bison cmake flex libedit-dev libllvm6.0 llvm-6.0-dev libclang-6.0-dev zlib1g-dev libelf-dev python3-distutils libfl-dev
-
-RUN wget -O /usr/local/bin/ebpf_exporter https://github.com/cloudflare/ebpf_exporter/releases/download/v1.2.5/ebpf_exporter.x86_64 && \
-  chmod +x /usr/local/bin/ebpf_exporter
-RUN apt-get purge -y wget
-
-ENTRYPOINT ["/usr/local/bin/ebpf_exporter"]
+ENTRYPOINT [ "/usr/local/bin/ebpf_exporter" ]
