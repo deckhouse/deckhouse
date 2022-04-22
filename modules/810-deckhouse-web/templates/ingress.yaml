@@ -8,7 +8,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | nindent 2 }}
   annotations:
     web.deckhouse.io/export-name: "docs"
-    web.deckhouse.io/export-icon: "https://media.istockphoto.com/vectors/book-line-vector-icon-open-book-reader-linear-web-app-symbol-vector-id1138089745"
+    web.deckhouse.io/export-icon: "/public/img/docs.jpg"
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.deckhouseWeb.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.deckhouseWeb.auth.externalAuthentication.authSignInURL | quote }}
