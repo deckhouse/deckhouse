@@ -11,7 +11,7 @@ Create a DNS record to access a WEB interface of the documentation module:
     <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.
     </li>
     <li>If your cluster DNS name template is <strong>NOT</strong> a <a
-            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>), then add А or CNAME record containing the public IP, you've discovered previously, for the <code example-hosts>deckhouse.example.com</code> service DNS name:
+            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>), then add A or CNAME record containing the public IP, you've discovered previously, for the <code example-hosts>deckhouse.example.com</code> service DNS name:
       </li>
     </ul>
   </li>

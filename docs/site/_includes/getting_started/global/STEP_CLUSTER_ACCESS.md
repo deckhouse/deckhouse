@@ -58,7 +58,7 @@ Point a DNS domain you specified in the "[Cluster Installation](./step3.html)" s
     </li>
     <li>If your cluster DNS name template is <strong>NOT</strong> a <a
             href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>),
-      then add А or CNAME records containing the IP of load balancer (<code>BALANCER_IP</code>), you've discovered
+      then add A or CNAME records containing the IP of load balancer (<code>BALANCER_IP</code>), you've discovered
       previously, for the following Deckhouse service DNS names:
       <div class="highlight">
 <pre class="highlight">
