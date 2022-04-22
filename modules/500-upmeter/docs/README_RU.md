@@ -4,7 +4,7 @@ title: "Модуль upmeter"
 
 Модуль собирает статистику по типам доступности для компонентов кластера и Deckhouse. Позволяет оценивать степень выполнения SLA на эти компоненты, показывает данные о доступности в web-интерфейсе и предоставляет web-страницу статуса работы компонентов кластера.
 
-С помощью Custom Resource [UpmeterRemoteWrite](cr.html#upmeterremotewrite) модуль можно настроить на передачу метрик по протоколу [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/).
+С помощью Custom Resource [UpmeterRemoteWrite](cr.html#upmeterremotewrite) можно экспортировать метрики доступности по протоколу [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/).
 
 Состав модуля:
 - **agent** — программа, которая периодически запускает пробы и отправляет результаты в агрегатор. Работает на мастер-узлах.
