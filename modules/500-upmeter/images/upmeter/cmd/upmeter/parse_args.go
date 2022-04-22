@@ -51,10 +51,9 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 		Envar("UPMETER_ORIGINS").
 		IntVar(&config.OriginsCount)
 
-	// Disabled probes to omit from fetching
+	// Disabled probes to omit from showing by default. On the server side, it makes sense for
+	// UI only. The list of probes can be passed as a repeated command-line argument.
 	cmd.Flag("disable-probe", "Group or probe to omit by default.").
-		Envar("UPMETER_DISABLED_PROBES").
-		Default("").
 		StringsVar(&config.DisabledProbes)
 
 	// User-Agent
@@ -98,9 +97,9 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Default("upmeter.db").
 		StringVar(&config.DatabasePath)
 
+	// Probes or even groups to skip for probing. The list of probes can be passed as a repeated
+	// command-line argument.
 	cmd.Flag("disable-probe", "Group or probe to disable.").
-		Envar("UPMETER_DISABLED_PROBES").
-		Default("").
 		StringsVar(&config.DisabledProbes)
 
 	// User-Agent
