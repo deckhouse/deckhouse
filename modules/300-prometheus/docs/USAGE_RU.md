@@ -76,6 +76,7 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: my-basic-auth-secret
+    nginx.ingress.kubernetes.io/app-root: /graph
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
