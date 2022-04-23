@@ -38,6 +38,10 @@ import (
 //   web.deckhouse.io/export-host - custom host for service, if not set - will take it from ingress rule
 //   web.deckhouse.io/export-path - custom path for service; if not set - will take from ingress rule
 //   web.deckhouse.io/export-icon - set custom icon for service (will be placed in grafana table), best choice - service favicon
+//   icon could be one of the following:
+//     1. Absolute URL to an icon (https://mycompany.com/icon/xxx.png)
+//     2. Relative path to grafana container (/public/img/mylogo.png)
+//     3. Data URI base64 string
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/prometheus/web_interfaces",
