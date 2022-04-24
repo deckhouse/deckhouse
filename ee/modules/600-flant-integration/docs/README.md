@@ -2,171 +2,166 @@
 title: "The flant-integration module"
 ---
 
-Модуль выполняет функции по интеграции с различными сервисами Флант:
-* Устанавливает в кластер madison-proxy в качестве alertmanager для Prometheus. Регистрируется в [Madison](#оповещения-в-madison).
-* [Отправляет статистику](#статистика-о-состоянии-кластера), необходимую для расчета стоимости обслуживания кластера.
-* [Отправляет логи](#логи-оператора-deckhouse) оператора Deckhouse, необходимые для облегчения процесса отладки.
-* [Настраивает сбор метрик SLA](#метрики-sla).
+This module integrates various Flant services. It:
+* installs madison-proxy as an alertmanager for Prometheus in the cluster; registers with [Madison](#madison-notifications);
+* [sends stats](#statistics-on-cluster-status) required to calculate the cost of maintaining the cluster;
+* [sends logs](#logs-operator-deckhouse) of the Deckhouse operator (these facilitate the debugging process);
+* [configures SLA metrics collection](#sla-metrics).
 
-## Сбор данных
+## Data collection
 
-### Куда Deckhouse отправляет данные?
+### Where does Deckhouse send the data?
 
-Все данные отправляются через единую точку входа. Этой точкой является сервис `connect.deckhouse.io` (далее — *Connect* или *сервис Connect*).
+All data is sent through a single entry point. The `connect.deckhouse.io` service (hereinafter referred to as *Connect* or the *Connect service*) serves as a single entry point.
 
-Для авторизации при отправке данных каждый кластер Deckhouse отправляет ключ лицензии (license key) в качестве [Bearer Token](https://oauth.net/2/bearer-tokens/). Сервис Connect проверяет действительность ключа, и перенаправляет запрос в необходимый внутренний сервис Флант. 
+When sending data, each Deckhouse cluster submits a license key as a [Bearer Token](https://oauth.net/2/bearer-tokens/) for authorization. The Connect service checks whether the key is valid and redirects the request to the target internal Flant service. 
 
-Для отправки данных из кластера необходимо разрешить доступ до всех IP-адресов следующих DNS имен:
+You must allow access to all IP addresses mapped to the following DNS names to send data from the cluster:
 - `сonnect.deckhouse.io`;
 - `madison-direct.deckhouse.io`.
 
-### Какие данные отправляет Deckhouse?
+### What data does Deckhouse send?
 
-> [Как отключить отправку данных Deckhouse...](#как-отключить-отправку-данных-deckhouse)
+> [How do I disable sending data by Deckhouse?](#how-do-i-disable-sending-data-by-deckhouse)
 
-Данные, отправляемые из кластера:
-- Статистика о состоянии кластера: 
-  - версия Kubernetes;
-  - версия Deckhouse;
-  - канал обновлений; 
-  - количество узлов, и т.п.
-- Оповещения, отправляемые в систему работы с инцидентами Madison.
-- Метрики SLA по компонентам Deckhouse.
-- Логи оператора Deckhouse.
-- Способ подключения к master-узлам кластера.
+Deckhouse sends the following cluster data:
+- Statistics on cluster state:
+  - Kubernetes version;
+  - Deckhouse version;
+  - release channel;
+  - the number of nodes, etc.
+- alerts sent to the Madison incident processing system.
+- SLA metrics for Deckhouse components.
+- Deckhouse operator logs.
+- The way to connect to the cluster master nodes.
 
-#### Статистика о состоянии кластера
+#### Statistics on cluster status
 
-При помощи [shell-operator](https://github.com/flant/shell-operator) модуль flant-integration выполняет сбор метрик о состоянии объектов кластера. Затем с помощью [Grafana agent](https://github.com/grafana/agent) собранные метрики передаются по протоколу [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/).
+The flant-integration module collects metrics about the state of the cluster objects using [shell-operator](https://github.com/flant/shell-operator). Next, the [Grafana agent](https://github.com/grafana/agent) sends the collected metrics over the [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/) protocol.
 
-На основании собранных данных рассчитывается стоимость услуги [Managed Kubernetes](https://flant.ru/services/managed-kubernetes-as-a-service).
+The data collected provides the basis for calculating the [Managed Kubernetes](https://flant.ru/services/managed-kubernetes-as-a-service) service fee.
 
-Среднее количество sample’ов отсылаемых одним кластером: **35 строк каждые 30 секунд**.
+The average number of samples sent per cluster is **35 lines every 30 seconds**.
 
-Пример собранных данных:
+Here is an example of the data collected:
 ![](../../images/600-flant-integration/image1.png)
 ![](../../images/600-flant-integration/image2.png)
 
-Дополнительно к метрикам собираемым модулем flant-integration, с помощью модуля [upmeter](../500-upmeter/) производится сбор [метрик доступности](#метрики-sla) для анализа выполнения SLA.
+In addition to the metrics collected by the flant-integration module, the [upmeter](../500-upmeter/) module collects the [availability metrics](#metrics-sla) to analyze SLA performance.
 
-#### Оповещения в Madison
+#### Madison notifications
 
-Madison — сервис обработки оповещений в составе платформы мониторинга компании Флант. Madison может принимать уведомления в формате Prometheus. 
+Madison is a notification processing service integrated into Flant's monitoring platform. Madison can handle alerts in the Prometheus format.
 
-При создании нового кластера Deckhouse:
-1. При помощи ключа лицензии происходит автоматическая регистрация кластера в Madison.
-2. Madison выдаёт кластеру ключ, необходимый для отправки уведомлений.
-3. При помощи DNS-запроса для домена `madison-direct.flant.com` Deckhouse находит все доступные на текущий момент IP-адреса Madison.
-4. Для каждого адреса создается Pod `madison-proxy`, в который Prometheus отправляет уведомления.
+Once the new Deckhouse cluster is created:
+1. The cluster gets automatically registered in Madison using the license key.
+2. Madison supplies the cluster with the key needed for sending out alerts and notifications.
+3. Deckhouse finds all currently available Madison IP addresses using a DNS query for the `madison-direct.flant.com` domain.
+4. Deckhouse creates a `madison-proxy` Pod for each IP address. These are then used to receive Prometheus alerts.
 
-Схема отправки оповещений из кластера в Madison:
+Below is the scheme of sending alerts from the cluster to Madison:
 ![](../../images/600-flant-integration/image3.png)
 
-В среднем скорость отправки оповещений из кластера равняется **2kb/s**. Но здесь следует учитывать, что чем больше инцидентов произошло в кластере, тем больше данных будет отправлено.
+On average, the bandwidth consumed by alerts sent from the cluster is **2 kb/s**. However, keep in mind that the more incidents occur in a cluster, the more data is sent.
 
-#### Логи оператора Deckhouse
+#### Deckhouse operator logs
 
-Оператор Deckhouse является центральным компонентом всего кластера. Чтобы иметь данные необходимые для диагностики проблем в кластере, модуль flant-pricing настраивает модуль [log-shipper](../460-log-shipper/) для отправки логов в хранилище Loki компании Флант (не напрямую, а также через сервис Connect).
+The Deckhouse operator is the centerpiece of the entire cluster. To collect the data needed to diagnose problems in the cluster, the flant-pricing module configures the [log-shipper](../460-log-shipper/) module for sending logs to Flant's Loki repository (though not directly but via the Connect service).
 
-В логах содержится информация **только о компонентах Deckhouse, и нет секретных данных** касающихся кластера (примеры сообщений приведены на рисунке ниже). Собранная информация помогает понять, какие действия выполнял оператор Deckhouse, когда он их выполнял и с каким результатом.
+The logs contain information **only about Deckhouse components (no secret cluster data)**. Sample messages are shown in the screenshot below. The data collected helps determine what and when the Deckhouse operator performed specific actions and with what results.
 
-Пример логов оператора Deckhouse:
+Below is an example of Deckhouse operator logs:
 ![](../../images/600-flant-integration/image4.png)
 
-При смене релиза Deckhouse, количество отправляемых данных логов достигает в среднем **150 записей в минуту**. При обычной работе, количество отправляемых данных логов достигает в среднем **20 записей в минуту**.
+During Deckhouse release switching, an average of **150 log entries per minute** is sent. During normal operation, an average of **20 log entries per minute** is sent.
 
-#### Метрики SLA
+#### SLA Metrics
 
-Модуль flant-pricing настраивает модуль [upmeter](../500-upmeter/) для отправки метрик, которые позволяют Флант контролировать выполнение условий соглашения об уровне сервиса (SLA) на компоненты кластера и компоненты Deckhouse.
+The flant-pricing module configures the [upmeter](../500-upmeter/) module to send metrics that allow Flant to monitor service level agreement (SLA) compliance for cluster and Deckhouse components.
 
-### Как отключить отправку данных Deckhouse? 
+### How do I disable sending data by Deckhouse? 
 
-Чтобы отключить регистрацию в Madison и отправку данных, необходимо отключить модуль `flantIntergation`.
+Disable the `flantIntergation` module to deactivate registering in Madison and sending data.
 
-**Важно!** Необходимо **обязательно** отключить модуль `flant-integration` в следующих случаях:
-- В **тестовом кластере**, развернутом для экспериментов и т.п. Это правило не относится к кластерам разработки и тестовым кластерам, от которых нужно получать алерты.
-- В любых **кластерах снятых с поддержки**.
+**Caution!**  The `flant-integration` module **must** be disabled in the following cases:
+- In **test clusters** deployed for experimenting or similar purposes. This rule does not apply to the development and test clusters you need to get alerts from.
+- In all **clusters withdrawn from support**.
 
-## Как осуществляется расчет стоимости?
+## How is the cost calculated?
 
-Для каждой NodeGroup, за исключением выделенных мастеров, автоматически вычисляется тип биллинга. Существуют следующие
-типы биллинга узлов:
+The billing type is automatically detected for each NodeGroup (except for dedicated masters). The following types of node billing are available:
 
-* Ephemeral — если узел относится к NodeGroup с типом Cloud, то она автоматически относится к Ephemeral.
-* VM — данный тип проставляется автоматически, если для узла удалось определить тип виртуализации с помощью команды
-  [virt-what](https://people.redhat.com/~rjones/virt-what/).
-* Hard — все остальные узлы автоматически относятся к данному типу.
-* Special — данный тип необходимо вручную проставлять на NodeGroup, сюда относятся выделенные узлы, которые нельзя
-  "потерять".
+* Ephemeral — if a node is a member of a NodeGroup of the Cloud type, it automatically falls under the Ephemeral category.
+* VM — this type is set automatically if the virtualization type for the node was defined using the [virt-what](https://people.redhat.com/~rjones/virt-what/) command.
+* Hard — all other nodes automatically fall under this category.
+* Special — this type must be manually set for the NodeGroup (it includes dedicated nodes that cannot be "lost").
 
-В случае, если в кластере есть узлы с типом биллинга Special или автоматическое определение сработало некорректно,
-то вы всегда можете вручную установить корректный тип биллинга.
+If there are nodes in the cluster with the billing type Special or the automatic detection did not work correctly, you can always manually set the correct billing type.
 
-Для установки типа биллинга на узлах рекомендуется устанавливать аннотацию на NodeGroup, к которой относится узел:
+For setting the billing type on the nodes, we recommend adding the annotation to the NodeGroup to which the node belongs:
 
 ```shell
 kubectl patch ng worker --patch '{"spec":{"nodeTemplate":{"annotations":{"pricing.flant.com/nodeType":"Special"}}}}' --type=merge
 ```
 
-Если в рамках одной NodeGroup есть узлы с разными типами биллинга, то можно навесить аннотацию отдельно на каждый объект Node:
+If there are nodes with different billing types within the single NodeGroup, you can add an annotation separately to each Node object:
 
 ```shell
 kubectl annotate node test pricing.flant.com/nodeType=Special
 ```
 
-### Определение статусов terraform-стейтов
+### Determining the statuses of the terraform states
 
-Модуль опирается на метрики экспортируемые компонентом `terraform-exporter`. В них содержатся статусы соответствия
-ресурсов в облаке/кластере с заданными в конфигурациях `*-cluster-configuration`.
+The module relies on metrics exported by the `terraform-exporter` component. They contain the statuses for matching the resources in the cloud/cluster with those specified in the `*-cluster-configuration` configurations.
 
-#### Исходные метрики `terraform-exporter` и их статусы
+#### The original `terraform-exporter` metrics and their statuses
 
-- `candi_converge_cluster_status` соответствие конфигурации базовой инфраструктуры:
-  - `error` — ошибка обработки, подробности смотреть в логе экспортера.
-  - `destructively_changed` — `terraform plan` предполагает изменение объектов в облаке с удалением какого-либо из них.
-  - `changed` — `terraform plan` предполагает изменение объектов в облаке без их удаления.
+- `candi_converge_cluster_status` determines whether the underlying infrastructure matches the configuration:
+  - `error` — processing error; see exporter log for details;
+  - `destructively_changed` — `terraform plan` implies changing objects in the cloud and deleting some of them;
+  - `changed` — `terraform plan` implies changing objects in the cloud without deleting them;
+  - `ok`;
+- `candi_converge_node_status` determines whether the individual Nodes match the configuration:
+  - `error` — processing error; see exporter log for details;
+  - `destructively_changed` — `terraform plan` implies changing objects in the cloud and deleting some of them;
+  - `abandoned` — there is an excess Node in the cluster;
+  - `absent` —   - `absent` — в кластере не хватает Node;
+  - `changed` — `terraform plan` implies changing objects in the cloud without deleting them;
+  - `ok`;
+- `candi_converge_node_template_status` determines whether the `nodeTemplate` for the `master` matches the `terranode` NodeGroup:
+  - `absent` — there is no NodeGroup in the cluster;
+  - `changed` — the parameters of the `nodeTemplate` mismatch;
   - `ok`.
-- `candi_converge_node_status` — соответствие конфигурации отдельных Node:
-  - `error` — ошибка обработки, подробности смотреть в логе экспортера.
-  - `destructively_changed` — `terraform plan` предполагает изменение объектов в облаке с удалением какого-либо из них.
-  - `abandoned` — в кластере лишняя Node.
-  - `absent` — в кластере не хватает Node.
-  - `changed` — `terraform plan` предполагает изменение объектов в облаке без их удаления.
-  - `ok`.
-- `candi_converge_node_template_status` — соответствие `nodeTemplate` для `master` и `terranode` NodeGroup:
-  - `absent` — NodeGroup отсутствует в кластере.
-  - `changed` — параметры `nodeTemplate` расходятся.
-  - `ok`.
 
-#### Конечные метрики модуля `flant-integration` и механизм их получения
+#### The resulting metrics of the `flant-integration' module and the algorithm for generating them
 
-> Если модуль `terraform-manager` выключен в кластере — статус во всех метриках будет `none`. Данный статус следует трактовать как: стейта в кластере нет, но и не должно быть.
+> If the `terraform-manager` module is disabled in the cluster, the status in all metrics will be `none`. This status should be interpreted as: the state is not in the cluster and is not supposed to be.
 
-- Статус кластера (базовой инфраструктуры):
-  - Используется значение метрики `candi_converge_cluster_status`.
-  - В случае отсутствия метрики — `missing`.
-- Статус `master` NodeGroup:
-  - Берется "худший" статус из метрик `candi_converge_node_status` и `candi_converge_node_template_status` для `ng/master`.
-  - В случае отсутствия обеих метрик — `missing`.
-- Отдельный статус по каждой `terranode` NodeGroup:
-  - Берется "худший" статус из метрик `candi_converge_node_status` и `candi_converge_node_template_status` для `ng/<nodeGroups[].name>`.
-- Суммарный статус для всех `terranode` NodeGroup:
-  - Берется "худший" статус из статусов, полученных для всех `terranode` NodeGroup.
+- The status of the cluster (basic infrastructure):
+  - The value of the `candi_converge_cluster_status` metric is used;
+  - If there is no metric, `missing` is used;
+- The `master` status of the NodeGroup:
+  - The module uses the worst-case status provided by either of the `candi_converge_node_status` and `candi_converge_node_template_status` metrics for `ng/master`;
+  - If both metrics are missing, `missing` is used;
+- The individual status for each `terranode` NodeGroup:
+  - The module uses the worst-case status provided by either of the `candi_converge_node_status` and `candi_converge_node_template_status` metrics for `ng/<nodeGroups[].name>`;
+- The aggregate status for all the `terranode` NodeGroups:
+  - The module uses the worst-case status based on the statuses retrieved for all `terranode` NodeGroups.
 
-> Статус `missing` так же будет фигурировать в конечных метриках, если `terraform-exporter` начнёт отдавать в своих метриках не описанные в модуле статусы. Иными словами статус `missing` это еще и некоего рода `fallback`-статус для ситуации, когда что-то пошло не так с определением "худшего" статуса.
+> The `missing` status will be used in the final metrics if the `terraform-exporter` metrics return statuses that are not defined in the module. In other words, the `missing` status also serves as a `fallback` status for a situation when there is a problem with the definition of the worst-case status.
 
-#### Как определяется "худший" статус?
+#### How is the worst-case status determined??
 
-Мы считаем "худший" с точки зрения возможности автоматического применения существующих изменений.
+We evaluate the "worseness" of the status in terms of the ability to automatically apply existing changes.
 
-Выбирается он по приоритету из следующей таблицы известных статусов:
+It is selected according to priority from the following table of known statuses:
 
-| Статус                | Описание                                                                                  |
+| Status                | Description                                                                               |
 | --------------------- | ----------------------------------------------------------------------------------------- |
-| error                 | Ошибка обработки стейта `terraform-exporter`'ом, подробности в его логе.                  |
-| destructively_changed | `terraform plan` предполагает изменение объектов в облаке с удалением какого-либо из них. |
-| abandoned             | В кластере лишняя Node.                                                                   |
-| absent                | В кластере не хватает Node или NodeGroup.                                                 |
-| changed               | `terraform plan` предполагает изменение объектов в облаке без их удаления.                |
-| ok                    | Расхождений не обнаружено.                                                                |
+| error                 | Error processing state by the `terraform-exporter`; see its log for details.              |
+| destructively_changed | `terraform plan` implies changing objects in the cloud and deleting some of them.         |
+| abandoned             | There is an excess Node in the cluster.                                                   |
+| absent                | The cluster lacks a Node or NodeGroup.                                                    |
+| changed               | `terraform plan` implies changing objects in the cloud without deleting them.             |
+| ok                    | No discrepancies were found.                                                              |
 
