@@ -141,9 +141,12 @@
         "verify_hostname": false
       },
       "compression": "gzip",
-      "index": "logs-%F",
+      "bulk": {
+        "action": "create",
+        "index": "logs-%F"
+      },
       "pipeline": "testpipe",
-      "bulk_action": "create"
+      "mode": "data_stream"
     }
   }
 }
