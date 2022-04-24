@@ -30,8 +30,11 @@
         "enabled": false
       },
       "compression": "gzip",
-      "bulk_action": "index",
-      "index": "{{ kubernetes.namespace }}-%F",
+      "bulk": {
+        "action": "index",
+        "index": "{{ kubernetes.namespace }}-%F"
+      },
+      "mode": "bulk",
       "pipeline": "test-pipe"
     }
   }

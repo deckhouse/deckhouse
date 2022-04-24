@@ -190,15 +190,18 @@ type elasticsearchDestination struct {
 
 	Compression string `json:"compression,omitempty"`
 
-	Index string `json:"index,omitempty"`
+	Bulk ElasticsearchBulk `json:"bulk,omitempty"`
 
 	Pipeline string `json:"pipeline,omitempty"`
-
-	BulkAction string `json:"bulk_action,omitempty"`
 
 	Mode string `json:"mode,omitempty"`
 
 	DocType string `json:"doc_type,omitempty"`
+}
+
+type ElasticsearchBulk struct {
+	Action string `json:"action,omitempty"`
+	Index  string `json:"index,omitempty"`
 }
 
 type logstashDestination struct {
