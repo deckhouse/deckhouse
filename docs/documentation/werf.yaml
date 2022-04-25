@@ -115,6 +115,12 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
+    - name: "Extract the default Kubernetes version"
+      shell: |
+        echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/
     - shell: |
         mkdir -m 777 -p /app/_site/
         {{- if eq $.Env "development" }}

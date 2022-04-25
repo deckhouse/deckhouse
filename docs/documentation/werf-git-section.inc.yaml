@@ -207,3 +207,9 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /dhctl/pkg/config/base.go
+  to: /srv/jekyll-data/documentation/_data/dhctl-base.go
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
