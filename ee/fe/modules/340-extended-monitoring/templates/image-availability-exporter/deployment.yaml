@@ -52,7 +52,7 @@ spec:
         # The exporter checks for string equality.
         # https://github.com/deckhouse/k8s-image-availability-exporter/blob/b1589b40c18290b9d105f0ac39ddc3fc554884d9/pkg/registry_checker/checker.go#L212
         # Among known inexisting images, there is the one from Upmeter probe where we don't want a container to start.
-        {{- $ignoredImages := list "k8s.gcr.io/upmeter-nonexistent:3.1415" }}
+        {{- $ignoredImages := list ".*upmeter-nonexistent.*" }}
         {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
           {{- $ignoredImages = concat $ignoredImages .Values.extendedMonitoring.imageAvailability.ignoredImages }}
         {{- end }}
