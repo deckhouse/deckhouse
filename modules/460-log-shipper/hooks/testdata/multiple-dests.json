@@ -308,8 +308,11 @@
         "verify_hostname": false
       },
       "compression": "gzip",
-      "index": "logs-%F",
-      "bulk_action": "index"
+      "bulk": {
+        "action": "index",
+        "index": "logs-%F"
+      },
+      "mode": "bulk"
     },
     "d8_cluster_sink_test-logstash-dest": {
       "type": "socket",
