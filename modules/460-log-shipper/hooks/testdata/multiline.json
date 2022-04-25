@@ -105,9 +105,12 @@
         "verify_hostname": false
       },
       "compression": "gzip",
-      "index": "logs-%F",
+      "bulk": {
+        "action": "index",
+        "index": "logs-%F"
+      },
       "pipeline": "testpipe",
-      "bulk_action": "index"
+      "mode": "bulk"
     }
   }
 }

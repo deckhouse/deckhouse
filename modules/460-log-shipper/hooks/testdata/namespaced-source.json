@@ -227,8 +227,11 @@
         "timeout_secs": 1
       },
       "compression": "gzip",
-      "index": "logs-%F",
-      "bulk_action": "index"
+      "bulk": {
+        "action": "index",
+        "index": "logs-%F"
+      },
+      "mode": "bulk"
     }
   }
 }
