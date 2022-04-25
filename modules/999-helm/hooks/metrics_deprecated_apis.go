@@ -21,10 +21,12 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -89,7 +91,7 @@ func handleHelmSecrets(input *go_hook.HookInput) error {
 		input.LogEntry.Warn("kubernetes version not found")
 		return nil
 	}
-	k8sCurrentVersion := k8sCurrentVersionRaw.String()
+	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 	// TODO: get deprecations for this version
 	versionStorage, exists := storage.getByK8sVersion(k8sCurrentVersion)
 	if !exists {
@@ -189,9 +191,8 @@ type manifest struct {
 // example: "1.22": {"networking.k8s.io/v1beta1": ["Ingress"]}
 type unsupportedVersionsStore map[string]unsupportedApiVersions
 
-func (uvs unsupportedVersionsStore) getByK8sVersion(version string) (unsupportedApiVersions, bool) {
-	arr := strings.Split(version, ".")
-	majorMinor := arr[0] + "." + arr[1]
+func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (unsupportedApiVersions, bool) {
+	majorMinor := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
 	apis, ok := uvs[majorMinor]
 	return apis, ok
 }
