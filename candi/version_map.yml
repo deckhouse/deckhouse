@@ -271,10 +271,10 @@ k8s:
     ccm:
       openstack: v1.23.1
       yandex: v0.23.0
-      aws: v1.23.0-alpha.0
+      aws: v1.23.0
       vsphere: v1.23.0
-      azure: v1.23.9
-      gcp: 61e23272eaea54e5deec9af5e5ad6f6bc23663ae
+      azure: v1.23.10
+      gcp: 66064c62c6c23110c7a93faca5fba668018df732
     csi:
       openstack: v1.23.1
       provisioner: v3.1.0@sha256:122bfb8c1edabb3c0edd63f06523e6940d958d19b3957dc7b1d6f81e9f1f6119
