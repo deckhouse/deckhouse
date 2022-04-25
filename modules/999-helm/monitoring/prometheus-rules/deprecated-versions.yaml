@@ -2,8 +2,7 @@
   rules:
   - alert: HelmReleaseHasResourcesWithDeprecatedVersions
     expr: |
-      max by (helm_release_name) ((max without(instance, pod, hook, job) (resource_versions_compatibility) == 1)
-      * on (module) group_left()(count by(module)(max without(instance, pod, hook, job) (resource_versions_compatibility) == 1) < 50) ^ 0)
+      (count by (k8s_version) (resource_versions_compatibility == 1)) > 0
     labels:
       tier: cluster
       severity_level: "9"
@@ -11,41 +10,25 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.22+
-      description: |
-        To see all resources please use the  expr `max without(instance, pod, hook, job, tier, module) (resource_versions_compatibility) == 1` in prometheus.
-        For more details, please follow the link https://kubernetes.io/blog/2021/07/14/upcoming-changes-in-kubernetes-1-22/
+    summary: At least one HELM release contains resources with deprecated apiVersion for kubernetes {{ .k8s_version }}.
+    description: |
+      To see resources use the expr `max by (helm_release_namespace, helm_release_name, resource_name, namespace, api_version, kind, k8s_version) (resource_versions_compatibility) == 0`
 
-        Deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v1-22
+      You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ .k8s_version | reReplaceAll "." "-" }}.
 
-  - alert: ClusterHasProblemsWithHelmReleasesWithResourceVersions
+  - alert: HelmReleaseHasResourcesWithUnsupportedVersions
     expr: |
-      count by (alertname) (ALERTS{alertname=~"HelmReleaseHasResourcesWithDeprecatedVersions", alertstate="firing"})
+      (count by (k8s_version) (resource_versions_compatibility == 2)) > 0
     labels:
       tier: cluster
-      severity_level: "9"
+      severity_level: "5"
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_alert_type: "group"
-      plk_group_for__helm_release_resource_versions_deprecated: HelmReleaseHasResourcesWithDeprecatedVersions,prometheus=deckhouse
-      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.22+
-      description: |
-        Examine groupped alerts to find the cause.
+      plk_pending_until_firing_for: "1m"
+    summary:
+      At least one HELM release contains resources with unsupported apiVersion for kubernetes {{ .k8s_version }}.
+    description: |
+      To see resources use the expr `max by (helm_release_namespace, helm_release_name, resource_name, namespace, api_version, kind, k8s_version) (resource_versions_compatibility) == 0`
 
-  - alert: ClusterHasProblemsWithHelmReleasesWithResourceVersions
-    expr: |
-      (count by (module) (resource_versions_compatibility == 1)) >= 50
-    labels:
-      tier: cluster
-      severity_level: "9"
-    annotations:
-      plk_markup_format: markdown
-      plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
-      summary: One of HELM-Releases contains at least one resource with unsupported apiVersion in kubernetes 1.22+
-      description: |
-        To see all resources please use the  expr `max without(instance, pod, hook, job, tier, module) (resource_versions_compatibility) == 1` in prometheus.
-        For more details, please follow the link https://kubernetes.io/blog/2021/07/14/upcoming-changes-in-kubernetes-1-22/
-
-        Deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v1-22
+      You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ .k8s_version | reReplaceAll "." "-" }}.

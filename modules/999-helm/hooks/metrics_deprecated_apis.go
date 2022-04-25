@@ -66,7 +66,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
-			Crontab: "*/20 * * * *",
+			Crontab: "*/1 * * * *", // TODO: make */20
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -86,15 +86,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       "helm2_releases",
 			ApiVersion: "v1",
-			Kind:       "Secret",
+			Kind:       "ConfigMap",
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"owner": "helm",
+					"OWNER": "TILLER",
 				},
 			},
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			FilterFunc:                   filterHelmSecret,
+			FilterFunc:                   filterHelmCM,
 		},
 	},
 }, handleHelmSecrets)
@@ -112,7 +112,47 @@ func filterHelmSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, nil
 	}
 
-	return decodeRelease(string(releaseData))
+	release, err := decodeRelease(string(releaseData))
+	if err != nil {
+		return nil, err
+	}
+
+	var statusDeployed bool
+	if v, ok := sec.Labels["status"]; ok {
+		if strings.ToLower(v) == "deployed" {
+			statusDeployed = true
+		}
+	}
+
+	return &helmRelease{StatusDeployed: statusDeployed, Release: release}, nil
+}
+
+func filterHelmCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var cm v1.ConfigMap
+
+	err := sdk.FromUnstructured(obj, &cm)
+	if err != nil {
+		return nil, err
+	}
+
+	releaseData := cm.Data["release"]
+	if len(releaseData) == 0 {
+		return nil, nil
+	}
+
+	release, err := decodeRelease(releaseData)
+	if err != nil {
+		return nil, err
+	}
+
+	var statusDeployed bool
+	if v, ok := cm.Labels["STATUS"]; ok {
+		if strings.ToLower(v) == "deployed" {
+			statusDeployed = true
+		}
+	}
+
+	return &helmRelease{StatusDeployed: statusDeployed, Release: release}, nil
 }
 
 func handleHelmSecrets(input *go_hook.HookInput) error {
@@ -125,17 +165,36 @@ func handleHelmSecrets(input *go_hook.HookInput) error {
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
+	total, err := processHelmReleases(k8sCurrentVersion, input, input.Snapshots["helm3_releases"])
+	if err != nil {
+		return err
+	}
+	input.MetricsCollector.Set("helm_releases_count", float64(total), map[string]string{"helm_version": "3"})
+
+	total, err = processHelmReleases(k8sCurrentVersion, input, input.Snapshots["helm2_releases"])
+	if err != nil {
+		return err
+	}
+	input.MetricsCollector.Set("helm_releases_count", float64(total), map[string]string{"helm_version": "2"})
+
+	return nil
+}
+
+func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookInput, snapshots []go_hook.FilterResult) (uint32, error) {
+	var totalDeployedReleases uint32
 	// get helm manifests
-	snap := input.Snapshots["helm_release_secrets"]
-	input.MetricsCollector.Set("helm_releases_count", float64(len(snap)), map[string]string{"helm_version": "3"})
-	for _, sn := range snap {
+	for _, sn := range snapshots {
 		if sn == nil {
 			continue
 		}
 
-		helmRelease := sn.(*release)
+		helmRelease := sn.(*helmRelease)
 
-		arr := strings.Split(helmRelease.Manifest, "---")
+		if helmRelease.StatusDeployed {
+			totalDeployedReleases++
+		}
+
+		arr := strings.Split(helmRelease.Release.Manifest, "---")
 		if len(arr) < 1 {
 			continue
 		}
@@ -143,14 +202,15 @@ func handleHelmSecrets(input *go_hook.HookInput) error {
 			var resource manifest
 			err := yaml.Unmarshal([]byte(resourceRaw), &resource)
 			if err != nil {
-				return err
+				return 0, err
 			}
 
 			incompatibility := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
-					"helm_release_name":      helmRelease.Name,
-					"helm_release_namespace": helmRelease.Namespace,
+					"helm_release_name":      helmRelease.Release.Name,
+					"helm_release_namespace": helmRelease.Release.Namespace,
+					"k8s_version":            fmt.Sprintf("%d.%d", k8sCurrentVersion.Major(), k8sCurrentVersion.Minor()),
 
 					"resource_name": resource.Metadata.Name,
 					"kind":          resource.Kind,
@@ -160,7 +220,13 @@ func handleHelmSecrets(input *go_hook.HookInput) error {
 			}
 		}
 	}
-	return nil
+
+	return totalDeployedReleases, nil
+}
+
+type helmRelease struct {
+	StatusDeployed bool
+	Release        *release
 }
 
 type release struct {
