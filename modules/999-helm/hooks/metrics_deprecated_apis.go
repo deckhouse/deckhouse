@@ -30,6 +30,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/golang/protobuf/proto"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,7 +141,7 @@ func filterHelmCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 		return nil, nil
 	}
 
-	release, err := decodeRelease(releaseData)
+	release, err := helm2DecodeRelease(string(releaseData))
 	if err != nil {
 		return nil, err
 	}
@@ -344,3 +345,39 @@ func decodeRelease(data string) (*release, error) {
 	}
 	return &rls, nil
 }
+
+// https://github.com/helm/helm/blob/47f0b88409e71fd9ca272abc7cd762a56a1c613e/pkg/storage/driver/util.go#L57
+func helm2DecodeRelease(data string) (*release, error) {
+	// base64 decode string
+	b, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// For backwards compatibility with releases that were stored before
+	// compression was introduced we skip decompression if the
+	// gzip magic header is not found
+	if bytes.Equal(b[0:3], magicGzip) {
+		r, err := gzip.NewReader(bytes.NewReader(b))
+		if err != nil {
+			return nil, err
+		}
+		b2, err := ioutil.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
+		b = b2
+	}
+
+	var rls release
+	// unmarshal protobuf bytes
+	if err := proto.Unmarshal(b, &rls); err != nil {
+		return nil, err
+	}
+	return &rls, nil
+}
+
+// protobuf methods for helm2
+func (m *release) Reset()         { *m = release{} }
+func (m *release) String() string { return proto.CompactTextString(m) }
+func (*release) ProtoMessage()    {}
