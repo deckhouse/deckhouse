@@ -10,7 +10,7 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      summary: At least one HELM release contains resources with deprecated apiVersion for kubernetes {{ $labels.k8s_version }}.
+      summary: At least one HELM release contains resources with deprecated apiVersion, which will be removed in kubernetes {{ $labels.k8s_version }}.
       description: |
         To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1`
 

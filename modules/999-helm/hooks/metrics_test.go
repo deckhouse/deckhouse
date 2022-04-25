@@ -50,6 +50,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 
 					case "resource_versions_compatibility":
 						Expect(*metric.Value).To(Equal(float64(1))) // 1 means deprecated
+						Expect(metric.Labels["k8s_version"]).To(Equal("1.22"))
 
 						switch metric.Labels["api_version"] {
 						case "networking.k8s.io/v1beta1":
@@ -82,6 +83,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 
 					case "resource_versions_compatibility":
 						Expect(*metric.Value).To(Equal(float64(2))) // 2 means unsupported
+						Expect(metric.Labels["k8s_version"]).To(Equal("1.22"))
 
 						switch metric.Labels["api_version"] {
 						case "networking.k8s.io/v1beta1":
@@ -110,7 +112,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 			for _, metric := range metrics {
 				switch metric.Name {
 				case "resource_versions_compatibility":
-					Fail("must have no compatiblity metrics")
+					Fail("must have no compatibility metrics")
 				}
 			}
 		})

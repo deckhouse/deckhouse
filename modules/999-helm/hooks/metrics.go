@@ -28,11 +28,10 @@ import (
 	"log"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-
-	"github.com/Masterminds/semver/v3"
 	"github.com/golang/protobuf/proto"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
@@ -234,12 +233,12 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 				continue
 			}
 
-			incompatibility := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
+			incompatibility, k8sCompatibilityVersion := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      helmRelease.Release.Name,
 					"helm_release_namespace": helmRelease.Release.Namespace,
-					"k8s_version":            fmt.Sprintf("%d.%d", k8sCurrentVersion.Major(), k8sCurrentVersion.Minor()),
+					"k8s_version":            k8sCompatibilityVersion,
 
 					"resource_name":      resource.Metadata.Name,
 					"resource_namespace": resource.Metadata.Namespace,
@@ -284,17 +283,18 @@ func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (un
 	return apis, ok
 }
 
-// CalculateCompatibility check compatiblity. Returns
+// CalculateCompatibility check compatibility. Returns
 //   0 - if resource is compatible
 //   1 - if resource in deprecated and will be removed in the future
 //   2 - if resource is unsupported for current k8s version
-func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semver.Version, resourceAPIVersion, resourceKind string) uint {
+//  and k8s version in which deprecation would be
+func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semver.Version, resourceAPIVersion, resourceKind string) (uint, string) {
 	// check unsupported api for current k8s version
 	currentK8SAPIsStorage, exists := uvs.getByK8sVersion(currentVersion)
 	if exists {
 		isUnsupported := currentK8SAPIsStorage.isUnsupportedByAPIAndKind(resourceAPIVersion, resourceKind)
 		if isUnsupported {
-			return 2
+			return 2, fmt.Sprintf("%d.%d", currentVersion.Major(), currentVersion.Minor())
 		}
 	}
 
@@ -306,12 +306,12 @@ func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semve
 		if exists {
 			isDeprecated := storage.isUnsupportedByAPIAndKind(resourceAPIVersion, resourceKind)
 			if isDeprecated {
-				return 1
+				return 1, fmt.Sprintf("%d.%d", nextVersion.Major(), nextVersion.Minor())
 			}
 		}
 	}
 
-	return 0
+	return 0, ""
 }
 
 // APIVersion: [Kind]
