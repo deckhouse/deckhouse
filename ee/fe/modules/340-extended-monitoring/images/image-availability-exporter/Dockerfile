@@ -5,8 +5,7 @@ ARG BASE_GOLANG_17_ALPINE
 FROM $BASE_GOLANG_17_ALPINE as artifact
 WORKDIR /src
 ENV GOARCH=amd64
-RUN apk add --no-cache git && \
-    git clone --branch b1f42fdbcf983c4c45c033d2ac960b1da5ae6a5c --depth 1 https://github.com/deckhouse/k8s-image-availability-exporter.git /src && \
+RUN wget --no-check-certificate https://github.com/deckhouse/k8s-image-availability-exporter/tarball/40e30d26ac81a681dd6d5129217e14e2523fcdd3 -O - | tar -xz --strip-components=1 && \
     go get -d -v ./... && \
     CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o /k8s-image-availability-exporter main.go
 
