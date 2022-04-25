@@ -30,8 +30,15 @@ _on_containerd_config_changed() {
       {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
     {{- end }}
   {{- end }}
+
+systemd_cgroup=true
+# Overriding cgroup type from external config file
+if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
+  systemd_cgroup=false
+fi
+
 # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
-bb-sync-file /etc/containerd/config.toml - << "EOF"
+bb-sync-file /etc/containerd/config.toml - << EOF
 version = 2
 root = "/var/lib/containerd"
 state = "/run/containerd"
@@ -121,7 +128,7 @@ oom_score = 0
           privileged_without_host_devices = false
           base_runtime_spec = ""
           [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-            SystemdCgroup = true
+            SystemdCgroup = ${systemd_cgroup}
     [plugins."io.containerd.grpc.v1.cri".cni]
       bin_dir = "/opt/cni/bin"
       conf_dir = "/etc/cni/net.d"

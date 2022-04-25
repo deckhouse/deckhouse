@@ -14,5 +14,5 @@
 # limitations under the License.
 
 set -Eeo pipefail
-dpkg -i -E containerd.io_amd64.deb
+dpkg -i -E --force-confold containerd.io_amd64.deb
 apt-mark hold containerd.io

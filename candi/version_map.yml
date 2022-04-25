@@ -9,7 +9,7 @@ bashible: &bashible
           allowedPattern: "containerd.io=1.[234]"
       containerd:
         desiredVersion: "containerd.io=1.4.6-1"
-        allowedPattern: "containerd.io=1.[4]"
+        allowedPattern: "containerd.io=1.[456]"
       kernel:
         generic:
           desiredVersion: "4.18.0-20-generic"
@@ -22,8 +22,8 @@ bashible: &bashible
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
       containerd:
-        desiredVersion: "containerd.io=1.4.6-1"
-        allowedPattern: "containerd.io=1.[4]"
+        desiredVersion: "containerd.io=1.5.11-1"
+        allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
           desiredVersion: "5.3.0-51-generic"
@@ -45,8 +45,8 @@ bashible: &bashible
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
       containerd:
-        desiredVersion: "containerd.io=1.4.6-1"
-        allowedPattern: "containerd.io=1.[4]"
+        desiredVersion: "containerd.io=1.5.11-1"
+        allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
           desiredVersion: "5.4.0-54-generic"
@@ -83,8 +83,8 @@ bashible: &bashible
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
       containerd:
-        desiredVersion: "containerd.io=1.4.6-1"
-        allowedPattern: "containerd.io=1.[4]"
+        desiredVersion: "containerd.io=1.5.11-1"
+        allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
           desiredVersion: "4.19.0-18-amd64"
@@ -97,8 +97,8 @@ bashible: &bashible
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
       containerd:
-        desiredVersion: "containerd.io=1.4.6-1"
-        allowedPattern: "containerd.io=1.[4]"
+        desiredVersion: "containerd.io=1.5.11-1"
+        allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
           desiredVersion: "5.10.0-10-amd64"
@@ -112,8 +112,8 @@ bashible: &bashible
           desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
           allowedPattern: "containerd.io-1.[1234]"
       containerd:
-        desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
-        allowedPattern: "containerd.io-1.[1234]"
+        desiredVersion: "containerd.io-1.5.11-3.1.el7.x86_64"
+        allowedPattern: "containerd.io-1.[56]"
       kernel:
         generic:
           desiredVersion: "3.10.0-1127.el7.x86_64"
@@ -126,8 +126,8 @@ bashible: &bashible
           desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
           allowedPattern: "containerd.io-1.[1234]"
       containerd:
-        desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
-        allowedPattern: "containerd.io-1.[1234]"
+        desiredVersion: "containerd.io-1.5.11-3.1.el8.x86_64"
+        allowedPattern: "containerd.io-1.[56]"
       kernel:
         generic:
           desiredVersion: "4.18.0-305.3.1.el8.x86_64"
@@ -149,8 +149,8 @@ k8s:
               desiredVersion: "containerd.io=1.4.6-1"
               allowedPattern: "containerd.io=1.[234]"
           containerd:
-            desiredVersion: "containerd.io=1.4.6-1"
-            allowedPattern: "containerd.io=1.[4]"
+            desiredVersion: "containerd.io=1.5.11-1"
+            allowedPattern: "containerd.io=1.[56]"
           kernel:
             generic:
               desiredVersion: "5.3.0-51-generic"
