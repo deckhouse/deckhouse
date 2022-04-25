@@ -28,10 +28,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/Masterminds/semver/v3"
 	"github.com/golang/protobuf/proto"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
@@ -39,6 +40,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 )
+
+// this hook checks helm releases (v2 and v3) and find deprecated apis
+// hook returns only metrics:
+//   `resource_versions_compatibility` for apis:
+//      1 - is deprecated
+//      2 - in unsupported
+// Also hook returns count on deployed releases `helm_releases_count`
 
 var unsupportedVersionsYAML = `
 "1.22":
@@ -61,6 +69,20 @@ var unsupportedVersionsYAML = `
   "node.k8s.io/v1beta1": ["RuntimeClass"]
 `
 
+var (
+	// delta for k8s versions which are checked for deprecated apis
+	// with delta == 2 for k8s 1.21 will also check apis for 1.22 and 1.23
+	delta   = 2
+	storage unsupportedVersionsStore
+)
+
+func init() {
+	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &storage)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/helm/helm_releases",
 	OnStartup: &go_hook.OrderedConfig{
@@ -69,7 +91,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
-			Crontab: "*/1 * * * *", // TODO: make */20
+			Crontab: "*/20 * * * *",
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -264,6 +286,10 @@ func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (un
 	return apis, ok
 }
 
+// CalculateCompatibility check compatiblity. Returns
+//   0 - if resource is compatible
+//   1 - if resource in deprecated and will be removed in the future
+//   2 - if resource is unsupported for current k8s version
 func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semver.Version, resourceAPIVersion, resourceKind string) uint {
 	// check unsupported api for current k8s version
 	currentK8SAPIsStorage, exists := uvs.getByK8sVersion(currentVersion)
@@ -275,8 +301,7 @@ func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semve
 	}
 
 	// if api is supported - check deprecation in the next 2 minor k8s versions
-	depth := 2
-	for i := 0; i < depth; i++ {
+	for i := 0; i < delta; i++ {
 		newMinor := currentVersion.Minor() + uint64(i)
 		nextVersion := semver.MustParse(fmt.Sprintf("%d.%d.0", currentVersion.Major(), newMinor))
 		storage, exists := uvs.getByK8sVersion(nextVersion)
@@ -306,15 +331,6 @@ func (ua unsupportedAPIVersions) isUnsupportedByAPIAndKind(api, ikind string) bo
 	}
 
 	return false
-}
-
-var storage unsupportedVersionsStore
-
-func init() {
-	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &storage)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 // helm3 decoding
