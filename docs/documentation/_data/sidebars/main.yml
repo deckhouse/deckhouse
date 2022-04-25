@@ -823,6 +823,77 @@ entries:
               - title: FAQ
                 url: /modules/101-cert-manager/faq.html
     - title:
+        en: Storage
+        ru: Хранилище
+      folders:
+        - title: ceph-csi
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/099-ceph-csi/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/099-ceph-csi/usage.html
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/099-ceph-csi/configuration.html
+                - title: Custom Resources
+                  url: /modules/099-ceph-csi/cr.html
+        - title: linstor
+          versionType: experimental
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/031-linstor/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/031-linstor/usage.html
+            - title:
+                en: Advanced Usage
+                ru: Расширенная конфигурация
+              url: /modules/031-linstor/advanced_usage.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/031-linstor/configuration.html
+            - title: FAQ
+              url: /modules/031-linstor/faq.html
+        - title: local-path-provisioner
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/031-local-path-provisioner/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/031-local-path-provisioner/usage.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/031-local-path-provisioner/configuration.html
+                - title: Custom Resources
+                  url: /modules/031-local-path-provisioner/cr.html
+            - title: FAQ
+              url: /modules/031-local-path-provisioner/faq.html
+    - title:
         en: Little things
         ru: Приятные мелочи
       folders:
@@ -893,26 +964,6 @@ entries:
         ru: Поддержка Bare Metal
       versionType: ee
       folders:
-        - title: ceph-csi
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/099-ceph-csi/
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/099-ceph-csi/usage.html
-            - title:
-                ru: Справка
-                en: Reference
-              folders:
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/099-ceph-csi/configuration.html
-                - title: Custom Resources
-                  url: /modules/099-ceph-csi/cr.html
         - title: keepalived
           versionType: fe
           folders:
@@ -934,53 +985,6 @@ entries:
                   url: /modules/450-keepalived/configuration.html
                 - title: Custom Resources
                   url: /modules/450-keepalived/cr.html
-        - title: local-path-provisioner
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/031-local-path-provisioner/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/031-local-path-provisioner/usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/031-local-path-provisioner/configuration.html
-                - title: Custom Resources
-                  url: /modules/031-local-path-provisioner/cr.html
-            - title: FAQ
-              url: /modules/031-local-path-provisioner/faq.html
-        - title: linstor
-          versionType: experimental
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/031-linstor/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/031-linstor/usage.html
-            - title:
-                en: Advanced Usage
-                ru: Расширенная конфигурация
-              url: /modules/031-linstor/advanced_usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/031-linstor/configuration.html
-            - title: FAQ
-              url: /modules/031-linstor/faq.html
         - title: metallb
           versionType: ee
           folders:
