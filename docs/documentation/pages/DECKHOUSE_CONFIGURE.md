@@ -117,7 +117,8 @@ Depending on the [bundle used](./modules/020-deckhouse/configuration.html#parame
 </tbody>
 </table>
 
-## Advanced scheduling
+## Managing placement of Deckhouse components
+### Advanced scheduling
 
 If no `nodeSelector/tolerations` are explicitly specified in the module parameters, the following strategy is used for all modules:
 1. If the `nodeSelector` module parameter is not set, then Deckhouse will try to calculate the `nodeSelector` automatically. Deckhouse looks for nodes with the specific labels in the cluster  (see the list below). If there are any, then the corresponding `nodeSelectors` are automatically applied to module resources.
