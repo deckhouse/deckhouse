@@ -3,10 +3,10 @@ title: "The flant-integration module"
 ---
 
 This module integrates various Flant services. It:
-* installs madison-proxy as an alertmanager for Prometheus in the cluster; registers with [Madison](#madison-notifications);
-* [sends stats](#statistics-on-cluster-status) required to calculate the cost of maintaining the cluster;
-* [sends logs](#logs-operator-deckhouse) of the Deckhouse operator (these facilitate the debugging process);
-* [configures SLA metrics collection](#sla-metrics).
+* Installs madison-proxy as an alertmanager for Prometheus in the cluster; registers with [Madison](#madison-notifications).
+* [Sends stats](#statistics-on-cluster-status) required to calculate the cost of maintaining the cluster.
+* [Sends logs](#logs-operator-deckhouse) of the Deckhouse operator (these facilitate the debugging process).
+* [Configures SLA metrics collection](#sla-metrics).
 
 ## Data collection
 
@@ -22,7 +22,7 @@ You must allow access to all IP addresses mapped to the following DNS names to s
 
 ### What data does Deckhouse send?
 
-> [How do I disable sending data by Deckhouse?](#how-do-i-disable-sending-data-by-deckhouse)
+> Learn about [how to disable sending data by Deckhouse](#how-do-i-disable-sending-data-by-deckhouse)
 
 Deckhouse sends the following cluster data:
 - Statistics on cluster state:
@@ -75,7 +75,7 @@ Below is an example of Deckhouse operator logs:
 
 During Deckhouse release switching, an average of **150 log entries per minute** is sent. During normal operation, an average of **20 log entries per minute** is sent.
 
-#### SLA Metrics
+#### SLA metrics
 
 The flant-pricing module configures the [upmeter](../500-upmeter/) module to send metrics that allow Flant to monitor service level agreement (SLA) compliance for cluster and Deckhouse components.
 
@@ -85,7 +85,7 @@ Disable the `flantIntergation` module to deactivate registering in Madison and s
 
 **Caution!**  The `flant-integration` module **must** be disabled in the following cases:
 - In **test clusters** deployed for experimenting or similar purposes. This rule does not apply to the development and test clusters you need to get alerts from.
-- In all **clusters withdrawn from support**.
+- In all **clusters withdrawn from Flant support**.
 
 ## How is the cost calculated?
 
@@ -125,7 +125,7 @@ The module relies on metrics exported by the `terraform-exporter` component. The
   - `error` — processing error; see exporter log for details;
   - `destructively_changed` — `terraform plan` implies changing objects in the cloud and deleting some of them;
   - `abandoned` — there is an excess Node in the cluster;
-  - `absent` —   - `absent` — в кластере не хватает Node;
+  - `absent` — в кластере не хватает Node;
   - `changed` — `terraform plan` implies changing objects in the cloud without deleting them;
   - `ok`;
 - `candi_converge_node_template_status` determines whether the `nodeTemplate` for the `master` matches the `terranode` NodeGroup:
