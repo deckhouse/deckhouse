@@ -10,11 +10,11 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-    summary: At least one HELM release contains resources with deprecated apiVersion for kubernetes {{ .k8s_version }}.
-    description: |
-      To see resources use the expr `max by (helm_release_namespace, helm_release_name, resource_name, namespace, api_version, kind, k8s_version) (resource_versions_compatibility) == 0`
+      summary: At least one HELM release contains resources with deprecated apiVersion for kubernetes {{ .k8s_version }}.
+      description: |
+        To see resources use the expr `max by (helm_release_namespace, helm_release_name, resource_name, namespace, api_version, kind, k8s_version) (resource_versions_compatibility) == 0`
 
-      You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ .k8s_version | reReplaceAll "." "-" }}.
+        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ .k8s_version | reReplaceAll "." "-" }}.
 
   - alert: HelmReleaseHasResourcesWithUnsupportedVersions
     expr: |
@@ -26,9 +26,9 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "1m"
-    summary:
-      At least one HELM release contains resources with unsupported apiVersion for kubernetes {{ .k8s_version }}.
-    description: |
-      To see resources use the expr `max by (helm_release_namespace, helm_release_name, resource_name, namespace, api_version, kind, k8s_version) (resource_versions_compatibility) == 0`
+      summary:
+        At least one HELM release contains resources with unsupported apiVersion for kubernetes {{ .k8s_version }}.
+      description: |
+        To see resources use the expr `max by (helm_release_namespace, helm_release_name, resource_name, namespace, api_version, kind, k8s_version) (resource_versions_compatibility) == 0`
 
-      You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ .k8s_version | reReplaceAll "." "-" }}.
+        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ .k8s_version | reReplaceAll "." "-" }}.

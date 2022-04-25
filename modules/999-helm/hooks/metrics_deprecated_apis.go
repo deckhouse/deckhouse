@@ -245,9 +245,9 @@ type manifest struct {
 }
 
 // k8s version: APIVersion: Kind
-type unsupportedVersionsStore map[string]unsupportedApiVersions
+type unsupportedVersionsStore map[string]unsupportedAPIVersions
 
-func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (unsupportedApiVersions, bool) {
+func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (unsupportedAPIVersions, bool) {
 	majorMinor := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
 	apis, ok := uvs[majorMinor]
 	return apis, ok
@@ -281,9 +281,9 @@ func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semve
 }
 
 // APIVersion: [Kind]
-type unsupportedApiVersions map[string][]string
+type unsupportedAPIVersions map[string][]string
 
-func (ua unsupportedApiVersions) isUnsupportedByAPIAndKind(api, ikind string) bool {
+func (ua unsupportedAPIVersions) isUnsupportedByAPIAndKind(api, ikind string) bool {
 	kinds, ok := ua[api]
 	if !ok {
 		return false
