@@ -201,11 +201,11 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 		}
 		for _, resourceRaw := range arr[1:] {
 			var resource manifest
-			fmt.Println("RAW", resourceRaw)
 			err := yaml.Unmarshal([]byte(resourceRaw), &resource)
 			if err != nil {
 				fmt.Println("YAML UNMARSHAL FAILED", helmRelease.Release.Namespace, helmRelease.Release.Name)
-				fmt.Println("FFFOFO", helmRelease.Release.Manifest)
+				fmt.Println("errrrrr", err)
+				fmt.Println("FFFOFO", resourceRaw)
 				return 0, err
 			}
 
