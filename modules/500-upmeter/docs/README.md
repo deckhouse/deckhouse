@@ -10,16 +10,16 @@ Module composition:
 - **agent** — probes the availability of components and sends the results to the server; runs on the master nodes;
 - **upmeter** — aggregates the results and implements the API server to retrieve them;
 - **front**
-  - **status** — показывает текущий уровень доступности за последние 10 минут (по умолчанию требует авторизации, но её можно отключить).
-  - **webui** — дашборд со статистикой по пробам и группам доступности (требует авторизации).
-- **smoke-mini** — постоянное *smoke-тестирование* с помощью StatefulSet, похожего на настоящее приложение.
+  - **status** — shows the current availability level over the previous 10 minutes (this one requires authorization by default, but you can disable it);
+  - **webui** — is a dashboard with statistics on probes and availability groups (requires authorization);
+- **smoke-mini** — continuous *smoke testing* using a StatefulSet that looks like an actual application.
 
-Модуль отправляет около 100 показаний метрик каждые 5 минут. Это значение зависит от количества включенных модулей Deckhouse.
+The module sends about 100 metric readings every 5 minutes. This figure depends on the number of Deckhouse modules enabled.
 
 ## Interface
 
-Пример web-интерфейса:
+Example of a web interface:
 ![](../../images/500-upmeter/image1.png)
 
-Пример графиков по метрикам из upmeter в Grafana:
+Example of Grafana plots based on upmeter metrics:
 ![](../../images/500-upmeter/image2.png)
