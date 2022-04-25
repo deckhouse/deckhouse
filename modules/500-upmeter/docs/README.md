@@ -2,7 +2,7 @@
 title: "The upmeter module"
 ---
 
-Модуль собирает статистику по типам доступности для компонентов кластера и Deckhouse. Позволяет оценивать степень выполнения SLA на эти компоненты, показывает данные о доступности в web-интерфейсе и предоставляет web-страницу статуса работы компонентов кластера.
+The module collects statistics by availability type for cluster components and Deckhouse. It enables evaluating the degree of SLA compliance for these components, presents availability data via a web interface, and provides a web page with the operating statuses of the cluster components.
 
 С помощью Custom Resource [UpmeterRemoteWrite](cr.html#upmeterremotewrite) можно экспортировать метрики доступности по протоколу [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/).
 
