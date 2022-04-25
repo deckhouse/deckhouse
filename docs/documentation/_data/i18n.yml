@@ -47,6 +47,9 @@ common:
   default_value:
     en: default
     ru: по умолчанию
+  default_version:
+    en: default version
+    ru: версия по умолчанию
   deprecated:
     en: deprecated
     ru: устарел

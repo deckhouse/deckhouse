@@ -41,8 +41,9 @@ The following Kubernetes versions are currently supported:
   <td style="text-align: center">
     <img src="{{ iconStatus }}" alt="" />
   </td>
-  <td style="text-align: center">
-    <p>{{ site.data.supported_versions.k8s_statuses[k8sStatus][page.lang] }}</p>
+  <td style="text-align: left">
+    <p>{%- if k8sItem[0] == site.data.version_kubernetes.default %}<strong>{{ site.data.i18n.common['default_version'][page.lang] | capitalize }}.</strong> {% endif %}
+    {{ site.data.supported_versions.k8s_statuses[k8sStatus][page.lang] }}</p>
   </td>
 </tr>
 {%- endfor %}
