@@ -22,7 +22,7 @@ resource "openstack_networking_secgroup_rule_v2" "allow_icmp" {
   direction = "ingress"
   ethertype = "IPv4"
   protocol = "icmp"
-  remote_ip_prefix = var.remote_ip_prefix
+  remote_ip_prefix = "0.0.0.0/0"
   security_group_id = openstack_networking_secgroup_v2.kube[0].id
 }
 
@@ -33,7 +33,7 @@ resource "openstack_networking_secgroup_rule_v2" "allow_node_ports" {
   protocol = "tcp"
   port_range_min = 30000
   port_range_max = 32767
-  remote_ip_prefix = var.remote_ip_prefix
+  remote_ip_prefix = "0.0.0.0/0"
   security_group_id = openstack_networking_secgroup_v2.kube[0].id
   description = "Allow access to node ports"
 }
