@@ -31,7 +31,7 @@
       "gridPos": {
         "h": 8,
         "w": 4,
-        "x": 4,
+        "x": 3,
         "y": 0
       },
       "id": 7,
@@ -39,7 +39,7 @@
         "content": "<center>\n  <img src=/public/img/deckhouse-logo.svg/>\n  <h1><b>Deckhouse</b></h1>\n</center>\n",
         "mode": "html"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "transparent": true,
       "type": "text"
     },
@@ -67,7 +67,7 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 8,
+        "x": 7,
         "y": 0
       },
       "id": 20,
@@ -86,7 +86,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -124,7 +124,7 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 10,
+        "x": 9,
         "y": 0
       },
       "id": 19,
@@ -143,7 +143,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -163,7 +163,7 @@
       "gridPos": {
         "h": 8,
         "w": 4,
-        "x": 12,
+        "x": 11,
         "y": 0
       },
       "id": 3,
@@ -179,9 +179,224 @@
           "main"
         ]
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "tags": [],
       "title": "Main",
+      "transparent": true,
+      "type": "dashlist"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": false
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "icon"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 1
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "image"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "",
+                    "url": "https://${__data.fields.url}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 15,
+        "y": 0
+      },
+      "id": 22,
+      "options": {
+        "showHeader": false,
+        "sortBy": []
+      },
+      "pageSize": null,
+      "pluginVersion": "8.2.6",
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "$$hashKey": "object:28",
+          "alias": "",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "url",
+          "type": "hidden"
+        },
+        {
+          "$$hashKey": "object:29",
+          "alias": "",
+          "align": "right",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (icon, name, url) (deckhouse_web_interfaces{job=\"deckhouse\"})",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Deckhouse Web Interfaces",
+      "transform": "table",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "name",
+                "url",
+                "icon"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "icon": false,
+              "url": false
+            },
+            "indexByName": {},
+            "renameByName": {
+              "url": ""
+            }
+          }
+        }
+      ],
+      "transparent": true,
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 7,
+        "y": 3
+      },
+      "id": 13,
+      "links": [],
+      "options": {
+        "maxItems": 30,
+        "query": "Deckhouse",
+        "showHeadings": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showStarred": false,
+        "tags": []
+      },
+      "pluginVersion": "8.2.6",
+      "tags": [],
+      "title": "Deckhouse",
+      "transparent": true,
+      "type": "dashlist"
+    },
+    {
+      "datasource": null,
+      "gridPos": {
+        "h": 11,
+        "w": 4,
+        "x": 7,
+        "y": 7
+      },
+      "id": 4,
+      "links": [],
+      "options": {
+        "maxItems": 30,
+        "query": "",
+        "showHeadings": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showStarred": false,
+        "tags": [
+          "ingress"
+        ]
+      },
+      "pluginVersion": "8.2.6",
+      "tags": [],
+      "title": "Ingress Nginx",
       "transparent": true,
       "type": "dashlist"
     },
@@ -215,16 +430,16 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 17,
+        "h": 10,
         "w": 4,
-        "x": 16,
-        "y": 0
+        "x": 15,
+        "y": 7
       },
       "id": 12,
       "options": {
         "showHeader": false
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -268,58 +483,6 @@
     },
     {
       "datasource": null,
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 3
-      },
-      "id": 13,
-      "links": [],
-      "options": {
-        "maxItems": 30,
-        "query": "Deckhouse",
-        "showHeadings": false,
-        "showRecentlyViewed": false,
-        "showSearch": true,
-        "showStarred": false,
-        "tags": []
-      },
-      "pluginVersion": "8.2.3",
-      "tags": [],
-      "title": "Deckhouse",
-      "transparent": true,
-      "type": "dashlist"
-    },
-    {
-      "datasource": null,
-      "gridPos": {
-        "h": 11,
-        "w": 4,
-        "x": 8,
-        "y": 7
-      },
-      "id": 4,
-      "links": [],
-      "options": {
-        "maxItems": 30,
-        "query": "",
-        "showHeadings": false,
-        "showRecentlyViewed": false,
-        "showSearch": true,
-        "showStarred": false,
-        "tags": [
-          "ingress"
-        ]
-      },
-      "pluginVersion": "8.2.3",
-      "tags": [],
-      "title": "Ingress Nginx",
-      "transparent": true,
-      "type": "dashlist"
-    },
-    {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -343,7 +506,7 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 4,
+        "x": 3,
         "y": 8
       },
       "id": 9,
@@ -362,7 +525,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -403,7 +566,7 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 6,
+        "x": 5,
         "y": 8
       },
       "id": 15,
@@ -422,7 +585,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -443,7 +606,7 @@
       "gridPos": {
         "h": 10,
         "w": 4,
-        "x": 12,
+        "x": 11,
         "y": 8
       },
       "id": 5,
@@ -459,7 +622,7 @@
           "nodes"
         ]
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "tags": [],
       "title": "Nodes",
       "transparent": true,
@@ -490,7 +653,7 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 4,
+        "x": 3,
         "y": 11
       },
       "id": 14,
@@ -508,7 +671,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -549,7 +712,7 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 6,
+        "x": 5,
         "y": 11
       },
       "id": 10,
@@ -567,7 +730,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -609,7 +772,7 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 4,
+        "x": 3,
         "y": 14
       },
       "id": 17,
@@ -628,7 +791,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,
@@ -669,7 +832,7 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 6,
+        "x": 5,
         "y": 14
       },
       "id": 16,
@@ -688,7 +851,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.2.6",
       "targets": [
         {
           "exemplar": true,

@@ -133,7 +133,7 @@ RUN echo "Fetch flant-statusmap-panel v${STATUSMAP_VERSION}" && \
 
 # Home Dashboard
 COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
-COPY ./web/deckhouse-platform.svg /usr/share/grafana/public/img/deckhouse-logo.svg
+COPY ./web/ /usr/share/grafana/public/img/
 
 EXPOSE 3000
 # Patched entrypoint script.
