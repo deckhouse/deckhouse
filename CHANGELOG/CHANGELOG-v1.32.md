@@ -54,6 +54,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix startup config in Kubernetes API proxy configuration script. [#1426](https://github.com/deckhouse/deckhouse/pull/1426)
  - **[candi]** Added imagePullPolicy: IfNotPresent to kubernetes-api-proxy static pod. Fixed kubernetes-api-proxy run in docker envs. [#1297](https://github.com/deckhouse/deckhouse/pull/1297)
  - **[chrony]** Remove chronyd stale pid file on start [#1375](https://github.com/deckhouse/deckhouse/pull/1375)
  - **[cloud-provider-aws]** The necessary IAM policies for creating a peering connection have been added to the documentation. [#504](https://github.com/deckhouse/deckhouse/pull/504)
@@ -66,14 +67,18 @@
  - **[linstor]** automatically recover evicted nodes in LINSTOR [#1397](https://github.com/deckhouse/deckhouse/pull/1397)
  - **[linstor]** LINSTOR module now supports high-availability [#1147](https://github.com/deckhouse/deckhouse/pull/1147)
     Multimaster clusters will automatically turn LINSTOR into HA-mode
+ - **[log-shipper]** Migrate deprecated Elasticsearch fields. [#1454](https://github.com/deckhouse/deckhouse/pull/1454)
+ - **[namespace-configurator]** Exclude upmeter probe namespaces from namespace-configurator snapshots. [#1439](https://github.com/deckhouse/deckhouse/pull/1439)
  - **[node-local-dns]** Reworked health checking logic [#388](https://github.com/deckhouse/deckhouse/pull/388)
     Now Pods shouldn't crash unexpectedly now due to poor implementation of locking/probing.
+ - **[openvpn]** Fixed "loadBalancer" OpenAPI spec. [#1417](https://github.com/deckhouse/deckhouse/pull/1417)
  - **[openvpn]** Fixed statefulSet apiVersion in a migration hook. [#1354](https://github.com/deckhouse/deckhouse/pull/1354)
  - **[openvpn]** Set default value for loadbalancer object in the OpenAPI schema. [#1353](https://github.com/deckhouse/deckhouse/pull/1353)
  - **[openvpn]** Add forgotten param effectiveStorageClass to openapi spec [#1344](https://github.com/deckhouse/deckhouse/pull/1344)
  - **[openvpn]** Fixed OpenAPI [#1307](https://github.com/deckhouse/deckhouse/pull/1307)
  - **[openvpn]** Web interface changed to https://github.com/flant/ovpn-admin. Persistent storage has been replaced with Kubernetes secrets. Added HostPort inlet. [#522](https://github.com/deckhouse/deckhouse/pull/522)
     OpenVPN will be migrated from using PVC to store certificates to Kubernetes secrets. PVC will still remain in the cluster as a backup. If you don't need it, you should manually delete it from the cluster.
+ - **[prometheus]** Fixed PersistentVolumeClaim size calculation for local storage. [#1437](https://github.com/deckhouse/deckhouse/pull/1437)
  - **[prometheus]** Fix null pointer dereference in prometheus_disk.go hook [#1345](https://github.com/deckhouse/deckhouse/pull/1345)
  - **[prometheus]** Set Grafana sample limit to 5000 [#1215](https://github.com/deckhouse/deckhouse/pull/1215)
  - **[upmeter]** Upmeter no longer exposes DNS queries to the Internet [#1256](https://github.com/deckhouse/deckhouse/pull/1256)
