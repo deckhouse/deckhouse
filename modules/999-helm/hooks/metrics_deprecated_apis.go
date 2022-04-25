@@ -143,7 +143,7 @@ func filterHelmCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 		return nil, nil
 	}
 
-	release, err := helm2DecodeRelease(string(releaseData))
+	release, err := helm2DecodeRelease(releaseData)
 	if err != nil {
 		return nil, err
 	}
@@ -221,45 +221,14 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 					"helm_release_namespace": helmRelease.Release.Namespace,
 					"k8s_version":            fmt.Sprintf("%d.%d", k8sCurrentVersion.Major(), k8sCurrentVersion.Minor()),
 
-					"resource_name": resource.Metadata.Name,
-					"kind":          resource.Kind,
-					"api_version":   resource.APIVersion,
-					"namespace":     resource.Metadata.Namespace,
+					"resource_name":      resource.Metadata.Name,
+					"resource_namespace": resource.Metadata.Namespace,
+					"kind":               resource.Kind,
+					"api_version":        resource.APIVersion,
 				}, metrics.WithGroup("helm_deprecated_apiversions"))
 			}
 
 		}
-
-		// fmt.Println("KKKK", helmRelease.Release.Manifest)
-		// arr := strings.Split(helmRelease.Release.Manifest, "---\n")
-		// fmt.Println(arr)
-		// if len(arr) < 1 {
-		// 	continue
-		// }
-		// for _, resourceRaw := range arr[1:] {
-		// 	var resource manifest
-		// 	err := yaml.Unmarshal([]byte(resourceRaw), &resource)
-		// 	if err != nil {
-		// 		fmt.Println("YAML UNMARSHAL FAILED", helmRelease.Release.Namespace, helmRelease.Release.Name)
-		// 		fmt.Println("errrrrr", err)
-		// 		fmt.Println("FFFOFO", resourceRaw)
-		// 		return 0, err
-		// 	}
-		//
-		// 	incompatibility := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
-		// 	if incompatibility > 0 {
-		// 		input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
-		// 			"helm_release_name":      helmRelease.Release.Name,
-		// 			"helm_release_namespace": helmRelease.Release.Namespace,
-		// 			"k8s_version":            fmt.Sprintf("%d.%d", k8sCurrentVersion.Major(), k8sCurrentVersion.Minor()),
-		//
-		// 			"resource_name": resource.Metadata.Name,
-		// 			"kind":          resource.Kind,
-		// 			"api_version":   resource.APIVersion,
-		// 			"namespace":     resource.Metadata.Namespace,
-		// 		}, metrics.WithGroup("helm_deprecated_apiversions"))
-		// 	}
-		// }
 	}
 
 	return totalDeployedReleases, nil
@@ -270,10 +239,11 @@ type helmRelease struct {
 	Release        *release
 }
 
+// protobuf for handling helm2 releases - https://github.com/helm/helm/blob/47f0b88409e71fd9ca272abc7cd762a56a1c613e/pkg/proto/hapi/release/release.pb.go#L24
 type release struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Manifest  string `json:"manifest,omitempty"`
+	Name      string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name,proto3"`
+	Namespace string `json:"namespace,omitempty" protobuf:"bytes,8,opt,name=namespace,proto3"`
+	Manifest  string `json:"manifest,omitempty" protobuf:"bytes,5,opt,name=manifest,proto3" `
 }
 
 type manifest struct {
