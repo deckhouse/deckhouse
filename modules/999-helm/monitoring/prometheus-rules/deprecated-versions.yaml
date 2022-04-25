@@ -14,7 +14,7 @@
       description: |
         To see resources use the expr `max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1`
 
-        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "." "-" }}.
+        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\." "-" }}.
 
   - alert: HelmReleaseHasResourcesWithUnsupportedVersions
     expr: |
@@ -31,4 +31,4 @@
       description: |
         To see resources use the expr `max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2`
 
-        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "." "-" }}.
+        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\." "-" }}.

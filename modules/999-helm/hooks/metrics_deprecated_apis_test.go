@@ -30,7 +30,7 @@ var _ = FDescribe("helm :: hooks :: deprecated_versions ::", func() {
 
 	Context("test", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(pma)
+			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/1 * * * *"))
 			f.RunGoHook()
 
@@ -39,6 +39,48 @@ var _ = FDescribe("helm :: hooks :: deprecated_versions ::", func() {
 			fmt.Println("OK")
 			fmt.Println(f.MetricsCollector.CollectedMetrics())
 			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	FContext("helm2 release with deprecated versions", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deprecatedSecret)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/1 * * * *"))
+			f.RunGoHook()
+
+		})
+		It("must have metric with deprecated resource", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			metrics := f.MetricsCollector.CollectedMetrics()
+			Expect(metrics).To(HaveLen(5))
+			for _, metric := range metrics {
+				if metric.Name == "resource_versions_compatibility" {
+					Expect(metric.Labels["api_version"]).To(Equal("networking.k8s.io/v1beta1"))
+					Expect(metric.Labels["kind"]).To(Equal("Ingress"))
+					Expect(*metric.Value).To(Equal(float64(2)))
+				}
+			}
+		})
+	})
+
+	Context("helm2 release with deprecated versions", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(helm2ReleaseWithDeprecated)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/1 * * * *"))
+			f.RunGoHook()
+
+		})
+		It("must have metric with deprecated resource", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			metrics := f.MetricsCollector.CollectedMetrics()
+			Expect(metrics).To(HaveLen(4))
+			for _, metric := range metrics {
+				if metric.Name == "resource_versions_compatibility" {
+					Expect(metric.Labels["api_version"]).To(Equal("networking.k8s.io/v1beta1"))
+					Expect(metric.Labels["kind"]).To(Equal("Ingress"))
+					Expect(*metric.Value).To(Equal(float64(2)))
+				}
+			}
 		})
 	})
 })
@@ -82,7 +124,7 @@ metadata:
   uid: 5dcad0b8-6945-44f9-bf85-ed3ccc43392f
 `
 
-var pma = `
+var helm2ReleaseWithDeprecated = `
 apiVersion: v1
 data:
   release: H4sIAAAAAAAC/+xWvW4kxRbW2tp7V7U32OuAYEkOM8GC5emZcWR1Zmx+LPbH2lkWIYRQTfXp7vJUVzV1To09i+AlyEgIQLwHEQESITEIiSfgAVBV94zX6xXwAEzQ01V96jt/3/m6xfZc+p19sXXrxs7/bn3z61df/ufOt398/eP23Sur3TsnllgaA8o1rUHGuz/8X+yL7aX0g5uTbJpNdl89hHfRNKBq6RlK5+G9MEdvkZEeby2nZ9vTbLLz/ZZ4hbFpjWSksbaVR6JsJRuz892WbPVT9KSdzcEinzu/0LbKFgeUaTdeTufIcioW2hY5nHRHRYMsC8kyFwBWNpjDs/436tEFgLTWsWTtLEU7gMUmtIi8DkMZSZTDYOFsNRDUoorWPhhMx0ZQO+Ic8ELGImTKNQmsZm47WIBWck3rxSgtcxgzEvd7AHOpFmiLfLMBQOiXWuHDFD+q2l1/duo853AwEWLw223xy+0hHGMpg2FYShOQUsWX0mdiCE9qTaAJJHx4+OD+qHS+kcxYQKkNRoNjVEZ6jPZazg0SsIM5QiuJsABt2cHKBQ+bVmVCeGyNVvLIBcs5TIXQjawwVQhbR5qdX+VgK20vBADLKgfiiC4A2mDMqTNarXI4KR86PvVIaLkHOQ3GzFB5ZMrho49FbOSjJXqvC8xhMBBlMObapuhLc6hUikkADGHWotKlRoLzGrlGD3JdQpCdIVDtgiliwsqjZCwE9Hc5sA+YgJ7UmAgFrgSu8RoIOwiEWbI9KcE6BkIGaYseK3Ygou2B7IA0QYUWffQIgbStEvA6t02xN0yOObaumKEKXvPqyFnGC87hs8+T15Le8S60OexPJpNYjZebKdnKuTaadUfjIQAU3rXr+xEc3r+f7j3K4pE1q8fO8dvaIK2IsXmuJj7YQ3robDR4cft9Qp/DtA8l1Sp64FWLORyZQIz+5DRyYcPkfu6iGdrIlCKHUhrCF0a2yyR6+su5XVPvuiEbGkmVShqDHghIo9wP6nquk3KN1tNtnJLmylRHZsaMTHebqjcCSrztRvcKwogN9SW+9DZcK8PLnAmP5IJXSJvmfYAQKEhjVuBRuaZBWySusQNKVF9B0QvB5nQiITswKJcIHNVARjVQzpLSLnRhqdpFPkfdiDQMhD7rpEMacqBtpDEhxVCt6v49U+w2OAtol9o726BlgnPNNRjNbHpGrEPZAwqqju4faKtjV7I4LSsXoHBwLu2VTJ47FmyXLXcz4oxx59pWCd1oG01kcRYoPW+iA4sKiaRf7aX8PTYuZY+ggjcrmHuZalMyerh3Wep7WQ/a6MseqTYkMjf9usEmydt0/+CB7lP8NCD90xPCugJnaFCx86m7gp2JWtAxPFJLlqW2mlfp8e7vW+J2VqNpdGWdx52ft4ZwGmXc2yTX3XZUOQvzoE0R9aSVaiGrKNf9W4BCG+eNgGo0Birj5tBIVrW21R54NJL1EhPBn9uXthBDsFil8OD11mOpL7Do+vzaGxlEmQBn08kYErToU18ykR3PPpmx8yiGcOSaxll4ejSDQnsSWaV5nK5d+CKbP/PjdF1v1NU4XtZLWtrxJVB8d4Y2vcdI7GZ03ordbC4XYjfjphW7X4ghPJU+chxOjt8ikbXenaFikekC5biz8+5MZEtSrsCxGNwU27HeP22J0WgkhjBLvMjjy3H88k8V8e+Hyt9/qBzcePO/vTL9GQAA///hRQQxZgoAAA==
