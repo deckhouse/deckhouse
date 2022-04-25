@@ -104,9 +104,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"owner": "helm",
 				},
 			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			FilterFunc:                   filterHelmSecret,
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          filterHelmSecret,
 		},
 		{
 			Name:       "helm2_releases",
@@ -117,9 +116,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"OWNER": "TILLER",
 				},
 			},
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			FilterFunc:                   filterHelmCM,
+			ExecuteHookOnEvents: pointer.BoolPtr(false),
+			FilterFunc:          filterHelmCM,
 		},
 	},
 }, handleHelmReleases)
