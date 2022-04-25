@@ -21,7 +21,9 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -195,18 +197,21 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 			totalDeployedReleases++
 		}
 
-		arr := strings.Split(helmRelease.Release.Manifest, "---\n")
-		if len(arr) < 1 {
-			continue
-		}
-		for _, resourceRaw := range arr[1:] {
-			var resource manifest
-			err := yaml.Unmarshal([]byte(resourceRaw), &resource)
+		d := yaml.NewDecoder(strings.NewReader(helmRelease.Release.Manifest))
+
+		for {
+			resource := new(manifest)
+			err := d.Decode(&resource)
 			if err != nil {
-				fmt.Println("YAML UNMARSHAL FAILED", helmRelease.Release.Namespace, helmRelease.Release.Name)
-				fmt.Println("errrrrr", err)
-				fmt.Println("FFFOFO", resourceRaw)
+				if errors.Is(err, io.EOF) {
+					break
+				}
+
 				return 0, err
+			}
+
+			if resource == nil {
+				continue
 			}
 
 			incompatibility := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
@@ -222,7 +227,39 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 					"namespace":     resource.Metadata.Namespace,
 				}, metrics.WithGroup("helm_deprecated_apiversions"))
 			}
+
 		}
+
+		// fmt.Println("KKKK", helmRelease.Release.Manifest)
+		// arr := strings.Split(helmRelease.Release.Manifest, "---\n")
+		// fmt.Println(arr)
+		// if len(arr) < 1 {
+		// 	continue
+		// }
+		// for _, resourceRaw := range arr[1:] {
+		// 	var resource manifest
+		// 	err := yaml.Unmarshal([]byte(resourceRaw), &resource)
+		// 	if err != nil {
+		// 		fmt.Println("YAML UNMARSHAL FAILED", helmRelease.Release.Namespace, helmRelease.Release.Name)
+		// 		fmt.Println("errrrrr", err)
+		// 		fmt.Println("FFFOFO", resourceRaw)
+		// 		return 0, err
+		// 	}
+		//
+		// 	incompatibility := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
+		// 	if incompatibility > 0 {
+		// 		input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
+		// 			"helm_release_name":      helmRelease.Release.Name,
+		// 			"helm_release_namespace": helmRelease.Release.Namespace,
+		// 			"k8s_version":            fmt.Sprintf("%d.%d", k8sCurrentVersion.Major(), k8sCurrentVersion.Minor()),
+		//
+		// 			"resource_name": resource.Metadata.Name,
+		// 			"kind":          resource.Kind,
+		// 			"api_version":   resource.APIVersion,
+		// 			"namespace":     resource.Metadata.Namespace,
+		// 		}, metrics.WithGroup("helm_deprecated_apiversions"))
+		// 	}
+		// }
 	}
 
 	return totalDeployedReleases, nil
