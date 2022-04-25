@@ -37,6 +37,27 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+var unsupportedVersionsYAML = `
+"1.22":
+  "admissionregistration.k8s.io/v1beta1": ["ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"]
+  "apiextensions.k8s.io/v1beta1": ["CustomResourceDefinition"]
+  "apiregistration.k8s.io/v1beta1": ["APIService"]
+  "authentication.k8s.io/v1beta1": ["TokenReview"]
+  "authorization.k8s.io/v1beta1": ["SubjectAccessReview", "LocalSubjectAccessReview", "SelfSubjectAccessReview"]
+  "certificates.k8s.io/v1beta1": ["CertificateSigningRequest"]
+  "coordination.k8s.io/v1beta1": ["Lease"]
+  "networking.k8s.io/v1beta1": ["Ingress"]
+  "extensions/v1beta1": ["Ingress"]
+
+"1.25":
+  "batch/v1beta1": ["CronJob"]
+  "discovery.k8s.io/v1beta1": ["EndpointSlice"]
+  "events.k8s.io/v1beta1": ["Event"]
+  "autoscaling/v2beta1": ["HorizontalPodAutoscaler"]
+  "policy/v1beta1": ["PodDisruptionBudget", "PodSecurityPolicy"]
+  "node.k8s.io/v1beta1": ["RuntimeClass"]
+`
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/helm/helm_releases",
 	OnStartup: &go_hook.OrderedConfig{
@@ -50,7 +71,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "helm_release_secrets",
+			Name:       "helm3_releases",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			LabelSelector: &metav1.LabelSelector{
@@ -60,7 +81,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			WaitForSynchronization:       pointer.BoolPtr(false),
+			FilterFunc:                   filterHelmSecret,
+		},
+		{
+			Name:       "helm2_releases",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"owner": "helm",
+				},
+			},
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			FilterFunc:                   filterHelmSecret,
 		},
 	},
@@ -85,22 +118,16 @@ func filterHelmSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 func handleHelmSecrets(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
-	// TODO: get k8s version
 	k8sCurrentVersionRaw, ok := input.Values.GetOk("global.discovery.kubernetesVersion")
 	if !ok {
 		input.LogEntry.Warn("kubernetes version not found")
 		return nil
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
-	// TODO: get deprecations for this version
-	versionStorage, exists := storage.getByK8sVersion(k8sCurrentVersion)
-	if !exists {
-		input.LogEntry.Infof("No Deprecated API versions for %s", k8sCurrentVersion)
-		return nil
-	}
 
 	// get helm manifests
 	snap := input.Snapshots["helm_release_secrets"]
+	input.MetricsCollector.Set("helm_releases_count", float64(len(snap)), map[string]string{"helm_version": "3"})
 	for _, sn := range snap {
 		if sn == nil {
 			continue
@@ -119,9 +146,9 @@ func handleHelmSecrets(input *go_hook.HookInput) error {
 				return err
 			}
 
-			isUnsupported := versionStorage.isUnsupportedByAPIAndKind(resource.APIVersion, resource.Kind)
-			if isUnsupported {
-				input.MetricsCollector.Set("resource_versions_compatibility", 1, map[string]string{
+			incompatibility := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
+			if incompatibility > 0 {
+				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      helmRelease.Name,
 					"helm_release_namespace": helmRelease.Namespace,
 
@@ -136,8 +163,88 @@ func handleHelmSecrets(input *go_hook.HookInput) error {
 	return nil
 }
 
+type release struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	Manifest  string `json:"manifest,omitempty"`
+}
+
+type manifest struct {
+	APIVersion string `json:"apiVersion" yaml:"apiVersion"`
+	Kind       string `json:"kind" yaml:"kind"`
+	Metadata   struct {
+		Name      string `json:"name" yaml:"name"`
+		Namespace string `json:"namespace" yaml:"namespace"`
+	} `json:"metadata" yaml:"metadata"`
+}
+
+// k8s version: APIVersion: Kind
+type unsupportedVersionsStore map[string]unsupportedApiVersions
+
+func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (unsupportedApiVersions, bool) {
+	majorMinor := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
+	apis, ok := uvs[majorMinor]
+	return apis, ok
+}
+
+func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semver.Version, resourceAPIVersion, resourceKind string) uint {
+	// check unsupported api for current k8s version
+	currentK8SAPIsStorage, exists := uvs.getByK8sVersion(currentVersion)
+	if exists {
+		isUnsupported := currentK8SAPIsStorage.isUnsupportedByAPIAndKind(resourceAPIVersion, resourceKind)
+		if isUnsupported {
+			return 2
+		}
+	}
+
+	// if api is supported - check deprecation in the next 2 minor k8s versions
+	depth := 2
+	for i := 0; i < depth; i++ {
+		newMinor := currentVersion.Minor() + uint64(i)
+		nextVersion := semver.MustParse(fmt.Sprintf("%d.%d.0", currentVersion.Major(), newMinor))
+		storage, exists := uvs.getByK8sVersion(nextVersion)
+		if exists {
+			isDeprecated := storage.isUnsupportedByAPIAndKind(resourceAPIVersion, resourceKind)
+			if isDeprecated {
+				return 1
+			}
+		}
+	}
+
+	return 0
+}
+
+// APIVersion: [Kind]
+type unsupportedApiVersions map[string][]string
+
+func (ua unsupportedApiVersions) isUnsupportedByAPIAndKind(api, ikind string) bool {
+	kinds, ok := ua[api]
+	if !ok {
+		return false
+	}
+	for _, kind := range kinds {
+		if kind == ikind {
+			return true
+		}
+	}
+
+	return false
+}
+
+var storage unsupportedVersionsStore
+
+func init() {
+	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &storage)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// helm3 decoding
+
 var magicGzip = []byte{0x1f, 0x8b, 0x08}
 
+// Import this from helm3 lib - https://github.com/helm/helm/blob/49819b4ef782e80b0c7f78c30bd76b51ebb56dc8/pkg/storage/driver/util.go#L56
 // decodeRelease decodes the bytes of data into a release
 // type. Data must contain a base64 encoded gzipped string of a
 // valid release, otherwise an error is returned.
@@ -170,75 +277,4 @@ func decodeRelease(data string) (*release, error) {
 		return nil, err
 	}
 	return &rls, nil
-}
-
-type release struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Manifest  string `json:"manifest,omitempty"`
-}
-
-type manifest struct {
-	APIVersion string `json:"apiVersion" yaml:"apiVersion"`
-	Kind       string `json:"kind" yaml:"kind"`
-	Metadata   struct {
-		Name      string `json:"name" yaml:"name"`
-		Namespace string `json:"namespace" yaml:"namespace"`
-	} `json:"metadata" yaml:"metadata"`
-}
-
-// k8s version: APIVersion: Kind
-// example: "1.22": {"networking.k8s.io/v1beta1": ["Ingress"]}
-type unsupportedVersionsStore map[string]unsupportedApiVersions
-
-func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (unsupportedApiVersions, bool) {
-	majorMinor := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
-	apis, ok := uvs[majorMinor]
-	return apis, ok
-}
-
-type unsupportedApiVersions map[string][]string
-
-func (ua unsupportedApiVersions) isUnsupportedByAPIAndKind(api, ikind string) bool {
-	kinds, ok := ua[api]
-	if !ok {
-		return false
-	}
-	for _, kind := range kinds {
-		if kind == ikind {
-			return true
-		}
-	}
-
-	return false
-}
-
-var unsupportedVersionsYAML = `
-"1.22":
-  "admissionregistration.k8s.io/v1beta1": ["ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"]
-  "apiextensions.k8s.io/v1beta1": ["CustomResourceDefinition"]
-  "apiregistration.k8s.io/v1beta1": ["APIService"]
-  "authentication.k8s.io/v1beta1": ["TokenReview"]
-  "authorization.k8s.io/v1beta1": ["SubjectAccessReview", "LocalSubjectAccessReview", "SelfSubjectAccessReview"]
-  "certificates.k8s.io/v1beta1": ["CertificateSigningRequest"]
-  "coordination.k8s.io/v1beta1": ["Lease"]
-  "networking.k8s.io/v1beta1": ["Ingress"]
-  "extensions/v1beta1": ["Ingress"]
-
-"1.25":
-  "batch/v1beta1": ["CronJob"]
-  "discovery.k8s.io/v1beta1": ["EndpointSlice"]
-  "events.k8s.io/v1beta1": ["Event"]
-  "autoscaling/v2beta1": ["HorizontalPodAutoscaler"]
-  "policy/v1beta1": ["PodDisruptionBudget", "PodSecurityPolicy"]
-  "node.k8s.io/v1beta1": ["RuntimeClass"]
-`
-
-var storage unsupportedVersionsStore
-
-func init() {
-	err := yaml.Unmarshal([]byte(unsupportedVersionsYAML), &storage)
-	if err != nil {
-		log.Fatal(err)
-	}
 }

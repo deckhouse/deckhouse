@@ -60,4 +60,5 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks/https"
+	_ "github.com/deckhouse/deckhouse/modules/999-helm/hooks"
 )
