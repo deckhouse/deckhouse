@@ -97,7 +97,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:                   filterHelmCM,
 		},
 	},
-}, handleHelmSecrets)
+}, handleHelmReleases)
 
 func filterHelmSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sec v1.Secret
@@ -155,7 +155,7 @@ func filterHelmCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	return &helmRelease{StatusDeployed: statusDeployed, Release: release}, nil
 }
 
-func handleHelmSecrets(input *go_hook.HookInput) error {
+func handleHelmReleases(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
 	k8sCurrentVersionRaw, ok := input.Values.GetOk("global.discovery.kubernetesVersion")
@@ -194,7 +194,7 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 			totalDeployedReleases++
 		}
 
-		arr := strings.Split(helmRelease.Release.Manifest, "---")
+		arr := strings.Split(helmRelease.Release.Manifest, "---\n")
 		if len(arr) < 1 {
 			continue
 		}

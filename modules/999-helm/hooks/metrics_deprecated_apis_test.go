@@ -30,7 +30,7 @@ var _ = FDescribe("helm :: hooks :: deprecated_versions ::", func() {
 	Context("test", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(testSecret)
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/1 * * * *"))
 			f.RunGoHook()
 
 		})
@@ -51,7 +51,7 @@ metadata:
     modifiedAt: "1650570656"
     name: prometheus
     owner: helm
-    status: superseded
+    status: deployed
     version: "5"
   name: sh.helm.release.v1.prometheus.v5
   namespace: d8-system
