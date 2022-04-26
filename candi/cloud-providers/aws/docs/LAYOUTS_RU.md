@@ -28,8 +28,14 @@ masterNodeGroup:
   # Если указано больше одного master-узла, то etcd-кластер соберётся автоматически.
   replicas: 1
   instanceClass:
+    # тип используемого инстанса
     instanceType: m5.xlarge
+    # id образа виртуальной машины в Amazon
     ami: ami-03818140b4ac9ae2b
+    # размер диска для виртуальной машины master-узла
+    diskSizeGb: 30
+    # используемый тип диска для виртуальной машины master-узла
+    diskType: gp3
 nodeGroups:
   - name: mydb
     nodeTemplate:
@@ -78,8 +84,14 @@ masterNodeGroup:
   # Если указано больше одного master-узла, то etcd-кластер соберётся автоматически.
   replicas: 1
   instanceClass:
+    # тип используемого инстанса
     instanceType: m5.xlarge
+    # id образа виртуальной машины в Amazon
     ami: ami-03818140b4ac9ae2b
+    # размер диска для виртуальной машины master-узла
+    diskSizeGb: 30
+    # используемый тип диска для виртуальной машины master-узла
+    diskType: gp3
 nodeGroups:
   - name: mydb
     nodeTemplate:

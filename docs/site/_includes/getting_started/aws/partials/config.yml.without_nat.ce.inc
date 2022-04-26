@@ -86,6 +86,16 @@ masterNodeGroup:
   # [<en>] Parameters of the VM image
   # [<ru>] параметры инстанса
   instanceClass:
+    # [<en>] master node VM disk size
+    # [<ru>] размер диска для виртуальной машины master-узла
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
+    diskSizeGb: 30
+    # [<en>] master node VM disk type to use
+    # [<ru>] используемый тип диска для виртуальной машины master-узла
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
+    diskType: gp3
     # [<en>] type of the instance
     # [<ru>] тип используемого инстанса
     # [<en>] you might consider changing this
