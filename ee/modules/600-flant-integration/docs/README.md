@@ -47,7 +47,7 @@ Here is an example of the data collected:
 ![](../../images/600-flant-integration/image1.png)
 ![](../../images/600-flant-integration/image2.png)
 
-In addition to the metrics collected by the flant-integration module, the [upmeter](../500-upmeter/) module collects the [availability metrics](#metrics-sla) to analyze SLA performance.
+In addition to the metrics collected by the flant-integration module, the [upmeter](../500-upmeter/) module collects the [availability metrics](#sla-metrics) to analyze SLA performance.
 
 #### Madison notifications
 
