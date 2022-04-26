@@ -1,6 +1,6 @@
 {{ $defaultTunnelNetwork := "172.25.175.0/255.255.255.0" }}
-{{ $tunnelNetworkAddress := index (splitList "/" (.Values.tunnelNetwork | default $defaultTunnelNetwork)) 0 }}
-{{ $tunnelNetworkNetmask := index (splitList "/" (.Values.tunnelNetwork | default $defaultTunnelNetwork)) 1 }}
+{{ $tunnelNetworkAddress := index (splitList "/" (.Values.openvpn.tunnelNetwork | default $defaultTunnelNetwork)) 0 }}
+{{ $tunnelNetworkNetmask := index (splitList "/" (.Values.openvpn.tunnelNetwork | default $defaultTunnelNetwork)) 1 }}
 ---
 apiVersion: v1
 kind: ConfigMap
