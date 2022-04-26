@@ -62,12 +62,23 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ref: ${{ steps.ref.outputs.ref }}
-      edition: ${{ steps.check.outputs.edition }}
-    # Skip if PR from deckhouse-BOaTswain, e.g. changelog PRs.
-    if: ${{ ! startsWith(github.event_name, 'pull_request') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+      edition: ${{ steps.check_pr.outputs.edition || steps.check_push.outputs.edition }}
+    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
+    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
     steps:
+      - name: Check push trigger
+        id: check_push
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            // Support 'push' trigger: use FE edition by default.
+            const edition = 'FE';
+            core.notice(`Enable default '${edition}' edition for 'push' trigger.`);
+            return core.setOutput('edition', edition);
+
       - name: Check if allow to run tests
-        id: check
+        id: check_pr
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         uses: actions/github-script@v5.0.0
         with:
@@ -129,6 +140,7 @@ jobs:
             const isCE = response.data[0].labels.some((l) => l.name === 'edition/ce');
             const edition = isCE ? 'CE' : (isEE ? 'EE' : process.env.WERF_ENV);
             core.info(`PR has 'edition/*'?   ${isCE || isEE} (${edition})`);
+            core.notice(`Enable '${edition}' edition.`);
             core.setOutput('edition', edition);
 
       # Checkhout the head commit of the PR branch.
@@ -170,6 +182,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
+            // context.ref is set for 'push' and 'workflow_dispatch' triggers.
             let ref = context.ref;
             if (context.eventName.startsWith('pull_request')) {
               ref = `refs/pull/${ context.issue.number }/head`
