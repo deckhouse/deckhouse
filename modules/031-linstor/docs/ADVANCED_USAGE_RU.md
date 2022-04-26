@@ -4,7 +4,7 @@ title: "Модуль linstor: примеры расширенной конфиг
 
 Чтобы продолжить рекомендуется установить плагин [kubectl-linstor](https://github.com/piraeusdatastore/kubectl-linstor) или добавить bash-алиас:
 
-```
+```shell
 alias linstor='kubectl exec -n d8-linstor deploy/linstor-controller -- linstor'
 ```
 
@@ -18,12 +18,12 @@ alias linstor='kubectl exec -n d8-linstor deploy/linstor-controller -- linstor'
 ## Создание пулов хранения
 
 Отобразить список всех узлов:
-```
+```shell
 linstor node list
 ```
 
 Отобразить список всех доступных блочных устройств для хранения:
-```
+```shell
 linstor physical-storage list
 ```
 
@@ -88,7 +88,7 @@ linstor storage-pool list
 
 Теперь опишите желаемое количество реплик и имя пула в котором они будут создаваться в вашем StorageClass и примените его в Kubernetes:
 
-```
+```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:

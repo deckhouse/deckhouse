@@ -4,7 +4,7 @@ title: "Модуль openvpn: примеры конфигурации"
 
 ## Пример для кластеров bare metal
 
-```
+```yaml
 openvpnEnabled: "true"
 openvpn: |
   inlet: ExternalIP
@@ -13,14 +13,14 @@ openvpn: |
 
 ## Пример для AWS и Google Cloud
 
-```
+```yaml
 openvpnEnabled: "true"
 openvpn: |
   inlet: LoadBalancer
 ```
 
 ## Пример для публичного IP на внешнем балансировщике
-```
+```yaml
 openvpnEnabled: "true"
 openvpn: |
   externalHost: 5.4.54.4

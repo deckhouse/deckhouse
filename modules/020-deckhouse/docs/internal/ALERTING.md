@@ -4,7 +4,7 @@ When deckhouse is updating you probably want to suppress some alerts (like PodIs
 This could be done by adding the annotation `d8_ignore_on_update: "true"` to a PrometheusRule
 
 Example:
-```
+```yaml
 - name: d8.deckhouse.availability
   rules:
   - alert: D8DeckhouseSelfTargetDown

@@ -11,7 +11,7 @@ searchable: false
 
 Чтобы получить список всех репозиториев и текущих версий, перейдите в директорию `./images` и выполните:
 
-```
+```shell
 grep -r '^ARG [A-Z_]*_\(GITREPO\|VERSION\)=' | awk '{print $NF}' | sort -u
 ```
 
@@ -19,6 +19,6 @@ grep -r '^ARG [A-Z_]*_\(GITREPO\|VERSION\)=' | awk '{print $NF}' | sort -u
 
 После обновления, не забудьте прогнать интеграционные тесты на существующем кластере:
 
-```
+```shell
 helm -n d8-system test linstor
 ```

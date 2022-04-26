@@ -141,7 +141,7 @@ title: "Управление control plane: FAQ"
    ```
 
    Подробную информацию по настройке содержимого `audit-policy.yaml` можно получить по следующим ссылкам:
-   - [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy).
+   - [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy).
    - [В нашей статье на Habr](https://habr.com/ru/company/flant/blog/468679/).
    - [Опираясь на код скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
 

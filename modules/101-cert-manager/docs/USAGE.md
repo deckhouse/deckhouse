@@ -40,7 +40,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
    You will see the key for interacting with the Cloudflare API (as well as the account email).
 
 2. Edit the deckhouse ConfigMap by adding the following section:
-   ```
+   ```shell
    kubectl -n d8-system edit cm deckhouse
    ```
 
@@ -129,7 +129,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 
 2. Edit the Deckhouse ConfigMap by adding the following section:
 
-   ```
+   ```shell
    kubectl -n d8-system edit cm deckhouse
    ```
 

@@ -33,7 +33,7 @@ kind create cluster --image "kindest/node:v1.22.7@sha256:c195c17f2a9f6ad5bbddc9e
 {% endsnippetcut %}
 
 Пример вывода команды создания кластера:
-```
+```shell
 $ kind create cluster --image "kindest/node:v1.22.7@sha256:c195c17f2a9f6ad5bbddc9eb8bad68fa21709162aabf2b84e4a3896db05c0808" --config kind.cfg
 Creating cluster "kind" ...
  ✓ Ensuring node image (kindest/node:v1.22.7) 🖼

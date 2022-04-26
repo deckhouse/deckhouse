@@ -141,7 +141,7 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
    ```
 
    You can find the detailed information about configuring the `audit-policy.yaml` file at the following links:
-   - [The official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy).
+   - [The official Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy).
    - [The code of the generator script used in GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
 
    Create a Secret from the file:

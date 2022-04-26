@@ -40,7 +40,7 @@ spec:
    В результате чего мы получаем ключ для взаимодействия с API Cloudflare и почту на которую зарегистрирован аккаунт.
 
 2. Редактируем конфигурационный ConfigMap deckhouse, добавляя такую секцию:
-   ```
+   ```shell
    kubectl -n d8-system edit cm deckhouse
    ```
 
@@ -129,7 +129,7 @@ spec:
 
 2. Редактируем ConfigMap Deckhouse, добавляя такую секцию:
 
-   ```
+   ```shell
    kubectl -n d8-system edit cm deckhouse
    ```
 
