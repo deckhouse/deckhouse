@@ -89,7 +89,7 @@ Example output:
 
 Now specify the desired number of replicas and the storage-pool name for them in your StorageClass and apply it to Kubernetes:
 
-```
+```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:

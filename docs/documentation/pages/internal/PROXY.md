@@ -7,11 +7,11 @@ lang: en
 * Prepare the VM for setting up the proxy.
 * The machine must be accessible to the nodes that will use it as a proxy and be connected to the Internet.
 * Install squid on the machine (in our example, the Ubuntu machine is used):
-```
+```shell
 apt-get install squid
 ```
 * Create a config file:
-```
+```shell
 cat <<EOF > /etc/squid/squid.conf
 auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
 auth_param basic realm proxy
@@ -22,11 +22,11 @@ http_access allow authenticated
 http_port 3128
 ```
 * Create a user (test/test):
-```
+```shell
 echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
 ```
 * Start squid and enable the system to start it up automatically:
-```
+```shell
 systemctl restart squid
 systemctl enable squid
 ```

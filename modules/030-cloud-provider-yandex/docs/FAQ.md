@@ -5,7 +5,7 @@ title: "Cloud provider — Yandex.Cloud: FAQ"
 ## How do I set up the INTERNAL LoadBalancer?
 
 Attach the following annotation to the service:
-```
+```yaml
 yandex.cpi.flant.com/listener-subnet-id: SubnetID
 ```
 The annotation links the LoadBalancer with the appropriate Subnet.
