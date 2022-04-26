@@ -285,9 +285,9 @@ properties:
                     type: string
                   mainNetworkIPAddresses:
                     type: array
-                    required: [address, gateway, nameservers]
                     items:
                       type: object
+                      required: [address, gateway, nameservers]
                       properties:
                         address:
                           type: string

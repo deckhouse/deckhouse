@@ -92,7 +92,6 @@ apiVersions:
                 example: rp-2012
               mainNetworkIPAddresses:
                 type: array
-                required: [address, gateway, nameservers]
                 description: |
                   A list of static IP addresses (with a CIDR prefix) sequentially allocated to master nodes in the `mainNetwork`.
 
@@ -101,6 +100,7 @@ apiVersions:
                   - [{"address": "10.1.14.20/24", "gateway": "10.1.14.254", "nameservers": { "addresses": ['8.8.8.8','8.8.4.4']}}]
                 items:
                   type: object
+                  required: [address, gateway, nameservers]
                   properties:
                     address:
                       type: string

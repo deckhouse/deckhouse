@@ -21,6 +21,7 @@ apiVersions:
         items:
           type: string
       masterNodeGroup:
+        type: object
         required: [replicas, instanceClass]
         description: |
           Parameters of the master's NodeGroup.
