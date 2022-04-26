@@ -7,7 +7,7 @@ The module is **automatically** enabled for the following cloud providers:
 - [VMware vSphere](../../modules/030-cloud-provider-vsphere/).
 
 To enable it for the bare metal machines, add the following parameter to the `deckhouse` configMap:
-```
+```yaml
 cniFlannelEnabled: "true"
 ```
 

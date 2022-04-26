@@ -22,7 +22,7 @@ searchable: false
   * Извлечь json-описания дашборд из манифеста samples/addons/grafana.yaml, отформатировать их с помощью jq и сложить в соответствующие json-ки в /monitoring/grafana-dashboards/istio/XXX.json.
   * Найти все range'и и заменить на `$__interval_sx4`:
 
-    ```bash
+    ```shell
     for dashboard in *.json; do
       for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | sort | uniq); do
         sed -e 's/\['$range'\]/[$__interval_sx4]/g' -i $dashboard
@@ -32,27 +32,27 @@ searchable: false
 
   * Заменить `irate` на `rate`:
 
-    ```bash
+    ```shell
     sed 's/irate(/rate(/g' -i *.json
     ```
   * Заменить `Resolution` на `1/1`:
 
-    ```bash
+    ```shell
     sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i *.json
     ```
   * Убрать `Min Step`:
 
-    ```bash
+    ```shell
     sed '/"interval":/d' -i *.json
     ```
   * Заменить все графики на `Staircase` (поломает графики `Stack` + `Percent`, которые придется поправить руками на `Bars`):
 
-    ```bash
+    ```shell
     sed 's/"steppedLine": false/"steppedLine": true/' -i *.json
     ```
 
   * Заменить все datasource на null:
 
-    ```bash
+    ```shell
     sed 's/"datasource": "Prometheus"/"datasource": null/' -i *.json
     ```

@@ -70,7 +70,7 @@ title: Управление control plane
 
 ## Аудит
 
-Если требуется журналировать операции с API или отдебажить неожиданное поведение — для всего этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/). Его можно настроить путём создания правил [Audit Policy](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy), а результат работы аудита будет лог-файл `/var/log/kube-audit/audit.log` со всеми интересующими операциями.
+Если требуется журналировать операции с API или отдебажить неожиданное поведение — для всего этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/). Его можно настроить путём создания правил [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy), а результат работы аудита будет лог-файл `/var/log/kube-audit/audit.log` со всеми интересующими операциями.
 
 В установках Deckhouse по умолчанию созданы базовые политики, они отвечают за логирование событий:
 - связанных с операциями создания, удаления и изменения ресурсов;

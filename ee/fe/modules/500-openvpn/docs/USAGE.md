@@ -4,7 +4,7 @@ title: "The openvpn module: usage"
 
 ## An example for bare metal clusters
 
-```
+```yaml
 openvpnEnabled: "true"
 openvpn: |
   inlet: ExternalIP
@@ -13,7 +13,7 @@ openvpn: |
 
 ## An example for AWS & Google Cloud
 
-```
+```yaml
 openvpnEnabled: "true"
 openvpn: |
   inlet: LoadBalancer
@@ -21,7 +21,7 @@ openvpn: |
 
 ## An example for an external load balancer with a public IP address
 
-```
+```yaml
 openvpnEnabled: "true"
 openvpn: |
   externalHost: 5.4.54.4

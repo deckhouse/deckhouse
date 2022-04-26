@@ -15,7 +15,7 @@ When a Pod orders a disk:
 - the `Provisioner` creates a local disk folder on the desired node along the path consisting of the `path` CR parameter, the PV name and the PVC name. 
   
   Example of a path:
-  ```
+  ```shell
   /opt/local-path-provisioner/pvc-d9bd3878-f710-417b-a4b3-38811aa8aac1_d8-monitoring_prometheus-main-db-prometheus-main-0
   ```
 

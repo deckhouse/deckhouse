@@ -430,7 +430,7 @@ Note that `addon-operator` extends the schema format with additional properties.
 * The `openapi/config-values.yaml` scheme validates values passed by the user via a ConfigMap.
 
 An example:
-```
+```yaml
 type: object
 properties:
   podNetworkMode:
@@ -447,7 +447,7 @@ properties:
     The `x-extend` parameter must be used in all cases. Learn more [here](https://github.com/flant/addon-operator/blob/main/VALUES.md#extending).
 
 An example:
-```
+```yaml
 x-extend:
   schema: config-values.yaml
 type: object
@@ -672,7 +672,7 @@ NB: Both commands must be executed in the root directory of the repository.
 
 1. [Login](https://pult.flant.com/projects/dev-rnd/services/2c15f630-8072-43bc-a17b-61135fa88fcf) to the docker registry to store werf stages:
 
-```
+```shell
 docker login https://dev-registry.deckhouse.io/
 ```
 
@@ -694,7 +694,7 @@ All hook tests in the directory         | `./testing/run modules/150-user-authn/
 **Caution!** Multiwerf is required to run tests; please, [install it](https://werf.io/documentation/guides/installation.html).
 
 Enter the following command to exec to the container where the tests are running:
-```
+```shell
 docker exec -ti deckhouse-testing bash
 ```
 {% endraw %}

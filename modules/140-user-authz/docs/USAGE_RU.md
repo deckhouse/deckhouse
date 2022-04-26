@@ -104,7 +104,7 @@ spec:
         ```
 
         Генерируем секцию с внешним доменом:
-        ```
+        ```shell
         kubectl config set-cluster $cluster_name --embed-certs=true \
           --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
           --certificate-authority=/tmp/ca.crt \

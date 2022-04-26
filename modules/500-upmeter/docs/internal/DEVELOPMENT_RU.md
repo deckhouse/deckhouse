@@ -36,7 +36,7 @@ title: "Информация для разработчиков"
 
 Пример Downtime:
 
-```
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: Downtime
 metadata:

@@ -5,7 +5,7 @@ title: "The flant-integration module"
 This module integrates various Flant services. It:
 * Installs madison-proxy as an alertmanager for Prometheus in the cluster; registers with [Madison](#madison-notifications).
 * [Sends stats](#statistics-on-cluster-status) required to calculate the cost of maintaining the cluster.
-* [Sends logs](#logs-operator-deckhouse) of the Deckhouse operator (these facilitate the debugging process).
+* [Sends logs](#deckhouse-operator-logs) of the Deckhouse operator (these facilitate the debugging process).
 * [Configures SLA metrics collection](#sla-metrics).
 
 ## Data collection
@@ -47,7 +47,7 @@ Here is an example of the data collected:
 ![](../../images/600-flant-integration/image1.png)
 ![](../../images/600-flant-integration/image2.png)
 
-In addition to the metrics collected by the flant-integration module, the [upmeter](../500-upmeter/) module collects the [availability metrics](#metrics-sla) to analyze SLA performance.
+In addition to the metrics collected by the flant-integration module, the [upmeter](../500-upmeter/) module collects the [availability metrics](#sla-metrics) to analyze SLA performance.
 
 #### Madison notifications
 
