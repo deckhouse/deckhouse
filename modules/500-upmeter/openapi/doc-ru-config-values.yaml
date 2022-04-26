@@ -1,12 +1,5 @@
-type: object
-required:
-  - auth
 properties:
   storageClass:
-    oneOf:
-      - type: string
-      - type: boolean
-        enum: [false]
     description: |
       Имя storageClass'а, который использовать.
 
@@ -14,158 +7,102 @@ properties:
       * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск будет перезаказан, а все данные удалены.
       * Если указать `false` — будет форсироваться использование emptyDir'а.
   auth:
-    type: object
-    default: {}
     description: |
       Доступ к web-интерфейсу
-    required:
-      - status
-      - webui
     properties:
       status:
-        type: object
         description: |
           Настройки доступа к web-интерфейсу.
-        default: {}
         properties:
           externalAuthentication:
-            type: object
             description: |
               Параметры для подключения внешней аутентификации. Используется механизм Nginx Ingress external-auth, работающей на основе модуля Nginx auth_request.
             properties:
               authURL:
-                type: string
                 description: |
                   URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
               authSignInURL:
-                type: string
                 description: |
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
           password:
-            type: string
             description: |
               Пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
 
               Используется, если не включен параметр `externalAuthentication`.
           allowedUserGroups:
-            type: array
-            items:
-              type: string
             description: |
               Группы доступа к просмотру интерфейса приложения.
 
               * Используется, если включен модуль `user-authn` или параметр `externalAuthentication`.
               * **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
           whitelistSourceRanges:
-            type: array
-            items:
-              type: string
-            x-examples:
-              - ["1.1.1.1/32"]
             description: |
               Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
       webui:
-        type: object
         description: |
-          Натсройки доступа к web-интерфейсу.
-        default: {}
+          Настройки доступа к web-интерфейсу.
         properties:
           externalAuthentication:
-            type: object
             description: |
               Параметры для подключения внешней аутентификации. Используется механизм Nginx Ingress external-auth, работающей на основе модуля Nginx auth_request.
             properties:
               authURL:
-                type: string
                 description: |
                   URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
               authSignInURL:
-                type: string
                 description: |
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
           password:
-            type: string
             description: |
               Пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
 
               Используется, если не включен параметр `externalAuthentication`.
           allowedUserGroups:
-            type: array
-            items:
-              type: string
             description: |
               Группы доступа к просмотру интерфейса приложения.
 
               * Используется, если включен модуль `user-authn` или параметр `externalAuthentication`.
               * **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
           whitelistSourceRanges:
-            type: array
-            items:
-              type: string
-            x-examples:
-              - ["1.1.1.1/32"]
             description: |
               Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
   smokeMini:
-    type: object
-    default: {}
-    required:
-      - auth
     properties:
       auth:
-        type: object
         description: |
           Натсройки доступа к web-интерфейсу.
-        default: {}
         properties:
           externalAuthentication:
-            type: object
             description: |
               Параметры для подключения внешней аутентификации. Используется механизм Nginx Ingress external-auth, работающей на основе модуля Nginx auth_request.
             properties:
               authURL:
-                type: string
                 description: |
                   URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
               authSignInURL:
-                type: string
                 description: |
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
           password:
-            type: string
             description: |
               Пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
 
               Используется, если не включен параметр `externalAuthentication`.
           allowedUserGroups:
-            type: array
-            items:
-              type: string
             description: |
               Группы доступа к просмотру интерфейса приложения.
 
               * Используется, если включен модуль `user-authn` или параметр `externalAuthentication`.
               * **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках DexProvider.
           whitelistSourceRanges:
-            type: array
-            items:
-              type: string
-            x-examples:
-              - ["1.1.1.1/32"]
             description: |
               Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
       storageClass:
-        oneOf:
-          - type: string
-          - type: boolean
-            enum: [false]
         description: |
           storageClass для использования при проверке работоспособности дисков.
 
           * Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
           * Если указать `false` — будет форсироваться использование emptyDir'а.
       ingressClass:
-        type: string
         description: |
           Класс ingress-контроллера, который используется для smoke-mini.
 
@@ -198,10 +135,6 @@ properties:
 
                   Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   disabledProbes:
-    type: array
-    default: []
-    items:
-      type: string
     description: |
       Массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в web-интерфейсе.
 
@@ -214,13 +147,9 @@ properties:
         - control-plane   # или без /
       ```
   statusPageAuthDisabled:
-    type: boolean
-    default: false
     description: |
       Выключение авторизации для status-домена.
   smokeMiniDisabled:
-    type: boolean
-    default: false
     description: |
       Выключение smokeMini. Также отключает группу "synthetic".
   https:
@@ -256,7 +185,6 @@ properties:
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
-    type: array
     description: |
       Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
