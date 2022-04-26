@@ -209,8 +209,8 @@ locals {
 
   vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
 
-  root_volume_size = lookup(local.instance_class, "diskSizeGb", 20)
-  root_volume_type = lookup(local.instance_class, "diskType", "gp2")
+  root_volume_size = lookup(local.instance_class, "diskSizeGb", 30)
+  root_volume_type = lookup(local.instance_class, "diskType", "gp3")
 }
 
 resource "aws_instance" "bastion" {

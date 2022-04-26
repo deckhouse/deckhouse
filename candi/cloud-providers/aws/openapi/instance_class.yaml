@@ -51,9 +51,9 @@ spec:
                   type: boolean
                 diskType:
                   description: Instance EBS disk type.
-                  example: "gp2"
+                  example: "gp3"
                   type: string
-                  x-doc-default: "gp2"
+                  x-doc-default: "gp3"
                 iops:
                   description: IOPS rate for io1 diskType
                   example: "500"
