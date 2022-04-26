@@ -129,6 +129,11 @@ defaults:
     values:
       versionType: fe
   - scope:
+      path: "*/600-flant-integration"
+      type: "pages"
+    values:
+      versionType: ee
+  - scope:
       path: "*/500-basic-auth"
       type: "pages"
     values:
