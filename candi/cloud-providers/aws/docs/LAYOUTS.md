@@ -26,8 +26,14 @@ provider:
 masterNodeGroup:
   replicas: 1
   instanceClass:
+    # type of the instance
     instanceType: m5.xlarge
+    # Amazon Machine Image id
     ami: ami-03818140b4ac9ae2b
+    # master node VM disk size
+    diskSizeGb: 30
+    # master node VM disk type to use
+    diskType: gp3
 nodeGroups:
   - name: mydb
     nodeTemplate:
@@ -76,8 +82,14 @@ masterNodeGroup:
   # If there is more than one master node, the etcd cluster will be set up automatically.
   replicas: 1
   instanceClass:
+    # type of the instance
     instanceType: m5.xlarge
+    # Amazon Machine Image id
     ami: ami-03818140b4ac9ae2b
+    # master node VM disk size
+    diskSizeGb: 30
+    # master node VM disk type to use
+    diskType: gp3
 nodeGroups:
   - name: mydb
     nodeTemplate:

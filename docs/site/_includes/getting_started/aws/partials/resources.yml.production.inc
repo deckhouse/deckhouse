@@ -18,7 +18,7 @@ spec:
   # [<ru>] используемый тип диска для виртуальной машины
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
-  diskType: gp2
+  diskType: gp3
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   instanceType: c5.xlarge
@@ -88,7 +88,7 @@ spec:
   # [<ru>] используемый тип диска для виртуальной машины
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
-  diskType: gp2
+  diskType: gp3
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   instanceType: c5.large
@@ -129,7 +129,7 @@ metadata:
   name: worker
 spec:
   diskSizeGb: 30
-  diskType: gp2
+  diskType: gp3
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   instanceType: c5.xlarge
