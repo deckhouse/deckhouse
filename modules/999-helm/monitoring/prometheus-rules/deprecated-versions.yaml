@@ -16,7 +16,7 @@
 
         You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
 
-  - alert: HelmReleaseHasResourcesWithUnsupportedVersions
+  - alert: HelmReleasesHasResourcesWithUnsupportedVersions
     expr: |
       (count by (k8s_version) (resource_versions_compatibility == 2)) > 0
     labels:
