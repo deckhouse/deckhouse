@@ -1,14 +1,13 @@
 diff --git a/cluster-autoscaler/utils/drain/drain.go b/cluster-autoscaler/utils/drain/drain.go
-index 5704e7823..70d475e9f 100644
 --- a/cluster-autoscaler/utils/drain/drain.go
 +++ b/cluster-autoscaler/utils/drain/drain.go
 @@ -18,6 +18,7 @@ package drain
- 
+
  import (
  	"fmt"
 +	"strings"
  	"time"
- 
+
  	apiv1 "k8s.io/api/core/v1"
 @@ -140,6 +141,18 @@ func GetPodsForDeletionOnNodeDrain(
  				replicated = true
