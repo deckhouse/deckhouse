@@ -61,5 +61,7 @@ columns:
         url: '/security.html'
       - title: Сравнение с KaaS
         url: '/deckhouse_vs_kaas.html'
+      - title: Как купить?
+        url: '/products/enterprise_edition.html#how-to-buy'
       - title: Политика конфиденциальности
         url: '/security-policy.html'
