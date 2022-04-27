@@ -129,10 +129,14 @@
         infinite: true,
         slidesToShow: 3,
         autoplaySpeed: 5000,
+        variableWidth: true,
+        centerMode: true,
+        initialSlide: 1,
         responsive: [{
-            breakpoint: 1440,
+            breakpoint: 1500,
             settings: {
-            slidesToShow: 2
+                initialSlide: 0,
+                slidesToShow: 1
             }
         }]
         });
