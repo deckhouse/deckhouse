@@ -27,7 +27,7 @@
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "1m"
       summary:
-        At least one HELM release contains resources with unsupported apiVersion for kubernetes {{ $labels.k8s_version }}.
+        At least one HELM release contains resources with unsupported apiVersion for Kubernetes v{{ $labels.k8s_version }}.
       description: |
         To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2`
 
