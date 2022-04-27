@@ -16,8 +16,10 @@
 if systemctl is-enabled kubernetes-api-proxy-configurator.timer >/dev/null 2>/dev/null; then
   systemctl stop kubernetes-api-proxy-configurator.timer
   systemctl disable kubernetes-api-proxy-configurator.timer
+  systemctl stop kubernetes-api-proxy-configurator.service
+  systemctl disable kubernetes-api-proxy-configurator.service
   systemctl stop kubernetes-api-proxy.service
   systemctl disable kubernetes-api-proxy.service
-  rm -f /var/lib/bashible/kubernetes-api-proxy-configurator.sh /etc/systemd/system/kubernetes-api-proxy-configurator.service /etc/systemd/system/kubernetes-api-proxy-configurator.timer /etc/systemd/system/kubernetes-api-proxy.service
+  rm -f /var/lib/bashible/kubernetes-api-proxy-configurator.sh /etc/systemd/system/kubernetes-api-proxy-configurator.service /etc/systemd/system/kubernetes-api-proxy-configurator.timer /etc/systemd/system/kubernetes-api-proxy.service /etc/kubernetes/kubernetes-api-proxy/nginx.conf
   systemctl daemon-reload
 fi
