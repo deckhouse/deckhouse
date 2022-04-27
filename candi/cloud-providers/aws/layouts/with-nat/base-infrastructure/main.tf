@@ -252,18 +252,61 @@ resource "aws_eip_association" "bastion" {
 
 // vpc peering
 
-locals {
-  peer_vpc_ids = lookup(var.providerClusterConfiguration, "peeredVPCs", [])
+data "aws_caller_identity" "kube" {}
+
+resource "aws_vpc_peering_connection" "kube" {
+  count         = length(local.peer_vpc_ids)
+  vpc_id        = module.vpc.id
+  peer_vpc_id   = local.peer_vpc_ids[count.index]
+  peer_owner_id = data.aws_caller_identity.kube.account_id
+  peer_region   = var.providerClusterConfiguration.provider.region
+  auto_accept   = false
+
+  tags = merge(local.tags, {
+    Name = local.prefix
+  })
 }
 
-module "vpc-peering" {
-  count                  = length(local.peer_vpc_ids) == 0 ? 0 : 1
-  source                 = "../../../terraform-modules/vpc-peering"
-  prefix                 = local.prefix
-  tags                   = local.tags
-  vpc_id                 = module.vpc.id
-  peer_vpc_ids           = local.peer_vpc_ids
-  region                 = var.providerClusterConfiguration.provider.region
-  route_table_id         = aws_route_table.kube_internal.id
-  destination_cidr_block = module.vpc.cidr_block
+resource "aws_vpc_peering_connection_accepter" "kube" {
+  count                     = length(local.peer_vpc_ids)
+  vpc_peering_connection_id = aws_vpc_peering_connection.kube[count.index].id
+  auto_accept               = true
+
+  tags = merge(local.tags, {
+    Name = local.prefix
+  })
+}
+
+resource "aws_route" "kube" {
+  count                     = length(local.peer_vpc_ids)
+  route_table_id            = aws_route_table.kube_internal.id
+  destination_cidr_block    = data.aws_vpc.target[count.index].cidr_block
+  vpc_peering_connection_id = aws_vpc_peering_connection.kube[count.index].id
+  depends_on                = [aws_route_table.kube_internal]
+}
+
+data "aws_vpc" "target" {
+  count = length(local.peer_vpc_ids)
+  id    = local.peer_vpc_ids[count.index]
+}
+
+data "aws_subnets" "target" {
+  count = length(local.peer_vpc_ids)
+  filter {
+    name   = "vpc-id"
+    values = [local.peer_vpc_ids[count.index]]
+  }
+}
+
+data "aws_route_table" "target" {
+  count     = length(local.peer_vpc_ids)
+  subnet_id = data.aws_subnets.target[count.index].ids[0]
+}
+
+resource "aws_route" "target" {
+  count                     = length(local.peer_vpc_ids)
+  route_table_id            = data.aws_route_table.target[count.index].id
+  destination_cidr_block    = module.vpc.cidr_block
+  vpc_peering_connection_id = aws_vpc_peering_connection.kube[count.index].id
+  depends_on                = [aws_route_table.kube_internal]
 }
