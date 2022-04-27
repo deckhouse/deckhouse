@@ -1,6 +1,6 @@
 - name: d8.helm-releases-resource-versions
   rules:
-  - alert: HelmReleaseHasResourcesWithDeprecatedVersions
+  - alert: HelmReleasesHasResourcesWithDeprecatedVersions
     expr: |
       (count by (k8s_version) (resource_versions_compatibility == 1)) > 0
     labels:
