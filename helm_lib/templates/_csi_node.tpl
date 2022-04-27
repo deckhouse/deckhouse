@@ -19,7 +19,7 @@
   {{- $driverRegistrarImage := printf "%s:%s" $context.Values.global.modulesImages.registry $driverRegistrarImageTag }}
 
   {{- if $driverRegistrarImageTag }}
-    {{- if (include "_helm_lib_cloud_or_hybrid_cluster" $context) }}
+    {{- if or (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
