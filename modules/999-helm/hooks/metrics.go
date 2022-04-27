@@ -47,7 +47,7 @@ import (
 //      2 - in unsupported
 // Also hook returns count on deployed releases `helm_releases_count`
 
-var unsupportedVersionsYAML = `
+const unsupportedVersionsYAML = `
 "1.22":
   "admissionregistration.k8s.io/v1beta1": ["ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"]
   "apiextensions.k8s.io/v1beta1": ["CustomResourceDefinition"]
