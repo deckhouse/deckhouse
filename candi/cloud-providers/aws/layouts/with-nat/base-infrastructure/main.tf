@@ -252,6 +252,10 @@ resource "aws_eip_association" "bastion" {
 
 // vpc peering
 
+locals {
+  peer_vpc_ids = lookup(var.providerClusterConfiguration, "peeredVPCs", [])
+}
+
 data "aws_caller_identity" "kube" {}
 
 resource "aws_vpc_peering_connection" "kube" {
