@@ -91,6 +91,10 @@ spec:
   selector:
     matchLabels:
       app: {{ $fullname }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   template:
     metadata:
       labels:
