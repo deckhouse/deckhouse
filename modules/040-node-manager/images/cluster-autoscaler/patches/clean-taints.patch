@@ -1,35 +1,9 @@
-diff --git a/cluster-autoscaler/core/scale_down.go b/cluster-autoscaler/core/scale_down.go
-index 7ac3654bf..a9af5b649 100644
---- a/cluster-autoscaler/core/scale_down.go
-+++ b/cluster-autoscaler/core/scale_down.go
-@@ -841,7 +841,7 @@ func (sd *ScaleDown) TryToScaleDown(
- 
- 		deletionsInProgress := sd.nodeDeletionTracker.GetDeletionsInProgress(nodeGroup.Id())
- 		if size-deletionsInProgress <= nodeGroup.MinSize() {
--			klog.V(1).Infof("Skipping %s - node group min size reached", node.Name)
-+			klog.V(1).Infof("Skipping %s on ScaleDown - node group min size reached", node.Name)
- 			sd.addUnremovableNodeReason(node, simulator.NodeGroupMinSizeReached)
- 			continue
- 		}
-diff --git a/cluster-autoscaler/processors/nodes/pre_filtering_processor.go b/cluster-autoscaler/processors/nodes/pre_filtering_processor.go
-index a40e61e05..73d984b47 100644
---- a/cluster-autoscaler/processors/nodes/pre_filtering_processor.go
-+++ b/cluster-autoscaler/processors/nodes/pre_filtering_processor.go
-@@ -63,7 +63,7 @@ func (n *PreFilteringScaleDownNodeProcessor) GetScaleDownCandidates(ctx *context
- 			continue
- 		}
- 		if size <= nodeGroup.MinSize() {
--			klog.V(1).Infof("Skipping %s - node group min size reached", node.Name)
-+			klog.V(1).Infof("Skipping %s on GetCandidates - node group min size reached", node.Name)
- 			continue
- 		}
- 		result = append(result, node)
 diff --git a/cluster-autoscaler/processors/status/scale_down_status_processor.go b/cluster-autoscaler/processors/status/scale_down_status_processor.go
 index de30a5c00..bc895f376 100644
 --- a/cluster-autoscaler/processors/status/scale_down_status_processor.go
 +++ b/cluster-autoscaler/processors/status/scale_down_status_processor.go
 @@ -18,11 +18,12 @@ package status
- 
+
  import (
  	apiv1 "k8s.io/api/core/v1"
 +	klog "k8s.io/klog/v2"
@@ -40,16 +14,16 @@ index de30a5c00..bc895f376 100644
  	"k8s.io/autoscaler/cluster-autoscaler/utils/drain"
 -	klog "k8s.io/klog/v2"
  )
- 
+
  // ScaleDownStatus represents the state of scale down.
 @@ -133,7 +134,7 @@ type ScaleDownStatusProcessor interface {
- 
+
  // NewDefaultScaleDownStatusProcessor creates a default instance of ScaleUpStatusProcessor.
  func NewDefaultScaleDownStatusProcessor() ScaleDownStatusProcessor {
 -	return &NoOpScaleDownStatusProcessor{}
 +	return &CleanTaintsScaleDownStatusProcessor{}
  }
- 
+
  // PodEvictionResult contains the result of an eviction of a pod.
 diff --git a/cluster-autoscaler/processors/status/scale_down_status_taint_processor.go b/cluster-autoscaler/processors/status/scale_down_status_taint_processor.go
 new file mode 100644
@@ -96,7 +70,7 @@ index d8b710169..8215f96d0 100644
 @@ -98,6 +98,41 @@ const (
  	UnexpectedError
  )
- 
+
 +func (ur UnremovableReason) String() string {
 +	switch ur {
 +	case 0:
