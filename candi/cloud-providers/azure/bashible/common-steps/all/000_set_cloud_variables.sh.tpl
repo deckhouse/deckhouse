@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,4 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apt-get purge unattended-upgrades -y
+shutdown_grace_period="0"
+shutdown_grace_period_critical_pods="0"
+
+if curl -sS -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance?api-version=2021-12-13" | grep -q  '"priority":"Regular"'; then
+  shutdown_grace_period="5m"
+  shutdown_grace_period_critical_pods="5s"
+fi
+
+cat << EOF > /var/lib/bashible/cloud-provider-variables
+shutdown_grace_period="$shutdown_grace_period"
+shutdown_grace_period_critical_pods="$shutdown_grace_period_critical_pods"
+EOF
