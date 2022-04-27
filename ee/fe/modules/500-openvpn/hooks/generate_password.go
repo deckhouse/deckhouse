@@ -9,4 +9,4 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 )
 
-var _ = generate_password.RegisterHook("istio")
+var _ = generate_password.RegisterHook("openvpn")
