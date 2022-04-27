@@ -46,6 +46,7 @@ import (
 //      1 - is deprecated
 //      2 - in unsupported
 // Also hook returns count on deployed releases `helm_releases_count`
+// Hook checks only releases with status: deployed
 
 const unsupportedVersionsYAML = `
 "1.22":
@@ -68,10 +69,11 @@ const unsupportedVersionsYAML = `
   "node.k8s.io/v1beta1": ["RuntimeClass"]
 `
 
+// delta for k8s versions which are checked for deprecated apis
+// with delta == 2 for k8s 1.21 will also check apis for 1.22 and 1.23
+const delta = 2
+
 var (
-	// delta for k8s versions which are checked for deprecated apis
-	// with delta == 2 for k8s 1.21 will also check apis for 1.22 and 1.23
-	delta   = 2
 	storage unsupportedVersionsStore
 )
 
@@ -129,6 +131,12 @@ func filterHelmSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 
+	statusDeployed := strings.ToLower(sec.Labels["status"]) == "deployed"
+
+	if !statusDeployed {
+		return nil, nil
+	}
+
 	releaseData := sec.Data["release"]
 	if len(releaseData) == 0 {
 		return nil, nil
@@ -137,13 +145,6 @@ func filterHelmSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	release, err := decodeRelease(string(releaseData))
 	if err != nil {
 		return nil, err
-	}
-
-	var statusDeployed bool
-	if v, ok := sec.Labels["status"]; ok {
-		if strings.ToLower(v) == "deployed" {
-			statusDeployed = true
-		}
 	}
 
 	return &helmRelease{StatusDeployed: statusDeployed, Release: release}, nil
@@ -156,6 +157,11 @@ func filterHelmCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	if err != nil {
 		return nil, err
 	}
+	statusDeployed := strings.ToLower(cm.Labels["STATUS"]) == "deployed"
+
+	if !statusDeployed {
+		return nil, nil
+	}
 
 	releaseData := cm.Data["release"]
 	if len(releaseData) == 0 {
@@ -165,13 +171,6 @@ func filterHelmCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	release, err := helm2DecodeRelease(releaseData)
 	if err != nil {
 		return nil, err
-	}
-
-	var statusDeployed bool
-	if v, ok := cm.Labels["STATUS"]; ok {
-		if strings.ToLower(v) == "deployed" {
-			statusDeployed = true
-		}
 	}
 
 	return &helmRelease{StatusDeployed: statusDeployed, Release: release}, nil
@@ -239,10 +238,10 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 					"helm_release_name":      helmRelease.Release.Name,
 					"helm_release_namespace": helmRelease.Release.Namespace,
 					"k8s_version":            k8sCompatibilityVersion,
-					"resource_name":      resource.Metadata.Name,
-					"resource_namespace": resource.Metadata.Namespace,
-					"kind":               resource.Kind,
-					"api_version":        resource.APIVersion,
+					"resource_name":          resource.Metadata.Name,
+					"resource_namespace":     resource.Metadata.Namespace,
+					"kind":                   resource.Kind,
+					"api_version":            resource.APIVersion,
 				}, metrics.WithGroup("helm_deprecated_apiversions"))
 			}
 
