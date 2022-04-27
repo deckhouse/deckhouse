@@ -52,11 +52,12 @@ index de30a5c00..bc895f376 100644
  
  // PodEvictionResult contains the result of an eviction of a pod.
 diff --git a/cluster-autoscaler/processors/status/scale_down_status_taint_processor.go b/cluster-autoscaler/processors/status/scale_down_status_taint_processor.go
-index 6c12ae38b..1bf1b043d 100644
---- a/cluster-autoscaler/processors/status/scale_down_status_taint_processor.go
+new file mode 100644
+index 000000000..1bf1b043d
+--- /dev/null
 +++ b/cluster-autoscaler/processors/status/scale_down_status_taint_processor.go
-@@ -1 +1,32 @@
- package status
+@@ -0,0 +1,32 @@
++package status
 +
 +import (
 +	apiv1 "k8s.io/api/core/v1"
