@@ -239,7 +239,6 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 					"helm_release_name":      helmRelease.Release.Name,
 					"helm_release_namespace": helmRelease.Release.Namespace,
 					"k8s_version":            k8sCompatibilityVersion,
-
 					"resource_name":      resource.Metadata.Name,
 					"resource_namespace": resource.Metadata.Namespace,
 					"kind":               resource.Kind,
