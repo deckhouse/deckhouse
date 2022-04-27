@@ -38,11 +38,29 @@
             border: 2px solid $color-alt;
         }
     }
+    &_img {
+        color: $color-main !important;
+        background: $color-inverse;
+        border: 2px solid $color-main;
+        padding: 0.5em 1.5em;
+        &:not(.button_disabled):hover {
+          color: $color-main !important;
+          background: $color-inverse;
+          border: 2px solid $color-inverse;
+        }
+        img {
+          height: $font-size-base*1.5;
+          display: block;
+        }
+    }
     &_disabled {
         opacity: 0.3;
     }
     &_big {
         font-size: $font-size-h2;
+        img {
+          height: $font-size-h2*1.5;
+        }
     }
 }
 
@@ -53,7 +71,7 @@
     justify-content: flex-start;
     flex-wrap: wrap;
     .button {
-        margin-right: 2em;
-        margin-bottom: 2em;
+        margin-right: 1em;
+        margin-bottom: 1em;
     }
 }
