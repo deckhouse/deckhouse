@@ -370,7 +370,7 @@
 
 #toc > ul > li {
     position: relative;
-    padding-left: 30px;
+    margin-left: 30px;
 }
 
 #toc > ul > li::before {
@@ -380,7 +380,7 @@
     width: 6px;
     height: 6px;
     position: absolute;
-    left: 15px;
+    left: -15px;
     top: 12px;
     border: none;
     border-radius: 0px;
@@ -400,7 +400,6 @@
 
 #toc ul ul > li {
     position: relative;
-    padding-left: 20px;
 }
 
 #toc ul ul > li::before {
@@ -410,7 +409,7 @@
     width: 8px;
     height: 1px;
     position: absolute;
-    left: 5px;
+    left: -15px;
     top: 15px;
     border: none;
     border-radius: 0px;
@@ -542,7 +541,7 @@
     width: 4px;
     height: 4px;
     position: absolute;
-    left: 15px;
+    left: -15px;
     top: 8px;
 }
 
