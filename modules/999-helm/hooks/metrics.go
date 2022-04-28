@@ -153,9 +153,9 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 
 func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *release) (uint32, error) {
 	var totalReleases uint32
+	var next string
 
 	for {
-		var next string
 		fmt.Println("GOT: request with ", next)
 		secretsList, err := client.CoreV1().Secrets("").List(ctx, metav1.ListOptions{
 			LabelSelector: "owner=helm,status=deployed",
@@ -198,8 +198,9 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 
 func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *release) (uint32, error) {
 	var totalReleases uint32
+	var next string
+
 	for {
-		var next string
 		cmList, err := client.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{
 			LabelSelector: "OWNER=TILLER,STATUS=DEPLOYED",
 			Limit:         objectBatchSize,
