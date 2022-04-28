@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
@@ -32,6 +33,8 @@ import (
 // it takes latest metrics from prometheus and duplicate them on Deckhouse startup
 
 func HandleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Container) error {
+	input.MetricsCollector.Expire("helm_deprecated_apiversions")
+
 	cl := dc.GetHTTPClient(d8http.WithInsecureSkipVerify())
 
 	// curl -s --connect-timeout 10 --max-time 10 -k -XGET -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://prometheus.d8-monitoring:9090/api/v1/query?query=resource_versions_compatibility"
@@ -77,7 +80,7 @@ func HandleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Containe
 			"resource_namespace":     metricRecord.Metric.ResourceNamespace,
 			"kind":                   metricRecord.Metric.Kind,
 			"api_version":            metricRecord.Metric.APIVersion,
-		})
+		}, metrics.WithGroup("helm_deprecated_apiversions"))
 	}
 
 	return nil
