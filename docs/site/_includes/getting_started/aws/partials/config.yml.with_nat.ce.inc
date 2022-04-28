@@ -95,6 +95,9 @@ withNAT:
       # [<en>] you might consider changing this
       # [<ru>] возможно, захотите изменить
       ami: ami-09a4a23815cdb5e06
+      # [<en>] Disk type
+      # [<ru>] Тип диска
+      diskType: gp3
 # [<en>] parameters of the master node group
 # [<ru>] параметры группы master-узлов
 masterNodeGroup:

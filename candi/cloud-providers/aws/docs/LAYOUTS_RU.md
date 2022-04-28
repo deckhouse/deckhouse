@@ -79,6 +79,7 @@ withNAT:
     instanceClass:
       instanceType: m5.large
       ami: ami-09a4a23815cdb5e06
+      diskType: gp3
 masterNodeGroup:
   # Количество master-узлов.
   # Если указано больше одного master-узла, то etcd-кластер соберётся автоматически.
