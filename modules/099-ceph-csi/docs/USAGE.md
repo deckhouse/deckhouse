@@ -21,14 +21,14 @@ spec:
       defaultFSType: ext4
       mountOptions:
       - discard
-      name: csi-rbd
+      namePostfix: csi-rbd
       pool: kubernetes-rbd
       reclaimPolicy: Delete
   cephfs:
     storageClasses:
     - allowVolumeExpansion: true
       fsName: cephfs
-      name: csi-cephfs
+      namePostfix: csi-cephfs
       pool: cephfs_data
       reclaimPolicy: Delete
 ```
