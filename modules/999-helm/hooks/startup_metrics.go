@@ -65,8 +65,9 @@ func handleStartupMetrics(input *go_hook.HookInput, dc dependency.Container) err
 		return err
 	}
 
+	fmt.Println("GOT METRICS", response)
+
 	for _, metricRecord := range response.Data.Result {
-		fmt.Println("JJJJ", metricRecord)
 		if len(metricRecord.Value) < 2 {
 			input.LogEntry.Warnf("Broken metric value from prometheus: %s. Skipping", metricRecord.Value)
 			continue

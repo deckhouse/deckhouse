@@ -94,7 +94,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
-			Crontab: "*/20 * * * *",
+			Crontab: "*/1 * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
@@ -119,6 +119,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 			input.LogEntry.Error(err)
 			return
 		}
+		fmt.Println("GOT HELM3 Releases", len(helm3Releases))
 		input.MetricsCollector.Set("helm_releases_count", float64(len(helm3Releases)), map[string]string{"helm_version": "3"})
 		err = processHelmReleases(k8sCurrentVersion, input, helm3Releases)
 		if err != nil {
@@ -133,6 +134,8 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 			input.LogEntry.Error(err)
 			return
 		}
+		fmt.Println("GOT HELM2 Releases", len(helm2Releases))
+
 		input.MetricsCollector.Set("helm_releases_count", float64(len(helm2Releases)), map[string]string{"helm_version": "2"})
 		err = processHelmReleases(k8sCurrentVersion, input, helm2Releases)
 		if err != nil {
@@ -156,6 +159,8 @@ func getHelm3Releases(ctx context.Context, dc dependency.Container) ([]*release,
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("GOT SECRETS", secretsList)
 
 	for _, secret := range secretsList.Items {
 		releaseData := secret.Data["release"]
