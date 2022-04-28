@@ -1,6 +1,10 @@
 # Next lines are for local build only
 entries:
   folders:
+    - title:
+        en: Overview
+        ru: Введение в документацию
+      url: /deckhouse-overview.html
     - title: Deckhouse
       folders:
         - title:
