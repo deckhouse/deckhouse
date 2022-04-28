@@ -91,6 +91,8 @@ spec:
   selector:
     matchLabels:
       app: {{ $fullname }}
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
