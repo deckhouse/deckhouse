@@ -92,9 +92,7 @@ spec:
     matchLabels:
       app: {{ $fullname }}
   strategy:
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
+    type: Recreate
   template:
     metadata:
       labels:
