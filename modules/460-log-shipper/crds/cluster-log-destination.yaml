@@ -315,6 +315,17 @@ spec:
                           type: boolean
                           default: true
                           description: Validate the TLS certificate of the remote host.
+                rateLimit:
+                  type: object
+                  description: |
+                    The rate limit option for clusterlogdestinations.
+                  required:
+                    - linesPerMinute
+                  properties:
+                    linesPerMinute:
+                      type: number
+                      description: |
+                        The linesPerMinute.
                 extraLabels:
                   type: object
                   description: |
