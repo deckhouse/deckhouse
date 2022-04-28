@@ -77,6 +77,7 @@ withNAT:
     instanceClass:
       instanceType: m5.large
       ami: ami-09a4a23815cdb5e06
+      diskType: gp3
 masterNodeGroup:
   # Number of master nodes.
   # If there is more than one master node, the etcd cluster will be set up automatically.
