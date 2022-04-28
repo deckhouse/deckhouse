@@ -17,18 +17,33 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
+var _ = FDescribe("helm :: hooks :: deprecated_versions ::", func() {
 	f := HookExecutionConfigInit(`{"global" : {"discovery": {"kubernetesVersion": "1.22.3"}}}`, "")
 
 	Context("helm3 release with deprecated versions", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(helm3ReleaseWithDeprecated)
+			f.KubeStateSet("")
+			var sec corev1.Secret
+			_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				Secrets("default").
+				Create(context.TODO(), &sec, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
 
 		})
@@ -101,7 +116,15 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 
 	Context("helm3 release without deprecated apis", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(helm3ReleaseWithoutDeprecated)
+			f.KubeStateSet("")
+			var sec corev1.Secret
+			_ = yaml.Unmarshal([]byte(helm3ReleaseWithoutDeprecated), &sec)
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				Secrets("default").
+				Create(context.TODO(), &sec, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
 			f.RunGoHook()
 		})
@@ -120,7 +143,15 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 
 	Context("helm2 release with deprecated versions", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(helm2ReleaseWithDeprecated)
+			f.KubeStateSet("")
+			var cm corev1.ConfigMap
+			_ = yaml.Unmarshal([]byte(helm2ReleaseWithDeprecated), &cm)
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				ConfigMaps("default").
+				Create(context.TODO(), &cm, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
 			f.RunGoHook()
 
@@ -147,7 +178,15 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 
 	Context("Should not check not deployed releases", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(helm3NotDeployed)
+			f.KubeStateSet("")
+			var sec corev1.Secret
+			_ = yaml.Unmarshal([]byte(helm3NotDeployed), &sec)
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				Secrets("default").
+				Create(context.TODO(), &sec, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/20 * * * *"))
 			f.RunGoHook()
 
@@ -191,7 +230,7 @@ metadata:
     OWNER: TILLER
     STATUS: DEPLOYED
   name: bar.v1
-  namespace: kube-system
+  namespace: default
 `
 
 var helm3ReleaseWithoutDeprecated = `

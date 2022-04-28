@@ -19,6 +19,7 @@ package hooks
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,7 @@ import (
 	"io/ioutil"
 	"log"
 	"strings"
+	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -34,10 +36,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/golang/protobuf/proto"
 	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 // this hook checks helm releases (v2 and v3) and find deprecated apis
@@ -47,6 +48,10 @@ import (
 //      2 - in unsupported
 // Also hook returns count on deployed releases `helm_releases_count`
 // Hook checks only releases with status: deployed
+
+// **Attention**
+// Releases are checked via kubeclient not by snapshots to avoid huge memory consumption
+// on some installations snapshots can take gigabytes of memory
 
 const unsupportedVersionsYAML = `
 "1.22":
@@ -86,97 +91,15 @@ func init() {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/helm/helm_releases",
-	OnStartup: &go_hook.OrderedConfig{
-		Order: 1,
-	},
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
 			Crontab: "*/20 * * * *",
 		},
 	},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "helm3_releases",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"owner": "helm",
-				},
-			},
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
-			FilterFunc:          filterHelmSecret,
-		},
-		{
-			Name:       "helm2_releases",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"OWNER": "TILLER",
-				},
-			},
-			ExecuteHookOnEvents: pointer.BoolPtr(false),
-			FilterFunc:          filterHelmCM,
-		},
-	},
-}, handleHelmReleases)
+}, dependency.WithExternalDependencies(handleHelmReleases))
 
-func filterHelmSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sec v1.Secret
-
-	err := sdk.FromUnstructured(obj, &sec)
-	if err != nil {
-		return nil, err
-	}
-
-	statusDeployed := strings.ToLower(sec.Labels["status"]) == "deployed"
-
-	if !statusDeployed {
-		return nil, nil
-	}
-
-	releaseData := sec.Data["release"]
-	if len(releaseData) == 0 {
-		return nil, nil
-	}
-
-	release, err := decodeRelease(string(releaseData))
-	if err != nil {
-		return nil, err
-	}
-
-	return &helmRelease{StatusDeployed: statusDeployed, Release: release}, nil
-}
-
-func filterHelmCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cm v1.ConfigMap
-
-	err := sdk.FromUnstructured(obj, &cm)
-	if err != nil {
-		return nil, err
-	}
-	statusDeployed := strings.ToLower(cm.Labels["STATUS"]) == "deployed"
-
-	if !statusDeployed {
-		return nil, nil
-	}
-
-	releaseData := cm.Data["release"]
-	if len(releaseData) == 0 {
-		return nil, nil
-	}
-
-	release, err := helm2DecodeRelease(releaseData)
-	if err != nil {
-		return nil, err
-	}
-
-	return &helmRelease{StatusDeployed: statusDeployed, Release: release}, nil
-}
-
-func handleHelmReleases(input *go_hook.HookInput) error {
+func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
 	k8sCurrentVersionRaw, ok := input.Values.GetOk("global.discovery.kubernetesVersion")
@@ -186,36 +109,103 @@ func handleHelmReleases(input *go_hook.HookInput) error {
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
-	total, err := processHelmReleases(k8sCurrentVersion, input, input.Snapshots["helm3_releases"])
-	if err != nil {
-		return err
-	}
-	input.MetricsCollector.Set("helm_releases_count", float64(total), map[string]string{"helm_version": "3"})
+	ctx := context.Background()
 
-	total, err = processHelmReleases(k8sCurrentVersion, input, input.Snapshots["helm2_releases"])
-	if err != nil {
-		return err
-	}
-	input.MetricsCollector.Set("helm_releases_count", float64(total), map[string]string{"helm_version": "2"})
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		helm3Releases, err := getHelm3Releases(ctx, dc)
+		if err != nil {
+			input.LogEntry.Error(err)
+			return
+		}
+		input.MetricsCollector.Set("helm_releases_count", float64(len(helm3Releases)), map[string]string{"helm_version": "3"})
+		err = processHelmReleases(k8sCurrentVersion, input, helm3Releases)
+		if err != nil {
+			input.LogEntry.Error(err)
+			return
+		}
+	}()
+
+	go func() {
+		helm2Releases, err := getHelm2Releases(ctx, dc)
+		if err != nil {
+			input.LogEntry.Error(err)
+			return
+		}
+		input.MetricsCollector.Set("helm_releases_count", float64(len(helm2Releases)), map[string]string{"helm_version": "2"})
+		err = processHelmReleases(k8sCurrentVersion, input, helm2Releases)
+		if err != nil {
+			input.LogEntry.Error(err)
+			return
+		}
+	}()
+
+	wg.Wait()
 
 	return nil
 }
 
-func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookInput, snapshots []go_hook.FilterResult) (uint32, error) {
-	var totalDeployedReleases uint32
-	// get helm manifests
-	for _, sn := range snapshots {
-		if sn == nil {
+func getHelm3Releases(ctx context.Context, dc dependency.Container) ([]*release, error) {
+	var result []*release
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return nil, err
+	}
+	secretsList, err := client.CoreV1().Secrets("").List(ctx, metav1.ListOptions{LabelSelector: "owner=helm,status=deployed"})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, secret := range secretsList.Items {
+		releaseData := secret.Data["release"]
+		if len(releaseData) == 0 {
 			continue
 		}
 
-		helmRelease := sn.(*helmRelease)
-
-		if helmRelease.StatusDeployed {
-			totalDeployedReleases++
+		release, err := decodeRelease(string(releaseData))
+		if err != nil {
+			return nil, err
 		}
 
-		d := yaml.NewDecoder(strings.NewReader(helmRelease.Release.Manifest))
+		result = append(result, release)
+	}
+
+	return result, nil
+}
+
+func getHelm2Releases(ctx context.Context, dc dependency.Container) ([]*release, error) {
+	var result []*release
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return nil, err
+	}
+	cmList, err := client.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{LabelSelector: "OWNER=TILLER,STATUS=DEPLOYED"})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, cm := range cmList.Items {
+		releaseData := cm.Data["release"]
+		if len(releaseData) == 0 {
+			continue
+		}
+
+		release, err := helm2DecodeRelease(releaseData)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, release)
+	}
+
+	return result, nil
+}
+
+func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookInput, releases []*release) error {
+	for _, rel := range releases {
+
+		d := yaml.NewDecoder(strings.NewReader(rel.Manifest))
 
 		for {
 			resource := new(manifest)
@@ -225,7 +215,7 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 					break
 				}
 
-				return 0, err
+				return err
 			}
 
 			if resource == nil {
@@ -235,8 +225,8 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 			incompatibility, k8sCompatibilityVersion := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
-					"helm_release_name":      helmRelease.Release.Name,
-					"helm_release_namespace": helmRelease.Release.Namespace,
+					"helm_release_name":      rel.Name,
+					"helm_release_namespace": rel.Namespace,
 					"k8s_version":            k8sCompatibilityVersion,
 					"resource_name":          resource.Metadata.Name,
 					"resource_namespace":     resource.Metadata.Namespace,
@@ -248,12 +238,7 @@ func processHelmReleases(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 		}
 	}
 
-	return totalDeployedReleases, nil
-}
-
-type helmRelease struct {
-	StatusDeployed bool
-	Release        *release
+	return nil
 }
 
 // protobuf for handling helm2 releases - https://github.com/helm/helm/blob/47f0b88409e71fd9ca272abc7cd762a56a1c613e/pkg/proto/hapi/release/release.pb.go#L24
