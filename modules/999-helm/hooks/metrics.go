@@ -77,7 +77,10 @@ const unsupportedVersionsYAML = `
 
 // delta for k8s versions which are checked for deprecated apis
 // with delta == 2 for k8s 1.21 will also check apis for 1.22 and 1.23
-const delta = 2
+const (
+	delta           = 2
+	objectBatchSize = int64(20)
+)
 
 var (
 	storage unsupportedVersionsStore
@@ -95,7 +98,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
-			Crontab: "*/1 * * * *",
+			Crontab: "*/3 * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
@@ -149,14 +152,14 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 }
 
 func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *release) (uint32, error) {
-	var limit = int64(1)
 	var totalReleases uint32
 
 	for {
 		var next string
+		fmt.Println("GOT: request with ", next)
 		secretsList, err := client.CoreV1().Secrets("").List(ctx, metav1.ListOptions{
 			LabelSelector: "owner=helm,status=deployed",
-			Limit:         limit,
+			Limit:         objectBatchSize,
 			Continue:      next,
 		})
 		if err != nil {
@@ -164,6 +167,7 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 		}
 
 		fmt.Println("GOT CONTINUE3", secretsList.Continue)
+		fmt.Println("GOT LEFT", secretsList.RemainingItemCount)
 
 		for _, secret := range secretsList.Items {
 			releaseData := secret.Data["release"]
@@ -187,24 +191,23 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 		}
 	}
 
+	fmt.Println("GOT TOTAL3: ", totalReleases)
+
 	return totalReleases, nil
 }
 
 func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *release) (uint32, error) {
-	var limit = int64(1)
 	var totalReleases uint32
 	for {
 		var next string
 		cmList, err := client.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{
 			LabelSelector: "OWNER=TILLER,STATUS=DEPLOYED",
-			Limit:         limit,
+			Limit:         objectBatchSize,
 			Continue:      next,
 		})
 		if err != nil {
 			return 0, err
 		}
-
-		fmt.Println("GOT CONTINUE2", cmList.Continue)
 
 		for _, secret := range cmList.Items {
 			releaseData := secret.Data["release"]
