@@ -40,7 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleStartupMetrics))
 
 func handleStartupMetrics(input *go_hook.HookInput, dc dependency.Container) error {
-	cl := dc.GetHTTPClient()
+	cl := dc.GetHTTPClient(d8http.WithTLSServerName("prometheus.d8-monitoring"))
 
 	promURL := "https://prometheus.d8-monitoring:9090/api/v1/query?query=resource_versions_compatibility"
 	req, err := http.NewRequest("GET", promURL, nil)
