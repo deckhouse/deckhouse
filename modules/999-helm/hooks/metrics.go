@@ -75,11 +75,12 @@ const unsupportedVersionsYAML = `
   "node.k8s.io/v1beta1": ["RuntimeClass"]
 `
 
-// delta for k8s versions which are checked for deprecated apis
-// with delta == 2 for k8s 1.21 will also check apis for 1.22 and 1.23
 const (
-	delta           = 2
-	objectBatchSize = int64(20)
+	// delta for k8s versions which are checked for deprecated apis
+	// with delta == 2 for k8s 1.21 will also check apis for 1.22 and 1.23
+	delta = 2
+	// objectBatchSize - how many secrets to list from k8s at once
+	objectBatchSize = int64(25)
 )
 
 var (
@@ -114,8 +115,9 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
 	releasesC := make(chan *release, 25)
+	doneC := make(chan bool)
 
-	go runReleaseProcessor(k8sCurrentVersion, input, releasesC)
+	go runReleaseProcessor(k8sCurrentVersion, input, releasesC, doneC)
 
 	ctx := context.Background()
 	client, err := dc.GetK8sClient()
@@ -123,30 +125,39 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 		return err
 	}
 
-	var wg sync.WaitGroup
+	var (
+		wg                 sync.WaitGroup
+		totalHelm3Releases uint32
+		totalHelm2Releases uint32
+	)
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		total, err := getHelm3Releases(ctx, client, releasesC)
+		var err error
+		totalHelm3Releases, err = getHelm3Releases(ctx, client, releasesC)
 		if err != nil {
 			input.LogEntry.Error(err)
 			return
 		}
-		input.MetricsCollector.Set("helm_releases_count", float64(total), map[string]string{"helm_version": "3"})
 	}()
 
 	go func() {
 		defer wg.Done()
-		total, err := getHelm2Releases(ctx, client, releasesC)
+		var err error
+		totalHelm2Releases, err = getHelm2Releases(ctx, client, releasesC)
 		if err != nil {
 			input.LogEntry.Error(err)
 			return
 		}
-		input.MetricsCollector.Set("helm_releases_count", float64(total), map[string]string{"helm_version": "2"})
 	}()
 
 	wg.Wait()
 	close(releasesC)
+	<-doneC
+
+	// to avoid data race
+	input.MetricsCollector.Set("helm_releases_count", float64(totalHelm3Releases), map[string]string{"helm_version": "3"})
+	input.MetricsCollector.Set("helm_releases_count", float64(totalHelm2Releases), map[string]string{"helm_version": "2"})
 
 	return nil
 }
@@ -156,7 +167,6 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 	var next string
 
 	for {
-		fmt.Println("GOT: request with ", next)
 		secretsList, err := client.CoreV1().Secrets("").List(ctx, metav1.ListOptions{
 			LabelSelector: "owner=helm,status=deployed",
 			Limit:         objectBatchSize,
@@ -165,9 +175,6 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 		if err != nil {
 			return 0, err
 		}
-
-		fmt.Println("GOT CONTINUE3", secretsList.Continue)
-		fmt.Println("GOT LEFT", secretsList.RemainingItemCount)
 
 		for _, secret := range secretsList.Items {
 			releaseData := secret.Data["release"]
@@ -190,8 +197,6 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			next = secretsList.Continue
 		}
 	}
-
-	fmt.Println("GOT TOTAL3: ", totalReleases)
 
 	return totalReleases, nil
 }
@@ -235,7 +240,10 @@ func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 	return totalReleases, nil
 }
 
-func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookInput, releasesC <-chan *release) {
+func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookInput, releasesC <-chan *release, doneC chan<- bool) {
+	defer func() {
+		doneC <- true
+	}()
 	for rel := range releasesC {
 		d := yaml.NewDecoder(strings.NewReader(rel.Manifest))
 
@@ -257,6 +265,7 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 
 			incompatibility, k8sCompatibilityVersion := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
+				fmt.Println("GOT INCOM", rel.Namespace, rel.Name, resource.APIVersion, resource.Kind)
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      rel.Name,
 					"helm_release_namespace": rel.Namespace,
