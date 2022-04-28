@@ -84,6 +84,7 @@ masterNodeGroup:
     cores: 2
     imageID: test
     memory: 4096
+    platform: standard-v2
   replicas: 1
 nodeNetworkCIDR: 10.231.0.0/22
 provider:
