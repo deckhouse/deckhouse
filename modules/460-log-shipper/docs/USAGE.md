@@ -227,7 +227,7 @@ Non-debug non-JSON logs:
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
-  name: non-debeg-logs
+  name: non-debug-logs
 spec:
   logFilter:
   - operator: NotRegex
