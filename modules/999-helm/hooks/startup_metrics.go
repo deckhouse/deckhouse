@@ -19,6 +19,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -58,9 +59,12 @@ func handleStartupMetrics(input *go_hook.HookInput, dc dependency.Container) err
 	}
 	defer res.Body.Close()
 
+	d, _ := ioutil.ReadAll(res.Body)
+	fmt.Println("BODY", string(d))
 	var response promMetrics
 
-	err = json.NewDecoder(res.Body).Decode(&response)
+	_ = json.Unmarshal(d, &response)
+	// err = json.NewDecoder(res.Body).Decode(&response)
 	if err != nil {
 		return err
 	}
