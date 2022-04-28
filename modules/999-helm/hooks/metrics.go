@@ -114,6 +114,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
+		defer wg.Done()
 		helm3Releases, err := getHelm3Releases(ctx, dc)
 		if err != nil {
 			input.LogEntry.Error(err)
@@ -129,6 +130,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	}()
 
 	go func() {
+		defer wg.Done()
 		helm2Releases, err := getHelm2Releases(ctx, dc)
 		if err != nil {
 			input.LogEntry.Error(err)

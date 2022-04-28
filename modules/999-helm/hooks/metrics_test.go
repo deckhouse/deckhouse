@@ -40,7 +40,7 @@ var _ = FDescribe("helm :: hooks :: deprecated_versions ::", func() {
 
 			_, err := dependency.TestDC.MustGetK8sClient().
 				CoreV1().
-				Secrets("default").
+				Secrets("appns").
 				Create(context.TODO(), &sec, metav1.CreateOptions{})
 			Expect(err).To(BeNil())
 
@@ -215,7 +215,7 @@ metadata:
     owner: helm
     status: deployed
   name: sh.helm.release.v1.foooo.v1
-  namespace: default
+  namespace: appns
 type: helm.sh/release.v1
 `
 
