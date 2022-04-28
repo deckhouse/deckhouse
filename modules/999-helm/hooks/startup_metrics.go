@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -59,8 +58,6 @@ func HandleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Containe
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("GOT METRICS", response)
 
 	for _, metricRecord := range response.Data.Result {
 		if len(metricRecord.Value) < 2 {
