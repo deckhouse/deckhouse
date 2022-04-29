@@ -1,0 +1,90 @@
+{
+  "sources": {
+    "test-source_test-es-dest": {
+      "type": "file"
+    }
+  },
+  "transforms": {
+    "d8_tf_test-source_test-es-dest_00_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "test-source_test-es-dest"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
+      "type": "remap"
+    },
+    "d8_tf_test-source_test-es-dest_01_json_parse": {
+      "drop_on_abort": false,
+      "inputs": [
+        "d8_tf_test-source_test-es-dest_00_clean_up"
+      ],
+      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
+      "type": "remap"
+    },
+    "d8_tf_test-source_test-es-dest_02_elastic_dedot": {
+      "hooks": {
+        "process": "process"
+      },
+      "inputs": [
+        "d8_tf_test-source_test-es-dest_01_json_parse"
+      ],
+      "source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend",
+      "type": "lua",
+      "version": "2"
+    },
+    "d8_tf_test-source_test-es-dest_03_ratelimit": {
+      "exclude": "null",
+      "inputs": [
+        "d8_tf_test-source_test-es-dest_02_elastic_dedot"
+      ],
+      "threshold": 666,
+      "type": "throttle",
+      "window_secs": 60
+    },
+    "d8_tf_test-source_test-es-dest_04_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "d8_tf_test-source_test-es-dest_03_ratelimit"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "d8_cluster_sink_test-es-dest": {
+      "type": "elasticsearch",
+      "inputs": [
+        "d8_tf_test-source_test-es-dest_04_del_parsed_data"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "endpoint": "http://192.168.1.1:9200",
+      "encoding": {
+        "timestamp_format": "rfc3339"
+      },
+      "batch": {
+        "max_bytes": 10485760,
+        "timeout_secs": 1
+      },
+      "auth": {
+        "password": "secret",
+        "strategy": "basic",
+        "user": "elastic"
+      },
+      "tls": {
+        "ca_file": "-----BEGIN CERTIFICATE-----\nMIICwzCCAasCFCjUspjyoopVgNr4tLNRKhRXDfAxMA0GCSqGSIb3DQEBCwUAMB4x\nCzAJBgNVBAYTAlJVMQ8wDQYDVQQDDAZUZXN0Q0EwHhcNMjEwNjIyMTE0NjA0WhcN\nNDgxMTA3MTE0NjA0WjAeMQswCQYDVQQGEwJSVTEPMA0GA1UEAwwGVGVzdENBMIIB\nIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3ln6SzVITuVweDTgytxL6NLC\nv+Zyg9wWiVYRVqcghOSAP2XRe2cMbiaNonOhem444dkBEcwxYhXeXAYA47WBHvQG\n+ZFK9oJiBMddiHZf5jTWZC+oJ+6L+HtGdx1K7s3Yh38iC2XtjzU9QBsfeBeJHzYY\neWrmLt6iN6Qt44cywPtJUowjjJiOXPv1z9nT7c/sF/9S1ElXCLWPytwJWSb0eDR+\na1FvgEKWqMarJrEm1iYXKSQYPajXOTShGioHMVC+es1nypszLoweBuV79I/VVv4a\ngVNBa70ibDqs7/w3q2wCb5fZADE832SrWHtcm/InJCkAKys0rI9f89PXyGoYMwID\nAQABMA0GCSqGSIb3DQEBCwUAA4IBAQC4oyj/utVQYkn6yu5Q0MneO+V/NSEHxjNr\nrWNfrnOcSWb8jAQZ3vdZGKQLUokhaSQCJBwarLbAiNUmntogtHDlKgeGqtgU7xVy\nIi1BJW5VLrz8L5GMDGPGcfR3iT7Jh5rzS5QG9aysTx/0jVhStOR5rqjt9hrfk+I/\nT+OMPM5klzsayge9dHLu+yuW0sxxGRO7+9OyV7nOJ4GtLHbqetj0VAB+ijC0zu5M\njLCvoZdJPPUbZeQzqeUnYML+CCDEzBJGIFOWwl53eSnQWlWUiROecawHhnBs1iGb\nSCPD11M34QEfX0pjCNxEIsMKotTzWhEh+/oKrByvumzJjVykrSiy\n-----END CERTIFICATE-----\n",
+        "crt_file": "-----BEGIN CERTIFICATE-----\nMIICtjCCAZ4CFGX3ECr4WwoVPaPZC4fZoN6sbXcOMA0GCSqGSIb3DQEBCwUAMB4x\nCzAJBgNVBAYTAlJVMQ8wDQYDVQQDDAZUZXN0Q0EwHhcNMjEwNjIyMTE1NzE2WhcN\nMzUwMzAxMTE1NzE2WjARMQ8wDQYDVQQDDAZ2ZWN0b3IwggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQDGBdHpoX/fC+ZRGEAViOkrxOuoBHk12aSKFWUShIHW\nej04/s1KcdQyELeJY9aC1O5ngXsuZCUCfKSVtq5cr2I5zr4Zisr3BY+reqPUbEeb\nK4PBtEQ9Ibnz6E6LUKwJ+HE1YjibEAnFDejhRQjz0qT5aXGYMwDd+WF1Fvc1ePy/\n8ldG7c3oFg3oFbWZznoVBf39xwYfYtFvpcv5f0mmRVfezjQROgnXcOWFoQxUg0J1\nWQE3LUIGX10sAZsuJp35R7KA/ZHF6Gr8pzfHRcQhvOoeAcJOu6Y0PZ2ppK0azKz/\nqxs+f/aQBfsCtsuvO/Gnb/YaC3TwA2fexe+2AZ6F+SATAgMBAAEwDQYJKoZIhvcN\nAQELBQADggEBAExHd9KAvAYa0vhmZSEdGX7NvHj8AX1OWUAqvbprwbFuBH2fnKX+\nNbFTvWjJCP7dzmtpza1T9Dmo92C4/lZ94W/UsJOF2cHAQPyJvNSvbOTH9a03j8Bh\nimRwfm+LsnotFKxwU4aP+QHG+EPv/AC01wP5a9ei0EYZrHQxuu5l9gTDWcStkkZ9\n/1w4EXgMClYUWgCUGQ6/7/WNBN53cYfyiMPq/UNePeIaRBCmrqnIZP+SZ5p31EQs\nfr2jMkQJ9m7j6XV/DkdXSIl+VgfiXQIrCqSvQuwFWpvpbpTOpRNrXa4ik0BK0mKi\nbbi0LUgo2SpbnHirtiVyP/10Buhf3wHIGGQ=\n-----END CERTIFICATE-----\n",
+        "key_file": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAxgXR6aF/3wvmURhAFYjpK8TrqAR5NdmkihVlEoSB1no9OP7N\nSnHUMhC3iWPWgtTuZ4F7LmQlAnyklbauXK9iOc6+GYrK9wWPq3qj1GxHmyuDwbRE\nPSG58+hOi1CsCfhxNWI4mxAJxQ3o4UUI89Kk+WlxmDMA3flhdRb3NXj8v/JXRu3N\n6BYN6BW1mc56FQX9/ccGH2LRb6XL+X9JpkVX3s40EToJ13DlhaEMVINCdVkBNy1C\nBl9dLAGbLiad+UeygP2Rxehq/Kc3x0XEIbzqHgHCTrumND2dqaStGsys/6sbPn/2\nkAX7ArbLrzvxp2/2Ggt08ANn3sXvtgGehfkgEwIDAQABAoIBADUqwt1zmx2L2F7V\nn/8oL1KtIIiQCutGcEMS03xRT3sCfwWahAwE2/BFRMICqEmgWhI4VZZzFOzCAn6f\n+diwzjKvK6M3/J6uQ5DK8MnL+L3UxR9xAxFWyNKQAOau1kInDl5C7OfVOopJ3cj9\n/BVa7Sh6AyHWL9lpZ51EeUNGJLZ0JZufB1QbAWi0NaEZHuaO/QCYNyB8yNMOBGya\nO9LmdyCfO9T/YLZWx/dCN5ZWYrHjTJZDGwOyBwY5B03QafJ+qANNJESMeznyTvDJ\n99whHCIqF4Chp03f7JnPQrBH0HmcC1oAf8LXX9v1/w68JjewU7UHh39Vq6t4cVep\nvXxaWIECgYEA7gCLSSVRPQqoFPApxD05fBjMRgv3kSmipZUM9nW2DvXsTRQCTSSs\nU/bT0nqgAmU7WeR7iAL3eJ1Nnr7yjW8eLZysFYJo32M2lGPgHuVhzRX/vnCNB1CG\ndkYXyd5r+H+vI5elHpo+lUiagv4KbBklBCgD9e4WzdXW7qxI9csMOEMCgYEA1P9R\nxhF5Bh4eGWX7EmC0Tf2UCkOp91uAzPd3f4SPXydKlq02BkpBxVJdCvAW6ZTFgqMu\ntgPqF/+K4M7/HE+b88h7+VvBMU20tqn5c5CbtMGeIM81i/ulE89jRVv/24cxYF+C\niTtVpRxu4IMsNkvp04xB26uphG2NG7CUcfAtI/ECgYEArjXBvonNPDQnsiPVPqpe\nAIMaSw+JaD0kq7U9Zs3ktHC4RfcmdBcq+M7MX92YcAhveC4xae5Z/HSQE2nLm1FB\nsrtijuAFKbayhc3RiGv4uainqVszL652re5CjWX8fEniBdiDabIXqygYyVdwg42o\nNbGgrIxZLtOe3tdHFHtK94cCgYBqWCOq4bRsIoNiqPEnJtM/ETlluozU7IGtVGz8\nZOH0Xzi1bDvJ/i9CZrH/sQmvi9DlPbYnuGKbosHjJlZm+zRhDhsfz/jwNdzhSpI6\nadvj7ruVo/8XKggskOH+kkV3hNNZS7Zv8Aj9y+lr/PIJFfPj5GZJWDbl4JCQX6Ru\nEr1m8QKBgEItNIJKC8KMr2xVPcnj54LYgPobxQrKKNSgEC+E3dDV8LD26vGJfQcI\nL0lPO3VmoYdZBykiAt5CXG5/FK9JCSWCmSY1OFbbgXtx0FjF7sTG8+w+j8mnQ6VP\n7WqSZ053ewFxk/XIXcNwWAQD9nWg3WJMwQADSDgKGctQQW8DOwOV\n-----END RSA PRIVATE KEY-----\n",
+        "verify_hostname": false
+      },
+      "compression": "gzip",
+      "bulk": {
+        "action": "index",
+        "index": "logs-%F"
+      },
+      "pipeline": "testpipe",
+      "mode": "bulk"
+    }
+  }
+}
