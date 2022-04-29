@@ -305,6 +305,12 @@ func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (un
 	return apis, ok
 }
 
+const (
+	UpToDateVersion uint = iota
+	DeprecatedVersion
+	UnsupportedVersion
+)
+
 // CalculateCompatibility check compatibility. Returns
 //   0 - if resource is compatible
 //   1 - if resource in deprecated and will be removed in the future
@@ -316,7 +322,7 @@ func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semve
 	if exists {
 		isUnsupported := currentK8SAPIsStorage.isUnsupportedByAPIAndKind(resourceAPIVersion, resourceKind)
 		if isUnsupported {
-			return 2, fmt.Sprintf("%d.%d", currentVersion.Major(), currentVersion.Minor())
+			return UnsupportedVersion, fmt.Sprintf("%d.%d", currentVersion.Major(), currentVersion.Minor())
 		}
 	}
 
@@ -328,24 +334,24 @@ func (uvs unsupportedVersionsStore) CalculateCompatibility(currentVersion *semve
 		if exists {
 			isDeprecated := storage.isUnsupportedByAPIAndKind(resourceAPIVersion, resourceKind)
 			if isDeprecated {
-				return 1, fmt.Sprintf("%d.%d", nextVersion.Major(), nextVersion.Minor())
+				return DeprecatedVersion, fmt.Sprintf("%d.%d", nextVersion.Major(), nextVersion.Minor())
 			}
 		}
 	}
 
-	return 0, ""
+	return UpToDateVersion, ""
 }
 
 // APIVersion: [Kind]
 type unsupportedAPIVersions map[string][]string
 
-func (ua unsupportedAPIVersions) isUnsupportedByAPIAndKind(api, ikind string) bool {
-	kinds, ok := ua[api]
+func (ua unsupportedAPIVersions) isUnsupportedByAPIAndKind(resourceAPI, resourceKind string) bool {
+	kinds, ok := ua[resourceAPI]
 	if !ok {
 		return false
 	}
 	for _, kind := range kinds {
-		if kind == ikind {
+		if kind == resourceKind {
 			return true
 		}
 	}
