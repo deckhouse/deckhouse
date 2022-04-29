@@ -2,7 +2,7 @@
 title: "The vertical-pod-autoscaler-crd module"
 ---
 
-This module defines CustomResourceDefinitions for the [vertical-pod-autoscaler]({{ "/modules/302-vertical-pod-autoscaler" | true_relative_url }}) module.
+This module defines CustomResourceDefinitions for the [vertical-pod-autoscaler](../302-vertical-pod-autoscaler/) module.
 
 Configuration
 ------------
