@@ -29,6 +29,8 @@
     The new module - ceph-csi. Manages the creation of Ceph volumes (RBD and CephFS) and attaches them to workloads.
  - **[control-plane-manager]** Update etcd to 3.5.3 [#1387](https://github.com/deckhouse/deckhouse/pull/1387)
     Restart etcd due to update to version 3.5.3.
+ - **[docs]** Added Deckhouse documentation overview page. [#1467](https://github.com/deckhouse/deckhouse/pull/1467)
+ - **[flant-integration]** Describes what information Deckhouse sends out and how it can be disabled. [#1429](https://github.com/deckhouse/deckhouse/pull/1429)
  - **[ingress-nginx]** Add 1.1 IngressNginxController version which is "must have" for clusters with k8s version > 1.21 [#1209](https://github.com/deckhouse/deckhouse/pull/1209)
  - **[linstor]** Added more alerts for LINSTOR. [#1055](https://github.com/deckhouse/deckhouse/pull/1055)
  - **[linstor]** Grafana dashboard for LINSTOR [#1035](https://github.com/deckhouse/deckhouse/pull/1035)
@@ -54,16 +56,21 @@
 ## Fixes
 
 
+ - **[candi]** Fixed race condition between old the kubernetes-api-proxy-configurator and bashible step. [#1482](https://github.com/deckhouse/deckhouse/pull/1482)
  - **[candi]** Fix startup config in Kubernetes API proxy configuration script. [#1426](https://github.com/deckhouse/deckhouse/pull/1426)
  - **[candi]** Added imagePullPolicy: IfNotPresent to kubernetes-api-proxy static pod. Fixed kubernetes-api-proxy run in docker envs. [#1297](https://github.com/deckhouse/deckhouse/pull/1297)
+ - **[ceph-csi]** Allow helm_lib_csi_node_manifests to be used for all cluster types for ceph-csi. [#1478](https://github.com/deckhouse/deckhouse/pull/1478)
  - **[chrony]** Remove chronyd stale pid file on start [#1375](https://github.com/deckhouse/deckhouse/pull/1375)
+ - **[cloud-provider-aws]** Fix OpenAPI specifications. [#1449](https://github.com/deckhouse/deckhouse/pull/1449)
  - **[cloud-provider-aws]** The necessary IAM policies for creating a peering connection have been added to the documentation. [#504](https://github.com/deckhouse/deckhouse/pull/504)
+ - **[cloud-provider-vsphere]** Fix OpenAPI specifications. [#1449](https://github.com/deckhouse/deckhouse/pull/1449)
  - **[cloud-provider-vsphere]** Correct behavior of nestedHardwareVirtualization parameter for VsphereInstanceClass. [#1331](https://github.com/deckhouse/deckhouse/pull/1331)
     Node groups with VsphereInstanceClass runtimeOptions.nestedHardwareVirtualization set to false have to be manually updated for this setting to take place. New nodes will be created with disabled nested hardware virtualization if it is disabled in configuration.
  - **[control-plane-manager]** Add the `--experimental-initial-corrupt-check` flag for etcd. [#1267](https://github.com/deckhouse/deckhouse/pull/1267)
     Etcd will be restarted.
  - **[deckhouse]** Fix kubernetes upgrades with feature gates and limits deckhouse modules revision up to 3 [#1377](https://github.com/deckhouse/deckhouse/pull/1377)
  - **[deckhouse]** Fixed a bug for the case when the storage class is set to "false" [#1364](https://github.com/deckhouse/deckhouse/pull/1364)
+ - **[helm_lib]** Update CSI controller without creating a new one. [#1481](https://github.com/deckhouse/deckhouse/pull/1481)
  - **[linstor]** automatically recover evicted nodes in LINSTOR [#1397](https://github.com/deckhouse/deckhouse/pull/1397)
  - **[linstor]** LINSTOR module now supports high-availability [#1147](https://github.com/deckhouse/deckhouse/pull/1147)
     Multimaster clusters will automatically turn LINSTOR into HA-mode
@@ -71,6 +78,8 @@
  - **[namespace-configurator]** Exclude upmeter probe namespaces from namespace-configurator snapshots. [#1439](https://github.com/deckhouse/deckhouse/pull/1439)
  - **[node-local-dns]** Reworked health checking logic [#388](https://github.com/deckhouse/deckhouse/pull/388)
     Now Pods shouldn't crash unexpectedly now due to poor implementation of locking/probing.
+ - **[node-manager]** Truncate event message to allowed maximums in update_node_group_status hook. [#1480](https://github.com/deckhouse/deckhouse/pull/1480)
+ - **[openvpn]** Fixed Values references in ConfigMap. [#1463](https://github.com/deckhouse/deckhouse/pull/1463)
  - **[openvpn]** Fixed "loadBalancer" OpenAPI spec. [#1417](https://github.com/deckhouse/deckhouse/pull/1417)
  - **[openvpn]** Fixed statefulSet apiVersion in a migration hook. [#1354](https://github.com/deckhouse/deckhouse/pull/1354)
  - **[openvpn]** Set default value for loadbalancer object in the OpenAPI schema. [#1353](https://github.com/deckhouse/deckhouse/pull/1353)
