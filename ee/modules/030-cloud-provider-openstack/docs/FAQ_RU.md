@@ -180,6 +180,7 @@ OpenStack API успешно рапортует об изменении разм
 
 Для устранения проблемы необходимо прописать в `cinder.conf` параметры доступа к Nova API. Например, так:
 
+{% raw %}
 ```ini
 [nova]
 interface = admin
@@ -193,6 +194,7 @@ region_name = {{ nova_service_region }}
 user_domain_id = default
 username = {{ nova_service_user_name }}
 ```
+{% endraw %}
 
 [Источник...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
 

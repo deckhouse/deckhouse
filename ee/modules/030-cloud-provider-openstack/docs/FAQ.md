@@ -174,6 +174,7 @@ The OpenStack API states that the resize is completed successfully. However, Nov
 
 To get rid of this problem, you need to insert the Nova API access parameters into the `cinder.conf` file, e.g., as follows:
 
+{% raw %}
 ```ini
 [nova]
 interface = admin
@@ -187,6 +188,7 @@ region_name = {{ nova_service_region }}
 user_domain_id = default
 username = {{ nova_service_user_name }}
 ```
+{% endraw %}
 
 [Source...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
 
