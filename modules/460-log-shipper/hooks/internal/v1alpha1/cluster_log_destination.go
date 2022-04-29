@@ -70,6 +70,7 @@ type LokiAuthSpec struct {
 	User     string `json:"user,omitempty"`
 }
 
+// RateLimitSpec is throttle-transform configuration.
 type RateLimitSpec struct {
 	LinesPerMinute *int32 `json:"linesPerMinute,omitempty"`
 }

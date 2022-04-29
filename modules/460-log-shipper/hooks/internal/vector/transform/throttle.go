@@ -20,13 +20,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
 )
 
-// ExtraFieldTransform converts templated labels to values.
-//
-// TODO(nabokihms): Honestly, I do not know exactly how this function works.
-//   Only required for Elasticsearch sinks.
-//   It definitely deserves refactoring. My assumption is that it generates VRL rules from extra labels.
-//   Example:
-//     label_name: {{ values.app }} -> .label_name = .values.app
+// ThrottleTransform adds throttling to event's flow.
 func ThrottleTransform(rl v1alpha1.RateLimitSpec) *DynamicTransform {
 	throttleTransform := DynamicTransform{
 		CommonTransform: CommonTransform{
