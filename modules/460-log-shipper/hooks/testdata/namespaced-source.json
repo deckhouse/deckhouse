@@ -172,7 +172,7 @@
     "d8_tf_tests-whispers_whispers-logs_test-es-dest_10_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "d8_tf_tests-whispers_whispers-logs_test-es-dest_03_extra_fields"
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_09_log_filter"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
@@ -182,7 +182,7 @@
     "d8_cluster_sink_loki-storage": {
       "type": "loki",
       "inputs": [
-        "d8_tf_tests-whispers_whispers-logs_loki-storage_01_json_parse"
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_07_log_filter"
       ],
       "healthcheck": {
         "enabled": false
@@ -213,7 +213,7 @@
     "d8_cluster_sink_test-es-dest": {
       "type": "elasticsearch",
       "inputs": [
-        "d8_tf_tests-whispers_whispers-logs_test-es-dest_04_del_parsed_data"
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_10_del_parsed_data"
       ],
       "healthcheck": {
         "enabled": false

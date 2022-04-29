@@ -32,11 +32,11 @@
         "verify_hostname": true
       },
       "compression": "gzip",
-      "pipeline": "test-pipe",
       "bulk": {
-        "index": "{{ kubernetes.namespace }}-%F",
-        "action": "index"
+        "action": "index",
+        "index": "{{ kubernetes.namespace }}-%F"
       },
+      "pipeline": "test-pipe",
       "mode": "bulk"
     }
   }

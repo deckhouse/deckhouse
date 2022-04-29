@@ -83,8 +83,6 @@
     },
     "d8_tf_test-source_test-es-dest_08_log_filter": {
       "condition": "match!(.parsed_data.foo, r'^wvrr$')",
-    "d8_tf_test-source_08_log_filter": {
-      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
       "inputs": [
         "d8_tf_test-source_test-es-dest_07_log_filter"
       ],
