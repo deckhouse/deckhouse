@@ -137,6 +137,13 @@ spec:
                           description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удалённого хоста.
                         verifyCertificate:
                           description: Проверка действия TLS-сертификата удаленного хоста.
+                rateLimit:
+                  description: |
+                    Ограничиваем поток событий в хранилище.
+                  properties:
+                    linesPerMinute:
+                      description: |
+                        Количество записей в минуту.
                 extraLabels:
                   description: |
                     Дополнительные label'ы, которыми будут снабжаться записи логов.
