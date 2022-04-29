@@ -43,8 +43,9 @@ type PodLoggingConfigSpec struct {
 	// LabelSelector filter pods by label
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
 
-	// Log filters array
-	LogFilters []LogFilter `json:"logFilter,omitempty"`
+	// Filters
+	LogFilters   []Filter `json:"logFilter,omitempty"`
+	LabelFilters []Filter `json:"labelFilter,omitempty"`
 
 	// Multiline parsers
 	MultiLineParser MultiLineParser `json:"multilineParser,omitempty"`

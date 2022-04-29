@@ -45,7 +45,7 @@
       "inputs": [
         "d8_tf_tests-whispers_whispers-logs_01_clean_up"
       ],
-      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n}",
+      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
       "type": "remap"
     },
     "d8_tf_tests-whispers_whispers-logs_03_elastic_dedot": {

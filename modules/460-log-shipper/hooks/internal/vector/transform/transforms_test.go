@@ -76,29 +76,48 @@ func TestTransformSnippet(t *testing.T) {
 	t.Run("Test filters", func(t *testing.T) {
 		transforms := make([]impl.LogTransform, 0)
 
-		filters := make([]v1alpha1.LogFilter, 0)
-		filters = append(filters, v1alpha1.LogFilter{
+		filters := make([]v1alpha1.Filter, 0)
+		filters = append(filters, v1alpha1.Filter{
 			Field:    "info",
-			Operator: v1alpha1.LogFilterOpExists,
+			Operator: v1alpha1.FilterOpExists,
 		})
 
-		filters = append(filters, v1alpha1.LogFilter{
+		filters = append(filters, v1alpha1.Filter{
 			Field:    "severity",
-			Operator: v1alpha1.LogFilterOpIn,
+			Operator: v1alpha1.FilterOpIn,
 			Values: []interface{}{
 				"aaa",
 				42,
 			},
 		})
 
-		filterTransforms, _ := CreateLogFilterTransforms(filters)
+		filters = append(filters, v1alpha1.Filter{
+			Field:    "namespace",
+			Operator: v1alpha1.FilterOpRegex,
+			Values: []interface{}{
+				"d8-.*",
+				"kube-.*",
+			},
+		})
+
+		filters = append(filters, v1alpha1.Filter{
+			Field:    "namespace",
+			Operator: v1alpha1.FilterOpNotRegex,
+			Values: []interface{}{
+				"dev-.*",
+				"prod-.*",
+			},
+		})
+
+		filterTransforms, err := CreateLogFilterTransforms(filters)
+		require.NoError(t, err)
 
 		transforms = append(transforms, filterTransforms...)
 
 		tr, err := BuildFromMapSlice("testit", transforms)
 		require.NoError(t, err)
 
-		assert.Len(t, tr, 2)
+		assert.Len(t, tr, 4)
 		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
 
 		data, err := json.MarshalIndent(tr, "", "\t")

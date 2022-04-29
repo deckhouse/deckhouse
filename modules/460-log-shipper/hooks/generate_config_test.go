@@ -186,6 +186,27 @@ spec:
     field: foo
     values:
     - ^wvrr
+  labelFilter:
+  - field: foo
+    operator: Exists
+  - field: fo
+    operator: DoesNotExist
+  - operator: In
+    field: test
+    values:
+    - 111
+  - operator: NotIn
+    field: test
+    values:
+    - test-test
+  - operator: Regex
+    field: test
+    values:
+    - test.*
+  - operator: NotRegex
+    field: foo
+    values:
+    - test.+
   destinationRefs:
     - test-es-dest
     - test-loki-dest

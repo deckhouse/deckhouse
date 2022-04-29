@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
 
-            `metadata.name` — задаёт имя upstream, который будет использоваться в CR [ClusterLoggingConfig](https://deckhouse.io/ru/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` — задаёт имя upstream, который будет использоваться в CustomResource [ClusterLoggingConfig](https://deckhouse.io/ru/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               properties:
@@ -19,7 +19,7 @@ spec:
                         password:
                           description: Закодированный в Base64 пароль для Basic-аутентификации.
                         strategy:
-                          description: Тип аутентификации — `Basic` или Bearer`.
+                          description: Используемый тип аутентификации.
                         token:
                           description: Токен для Bearer-аутентификации.
                         user:
@@ -56,7 +56,7 @@ spec:
                     auth:
                       properties:
                         strategy:
-                          description: Тип аутентификации - `Basic` или `AWS`.
+                          description: Тип аутентификации — `Basic` или `AWS`.
                         password:
                           description: Закодированный в Base64 пароль для Basic-аутентификации.
                         awsAccessKey:
@@ -74,7 +74,7 @@ spec:
                     pipeline:
                       description: Имя pipeline, который будет применён к данным перед записью в индекс.
                     endpoint:
-                      description: Адрес инстанса Elasticsearch.
+                      description: URL для подключения к Elasticsearch.
                     dataStreamEnabled:
                       description: |
                         Использовать Datastream для хранения логов (https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
@@ -112,9 +112,9 @@ spec:
                 logstash:
                   properties:
                     endpoint:
-                      description: Адрес приёмника логов.
+                      description: URL для подключения к Logstash.
                     tls:
-                      description: Настройки защищённого TLS соединения.
+                      description: Настройки защищённого TLS-соединения.
                       properties:
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
@@ -146,7 +146,7 @@ spec:
                     Некоторые ключи зарезервированы:
                     - parsed_data
                     - pod
-                    - pod_labels
+                    - pod_labels_*
                     - pod_ip
                     - namespace
                     - image

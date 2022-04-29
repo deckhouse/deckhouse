@@ -198,3 +198,63 @@ spec:
       user: elastic
       password: c2VjcmV0IC1uCg==
 ```
+
+## Фильтрация логов
+
+Только логи контейнера Nginx:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: nginx-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+  - field: container
+    operator: In
+    values: [nginx]
+  destinationRefs:
+  - loki-storage
+```
+
+Не debug и не JSON-логи:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: non-debug-logs
+spec:
+  logFilter:
+  - operator: NotRegex
+    values: ["DEBUG.*"]
+  destinationRefs:
+  - loki-storage
+```
+
+Только ошибки микросервисов бекэнда:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: backend-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+    - field: pod_labels.app
+      operator: In
+      values: [web-server, queue-worker]
+  logFilter:
+    - field: error
+      operator: Exists
+  destinationRefs:
+    - loki-storage
+```
+
+> NOTE: Если вам нужны только логи одного или малой группы pod'ов, постарайтесь использовать настройки kubernetesPods, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
+

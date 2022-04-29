@@ -14,13 +14,13 @@ Then in logs, you will find a lot of helpful information about HTTP requests, co
 
 ## How to get aware of logs pipelines?
 
-To begin with, go to the command shell of the pod on a desired node.
+To begin with, go to the command shell of the Pod on a desired node.
 ```bash
 kubectl -n d8-log-shipper get pods -o wide | grep $node
 kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
 ```
 
-All following commands are assumed to be executed from the pod's shell.
+All following commands are assumed to be executed from the Pod's shell.
 
 ### See pipelines as a graph
 

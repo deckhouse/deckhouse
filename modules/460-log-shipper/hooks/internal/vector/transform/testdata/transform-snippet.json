@@ -12,7 +12,7 @@
 		"inputs": [
 			"d8_tf_testit_00_clean_up"
 		],
-		"source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n}",
+		"source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
 		"type": "remap"
 	},
 	{

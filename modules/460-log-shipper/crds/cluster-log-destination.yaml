@@ -24,7 +24,7 @@ spec:
           description: |
             Describes setting for a log storage, which you can use in many log sources.
 
-            `metadata.name` — is an upstream name, which you should use in CR [ClusterLoggingConfig](https://deckhouse.io/en/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` — is an upstream name, which you should use in CustomResource [ClusterLoggingConfig](https://deckhouse.io/en/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               type: object
@@ -275,7 +275,7 @@ spec:
                   properties:
                     endpoint:
                       type: string
-                      description: The base URL of the Loki instance.
+                      description: The base URL of the Logstash instance.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
@@ -325,7 +325,7 @@ spec:
                     There are some reserved keys:
                     - parsed_data
                     - pod
-                    - pod_labels
+                    - pod_labels_*
                     - pod_ip
                     - namespace
                     - image

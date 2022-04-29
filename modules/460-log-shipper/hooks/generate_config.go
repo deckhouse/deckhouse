@@ -122,29 +122,49 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 		if len(sourceConfig.Spec.DestinationRefs) > 1 {
 			for _, dest := range sourceConfig.Spec.DestinationRefs {
 				newSource := sourceConfig
-				newSource.Name = sourceConfig.Name + "_" + dest
-				newSource.Spec.DestinationRefs = make([]string, 1)
-				newSource.Spec.DestinationRefs[0] = dest
-				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[dest])...)
-				filterTransforms, err := transform.CreateLogFilterTransforms(tmpSpec.Spec.LogFilters)
-				if err != nil {
-					return err
+				// Destination
+				{
+					newSource.Name = sourceConfig.Name + "_" + dest
+					newSource.Spec.DestinationRefs = make([]string, 1)
+					newSource.Spec.DestinationRefs[0] = dest
 				}
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, filterTransforms...)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[dest])...)
+				// Transforms
+				{
+					newSource.Spec.Transforms = make([]impl.LogTransform, 0)
+
+					newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
+					newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[dest])...)
+					labelFilterTransforms, err := transform.CreateLabelFilterTransforms(tmpSpec.Spec.LabelFilters)
+					if err != nil {
+						return err
+					}
+					newSource.Spec.Transforms = append(newSource.Spec.Transforms, labelFilterTransforms...)
+					logFilterTransforms, err := transform.CreateLogFilterTransforms(tmpSpec.Spec.LogFilters)
+					if err != nil {
+						return err
+					}
+					newSource.Spec.Transforms = append(newSource.Spec.Transforms, logFilterTransforms...)
+					newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[dest])...)
+				}
 				clusterSources = append(clusterSources, newSource)
 			}
 		} else {
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[sourceConfig.Spec.DestinationRefs[0]])...)
-			filterTransforms, err := transform.CreateLogFilterTransforms(tmpSpec.Spec.LogFilters)
-			if err != nil {
-				return err
+			// Transforms
+			{
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateMultiLineTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[sourceConfig.Spec.DestinationRefs[0]])...)
+				labelFilterTransforms, err := transform.CreateLabelFilterTransforms(tmpSpec.Spec.LabelFilters)
+				if err != nil {
+					return err
+				}
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, labelFilterTransforms...)
+				logFilterTransforms, err := transform.CreateLogFilterTransforms(tmpSpec.Spec.LogFilters)
+				if err != nil {
+					return err
+				}
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, logFilterTransforms...)
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[sourceConfig.Spec.DestinationRefs[0]])...)
 			}
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[sourceConfig.Spec.DestinationRefs[0]])...)
 			clusterSources = append(clusterSources, sourceConfig)
 		}
 	}
@@ -167,29 +187,48 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 		if len(sourceConfig.Spec.ClusterDestinationRefs) > 1 {
 			for _, dest := range sourceConfig.Spec.ClusterDestinationRefs {
 				newSource := sourceConfig
-				newSource.Name = sourceConfig.Name + "_" + dest
-				newSource.Spec.ClusterDestinationRefs = make([]string, 1)
-				newSource.Spec.ClusterDestinationRefs[0] = dest
-				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[dest])...)
-				filterTransforms, err := transform.CreateLogFilterTransforms(tmpPogSpec.Spec.LogFilters)
-				if err != nil {
-					return err
+				// Destination
+				{
+					newSource.Name = sourceConfig.Name + "_" + dest
+					newSource.Spec.ClusterDestinationRefs = make([]string, 1)
+					newSource.Spec.ClusterDestinationRefs[0] = dest
 				}
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, filterTransforms...)
-				newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[dest])...)
+				// Transforms
+				{
+					newSource.Spec.Transforms = make([]impl.LogTransform, 0)
+					newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
+					newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[dest])...)
+					labelFilterTransforms, err := transform.CreateLabelFilterTransforms(tmpPogSpec.Spec.LabelFilters)
+					if err != nil {
+						return err
+					}
+					sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, labelFilterTransforms...)
+					logFilterTransforms, err := transform.CreateLogFilterTransforms(tmpPogSpec.Spec.LogFilters)
+					if err != nil {
+						return err
+					}
+					sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, logFilterTransforms...)
+					newSource.Spec.Transforms = append(newSource.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[dest])...)
+				}
 				namespacedSources = append(namespacedSources, newSource)
 			}
 		} else {
-			filterTransforms, err := transform.CreateLogFilterTransforms(tmpPogSpec.Spec.LogFilters)
-			if err != nil {
-				return err
+			// Transforms
+			{
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
+				labelFilterTransforms, err := transform.CreateLabelFilterTransforms(tmpPogSpec.Spec.LabelFilters)
+				if err != nil {
+					return err
+				}
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, labelFilterTransforms...)
+				logFilterTransforms, err := transform.CreateLogFilterTransforms(tmpPogSpec.Spec.LogFilters)
+				if err != nil {
+					return err
+				}
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, logFilterTransforms...)
+				sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
 			}
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateMultiLineTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultTransforms(destNameToObject[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
-			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, transform.CreateDefaultCleanUpTransforms(destNameToObject[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
 			namespacedSources = append(namespacedSources, sourceConfig)
 		}
 	}

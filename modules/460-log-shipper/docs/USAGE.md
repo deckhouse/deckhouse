@@ -160,7 +160,7 @@ Now you can create PodLogginConfig or ClusterPodLoggingConfig and send logs to *
 
 ## Adding Loki source to Deckhouse Grafana
 
-You can work with Loki from embeded to deckhouse Grafana. Just add [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource)
+You can work with Loki from embedded to deckhouse Grafana. Just add [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource)
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -199,3 +199,63 @@ spec:
       user: elastic
       password: c2VjcmV0IC1uCg==
 ```
+
+## Logs filters
+
+Only Nginx container logs:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: nginx-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+  - field: container
+    operator: In
+    values: [nginx]
+  destinationRefs:
+  - loki-storage
+```
+
+Non-debug non-JSON logs:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: non-debug-logs
+spec:
+  logFilter:
+  - operator: NotRegex
+    values: ["DEBUG.*"]
+  destinationRefs:
+  - loki-storage
+```
+
+Only error logs of backend microservices:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: backend-logs
+spec:
+  type: KubernetesPods
+  labelFilter:
+  - field: pod_labels.app
+    operator: In
+    values: [web-server, queue-worker]
+  logFilter:
+  - field: error
+    operator: Exists
+  destinationRefs:
+  - loki-storage
+```
+
+
+> NOTE: If you need logs from only one or from a small group of a pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.

@@ -16,9 +16,9 @@ limitations under the License.
 
 package vrl
 
-// CleanUpRule is a general cleanup rule to sanitize the final message.
-// It should always be the first rule in the transforms chain.
-const CleanUpRule Rule = `
+// CleanUpAfterSourceRule is a general cleanup rule to sanitize the final message.
+// It should always be the first rule in the transforms chain to avoid unexpected data leaks to transform rules.
+const CleanUpAfterSourceRule Rule = `
 if exists(.pod_labels."controller-revision-hash") {
     del(.pod_labels."controller-revision-hash")
 }
@@ -30,5 +30,12 @@ if exists(.kubernetes) {
 }
 if exists(.file) {
     del(.file)
+}
+`
+
+// ParsedDataCleanUpRule cleans up the temporary parsed data object.
+const ParsedDataCleanUpRule Rule = `
+if exists(.parsed_data) {
+    del(.parsed_data)
 }
 `
