@@ -29,7 +29,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("helm :: hooks :: deprecated_versions ::", func() {
+var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 	f := HookExecutionConfigInit(`{"global" : {"discovery": {"kubernetesVersion": "1.22.3"}}}`, "")
 
 	Context("helm3 release with deprecated versions", func() {

@@ -26,6 +26,7 @@ import (
 
 // This hook is needed to fill the gaps between Deckhouse restarts and avoid alerts flapping.
 // it takes latest metrics from prometheus and duplicate them on Deckhouse startup
+// Hook is global to execute as soon as possible
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/helm/helm_releases",

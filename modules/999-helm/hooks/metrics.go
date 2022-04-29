@@ -52,7 +52,8 @@ import (
 
 // **Attention**
 // Releases are checked via kubeclient not by snapshots to avoid huge memory consumption
-// on some installations snapshots can take gigabytes of memory
+// on some installations snapshots can take gigabytes of memory. Releases are checked by batches with size specified in
+// objectBatchSize. It means, that kubeClient will list only limited amount of releases to avoid memory explosion
 
 const unsupportedVersionsYAML = `
 "1.22":
@@ -99,7 +100,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
-			Crontab: "*/3 * * * *",
+			Crontab: "*/20 * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
