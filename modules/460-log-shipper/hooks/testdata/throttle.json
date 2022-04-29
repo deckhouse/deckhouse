@@ -1,14 +1,26 @@
 {
   "sources": {
-    "test-source_test-es-dest": {
-      "type": "file"
+    "d8_cluster_source_test-source_test-es-dest": {
+      "type": "kubernetes_logs",
+      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "glob_minimum_cooldown_ms": 1000
     }
   },
   "transforms": {
     "d8_tf_test-source_test-es-dest_00_clean_up": {
       "drop_on_abort": false,
       "inputs": [
-        "test-source_test-es-dest"
+        "d8_cluster_source_test-source_test-es-dest"
       ],
       "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
       "type": "remap"
@@ -37,7 +49,7 @@
       "inputs": [
         "d8_tf_test-source_test-es-dest_02_elastic_dedot"
       ],
-      "threshold": 666,
+      "threshold": 500,
       "type": "throttle",
       "window_secs": 60
     },

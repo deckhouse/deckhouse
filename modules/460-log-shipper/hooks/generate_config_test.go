@@ -712,7 +712,7 @@ kind: ClusterLoggingConfig
 metadata:
   name: test-source
 spec:
-  type: File
+  type: KubernetesPods
   #kubernetesPods: {}
   destinationRefs:
     - test-es-dest
