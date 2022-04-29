@@ -296,7 +296,7 @@ type manifest struct {
 	} `json:"metadata" yaml:"metadata"`
 }
 
-// k8s version: APIVersion: Kind
+// k8s version: APIVersion: [Kind, ...]
 type unsupportedVersionsStore map[string]unsupportedAPIVersions
 
 func (uvs unsupportedVersionsStore) getByK8sVersion(version *semver.Version) (unsupportedAPIVersions, bool) {
