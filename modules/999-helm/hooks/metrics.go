@@ -265,7 +265,6 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 
 			incompatibility, k8sCompatibilityVersion := storage.CalculateCompatibility(k8sCurrentVersion, resource.APIVersion, resource.Kind)
 			if incompatibility > 0 {
-				fmt.Println("GOT INCOM", rel.Namespace, rel.Name, resource.APIVersion, resource.Kind)
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      rel.Name,
 					"helm_release_namespace": rel.Namespace,
