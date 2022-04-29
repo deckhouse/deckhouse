@@ -183,7 +183,7 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 				continue
 			}
 
-			release, err := decodeRelease(string(releaseData))
+			release, err := helm3DecodeRelease(string(releaseData))
 			if err != nil {
 				return 0, err
 			}
@@ -358,10 +358,10 @@ func (ua unsupportedAPIVersions) isUnsupportedByAPIAndKind(api, ikind string) bo
 var magicGzip = []byte{0x1f, 0x8b, 0x08}
 
 // Import this from helm3 lib - https://github.com/helm/helm/blob/49819b4ef782e80b0c7f78c30bd76b51ebb56dc8/pkg/storage/driver/util.go#L56
-// decodeRelease decodes the bytes of data into a release
+// helm3DecodeRelease decodes the bytes of data into a release
 // type. Data must contain a base64 encoded gzipped string of a
 // valid release, otherwise an error is returned.
-func decodeRelease(data string) (*release, error) {
+func helm3DecodeRelease(data string) (*release, error) {
 	// base64 decode string
 	b, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
