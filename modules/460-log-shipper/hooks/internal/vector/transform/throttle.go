@@ -35,7 +35,7 @@ func ThrottleTransform(rl v1alpha1.RateLimitSpec) *DynamicTransform {
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"exclude":     "null",
-			"threshold":   rl.LinesPerMinute,
+			"threshold":   *rl.LinesPerMinute,
 			"window_secs": 60,
 		},
 	}
