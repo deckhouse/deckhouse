@@ -1,0 +1,46 @@
+candi:
+  fixes:
+    - summary: Fixed race condition between old the kubernetes-api-proxy-configurator and bashible step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1482
+ceph-csi:
+  fixes:
+    - summary: Allow helm_lib_csi_node_manifests to be used for all cluster types for ceph-csi.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1478
+cloud-provider-aws:
+  fixes:
+    - summary: Fix OpenAPI specifications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1449
+cloud-provider-vsphere:
+  fixes:
+    - summary: Fix OpenAPI specifications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1449
+docs:
+  features:
+    - summary: Don't collapse the expanded item in the sidebar when expanding the item.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1470
+    - summary: Added Deckhouse documentation overview page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1467
+  fixes:
+    - summary: Minor fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1474
+flant-integration:
+  features:
+    - summary: Describes what information Deckhouse sends out and how it can be disabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1429
+helm_lib:
+  fixes:
+    - summary: Update CSI controller without creating a new one.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1481
+node-manager:
+  fixes:
+    - summary: Truncate event message to allowed maximums in update_node_group_status hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1480
+openvpn:
+  fixes:
+    - summary: Fixed Values references in ConfigMap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1463
+upmeter:
+  fixes:
+    - summary: Fix OpenAPI specifications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1449
+
