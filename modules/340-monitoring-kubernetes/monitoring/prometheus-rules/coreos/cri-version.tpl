@@ -27,8 +27,11 @@
         * Docker 17.x
         * Docker 18.x
         * Docker 19.x
+        * Docker 20.x
+        * Docker 3.x (for moby project in Azure)
         * Containerd 1.4.*
-        * 3.x (for moby project in Azure)
+        * Containerd 1.5.*
+        * Containerd 1.6.*
       summary: >
         Unsupported version of CRI {{`{{$labels.container_runtime_version}}`}} installed for Kubernetes version: {{`{{$labels.kubelet_version}}`}}
 
