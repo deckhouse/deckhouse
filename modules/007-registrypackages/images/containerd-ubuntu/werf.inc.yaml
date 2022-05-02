@@ -1,5 +1,5 @@
 {{- $containerd_versions := list }}
-{{- $ubuntu_versions := dict "16.04" "xenial" "18.04" "bionic" "20.04" "focal" }}
+{{- $ubuntu_versions := dict "16.04" "xenial" "18.04" "bionic" "20.04" "focal" "22.04" "jammy"}}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- range $key, $versions := $value.bashible.ubuntu }}
     {{- if $versions.containerd.desiredVersion }}

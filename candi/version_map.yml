@@ -60,6 +60,29 @@ bashible: &bashible
         gcp:
           desiredVersion: "5.4.0-1029-gcp"
           allowedPattern: ""
+    '22.04':
+      docker:
+        desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io=1.5.11-1"
+          allowedPattern: "containerd.io=1.[56]"
+      containerd:
+        desiredVersion: "containerd.io=1.5.11-1"
+        allowedPattern: "containerd.io=1.[56]"
+      kernel:
+        generic:
+          desiredVersion: "5.15.0-27-generic"
+          allowedPattern: ""
+        aws:
+          desiredVersion: "5.15.0-1004-aws"
+          allowedPattern: ""
+        azure:
+          desiredVersion: "5.15.0-1003-azure"
+          allowedPattern: ""
+        gcp:
+          desiredVersion: "5.15.0-1003-gcp"
+          allowedPattern: ""
   debian:
     '9': &debian9
       docker:

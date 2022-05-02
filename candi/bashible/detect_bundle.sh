@@ -20,7 +20,7 @@ if [ -e /etc/os-release ]; then
       echo "centos"
       exit 0
     ;;
-    ubuntu-16.04|ubuntu-18.04|ubuntu-20.04)
+    ubuntu-16.04|ubuntu-18.04|ubuntu-20.04|ubuntu-22.04)
       echo "ubuntu-lts"
       exit 0
     ;;
