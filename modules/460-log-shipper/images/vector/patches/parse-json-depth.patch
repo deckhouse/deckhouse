@@ -1,8 +1,8 @@
 diff --git a/lib/vrl/stdlib/src/parse_json.rs b/lib/vrl/stdlib/src/parse_json.rs
-index 1fae11397..c89e9c154 100644
+index 1fae11397..0bfb773a4 100644
 --- a/lib/vrl/stdlib/src/parse_json.rs
 +++ b/lib/vrl/stdlib/src/parse_json.rs
-@@ -1,10 +1,68 @@
+@@ -1,10 +1,70 @@
 +use serde_json::value::{RawValue, Value as JsonValue};
 +use serde_json::{Error, Map};
 +use std::collections::HashMap;
@@ -47,35 +47,37 @@ index 1fae11397..c89e9c154 100644
 +    value: Box<RawValue>,
 +    max_depth: i64,
 +) -> std::result::Result<JsonValue, Error> {
-+    // Exhausted, return raw bytes
-+    if max_depth == 0 {
-+        serde_json::value::to_value(value.to_string())
-+    // Object
-+    } else if value.get().starts_with('{') {
-+        let map: HashMap<String, Box<RawValue>> = serde_json::from_str(value.get())?;
++    if value.get().starts_with('{') {
++        if max_depth == 0 {
++            serde_json::value::to_value(value.to_string())
++        } else {
++            let map: HashMap<String, Box<RawValue>> = serde_json::from_str(value.get())?;
 +
-+        let mut res_map: Map<String, JsonValue> = Map::with_capacity(map.len());
-+        for (k, v) in map {
-+            res_map.insert(k, parse_once_with_depth(v, max_depth - 1)?);
++            let mut res_map: Map<String, JsonValue> = Map::with_capacity(map.len());
++            for (k, v) in map {
++                res_map.insert(k, parse_once_with_depth(v, max_depth - 1)?);
++            }
++            Ok(serde_json::Value::from(res_map))
 +        }
-+        Ok(serde_json::Value::from(res_map))
-+    // Array
 +    } else if value.get().starts_with('[') {
-+        let arr: Vec<Box<RawValue>> = serde_json::from_str(value.get())?;
++        if max_depth == 0 {
++            serde_json::value::to_value(value.to_string())
++        } else {
++            let arr: Vec<Box<RawValue>> = serde_json::from_str(value.get())?;
 +
-+        let mut res_arr: Vec<JsonValue> = Vec::with_capacity(arr.len());
-+        for v in arr {
-+            res_arr.push(parse_once_with_depth(v, max_depth - 1)?)
++            let mut res_arr: Vec<JsonValue> = Vec::with_capacity(arr.len());
++            for v in arr {
++                res_arr.push(parse_once_with_depth(v, max_depth - 1)?)
++            }
++            Ok(serde_json::Value::from(res_arr))
 +        }
-+        Ok(serde_json::Value::from(res_arr))
-+    // Other JSON values
 +    } else {
-+        serde_json::value::to_value(value.to_string())
++        serde_json::from_str(value.get())
 +    }
  }
 
  #[derive(Clone, Copy, Debug)]
-@@ -29,11 +87,18 @@ impl Function for ParseJson {
+@@ -29,11 +89,18 @@ impl Function for ParseJson {
      }
 
      fn parameters(&self) -> &'static [Parameter] {
@@ -99,7 +101,7 @@ index 1fae11397..c89e9c154 100644
      }
 
      fn examples(&self) -> &'static [Example] {
-@@ -75,6 +140,11 @@ impl Function for ParseJson {
+@@ -75,6 +142,11 @@ impl Function for ParseJson {
                      r#"function call error for "parse_json" at (0:26): unable to parse json: key must be a string at line 1 column 3"#,
                  ),
              },
@@ -111,7 +113,7 @@ index 1fae11397..c89e9c154 100644
          ]
      }
 
-@@ -85,8 +155,9 @@ impl Function for ParseJson {
+@@ -85,8 +157,9 @@ impl Function for ParseJson {
          mut arguments: ArgumentList,
      ) -> Compiled {
          let value = arguments.required("value");
@@ -122,7 +124,7 @@ index 1fae11397..c89e9c154 100644
      }
 
      fn call_by_vm(
-@@ -95,19 +166,27 @@ impl Function for ParseJson {
+@@ -95,19 +168,27 @@ impl Function for ParseJson {
          args: &mut VmArgumentList,
      ) -> std::result::Result<Value, ExpressionError> {
          let value = args.required("value");
@@ -152,7 +154,7 @@ index 1fae11397..c89e9c154 100644
      }
 
      fn type_def(&self, _: &state::Compiler) -> TypeDef {
-@@ -169,5 +248,37 @@ mod tests {
+@@ -169,5 +250,37 @@ mod tests {
                  .add_array_mapped::<(), Kind>(map! { (): inner_kind() })
                  .add_object::<(), Kind>(map! { (): inner_kind() }),
          }
