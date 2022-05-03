@@ -16,3 +16,9 @@ https://github.com/vectordotdev/vector/issues/9550
 Add the ability to extract objets to Loki labels, e.g., `{"pod_labels":{"app":"server","name":"web"}}` -> `{"pod_labels_app": "server", "pod_labels_name": "web"}`. 
 
 https://github.com/vectordotdev/vector/issues/9549
+
+### parse_json max depth
+
+Add max_depth optional parameter to the parse_json function to efficiently parse highly nested JSON-formatted messages.
+
+https://github.com/vectordotdev/vector/issues/12458
