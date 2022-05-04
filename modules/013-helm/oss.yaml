@@ -1,0 +1,5 @@
+- name: Helm
+  link: https://github.com/helm/helm
+  description: The package manager for Kubernetes
+  logo: https://helm.sh/img/helm.svg
+  licence: Apache License 2.0
