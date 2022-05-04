@@ -523,7 +523,7 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 		}
 
 		if registry, ok := dc.Auths[m.Registry.Address]; ok {
-			switch true {
+			switch {
 			case registry.Auth != nil:
 				registryAuth = *registry.Auth
 			case registry.Username != nil && registry.Password != nil:

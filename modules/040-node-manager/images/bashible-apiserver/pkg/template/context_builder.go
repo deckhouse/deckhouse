@@ -358,7 +358,7 @@ func (rid registryInputData) toRegistry() registry {
 		}
 
 		if registryObj, ok := dcfg.Auths[rid.Address]; ok {
-			switch true {
+			switch {
 			case registryObj.Auth != nil:
 				auth = *registryObj.Auth
 			case registryObj.Username != nil && registryObj.Password != nil:
