@@ -19,6 +19,7 @@ package template
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"hash"
@@ -356,8 +357,13 @@ func (rid registryInputData) toRegistry() registry {
 			panic(err)
 		}
 
-		if registry, ok := dcfg.Auths[rid.Address]; ok {
-			auth = registry.Auth
+		if registryObj, ok := dcfg.Auths[rid.Address]; ok {
+			if registryObj.Auth != nil {
+				auth = *registryObj.Auth
+			} else if registryObj.Username != nil && registryObj.Password != nil {
+				authRaw := fmt.Sprintf("%s:%s", *registryObj.Username, *registryObj.Password)
+				auth = base64.StdEncoding.EncodeToString([]byte(authRaw))
+			}
 		}
 	}
 
@@ -495,7 +501,9 @@ type registryInputData struct {
 
 type dockerCfg struct {
 	Auths map[string]struct {
-		Auth string `json:"auth"`
+		Auth     *string `json:"auth"`
+		Username *string `json:"username"`
+		Password *string `json:"password"`
 	} `json:"auths"`
 }
 
