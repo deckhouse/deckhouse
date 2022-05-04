@@ -497,7 +497,9 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 	type dockerCfg struct {
 		Auths map[string]struct {
-			Auth string `json:"auth"`
+			Auth     *string `json:"auth"`
+			Username *string `json:"username"`
+			Password *string `json:"password"`
 		} `json:"auths"`
 	}
 
@@ -514,14 +516,21 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 			return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
 		}
 
-		log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
+		log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", string(bytes))
 		err = json.Unmarshal(bytes, &dc)
 		if err != nil {
 			return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
 		}
 
 		if registry, ok := dc.Auths[m.Registry.Address]; ok {
-			registryAuth = registry.Auth
+			if registry.Auth != nil {
+				registryAuth = *registry.Auth
+			} else if registry.Username != nil && registry.Password != nil {
+				auth := fmt.Sprintf("%s:%s", *registry.Username, *registry.Password)
+				registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
+			} else {
+				log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", string(bytes), m.Registry.Address)
+			}
 		}
 	}
 
