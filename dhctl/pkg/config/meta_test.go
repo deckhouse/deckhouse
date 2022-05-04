@@ -17,12 +17,14 @@ package config
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -145,8 +147,33 @@ func generateDockerCfg(host, username, password string) string {
 	return fmt.Sprintf(`{ "auths": { "%s": { "auth": "%s" } } }`, host, dockerCfgAuth(username, password))
 }
 
-func generateOldDockerCfg(host, username, password string) string {
-	return fmt.Sprintf(`{ "auths": { "%s": { "username": "%s", "password": "%s" } } }`, host, username, password)
+func generateOldDockerCfg(host string, username, password *string) string {
+	res := map[string]interface{}{
+		"auths": map[string]interface{}{
+			host: make(map[string]interface{}),
+		},
+	}
+
+	if username != nil {
+		err := unstructured.SetNestedField(res, *username, "auths", host, "username")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if password != nil {
+		err := unstructured.SetNestedField(res, *password, "auths", host, "password")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	auth, err := json.Marshal(res)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(auth)
 }
 
 func generateMetaConfig(t *testing.T, data map[string]interface{}) *MetaConfig {
@@ -216,17 +243,41 @@ func TestParseRegistryData(t *testing.T) {
 	})
 
 	t.Run("dockerCfg in old format (has username and password)", func(t *testing.T) {
-		t.Run("sets auth key as base64 concatenation username and password with ':' separator", func(t *testing.T) {
-			user, password := "old_user", "old_password"
-			cfg := generateMetaConfig(t, map[string]interface{}{
-				"dockerCfg":  generateOldDockerCfg("r.example.com", user, password),
-				"imagesRepo": "r.example.com/deckhouse/ce/",
+		t.Run("correct", func(t *testing.T) {
+			t.Run("sets auth key as base64 concatenation username and password with ':' separator", func(t *testing.T) {
+				user, password := "old_user", "old_password"
+				cfg := generateMetaConfig(t, map[string]interface{}{
+					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, &password),
+					"imagesRepo": "r.example.com/deckhouse/ce/",
+				})
+
+				m, err := cfg.ParseRegistryData()
+				require.NoError(t, err)
+
+				require.Equal(t, m["auth"], dockerCfgAuth(user, password))
 			})
+		})
 
-			m, err := cfg.ParseRegistryData()
-			require.NoError(t, err)
+		t.Run("does not have username", func(t *testing.T) {
+			t.Run("sets empty auth key", func(t *testing.T) {
+				cfg := generateMetaConfig(t, make(map[string]interface{}))
 
-			require.Equal(t, m["auth"], dockerCfgAuth(user, password))
+				m, err := cfg.ParseRegistryData()
+				require.NoError(t, err)
+
+				require.Equal(t, m["auth"], "")
+			})
+		})
+
+		t.Run("does not have password", func(t *testing.T) {
+			t.Run("sets empty auth key", func(t *testing.T) {
+				cfg := generateMetaConfig(t, make(map[string]interface{}))
+
+				m, err := cfg.ParseRegistryData()
+				require.NoError(t, err)
+
+				require.Equal(t, m["auth"], "")
+			})
 		})
 	})
 
