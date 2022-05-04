@@ -31,4 +31,5 @@ locals {
   pod_network_mode      = lookup(var.providerClusterConfiguration.simple, "podNetworkMode", "VXLAN")
   image_name            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
   tags                  = lookup(var.providerClusterConfiguration, "tags", {})
+  ssh_allow_list        = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
 }

@@ -300,6 +300,14 @@ apiVersions:
         type: string
         description: |
           A public key for accessing nodes.
+      sshAllowList:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDR's allowed to connect to nodes via ssh.
+
+          By default, `0.0.0.0/0`.
       tags:
         type: object
         additionalProperties:

@@ -35,8 +35,10 @@ variable "clusterUUID" {
 }
 
 locals {
+  bastion_instance = lookup(var.providerClusterConfiguration, "withNAT", null) != null ? lookup(var.providerClusterConfiguration.withNAT ,"bastionInstance", null) : null
   prefix           = var.clusterConfiguration.cloud.prefix
   vpc_network_cidr = lookup(var.providerClusterConfiguration, "vpcNetworkCIDR", "")
   existing_vpc_id  = lookup(var.providerClusterConfiguration, "existingVPCID", "")
   tags             = lookup(var.providerClusterConfiguration, "tags", {})
+  ssh_allow_list   = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
 }

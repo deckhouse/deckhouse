@@ -33,5 +33,5 @@ output "cloud_discovery_data" {
 }
 
 output "bastion_ip_address_for_ssh" {
-  value = local.bastion_instance != {} ? aws_eip.bastion[0].public_ip : ""
+  value = local.bastion_instance != null ? aws_eip.bastion[0].public_ip : ""
 }

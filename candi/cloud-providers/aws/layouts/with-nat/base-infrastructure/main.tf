@@ -21,11 +21,12 @@ module "vpc" {
 }
 
 module "security-groups" {
-  source       = "../../../terraform-modules/security-groups"
-  prefix       = local.prefix
+  source = "../../../terraform-modules/security-groups"
+  prefix = local.prefix
   cluster_uuid = var.clusterUUID
-  vpc_id       = module.vpc.id
-  tags         = local.tags
+  vpc_id = module.vpc.id
+  tags = local.tags
+  ssh_allow_list = local.ssh_allow_list
 }
 
 data "aws_availability_zones" "available" {}
@@ -191,8 +192,6 @@ resource "aws_key_pair" "ssh" {
 // bastion
 
 locals {
-  with_nat                   = lookup(var.providerClusterConfiguration, "withNAT", {})
-  bastion_instance           = lookup(local.with_nat, "bastionInstance", {})
   instance_class             = lookup(local.bastion_instance, "instanceClass", {})
   additional_security_groups = lookup(local.instance_class, "additionalSecurityGroups", [])
 
@@ -207,19 +206,17 @@ locals {
 
   subnet_id = local.zone_to_subnet_id_map[local.zone]
 
-  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
-
   root_volume_size = lookup(local.instance_class, "diskSizeGb", 20)
   root_volume_type = lookup(local.instance_class, "diskType", "gp2")
 }
 
 resource "aws_instance" "bastion" {
-  count                  = local.bastion_instance != {} ? 1 : 0
+  count                  = local.bastion_instance != null ? 1 : 0
   ami                    = local.instance_class.ami
   instance_type          = local.instance_class.instanceType
   key_name               = local.prefix
   subnet_id              = local.subnet_id
-  vpc_security_group_ids = local.vpc_security_group_ids
+  vpc_security_group_ids = concat([module.security-groups.security_group_id_node, module.security-groups.security_group_id_ssh_accessible], local.additional_security_groups)
   source_dest_check      = false
   iam_instance_profile   = "${local.prefix}-node"
 
@@ -240,7 +237,7 @@ resource "aws_instance" "bastion" {
 }
 
 resource "aws_eip" "bastion" {
-  count = local.bastion_instance != {} ? 1 : 0
+  count = local.bastion_instance != null ? 1 : 0
   vpc   = true
   tags = merge(local.tags, {
     Name = "${local.prefix}-bastion"
@@ -248,7 +245,7 @@ resource "aws_eip" "bastion" {
 }
 
 resource "aws_eip_association" "bastion" {
-  count         = local.bastion_instance != {} ? 1 : 0
+  count         = local.bastion_instance != null ? 1 : 0
   instance_id   = aws_instance.bastion[0].id
   allocation_id = aws_eip.bastion[0].id
 }

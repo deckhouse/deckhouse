@@ -26,6 +26,7 @@ module "security-groups" {
   cluster_uuid = var.clusterUUID
   vpc_id = module.vpc.id
   tags = local.tags
+  ssh_allow_list = local.ssh_allow_list
 }
 
 data "aws_availability_zones" "available" {}
