@@ -122,6 +122,8 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	releasesC := make(chan *release, objectBatchSize)
 	doneC := make(chan bool)
 
+	// helm3 and helm2 are listed and parsed in goroutines
+	// deprecated resources will be processed here in the separated goroutine
 	go runReleaseProcessor(k8sCurrentVersion, input, releasesC, doneC)
 
 	ctx := context.Background()
