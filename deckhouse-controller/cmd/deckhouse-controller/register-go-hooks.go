@@ -21,7 +21,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/pricing"
 	_ "github.com/deckhouse/deckhouse/global-hooks"
 	_ "github.com/deckhouse/deckhouse/global-hooks/discovery"
-	_ "github.com/deckhouse/deckhouse/global-hooks/metrics"
 	_ "github.com/deckhouse/deckhouse/global-hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/global-hooks/resources"
 	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
@@ -29,6 +28,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/010-prometheus-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-user-authn-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-vertical-pod-autoscaler-crd/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/013-helm/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/021-kube-proxy/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-aws/hooks"
@@ -61,5 +61,4 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks/https"
-	_ "github.com/deckhouse/deckhouse/modules/999-helm/hooks"
 )
