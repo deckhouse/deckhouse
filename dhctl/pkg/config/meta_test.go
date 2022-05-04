@@ -260,7 +260,11 @@ func TestParseRegistryData(t *testing.T) {
 
 		t.Run("does not have username", func(t *testing.T) {
 			t.Run("sets empty auth key", func(t *testing.T) {
-				cfg := generateMetaConfig(t, make(map[string]interface{}))
+				password := "old_password"
+				cfg := generateMetaConfig(t, map[string]interface{}{
+					"dockerCfg":  generateOldDockerCfg("r.example.com", nil, &password),
+					"imagesRepo": "r.example.com/deckhouse/ce/",
+				})
 
 				m, err := cfg.ParseRegistryData()
 				require.NoError(t, err)
@@ -271,7 +275,11 @@ func TestParseRegistryData(t *testing.T) {
 
 		t.Run("does not have password", func(t *testing.T) {
 			t.Run("sets empty auth key", func(t *testing.T) {
-				cfg := generateMetaConfig(t, make(map[string]interface{}))
+				user := "old_user"
+				cfg := generateMetaConfig(t, map[string]interface{}{
+					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, nil),
+					"imagesRepo": "r.example.com/deckhouse/ce/",
+				})
 
 				m, err := cfg.ParseRegistryData()
 				require.NoError(t, err)

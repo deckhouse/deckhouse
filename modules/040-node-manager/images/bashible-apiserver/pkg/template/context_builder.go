@@ -358,9 +358,10 @@ func (rid registryInputData) toRegistry() registry {
 		}
 
 		if registryObj, ok := dcfg.Auths[rid.Address]; ok {
-			if registryObj.Auth != nil {
+			switch true {
+			case registryObj.Auth != nil:
 				auth = *registryObj.Auth
-			} else if registryObj.Username != nil && registryObj.Password != nil {
+			case registryObj.Username != nil && registryObj.Password != nil:
 				authRaw := fmt.Sprintf("%s:%s", *registryObj.Username, *registryObj.Password)
 				auth = base64.StdEncoding.EncodeToString([]byte(authRaw))
 			}

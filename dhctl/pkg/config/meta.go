@@ -523,12 +523,13 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 		}
 
 		if registry, ok := dc.Auths[m.Registry.Address]; ok {
-			if registry.Auth != nil {
+			switch true {
+			case registry.Auth != nil:
 				registryAuth = *registry.Auth
-			} else if registry.Username != nil && registry.Password != nil {
+			case registry.Username != nil && registry.Password != nil:
 				auth := fmt.Sprintf("%s:%s", *registry.Username, *registry.Password)
 				registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
-			} else {
+			default:
 				log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", string(bytes), m.Registry.Address)
 			}
 		}
