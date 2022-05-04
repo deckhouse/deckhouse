@@ -2,6 +2,6 @@
   "alpha": {"enabled": true, "waves": 2, "interval": "5m"},
   "beta": {"enabled": false, "waves": 1, "interval": "1m"},
   "early-access": {"enabled": true, "waves": 6, "interval": "30m"},
-  "stable": {"enabled": true, "waves": 6, "interval": "20m"},
+  "stable": {"enabled": true, "waves": 6, "interval": "30m"},
   "rock-solid": {"enabled": false, "waves": 5, "interval": "5m"}
 }
