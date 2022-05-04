@@ -31,7 +31,7 @@
       plk_protocol_version: "1"
       plk_group_for__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
       description: Prometheus failed to scrape {{ `{{ $value }}` }}% of kubelets.
-      summary: A few Kubelets cannot be scraped
+      summary: A few kubelets cannot be scraped
   - alert: K8SKubeletDown
     expr: (count(up{job="kubelet"} == 0) or absent(up{job="kubelet"} == 1)) / count(up{job="kubelet"})) * 100 > 10
     for: 30m
@@ -42,7 +42,7 @@
       plk_protocol_version: "1"
       plk_group_for__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
       description: Prometheus failed to scrape {{ `{{ $value }}` }}% of kubelets.
-      summary: Many Kubelets cannot be scraped
+      summary: Many kubelets cannot be scraped
   - alert: K8SKubeletTooManyPods
 {{- if semverCompare "<1.19" .Values.global.discovery.kubernetesVersion }}
     expr: kubelet_running_pod_count > on(node) kube_node_status_capacity_pods * 0.9
