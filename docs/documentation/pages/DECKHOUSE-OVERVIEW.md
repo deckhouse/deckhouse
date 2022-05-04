@@ -15,7 +15,7 @@ Here are some tips on how to find what you need:
   <div markdown="1">
   - Deckhouse — global settings and general information about the platform.
   - Kubernetes cluster — all things related to control-plane, integration with cloud providers, node management, network management, etc.
-  - Accessing cluster — tools for accessing ([openvpn]({{ site.url }}/{{ page.lang }}/documentation/modules/500-openvpn/)) and managing the cluster ([dashboard](modules/500-dashboard/)).
+  - Accessing cluster — tools for accessing ([openvpn]({{ site.url }}/{{ page.lang }}/documentation/v1/modules/500-openvpn/)) and managing the cluster ([dashboard](modules/500-dashboard/)).
   - Network Load Balancing — [Nginx Ingress](modules/402-ingress-nginx/) and [Istio]({{ site.url }}/{{ page.lang }}/documentation/v1/modules/110-istio/) features.
   - Monitoring — [Prometheus/Grafana](modules/300-prometheus/), [custom monitoring capabilities](modules/340-monitoring-custom/), and [logs collecting](modules/460-log-shipper/).
   - Autoscaling & Managing resources — all things related to Pod management and scaling.
