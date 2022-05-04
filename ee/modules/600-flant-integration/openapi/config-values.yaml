@@ -83,11 +83,6 @@ properties:
       Parameters for generating the kubeall registry.
     required: [host]
     properties:
-      team:
-        type: string
-        x-examples: ["teamA"]
-        description: |
-          **Unused.** The team serving this cluster.
       host:
         type: string
         x-examples: ["hostA"]

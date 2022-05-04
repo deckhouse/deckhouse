@@ -45,9 +45,6 @@ properties:
     description: |
       Параметры для формирования kubeall реестра.
     properties:
-      team:
-        description: |
-          **Не используется.** Команда, обслуживающая этот кластер.
       host:
         description: |
           Имя хоста, на котором запускать `kubectl`.
