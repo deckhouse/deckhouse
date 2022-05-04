@@ -27,6 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+// THIS IS AN EXAMPLE MIGRATION TEST SUITE, NOT USEFUL BY ITSELF
 var _ = Describe("Global hooks :: migrate/flant_integration_remove_kubeall_team ::", func() {
 	const (
 		initValuesString       = `{}`
