@@ -151,6 +151,7 @@ func parseProjectList(b []byte) ([]ossProject, error) {
 var skipOssChecks = map[string]struct{}{
 	// module name
 	"010-priority-class":                      {},
+	"013-helm":                                {}, // helm in 020-deckhouse
 	"021-kube-proxy":                          {},
 	"030-cloud-provider-aws":                  {},
 	"030-cloud-provider-azure":                {},
@@ -173,7 +174,6 @@ var skipOssChecks = map[string]struct{}{
 	"500-upmeter":                             {},
 	"600-secret-copier":                       {},
 	"810-deckhouse-web":                       {},
-	"999-helm":                                {}, // helm in 020-deckhouse
 }
 
 // TODO When lintignore files will be implemented in modules, detect "oss.yaml" line in it
