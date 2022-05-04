@@ -23,6 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+	"github.com/flant/addon-operator/sdk"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
@@ -31,7 +32,14 @@ import (
 // This hook is needed to fill the gaps between Deckhouse restarts and avoid alerts flapping.
 // it takes latest metrics from prometheus and duplicate them on Deckhouse startup
 
-func HandleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Container) error {
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/helm/helm_releases",
+	OnStartup: &go_hook.OrderedConfig{
+		Order: 1,
+	},
+}, dependency.WithExternalDependencies(handleDeprecatedAPIStartup))
+
+func handleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
 	cl := dc.GetHTTPClient(d8http.WithInsecureSkipVerify())

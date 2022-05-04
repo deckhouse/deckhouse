@@ -115,7 +115,11 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
-	releasesC := make(chan *release, 25)
+	// create buffered channel == objectBatchSize
+	// this give as ability to handle in memory only objectBatchSize * 2 amount of helm releases
+	// because this counter also used as a limit to apiserver
+	// we have `objectBatchSize` (25) objects in channel and max `objectBatchSize` (25) objects in goroutine waiting for channel
+	releasesC := make(chan *release, objectBatchSize)
 	doneC := make(chan bool)
 
 	go runReleaseProcessor(k8sCurrentVersion, input, releasesC, doneC)
@@ -172,6 +176,8 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			LabelSelector: "owner=helm,status=deployed",
 			Limit:         objectBatchSize,
 			Continue:      next,
+			// https://kubernetes.io/docs/reference/using-api/api-concepts/#semantics-for-get-and-list
+			ResourceVersion: "0",
 		})
 		if err != nil {
 			return 0, err
@@ -208,9 +214,10 @@ func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 
 	for {
 		cmList, err := client.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{
-			LabelSelector: "OWNER=TILLER,STATUS=DEPLOYED",
-			Limit:         objectBatchSize,
-			Continue:      next,
+			LabelSelector:   "OWNER=TILLER,STATUS=DEPLOYED",
+			Limit:           objectBatchSize,
+			Continue:        next,
+			ResourceVersion: "0",
 		})
 		if err != nil {
 			return 0, err
