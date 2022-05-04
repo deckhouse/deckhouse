@@ -65,6 +65,17 @@ func printBanner() {
 	log.InfoLn(banner)
 }
 
+func showWarningAboutUsageDontUsePublicImagesFlagIfNeed() {
+	deprecationBanner := "" +
+		`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! DO NOT USE --dont-use-public-control-plane-images FLAG                               !
+! IT IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE                                   !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`
+	if app.DontUsePublicControlPlaneImages {
+		log.ErrorLn(deprecationBanner)
+	}
+}
+
 func generateClusterUUID(stateCache state.Cache) (string, error) {
 	var clusterUUID string
 	err := log.Process("bootstrap", "Cluster UUID", func() error {
@@ -212,6 +223,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		printBanner()
+
+		showWarningAboutUsageDontUsePublicImagesFlagIfNeed()
 
 		bootstrapState := bootstrap.NewBootstrapState(stateCache)
 

@@ -95,7 +95,7 @@ Experimental. This feature may be deleted in the future.`
 }
 
 func DefineDontUsePublicImagesFlags(cmd *kingpin.CmdClause) {
-	const help = `Don't use public images for control-plane components. Experimental. This feature may be deleted in the future.`
+	const help = `DEPRECATED. Don't use public images for control-plane components.`
 	cmd.Flag("dont-use-public-control-plane-images", help).
 		Envar(configEnvName("DONT_USE_PUBLIC_CONTROL_PLANE_IMAGES")).
 		Default("false").
