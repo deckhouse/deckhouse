@@ -71,10 +71,11 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      initContainers:
 {{- $storageClass := .Values.upmeter.internal.effectiveStorageClass }}
 {{- if $storageClass }}
-      initContainers:
       {{- include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "data") | nindent 6 }}
+{{- end }}
       - name: migrator
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}"
         command:
@@ -93,7 +94,6 @@ spec:
             readOnly: false
           - mountPath: /tmp
             name: tmp
-{{- end }}
       containers:
       - name: upmeter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
