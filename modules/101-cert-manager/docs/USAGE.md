@@ -83,7 +83,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 4. Create an Ingress:
 
    ```yaml
-   apiVersion: extensions/v1beta1
+   apiVersion: networking.k8s.io/v1
    kind: Ingress
    metadata:
      annotations:
@@ -97,8 +97,10 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
        http:
          paths:
          - backend:
-             serviceName: svc-web
-             servicePort: 80
+             service:
+               name: svc-web
+               port:
+                 number: 80
            path: /
      tls:
      - hosts:
