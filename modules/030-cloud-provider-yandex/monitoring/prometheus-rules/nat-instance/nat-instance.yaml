@@ -8,6 +8,6 @@
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
-      description: Nat-instance connections quota should be increased by Yandex technical support
+      description: Nat-instance connections quota should be increased by Yandex technical support.
       summary: Yandex nat-instance connections quota utilization was above 85% over last 5 minutes
 
