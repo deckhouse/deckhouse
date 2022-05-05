@@ -158,41 +158,33 @@ func main() {
 
 		var s clientSecret
 
-		switch cert.Flag {
-		case "V":
-			file, err := ioutil.ReadFile(fmt.Sprintf("%s/pki/issued/%s.crt", easyrsaDir, cert.CommonName))
-			if err != nil {
-				log.Error(err)
-			}
-			s.cert = string(file)
+		path := fmt.Sprintf("%s/pki/issued/%s.crt", easyrsaDir, cert.CommonName)
+		if !checkFileExists(path) {
+			log.Printf("file not found: %s", path)
+			path = fmt.Sprintf("%s/pki/revoked/certs_by_serial/%s.crt", easyrsaDir, cert.SerialNumber)
+		}
+		file, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Error(err)
+		}
+		s.cert = string(file)
 
-			file, err = ioutil.ReadFile(fmt.Sprintf("%s/pki/private/%s.key", easyrsaDir, cert.CommonName))
-			if err != nil {
-				log.Error(err)
-			}
-			s.key = string(file)
-		case "R":
-			path := fmt.Sprintf("%s/pki/issued/%s.crt", easyrsaDir, cert.CommonName)
-			if !checkFileExists(path) {
-				path = fmt.Sprintf("%s/pki/revoked/certs_by_serial/%s.crt", easyrsaDir, cert.SerialNumber)
-			}
-			file, err := ioutil.ReadFile(path)
-			if err != nil {
-				log.Error(err)
-			}
-			s.cert = string(file)
+		path = fmt.Sprintf("%s/pki/private/%s.key", easyrsaDir, cert.CommonName)
+		if !checkFileExists(path) {
+			log.Printf("file not found: %s", path)
+			path = fmt.Sprintf("%s/pki/revoked/private_by_serial/%s.key", easyrsaDir, cert.SerialNumber)
+		}
+		file, err = ioutil.ReadFile(path)
+		if err != nil {
+			log.Error(err)
+		}
+		s.key = string(file)
 
-			path = fmt.Sprintf("%s/pki/private/%s.key", easyrsaDir, cert.CommonName)
-			if !checkFileExists(path) {
-				path = fmt.Sprintf("%s/pki/revoked/private_by_serial/%s.key", easyrsaDir, cert.SerialNumber)
-			}
-			file, err = ioutil.ReadFile(path)
-			if err != nil {
-				log.Error(err)
-			}
-			s.key = string(file)
+		if cert.Flag == "R" {
 			s.revokedAt = cert.RevocationDate
-		default:
+		}
+
+		if cert.Flag != "V" && cert.Flag != "R" {
 			log.Errorf("unknown flag: %s", cert.Flag)
 		}
 
