@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{ // Due to we are afraid of subscribing to all Pods in the cluster,
-		{Name: "cron", Crontab: "5 * * * *"}, // we run the hook every 5 minutes to discover data-plane status.
+		{Name: "cron", Crontab: "*/5 * * * *"}, // we run the hook every 5 minutes to discover data-plane status.
 	},
 }, dependency.WithExternalDependencies(revisionsMonitoring))
 
