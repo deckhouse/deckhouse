@@ -26,7 +26,6 @@ import (
 	"github.com/peterbourgon/mergemap"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -304,14 +303,6 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 
 	images := m.Images
 
-	if !app.DontUsePublicControlPlaneImages {
-		k8s := strings.Replace(fmt.Sprintf("%s", data["kubernetesVersion"]), ".", "", 1)
-		delete(images["controlPlaneManager"], "etcd")
-		delete(images["controlPlaneManager"], "kubeApiserver"+k8s)
-		delete(images["controlPlaneManager"], "kubeControllerManager"+k8s)
-		delete(images["controlPlaneManager"], "kubeScheduler"+k8s)
-	}
-
 	result["images"] = images.ConvertToMap()
 	return result, nil
 }
@@ -379,9 +370,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	configForBashibleBundleTemplate["registry"] = registryData
 
 	images := m.Images
-	if !app.DontUsePublicControlPlaneImages {
-		delete(images["common"], "pause")
-	}
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 
 	return configForBashibleBundleTemplate, nil

@@ -44,9 +44,6 @@ dhctl bootstrap \
   --ssh-host=<master_ip> \
   --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
   --config=/config.yml \
-{%- if page.platform_code == "bm-private" %}
-  --dont-use-public-control-plane-images \
-{%- endif %}
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
 dhctl bootstrap \
