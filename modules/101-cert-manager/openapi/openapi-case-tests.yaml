@@ -20,6 +20,8 @@ positive:
   # cloudflare settings
   - cloudflareGlobalAPIKey: "key"
     cloudflareEmail: "example@example.com"
+  - cloudflareAPIToken: "token"
+    cloudflareEmail: "example@example.com"
 
   # route53 settings
   - route53AccessKeyID: "key id"

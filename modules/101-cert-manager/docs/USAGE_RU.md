@@ -49,8 +49,18 @@ spec:
      cloudflareGlobalAPIKey: APIkey
      cloudflareEmail: some@mail.somedomain
    ```
+   
+   или
+   
+   ```yaml
+   certManager: |
+     cloudflareAPIToken: some-token
+     cloudflareEmail: some@mail.somedomain
+   ```
 
    После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
+   
+   * Конфигурация с помощью (APIToken)[https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens] является рекомендуемой и более безопасной.
 
 3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Deckhouse:
 
@@ -73,7 +83,7 @@ spec:
 4. Создаем Ingress:
 
    ```yaml
-   apiVersion: extensions/v1beta1
+   apiVersion: networking.k8s.io/v1
    kind: Ingress
    metadata:
      annotations:

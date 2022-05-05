@@ -1,4 +1,4 @@
-{{- if or (hasKey .Values.certManager "cloudflareGlobalAPIKey") (hasKey .Values.certManager "cloudflareEmail") }}
+{{- if or (hasKey .Values.certManager "cloudflareGlobalAPIKey") (hasKey .Values.certManager "cloudflareAPIToken") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -20,7 +20,14 @@ spec:
     - dns01:
         cloudflare:
           email: "{{ .Values.certManager.cloudflareEmail }}"
+          {{- if and (hasKey .Values.certManager "cloudflareGlobalAPIKey") (.Values.certManager.cloudflareGlobalAPIKey) }}
           apiKeySecretRef:
             name: cloudflare
             key: global-api-key
+          {{- end }}
+          {{- if and (hasKey .Values.certManager "cloudflareAPIToken") (.Values.certManager.cloudflareAPIToken) }}
+          apiTokenSecretRef:
+            name: cloudflare
+            key: api-token
+          {{- end }}
 {{- end }}
