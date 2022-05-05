@@ -1,9 +1,9 @@
 module github.com/flant/protobuf_exporter
 
-go 1.13
+go 1.16
 
 require (
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.4.0
 	github.com/prometheus/client_golang v1.6.0
 	github.com/prometheus/common v0.9.1
