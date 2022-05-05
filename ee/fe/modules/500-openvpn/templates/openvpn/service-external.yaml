@@ -56,7 +56,7 @@ spec:
       targetPort: ovpn-udp
   selector:
     app: {{ .Chart.Name }}
-    {{- end }} # udp
+    {{- end }}
   {{- else if eq .Values.openvpn.inlet "ExternalIP" }}
     {{- if .Values.openvpn.tcpEnabled }}
 ---
