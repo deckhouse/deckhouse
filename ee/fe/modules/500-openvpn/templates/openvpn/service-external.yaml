@@ -97,7 +97,7 @@ spec:
       targetPort: ovpn-udp
   selector:
     app: {{ .Chart.Name }}
-    {{- end }} # udp
+    {{- end }}
   {{- else if eq .Values.openvpn.inlet "Direct" }}
 ---
   {{- else if eq .Values.openvpn.inlet "HostPort" }}
