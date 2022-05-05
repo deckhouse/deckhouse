@@ -401,8 +401,6 @@ spec:
 
 ## Как использовать containerd с поддержкой Nvidia GPU?
 
-Настройка драйверов Nvidia выходит за рамки данного руководства, предполагается что дистрибутив уже содержит установленные и настроенные драйвера Nvidia.
-Подробнее о установке и настройке драйверов Nvidia можно прочесть тут - https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html.
 Так как для использования Nvidia GPU требуется кастомная настройка, необходимо создать нодгруппу с типом cri `Unmanaged`.
 
 ```yaml
@@ -422,6 +420,8 @@ spec:
 ```
 
 ### Debian
+Debian-based дистрибутивы содержат пакеты с драйверами Nvidia в базовом репозитории.
+
 Необходимо задеплоить NodeGroupConfiguration скрипты:
 ```yaml
 ````---
@@ -746,13 +746,17 @@ spec:
     curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey -o - | apt-key add -
     curl -s -L https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.list -o /etc/apt/sources.list.d/nvidia-container-toolkit.list
     apt-get update
-    apt-get install -y nvidia-container-toolkit nvidia-driver firmware-misc-nonfree
+    apt-get install -y nvidia-container-toolkit nvidia-driver-470
 ```
-Для других версий Debian нужно будет поправить `distribution` и версии `nvidia-driver-470`, `nvidia-dkms-470`, `nvidia-utils-470`.
+Для других версий Debian нужно будет поправить `distribution` и версии `nvidia-driver-470`.
 
 ### Centos
-1. Установите драйверы Cuda по инструкции https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html.
-2. Задеплойте NodeGroupConfiguration скрипты:
+Centos-based дистрибутивы не содержат драйверы Nvidia в базовых репозиториях.
+
+Установку драйверов Nvidia в Centos-based дистрибутивах трудно автоматизировать, поэтому желательно иметь подготовленный образ с установленными драйверами.
+Как установить драйвера Nvidia написано в [инструкции](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#redhat-installation). 
+
+Задеплойте NodeGroupConfiguration скрипты:
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -1070,9 +1074,9 @@ spec:
     yum install -y nvidia-container-toolkit
 ```
 ### Как проверить что все прошло успешно ?
+
 Задеплоить Job:
 ```yaml
----
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -1091,4 +1095,24 @@ spec:
           imagePullPolicy: "IfNotPresent"
           command:
             - nvidia-smi
+```
+
+Задеплоить Job:
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpu-operator-test
+  namespace: default
+spec:
+  completions: 1
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        node.deckhouse.io/group: gpu
+      containers:
+        - name: gpu-operator-test
+          image: nvidia/samples:vectoradd-cuda10.2
+          imagePullPolicy: "IfNotPresent"
 ```
