@@ -340,8 +340,7 @@ ansible:
   setup:
   - name: "Migrate ee/fe internal packages imports"
     shell: |
-      find /deckhouse/modules/* -type f -exec sed -i 's/github.com\/deckhouse\/deckhouse\/ee\/modules/github.com\/deckhouse\/deckhouse\/modules/g' {} +
-      find /deckhouse/modules/* -type f -exec sed -i 's/github.com\/deckhouse\/deckhouse\/ee\/fe\/modules/github.com\/deckhouse\/deckhouse\/modules/g' {} +
+      find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee(/fe)?/modules|github.com/deckhouse/deckhouse/modules|g' {} +
 
 docker:
   ENV:
