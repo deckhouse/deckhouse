@@ -120,10 +120,6 @@ deckhouse: |
 * `registryCA` — корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты);
 * `registryScheme` — протокол доступа к registry (`http` или `https`). По умолчанию - `https`.
 
-### Установка
-
-Укажите для `dhctl` параметр `--dont-use-public-control-plane-images`, чтобы он использовал образы `control-plane` из стороннего registry, вместо публичного (`k8s.gcr.io`).
-
 ### Особенности настройки сторонних registry
 
 **Внимание:** Deckhouse поддерживает работу только с Bearer token-схемой авторизации в registry.

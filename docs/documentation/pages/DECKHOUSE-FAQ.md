@@ -116,10 +116,6 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 * `registryCA` - root CA certificate to validate the third-party registry's HTTPS certificate (if self-signed certificates are used);
 * `registryScheme` - registry scheme (`http` or `https`). The default value is `https`.
 
-### Installing
-
-Use the `dhctl`'s `--dont-use-public-control-plane-images` key to instruct Deckhouse to use `control-plane` images from the third-party registry instead of the public one (`k8s.gcr.io`).
-
 ### Tips for configuring the third-party registry
 
 **Note** that Deckhouse only supports Bearer authentication for registries.
