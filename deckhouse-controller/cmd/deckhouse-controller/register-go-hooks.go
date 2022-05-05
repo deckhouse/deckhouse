@@ -28,6 +28,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/010-prometheus-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-user-authn-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-vertical-pod-autoscaler-crd/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/013-helm/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/021-kube-proxy/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-aws/hooks"

@@ -49,17 +49,6 @@ gitWorktree:
       dest: /usr/local/bin/kubectl
       mode: +x
 
-  - name: "Install helm 2"
-    unarchive:
-      extra_opts:
-        - linux-amd64/helm
-        - --strip-components=1
-        - --transform
-        - s/helm/helm2/
-      src: https://get.helm.sh/helm-v2.16.9-linux-amd64.tar.gz
-      remote_src: yes
-      dest: /usr/local/bin
-
   - name: "Install helm 3"
     unarchive:
       extra_opts:
