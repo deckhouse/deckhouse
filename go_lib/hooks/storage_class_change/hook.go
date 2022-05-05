@@ -278,8 +278,9 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 
 	effectiveStorageClass := calculateEffectiveStorageClass(input, args, currentStorageClass)
 
-	if currentStorageClass != effectiveStorageClass {
-		if len(currentStorageClass) != 0 {
+	if !storageClassesAreEqual(currentStorageClass, effectiveStorageClass) {
+		wasPvc := !isEmptyOrFalseStr(currentStorageClass)
+		if wasPvc {
 			for _, obj := range pvcs {
 				pvc := obj.(PVC)
 				input.LogEntry.Infof("storage class changed, deleting %s/PersistentVolumeClaim/%s", pvc.Namespace, pvc.Name)
@@ -305,6 +306,17 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		}
 	}
 	return nil
+}
+
+func storageClassesAreEqual(sc1, sc2 string) bool {
+	if sc1 == sc2 {
+		return true
+	}
+	return isEmptyOrFalseStr(sc1) && isEmptyOrFalseStr(sc2)
+}
+
+func isEmptyOrFalseStr(sc string) bool {
+	return sc == "" || sc == "false"
 }
 
 func storageClassChange(args Args) func(input *go_hook.HookInput, dc dependency.Container) error {
