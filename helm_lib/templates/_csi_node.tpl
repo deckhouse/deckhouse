@@ -77,6 +77,9 @@ spec:
                 - CloudEphemeral
                 - CloudPermanent
                 - CloudStatic
+                {{- if or (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") }}
+                - Static
+                {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
