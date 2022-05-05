@@ -28,7 +28,7 @@ spec:
       targetPort: ovpn-tcp
   selector:
     app: {{ .Chart.Name }}
-    {{- end }} # tcp
+    {{- end }}
     {{- if .Values.openvpn.udpEnabled }}
 ---
 apiVersion: v1
