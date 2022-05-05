@@ -60,7 +60,7 @@ spec:
 
    После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
    
-   * Конфигурация с помощью (APIToken)[https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens] является рекомендуемой и более безопасной.
+   * Конфигурация с помощью [APIToken](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) является рекомендуемой и более безопасной.
 
 3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Deckhouse:
 

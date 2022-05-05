@@ -49,8 +49,18 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
      cloudflareGlobalAPIKey: APIkey
      cloudflareEmail: some@mail.somedomain
    ```
+   
+   or
+   
+   ```yaml
+   certManager: |
+     cloudflareAPIToken: some-token
+     cloudflareEmail: some@mail.somedomain
+   ```
 
    After that, Deckhouse will automatically create ClusterIssuer and Secret for Cloudflare in the `d8-cert-manager` namespace.
+
+   * Configuration with [APIToken](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) is more secure and recommended for use.
 
 3. Create a Certificate with validation via Cloudflare. Note that you must specify `cloudflareGlobalAPIKey` and `cloudflareEmail` in Deckhouse beforehand:
 
