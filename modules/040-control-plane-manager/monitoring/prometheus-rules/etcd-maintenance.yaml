@@ -38,6 +38,7 @@
         tier: cluster
         d8_component: control-plane-manager
         d8_module: control-plane-manager
+        severity_level: "6"
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
