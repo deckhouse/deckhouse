@@ -317,8 +317,7 @@ func storageClassesAreEqual(sc1, sc2 string) bool {
 
 // isEmptyOrFalseStr returns true if sc is empty string or "false". For storage class values or
 // configuration, empty strings and "false" mean the same: no storage class specified. "false" is
-// set by humans, while absent values resolve to empty strings and it means to use starage class
-// specification from elsewhere.
+// set by humans, while absent values resolve to empty strings.
 func isEmptyOrFalseStr(sc string) bool {
 	return sc == "" || sc == "false"
 }
