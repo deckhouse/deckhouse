@@ -42,8 +42,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
-	// curl -s --connect-timeout 10 --max-time 10 -k -XGET -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://prometheus.d8-monitoring:9090/api/v1/query?query=resource_versions_compatibility"
-	response, err := makePromRequest(dc)
+	response, err := makePrometheusRequest(dc)
 	if err != nil {
 		input.LogEntry.Warnf("Prometheus request for previous metrics failed: %s", err)
 		return nil // don't fail the hook
@@ -73,9 +72,10 @@ func handleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Containe
 	return nil
 }
 
-func makePromRequest(dc dependency.Container) (*promMetrics, error) {
+func makePrometheusRequest(dc dependency.Container) (*promMetrics, error) {
 	cl := dc.GetHTTPClient(d8http.WithInsecureSkipVerify())
 
+	// curl -s --connect-timeout 10 --max-time 10 -k -XGET -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://prometheus.d8-monitoring:9090/api/v1/query?query=resource_versions_compatibility"
 	promURL := "https://prometheus.d8-monitoring:9090/api/v1/query?query=resource_versions_compatibility"
 	req, err := http.NewRequest("GET", promURL, nil)
 	if err != nil {
