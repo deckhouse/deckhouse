@@ -159,8 +159,8 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 #### Application with Istio turned off
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSN2yCNumnHC-Q9sgQ7LstaLuG8lWjYkvKrN27zNM4P8JxejasMeCazGIX5zYNSLuv6DieoXgI1Mx7u/embed?start=false&loop=false&delayms=3000" frameborder="0" width="960" height="569" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1_lw3EyDNTFTYNirqEfrRANnEAVjGhrOCdFJc-zCOuvs/edit --->
+<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vTA4frEamcw7yPAFdva8odR0jRy6anKr_0YnWf3KZzfBT4buiTA6KvfQBmuqg5pnhqYTyNHKPxlKMNQ/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+<!--- Source: https://docs.google.com/presentation/d/1BtvvtETQENVaWkEpF00zpi7xjFxfWu3ddZmvCF3f2LQ/edit --->
 <p class="text text_alt" style="color: #2A5EFF">
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
   Control presentation
@@ -168,8 +168,8 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 #### Application with Istio turned on
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSBqX8-US32uDhUYKpra4Co9rYsh9wqbhUV2pMh69WC-daXwW7CYeaofH_yhDOl4pdN-tO5pIPDMqtw/embed?start=false&loop=false&delayms=3000" frameborder="0" width="960" height="569" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1gQfX9ge2vhp74yF5LOfpdK2nY47l_4DIvk6px_tAMPU/edit --->
+<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vTPTIYcf3hOwyWzp-d08QWCiKYm81oZuWJkiEzVQG24QDv0syrZ8fxzJxPRp27E_B_JdPdhaaYlhONM/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+<!--- Source: https://docs.google.com/presentation/d/1fg_3eVA9JLizZaiN8W5vpkzOE6y9eD-4Iu10At4LN9U/edit --->
 <p class="text text_alt" style="color: #2A5EFF">
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
   Control presentation
@@ -217,8 +217,8 @@ Below are their fundamental differences:
 * Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates;
 * You also need to share information about government services to use the federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vRGnHBdHyQq7xGP3v3kaUCsMkfBGXun5NJb4R6nRQtjOlrq4BSyZ4hIUbA92JN4OCJcoR5A3M6VCtS8/embed?start=false&loop=false&delayms=3000" frameborder="0" width="960" height="569" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1EI2MQMuVCGACnLNBXMGVDNJVhwU3vJYtVcHhrWfjLDc/edit --->
+<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQ4QHMLIfVQD_2PGrxxFHQ-mxxdQ3n4BQACTKDi6PrKRBfSazVps2regkjgnBnwGsBpzXcABg3E5zDL/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+<!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/edit --->
 <p class="text text_alt" style="color: #2A5EFF">
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
   Control presentation
@@ -236,8 +236,8 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 
 #### Managing the federation
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQtxDlMcQFmJT7Jc1HDose3KXwe8dGqLs_C1JSoKg0Dv6tZq9a2nibRPZh9Yihy4UoyXMHKBAFKZDIM/embed?start=false&loop=false&delayms=3000" frameborder="0" width="960" height="569" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1MpmtwJwvSL32EdwOUNpJ6GjgWt0gplzjqL8OOprNqvc/edit --->
+<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSOHsRtmDiyKJqNx1MrUOmF8iSzHtbBhdKbffBvNW6Ed9fmvmyhoByh1TOiQt_CF-UVHp4Xmp1ZfNuW/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+<!--- Source: https://docs.google.com/presentation/d/1dYOeYKGaGOsgskWCDDcVJfXcMC9iQ4cvaCkhyqrDKgg/edit --->
 <p class="text text_alt" style="color: #2A5EFF">
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
   Control presentation
@@ -251,8 +251,8 @@ To establish a federation, you must:
 
 #### General principles
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQBozUYrpJ3Qzk4BWxkkAtiHuJjvG3dL0K43ZdQy6dJjkSToEAZT_2pqVlpv4vjdlmgBv16pH9juBY1/embed?start=false&loop=false&delayms=3000" frameborder="0" width="960" height="569" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1WeNrp0Ni2Tz3_Az0f45rkWRUZxZUDx93Om5MB3sEod8/edit --->
+<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSNzIJYjN0svO5NJklrF3KpB0zEGTiGNZRXmajTr2wQSU9Do_O198FYfrRQpT5fTp6tx7XBs193233C/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+<!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/edit --->
 <p class="text text_alt" style="color: #2A5EFF">
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
   Control presentation
@@ -275,8 +275,8 @@ Enabling the multicluster (via the `istio.multicluster.enabled = true` module pa
 
 #### Managing the multicluster
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vSg7WC5U6u8hpVKQFFOKRo8b1NwIhzXXMx26gNNrWekAcTvZOVT4-nzTAnzPnjzlAfFSYL5-U4_Qa1h/embed?start=false&loop=false&delayms=3000" frameborder="0" width="960" height="569" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-<!--- Source: https://docs.google.com/presentation/d/1D3nuoC0okJQRCOY4teJ6p598Bd4JwPXZT5cdG0hW8Hc/edit --->
+<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQcCeARUNzFIgCSuJBBABM4zNb6EzCYk7GPRWKKiE78aLZ94_dtad0eqKXZOuRkeHBNvUiTCcJgbCHR/embed?start=false&loop=false&delayms=5000" frameborder="0" width="816" height="495" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+<!--- Source: https://docs.google.com/presentation/d/1fy3jIynIPTrJ5Whn4eqQxeLk7ORtipDxBWP3By4buoc/edit --->
 <p class="text text_alt" style="color: #2A5EFF">
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
   Control presentation
