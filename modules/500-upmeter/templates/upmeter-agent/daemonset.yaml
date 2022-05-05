@@ -67,10 +67,6 @@ spec:
           - "-path=/data/migrations/agent"
           - "-database=sqlite3:///db/db.sqlite?x-no-tx-wrap=true"
           - up
-        securityContext:
-          runAsNonRoot: false
-          runAsUser: 0
-          runAsGroup: 0
         volumeMounts:
           - mountPath: /db
             name: data

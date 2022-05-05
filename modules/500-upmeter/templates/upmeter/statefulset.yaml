@@ -84,10 +84,6 @@ spec:
           - "-path=/data/migrations/server"
           - "-database=sqlite3:///db/downtime.db.sqlite?x-no-tx-wrap=true"
           - up
-        securityContext:
-          runAsNonRoot: false
-          runAsUser: 0
-          runAsGroup: 0
         volumeMounts:
           - mountPath: /db
             name: data
