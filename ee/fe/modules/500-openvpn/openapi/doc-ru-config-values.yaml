@@ -41,7 +41,7 @@ properties:
       Подсеть туннеля для TCP OpenVPN сервера.
   udpTunnelNetwork:
     description: |
-      Сеть туннеля для UDP OpenVPN сервера.
+      Подсеть туннеля для UDP OpenVPN сервера.
   pushToClientRoutes:
     description: |
       Список роутов, которые отправляются клиентам при подключении.
