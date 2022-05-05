@@ -48,6 +48,12 @@ deckhouse:
         # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
         # [<ru>] Например, Grafana для %s.example.com будет доступна на домене grafana.example.com.
         publicDomainTemplate: "%s.example.com"
+        # [<en>] Proxy server settings for accessing Deckhouse modules to the Internet.
+        # [<ru>] Настройки proxy-сервера для доступа в Интернет модулей Deckhouse.
+        proxy:
+          httpProxy: <HTTP_PROXY_ADDRESS>
+          httpsProxy: <HTTPS_PROXY_ADDRESS>
+          noProxy: <NO_PROXY_LIST>
     # [<en>] Enable the cni-flannel module.
     # [<ru>] Включить модуль cni-flannel.
     cniFlannelEnabled: true
