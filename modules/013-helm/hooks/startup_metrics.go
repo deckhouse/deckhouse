@@ -45,7 +45,7 @@ func handleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Containe
 	// curl -s --connect-timeout 10 --max-time 10 -k -XGET -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://prometheus.d8-monitoring:9090/api/v1/query?query=resource_versions_compatibility"
 	response, err := makePromRequest(dc)
 	if err != nil {
-		input.LogEntry.Errorf("Prometheus request for previous metrics failed: %s", err)
+		input.LogEntry.Warnf("Prometheus request for previous metrics failed: %s", err)
 		return nil // don't fail the hook
 	}
 
