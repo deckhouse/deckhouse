@@ -114,20 +114,6 @@ func (s *Session) SetAvailableHosts(hosts []string) {
 	s.selectNewHost("")
 }
 
-// ReplaceAvailableHosts
-// Set Available hosts and try save current host if it exists in cluster
-// return true if current host found in new hosts
-func (s *Session) ReplaceAvailableHosts(hosts []string) bool {
-	defer s.lock.Unlock()
-	s.lock.Lock()
-
-	s.availableHosts = make([]string, len(hosts))
-	copy(s.availableHosts, hosts)
-
-	s.resetUsedHosts()
-	return s.selectNewHost(s.host)
-}
-
 func (s *Session) AvailableHosts() []string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()

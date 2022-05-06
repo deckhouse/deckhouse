@@ -255,9 +255,9 @@ type NodeGroupController struct {
 
 	stateCache dstate.Cache
 
-	nodeExternalIPs map[string]string
-	name            string
-	state           NodeGroupTerraformState
+	nodeToHost map[string]string
+	name       string
+	state      NodeGroupTerraformState
 }
 
 type NodeGroupGroupOptions struct {
@@ -295,6 +295,34 @@ func (c *NodeGroupController) WithExcludedNodes(nodesMap map[string]bool) *NodeG
 	return c
 }
 
+func (c *NodeGroupController) populateNodeToHost() error {
+	if c.name != MasterNodeGroupName {
+		return nil
+	}
+
+	var userPassedHosts []string
+	if c.client.SSHClient != nil {
+		userPassedHosts = c.client.SSHClient.Settings.AvailableHosts()
+	}
+
+	nodesNames := make([]string, 0, len(c.state.State))
+	for nodeName := range c.state.State {
+		nodesNames = append(nodesNames, nodeName)
+	}
+
+	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, func(msg string) bool {
+		return input.NewConfirmation().WithMessage(msg).Ask()
+	})
+
+	if err != nil {
+		return err
+	}
+
+	c.nodeToHost = nodeToHost
+
+	return nil
+}
+
 func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupGroupOptions, convergedNode string) (terraform.InfraActionHook, error) {
 	if c.name != MasterNodeGroupName {
 		// for not master node groups do not need readiness check
@@ -308,51 +336,7 @@ func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupG
 		return &terraform.DummyHook{}, nil
 	}
 
-	if c.nodeExternalIPs == nil {
-		ips := make(map[string]string)
-		for nodeName, st := range nodeGroup.State {
-			r := terraform.NewRunnerFromConfig(c.config, "get-master-ip", c.stateCache).
-				WithState(st)
-
-			out, err := terraform.GetMasterNodeResult(r)
-			if err != nil {
-				return nil, err
-			}
-
-			ips[nodeName] = out.MasterIPForSSH
-		}
-
-		c.nodeExternalIPs = ips
-	}
-
-	if c.client.SSHClient != nil {
-		userPassedHosts := c.client.SSHClient.Settings.AvailableHosts()
-		setFromState, err := ssh.CheckSSHHosts(userPassedHosts, c.nodeExternalIPs, func(msg string) bool {
-			return input.NewConfirmation().WithMessage(msg).Ask()
-		})
-
-		if err != nil {
-			return nil, err
-		}
-
-		if setFromState {
-			hostnames := maputil.Values(c.nodeExternalIPs)
-			foundCurrentHostInNew := c.client.SSHClient.Settings.ReplaceAvailableHosts(hostnames)
-			if !foundCurrentHostInNew {
-				// we can not find current if we want to delete master
-				// in case, when we already connect to node for delete, we should reconnect to another node
-				log.InfoF("Need to restart kube proxy with new host %s ...\n", c.client.SSHClient.Settings.Host())
-				err := c.client.KubeProxy.Restart()
-				if err != nil {
-					return nil, err
-				}
-
-				log.InfoLn("Proxy was restarted")
-			}
-		}
-	}
-
-	nodesToCheck := maputil.ExcludeKeys(c.nodeExternalIPs, convergedNode)
+	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
 
 	h := controlplane.NewHook(c.client, nodesToCheck, c.config.UUID).
 		WithSourceCommandName("converge").
@@ -637,6 +621,10 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 
 	var allErrs *multierror.Error
 
+	if err := c.populateNodeToHost(); err != nil {
+		return err
+	}
+
 	for nodeName := range nodeGroup.State {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
@@ -645,10 +633,6 @@ func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) erro
 		})
 
 		if err != nil {
-			if errors.Is(err, ssh.ErrNotEnoughMastersSSHHosts) {
-				return err
-			}
-
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %v", nodeName, err))
 		}
 	}
