@@ -1,6 +1,9 @@
-{{ $defaultTunnelNetwork := "172.25.175.0/255.255.255.0" }}
-{{ $tunnelNetworkAddress := index (splitList "/" (.Values.openvpn.tunnelNetwork | default $defaultTunnelNetwork)) 0 }}
-{{ $tunnelNetworkNetmask := index (splitList "/" (.Values.openvpn.tunnelNetwork | default $defaultTunnelNetwork)) 1 }}
+{{ $tcpDefaultTunnelNetwork := "172.25.175.0/255.255.255.0" }}
+{{ $udpDefaultTunnelNetwork := "172.25.176.0/255.255.255.0" }}
+{{ $tcpTunnelNetworkAddress := index (splitList "/" (.Values.openvpn.tunnelNetwork | default $tcpDefaultTunnelNetwork)) 0 }}
+{{ $tcpTunnelNetworkNetmask := index (splitList "/" (.Values.openvpn.tunnelNetwork | default $tcpDefaultTunnelNetwork)) 1 }}
+{{ $udpTunnelNetworkAddress := index (splitList "/" (.Values.openvpn.udpTunnelNetwork | default $udpDefaultTunnelNetwork)) 0 }}
+{{ $udpTunnelNetworkNetmask := index (splitList "/" (.Values.openvpn.udpTunnelNetwork | default $udpDefaultTunnelNetwork)) 1 }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -9,8 +12,8 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 data:
-  openvpn.conf: |-
-    server {{ $tunnelNetworkAddress }} {{ $tunnelNetworkNetmask }}
+  openvpn-tcp.conf: |-
+    server {{ $tcpTunnelNetworkAddress }} {{ $tcpTunnelNetworkNetmask }}
     verb 3
     tls-server
     ca /etc/openvpn/certs/pki/ca.crt
@@ -29,7 +32,45 @@ data:
     topology subnet
     proto tcp
     port 1194
-    dev tun0
+    dev tun-tcp
+    status /tmp/openvpn-status.log
+    user nobody
+    group nogroup
+    push "topology subnet"
+    push "route-metric 9999"
+    {{- if hasKey .Values.openvpn "pushToClientRoutes" }}
+    {{- range $route := .Values.openvpn.pushToClientRoutes }}
+    push "route {{ $route | replace "/" " " }}"
+    {{- end }}
+    {{- else }}
+    {{- end }}
+    push "dhcp-option DNS {{ .Values.openvpn.pushToClientDNS | default .Values.global.discovery.clusterDNSAddress }}"
+    {{- if hasKey .Values.openvpn "pushToClientSearchDomains" }}
+      {{- range $searchDomain := .Values.openvpn.pushToClientSearchDomains }}
+    push "dhcp-option DOMAIN {{ $searchDomain }}"
+      {{- end }}
+    {{- end }}
+  openvpn-udp.conf: |-
+    server {{ $udpTunnelNetworkAddress }} {{ $udpTunnelNetworkNetmask }}
+    verb 3
+    tls-server
+    ca /etc/openvpn/certs/pki/ca.crt
+    key /etc/openvpn/certs/pki/private/server.key
+    cert /etc/openvpn/certs/pki/issued/server.crt
+    dh /etc/openvpn/certs/pki/dh.pem
+    crl-verify /etc/openvpn/certs/pki/crl.pem
+    tls-auth /etc/openvpn/certs/pki/ta.key
+    client-config-dir /etc/openvpn/ccd
+    key-direction 0
+    cipher AES-128-CBC
+    management 127.0.0.1 9090
+    keepalive 10 60
+    persist-key
+    persist-tun
+    topology subnet
+    proto udp
+    port 1194
+    dev tun-udp
     status /tmp/openvpn-status.log
     user nobody
     group nogroup
@@ -51,7 +92,8 @@ data:
   entrypoint.sh: |-
     #!/bin/sh
 
-    iptables -t nat -A POSTROUTING -s {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} ! -d {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} -j MASQUERADE
+    iptables -t nat -A POSTROUTING -s {{ $tcpTunnelNetworkAddress }}/{{ $tcpTunnelNetworkNetmask }} ! -d {{ $tcpTunnelNetworkAddress }}/{{ $tcpTunnelNetworkNetmask }} -j MASQUERADE
+    iptables -t nat -A POSTROUTING -s {{ $udpTunnelNetworkAddress }}/{{ $udpTunnelNetworkNetmask }} ! -d {{ $udpTunnelNetworkAddress }}/{{ $udpTunnelNetworkNetmask }} -j MASQUERADE
 
     mkdir -p /dev/net
     if [ ! -c /dev/net/tun ]; then
@@ -78,4 +120,5 @@ data:
     wait_file "$easyrsa_path/pki/dh.pem"
     wait_file "$easyrsa_path/pki/crl.pem"
 
-    openvpn --config /etc/openvpn/openvpn.conf
+    proto="$1"
+    openvpn --config /etc/openvpn/openvpn-${proto}.conf
