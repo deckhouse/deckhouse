@@ -95,11 +95,11 @@ const langPack: LangPack = {
             <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
     },
-    scaling: {
+    extensions: {
       ...GROUP_DEFAULT_TOOLTIP,
-      title: "Scaling",
+      title: "Extensions",
       description: `
-            <p>Checks the availability of cluster scaling and autoscaling controllers and controller managers.</p>
+            <p>Checks the availability of various extensions apps.</p>
             <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
     },
@@ -120,8 +120,8 @@ const langPack: LangPack = {
   },
   probe: {
     "control-plane": {
-      access: {
-        title: "Access",
+      apiserver: {
+        title: "API server",
         description: "The probe requests <code>/version</code> endpoint from kube-apiserver",
         reasonUp: "<code>/version</code> returns 200 OK.",
         reasonDown: "<code>/version</code> returns other codes or there is no connection to kube-apiserver.",
@@ -253,7 +253,7 @@ const langPack: LangPack = {
           "Every 5 seconds resolve sample application IPs and request <code>/neighbor-via-service</code> endpoint until first success",
       },
     },
-    scaling: {
+    extensions: {
       "cluster-scaling": {
         title: "Cluster Scaling",
         description:
