@@ -34,7 +34,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 	return []runnerConfig{
 		{
 			group:  groupName,
-			probe:  "access",
+			probe:  "apiserver",
 			check:  "_",
 			period: 5 * time.Second,
 			config: checker.ControlPlaneAvailable{
