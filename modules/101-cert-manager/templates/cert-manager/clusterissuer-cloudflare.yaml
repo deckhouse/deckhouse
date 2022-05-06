@@ -20,14 +20,13 @@ spec:
     - dns01:
         cloudflare:
           email: "{{ .Values.certManager.cloudflareEmail }}"
-          {{- if and (hasKey .Values.certManager "cloudflareGlobalAPIKey") (.Values.certManager.cloudflareGlobalAPIKey) }}
-          apiKeySecretRef:
-            name: cloudflare
-            key: global-api-key
-          {{- end }}
           {{- if and (hasKey .Values.certManager "cloudflareAPIToken") (.Values.certManager.cloudflareAPIToken) }}
           apiTokenSecretRef:
             name: cloudflare
             key: api-token
+          {{- else if and (hasKey .Values.certManager "cloudflareGlobalAPIKey") (.Values.certManager.cloudflareGlobalAPIKey) }}
+          apiKeySecretRef:
+            name: cloudflare
+            key: global-api-key
           {{- end }}
 {{- end }}
