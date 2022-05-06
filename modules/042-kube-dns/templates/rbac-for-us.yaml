@@ -22,7 +22,7 @@ rules:
   verbs:
   - list
   - watch
-  apiGroups:
+- apiGroups:
   - discovery.k8s.io
   resources:
   - endpointslices
