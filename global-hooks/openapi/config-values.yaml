@@ -187,12 +187,12 @@ properties:
         properties:
           httpProxy:
             type: string
-            pattern: '^http://[0-9a-zA-Z\.\-:]+$'
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
               HTTP proxy URL.
           httpsProxy:
             type: string
-            pattern: '^https://[0-9a-zA-Z\.\-:]+$'
+            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
               HTTPS proxy URL.
           noProxy:
