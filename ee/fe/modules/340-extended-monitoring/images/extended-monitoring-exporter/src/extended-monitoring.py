@@ -27,13 +27,20 @@ EXTENDED_MONITORING_ENABLED_ANNOTATION = "extended-monitoring.flant.com/enabled"
 DEFAULT_SERVER_ADDRESS = '0.0.0.0'
 DEFAULT_PORT = 8080
 
-
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
 
 class Annotated(ABC):
     default_thresholds = {}
+    # When specified with a watch call, shows changes that occur after that particular version of a resource.
+    # Defaults to changes from the beginning of history. When specified for list:
+    # - if unset, then the result is returned from remote storage based on quorum-read flag;
+    # - if it's 0, then we simply return what we currently have in cache, no guarantee;
+    # - if set to non zero, then the result is at least as fresh as given rv.
+    default_list_options = {
+      "resource_version": 0,
+    }
 
     def __init__(self, namespace, name, kube_annotations):
         self.namespace = namespace
@@ -54,7 +61,7 @@ class Annotated(ABC):
 
     @classmethod
     def list_threshold_annotated_objects(cls, namespace):
-        for kube_object in cls.list(namespace):
+        for kube_object in cls.list(namespace, **cls.default_list_options):
             yield cls(namespace, kube_object.metadata.name, kube_object.metadata.annotations)
 
     @property
@@ -97,7 +104,7 @@ class Annotated(ABC):
 
     @classmethod
     @abstractmethod
-    def list(cls, namespace):
+    def list(cls, namespace, **kwargs):
         pass
 
 
@@ -106,8 +113,8 @@ class AnnotatedDeployment(Annotated):
     api = kubernetes.client.AppsV1Api()
 
     @classmethod
-    def list(cls, namespace):
-        return cls.api.list_namespaced_deployment(namespace).items
+    def list(cls, namespace, **kwargs):
+        return cls.api.list_namespaced_deployment(namespace, **kwargs).items
 
     default_thresholds = {
         "replicas-not-ready": 0
@@ -119,8 +126,8 @@ class AnnotatedStatefulSet(Annotated):
     api = kubernetes.client.AppsV1Api()
 
     @classmethod
-    def list(cls, namespace):
-        return cls.api.list_namespaced_stateful_set(namespace).items
+    def list(cls, namespace, **kwargs):
+        return cls.api.list_namespaced_stateful_set(namespace, **kwargs).items
 
     default_thresholds = {
         "replicas-not-ready": 0
@@ -132,8 +139,8 @@ class AnnotatedDaemonSet(Annotated):
     api = kubernetes.client.AppsV1Api()
 
     @classmethod
-    def list(cls, namespace):
-        return cls.api.list_namespaced_daemon_set(namespace).items
+    def list(cls, namespace, **kwargs):
+        return cls.api.list_namespaced_daemon_set(namespace, **kwargs).items
 
     default_thresholds = {
         "replicas-not-ready": 0
@@ -145,8 +152,8 @@ class AnnotatedPod(Annotated):
     api = kubernetes.client.CoreV1Api()
 
     @classmethod
-    def list(cls, namespace):
-        return cls.api.list_namespaced_pod(namespace).items
+    def list(cls, namespace, **kwargs):
+        return cls.api.list_namespaced_pod(namespace, **kwargs).items
 
     default_thresholds = {
         "disk-bytes-warning": 85,
@@ -163,8 +170,8 @@ class AnnotatedIngress(Annotated):
     api = kubernetes.client.NetworkingV1Api()
 
     @classmethod
-    def list(cls, namespace):
-        return cls.api.list_namespaced_ingress(namespace).items
+    def list(cls, namespace, **kwargs):
+        return cls.api.list_namespaced_ingress(namespace, **kwargs).items
 
     default_thresholds = {
         "5xx-warning": 10,
@@ -177,8 +184,8 @@ class AnnotatedNode(Annotated):
     api = kubernetes.client.CoreV1Api()
 
     @classmethod
-    def list(cls, namespace=None):
-        return cls.api.list_node().items
+    def list(cls, namespace=None, **kwargs):
+        return cls.api.list_node(**kwargs).items
 
     default_thresholds = {
         "disk-bytes-warning": 70,
@@ -195,8 +202,8 @@ class AnnotatedCronJob(Annotated):
     api = kubernetes.client.BatchV1beta1Api()
 
     @classmethod
-    def list(cls, namespace):
-        return cls.api.list_namespaced_cron_job(namespace).items
+    def list(cls, namespace, **kwargs):
+        return cls.api.list_namespaced_cron_job(namespace, **kwargs).items
 
 
 KUBERNETES_OBJECTS = (
