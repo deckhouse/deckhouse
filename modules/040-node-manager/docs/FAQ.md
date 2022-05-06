@@ -25,7 +25,7 @@ kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.su
 ```
 2. Get Kubernetes API token for special `ServiceAccount` that is managed by Deckhouse.
 ```shell
-kubectl -n d8-service-accounts get $(kubectl -n d8-service-accounts get secret -o name | grep batch-bootstrap-for-static-ngs-token) -o json | jq '.data.token' -r | base64 -d && echo ""
+kubectl -n d8-system get $(kubectl -n d8-system get secret -o name | grep node-manager-node-group-token) -o json | jq '.data.token' -r | base64 -d && echo ""
 ```
 3. Create Ansible playbook with `vars` replaced with values from previous steps.
 ```yaml
