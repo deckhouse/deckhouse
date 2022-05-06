@@ -38,6 +38,7 @@ while [ "$patch_pending" = true ] ; do
 done
 
 # Start output bootstrap logs
+bootstrap_job_log_pid=""
 if type socat >/dev/null 2>&1; then
   socat -u FILE:/var/log/cloud-init-output.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
   bootstrap_job_log_pid=$!
