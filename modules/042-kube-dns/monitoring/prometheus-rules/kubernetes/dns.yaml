@@ -1,7 +1,7 @@
 - name: d8-kube-dns.coredns
   rules:
   - alert: KubernetesCoreDNSHasCriticalErrors
-    expr: sum by (pod) (coredns_panic_count_total{job="kube-dns"}) > 0
+    expr: sum by (pod) (coredns_panics_total{job="kube-dns"}) > 0
     labels:
       severity_level: "5"
       tier: cluster
