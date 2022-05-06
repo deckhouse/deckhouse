@@ -416,7 +416,7 @@ spec:
     type: NotManaged
   disruptions:
     approvalMode: Automatic
-  nodeType: CloudPermanent
+  nodeType: CloudStatic
 ```
 
 ### Debian
