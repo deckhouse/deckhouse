@@ -396,3 +396,755 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
 ## How to add node configuration step?
 Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.
+
+## How to use containerd with Nvidia GPU support?
+
+Since using the Nvidia GPU requires a custom containerd configuration, it is necessary to create a node group with the type cri `Unmanaged`.
+
+```yaml
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: gpu
+spec:
+  chaos:
+    mode: Disabled
+  cri:
+    type: NotManaged
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudPermanent
+```
+
+### Debian
+Debian-based distributions contain packages with Nvidia drivers in the base repository, so we do not need prepare special images for Nvidia GPU support.
+
+Deploy NodeGroupConfiguration scripts:
+```yaml
+````---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-containerd.sh
+spec:
+  bundles:
+  - 'debian'
+  nodeGroups:
+  - 'gpu'
+  weight: 31
+  content: |
+    # Copyright 2021 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+        
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      systemctl daemon-reload
+      systemctl enable containerd.service
+      systemctl restart containerd.service
+    }
+        
+    # set default
+    desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | quote }}
+    allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "allowedPattern" | quote }}
+    
+    {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
+      {{- $debianVersion := toString $key }}
+      {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
+    if bb-is-debian-version? {{ $debianVersion }} ; then
+      desired_version={{ $value.containerd.desiredVersion | quote }}
+      allowed_versions_pattern={{ $value.containerd.allowedPattern | quote }}
+    fi
+      {{- end }}
+    {{- end }}
+    
+    if [[ -z $desired_version ]]; then
+      bb-log-error "Desired version must be set"
+      exit 1
+    fi
+    
+    should_install_containerd=true
+    version_in_use="$(dpkg -l containerd.io 2>/dev/null | grep -E "(hi|ii)\s+(containerd.io)" | awk '{print $2"="$3}' || true)"
+    if test -n "$allowed_versions_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
+      should_install_containerd=false
+    fi
+    
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      should_install_containerd=false
+    fi
+    
+    if [[ "$should_install_containerd" == true ]]; then
+      # set default
+      containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
+    
+    {{- $debianName := dict "9" "Stretch" "10" "Buster" "11" "Bullseye" }}
+    {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
+      {{- $debianVersion := toString $key }}
+      if bb-is-debian-version? {{ $debianVersion }} ; then
+        containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%s%s" ($value.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $debianName $debianVersion)) }}"
+      fi
+    {{- end }}
+    
+      crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
+    
+      bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}"
+    fi
+    
+    # Upgrade containerd-flant-edition if needed
+    containerd_fe_tag="{{ index .images.registrypackages "containerdFe1511" | toString }}"
+    if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
+      systemctl stop containerd.service
+      bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
+    
+      mkdir -p /etc/systemd/system/containerd.service.d
+      bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF
+    [Service]
+    ExecStart=
+    ExecStart=-/usr/local/bin/containerd
+    EOF
+    fi
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: configure-and-start-containerd.sh
+spec:
+  bundles:
+  - 'debian'
+  nodeGroups:
+  - 'gpu'
+  weight: 50
+  content: |
+    # Copyright 2021 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    bb-event-on 'bb-sync-file-changed' '_on_containerd_config_changed'
+    _on_containerd_config_changed() {
+      systemctl restart containerd.service
+    }
+    
+      {{- $max_concurrent_downloads := 3 }}
+      {{- $sandbox_image := "k8s.gcr.io/pause:3.2" }}
+      {{- if .images }}
+        {{- if .images.common.pause }}
+          {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
+        {{- end }}
+      {{- end }}
+    
+    systemd_cgroup=true
+    # Overriding cgroup type from external config file
+    if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
+      systemd_cgroup=false
+    fi
+    
+    # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
+    bb-sync-file /etc/containerd/config.toml - << EOF
+    version = 2
+    root = "/var/lib/containerd"
+    state = "/run/containerd"
+    plugin_dir = ""
+    disabled_plugins = []
+    required_plugins = []
+    oom_score = 0
+    [grpc]
+      address = "/run/containerd/containerd.sock"
+      tcp_address = ""
+      tcp_tls_cert = ""
+      tcp_tls_key = ""
+      uid = 0
+      gid = 0
+      max_recv_message_size = 16777216
+      max_send_message_size = 16777216
+    [ttrpc]
+      address = ""
+      uid = 0
+      gid = 0
+    [debug]
+      address = ""
+      uid = 0
+      gid = 0
+      level = ""
+    [metrics]
+      address = ""
+      grpc_histogram = false
+    [cgroup]
+      path = ""
+    [timeouts]
+      "io.containerd.timeout.shim.cleanup" = "5s"
+      "io.containerd.timeout.shim.load" = "5s"
+      "io.containerd.timeout.shim.shutdown" = "3s"
+      "io.containerd.timeout.task.state" = "2s"
+    [plugins]
+      [plugins."io.containerd.gc.v1.scheduler"]
+        pause_threshold = 0.02
+        deletion_threshold = 0
+        mutation_threshold = 100
+        schedule_delay = "0s"
+        startup_delay = "100ms"
+      [plugins."io.containerd.grpc.v1.cri"]
+        disable_tcp_service = true
+        stream_server_address = "127.0.0.1"
+        stream_server_port = "0"
+        stream_idle_timeout = "4h0m0s"
+        enable_selinux = false
+        selinux_category_range = 1024
+        sandbox_image = {{ $sandbox_image | quote }}
+        stats_collect_period = 10
+        systemd_cgroup = false
+        enable_tls_streaming = false
+        max_container_log_line_size = 16384
+        disable_cgroup = false
+        disable_apparmor = false
+        restrict_oom_score_adj = false
+        max_concurrent_downloads = {{ $max_concurrent_downloads }}
+        disable_proc_mount = false
+        unset_seccomp_profile = ""
+        tolerate_missing_hugetlb_controller = true
+        disable_hugetlb_controller = true
+        ignore_image_defined_volumes = false
+        [plugins."io.containerd.grpc.v1.cri".containerd]
+          snapshotter = "overlayfs"
+          default_runtime_name = "nvidia"
+          no_pivot = false
+          disable_snapshot_annotations = true
+          discard_unpacked_layers = false
+          [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
+            runtime_type = ""
+            runtime_engine = ""
+            runtime_root = ""
+            privileged_without_host_devices = false
+            base_runtime_spec = ""
+          [plugins."io.containerd.grpc.v1.cri".containerd.untrusted_workload_runtime]
+            runtime_type = ""
+            runtime_engine = ""
+            runtime_root = ""
+            privileged_without_host_devices = false
+            base_runtime_spec = ""
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+              runtime_type = "io.containerd.runc.v2"
+              runtime_engine = ""
+              runtime_root = ""
+              privileged_without_host_devices = false
+              base_runtime_spec = ""
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+                SystemdCgroup = ${systemd_cgroup}
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+                privileged_without_host_devices = false
+                runtime_engine = ""
+                runtime_root = ""
+                runtime_type = "io.containerd.runc.v1"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+                  BinaryName = "/usr/bin/nvidia-container-runtime"
+                  SystemdCgroup = ${systemd_cgroup}
+        [plugins."io.containerd.grpc.v1.cri".cni]
+          bin_dir = "/opt/cni/bin"
+          conf_dir = "/etc/cni/net.d"
+          max_conf_num = 1
+          conf_template = ""
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+              endpoint = ["https://registry-1.docker.io"]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
+              endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
+              auth = "{{ .registry.auth | default "" }}"
+      {{- if eq .registry.scheme "http" }}
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+              insecure_skip_verify = true
+      {{- end }}
+        [plugins."io.containerd.grpc.v1.cri".image_decryption]
+          key_model = ""
+        [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
+          tls_cert_file = ""
+          tls_key_file = ""
+      [plugins."io.containerd.internal.v1.opt"]
+        path = "/opt/containerd"
+      [plugins."io.containerd.internal.v1.restart"]
+        interval = "10s"
+      [plugins."io.containerd.metadata.v1.bolt"]
+        content_sharing_policy = "shared"
+      [plugins."io.containerd.monitor.v1.cgroups"]
+        no_prometheus = false
+      [plugins."io.containerd.runtime.v1.linux"]
+        shim = "containerd-shim"
+        runtime = "runc"
+        runtime_root = ""
+        no_shim = false
+        shim_debug = false
+      [plugins."io.containerd.runtime.v2.task"]
+        platforms = ["linux/amd64"]
+      [plugins."io.containerd.service.v1.diff-service"]
+        default = ["walking"]
+      [plugins."io.containerd.snapshotter.v1.devmapper"]
+        root_path = ""
+        pool_name = ""
+        base_image_size = ""
+        async_remove = false
+    EOF
+    
+    bb-sync-file /etc/crictl.yaml - << "EOF"
+    runtime-endpoint: unix:/var/run/containerd/containerd.sock
+    image-endpoint: unix:/var/run/containerd/containerd.sock
+    timeout: 2
+    debug: false
+    pull-image-on-create: false
+    EOF
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-cuda.sh
+spec:
+  bundles:
+  - 'debian'
+  nodeGroups:
+  - 'gpu'
+  weight: 30
+  content: |
+    # Copyright 2021 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    distribution="debian9"
+    curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey -o - | apt-key add -
+    curl -s -L https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.list -o /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    apt-get update
+    apt-get install -y nvidia-container-toolkit nvidia-driver-470
+```
+For other Debian versions you will need to correct the `distribution` and versions of `nvidia-driver-470`.
+
+### Centos
+Centos-based distributions do not contain Nvidia drivers in the base repositories.
+
+The installation of Nvidia drivers in Centos-based distributions is difficult to automate, so it is advisable to have a prepared image with the drivers installed.
+How to install Nvidia drivers is written in [instruction](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#redhat-installation).
+
+Deploy NodeGroupConfiguration scripts:
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-containerd.sh
+spec:
+  bundles:
+  - 'centos'
+  nodeGroups:
+  - 'gpu'
+  weight: 31
+  content: |
+    # Copyright 2021 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    bb-event-on 'bb-package-installed' 'post-install'
+    post-install() {
+      systemctl daemon-reload
+      systemctl enable containerd.service
+      systemctl restart containerd.service
+    }
+        
+    {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
+      {{- $centosVersion := toString $key }}
+      {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
+    if bb-is-centos-version? {{ $centosVersion }} ; then
+      desired_version={{ $value.containerd.desiredVersion | quote }}
+      allowed_versions_pattern={{ $value.containerd.allowedPattern | quote }}
+    fi
+      {{- end }}
+    {{- end }}
+    
+    if [[ -z $desired_version ]]; then
+      bb-log-error "Desired version must be set"
+      exit 1
+    fi
+    
+    should_install_containerd=true
+    version_in_use="$(rpm -q containerd.io | head -1 || true)"
+    if test -n "$allowed_versions_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
+      should_install_containerd=false
+    fi
+    
+    if [[ "$version_in_use" == "$desired_version" ]]; then
+      should_install_containerd=false
+    fi
+    
+    if [[ "$should_install_containerd" == true ]]; then
+    
+    {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
+      {{- $centosVersion := toString $key }}
+      if bb-is-centos-version? {{ $centosVersion }} ; then
+        containerd_tag="{{- index $.images.registrypackages (printf "containerdCentos%s" ($value.containerd.desiredVersion | replace "containerd.io-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
+      fi
+    {{- end }}
+    
+      crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
+    
+      bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}"
+    fi
+    
+    # Upgrade containerd-flant-edition if needed
+    containerd_fe_tag="{{ index .images.registrypackages "containerdFe1511" | toString }}"
+    if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
+      systemctl stop containerd.service
+      bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
+    
+      mkdir -p /etc/systemd/system/containerd.service.d
+      bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF
+    [Service]
+    ExecStart=
+    ExecStart=-/usr/local/bin/containerd
+    EOF
+    fi
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: configure-and-start-containerd.sh
+spec:
+  bundles:
+  - 'centos'
+  nodeGroups:
+  - 'gpu'
+  weight: 50
+  content: |
+    # Copyright 2021 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    bb-event-on 'bb-sync-file-changed' '_on_containerd_config_changed'
+    _on_containerd_config_changed() {
+      systemctl restart containerd.service
+    }
+    
+      {{- $max_concurrent_downloads := 3 }}
+      {{- $sandbox_image := "k8s.gcr.io/pause:3.2" }}
+      {{- if .images }}
+        {{- if .images.common.pause }}
+          {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
+        {{- end }}
+      {{- end }}
+    
+    systemd_cgroup=true
+    # Overriding cgroup type from external config file
+    if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
+      systemd_cgroup=false
+    fi
+    
+    # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
+    bb-sync-file /etc/containerd/config.toml - << EOF
+    version = 2
+    root = "/var/lib/containerd"
+    state = "/run/containerd"
+    plugin_dir = ""
+    disabled_plugins = []
+    required_plugins = []
+    oom_score = 0
+    [grpc]
+      address = "/run/containerd/containerd.sock"
+      tcp_address = ""
+      tcp_tls_cert = ""
+      tcp_tls_key = ""
+      uid = 0
+      gid = 0
+      max_recv_message_size = 16777216
+      max_send_message_size = 16777216
+    [ttrpc]
+      address = ""
+      uid = 0
+      gid = 0
+    [debug]
+      address = ""
+      uid = 0
+      gid = 0
+      level = ""
+    [metrics]
+      address = ""
+      grpc_histogram = false
+    [cgroup]
+      path = ""
+    [timeouts]
+      "io.containerd.timeout.shim.cleanup" = "5s"
+      "io.containerd.timeout.shim.load" = "5s"
+      "io.containerd.timeout.shim.shutdown" = "3s"
+      "io.containerd.timeout.task.state" = "2s"
+    [plugins]
+      [plugins."io.containerd.gc.v1.scheduler"]
+        pause_threshold = 0.02
+        deletion_threshold = 0
+        mutation_threshold = 100
+        schedule_delay = "0s"
+        startup_delay = "100ms"
+      [plugins."io.containerd.grpc.v1.cri"]
+        disable_tcp_service = true
+        stream_server_address = "127.0.0.1"
+        stream_server_port = "0"
+        stream_idle_timeout = "4h0m0s"
+        enable_selinux = false
+        selinux_category_range = 1024
+        sandbox_image = {{ $sandbox_image | quote }}
+        stats_collect_period = 10
+        systemd_cgroup = false
+        enable_tls_streaming = false
+        max_container_log_line_size = 16384
+        disable_cgroup = false
+        disable_apparmor = false
+        restrict_oom_score_adj = false
+        max_concurrent_downloads = {{ $max_concurrent_downloads }}
+        disable_proc_mount = false
+        unset_seccomp_profile = ""
+        tolerate_missing_hugetlb_controller = true
+        disable_hugetlb_controller = true
+        ignore_image_defined_volumes = false
+        [plugins."io.containerd.grpc.v1.cri".containerd]
+          snapshotter = "overlayfs"
+          default_runtime_name = "nvidia"
+          no_pivot = false
+          disable_snapshot_annotations = true
+          discard_unpacked_layers = false
+          [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
+            runtime_type = ""
+            runtime_engine = ""
+            runtime_root = ""
+            privileged_without_host_devices = false
+            base_runtime_spec = ""
+          [plugins."io.containerd.grpc.v1.cri".containerd.untrusted_workload_runtime]
+            runtime_type = ""
+            runtime_engine = ""
+            runtime_root = ""
+            privileged_without_host_devices = false
+            base_runtime_spec = ""
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+              runtime_type = "io.containerd.runc.v2"
+              runtime_engine = ""
+              runtime_root = ""
+              privileged_without_host_devices = false
+              base_runtime_spec = ""
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+                SystemdCgroup = ${systemd_cgroup}
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+                privileged_without_host_devices = false
+                runtime_engine = ""
+                runtime_root = ""
+                runtime_type = "io.containerd.runc.v1"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+                  BinaryName = "/usr/bin/nvidia-container-runtime"
+                  SystemdCgroup = ${systemd_cgroup}
+        [plugins."io.containerd.grpc.v1.cri".cni]
+          bin_dir = "/opt/cni/bin"
+          conf_dir = "/etc/cni/net.d"
+          max_conf_num = 1
+          conf_template = ""
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+              endpoint = ["https://registry-1.docker.io"]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
+              endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
+              auth = "{{ .registry.auth | default "" }}"
+      {{- if eq .registry.scheme "http" }}
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+              insecure_skip_verify = true
+      {{- end }}
+        [plugins."io.containerd.grpc.v1.cri".image_decryption]
+          key_model = ""
+        [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
+          tls_cert_file = ""
+          tls_key_file = ""
+      [plugins."io.containerd.internal.v1.opt"]
+        path = "/opt/containerd"
+      [plugins."io.containerd.internal.v1.restart"]
+        interval = "10s"
+      [plugins."io.containerd.metadata.v1.bolt"]
+        content_sharing_policy = "shared"
+      [plugins."io.containerd.monitor.v1.cgroups"]
+        no_prometheus = false
+      [plugins."io.containerd.runtime.v1.linux"]
+        shim = "containerd-shim"
+        runtime = "runc"
+        runtime_root = ""
+        no_shim = false
+        shim_debug = false
+      [plugins."io.containerd.runtime.v2.task"]
+        platforms = ["linux/amd64"]
+      [plugins."io.containerd.service.v1.diff-service"]
+        default = ["walking"]
+      [plugins."io.containerd.snapshotter.v1.devmapper"]
+        root_path = ""
+        pool_name = ""
+        base_image_size = ""
+        async_remove = false
+    EOF
+    
+    bb-sync-file /etc/crictl.yaml - << "EOF"
+    runtime-endpoint: unix:/var/run/containerd/containerd.sock
+    image-endpoint: unix:/var/run/containerd/containerd.sock
+    timeout: 2
+    debug: false
+    pull-image-on-create: false
+    EOF
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: install-cuda.sh
+spec:
+  bundles:
+  - 'centos'
+  nodeGroups:
+  - 'gpu'
+  weight: 30
+  content: |
+    # Copyright 2021 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    distribution="centos7"
+    curl -s -L https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.repo -o /etc/yum.repos.d/nvidia-container-toolkit.repo
+    yum install -y nvidia-container-toolkit
+```
+### How to check if it was successful ?
+
+Deploy Job:
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nvidia-cuda-test
+  namespace: default
+spec:
+  completions: 1
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        node.deckhouse.io/group: gpu
+      containers:
+        - name: nvidia-cuda-test
+          image: docker.io/nvidia/cuda:11.0-base
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - nvidia-smi
+```
+And check the logs:
+```shell
+$ kubectl logs job/nvidia-cuda-test
+Fri May  6 07:45:37 2022       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Tesla V100-SXM2...  Off  | 00000000:8B:00.0 Off |                    0 |
+| N/A   32C    P0    22W / 300W |      0MiB / 32510MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+```
+
+Deploy Job:
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpu-operator-test
+  namespace: default
+spec:
+  completions: 1
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        node.deckhouse.io/group: gpu
+      containers:
+        - name: gpu-operator-test
+          image: nvidia/samples:vectoradd-cuda10.2
+          imagePullPolicy: "IfNotPresent"
+```
+And check the logs:
+```shell
+$ kubectl logs job/gpu-operator-test
+[Vector addition of 50000 elements]
+Copy input data from the host memory to the CUDA device
+CUDA kernel launch with 196 blocks of 256 threads
+Copy output data from the CUDA device to the host memory
+Test PASSED
+Done
+```

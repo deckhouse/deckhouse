@@ -401,7 +401,7 @@ spec:
 
 ## Как использовать containerd с поддержкой Nvidia GPU?
 
-Так как для использования Nvidia GPU требуется кастомная настройка, необходимо создать нодгруппу с типом cri `Unmanaged`.
+Так как для использования Nvidia GPU требуется кастомная настройка containerd, необходимо создать нодгруппу с типом cri `Unmanaged`.
 
 ```yaml
 ---
@@ -420,7 +420,7 @@ spec:
 ```
 
 ### Debian
-Debian-based дистрибутивы содержат пакеты с драйверами Nvidia в базовом репозитории.
+Debian-based дистрибутивы содержат пакеты с драйверами Nvidia в базовом репозитории, поэтому нет необходимости подготавливать специальный образ c установленными драйверами.
 
 Необходимо задеплоить NodeGroupConfiguration скрипты:
 ```yaml
@@ -756,7 +756,7 @@ Centos-based дистрибутивы не содержат драйверы Nvi
 Установку драйверов Nvidia в Centos-based дистрибутивах трудно автоматизировать, поэтому желательно иметь подготовленный образ с установленными драйверами.
 Как установить драйвера Nvidia написано в [инструкции](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#redhat-installation). 
 
-Задеплойте NodeGroupConfiguration скрипты:
+Необходимо задеплоить NodeGroupConfiguration скрипты:
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -1096,6 +1096,30 @@ spec:
           command:
             - nvidia-smi
 ```
+И посмотреть логи:
+```shell
+$ kubectl logs job/nvidia-cuda-test
+Fri May  6 07:45:37 2022       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Tesla V100-SXM2...  Off  | 00000000:8B:00.0 Off |                    0 |
+| N/A   32C    P0    22W / 300W |      0MiB / 32510MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+```
 
 Задеплоить Job:
 ```yaml
@@ -1115,4 +1139,14 @@ spec:
         - name: gpu-operator-test
           image: nvidia/samples:vectoradd-cuda10.2
           imagePullPolicy: "IfNotPresent"
+```
+И посмотреть логи:
+```shell
+$ kubectl logs job/gpu-operator-test
+[Vector addition of 50000 elements]
+Copy input data from the host memory to the CUDA device
+CUDA kernel launch with 196 blocks of 256 threads
+Copy output data from the CUDA device to the host memory
+Test PASSED
+Done
 ```
