@@ -138,6 +138,13 @@ apiVersions:
         description: |
           Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance).
         properties:
+          exporterAPIKey:
+            description: |
+              API-ключ для экспортера метрик Яндекс Облака.
+              Если значение равно `Auto`, то декхауз создаст сервис-аккаунт c ролью `monitoring.viewer` и API-ключ для него. Для основного сервис-аккаунта требуется роль `admin`.
+              Если значение равно `Off` то экспортер не будет задеплоен в кластер.
+              Любое другое значение считается валидным API-ключем. Используйте [эту инструкцию](https://cloud.yandex.ru/docs/iam/operations/api-key/create) для создания API-ключа.
+              Сервисный аккаунту для которого будет создан ключ необходимо назначить роль `monitoring.viewer`.
           natInstanceExternalAddress:
             description: |
               Внешний [зарезервированный IP-адрес](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.

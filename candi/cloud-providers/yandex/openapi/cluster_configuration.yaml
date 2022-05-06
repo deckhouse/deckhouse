@@ -288,6 +288,15 @@ apiVersions:
           Settings for the [`WithNATInstance`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance) layout.
         additionalProperties: false
         properties:
+          exporterAPIKey:
+            description: |
+              API-key for cloud metrics exporter.
+              If parameter is `Off` cloud metrics exporter will not deployed in the cluster.
+              If parameter is `Auto`, Deckhouse will create service account with role `monitoring.viewer` and create API-key manually.
+              Any other value is considered a valid API-key. See [this instruction](https://cloud.yandex.ru/docs/iam/operations/api-key/create) for creating API-key.
+              Service account should have `monitoring.viewer` role.
+            type: string
+            default: Off
           natInstanceExternalAddress:
             description: |
               A [reserved external IP address](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) (or `externalSubnetID` address if specified).
