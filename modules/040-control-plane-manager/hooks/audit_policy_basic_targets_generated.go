@@ -40,6 +40,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"alliance-ingressgateway",
 	"alliance-metadata-exporter",
 	"annotations-converter",
+	"batch-bootstrap-for-static-ngs",
 	"cainjector",
 	"cert-exporter",
 	"cert-manager",
