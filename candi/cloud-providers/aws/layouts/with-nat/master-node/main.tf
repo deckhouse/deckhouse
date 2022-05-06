@@ -24,5 +24,5 @@ module "master-node" {
   cloud_config = var.cloudConfig
   zones = local.zones
   tags = local.tags
-  associate_ssh_accessible_sg = local.bastion_instance != null ? false : true
+  associate_ssh_accessible_sg = local.bastion_instance != {} ? false : true
 }
