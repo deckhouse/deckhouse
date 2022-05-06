@@ -29,12 +29,14 @@ func Test_newProbeLister(t *testing.T) {
 	pl := newProbeLister([]string{})
 
 	allProbesSorted := []check.ProbeRef{
-		{Group: "control-plane", Probe: "access"},
+		{Group: "control-plane", Probe: "apiserver"},
 		{Group: "control-plane", Probe: "basic-functionality"},
 		{Group: "control-plane", Probe: "controller-manager"},
 		{Group: "control-plane", Probe: "namespace"},
 		{Group: "control-plane", Probe: "scheduler"},
 		{Group: "deckhouse", Probe: "cluster-configuration"},
+		{Group: "extensions", Probe: "cluster-autoscaler"},
+		{Group: "extensions", Probe: "cluster-scaling"},
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},
 		{Group: "load-balancing", Probe: "metallb"},
 		{Group: "monitoring-and-autoscaling", Probe: "horizontal-pod-autoscaler"},
@@ -44,8 +46,6 @@ func Test_newProbeLister(t *testing.T) {
 		{Group: "monitoring-and-autoscaling", Probe: "prometheus-metrics-adapter"},
 		{Group: "monitoring-and-autoscaling", Probe: "trickster"},
 		{Group: "monitoring-and-autoscaling", Probe: "vertical-pod-autoscaler"},
-		{Group: "scaling", Probe: "cluster-autoscaler"},
-		{Group: "scaling", Probe: "cluster-scaling"},
 		{Group: "synthetic", Probe: "access"},
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
@@ -55,9 +55,9 @@ func Test_newProbeLister(t *testing.T) {
 	allGroupsSorted := []string{
 		"control-plane",
 		"deckhouse",
+		"extensions",
 		"load-balancing",
 		"monitoring-and-autoscaling",
-		"scaling",
 		"synthetic",
 	}
 

@@ -54,15 +54,15 @@ func TestLoader_Groups(t *testing.T) {
 	allGroups := []string{
 		"control-plane",
 		"deckhouse",
+		"extensions",
 		"load-balancing",
 		"monitoring-and-autoscaling",
-		"scaling",
 		"synthetic",
 	}
 	assert.Equal(t, allGroups, unfiltered.Groups())
 
 	filtered := &Loader{
-		filter: NewProbeFilter([]string{"deckhouse", "scaling/"}),
+		filter: NewProbeFilter([]string{"deckhouse", "extensions/"}),
 		access: &kubernetes.Accessor{},
 		logger: newDummyLogger().Logger,
 	}
@@ -84,12 +84,14 @@ func TestLoader_Probes(t *testing.T) {
 	}
 
 	allProbesSorted := []check.ProbeRef{
-		{Group: "control-plane", Probe: "access"},
+		{Group: "control-plane", Probe: "apiserver"},
 		{Group: "control-plane", Probe: "basic-functionality"},
 		{Group: "control-plane", Probe: "controller-manager"},
 		{Group: "control-plane", Probe: "namespace"},
 		{Group: "control-plane", Probe: "scheduler"},
 		{Group: "deckhouse", Probe: "cluster-configuration"},
+		{Group: "extensions", Probe: "cluster-autoscaler"},
+		{Group: "extensions", Probe: "cluster-scaling"},
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},
 		{Group: "load-balancing", Probe: "metallb"},
 		{Group: "monitoring-and-autoscaling", Probe: "key-metrics-present"},
@@ -98,8 +100,6 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "monitoring-and-autoscaling", Probe: "prometheus-metrics-adapter"},
 		{Group: "monitoring-and-autoscaling", Probe: "trickster"},
 		{Group: "monitoring-and-autoscaling", Probe: "vertical-pod-autoscaler"},
-		{Group: "scaling", Probe: "cluster-autoscaler"},
-		{Group: "scaling", Probe: "cluster-scaling"},
 		{Group: "synthetic", Probe: "access"},
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
@@ -109,18 +109,19 @@ func TestLoader_Probes(t *testing.T) {
 	assert.Equal(t, allProbesSorted, unfiltered.Probes())
 
 	filtered := &Loader{
-		filter: NewProbeFilter([]string{"deckhouse", "scaling/", "load-balancing/metallb"}),
+		filter: NewProbeFilter([]string{"deckhouse", "extensions/", "load-balancing/metallb"}),
 		access: &kubernetes.Accessor{},
 		logger: newDummyLogger().Logger,
 	}
 
 	filteredProbesSorted := []check.ProbeRef{
-		{Group: "control-plane", Probe: "access"},
+		{Group: "control-plane", Probe: "apiserver"},
 		{Group: "control-plane", Probe: "basic-functionality"},
 		{Group: "control-plane", Probe: "controller-manager"},
 		{Group: "control-plane", Probe: "namespace"},
 		{Group: "control-plane", Probe: "scheduler"},
 		// --    deckhouse/...
+		// --    extensions/...
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},
 		// --    load-balancing/metallb
 		{Group: "monitoring-and-autoscaling", Probe: "key-metrics-present"},
@@ -129,7 +130,6 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "monitoring-and-autoscaling", Probe: "prometheus-metrics-adapter"},
 		{Group: "monitoring-and-autoscaling", Probe: "trickster"},
 		{Group: "monitoring-and-autoscaling", Probe: "vertical-pod-autoscaler"},
-		// --    scale/...
 		{Group: "synthetic", Probe: "access"},
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},

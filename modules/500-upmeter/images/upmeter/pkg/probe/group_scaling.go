@@ -23,9 +23,9 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initScaling(access kubernetes.Access) []runnerConfig {
+func initExtensions(access kubernetes.Access) []runnerConfig {
 	const (
-		groupName = "scaling"
+		groupName = "extensions"
 		cpTimeout = 5 * time.Second
 	)
 

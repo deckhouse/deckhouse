@@ -57,7 +57,7 @@ func (l *Loader) collectConfigs() []runnerConfig {
 	l.configs = append(l.configs, initSynthetic(l.access, l.logger)...)
 	l.configs = append(l.configs, initControlPlane(l.access)...)
 	l.configs = append(l.configs, initMonitoringAndAutoscaling(l.access)...)
-	l.configs = append(l.configs, initScaling(l.access)...)
+	l.configs = append(l.configs, initExtensions(l.access)...)
 	l.configs = append(l.configs, initLoadBalancing(l.access)...)
 	l.configs = append(l.configs, initDeckhouse(l.access, l.logger)...)
 
