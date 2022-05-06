@@ -38,6 +38,6 @@ trim_trailing_whitespace = false
 ; golang
 ###########################################################
 
-[*.go]
+[{*.go, *.patch}]
 indent_style = tab
 indent_size = 4

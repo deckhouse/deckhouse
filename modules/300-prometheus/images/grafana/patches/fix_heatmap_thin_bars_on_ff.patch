@@ -1,8 +1,8 @@
 diff --git a/public/app/core/time_series2.ts b/public/app/core/time_series2.ts
-index 8a9a515d48..c3cd098317 100644
+index e2c301d..8335348 100644
 --- a/public/app/core/time_series2.ts
 +++ b/public/app/core/time_series2.ts
-@@ -222,6 +222,7 @@ export default class TimeSeries {
+@@ -223,6 +223,7 @@ export default class TimeSeries {
      let previousTime;
      let previousValue = 0;
      let previousDeltaUp = true;
@@ -10,7 +10,7 @@ index 8a9a515d48..c3cd098317 100644
 
      for (let i = 0; i < this.datapoints.length; i++) {
        currentValue = this.datapoints[i][0];
-@@ -231,8 +232,15 @@ export default class TimeSeries {
+@@ -232,8 +233,15 @@ export default class TimeSeries {
        // so we have to find the minimum one (could occur with aggregators such as ZimSum)
        if (previousTime !== undefined) {
          const timeStep = currentTime - previousTime;
@@ -28,16 +28,16 @@ index 8a9a515d48..c3cd098317 100644
        }
        previousTime = currentTime;
 diff --git a/public/app/plugins/panel/heatmap/heatmap_data_converter.ts b/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
-index 570590adec..36e5abf3ca 100644
+index 95183a6..186d0aa 100644
 --- a/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
 +++ b/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
 @@ -1,4 +1,4 @@
 -import { concat, forEach, isEmpty, isEqual, isNumber, sortBy } from 'lodash';
 +import { concat, forEach, isEmpty, isEqual, isNumber, sortBy, toNumber } from 'lodash';
- import { TimeSeries } from 'app/core/core';
- import { Bucket, HeatmapCard, HeatmapCardStats, YBucket, XBucket } from './types';
 
-@@ -399,10 +399,28 @@ function calculateBucketSize(bounds: number[], logBase = 1): number {
+ import { TimeSeries } from 'app/core/core';
+
+@@ -401,10 +401,28 @@ function calculateBucketSize(bounds: number[], logBase = 1): number {
      return bounds[0];
    } else {
      bounds = sortBy(bounds);
