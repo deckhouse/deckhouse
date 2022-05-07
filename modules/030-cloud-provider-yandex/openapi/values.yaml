@@ -6,28 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      exporter:
-        type: object
-        default: {}
-        properties:
-          apiKey:
-            type: string
-            default: ""
-            x-examples:
-            - test
-            - ""
-          serviceAccountChecksum:
-            type: string
-            default: ""
-            x-examples:
-            - test
-            - ""
-          apiKeyID:
-            type: string
-            default: ""
-            x-examples:
-              - test
-              - ""
       defaultStorageClass:
         type: string
         x-examples:
