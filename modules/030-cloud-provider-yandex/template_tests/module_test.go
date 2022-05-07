@@ -148,9 +148,6 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			if exists {
 				Expect(secret.Field("data.api-key").String()).To(Equal("YXBpLWtleQ=="))
 				Expect(secret.Field("data.folder-id").String()).To(Equal("bXlmb2xkaWQ="))
-
-				Expect(secret.Field("metadata.annotations.checksum/service-account").String()).To(Equal("aaaabbb0000"))
-				Expect(secret.Field("metadata.annotations.service-account-api-key/id").String()).To(Equal("key-id"))
 			}
 		}
 
@@ -164,9 +161,9 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(grafanaDashboardExists).To(Equal(exists))
 		}
 
-		Context("exporter disabled", func() {
+		Context("monitoring api-key does not set", func() {
 			BeforeEach(func() {
-				f.ValuesSet("cloudProviderYandex.cloudMetricsExporterEnabled", false)
+				f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey", "")
 			})
 
 			Context("without NAT-instance", func() {
@@ -207,12 +204,9 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			})
 		})
 
-		Context("exporter enabled", func() {
+		Context("monitoring api-key sets", func() {
 			BeforeEach(func() {
-				f.ValuesSet("cloudProviderYandex.cloudMetricsExporterEnabled", true)
-				f.ValuesSet("cloudProviderYandex.internal.exporter.apiKey", "api-key")
-				f.ValuesSet("cloudProviderYandex.internal.exporter.serviceAccountChecksum", "aaaabbb0000")
-				f.ValuesSet("cloudProviderYandex.internal.exporter.apiKeyID", "key-id")
+				f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey", "api-key")
 			})
 
 			Context("without NAT-instance", func() {

@@ -13,6 +13,7 @@ apiVersions:
       zoneToSubnetIdMap: { "zone": "id", "zone-2": "id-2" }
       shouldAssignPublicIPAddress: true
       natInstanceName: ""
+      monitoringAPIKey: ""
     - apiVersion: deckhouse.io/v1
       kind: YandexCloudDiscoveryData
       region: test-region
@@ -23,6 +24,7 @@ apiVersions:
       zoneToSubnetIdMap: { "zone": "id", "zone-2": "id-2" }
       shouldAssignPublicIPAddress: true
       natInstanceName: "cluster-nat-instance"
+      monitoringAPIKey: "api-key"
     type: object
     additionalProperties: false
     required: [apiVersion, kind, region, routeTableID, defaultLbTargetGroupNetworkId, internalNetworkIDs, zones, zoneToSubnetIdMap, shouldAssignPublicIPAddress]
