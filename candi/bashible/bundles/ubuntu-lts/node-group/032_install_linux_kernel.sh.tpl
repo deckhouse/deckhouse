@@ -72,7 +72,9 @@ version_in_use_pattern="$(echo "$version_in_use" | sed -r 's/([0-9\.-]+)-([^0-9]
 
 if [[ "$should_install_kernel" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
-  if bb-is-ubuntu-version? 20.04 ; then
+  if bb-is-ubuntu-version? 22.04 ; then
+    bb-apt-install "linux-image-${desired_version}" "linux-modules-${desired_version}" "linux-modules-extra-${desired_version}" "linux-headers-${desired_version}"
+  elif bb-is-ubuntu-version? 20.04 ; then
     bb-apt-install "linux-image-${desired_version}" "linux-modules-${desired_version}" "linux-modules-extra-${desired_version}" "linux-headers-${desired_version}"
   elif bb-is-ubuntu-version? 18.04 ; then
     bb-apt-install "linux-image-${desired_version}" "linux-modules-${desired_version}" "linux-modules-extra-${desired_version}" "linux-headers-${desired_version}"

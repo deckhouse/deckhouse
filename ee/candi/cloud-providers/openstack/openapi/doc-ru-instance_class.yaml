@@ -28,7 +28,7 @@ spec:
 
                     Получить список всех доступных образов можно с помощью команды: `openstack image list`.
 
-                    **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04` и `Centos 7`.
+                    **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Debian 9`, `Debian 10`, `Debian 11`.
 
                     **По умолчанию:** значение либо из `OpenStackCloudDiscoveryData`, либо из настроек `instances.imageName`.
                 rootDiskSize:
