@@ -29,10 +29,8 @@ func handleValues(input *go_hook.HookInput) error {
 	if madisonAuthKey != "false" {
 		if metrics != "https://connect.deckhouse.io/v1/remote_write" {
 			value = 1
-		} else {
-			if !kubeallHostIsSet {
-				value = 2
-			}
+		} else if !kubeallHostIsSet {
+			value = 2
 		}
 	}
 

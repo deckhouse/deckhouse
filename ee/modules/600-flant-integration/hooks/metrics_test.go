@@ -51,7 +51,7 @@ var _ = Describe("helm :: hooks :: metrics ::", func() {
 		Context("kubeall host is not set", func() {
 			BeforeEach(func() {
 				f.ValuesSet("flantIntegration.madisonAuthKey", "secret")
-				f.ValuesSet("flantIntegration.metrics", "https://connect.deckhouse.io/v1/remote_write")
+				f.ValuesSet("flantIntegration.metrics.url", "https://connect.deckhouse.io/v1/remote_write")
 				f.RunGoHook()
 			})
 			It("d8_flant_integration_misconfiguration_detected must be 2", func() {
@@ -66,7 +66,7 @@ var _ = Describe("helm :: hooks :: metrics ::", func() {
 		Context("configuration is ok", func() {
 			BeforeEach(func() {
 				f.ValuesSet("flantIntegration.madisonAuthKey", "secret")
-				f.ValuesSet("flantIntegration.metrics", "https://connect.deckhouse.io/v1/remote_write")
+				f.ValuesSet("flantIntegration.metrics.url", "https://connect.deckhouse.io/v1/remote_write")
 				f.ValuesSet("flantIntegration.kubeall.host", "my.kube-master")
 				f.RunGoHook()
 			})
