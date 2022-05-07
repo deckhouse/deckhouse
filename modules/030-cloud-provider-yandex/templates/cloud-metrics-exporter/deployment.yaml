@@ -1,4 +1,4 @@
-{{- if .Values.cloudProviderYandex.cloudMetricsExporterEnabled }}
+{{- if .Values.cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1

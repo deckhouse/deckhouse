@@ -1,4 +1,4 @@
-{{- if and .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName .Values.cloudProviderYandex.cloudMetricsExporterEnabled }}
+{{- if and .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName .Values.cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey }}
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:

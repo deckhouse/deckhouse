@@ -65,3 +65,7 @@ apiVersions:
         type: boolean
       natInstanceName:
         type: string
+        default: ""
+      monitoringAPIKey:
+        type: string
+        default: ""

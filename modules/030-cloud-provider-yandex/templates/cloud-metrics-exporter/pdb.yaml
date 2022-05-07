@@ -1,4 +1,4 @@
-{{- if .Values.cloudProviderYandex.cloudMetricsExporterEnabled }}
+{{- if .Values.cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey }}
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:

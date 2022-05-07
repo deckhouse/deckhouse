@@ -1,4 +1,4 @@
-{{- if .Values.cloudProviderYandex.cloudMetricsExporterEnabled }}
+{{- if .Values.cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey }}
 ---
 apiVersion: v1
 kind: ServiceAccount
