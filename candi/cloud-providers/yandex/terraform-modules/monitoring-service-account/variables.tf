@@ -20,3 +20,7 @@ variable "apiKey" {
 variable "folderID" {
   type = string
 }
+
+variable "prefix" {
+  type = string
+}

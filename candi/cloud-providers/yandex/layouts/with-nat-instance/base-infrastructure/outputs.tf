@@ -24,6 +24,6 @@ output "cloud_discovery_data" {
     "zoneToSubnetIdMap" = module.vpc_components.zone_to_subnet_id_map
     "shouldAssignPublicIPAddress" = false
     "natInstanceName"=module.vpc_components.nat_instance_name
-    "monitoringAPIKey"=yandex_iam_service_account_api_key.monitoring_sa.secret_key
+    "monitoringAPIKey"=module.monitoring-service-account.apiKey
   }
 }

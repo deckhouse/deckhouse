@@ -47,6 +47,7 @@ module "vpc_components" {
 module "monitoring-service-account" {
   source = "../../../terraform-modules/monitoring-service-account"
 
+  prefix   = local.prefix
   apiKey   = local.exporter_api_key
   folderID = var.providerClusterConfiguration.provider.folderID
 }

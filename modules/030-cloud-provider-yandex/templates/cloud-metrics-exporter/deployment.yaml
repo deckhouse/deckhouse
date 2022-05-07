@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: cloud-metrics-exporter
   namespace: d8-cloud-provider-yandex
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-metrics-exporter")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-cloud-metrics-exporter")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -21,16 +21,16 @@ kind: Deployment
 metadata:
   name: cloud-metrics-exporter
   namespace: d8-cloud-provider-yandex
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-metrics-exporter")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-cloud-metrics-exporter")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
-      app: cloud-metrics-exporter
+      app: yandex-cloud-metrics-exporter
   template:
     metadata:
       labels:
-        app: cloud-metrics-exporter
+        app: yandex-cloud-metrics-exporter
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-metrics-exporter/secret-exporter-creds.yaml") . | sha256sum }}
     spec:
@@ -40,7 +40,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-metrics-exporter")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "yandex-cloud-metrics-exporter")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       containers:
       - name: exporter
