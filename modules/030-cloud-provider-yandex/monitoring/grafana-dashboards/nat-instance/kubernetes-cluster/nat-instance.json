@@ -90,7 +90,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by(job) (cpu_usage{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+          "expr": "max by(job) (cpu_usage{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
           "legendFormat": "",
           "refId": "A"
         }
@@ -148,7 +148,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by(job) (network_connections_quota_utilization{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+          "expr": "max by(job) (network_connections_quota_utilization{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
           "legendFormat": "",
           "refId": "A"
         }
@@ -244,7 +244,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by(job) (network_connections_quota_utilization{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"}",
+          "expr": "max by(job) (network_connections_quota_utilization{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"}",
           "legendFormat": "Utilization %",
           "refId": "A"
         }
@@ -328,14 +328,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by(job) (network_received_bytes{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+          "expr": "max by(job) (network_received_bytes{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
           "hide": false,
           "legendFormat": "Received",
           "refId": "a"
         },
         {
           "exemplar": true,
-          "expr": "max by(job) (network_sent_bytes{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+          "expr": "max by(job) (network_sent_bytes{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
           "hide": false,
           "legendFormat": "Sent",
           "refId": "A"
@@ -420,14 +420,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by(job) (network_received_packets{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+          "expr": "max by(job) (network_received_packets{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
           "hide": false,
           "legendFormat": "Received",
           "refId": "a"
         },
         {
           "exemplar": true,
-          "expr": "max by(job) (network_sent_packets{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+          "expr": "max by(job) (network_sent_packets{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
           "hide": false,
           "legendFormat": "Sent",
           "refId": "A"
@@ -523,7 +523,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "max by(job) (cpu_utilization{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+              "expr": "max by(job) (cpu_utilization{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
               "legendFormat": "Core {{cpu_name}}",
               "refId": "A"
             }
@@ -607,7 +607,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "max by(job) (cpu_usage{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+              "expr": "max by(job) (cpu_usage{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
               "legendFormat": "Usage %",
               "refId": "A"
             }
@@ -702,14 +702,14 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "max by(job) (disk_read_ops{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+              "expr": "max by(job) (disk_read_ops{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
               "hide": false,
               "legendFormat": "Read",
               "refId": "a"
             },
             {
               "exemplar": true,
-              "expr": "max by(job) (disk_write_ops{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+              "expr": "max by(job) (disk_write_ops{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
               "hide": false,
               "legendFormat": "Write",
               "refId": "A"
@@ -790,14 +790,14 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "max by(job) (disk_read_bytes{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+              "expr": "max by(job) (disk_read_bytes{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
               "hide": false,
               "legendFormat": "Read",
               "refId": "a"
             },
             {
               "exemplar": true,
-              "expr": "max by(job) (disk_write_bytes{nat_instance=\"true\" job=\"yandex-cloud-metrics-exporter\"})",
+              "expr": "max by(job) (disk_write_bytes{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
               "hide": false,
               "legendFormat": "Write",
               "refId": "A"
