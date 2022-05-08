@@ -215,6 +215,8 @@ properties:
   udpEnabled:
     type: boolean
     default: false
+  storageClass:
+    type: string
 oneOf:
   - properties:
       tcpEnabled:

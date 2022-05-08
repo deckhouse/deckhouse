@@ -95,6 +95,8 @@ func applyMigrationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 }
 
 func migration(input *go_hook.HookInput) error {
+	input.ConfigValues.Remove("openvpn.storageClass")
+
 	migrated := false
 
 	if len(input.Snapshots["easyrsa_migrated"]) > 0 {
