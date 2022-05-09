@@ -205,3 +205,7 @@ properties:
           format: int64
         value:
           type: string
+  storageClass:
+    type: string
+    description: |
+      The parameter will be removed in future releases, as we have abandoned the use of a disk for storing certificates.
