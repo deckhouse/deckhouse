@@ -244,7 +244,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max by(job) (network_connections_quota_utilization{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"}",
+          "expr": "max by(job) (network_connections_quota_utilization{nat_instance=\"true\", job=\"yandex-cloud-metrics-exporter\"})",
           "legendFormat": "Utilization %",
           "refId": "A"
         }
