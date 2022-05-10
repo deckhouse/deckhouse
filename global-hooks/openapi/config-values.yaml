@@ -14,7 +14,7 @@ properties:
     description: |
       A global switch to enable the *high availability* mode for modules that support it.
 
-      If not defined, the value is determined automatically.
+      If not defined, the value is determined automatically as `true` for clusters with more than one master node. Otherwise, it is determined as`false`.
     x-examples: [ true, false ]
   modules:
     description: |
