@@ -401,10 +401,9 @@ spec:
 
 ## Как использовать containerd с поддержкой Nvidia GPU?
 
-Так как для использования Nvidia GPU требуется кастомная настройка containerd, необходимо создать нодгруппу с типом cri `Unmanaged`.
+Так как для использования Nvidia GPU требуется особая настройка containerd, необходимо создать NodeGroup с типом CRI `Unmanaged`.
 
 ```yaml
----
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -422,9 +421,8 @@ spec:
 ### Debian
 Debian-based дистрибутивы содержат пакеты с драйверами Nvidia в базовом репозитории, поэтому нет необходимости подготавливать специальный образ c установленными драйверами.
 
-Необходимо задеплоить NodeGroupConfiguration скрипты:
+Разверните скрипты `NodeGroupConfiguration`:
 ```yaml
-````---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
@@ -748,15 +746,15 @@ spec:
     apt-get update
     apt-get install -y nvidia-container-toolkit nvidia-driver-470
 ```
-Для других версий Debian нужно будет поправить `distribution` и версии `nvidia-driver-470`.
+Для других версий Debian исправьте значение переменной `distribution` в скрипте и версию пакета драйверов Nvidia (в примере выше — `nvidia-driver-470`).
 
-### Centos
-Centos-based дистрибутивы не содержат драйверы Nvidia в базовых репозиториях.
+### CentOS
+CentOS-based дистрибутивы не содержат драйверы Nvidia в базовых репозиториях.
 
-Установку драйверов Nvidia в Centos-based дистрибутивах трудно автоматизировать, поэтому желательно иметь подготовленный образ с установленными драйверами.
+Установку драйверов Nvidia в CentOS-based дистрибутивах трудно автоматизировать, поэтому желательно иметь подготовленный образ с установленными драйверами.
 Как установить драйвера Nvidia написано в [инструкции](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#redhat-installation). 
 
-Необходимо задеплоить NodeGroupConfiguration скрипты:
+Разверните скрипты `NodeGroupConfiguration`:
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -1073,9 +1071,9 @@ spec:
     curl -s -L https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.repo -o /etc/yum.repos.d/nvidia-container-toolkit.repo
     yum install -y nvidia-container-toolkit
 ```
-### Как проверить что все прошло успешно ?
+### Как проверить что все прошло успешно?
 
-Задеплоить Job:
+Развернуть Job:
 ```yaml
 apiVersion: batch/v1
 kind: Job

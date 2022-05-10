@@ -400,10 +400,9 @@ Additional node configuration steps are set by custom resource `NodeGroupConfigu
 
 ## How to use containerd with Nvidia GPU support?
 
-Since using the Nvidia GPU requires a custom containerd configuration, it is necessary to create a node group with the type cri `Unmanaged`.
+Since using the Nvidia GPU requires a custom containerd configuration, it is necessary to create a NodeGroup with the `Unmanaged` CRI type.
 
 ```yaml
----
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -419,11 +418,10 @@ spec:
 ```
 
 ### Debian
-Debian-based distributions contain packages with Nvidia drivers in the base repository, so we do not need prepare special images for Nvidia GPU support.
+Debian-based distributions contain packages with Nvidia drivers in the base repository, so we do not need to prepare special images to support Nvidia GPU.
 
-Deploy NodeGroupConfiguration scripts:
+Deploy `NodeGroupConfiguration` scripts:
 ```yaml
-````---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
@@ -747,17 +745,16 @@ spec:
     apt-get update
     apt-get install -y nvidia-container-toolkit nvidia-driver-470
 ```
-For other Debian versions you will need to correct the `distribution` and versions of `nvidia-driver-470`.
+For other Debian versions you will need to correct the `distribution` variable and Nvidia driver package name (the `nvidia-driver-470` in the example above).
 
-### Centos
-Centos-based distributions do not contain Nvidia drivers in the base repositories.
+### CentOS
+CentOS-based distributions do not contain Nvidia drivers in the base repositories.
 
-The installation of Nvidia drivers in Centos-based distributions is difficult to automate, so it is advisable to have a prepared image with the drivers installed.
+The installation of Nvidia drivers in CentOS-based distributions is difficult to automate, so it is advisable to have a prepared image with the drivers installed.
 How to install Nvidia drivers is written in [instruction](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#redhat-installation).
 
-Deploy NodeGroupConfiguration scripts:
+Deploy `NodeGroupConfiguration` scripts:
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
@@ -1072,7 +1069,7 @@ spec:
     curl -s -L https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.repo -o /etc/yum.repos.d/nvidia-container-toolkit.repo
     yum install -y nvidia-container-toolkit
 ```
-### How to check if it was successful ?
+### How to check if it was successful?
 
 Deploy Job:
 ```yaml
