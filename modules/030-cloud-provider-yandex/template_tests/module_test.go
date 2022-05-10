@@ -152,7 +152,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 		}
 
 		assertDeployNatInstanceMonitoring := func(h *Config, exists bool) {
-			prometheusRuleExists := h.KubernetesResource("PrometheusRule", "d8-monitoring", "cloud-provider-yandex-nat-instance").Exists()
+			prometheusRuleExists := h.KubernetesResource("PrometheusRule", "d8-cloud-provider-yandex", "cloud-provider-yandex-nat-instance").Exists()
 			grafanaDashboardExists := h.KubernetesResource("GrafanaDashboardDefinition", "", "d8-cloud-provider-yandex-kubernetes-cluster-nat-instance").Exists()
 			monitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics")
 
