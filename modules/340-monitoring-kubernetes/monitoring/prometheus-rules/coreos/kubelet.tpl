@@ -22,7 +22,7 @@
       description: '{{ `{{ $value }}` }}% of Kubernetes nodes are not ready'
       summary: Too many nodes are not ready
   - alert: K8SKubeletDown
-    expr: (count(up{job="kubelet"} == 0) or absent(up{job="kubelet"} == 1)) / count(up{job="kubelet"})) * 100 > 3
+    expr: (count(up{job="kubelet"} == 0) or absent(up{job="kubelet"} == 1)) / count(up{job="kubelet"}) * 100 > 3
     for: 10m
     labels:
       severity_level: "4"
@@ -33,7 +33,7 @@
       description: Prometheus failed to scrape {{ `{{ $value }}` }}% of kubelets.
       summary: A few kubelets cannot be scraped
   - alert: K8SKubeletDown
-    expr: (count(up{job="kubelet"} == 0) or absent(up{job="kubelet"} == 1)) / count(up{job="kubelet"})) * 100 > 10
+    expr: (count(up{job="kubelet"} == 0) or absent(up{job="kubelet"} == 1)) / count(up{job="kubelet"}) * 100 > 10
     for: 30m
     labels:
       severity_level: "3"
