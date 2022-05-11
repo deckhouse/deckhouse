@@ -523,7 +523,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "max by(job) (cpu_utilization{nat_instance=\"true\", job=\"cloud-metrics-exporter\"})",
+              "expr": "max by(job, cpu_name) (cpu_utilization{nat_instance=\"true\", job=\"cloud-metrics-exporter\"})",
               "legendFormat": "Core {{cpu_name}}",
               "refId": "A"
             }
