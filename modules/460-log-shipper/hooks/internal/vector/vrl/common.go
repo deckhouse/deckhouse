@@ -27,7 +27,7 @@ import (
 // Rule is a representation of a VRL rule.
 type Rule string
 
-//
+// String returns string representation of the rule.
 func (r Rule) String() string {
 	return strings.TrimSpace(string(r))
 }
