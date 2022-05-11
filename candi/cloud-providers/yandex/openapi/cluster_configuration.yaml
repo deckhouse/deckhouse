@@ -291,8 +291,8 @@ apiVersions:
           exporterAPIKey:
             description: |
               API-key for cloud metrics exporter.
-              If parameter is `Off` cloud metrics exporter will not deployed in the cluster.
-              If parameter is `Auto`, Deckhouse will create service account with role `monitoring.viewer` and create API-key manually.
+              If parameter is empty cloud metrics exporter will not deployed in the cluster.
+              If parameter is `Auto`, Deckhouse will create service account with role `monitoring.viewer` and create API-key manually. Provider service account should have `admin` role.
               Any other value is considered a valid API-key. See [this instruction](https://cloud.yandex.ru/docs/iam/operations/api-key/create) for creating API-key.
               Service account should have `monitoring.viewer` role.
             type: string

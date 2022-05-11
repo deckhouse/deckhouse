@@ -13,5 +13,5 @@
 # limitations under the License.
 
 output "apiKey" {
-  value = var.apiKey == "Auto" ? yandex_iam_service_account_api_key.monitoring_sa[0].secret_key : (var.apiKey == "Off" ? "" : var.apiKey)
+  value = var.apiKey == "Auto" ? yandex_iam_service_account_api_key.monitoring_sa[0].secret_key : var.apiKey
 }

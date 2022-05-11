@@ -14,7 +14,6 @@
 
 variable "apiKey" {
   type = string
-  default = "Off"
 }
 
 variable "folderID" {
