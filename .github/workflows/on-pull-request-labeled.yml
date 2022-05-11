@@ -116,7 +116,6 @@ jobs:
           filters: |
             dangerous:
               - './.github/**'
-              - './.gitlab/**'
               - './tools/**'
               - './testing/**'
               - './docs/**/js/**'

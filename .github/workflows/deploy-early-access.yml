@@ -23,7 +23,6 @@ on:
 env:
 
   # <template: werf_envs>
-  # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
   # We use stapel image from own registry due to docker hub pull amount limitation.
@@ -302,8 +301,6 @@ jobs:
           WERF_ENV: CE
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          ## Source: .gitlab/ci_templates/deploy.yml
-
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.
@@ -435,8 +432,6 @@ jobs:
           WERF_ENV: EE
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          ## Source: .gitlab/ci_templates/deploy.yml
-
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.
@@ -568,8 +563,6 @@ jobs:
           WERF_ENV: FE
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
-          ## Source: .gitlab/ci_templates/deploy.yml
-
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
           # DST is an image name for docker push.

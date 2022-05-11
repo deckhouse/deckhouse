@@ -12,7 +12,6 @@ env:
   WERF_DRY_RUN: "true"
 
   # <template: werf_envs>
-  # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
   # We use stapel image from own registry due to docker hub pull amount limitation.
@@ -29,8 +28,7 @@ env:
   # </template: werf_envs>
 
 
-  # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
-  # https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
+  # <template: image_versions_envs>
   BASE_ALPINE: "registry.deckhouse.io/base_images/alpine:3.12.12@sha256:cb64bbe7fa613666c234e1090e91427314ee18ec6420e9426cf4e7f314056813"
   BASE_ALPINE_3_15: "registry.deckhouse.io/base_images/alpine:3.15.4@sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89"
   BASE_DEBIAN: "registry.deckhouse.io/base_images/debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"
@@ -50,7 +48,9 @@ env:
   BASE_SCRATCH: "registry.deckhouse.io/base_images/spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
   BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/flant/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
   BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
+  # </template: image_versions_envs>
 
+  # <template: terraform_versions_envs>
   # Terraform settings
   TF_AWS_NAMESPACE: hashicorp
   TF_AWS_TYPE: aws
@@ -71,6 +71,7 @@ env:
   TF_YANDEX_NAMESPACE: yandex-cloud
   TF_YANDEX_TYPE: yandex
   TF_YANDEX_VERSION: 0.45.1
+  # </template: terraform_versions_envs>
 
 # Always run a single job at a time.
 # Note: Concurrency is currently in beta and subject to change.

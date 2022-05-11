@@ -21,10 +21,10 @@ The changelog toolchain consists of these files
     scripts/js/
         changelog-command-validate.js
     workflows/
-        changelog-command-dispatch.yml
         changelog-command.yml
         changelog-by-milestone.yml
         changelog-by-pull.yml
+        dispatch-slash-command.yml
 ```
 
 

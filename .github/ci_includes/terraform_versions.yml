@@ -1,8 +1,5 @@
-#
-# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
-#
-
 {!{ define "terraform_versions_envs" }!}
+# <template: terraform_versions_envs>
 # Terraform settings
 TF_AWS_NAMESPACE: hashicorp
 TF_AWS_TYPE: aws
@@ -23,4 +20,5 @@ TF_VSPHERE_VERSION: 2.0.2
 TF_YANDEX_NAMESPACE: yandex-cloud
 TF_YANDEX_TYPE: yandex
 TF_YANDEX_VERSION: 0.45.1
+# </template: terraform_versions_envs>
 {!{- end -}!}
