@@ -202,7 +202,7 @@ func TestPrepareRegistry(t *testing.T) {
 				Path:      "/deckhouse/ce",
 				Scheme:    "https",
 				CA:        "",
-				DockerCfg: "eyAiYXV0aHMiOiB7ICJyLmV4YW1wbGUuY29tIjogeyAiYXV0aCI6ICJZVHBpIiB9IH0gfQ==",
+				DockerCfg: "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
 			}
 
 			require.Equal(t, cfg.Registry, expectedData)
