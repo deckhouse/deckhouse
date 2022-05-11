@@ -37,11 +37,11 @@ data "aws_availability_zones" "available" {}
 
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
-  bastion_instance = lookup(var.providerClusterConfiguration, "withNAT", null) != null ? lookup(var.providerClusterConfiguration.withNAT ,"bastionInstance", null) : null
+  bastion_instance = lookup(var.providerClusterConfiguration, "withNAT", {}) != {} ? lookup(var.providerClusterConfiguration.withNAT ,"bastionInstance", {}) : {}
   root_volume_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 20)
   root_volume_type = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskType", "gp2")
   additional_security_groups = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])
-  actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
-  zones = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
+  actual_zones = lookup(var.providerClusterConfiguration, "zones", {}) != {} ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
+  zones = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", {}) != {} ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
   tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(var.providerClusterConfiguration.masterNodeGroup, "additionalTags", {}))
 }
