@@ -253,7 +253,7 @@
 <div class="tabs">
 {% for preset in site.data.getting_started.data.presets %}
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_preset{% if preset[1].recommended %} active{% endif %}"
-  onclick="openTabAndSaveStatus(event, 'tabs__btn_preset', 'tabs__content_preset', 'preset_{{ preset[0] }}', 'dhctl-preset', '{{ preset[0] }}');" title="{{ preset[1].description[page.lang] }}">
+  onclick="openTabAndSaveStatus(event, 'tabs__btn_preset', 'tabs__content_preset', 'preset_{{ preset[0] }}', 'dhctl-preset', '{{ preset[0] }}');">
     {{ preset[1].name[page.lang] }}
   </a>
 {% endfor %}
