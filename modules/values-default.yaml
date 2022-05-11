@@ -32,3 +32,4 @@ logShipperEnabled: true
 localPathProvisionerEnabled: true
 podReloaderEnabled: true
 chronyEnabled: true
+ciliumHubbleEnabled: true

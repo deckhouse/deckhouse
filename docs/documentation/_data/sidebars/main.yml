@@ -353,6 +353,26 @@ entries:
             en: Other modules
             ru: Другие модули
           folders:
+            - title: cni-cilium
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/021-cni-cilium/
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/021-cni-cilium/configuration.html
+            - title: cilium-hubble
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/500-cilium-hubble/
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/500-cilium-hubble/configuration.html
             - title: cni-flannel
               folders:
                 - title:

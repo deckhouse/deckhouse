@@ -15,17 +15,23 @@
 package hooks
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 var (
 	cniNameToModule = map[string]string{
 		"flannel":       "cniFlannelEnabled",
 		"simple-bridge": "cniSimpleBridgeEnabled",
+		"cilium":        "cniCiliumEnabled",
 	}
 )
 
@@ -45,8 +51,47 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyCniConfigFilter,
 		},
+		{
+			Name:       "deckhouse_cm",
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"deckhouse"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			FilterFunc:                   applyD8CMFilter,
+		},
 	},
 }, enableCni)
+
+func applyD8CMFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var cm v1core.ConfigMap
+	err := sdk.FromUnstructured(obj, &cm)
+	if err != nil {
+		return "", err
+	}
+
+	cniMap := make(map[string]bool)
+
+	for k, v := range cm.Data {
+		// looking for keys like 'cniCiliumEnabled' or 'cniFlannelEnabled'
+		if strings.HasPrefix(k, "cni") && strings.HasSuffix(k, "Enabled") {
+			boolValue, err := strconv.ParseBool(v)
+			if err != nil {
+				return nil, fmt.Errorf("parse cni enable flag failed: %s", err)
+			}
+			cniMap[k] = boolValue
+		}
+	}
+
+	return cniMap, nil
+}
 
 func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var cm v1core.Secret
@@ -65,25 +110,40 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 func enableCni(input *go_hook.HookInput) error {
 	cniNameSnap := input.Snapshots["cni_name"]
+	deckhouseCMSnap := input.Snapshots["deckhouse_cm"]
 
 	if len(cniNameSnap) == 0 {
 		input.LogEntry.Warnln("Cni name not found")
 		return nil
 	}
 
+	if len(deckhouseCMSnap) == 0 {
+		input.LogEntry.Warnln("Deckhouse CM not found")
+		return nil
+	}
+
+	cmEnabledCNIs := make([]string, 0)
+	for cni, enabled := range deckhouseCMSnap[0].(map[string]bool) {
+		if enabled {
+			cmEnabledCNIs = append(cmEnabledCNIs, cni)
+		}
+	}
+
+	if len(cmEnabledCNIs) > 1 {
+		return fmt.Errorf("more then one CNI enabled: %v", cmEnabledCNIs)
+	} else if len(cmEnabledCNIs) == 1 {
+		input.LogEntry.Infof("enabled CNI from Deckhouse CM: %s", strings.TrimSuffix(cmEnabledCNIs[0], "Enabled"))
+		return nil
+	}
+
+	// nor any CNI enabled directly via CM, found default CNI from secret
 	cniToEnable := cniNameSnap[0].(string)
 	if _, ok := cniNameToModule[cniToEnable]; !ok {
 		input.LogEntry.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
 		return nil
 	}
 
-	for cniName, module := range cniNameToModule {
-		if cniToEnable == cniName {
-			input.Values.Set(module, true)
-		} else {
-			input.Values.Remove(module)
-		}
-	}
-
+	input.LogEntry.Infof("enabled CNI by secret: %s", cniToEnable)
+	input.Values.Set(cniNameToModule[cniToEnable], true)
 	return nil
 }
