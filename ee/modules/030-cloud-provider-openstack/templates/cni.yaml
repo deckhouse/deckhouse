@@ -12,4 +12,3 @@ data:
   {{- else }}
   flannel: {{ b64enc "{\"podNetworkMode\":\"host-gw\"}" | quote }}
   {{- end }}
-
