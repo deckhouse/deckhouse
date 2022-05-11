@@ -61,10 +61,10 @@ properties:
       Tunnel network for TCP OpenVPN server.
     x-doc-default: '172.25.175.0/255.255.255.0'
   udpTunnelNetwork:
-        type: string
-        description: |
-          Tunnel network for UDP OpenVPN server.
-        x-doc-default: '172.25.176.0/255.255.255.0'
+    type: string
+    description: |
+      Tunnel network for UDP OpenVPN server.
+    x-doc-default: '172.25.176.0/255.255.255.0'
   pushToClientRoutes:
     type: array
     items:

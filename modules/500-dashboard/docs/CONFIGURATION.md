@@ -30,7 +30,7 @@ The module does not have any mandatory settings.
       * `clusterIssuerName` — what ClusterIssuer to use for the dashboard (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own);
         * By default, `letsencrypt` is used;
     * `customCertificate`
-      * `secretName` - the name of the secret in the `d8-system` namespace to use with the dashboard (this secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format);
+      * `secretName` — the name of the secret in the `d8-system` namespace to use with the dashboard (this secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format);
         * It is set to `false` by default;
 * `nodeSelector` — the same as in the Pod's `spec.nodeSelector` parameter in Kubernetes;
     * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).

@@ -8,9 +8,9 @@ title: "Модуль dashboard: настройки"
 * `ingressClass` — класс Ingress-контроллера, который используется для dashboard.
     * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
-    * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html):
-         * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
-         * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
+    * `externalAuthentication` — параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html):
+         * `authURL` — URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+         * `authSignInURL` — URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
          * `useBearerTokens` – Токены авторизации. dashboard должен работать с Kubernetes API от имени пользователя (сервис аутентификации при этом должен обязательно возвращать в своих ответах HTTP-заголовок Authorization, в котором должен быть bearer-token – именно под этим токеном dashboard будет производить запросы к API-серверу Kubernetes).
              * Значение по умолчанию: `false`.
              * **Важно!** Из соображений безопасности этот режим работает только если `https.mode` (глобальный или в модуле) не установлен в значение `Disabled`.
@@ -30,7 +30,7 @@ title: "Модуль dashboard: настройки"
       * `clusterIssuerName` — тип используемого ClusterIssuer (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
         * По умолчанию `letsencrypt`.
     * `customCertificate`
-      * `secretName` - имя Secret'а в пространстве имен `d8-system`, который будет использоваться для dashboard (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+      * `secretName` — имя Secret'а в пространстве имен `d8-system`, который будет использоваться для dashboard (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
         * По умолчанию `false`.
 * `nodeSelector` — аналогично параметру Kubernetes `spec.nodeSelector` у Pod'ов.
     * Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
