@@ -27,3 +27,4 @@ cloud-controller-manager/   @zuzzas
 csi/                        @zuzzas
 deckhouse-controller/       @diafour
 dhctl/                      @name212
+docs/                       @z9r5
