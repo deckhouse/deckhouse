@@ -5,10 +5,10 @@ properties:
       Способы подключения из внешнего мира.
 
       Поддерживаются следующие inlet'ы:
-      * `ExternalIP` — когда имеются узлы с публичными IP. Используется в комбинации с параметром `externalIP`.
+      * `ExternalIP` — когда имеются узлы с публичными IP-адресами. Используется в комбинации с параметром `externalIP`.
       * `LoadBalancer` — для всех облачных провайдеров и их схем размещения, в которых поддерживается заказ LoadBalancer'ов.
-      * `HostPort` — порт сервера openvpn будет доступен на узле, на котором находится Pod. За выбор порта отвечает параметр `hostPort`.
-      * `Direct` — для нестандартных случаев. В пространстве имен `d8-openvpn` необходимо создать сервис с именем `openvpn-external`, который отправляет трафик в Pod с лейблом `app: openvpn` на порт с именем `ovpn-tcp` (или просто 1194). Из этого сервиса парсится externalIP, IP балансировщика или host балансировщика. Если ничего этого нет, то необходимо указать параметр `externalHost`.
+      * `HostPort` — порт сервера OpenVPN будет доступен на узле, на котором находится Pod. За выбор порта отвечает параметр `hostPort`.
+      * `Direct` — для нестандартных случаев. В пространстве имен `d8-openvpn` необходимо создать сервис с именем `openvpn-external`, который отправляет трафик в Pod с лейблом `app: openvpn` на порт с именем `ovpn-tcp` (или просто 1194). Из этого сервиса парсится `externalIP`, IP-адрес балансировщика или его host. Если ничего этого нет, то необходимо указать параметр `externalHost`.
   loadBalancer:
     description: |
       Секция опциональных настроек для inlet'а `LoadBalancer`.
@@ -17,7 +17,7 @@ properties:
         description: |
           Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
 
-          > **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет выключить и включить модуль.
+          > **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа Load Balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет выключить и включить модуль.
       sourceRanges:
         description: |
           Список CIDR, которым разрешен доступ на балансировщик.
@@ -25,12 +25,12 @@ properties:
           Облачный провайдер может не поддерживать данную опцию и игнорировать её.
   hostPort:
     description: |
-      Порт для подключения к openvpn-серверу, который будет доступен на узле, на котором запущен Pod openvpn.
+      Порт для подключения к OpenVPN-серверу, который будет доступен на узле, на котором запущен Pod OpenVPN.
 
       Параметр доступен при выборе inlet `HostPort`.
   externalIP:
     description: |
-      IP одного из узлов кластера, который будет использоваться для подключения клиентов OpenVPN.
+      IP-адрес одного из узлов кластера, который будет использоваться для подключения клиентов OpenVPN.
 
       Требуется только при использовании inlet `ExternalIP`.
   externalPort:
@@ -38,20 +38,20 @@ properties:
       Порт, который вывешивается наружу на `externalIP` или балансировщике.
   tunnelNetwork:
     description: |
-      Подсеть туннеля для TCP OpenVPN сервера.
+      Подсеть используемая для TCP-туннеля OpenVPN сервера.
   udpTunnelNetwork:
     description: |
-      Подсеть туннеля для UDP OpenVPN сервера.
+      Подсеть используемая для UDP-туннеля OpenVPN сервера.
   pushToClientRoutes:
     description: |
-      Список роутов, которые отправляются клиентам при подключении.
+      Список маршрутов, которые отправляются клиентам при подключении.
 
-      По умолчанию — генерируется автоматически из локальной сети кластера, сервисной подсети и подсети Pod'ов.
+      По умолчанию генерируется автоматически из локальной сети кластера, сервисной подсети и подсети Pod'ов.
   pushToClientDNS:
     description: |
       Адрес DNS-сервера, который отправляется клиентам при подключении.
 
-      По умолчанию — IP сервиса `kube-system/kube-dns`.
+      По умолчанию — IP-адрес сервиса `kube-system/kube-dns`.
   pushToClientSearchDomains:
     description: |
       Список доменов поиска, которые отправляются клиентам при подключении.
@@ -75,54 +75,54 @@ properties:
               URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
       password:
         description: |
-          Пароль для HTTP-авторизации для пользователя `admin` (генерируется автоматически, но можно менять).
+          Пароль HTTP-авторизации для пользователя `admin` (генерируется автоматически, но можно менять).
 
-          Используется если не включен параметр [externalAuthentication](#parameters-auth-externalauthentication).
+          Используется, если не включен параметр [externalAuthentication](#parameters-auth-externalauthentication).
       allowedUserGroups:
         description: |
-          Массив групп, пользователям которых позволен доступ в панель администратора openvpn.
+          Массив групп, пользователям которых позволен доступ в панель администратора OpenVPN.
 
-          Используется если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) или параметр [externalAuthentication](#parameters-auth-externalauthentication).
+          Используется, если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) или параметр [externalAuthentication](#parameters-auth-externalauthentication).
 
-          > **Внимание!** При использовании совместно с модулем user-authn необходимо так же добавить разрешенные группы в соответствующее поле в настройках [DexProvider](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
+          > **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках [DexProvider](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
       whitelistSourceRanges:
         description: |
-          Массив CIDR, которым разрешено проходить аутентификацию для доступа в openvpn.
+          Массив CIDR, которым разрешено проходить аутентификацию для доступа в OpenVPN.
   externalHost:
     description: |
-      IP или домен по которому клиенты подключаются к OpenVPN серверу.
+      IP-адрес или домен, по которому клиенты подключаются к OpenVPN-серверу.
 
-      По умолчанию — используются данные из сервиса с именем `openvpn-external`.
+      По умолчанию используются данные из сервиса с именем `openvpn-external`.
   ingressClass:
     description: |
-      Класс Ingress-контроллера, который используется для панели администратора openvpn.
+      Класс Ingress-контроллера, который используется для панели администратора OpenVPN.
 
-      По умолчанию — глобальное значение `modules.ingressClass`.
+      По умолчанию – глобальное значение `modules.ingressClass`.
   https:
     description: |
-      Тип сертификата, используемого для панели администратора openvpn.
+      Тип сертификата, используемого для панели администратора OpenVPN.
 
       При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     properties:
       mode:
         description: |
           Режим работы HTTPS:
-          * `CertManager` — панель администратора openvpn будет работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
-          * `CustomCertificate` — панель администратора openvpn будет работать по HTTPS используя сертификат из пространства имен `d8-system`;
-          * `Disabled` — в данном режиме панель администратора openvpn будет работать только по HTTP;
-          * `OnlyInURI` — панель администратора openvpn будет работать по HTTP (подразумевая, что перед ней стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          * `CertManager` — панель администратора OpenVPN будет работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
+          * `CustomCertificate` — панель администратора OpenVPN будет работать по HTTPS, используя сертификат из пространства имен `d8-system`;
+          * `Disabled` — панель администратора OpenVPN будет работать только по HTTP;
+          * `OnlyInURI` — панель администратора OpenVPN будет работать по HTTP (подразумевая, что перед ней стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
       certManager:
         properties:
           clusterIssuerName:
             description: |
-              ClusterIssuer, используемый для панели администратора openvpn
+              ClusterIssuer, используемый для панели администратора OpenVPN.
 
               Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
       customCertificate:
         properties:
           secretName:
             description: |
-              Указываем имя Secret'а в пространстве имен `d8-system`, который будет использоваться для панели администратора openvpn (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для панели администратора OpenVPN (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.

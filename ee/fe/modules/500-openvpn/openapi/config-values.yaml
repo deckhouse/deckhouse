@@ -13,7 +13,7 @@ properties:
       The following inlet types are supported:
       * `ExternalIP` — when there are nodes with public IPs. It is used together with the `externalIP` parameter.
       * `LoadBalancer` — for all cloud providers and cloud-based placement strategies that support the provision of LoadBalancers.
-      * `HostPort` — the port of the openvpn server will be available on the node where it is scheduled. The port can be configured in the `hostPort` parameter.
+      * `HostPort` — the port of the OpenVPN server will be available on the node where it is scheduled. The port can be configured in the `hostPort` parameter.
       * `Direct` — for non-standard cases. You need to create a service called `openvpn-external` in the `d8-openvpn` namespace. It will route traffic to the Pod with the `app: openvpn` label to the port called `ovpn-tcp` (or just 1194). This service provides the externalIP, the IP address of the balancer or its host. If none of these are present, you need to specify the `externalHost` parameter.
   loadBalancer:
     type: object
@@ -34,13 +34,13 @@ properties:
         items:
           type: string
         description: |
-          A list of CIDRs that are allowed to connect to the load balancer.
+          A list of CIDRs that are allowed to connect to the Load Balancer.
 
           The cloud provider may not support this option or ignore it.
   hostPort:
     type: integer
     description: |
-      Port to connect to the openvpn server, which will be available on the node where it is scheduled.
+      Port to connect to the OpenVPN server, which will be available on the node where it is scheduled.
 
       The parameter is available when selecting inlet `HostPort`.
     x-doc-default: '5416'
@@ -61,10 +61,10 @@ properties:
       Tunnel network for TCP OpenVPN server.
     x-doc-default: '172.25.175.0/255.255.255.0'
   udpTunnelNetwork:
-        type: string
-        description: |
-          Tunnel network for UDP OpenVPN server.
-        x-doc-default: '172.25.176.0/255.255.255.0'
+    type: string
+    description: |
+      Tunnel network for UDP OpenVPN server.
+    x-doc-default: '172.25.176.0/255.255.255.0'
   pushToClientRoutes:
     type: array
     items:
@@ -119,7 +119,7 @@ properties:
         items:
           type: string
         description: |
-          An array of user groups that can access the openvpn admin panel.
+          An array of user groups that can access the OpenVPN admin panel.
 
           This parameter is used if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled or the [externalAuthentication](#parameters-auth-externalauthentication) parameter is set.
 
@@ -129,7 +129,7 @@ properties:
         items:
           type: string
         description: |
-          The CIDR range for which authentication to access the openvpn is allowed.
+          The CIDR range for which authentication to access the OpenVPN is allowed.
   externalHost:
     type: string
     description: |
@@ -139,13 +139,13 @@ properties:
   ingressClass:
     type: string
     description: |
-      The class of the Ingress controller used for the openvpn admin panel.
+      The class of the Ingress controller used for the OpenVPN admin panel.
 
       By default, the `modules.ingressClass` global value is used.
   https:
     type: object
     description: |
-      What certificate type to use with the openvpn admin panel.
+      What certificate type to use with the OpenVPN admin panel.
 
       This parameter completely overrides the `global.modules.https` settings.
     properties:
@@ -158,17 +158,17 @@ properties:
           - OnlyInURI
         description: |
           The HTTPS usage mode:
-          * `CertManager` — the openvpn admin panel will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
-          * `CustomCertificate` — the openvpn admin panel will use the certificate from the `d8-system` namespace for HTTPS.
-          * `Disabled` — in this mode, the openvpn admin panel works over HTTP only.
-          * `OnlyInURI` — the openvpn admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme.
+          * `CertManager` — the OpenVPN admin panel will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
+          * `CustomCertificate` — the OpenVPN admin panel will use the certificate from the `d8-system` namespace for HTTPS.
+          * `Disabled` — in this mode, the OpenVPN admin panel works over HTTP only.
+          * `OnlyInURI` — the OpenVPN admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme.
       certManager:
         type: object
         properties:
           clusterIssuerName:
             type: string
             description: |
-              What ClusterIssuer to use for the openvpn admin panel (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
+              What ClusterIssuer to use for the OpenVPN admin panel (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
 
               Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
             x-doc-default: "letsencrypt"
@@ -178,7 +178,7 @@ properties:
           secretName:
             type: string
             description: |
-              The name of the Secret in the `d8-system` namespace to use with the openvpn admin panel (this Secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format).
+              The name of the Secret in the `d8-system` namespace to use with the OpenVPN admin panel (this Secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format).
 
             x-doc-default: 'false'
   nodeSelector:

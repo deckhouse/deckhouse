@@ -25,7 +25,7 @@ openvpn: |
 openvpnEnabled: "true"
 openvpn: |
   externalHost: 5.4.54.4
-  externalIP: 192.168.0.30 # the internal IP address to forward the external LB's traffic to
+  externalIP: 192.168.0.30 # The internal IP address to forward the external LB's traffic to.
   inlet: ExternalIP
   nodeSelector:
     kubernetes.io/hostname: node
