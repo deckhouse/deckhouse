@@ -59,6 +59,7 @@
  - **[candi]** Fixed race condition between old the kubernetes-api-proxy-configurator and bashible step. [#1482](https://github.com/deckhouse/deckhouse/pull/1482)
  - **[candi]** Fix startup config in Kubernetes API proxy configuration script. [#1426](https://github.com/deckhouse/deckhouse/pull/1426)
  - **[candi]** Added imagePullPolicy: IfNotPresent to kubernetes-api-proxy static pod. Fixed kubernetes-api-proxy run in docker envs. [#1297](https://github.com/deckhouse/deckhouse/pull/1297)
+ - **[ceph-csi]** Fixed nodeSelector for csi-node pods in helm_lib [#1522](https://github.com/deckhouse/deckhouse/pull/1522)
  - **[ceph-csi]** Allow helm_lib_csi_node_manifests to be used for all cluster types for ceph-csi. [#1478](https://github.com/deckhouse/deckhouse/pull/1478)
  - **[chrony]** Remove chronyd stale pid file on start [#1375](https://github.com/deckhouse/deckhouse/pull/1375)
  - **[cloud-provider-aws]** Fix OpenAPI specifications. [#1449](https://github.com/deckhouse/deckhouse/pull/1449)
@@ -79,6 +80,8 @@
  - **[node-local-dns]** Reworked health checking logic [#388](https://github.com/deckhouse/deckhouse/pull/388)
     Now Pods shouldn't crash unexpectedly now due to poor implementation of locking/probing.
  - **[node-manager]** Truncate event message to allowed maximums in update_node_group_status hook. [#1480](https://github.com/deckhouse/deckhouse/pull/1480)
+ - **[openvpn]** Improved migration to secrets. [#1521](https://github.com/deckhouse/deckhouse/pull/1521)
+ - **[openvpn]** Removing of openvpn.storageClass parameter from deckhouse configmap [#1493](https://github.com/deckhouse/deckhouse/pull/1493)
  - **[openvpn]** Fixed Values references in ConfigMap. [#1463](https://github.com/deckhouse/deckhouse/pull/1463)
  - **[openvpn]** Fixed "loadBalancer" OpenAPI spec. [#1417](https://github.com/deckhouse/deckhouse/pull/1417)
  - **[openvpn]** Fixed statefulSet apiVersion in a migration hook. [#1354](https://github.com/deckhouse/deckhouse/pull/1354)
@@ -90,6 +93,7 @@
  - **[prometheus]** Fixed PersistentVolumeClaim size calculation for local storage. [#1437](https://github.com/deckhouse/deckhouse/pull/1437)
  - **[prometheus]** Fix null pointer dereference in prometheus_disk.go hook [#1345](https://github.com/deckhouse/deckhouse/pull/1345)
  - **[prometheus]** Set Grafana sample limit to 5000 [#1215](https://github.com/deckhouse/deckhouse/pull/1215)
+ - **[upmeter]** Fix non-working upmeter server on emptyDirs [#1524](https://github.com/deckhouse/deckhouse/pull/1524)
  - **[upmeter]** Upmeter no longer exposes DNS queries to the Internet [#1256](https://github.com/deckhouse/deckhouse/pull/1256)
  - **[upmeter]** Fixed the calculation of groups uptime [#1144](https://github.com/deckhouse/deckhouse/pull/1144)
 
@@ -97,6 +101,7 @@
 
 
  - **[cert-manager]** Bump to version 1.7.1. Fix a possible bug with ACME solvers when you don't have a default ingress class like nginx (a very rare case). Minor bug fixes [#1082](https://github.com/deckhouse/deckhouse/pull/1082)
+ - **[istio]** Documentation refactoring. [#1281](https://github.com/deckhouse/deckhouse/pull/1281)
  - **[upmeter]** Remove redundant smoke-mini Ingress [#1237](https://github.com/deckhouse/deckhouse/pull/1237)
  - **[upmeter]** Add User-Agent header to all requests [#1213](https://github.com/deckhouse/deckhouse/pull/1213)
 
