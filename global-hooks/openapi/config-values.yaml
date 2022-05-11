@@ -202,16 +202,7 @@ properties:
             items:
               type: string
               pattern: '^[a-z0-9\-\./]+$'
-        x-emamples:
-        - httpProxy: http://1.2.3.4:80
-        - httpsProxy: https://1.2.3.4:443
+        x-examples:
         - httpProxy: http://1.2.3.4:80
           httpsProxy: https://1.2.3.4:443
-        - {}
-        - httpProxy: http://1.2.3.4:80
-          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
-        - httpsProxy: https://1.2.3.4:443
-          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
-        - httpProxy: http://1.2.3.4:80
-          httpsProxy: https://1.2.3.4:80
           noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
