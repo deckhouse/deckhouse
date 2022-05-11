@@ -19,7 +19,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% endif %}{% if page.platform_type == "existing" or page.platform_code == "kind" %} -v "$HOME/.kube/config:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %}
-{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>:stable
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
 {%- else %} registry.deckhouse.io/deckhouse/ce/install:stable{% endif %} bash
 ```
 {% endsnippetcut %}
@@ -44,6 +44,9 @@ dhctl bootstrap \
   --ssh-host=<master_ip> \
   --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
   --config=/config.yml \
+{%- if page.platform_code == "bm-private" %}
+  --dont-use-public-control-plane-images \
+{%- endif %}
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
 dhctl bootstrap \

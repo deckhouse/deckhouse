@@ -104,6 +104,9 @@ $(document).ready(function () {
   }
 
   if (registryImagesRepo && registryImagesRepo.length > 0) {
+    // trim right / symbol
+    // for example: registry.deckhouse.io/deckhouse/ce/ -> registry.deckhouse.io/deckhouse/ce
+    const cleanedRegistryImagesRepo = registryImagesRepo.replace(/\/+$/, '');
     update_parameter('dhctl-registry-docker-cfg', 'registryDockerCfg', '<YOUR_PRIVATE_ACCESS_STRING_IS_HERE>', null, '[config-yml]');
     update_parameter('dhctl-registry-images-repo', 'imagesRepo', '<IMAGES_REPO_URI>', null, '[config-yml]');
     update_parameter('dhctl-registry-ca', 'registryCA', '<REGISTRY_CA>', null, '[config-yml]', 4);
@@ -125,10 +128,10 @@ $(document).ready(function () {
     $('.highlight code').filter(function () {
       return this.innerText.match('<IMAGES_REPO_URI>');
     }).each(function () {
-      $(this).text($(this).text().replace('<IMAGES_REPO_URI>', registryImagesRepo));
+      $(this).text($(this).text().replace('<IMAGES_REPO_URI>', cleanedRegistryImagesRepo));
     });
 
-    updateTextInSnippet('[docker-login-ce]', '<IMAGES_REPO_URI>', registryImagesRepo);
+    updateTextInSnippet('[docker-login-ce]', '<IMAGES_REPO_URI>', cleanedRegistryImagesRepo);
   }
 
   // delete empty lines in snippet
