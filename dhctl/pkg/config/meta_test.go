@@ -144,7 +144,7 @@ func dockerCfgAuth(username, password string) string {
 }
 
 func generateDockerCfg(host, username, password string) string {
-	return fmt.Sprintf(`{ "auths": { "%s": { "auth": "%s" } } }`, host, dockerCfgAuth(username, password))
+	return fmt.Sprintf(`{"auths":{"%s":{"auth":"%s"}}}`, host, dockerCfgAuth(username, password))
 }
 
 func generateOldDockerCfg(host string, username, password *string) string {
