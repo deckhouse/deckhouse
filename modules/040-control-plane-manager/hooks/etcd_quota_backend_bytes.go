@@ -17,8 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"math"
+	"regexp"
 	"strconv"
+
+	"github.com/deckhouse/deckhouse/go_lib/filter"
+
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -37,10 +43,15 @@ type etcdNode struct {
 	IsDedicated bool
 }
 
-const etcdBackendBytesGroup = "etcd_quota_backend_should_decrease"
+const (
+	etcdBackendBytesGroup       = "etcd_quota_backend_should_decrease"
+	defaultEtcdMaxSize    int64 = 2 * 1024 * 1024 * 1024 // 2GB
+)
+
+var maxDbSizeRegExp = regexp.MustCompile(`(^|\s+)--quota-backend-bytes=(\d+)$`)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: etcdMaintenanceQueue,
+	Queue: moduleQueue + "/etcd_maintenance",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "master_nodes",
@@ -53,7 +64,32 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: etcdQuotaFilterNode,
 		},
-		etcdMaintenanceConfig,
+		{
+			Name:       "etcd_endpoints",
+			ApiVersion: "v1",
+			Kind:       "Pod",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"component": "etcd",
+					"tier":      "control-plane",
+				},
+			},
+			FieldSelector: &types.FieldSelector{
+				MatchExpressions: []types.FieldSelectorRequirement{
+					{
+						Field:    "status.phase",
+						Operator: "Equals",
+						Value:    "Running",
+					},
+				},
+			},
+			FilterFunc: maintenanceEtcdFilter,
+		},
 	},
 }, etcdQuotaBackendBytesHandler)
 
@@ -81,10 +117,42 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
+func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var pod corev1.Pod
+
+	err := sdk.FromUnstructured(unstructured, &pod)
+	if err != nil {
+		return nil, err
+	}
+
+	var ip string
+	if pod.Spec.HostNetwork {
+		ip = pod.Status.HostIP
+	} else {
+		ip = pod.Status.PodIP
+	}
+
+	curMaxDbSize := defaultEtcdMaxSize
+	maxBytesStr := filter.GetArgPodWithRegexp(&pod, maxDbSizeRegExp, 1, "")
+	if maxBytesStr != "" {
+		curMaxDbSize, err = strconv.ParseInt(maxBytesStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get quota-backend-bytes from etcd argument, got %s: %v", maxBytesStr, err)
+		}
+	}
+
+	return &etcdInstance{
+		Endpoint:  fmt.Sprintf("https://%s:2379", ip),
+		MaxDbSize: curMaxDbSize,
+		PodName:   pod.GetName(),
+		Node:      pod.Spec.NodeName,
+	}, nil
+}
+
 func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string) {
 	var currentQuotaBytes int64
 	var nodeWithMaxQuota string
-	for _, endpointRaw := range input.Snapshots[etcdEndpointsSnapshotName] {
+	for _, endpointRaw := range input.Snapshots["etcd_endpoints"] {
 		endpoint := endpointRaw.(*etcdInstance)
 		quotaForInstance := endpoint.MaxDbSize
 		if quotaForInstance > currentQuotaBytes {

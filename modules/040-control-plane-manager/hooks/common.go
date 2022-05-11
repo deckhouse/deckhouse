@@ -18,32 +18,21 @@ package hooks
 
 import (
 	"fmt"
-	"regexp"
-	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
-	"github.com/deckhouse/deckhouse/go_lib/filter"
 )
 
 const (
-	moduleQueue                     = "/modules/control-plane-manager"
-	etcdMaintenanceQueue            = moduleQueue + "/etcd_maintenance"
-	defaultEtcdMaxSize        int64 = 2 * 1024 * 1024 * 1024 // 2GB
-	etcdEndpointsSnapshotName       = "etcd_endpoints"
-)
-
-var (
-	ErrEmptyEtcdSnapshot = fmt.Errorf("empty etcd pods snapshot")
+	moduleQueue = "/modules/control-plane-manager"
 )
 
 type etcdInstance struct {
@@ -73,26 +62,7 @@ func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints 
 	return dc.GetEtcdClient(endpoints, etcd.WithClientCert(clientCert, caCert), etcd.WithInsecureSkipVerify())
 }
 
-func getETCDClientFromSnapshots(input *go_hook.HookInput, dc dependency.Container) (etcd.Client, error) {
-	snap := input.Snapshots[etcdEndpointsSnapshotName]
-
-	if len(snap) == 0 {
-		return nil, ErrEmptyEtcdSnapshot
-	}
-
-	endpoints := make([]string, 0, len(snap))
-
-	for _, eRaw := range snap {
-		e := eRaw.(*etcdInstance)
-		endpoints = append(endpoints, e.Endpoint)
-	}
-
-	return getETCDClient(input, dc, endpoints)
-}
-
 var (
-	maxDbSizeRegExp = regexp.MustCompile(`(^|\s+)--quota-backend-bytes=(\d+)$`)
-
 	etcdSecretK8sConfig = go_hook.KubernetesConfig{
 		Name:       "etcd-certificate",
 		ApiVersion: "v1",
@@ -107,70 +77,7 @@ var (
 		ExecuteHookOnEvents:          pointer.BoolPtr(false),
 		FilterFunc:                   syncEtcdFilter,
 	}
-
-	etcdMaintenanceConfig = go_hook.KubernetesConfig{
-		Name:       etcdEndpointsSnapshotName,
-		ApiVersion: "v1",
-		Kind:       "Pod",
-		NamespaceSelector: &types.NamespaceSelector{
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"kube-system"},
-			},
-		},
-		LabelSelector: &v1.LabelSelector{
-			MatchLabels: map[string]string{
-				"component": "etcd",
-				"tier":      "control-plane",
-			},
-		},
-		FieldSelector: &types.FieldSelector{
-			MatchExpressions: []types.FieldSelectorRequirement{
-				{
-					Field:    "status.phase",
-					Operator: "Equals",
-					Value:    "Running",
-				},
-			},
-		},
-		FilterFunc: maintenanceEtcdFilter,
-	}
 )
-
-func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var pod corev1.Pod
-
-	err := sdk.FromUnstructured(unstructured, &pod)
-	if err != nil {
-		return nil, err
-	}
-
-	var ip string
-	if pod.Spec.HostNetwork {
-		ip = pod.Status.HostIP
-	} else {
-		ip = pod.Status.PodIP
-	}
-
-	curMaxDbSize := defaultEtcdMaxSize
-	maxBytesStr := filter.GetArgPodWithRegexp(&pod, maxDbSizeRegExp, 1, "")
-	if maxBytesStr != "" {
-		curMaxDbSize, err = strconv.ParseInt(maxBytesStr, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("cannot get quota-backend-bytes from etcd argument, got %s: %v", maxBytesStr, err)
-		}
-	}
-
-	return &etcdInstance{
-		Endpoint:  etcdEndpoint(ip),
-		MaxDbSize: curMaxDbSize,
-		PodName:   pod.GetName(),
-		Node:      pod.Spec.NodeName,
-	}, nil
-}
-
-func etcdEndpoint(ip string) string {
-	return fmt.Sprintf("https://%s:2379", ip)
-}
 
 func syncEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sec corev1.Secret
