@@ -24,7 +24,7 @@ output "cloud_discovery_data" {
       "iamProfileName": "${local.prefix}-node"
     }
     "loadBalancerSecurityGroup" = module.security-groups.load_balancer_security_group
-    "zones" = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
+    "zones" = lookup(var.providerClusterConfiguration, "zones", {}) != {} ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
     "zoneToSubnetIdMap" = {
       for subnet in aws_subnet.kube_internal:
       subnet.availability_zone => subnet.id
