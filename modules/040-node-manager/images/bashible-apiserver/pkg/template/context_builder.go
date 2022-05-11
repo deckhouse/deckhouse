@@ -359,10 +359,10 @@ func (rid registryInputData) toRegistry() registry {
 
 		if registryObj, ok := dcfg.Auths[rid.Address]; ok {
 			switch {
-			case registryObj.Auth != nil:
-				auth = *registryObj.Auth
-			case registryObj.Username != nil && registryObj.Password != nil:
-				authRaw := fmt.Sprintf("%s:%s", *registryObj.Username, *registryObj.Password)
+			case registryObj.Auth != "":
+				auth = registryObj.Auth
+			case registryObj.Username != "" && registryObj.Password != "":
+				authRaw := fmt.Sprintf("%s:%s", registryObj.Username, registryObj.Password)
 				auth = base64.StdEncoding.EncodeToString([]byte(authRaw))
 			}
 		}
@@ -502,9 +502,9 @@ type registryInputData struct {
 
 type dockerCfg struct {
 	Auths map[string]struct {
-		Auth     *string `json:"auth"`
-		Username *string `json:"username"`
-		Password *string `json:"password"`
+		Auth     string `json:"auth"`
+		Username string `json:"username"`
+		Password string `json:"password"`
 	} `json:"auths"`
 }
 
