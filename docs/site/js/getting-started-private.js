@@ -1,21 +1,89 @@
 $(document).ready(function () {
-  let enablePackagesProxy = sessionStorage.getItem('dhctl-packages-proxy-enabled')
-  let proxyUsername = sessionStorage.getItem('dhctl-packages-proxy-username')
-  let proxyPassword = sessionStorage.getItem('dhctl-packages-proxy-password')
-  let proxyURI = sessionStorage.getItem('dhctl-packages-proxy-uri')
+  let modulesProxyEnabled = sessionStorage.getItem('dhctl-modules-proxy-enabled')
+  let modulesProxyHttpsUri = sessionStorage.getItem('dhctl-modules-proxy-https-uri')
+  let modulesProxyHttpUri = sessionStorage.getItem('dhctl-modules-proxy-http-uri')
+  let modulesNoProxyAddressList = sessionStorage.getItem('dhctl-modules-noproxy-address-list')
+  let packagesProxyEnabled = sessionStorage.getItem('dhctl-packages-proxy-enabled')
+  let packagesProxyUsername = sessionStorage.getItem('dhctl-packages-proxy-username')
+  let packagesProxyPassword = sessionStorage.getItem('dhctl-packages-proxy-password')
+  let packagesProxyURI = sessionStorage.getItem('dhctl-packages-proxy-uri')
   let registryDockerCfg = sessionStorage.getItem('dhctl-registry-docker-cfg')
   let registryImagesRepo = sessionStorage.getItem('dhctl-registry-images-repo')
   let registrySchemeHTTP = sessionStorage.getItem('dhctl-registry-scheme-http')
   let registryCA = sessionStorage.getItem('dhctl-registry-ca')
 
-  if ( enablePackagesProxy && enablePackagesProxy === "true" &&
-       proxyUsername && proxyUsername.length > 0 &&
-       proxyPassword && proxyPassword.length > 0 &&
-       proxyURI && proxyURI.length > 0 ) {
+  if (modulesNoProxyAddressList && modulesNoProxyAddressList.length > 0) {
+    modulesNoProxyAddressList = modulesNoProxyAddressList.replaceAll(' ', '')
+  }
+
+  if (modulesProxyEnabled && modulesProxyEnabled === "true" &&
+    ((modulesProxyHttpsUri && modulesProxyHttpsUri.length > 0) || (modulesProxyHttpUri && modulesProxyHttpUri.length > 0))) {
+    if (modulesProxyHttpsUri && modulesProxyHttpsUri.length > 0) {
+      update_parameter('dhctl-modules-proxy-https-uri', 'httpsProxy', '<HTTPS_PROXY_ADDRESS>', null, '[config-yml]');
+      if (!(modulesProxyHttpUri && modulesProxyHttpUri.length > 0)) {
+        // Delete httpProxy section
+        $('code span.na').filter(function () {
+          return (this.innerText === "httpProxy");
+        }).each(function (index) {
+          parent = $(this).parent();
+          delete_elements($(this), 2);
+          parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
+        });
+        updateTextInSnippet('[config-yml]', /\n\s+httpProxy: <HTTP_PROXY_ADDRESS>\n/, "\n");
+      }
+    }
+
+    if (modulesProxyHttpUri && modulesProxyHttpUri.length > 0) {
+      update_parameter('dhctl-modules-proxy-http-uri', 'httpProxy', '<HTTP_PROXY_ADDRESS>', null, '[config-yml]');
+      if (!(modulesProxyHttpsUri && modulesProxyHttpsUri.length > 0)) {
+        // Delete httpsProxy section
+        $('code span.na').filter(function () {
+          return (this.innerText === "httpsProxy");
+        }).each(function (index) {
+          parent = $(this).parent();
+          delete_elements($(this), 2);
+          parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
+        });
+        updateTextInSnippet('[config-yml]', /\n\s+httpsProxy: <HTTPS_PROXY_ADDRESS>\n/, "\n");
+      }
+    }
+
+    if (modulesNoProxyAddressList && modulesNoProxyAddressList.length > 0) {
+      modulesNoProxyAddressList = ('["' + modulesNoProxyAddressList.split(',').join('", "') + '"]').replaceAll('""', '"')
+      update_parameter(modulesNoProxyAddressList, 'noProxy', '<NO_PROXY_LIST>', null, '[config-yml]');
+    }
+  } else {
+    // Delete proxy section
+    $('code span.na').filter(function () {
+      return (this.innerText === "proxy");
+    }).each(function (index) {
+      parent = $(this).parent();
+      delete_elements($(this).prev(), 12);
+      parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
+    });
+    updateTextInSnippet('[config-yml]', /\n\s+#[^#]+\n\s+proxy:\n\s+httpProxy: <HTTP_PROXY_ADDRESS>\n\s+httpsProxy: <HTTPS_PROXY_ADDRESS>\n\s+noProxy: <NO_PROXY_LIST>\n/, "\n");
+  }
+
+  if (!(modulesNoProxyAddressList && modulesNoProxyAddressList.length > 0)) {
+    // Delete noProxy section
+    $('code span.na').filter(function () {
+      return (this.innerText === "noProxy");
+    }).each(function (index) {
+      parent = $(this).parent();
+      delete_elements($(this), 2);
+      parent.html(parent.html().replaceAll(/\n\s+\n/g, "\n"));
+    });
+    updateTextInSnippet('[config-yml]', /\n\s+noProxy: <NO_PROXY_LIST>\n/, "\n");
+  }
+
+  if (packagesProxyEnabled && packagesProxyEnabled === "true" &&
+    packagesProxyUsername && packagesProxyUsername.length > 0 &&
+    packagesProxyPassword && packagesProxyPassword.length > 0 &&
+    packagesProxyURI && packagesProxyURI.length > 0) {
     update_parameter('dhctl-packages-proxy-uri', 'uri', 'https://example.com', null, '[config-yml]');
     update_parameter('dhctl-packages-proxy-username', 'username', '<PROXY-USERNAME>', null, '[config-yml]');
     update_parameter('dhctl-packages-proxy-password', 'password', '<PROXY-PASSWORD>', null, '[config-yml]');
-  } else if (enablePackagesProxy && enablePackagesProxy === "true" && proxyURI && proxyURI.length > 0) {
+  } else if (packagesProxyEnabled && packagesProxyEnabled === "true" && packagesProxyURI && packagesProxyURI.length > 0) {
     // Have proxy without auth.
     update_parameter('dhctl-packages-proxy-uri', 'uri', 'https://example.com', null, '[config-yml]');
     $('code span.na').filter(function () {
@@ -31,8 +99,8 @@ $(document).ready(function () {
       return (this.innerText === "packagesProxy");
     }).each(function (index) {
       delete_elements($(this), 10);
-      updateTextInSnippet('[config-yml]', /packagesProxy.+<PROXY-PASSWORD>\n---/s, "---");
     });
+    updateTextInSnippet('[config-yml]', /packagesProxy.+<PROXY-PASSWORD>\n---/s, "---");
   }
 
   if (registryImagesRepo && registryImagesRepo.length > 0) {
@@ -66,17 +134,17 @@ $(document).ready(function () {
   // delete empty lines in snippet
   $('div.snippetcut code').each(function () {
     let text = this.innerHTML;
-    this.innerHTML = text.replace(/\s+\n(<span class="nn">---)/gs,"\n$1");
+    this.innerHTML = text.replace(/\s+\n(<span class="nn">---)/gs, "\n$1");
   });
 
 });
 
 // Deletes element and the next count elements
 function delete_elements(element, count) {
-   // console.log("input - ", element, "count - ", count)
-   if (count && count > 0) {
-     delete_elements(element.next(), count - 1)
-   }
-   // console.log("remove - ", element)
-   element.remove()
+  // console.log("input - ", element, "count - ", count)
+  if (count && count > 0) {
+    delete_elements(element.next(), count - 1)
+  }
+  // console.log("remove - ", element)
+  element.remove()
 }
