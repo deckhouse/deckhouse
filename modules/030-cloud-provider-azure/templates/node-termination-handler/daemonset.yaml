@@ -63,7 +63,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.cloudProviderAzure.nodeTerminationHandler }}"
         env:
-        - name: NODE_NMY_NODE_NAMEAME
+        - name: MY_NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
