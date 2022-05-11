@@ -10,6 +10,16 @@ properties:
       Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  cloudflareAPIToken:
+    description: |
+      [API Tokens](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) позволяют использовать ключи, привязанные к определенным DNS зонам.
+
+      API Tokens are recommended for higher security, since they have more restrictive permissions and are more easily revocable.
+      Рекомендуется использовать API Tokens для более высокой безопасности, поскольку они имеют более строгие разрешения и могут быть легко отозваны.
+
+      Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат,
+      находятся под управлением `cert-manager` у DNS провайдера Cloudflare. Проверка происходит добавлением специальных
+      TXT записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
   cloudflareGlobalAPIKey:
     description: |
       Cloudflare Global API key для управления DNS записями.
