@@ -36,8 +36,8 @@ var (
 	listenPort = "8080"
 
 	// targetServices is the list of neighbor indexes, e.g. for "c" it is []string{"a", "b", "d", "e"}
-	targetServices   = strings.Split(os.Getenv("SMOKE_MINI_STS_LIST"), " ")
-	commonServiceURL = "http://smoke-mini:8080"
+	targetServices      = strings.Split(os.Getenv("SMOKE_MINI_STS_LIST"), " ")
+	clusterIpServiceUrl = "http://smoke-mini-cluster-ip:8080"
 
 	serviceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
@@ -184,7 +184,7 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 	errorCount := 0
 	for i := 0; i < len(targetServices)-1; i++ {
 		if errorCount <= maxErrors {
-			resp, err := client.Get(commonServiceURL)
+			resp, err := client.Get(clusterIpServiceUrl)
 			if err != nil {
 				log.Error(err)
 				errorCount++
