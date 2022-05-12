@@ -1,4 +1,8 @@
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+apiVersion: kubeadm.k8s.io/v1beta3
+{{- else }}
 apiVersion: kubeadm.k8s.io/v1beta2
+{{- end }}
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
@@ -173,16 +177,32 @@ etcd:
   {{- end }}
 {{- end }}
 ---
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+apiVersion: kubeadm.k8s.io/v1beta3
+{{- else }}
 apiVersion: kubeadm.k8s.io/v1beta2
+{{- end }}
 kind: InitConfiguration
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+patches:
+  directory: /etc/kubernetes/deckhouse/kubeadm/patches/
+{{- end }}
 localAPIEndpoint:
 {{- if hasKey . "nodeIP" }}
   advertiseAddress: {{ .nodeIP | quote }}
 {{- end }}
   bindPort: 6443
 ---
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+apiVersion: kubeadm.k8s.io/v1beta3
+{{- else }}
 apiVersion: kubeadm.k8s.io/v1beta2
+{{- end }}
 kind: JoinConfiguration
+{{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
+patches:
+  directory: /etc/kubernetes/deckhouse/kubeadm/patches/
+{{- end }}
 discovery:
   file:
     kubeConfigPath: "/etc/kubernetes/admin.conf"

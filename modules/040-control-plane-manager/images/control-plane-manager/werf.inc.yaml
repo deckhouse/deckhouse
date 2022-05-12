@@ -1,12 +1,15 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := $value.patch | toString }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_ALPINE" }}
 import:
 - image: common/pause
   add: /pause
   to: /pause
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /usr/local/bin
   to: /usr/local/bin
   includePaths:
@@ -24,18 +27,25 @@ shell:
   beforeInstall:
   - apk add --no-cache jq curl bash gettext grep
   install:
-  - curl -L https://storage.googleapis.com/kubernetes-release/release/v1.19.{{ index $.CandiVersionMap "k8s" "1.19" "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
+  - curl -L https://dl.k8s.io/release/v{{ $version }}.{{ index $.CandiVersionMap "k8s" $version "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
   - curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl-certinfo_1.4.1_linux_amd64 -o /usr/local/bin/cfssl-certinfo
   - curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl
   - chmod +x /usr/local/bin/kubectl /usr/local/bin/cfssl-certinfo /usr/local/bin/cfssl
 docker:
   ENTRYPOINT: ["/control-plane-manager"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.23" $version }}
+from: {{ env "BASE_GOLANG_17_BUSTER" }}
+    {{- else }}
 from: {{ env "BASE_GOLANG_16_BUSTER" }}
+    {{- end }}
 git:
 - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -44,9 +54,6 @@ shell:
   - apt update
   - apt install rsync patch -y
   install:
- {{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
-  {{- $patch := $value.patch | toString }}
   - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz -C /
   - cd /kubernetes-{{ printf "%s.%s" $version $patch }}
   - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done

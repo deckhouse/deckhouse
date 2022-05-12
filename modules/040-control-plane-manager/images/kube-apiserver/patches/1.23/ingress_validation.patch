@@ -1,10 +1,10 @@
 diff --git a/pkg/apis/networking/validation/validation.go b/pkg/apis/networking/validation/validation.go
 --- a/pkg/apis/networking/validation/validation.go
 +++ b/pkg/apis/networking/validation/validation.go
-@@ -244,11 +244,6 @@ func ValidateIngressCreate(ingress *networking.Ingress, requestGV schema.GroupVe
- 		AllowInvalidWildcardHostRule: allowInvalidWildcardHostRule(requestGV, nil),
+@@ -239,11 +239,6 @@ func ValidateIngressCreate(ingress *networking.Ingress) field.ErrorList {
+ 		AllowInvalidWildcardHostRule: false,
  	}
- 	allErrs = append(allErrs, validateIngress(ingress, opts, requestGV)...)
+ 	allErrs = append(allErrs, validateIngress(ingress, opts)...)
 -	annotationVal, annotationIsSet := ingress.Annotations[annotationIngressClass]
 -	if annotationIsSet && ingress.Spec.IngressClassName != nil {
 -		annotationPath := field.NewPath("annotations").Child(annotationIngressClass)

@@ -32,14 +32,19 @@ docker:
   ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  {{- if semverCompare "<1.21" $version }}
-from: {{ env "BASE_GOLANG_ALPINE" }}
-  {{- else }}
+    {{- if semverCompare ">=1.23" $version }}
+from: {{ env "BASE_GOLANG_17_ALPINE" }}
+    {{- else if semverCompare ">=1.21" $version }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
-  {{- end }}
+    {{- else }}
+from: {{ env "BASE_GOLANG_ALPINE" }}
+    {{- end }}
 git:
 - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

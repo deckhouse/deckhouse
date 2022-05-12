@@ -3,8 +3,8 @@ IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
---- staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go	(revision e8462b5b5dc2584fdcd18e6bcfe9f1e4d970a529)
-+++ staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go	(date 1589130892814)
+--- a/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go	(revision e8462b5b5dc2584fdcd18e6bcfe9f1e4d970a529)
++++ b/staging/src/k8s.io/apiserver/pkg/authentication/request/x509/x509.go	(date 1589130892814)
 @@ -20,6 +20,7 @@
  	"crypto/x509"
  	"crypto/x509/pkix"
