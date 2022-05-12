@@ -94,9 +94,7 @@ func main() {
 
 		editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
 		{
-			commands.DefineEditClusterConfigurationCommand(editCmd)
-			commands.DefineEditProviderClusterConfigurationCommand(editCmd)
-			commands.DefineEditStaticClusterConfigurationCommand(editCmd)
+			commands.DefineEditCommands(editCmd /* wConnFlags */, true)
 		}
 	}
 

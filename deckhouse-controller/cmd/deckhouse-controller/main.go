@@ -19,6 +19,8 @@ import (
 	_ "net/http/pprof"
 	"os"
 
+	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
+	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtologrus"
 	"github.com/flant/kube-client/klogtologrus"
@@ -104,6 +106,16 @@ func main() {
 
 	// deckhouse-controller helper subcommands
 	helpers.DefineHelperCommands(kpApp)
+
+	// deckhouse-controller edit subcommands
+	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+	{
+		dhctl_app.LoggerType = "json"
+		dhctl_app.Editor = "vim"
+		dhctl_app.KubeConfigInCluster = true
+
+		dhctl_commands.DefineEditCommands(editCmd /* wConnFlags */, false)
+	}
 
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
 }
