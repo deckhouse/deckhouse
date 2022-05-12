@@ -117,7 +117,7 @@ spec:
     {{- if .maxDbSize }}
     - --quota-backend-bytes={{ .maxDbSize }}
     {{- end }}
-    image: registry.deckhouse.io/sys/deckhouse-oss:c47d237beff7354f150a2cd3aec929128c234b33b4b6fe938d5ab72a-1638791306829
+    image: registry.deckhouse.io/deckhouse/ce:etcd-image
     name: etcd
   {{- if not .podIP }}
   hostNetwork: true
