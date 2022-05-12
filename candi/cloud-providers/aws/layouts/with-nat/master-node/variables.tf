@@ -37,7 +37,8 @@ data "aws_availability_zones" "available" {}
 
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
-  bastion_instance = lookup(var.providerClusterConfiguration, "withNAT", {}) != {} ? lookup(var.providerClusterConfiguration.withNAT ,"bastionInstance", {}) : {}
+  with_nat         = lookup(var.providerClusterConfiguration, "withNAT", {})
+  bastion_instance = lookup(local.with_nat, "bastionInstance", {})
   root_volume_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 20)
   root_volume_type = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskType", "gp2")
   additional_security_groups = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])
