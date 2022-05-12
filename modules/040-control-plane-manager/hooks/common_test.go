@@ -19,7 +19,6 @@ package hooks
 import (
 	"bytes"
 	"context"
-	"math"
 	"testing"
 	"text/template"
 
@@ -30,14 +29,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
-
-func gb(n int64) int64 {
-	return n * 1024 * 1024 * 1024
-}
-
-func gbFloat(n float64) int64 {
-	return int64(math.Floor(n * 1024 * 1024 * 1024))
-}
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -101,7 +92,6 @@ func etcdPodManifest(data map[string]interface{}) string {
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: "2022-04-05T16:52:43Z"
   labels:
     component: etcd
     tier: control-plane
@@ -136,7 +126,6 @@ status:
   {{- else }}
   - ip: {{ .hostIP }}
   {{- end }}
-  startTime: "2022-04-05T15:49:45Z"
 `
 	t := template.New("testetcd_pod_template")
 	t, err := t.Parse(podTpl)

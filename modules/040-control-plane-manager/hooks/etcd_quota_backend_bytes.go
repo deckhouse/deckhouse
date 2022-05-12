@@ -44,11 +44,13 @@ type etcdNode struct {
 }
 
 const (
-	etcdBackendBytesGroup       = "etcd_quota_backend_should_decrease"
-	defaultEtcdMaxSize    int64 = 2 * 1024 * 1024 * 1024 // 2GB
+	etcdBackendBytesGroup = "etcd_quota_backend_should_decrease"
 )
 
-var maxDbSizeRegExp = regexp.MustCompile(`(^|\s+)--quota-backend-bytes=(\d+)$`)
+var (
+	maxDbSizeRegExp    = regexp.MustCompile(`(^|\s+)--quota-backend-bytes=(\d+)$`)
+	defaultEtcdMaxSize = gb(2)
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/etcd_maintenance",
@@ -191,11 +193,11 @@ func getNodeWithMinimalMemory(snapshots []go_hook.FilterResult) *etcdNode {
 }
 
 func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
-	const (
-		minimalNodeSizeForCalc = 16 * 1024 * 1024 * 1024
-		nodeSizeStepForAdd     = 8 * 1024 * 1024 * 1024 // every 8 GB memory
-		quotaStep              = 1 * 1024 * 1024 * 1024 // add 1 GB etcd memory every nodeSizeStepForAdd
-		maxQuota               = 8 * 1024 * 1024 * 1024
+	var (
+		minimalNodeSizeForCalc = gb(16)
+		nodeSizeStepForAdd     = gb(8) // every 8 GB memory
+		quotaStep              = gb(1) // add 1 GB etcd memory every nodeSizeStepForAdd
+		maxQuota               = gb(8)
 	)
 
 	if minimalMemoryNodeBytes <= minimalNodeSizeForCalc {
@@ -205,7 +207,7 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 	// node capacity often less than set size
 	// for example for 24GB node size capacity can be 23.48GB
 	// for there cases we should round step value
-	stepsFloat := float64(minimalMemoryNodeBytes-minimalNodeSizeForCalc) / nodeSizeStepForAdd
+	stepsFloat := float64(minimalMemoryNodeBytes-minimalNodeSizeForCalc) / float64(nodeSizeStepForAdd)
 	steps := int64(math.Round(stepsFloat))
 
 	newQuota := steps*quotaStep + defaultEtcdMaxSize
