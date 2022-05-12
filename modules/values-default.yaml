@@ -27,6 +27,7 @@ priorityClassEnabled: true
 prometheusCrdEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
+secretCopierEnabled: true
 smokeMiniEnabled: true
 terraformManagerEnabled: true
 upmeterEnabled: true

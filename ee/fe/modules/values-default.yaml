@@ -1,4 +1,3 @@
 # FE Bundle "Default"
 monitoringApplicationsEnabled: true
-secretCopierEnabled: true
 flantIntegrationEnabled: true

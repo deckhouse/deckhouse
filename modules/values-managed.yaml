@@ -21,6 +21,7 @@ priorityClassEnabled: true
 prometheusCrdEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
+secretCopierEnabled: true
 upmeterEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerCrdEnabled: true
