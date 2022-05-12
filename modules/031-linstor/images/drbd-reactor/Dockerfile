@@ -1,13 +1,13 @@
-ARG BASE_DEBIAN
+ARG BASE_DEBIAN_BULLSEYE
 
-FROM $BASE_DEBIAN as utils-builder
+FROM $BASE_DEBIAN_BULLSEYE as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.20.2
+ARG UTILS_VERSION=9.21.1
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
- && apt-get -y install build-essential debhelper git flex clitest xsltproc locales libxml2-utils po4a bash-completion dh-systemd docbook-xsl udev asciidoctor \
+ && apt-get -y install build-essential debhelper git flex clitest xsltproc locales libxml2-utils po4a bash-completion docbook-xsl udev asciidoctor \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -31,14 +31,14 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN as reactor-builder
+FROM $BASE_DEBIAN_BULLSEYE as reactor-builder
 
 ARG REACTOR_GITREPO=https://github.com/LINBIT/drbd-reactor
-ARG REACTOR_VERSION=0.5.3
+ARG REACTOR_VERSION=0.7.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
- && apt-get -y install build-essential debhelper git cargo rustc dh-python \
+ && apt-get -y install build-essential debhelper git cargo rustc dh-python bash-completion \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -54,7 +54,7 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN
+FROM $BASE_DEBIAN_BULLSEYE
 
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /thin-send-recv_*.deb /packages/
 COPY --from=reactor-builder /drbd-reactor_*.deb /packages/
