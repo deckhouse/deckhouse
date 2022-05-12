@@ -297,6 +297,7 @@ func (c *NodeGroupController) WithExcludedNodes(nodesMap map[string]bool) *NodeG
 
 func (c *NodeGroupController) populateNodeToHost() error {
 	if c.name != MasterNodeGroupName {
+		c.nodeToHost = make(map[string]string)
 		return nil
 	}
 

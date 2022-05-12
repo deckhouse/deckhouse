@@ -40,11 +40,11 @@ type Hook struct {
 	runAfterAction    bool
 }
 
-func NewHook(kubeCl *client.KubernetesClient, nodeToHost map[string]string, clusterUUID string) *Hook {
+func NewHook(kubeCl *client.KubernetesClient, nodeToHostForChecks map[string]string, clusterUUID string) *Hook {
 	addProxyChecker := true
 	nodes := make([]string, 0)
 
-	for nodeName, host := range nodeToHost {
+	for nodeName, host := range nodeToHostForChecks {
 		nodes = append(nodes, nodeName)
 		if host == "" {
 			addProxyChecker = false
@@ -57,7 +57,7 @@ func NewHook(kubeCl *client.KubernetesClient, nodeToHost map[string]string, clus
 
 	if addProxyChecker {
 		proxyChecker := NewKubeProxyChecker().
-			WithExternalIPs(nodeToHost).
+			WithExternalIPs(nodeToHostForChecks).
 			WithClusterUUID(clusterUUID)
 		checkers = append(checkers, proxyChecker)
 	}
