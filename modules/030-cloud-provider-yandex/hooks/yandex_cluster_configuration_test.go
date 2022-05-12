@@ -98,7 +98,7 @@ sshPublicKey: ssh-rsa test
 withNATInstance:
   internalSubnetID: test
   natInstanceExternalAddress: 84.201.160.148
-  exporterAPIKey: "Off"
+  exporterAPIKey: ""
 nodeNetworkCIDR: 84.201.160.148/31
 sshPublicKey: ssh-rsa AAAAAbbbb
 `
