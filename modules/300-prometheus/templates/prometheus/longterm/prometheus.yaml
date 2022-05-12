@@ -78,12 +78,13 @@ spec:
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app: prometheus
-            prometheus: main
-        topologyKey: kubernetes.io/hostname
-        weight: 50
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: prometheus
+              prometheus: main
+          topologyKey: kubernetes.io/hostname
   scrapeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
   evaluationInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
 {{- if .Values.global.modules.publicDomainTemplate }}

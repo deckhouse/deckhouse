@@ -77,12 +77,13 @@ spec:
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app: prometheus
-            prometheus: longterm
-        topologyKey: kubernetes.io/hostname
-        weight: 50
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: prometheus
+              prometheus: longterm
+          topologyKey: kubernetes.io/hostname
 {{- if (include "helm_lib_ha_enabled" .) }}
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
