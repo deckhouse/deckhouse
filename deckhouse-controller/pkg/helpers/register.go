@@ -19,6 +19,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/jwt"
+	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 )
 
 func DefineHelperCommands(kpApp *kingpin.Application) {
@@ -33,4 +34,8 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 			return jwt.GenJWT(*privateKeyPath, *claims, *ttl)
 		})
 	}
+
+	// dhctl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
+	dhctlapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand)
+	dhctlapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand)
 }
