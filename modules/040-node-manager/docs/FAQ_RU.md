@@ -23,7 +23,7 @@ search: добавить ноду в кластер, добавить узел �
    ```shell
    kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
-2. Получить Kubernetes API токен для специального `ServiceAccount`, которым управляет Deckhouse.
+2. Получите Kubernetes API-токен для специального `ServiceAccount`, которым управляет Deckhouse.
    ```shell
    kubectl -n d8-system get $(kubectl -n d8-system get secret -o name | grep node-manager-node-group-token) -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
