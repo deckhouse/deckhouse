@@ -15,5 +15,9 @@
   to: /deckhouse/modules/350-node-local-dns
 - add: /ee/modules/380-metallb
   to: /deckhouse/modules/380-metallb
+- add: /ee/modules/450-keepalived
+  to: /deckhouse/modules/450-keepalived
+- add: /ee/modules/450-network-gateway
+  to: /deckhouse/modules/450-network-gateway
 - add: /ee/modules/600-flant-integration
   to: /deckhouse/modules/600-flant-integration
