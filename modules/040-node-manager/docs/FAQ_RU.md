@@ -25,7 +25,7 @@ search: добавить ноду в кластер, добавить узел �
    ```
 2. Получите Kubernetes API-токен для специального `ServiceAccount`, которым управляет Deckhouse.
    ```shell
-   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-manager-token) -o json | jq '.data.token' -r | base64 -d && echo ""
+   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 3. Создайте Ansible плейбук с `vars`, которые заменены на полученные на предыдущих шагах значения.
    ```yaml
