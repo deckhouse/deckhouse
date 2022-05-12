@@ -172,9 +172,9 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
 
-// neighborViaServiceHandler checks the availabilty of any smoke-mini pod including themselves. It
-// gets responses from common headless service URL which targets all smoke-mini pods including
-// current one. In worst case, the pod gets all responses from it.
+// neighborViaServiceHandler checks the availabilty of any smoke-mini pod including themselves via
+// service "cluster IP", i.e. via iptables rules. In worst case, the pod gets all responses from
+// itself.
 func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 	maxErrors := 2
 
