@@ -19,8 +19,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
-	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtologrus"
 	"github.com/flant/kube-client/klogtologrus"
@@ -34,6 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/deckhouse"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
+	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 // Variables with component versions. They set by 'go build' command.

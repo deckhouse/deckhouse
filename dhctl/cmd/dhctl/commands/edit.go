@@ -43,7 +43,7 @@ func connectionFlags(parent *kingpin.CmdClause) {
 func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, manifest func([]byte) *apiv1.Secret) *kingpin.CmdClause {
 	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
 	app.DefineOutputFlag(cmd)
-	app.DefineEditorConfigFlags(parent)
+	app.DefineEditorConfigFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		sshClient, err := ssh.NewInitClientFromFlags(true)
