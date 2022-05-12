@@ -135,7 +135,7 @@ func objectRBACPlacementServiceAccount(m utils.Module, object storage.StoreObjec
 					"MANIFEST053",
 					object.Identity(),
 					namespace,
-					"ServiceAccount %q should be deployed to %q", objectName, m.Namespace,
+					"ServiceAccount should be deployed to %q", m.Namespace,
 				)
 			}
 			return errors.EmptyRuleError
@@ -145,7 +145,7 @@ func objectRBACPlacementServiceAccount(m utils.Module, object storage.StoreObjec
 					"MANIFEST053",
 					object.Identity(),
 					namespace,
-					"ServiceAccount %q should be deployed to \"d8-system\" or \"d8-monitoring\"", objectName,
+					"ServiceAccount should be deployed to \"d8-system\" or \"d8-monitoring\"",
 				)
 			}
 			return errors.EmptyRuleError
