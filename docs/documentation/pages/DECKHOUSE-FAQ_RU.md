@@ -89,7 +89,7 @@ deckhouse: |
 
 Установите следующие параметры в ресурсе `InitConfiguration`:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>` — адрес образа Deckhouse в стороннем registry с учетом используемой редакции - CE, EE или FE. Пример: `imagesRepo: registry.deckhouse.io/deckhouse/ce`;
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>` — адрес образа Deckhouse в стороннем registry с учетом используемой редакции - CE или EE. Пример: `imagesRepo: registry.deckhouse.io/deckhouse/ce`;
 * `registryDockerCfg: <BASE64>` — права доступа к стороннему registry, зашифрованные в Base64.
 
 Если разрешен анонимный доступ к образам Deckhouse в стороннем registry, то `registryDockerCfg` должен выглядеть следующим образом:
@@ -168,7 +168,7 @@ deckhouse: |
 * Изменить Secret `d8-system/deckhouse-registry` (все параметры хранятся в кодировке Base64):
   * Исправить `.dockerconfigjson` с учетом авторизации в новом registry.
   * Исправить `address` на адрес нового registry (например, `registry.example.com`).
-  * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/fe`).
+  * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/ee`).
   * При необходимости изменить `scheme` на `http` (если используется HTTP registry).
   * Если registry использует самоподписные сертификаты, то изменить или добавить поле `ca`, куда внести корневой сертификат соответствующего сертификата registry;
 * Дождаться перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.

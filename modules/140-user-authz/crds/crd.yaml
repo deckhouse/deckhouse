@@ -65,7 +65,7 @@ spec:
                     Allow access to System namespaces (kube-*, d8-*, loghouse, default).
 
                     Option available **only** if `enableMultiTenancy` option is enabled.
-                  x-doc-versionType: ee
+                  x-doc-d8Revision: ee
                   x-doc-default: false
                 limitNamespaces:
                   type: array
@@ -77,7 +77,7 @@ spec:
                     * If the list is not defined, then all namespaces are accessible (except for the system ones - see `spec.allowAccessToSystemNamespaces` below).
 
                     Option available only if `enableMultiTenancy` option is enabled.
-                  x-doc-versionType: ee
+                  x-doc-d8Revision: ee
                   example: ['production-.*']
                   items:
                     type: string

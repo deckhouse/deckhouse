@@ -55,7 +55,7 @@ clusterDomain: "cluster.local"
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/fe
+  imagesRepo: registry.deckhouse.io/ee
   registryDockerCfg: | # base64 encoded section of docker.auths {"auths":{"registry.example.com":{"username":"oauth2","password":"token"}}}
     eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJ1c2VybmFtZSI6Im9hdXRoMiIsInBhc3N3b3JkIjoidG9rZW4ifX19Cg==
   releaseChannel: Stable
@@ -109,9 +109,9 @@ For example, use a docker image from the Flant docker registry:
 
 1. Pull a fresh Docker image for desired release channel (we picked the Alpha channel for an example)
     ```bash
-    docker pull registry.deckhouse.io/deckhouse/fe/install:alpha
+    docker pull registry.deckhouse.io/deckhouse/ee/install:alpha
     ```
-    **NOTE!** It is required to have Deckhouse license key to download FE images. 
+    **NOTE!** It is required to have Deckhouse license key to download EE images. 
 
 2.  Run docker container and connect the terminal session to it:
    
@@ -120,7 +120,7 @@ For example, use a docker image from the Flant docker registry:
      docker run -it \
        -v "$PWD/config.yaml:/config.yaml" \
        -v "$HOME/.ssh/:/tmp/.ssh/" \
-       registry.deckhouse.io/fe/install:alpha \
+       registry.deckhouse.io/ee/install:alpha \
        bash
      ```
      > MacOS users do not need to mount the .ssh folder to the `/tmp`.

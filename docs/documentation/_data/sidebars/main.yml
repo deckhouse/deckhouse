@@ -192,7 +192,7 @@ entries:
                     ru: Примеры
                   url: /modules/030-cloud-provider-azure/usage.html
             - title: OpenStack
-              versionType: ee
+              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -231,7 +231,7 @@ entries:
                 - title: FAQ
                   url: /modules/030-cloud-provider-openstack/faq.html
             - title: VMware vSphere
-              versionType: ee
+              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -410,7 +410,7 @@ entries:
                     ru: Примеры
                   url: /modules/042-kube-dns/usage.html
             - title: node-local-dns
-              versionType: ee
+              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -453,7 +453,7 @@ entries:
                 ru: Настройки
               url: /modules/500-dashboard/configuration.html
         - title: openvpn
-          versionType: fe
+          featureStatus: experimental
           folders:
             - title:
                 en: Description
@@ -494,7 +494,7 @@ entries:
             - title: FAQ
               url: /modules/402-ingress-nginx/faq.html
         - title: istio
-          versionType: ee
+          d8Revision: ee
           folders:
             - title:
                 en: Description
@@ -596,7 +596,6 @@ entries:
                     ru: Настройки
                   url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
             - title: extended-monitoring
-              versionType: fe
               folders:
                 - title:
                     en: Description
@@ -634,6 +633,32 @@ entries:
                       url: /modules/460-log-shipper/configuration.html
                     - title: Custom Resources
                       url: /modules/460-log-shipper/cr.html
+            - title: flant-integration
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/600-flant-integration/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/600-flant-integration/configuration.html
+            - title: okmeter
+              featureStatus: proprietaryOkmeter
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/500-okmeter/
+                - title:
+                    en: Usage
+                    ru: Примеры
+                  url: /modules/500-okmeter/usage.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/500-okmeter/configuration.html
             - title: prometheus-pushgateway
               folders:
                 - title:
@@ -873,7 +898,7 @@ entries:
                 - title: Custom Resources
                   url: /modules/099-ceph-csi/cr.html
         - title: linstor
-          versionType: experimental
+          featureStatus: experimental
           folders:
             - title:
                 en: Description
@@ -923,21 +948,6 @@ entries:
         en: Little things
         ru: Приятные мелочи
       folders:
-        - title: basic-auth
-          versionType: fe
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/500-basic-auth/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/500-basic-auth/configuration.html
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/500-basic-auth/usage.html
         - title: chrony
           folders:
             - title:
@@ -949,7 +959,6 @@ entries:
                 ru: Настройки
               url: /modules/470-chrony/configuration.html
         - title: namespace-configurator
-          versionType: fe
           folders:
             - title:
                 en: Description
@@ -964,14 +973,12 @@ entries:
                 ru: Примеры
               url: /modules/600-namespace-configurator/usage.html
         - title: secret-copier
-          versionType: fe
           folders:
             - title:
                 en: Description
                 ru: Описание
               url: /modules/600-secret-copier/
         - title: snapshot-controller
-          versionType: fe
           folders:
             - title:
                 en: Description
@@ -988,10 +995,9 @@ entries:
     - title:
         en: Bare Metal Support
         ru: Поддержка Bare Metal
-      versionType: ee
       folders:
         - title: keepalived
-          versionType: fe
+          d8Revision: ee
           folders:
             - title:
                 en: Description
@@ -1012,7 +1018,7 @@ entries:
                 - title: Custom Resources
                   url: /modules/450-keepalived/cr.html
         - title: metallb
-          versionType: ee
+          d8Revision: ee
           folders:
             - title:
                 en: Description
@@ -1023,7 +1029,7 @@ entries:
                 ru: Настройки
               url: /modules/380-metallb/configuration.html
         - title: network-gateway
-          versionType: fe
+          d8Revision: ee
           folders:
             - title:
                 en: Description

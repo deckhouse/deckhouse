@@ -29,10 +29,10 @@ Pass all params via next env variables:
    REGISTRY_CA - registry TLS root-certificate
 
   Example:
-    REPO_USER="aaaaa" REPO_PASSWORD='Pass"Word' IMAGE_WITH_TAG="q.com/deckhouse/fe:1.28.1" $0
+    REPO_USER="aaaaa" REPO_PASSWORD='Pass"Word' IMAGE_WITH_TAG="q.com/deckhouse/ee:1.28.1" $0
 
   Example repo without TLS:
-    REPO_USER="aaaaa" REPO_PASSWORD='Pass"Word' IMAGE_WITH_TAG="q.com/deckhouse/fe:1.28.1" INSECURE_REGISTRY=true $0
+    REPO_USER="aaaaa" REPO_PASSWORD='Pass"Word' IMAGE_WITH_TAG="q.com/deckhouse/ee:1.28.1" INSECURE_REGISTRY=true $0
 HELP
 
    exit "$1"

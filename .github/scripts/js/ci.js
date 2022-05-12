@@ -628,7 +628,7 @@ module.exports.checkValidationLabels = async ({ github, context, core }) => {
  *   /e2e/use/cri/containerd
  *   /deploy/web/stage v1.3.2
  *   /deploy/alpha - to deploy all editions
- *   /deploy/alpha/ce,ee,fe
+ *   /deploy/alpha/ce,ee
  *   /suspend/alpha
  *
  * @param {object} inputs
@@ -1126,7 +1126,7 @@ and with Kubernetes version 1.19 and 1.21.
 \`\`\`
 
 **Note 2:**
-'deploy', 'suspend' and 'e2e' commands should run after 'build modules FE' and 'build FE' jobs are finished.
+'deploy', 'suspend' and 'e2e' commands should run after 'build FE' job is finished.
 
 </details>`;
 

@@ -8,12 +8,11 @@ sections:
       #   description:
       #     en: Description in English
       #     ru: Description in Russian
-      #   revision: (ce|ee|fe)
+      #   revision: (ce|ee)
       #   or
       #   revision:
       #     ce: true     each item can be true, partial or false
       #     ee: partial
-      #     fe: false
       #   hint:
       #     ru: Hint in Russian (not required)
       #     en: Hint in English (not required)

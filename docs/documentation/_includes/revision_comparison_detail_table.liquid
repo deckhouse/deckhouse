@@ -3,8 +3,8 @@
 {%- assign supported_img_url = '/images/icons/supported.svg' %}
 {%- assign notsupported_img_url = '/images/icons/not_supported.svg' %}
 {%- assign revision = 'fe' %}
-{%- if site.mode == 'local' and site.versionType %}
-{%- assign revision = site.versionType | downcase %}
+{%- if site.mode == 'local' and site.d8Revision %}
+{%- assign revision = site.d8Revision | downcase %}
 {%- endif %}
 
 <table markdown="0">
@@ -13,7 +13,6 @@
       <th style="text-align: center"></th>
       <th style="text-align: center">CE</th>
       <th style="text-align: center"><a style="color: #fff;" href="{{ site.url }}/{{ page.lang }}/products/enterprise_edition.html">EE</a></th>
-      <th style="text-align: center">Flant Edition*</th>
     </tr>
 </thead>
 <tbody>
@@ -49,9 +48,6 @@
       {% else %}
       <img src="{{ notsupported_img_url }}">
       {% endif %}
-  </td>
-  <td style="text-align: center; width: 170px;">
-      <img src="{{ supported_img_url }}">
   </td>
 </tr>
 {%- endfor %}

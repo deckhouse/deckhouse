@@ -12,7 +12,7 @@ site_description:
   en: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."
   ru: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."
 github_repo_path: /deckhouse/deckhouse
-versionType: FE
+d8Revision: FE
 
 assets:
   precompile: ['**/*.*']
@@ -87,66 +87,50 @@ defaults:
       path: "*/030-cloud-provider-openstack"
       type: "pages"
     values:
-      versionType: ee
+      d8Revision: ee
   - scope:
       path: "*/030-cloud-provider-vsphere"
       type: "pages"
     values:
-      versionType: ee
+      d8Revision: ee
   - scope:
       path: "*/031-linstor"
       type: "pages"
     values:
-      versionType: experimental
-  - scope:
-      path: "*/340-extended-monitoring"
-      type: "pages"
-    values:
-      versionType: fe
+      featureStatus: experimental
   - scope:
       path: "*/350-node-local-dns"
       type: "pages"
     values:
-      versionType: ee
+      d8Revision: ee
   - scope:
       path: "*/380-metallb"
       type: "pages"
     values:
-      versionType: ee
+      d8Revision: ee
   - scope:
       path: "*/450-keepalived"
       type: "pages"
     values:
-      versionType: fe
+      d8Revision: ee
   - scope:
       path: "*/450-network-gateway"
       type: "pages"
     values:
-      versionType: fe
-  - scope:
-      path: "*/600-namespace-configurator"
-      type: "pages"
-    values:
-      versionType: fe
+      d8Revision: ee
   - scope:
       path: "*/600-flant-integration"
       type: "pages"
     values:
-      versionType: ee
+      d8Revision: ee
   - scope:
-      path: "*/500-basic-auth"
+      path: "*/500-okmeter"
       type: "pages"
     values:
-      versionType: fe
-  - scope:
-      path: "*/600-secret-copier"
-      type: "pages"
-    values:
-      versionType: fe
+      featureStatus: proprietaryOkmeter
   - scope:
       path: "*/500-openvpn"
       type: "pages"
     values:
-      versionType: fe
-
+      featureStatus: experimental
 timezone: Europe/Moscow
