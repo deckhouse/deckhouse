@@ -20,7 +20,7 @@ data:
       reload 2s
       loop
       bind {{ .Values.global.discovery.clusterDNSAddress }} 169.254.20.10
-      forward . {{ .Values.global.discovery.clusterDNSAddress }} {{ .Values.global.discovery.clusterDNSAddress }} {{ .Values.global.discovery.clusterDNSAddress }} {
+      forward . {{ .Values.global.discovery.clusterDNSAddress }} {
         max_fails 0
       }
       prometheus 127.0.0.1:9254

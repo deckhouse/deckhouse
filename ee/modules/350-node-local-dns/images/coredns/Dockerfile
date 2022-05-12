@@ -1,6 +1,6 @@
 # Based on https://github.com/coredns/coredns/blob/master/Dockerfile
 ARG BASE_ALPINE
-FROM coredns/coredns:1.6.9@sha256:40ee1b708e20e3a6b8e04ccd8b6b3dd8fd25343eab27c37154946f232649ae21 as artifact
+FROM coredns/coredns:1.9.1@sha256:d5a7db9ab4cb3efc22a08707385c54c328db3df32841d6c4a8ae78f102f1f49a as artifact
 
 ARG BASE_ALPINE
 FROM $BASE_ALPINE
