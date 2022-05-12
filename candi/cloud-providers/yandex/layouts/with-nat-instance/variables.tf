@@ -47,7 +47,7 @@ locals {
   nat_instance_external_subnet_id = lookup(var.providerClusterConfiguration.withNATInstance, "externalSubnetID", null)
   nat_instance_external_address = lookup(var.providerClusterConfiguration.withNATInstance, "natInstanceExternalAddress", null)
   nat_instance_internal_address = lookup(var.providerClusterConfiguration.withNATInstance, "natInstanceInternalAddress", null)
-  exporter_api_key = lookup(var.providerClusterConfiguration.withNATInstance, "exporterAPIKey", "Off")
+  exporter_api_key = lookup(var.providerClusterConfiguration.withNATInstance, "exporterAPIKey", "")
 
   dhcp_options = lookup(var.providerClusterConfiguration, "dhcpOptions", null)
   dhcp_domain_name = local.dhcp_options != null ? lookup(local.dhcp_options, "domainName", null) : null
