@@ -56,6 +56,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix errors in withNAT layout [#1554](https://github.com/deckhouse/deckhouse/pull/1554)
  - **[candi]** Fixed race condition between old the kubernetes-api-proxy-configurator and bashible step. [#1482](https://github.com/deckhouse/deckhouse/pull/1482)
  - **[candi]** Fix startup config in Kubernetes API proxy configuration script. [#1426](https://github.com/deckhouse/deckhouse/pull/1426)
  - **[candi]** Added imagePullPolicy: IfNotPresent to kubernetes-api-proxy static pod. Fixed kubernetes-api-proxy run in docker envs. [#1297](https://github.com/deckhouse/deckhouse/pull/1297)
