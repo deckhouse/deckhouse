@@ -17,66 +17,66 @@ To add a new static node (e.g., VM or bare-metal server) to the cluster, you nee
 
 ## How do I add a batch of static nodes to a cluster?
 If you don't have `NodeGroup` in your cluster, then you can find information how to do it [here](#how-do-i-add-a-static-node-to-a-cluster).
-If you already have `NodeGroup`, you can automate bootstrap process with any automation platform that you prefer. We will use Ansible as example.
+If you already have `NodeGroup`, you can automate the bootstrap process with any automation platform that you prefer. We will use Ansible as an example.
 
 1. Pick up one of Kubernetes API Server endpoints. Note that this IP have to be accessible from nodes that are prepared to be bootstrapped.
-```shell
-kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
-```
+   ```shell
+   kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   ```
 2. Get Kubernetes API token for special `ServiceAccount` that is managed by Deckhouse.
-```shell
-kubectl -n d8-system get $(kubectl -n d8-system get secret -o name | grep node-manager-node-group-token) -o json | jq '.data.token' -r | base64 -d && echo ""
-```
+   ```shell
+   kubectl -n d8-system get $(kubectl -n d8-system get secret -o name | grep node-manager-node-group-token) -o json | jq '.data.token' -r | base64 -d && echo ""
+   ```
 3. Create Ansible playbook with `vars` replaced with values from previous steps.
-```yaml
-- hosts: all
-  become: yes
-  gather_facts: no
-  vars:
-    kube_apiserver: <KUBE_APISERVER>
-    token: <TOKEN>
-  tasks:
-    - name: Check if node is already bootsrapped
-      stat:
-        path: /var/lib/bashible
-      register: bootstrapped
-    - name: Get bootstrap secret
-      uri:
-        url: "https://{{ kube_apiserver }}/api/v1/namespaces/d8-cloud-instance-manager/secrets/manual-bootstrap-for-{{ node_group }}"
-        return_content: yes
-        method: GET
-        status_code: 200
-        body_format: json
-        headers:
-          Authorization: "Bearer {{ token }}"
-        validate_certs: no
-      register: bootstrap_secret
-      when: bootstrapped.stat.exists == False
-    - name: Run bootstrap.sh
-      shell: "{{ bootstrap_secret.json.data['bootstrap.sh'] | b64decode }}"
-      ignore_errors: yes
-      when: bootstrapped.stat.exists == False
-    - name: wait
-      wait_for_connection:
-        delay: 30
-      when: bootstrapped.stat.exists == False
-```
+   ```yaml
+   - hosts: all
+     become: yes
+     gather_facts: no
+     vars:
+       kube_apiserver: <KUBE_APISERVER>
+       token: <TOKEN>
+     tasks:
+       - name: Check if node is already bootsrapped
+         stat:
+           path: /var/lib/bashible
+         register: bootstrapped
+       - name: Get bootstrap secret
+         uri:
+           url: "https://{{ kube_apiserver }}/api/v1/namespaces/d8-cloud-instance-manager/secrets/manual-bootstrap-for-{{ node_group }}"
+           return_content: yes
+           method: GET
+           status_code: 200
+           body_format: json
+           headers:
+             Authorization: "Bearer {{ token }}"
+           validate_certs: no
+         register: bootstrap_secret
+         when: bootstrapped.stat.exists == False
+       - name: Run bootstrap.sh
+         shell: "{{ bootstrap_secret.json.data['bootstrap.sh'] | b64decode }}"
+         ignore_errors: yes
+         when: bootstrapped.stat.exists == False
+       - name: wait
+         wait_for_connection:
+           delay: 30
+         when: bootstrapped.stat.exists == False
+   ```
 4. You have to specify one more variable `node_group`. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, here is an example using inventory file.
-```
-[system]
-system-0
-system-1
-
-[system:vars]
-node_group=system
-
-[worker]
-worker-0
-worker-1
-
-[worker:vars]
-node_group=worker
-```
+   ```
+   [system]
+   system-0
+   system-1
+   
+   [system:vars]
+   node_group=system
+   
+   [worker]
+   worker-0
+   worker-1
+   
+   [worker:vars]
+   node_group=worker
+   ```
 5. Now you can simply run this playbook with your inventory file.
 
 ## How to put an existing cluster node under the node-manager's control?
