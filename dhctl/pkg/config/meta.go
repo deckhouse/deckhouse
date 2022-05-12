@@ -516,7 +516,7 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 			return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
 		}
 
-		log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", string(bytes))
+		log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
 		err = json.Unmarshal(bytes, &dc)
 		if err != nil {
 			return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
