@@ -42,7 +42,7 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 
 	groupProbes := map[string][]string{
 		"control-plane": {
-			"access",
+			"apiserver",
 			"basic",
 			"controller-manager",
 			"namespace",
@@ -113,7 +113,7 @@ func Test_Fill_30s_OneDay(t *testing.T) {
 
 	groupProbes := map[string][]string{
 		"control-plane": {
-			"access",
+			"apiserver",
 			"basic",
 			"controller-manager",
 			"namespace",
@@ -167,7 +167,7 @@ func Test_FillOneDay(t *testing.T) {
 
 	groupProbes := map[string][]string{
 		"control-plane": {
-			"access",
+			"apiserver",
 			"basic",
 			"controller-manager",
 			"namespace",
@@ -220,7 +220,7 @@ func Test_Fill_Year(t *testing.T) {
 
 	groupProbes := map[string][]string{
 		"control-plane": {
-			"access",
+			"apiserver",
 			"basic",
 			"controller-manager",
 			"namespace",
