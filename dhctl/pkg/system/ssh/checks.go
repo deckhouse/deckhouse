@@ -21,6 +21,8 @@ import (
 )
 
 const (
+	// skip  G101: Potential hardcoded credentials
+	//nolint:gosec
 	notPassedWarn    = "SSH-hosts was not passed. Maybe you run converge in pod?"
 	notEnthoughtWarn = "Not enough master SSH-hosts."
 	tooManyWarn      = "Too many master SSH-hosts. Maybe you want to delete nodes, but pass hosts for delete via --ssh-host?"

@@ -324,17 +324,17 @@ func (c *NodeGroupController) populateNodeToHost() error {
 	return nil
 }
 
-func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupGroupOptions, convergedNode string) (terraform.InfraActionHook, error) {
+func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupGroupOptions, convergedNode string) terraform.InfraActionHook {
 	if c.name != MasterNodeGroupName {
 		// for not master node groups do not need readiness check
-		return &terraform.DummyHook{}, nil
+		return &terraform.DummyHook{}
 	}
 
 	// single master do no need readiness check
 	// it doesn't make sense
 	// but single master can converge for updating
 	if nodeGroup.CurReplicas() == 1 {
-		return &terraform.DummyHook{}, nil
+		return &terraform.DummyHook{}
 	}
 
 	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
@@ -343,7 +343,7 @@ func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupG
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode)
 
-	return h, nil
+	return h
 }
 
 func (c *NodeGroupController) Run() error {
@@ -430,10 +430,7 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 		return nil
 	}
 
-	checker, err := c.getNodeGroupReadinessChecker(nodeGroup, nodeName)
-	if err != nil {
-		return err
-	}
+	checker := c.getNodeGroupReadinessChecker(nodeGroup, nodeName)
 
 	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
