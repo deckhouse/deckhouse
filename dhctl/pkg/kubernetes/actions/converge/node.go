@@ -76,6 +76,56 @@ func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string) (stri
 	return cloudData, err
 }
 
+func GetNodeTemplate(kubeCl *client.KubernetesClient, nodeGroupName string) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	err := retry.NewSilentLoop(fmt.Sprintf("Get NodeGroup %q", nodeGroupName), 45, 15*time.Second).Run(func() error {
+		ng, err := kubeCl.Dynamic().
+			Resource(nodeGroupResource).
+			Get(context.TODO(), nodeGroupName, metav1.GetOptions{})
+
+		if err != nil {
+			return err
+		}
+
+		nt, _, err := unstructured.NestedMap(ng.Object, "spec", "nodeTemplate")
+		if err != nil {
+			return err
+		}
+
+		res = nt
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func UpdateNodeTemplate(kubeCl *client.KubernetesClient, nodeGroupName string, template map[string]interface{}) error {
+	return retry.NewLoop(fmt.Sprintf("Update node template in NodeGroup %q", nodeGroupName), 45, 15*time.Second).Run(func() error {
+		doc, err := kubeCl.Dynamic().
+			Resource(nodeGroupResource).
+			Get(context.TODO(), nodeGroupName, metav1.GetOptions{})
+
+		if err != nil {
+			return err
+		}
+
+		err = unstructured.SetNestedMap(doc.Object, template, "spec", "nodeTemplate")
+		if err != nil {
+			return err
+		}
+
+		_, err = kubeCl.Dynamic().
+			Resource(nodeGroupResource).
+			Update(context.TODO(), doc, metav1.UpdateOptions{})
+
+		return err
+	})
+}
+
 func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data map[string]interface{}) error {
 	doc := unstructured.Unstructured{}
 	doc.SetUnstructuredContent(data)

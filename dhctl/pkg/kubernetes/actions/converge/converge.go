@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -166,7 +168,10 @@ func (r *Runner) converge() error {
 	}
 
 	var nodeGroupsWithStateInCluster []string
+	nodeGroupTemplates := make(map[string]map[string]interface{})
+
 	for _, group := range terraNodeGroups {
+		nodeGroupTemplates[group.Name] = group.NodeTemplate
 		// Skip if node group terraform state exists, we will update node group state below
 		if _, ok := nodesState[group.Name]; ok {
 			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
@@ -401,6 +406,11 @@ func (c *NodeGroupController) Run() error {
 		return err
 	}
 
+	groupSpec := c.getSpec(nodeGroup.Name)
+	if groupSpec != nil {
+		return c.tryUpdateNodeTemplate(nodeGroup, groupSpec.NodeTemplate)
+	}
+
 	return c.tryDeleteNodeGroup(nodeGroup)
 }
 
@@ -598,6 +608,27 @@ func (c *NodeGroupController) tryDeleteNodes(deleteNodesNames map[string][]byte,
 		return c.deleteRedundantNodes(nodeGroup, c.state.Settings, deleteNodesNames)
 	})
 }
+func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOptions, nodeTemplate map[string]interface{}) error {
+	templateInCluster, err := GetNodeTemplate(c.client, c.name)
+	if err != nil {
+		return err
+	}
+
+	diff := cmp.Diff(nodeTemplate, templateInCluster)
+	if diff == "" {
+		log.DebugF("Can not different in node group %s template. Skip", c.name)
+		return nil
+	}
+
+	msg := fmt.Sprintf("Do you want to change node template? Diff:\n\n%s", diff)
+
+	if !c.changeSettings.AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
+		log.InfoLn("Updating node group template was skipped")
+		return nil
+	}
+
+	return UpdateNodeTemplate(c.client, nodeGroup.Name, nodeTemplate)
+}
 
 func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
 	if c.changeSettings.AutoDismissDestructive {
@@ -610,23 +641,20 @@ func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOption
 		return nil
 	}
 
-	groupInConfig := false
-
-	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
-		if terranodeGroup.Name == c.name {
-			groupInConfig = true
-			break
-		}
-	}
-
-	if groupInConfig {
-		log.DebugF("Do not delete %s node group, because it present in config\n")
-		return nil
-	}
-
 	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
 		return DeleteNodeGroup(c.client, nodeGroup.Name)
 	})
+}
+
+func (c *NodeGroupController) getSpec(name string) *config.TerraNodeGroupSpec {
+	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
+		if terranodeGroup.Name == name {
+			cc := terranodeGroup
+			return &cc
+		}
+	}
+
+	return nil
 }
 
 func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) error {
