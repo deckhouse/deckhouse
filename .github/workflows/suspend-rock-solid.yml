@@ -23,7 +23,6 @@ on:
 env:
 
   # <template: werf_envs>
-  # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
   # We use stapel image from own registry due to docker hub pull amount limitation.

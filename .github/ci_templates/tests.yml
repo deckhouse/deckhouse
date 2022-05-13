@@ -1,5 +1,3 @@
-{!{/* Source: .gitlab/ci_templates/tests.yml */}!}
-
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
 args: 'go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...'

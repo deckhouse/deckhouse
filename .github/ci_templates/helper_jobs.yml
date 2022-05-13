@@ -195,7 +195,6 @@ pull_request_info:
         filters: |
           dangerous:
             - './.github/**'
-            - './.gitlab/**'
             - './tools/**'
             - './testing/**'
             - './docs/**/js/**'
