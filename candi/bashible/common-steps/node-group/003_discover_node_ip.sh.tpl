@@ -34,14 +34,14 @@ fi
 {{- end }}
 
 {{- if eq .nodeGroup.nodeType "Static" }}
-# if node has one interface, use it's network as internal_network_cidr
+# if a node has one interface, use its network as internal_network_cidr
 internal_network_cidrs=""
 if [[ "$(ip route show scope link | wc -l)" -eq 1 ]]; then
-  internal_network_cidrs=$(ip route show scope link | awk '{print $1}')"
+  internal_network_cidrs="$(ip route show scope link | awk '{print $1}')"
 fi
 
   {{- if and (hasKey .nodeGroup "static") (hasKey .nodeGroup.static "internalNetworkCIDRs")}}
-internal_network_cidrs="{{ .nodeGroup.static.internalNetworkCIDRs }}"
+internal_network_cidrs={{ .nodeGroup.static.internalNetworkCIDRs | join " " | quote }}
   {{- end }}
 
 if [[ -z "$internal_network_cidrs" ]]; then
@@ -86,7 +86,7 @@ done
 
 {{- if or (eq .runType "ClusterBootstrap") (eq .nodeGroup.nodeType "Static") }}
 if [ -z "$(cat /var/lib/bashible/discovered-node-ip)" ] ; then
-  bb-log-error "Failed to discover node_ip but it's required for cluster bootstrap or static cluster nodes"
+  bb-log-error "Failed to discover node_ip but its required for static cluster bootstrap or static cluster nodes"
   exit 1
 fi
 {{- end }}
