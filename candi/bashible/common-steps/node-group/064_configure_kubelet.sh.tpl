@@ -135,7 +135,7 @@ if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
 fi
 
 shutdownGracePeriod="0s"
-shutdownGracePeriodCriticalPods="0"
+shutdownGracePeriodCriticalPods="0s"
 
 if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   source /var/lib/bashible/cloud-provider-variables
