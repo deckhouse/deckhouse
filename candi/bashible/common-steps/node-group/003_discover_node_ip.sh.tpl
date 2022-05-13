@@ -34,18 +34,19 @@ fi
 {{- end }}
 
 {{- if eq .nodeGroup.nodeType "Static" }}
+ip_route_get_cmd="ip route show scope link proto kernel"
   {{- if and (hasKey .nodeGroup "static") (hasKey .nodeGroup.static "internalNetworkCIDRs")}}
 internal_network_cidrs={{ .nodeGroup.static.internalNetworkCIDRs | join " " | quote }}
   {{- end }}
 
 if [[ -z "$internal_network_cidrs" ]]; then
   # if internal network cidrs is not set, and the node has one interface, use its network as internal_network_cidr
-  if [[ "$(ip route show scope link | wc -l)" -eq 1 ]]; then
-    internal_network_cidrs="$(ip route show scope link | awk '{print $1}')"
+  if [[ "$($ip_route_get_cmd | wc -l)" -eq 1 ]]; then
+    internal_network_cidrs="$($ip_route_get_cmd | awk '{print $1}')"
   else
     bb-log-error "Cannot discover internal network CIDRs. Node has more than one interface, and nodeGroup.static.internalNetworkCIDRs is not set."
     bb-log-error "Please set nodeGroup.static.internalNetworkCIDRs to one of the node networks:"
-    for network in $(ip route show scope link | awk '{print $1}'); do
+    for network in $($ip_route_get_cmd | awk '{print $1}'); do
       bb-log-error "  - $network"
     done
     exit 1
