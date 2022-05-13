@@ -15,6 +15,70 @@ search: добавить ноду в кластер, добавить узел �
   - Между узлами кластера настроена сетевая связанность.
 4. Зайти на новый узел по SSH и выполнить команду из Secret'а: `echo <base64> | base64 -d | bash`.
 
+## Как добавить несколько статических узлов в кластер?
+Если у вас в кластере не созданы `NodeGroup`, то вы можете ознакомиться с информацией, как это сделать в [этом разделе](#как-добавить-статичный-узел-в-кластер).
+Если у вас уже созданы `NodeGroup`, то вы можете автоматизировать процесс добавления узлов с помощью любой предпочитаемой платформы автоматизации. Для примера мы будем использовать Ansible.
+
+1. Получите один из адресов Kubernetes API-сервера. Обратите внимание, что IP-адрес должен быть доступен с узлов, которые добавляются в кластер.
+   ```shell
+   kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   ```
+2. Получите Kubernetes API-токен для специального `ServiceAccount`, которым управляет Deckhouse.
+   ```shell
+   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) -o json | jq '.data.token' -r | base64 -d && echo ""
+   ```
+3. Создайте Ansible плейбук с `vars`, которые заменены на полученные на предыдущих шагах значения.
+   ```yaml
+   - hosts: all
+     become: yes
+     gather_facts: no
+     vars:
+       kube_apiserver: <KUBE_APISERVER>
+       token: <TOKEN>
+     tasks:
+       - name: Check if node is already bootsrapped
+         stat:
+           path: /var/lib/bashible
+         register: bootstrapped
+       - name: Get bootstrap secret
+         uri:
+           url: "https://{{ kube_apiserver }}/api/v1/namespaces/d8-cloud-instance-manager/secrets/manual-bootstrap-for-{{ node_group }}"
+           return_content: yes
+           method: GET
+           status_code: 200
+           body_format: json
+           headers:
+             Authorization: "Bearer {{ token }}"
+           validate_certs: no
+         register: bootstrap_secret
+         when: bootstrapped.stat.exists == False
+       - name: Run bootstrap.sh
+         shell: "{{ bootstrap_secret.json.data['bootstrap.sh'] | b64decode }}"
+         ignore_errors: yes
+         when: bootstrapped.stat.exists == False
+       - name: wait
+         wait_for_connection:
+           delay: 30
+         when: bootstrapped.stat.exists == False
+   ```
+4. Вам также необходимо определить дополнительную переменную `node_group`. Значение переменной должно совпадать с именем `NodeGroup`, которой будет принадлежать узел. Переменную можно передать разными способами, ниже пример с использованием файла инвентаря.
+   ```
+   [system]
+   system-0
+   system-1
+   
+   [system:vars]
+   node_group=system
+   
+   [worker]
+   worker-0
+   worker-1
+   
+   [worker:vars]
+   node_group=worker
+   ```
+5. Теперь вы можете выполнить плейбук с использованием файла инвентаря.
+
 ## Как завести существующий узел кластера под управление node-manager?
 
 Чтобы завести существующий узел кластера под управление `node-manager`, необходимо:
