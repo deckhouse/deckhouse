@@ -1,13 +1,15 @@
 diff --git a/pkg/build/cmd.go b/pkg/build/cmd.go
-index 5817cee065..a7a19cc30e 100644
+index bd0128d..b4d7550 100644
 --- a/pkg/build/cmd.go
 +++ b/pkg/build/cmd.go
-@@ -243,7 +243,7 @@ func ldflags(opts BuildOpts) (string, error) {
- 	b.WriteString(fmt.Sprintf(" -X main.version=%s", opts.version))
- 	b.WriteString(fmt.Sprintf(" -X main.commit=%s", getGitSha()))
+@@ -206,8 +206,8 @@ func ldflags(opts BuildOpts) (string, error) {
+
+ 	var b bytes.Buffer
+ 	b.WriteString("-w")
+-	b.WriteString(fmt.Sprintf(" -X main.version=%s", opts.version))
+-	b.WriteString(fmt.Sprintf(" -X main.commit=%s", getGitSha()))
++	b.WriteString(fmt.Sprintf(" -X main.version=%s", "8.5.2"))
++	b.WriteString(fmt.Sprintf(" -X main.commit=%s", "fix_heatmap,feat_extra_vars"))
  	b.WriteString(fmt.Sprintf(" -X main.buildstamp=%d", buildStamp))
--	b.WriteString(fmt.Sprintf(" -X main.buildBranch=%s", getGitBranch()))
-+	b.WriteString(fmt.Sprintf(" -X main.buildBranch=%s", "fix_heatmap,feat_extra_vars"))
+ 	b.WriteString(fmt.Sprintf(" -X main.buildBranch=%s", getGitBranch()))
  	if v := os.Getenv("LDFLAGS"); v != "" {
- 		b.WriteString(fmt.Sprintf(" -extldflags \"%s\"", v))
- 	}
