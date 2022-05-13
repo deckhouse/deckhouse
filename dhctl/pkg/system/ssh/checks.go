@@ -10,6 +10,8 @@ const (
 	notPassedWarn    = "SSH-hosts was not passed. Maybe you run converge in pod?"
 	notEnthoughtWarn = "Not enough master SSH-hosts."
 	tooManyWarn      = "Too many master SSH-hosts. Maybe you want to delete nodes, but pass hosts for delete via --ssh-host?"
+
+	checkHostsMsg = "Please check, is correct mapping node name to host?"
 )
 
 func CheckSSHHosts(userPassedHosts []string, nodesNames []string, runConfirm func(string) bool) (map[string]string, error) {
@@ -54,12 +56,12 @@ Do you want to contimue?
 	forConfirmation := make([]string, userPassedHostsLen)
 
 	for i, host := range userPassedHosts {
-		nodeName := nodesNames[i]
+		nodeName := nodesSorted[i]
 		forConfirmation[i] = fmt.Sprintf("%s -> %s", nodeName, host)
 		nodeToHost[nodeName] = host
 	}
 
-	msg := fmt.Sprintf("Please check, is correct mapping node name to host?\n%s\n", strings.Join(forConfirmation, "\n"))
+	msg := fmt.Sprintf("%s\n%s\n", checkHostsMsg, strings.Join(forConfirmation, "\n"))
 
 	if !runConfirm(msg) {
 		return nil, fmt.Errorf("Node name to host mapping was not confirmed. Please pass hosts in order.")
