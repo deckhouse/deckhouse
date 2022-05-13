@@ -129,9 +129,6 @@ func loadConfigFromFile(path string) (*config.MetaConfig, error) {
 		return nil, err
 	}
 
-	if len(metaConfig.ProviderClusterConfig) == 0 && len(metaConfig.StaticClusterConfig) == 0 {
-		return nil, fmt.Errorf("StaticClusterConfiguration must present for static-cluster bootstrap.")
-	}
 	return metaConfig, nil
 }
 
