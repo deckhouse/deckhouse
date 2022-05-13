@@ -10,7 +10,7 @@ It is essential to set the `priorityClassName` correctly. If in doubt, get your 
 > Any `priorityClassName` set to a Pod cannot lower its priority because the scheduler considers Pods without the `priority-class` as having the lowest (`develop`) priority.
 
 Below is the list of priority classes set by the module (sorted by the priority, starting with the higher one).
-**Caution!** Note that you cannot use the following PriorityClasses: `system-cluster-critical`, `node-cluster-critical`, `cluster-medium`, `cluster-low`.
+**Caution!** Note that you cannot use the following PriorityClasses: `system-node-critical`, `system-cluster-critical`, `cluster-medium`, `cluster-low`.
 
 | Priority Class            | Description                                                                                                                                                         | Value      |
 |---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
