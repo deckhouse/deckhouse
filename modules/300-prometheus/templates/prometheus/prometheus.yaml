@@ -74,9 +74,17 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | nindent 8 }}
-{{- if (include "helm_lib_ha_enabled" .) }}
   affinity:
     podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: prometheus
+              prometheus: longterm
+          topologyKey: kubernetes.io/hostname
+{{- if (include "helm_lib_ha_enabled" .) }}
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchLabels:

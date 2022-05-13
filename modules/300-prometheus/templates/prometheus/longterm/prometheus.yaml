@@ -75,6 +75,16 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | nindent 8 }}
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: prometheus
+              prometheus: main
+          topologyKey: kubernetes.io/hostname
   scrapeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
   evaluationInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
 {{- if .Values.global.modules.publicDomainTemplate }}
