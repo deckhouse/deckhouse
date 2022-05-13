@@ -167,10 +167,8 @@ func (r *Runner) converge() error {
 	}
 
 	var nodeGroupsWithStateInCluster []string
-	nodeGroupTemplates := make(map[string]map[string]interface{})
 
 	for _, group := range terraNodeGroups {
-		nodeGroupTemplates[group.Name] = group.NodeTemplate
 		// Skip if node group terraform state exists, we will update node group state below
 		if _, ok := nodesState[group.Name]; ok {
 			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
@@ -614,7 +612,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOpt
 		return err
 	}
 
-	diff := cmp.Diff(nodeTemplate, templateInCluster)
+	diff := cmp.Diff(templateInCluster, nodeTemplate)
 	if diff == "" {
 		log.DebugF("Can not different in node group %s template. Skip", c.name)
 		return nil
