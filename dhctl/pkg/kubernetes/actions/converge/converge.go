@@ -21,7 +21,6 @@ import (
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
-
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -488,6 +487,7 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 
 	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, extractOutputFunc)
 	if err != nil {
+		log.ErrorF("Terraform exit with error:\n%s\n", err.Error())
 		return err
 	}
 

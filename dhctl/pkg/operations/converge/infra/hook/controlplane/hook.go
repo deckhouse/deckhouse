@@ -122,7 +122,7 @@ func (h *Hook) BeforeAction() (bool, error) {
 		}
 
 		confirm := input.NewConfirmation().
-			WithMessage("Deckhouse pod is located on node to converge. Do you want to move pod in another node?")
+			WithMessage("Deckhouse pod is located on node to converge. Do you want to move pod to another node?")
 
 		if !confirm.Ask() {
 			log.WarnLn("Skip moving deckhouse pod")

@@ -33,10 +33,11 @@ import (
 )
 
 var (
-	ErrListPods      = errors.New("No Deckhouse pod found.")
-	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
-	ErrRequestFailed = errors.New("Request failed. Probably pod was restarted during installation.")
-	ErrIncorrectNode = errors.New("Deckhouse on wrong node")
+	ErrListPods          = errors.New("No Deckhouse pod found.")
+	ErrMultiplePodsFound = errors.New("Multiple Deckhouse pods found.")
+	ErrTimedOut          = errors.New("Time is out waiting for Deckhouse readiness.")
+	ErrRequestFailed     = errors.New("Request failed. Probably pod was restarted during installation.")
+	ErrIncorrectNode     = errors.New("Deckhouse on wrong node")
 )
 
 type logLine struct {
