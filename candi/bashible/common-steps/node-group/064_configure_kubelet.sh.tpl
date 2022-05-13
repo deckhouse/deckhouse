@@ -134,7 +134,7 @@ if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-shutdownGracePeriod="0"
+shutdownGracePeriod="0s"
 shutdownGracePeriodCriticalPods="0"
 
 if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
