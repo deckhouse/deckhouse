@@ -10,7 +10,7 @@ title: "Модуль priority-class: настройки"
 > Любой установленный `priorityClassName` не уменьшит приоритета Pod'а, т.к. если `priority-class` у Pod'а не установлен, планировщик считает его самым низким — `develop`.
 
 Устанавливаемые модулем priority class'ы (в порядке приоритета от большего к меньшему).
-**Внимание!** Нельзя использовать PriorityClasses: `system-cluster-critical`, `node-cluster-critical`, `cluster-medium`, `cluster-low`.
+**Внимание!** Нельзя использовать PriorityClasses: `system-node-critical`, `system-cluster-critical`, `cluster-medium`, `cluster-low`.
 
 | Priority Class            | Описание                                                                                                                                                            | Значение   |
 |---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
