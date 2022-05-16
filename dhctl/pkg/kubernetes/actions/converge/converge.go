@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -404,11 +405,11 @@ func (c *NodeGroupController) Run() error {
 	}
 
 	groupSpec := c.getSpec(nodeGroup.Name)
-	if groupSpec != nil {
-		return c.tryUpdateNodeTemplate(nodeGroup, groupSpec.NodeTemplate)
+	if groupSpec == nil {
+		return c.tryDeleteNodeGroup(nodeGroup)
 	}
 
-	return c.tryDeleteNodeGroup(nodeGroup)
+	return c.tryUpdateNodeTemplate(nodeGroup, groupSpec.NodeTemplate)
 }
 
 func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error {
@@ -607,25 +608,49 @@ func (c *NodeGroupController) tryDeleteNodes(deleteNodesNames map[string][]byte,
 	})
 }
 func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOptions, nodeTemplate map[string]interface{}) error {
-	templateInCluster, err := GetNodeTemplate(c.client, c.name)
-	if err != nil {
+	nodeTemplatePath := []string{"spec", "nodeTemplate"}
+	for {
+		ng, err := GetNodeGroup(c.client, c.name)
+		if err != nil {
+			return err
+		}
+
+		templateInCluster, _, err := unstructured.NestedMap(ng.Object, nodeTemplatePath...)
+		if err != nil {
+			return err
+		}
+
+		diff := cmp.Diff(templateInCluster, nodeTemplate)
+		if diff == "" {
+			log.DebugF("Can not different in node group %s template. Skip", c.name)
+			return nil
+		}
+
+		msg := fmt.Sprintf("Do you want to change node template? Diff:\n\n%s", diff)
+
+		if !c.changeSettings.AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
+			log.InfoLn("Updating node group template was skipped")
+			return nil
+		}
+
+		err = unstructured.SetNestedMap(ng.Object, nodeTemplate, nodeTemplatePath...)
+		if err != nil {
+			return err
+		}
+
+		err = UpdateNodeGroup(c.client, nodeGroup.Name, ng)
+
+		if err == nil {
+			return nil
+		}
+
+		if errors.Is(err, ErrNodeGroupChanged) {
+			log.WarnLn(err.Error())
+			continue
+		}
+
 		return err
 	}
-
-	diff := cmp.Diff(templateInCluster, nodeTemplate)
-	if diff == "" {
-		log.DebugF("Can not different in node group %s template. Skip", c.name)
-		return nil
-	}
-
-	msg := fmt.Sprintf("Do you want to change node template? Diff:\n\n%s", diff)
-
-	if !c.changeSettings.AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
-		log.InfoLn("Updating node group template was skipped")
-		return nil
-	}
-
-	return UpdateNodeTemplate(c.client, nodeGroup.Name, nodeTemplate)
 }
 
 func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
