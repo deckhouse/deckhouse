@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -34,6 +35,13 @@ import (
 const (
 	moduleQueue = "/modules/control-plane-manager"
 )
+
+type etcdInstance struct {
+	Endpoint  string
+	MaxDbSize int64
+	PodName   string
+	Node      string
+}
 
 func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints []string) (etcd.Client, error) {
 	snap := input.Snapshots["etcd-certificate"]
@@ -92,4 +100,12 @@ func syncEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResu
 	}
 
 	return cert, nil
+}
+
+func gb(n int64) int64 {
+	return n * 1024 * 1024 * 1024
+}
+
+func gbFloat(n float64) int64 {
+	return int64(math.Floor(n * 1024 * 1024 * 1024))
 }
