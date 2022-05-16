@@ -30,7 +30,11 @@ func GetPod(kubeCl *client.KubernetesClient) (*v1.Pod, error) {
 		return nil, ErrListPods
 	}
 
-	if len(pods.Items) != 1 {
+	if len(pods.Items) == 0 {
+		return nil, ErrListPods
+	}
+
+	if len(pods.Items) > 1 {
 		return nil, ErrMultiplePodsFound
 	}
 
