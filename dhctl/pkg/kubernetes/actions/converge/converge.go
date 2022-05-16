@@ -486,7 +486,7 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 
 	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, extractOutputFunc)
 	if err != nil {
-		log.ErrorF("Terraform exit with error:\n%s\n", err.Error())
+		log.ErrorF("Terraform exited with an error:\n%s\n", err.Error())
 		return err
 	}
 
@@ -622,11 +622,11 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOpt
 
 		diff := cmp.Diff(templateInCluster, nodeTemplate)
 		if diff == "" {
-			log.DebugF("Can not different in node group %s template. Skip", c.name)
+			log.DebugF("Node template of the %s NodeGroup is not changed", c.name)
 			return nil
 		}
 
-		msg := fmt.Sprintf("Do you want to change node template? Diff:\n\n%s", diff)
+		msg := fmt.Sprintf("Node template diff:\n\n%s\n", diff)
 
 		if !c.changeSettings.AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
 			log.InfoLn("Updating node group template was skipped")
