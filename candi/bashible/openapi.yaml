@@ -137,6 +137,7 @@ apiVersions:
                   azure:
                     type: string
                   gcp:
+                    type: string
               csi:
                 type: object
                 properties:

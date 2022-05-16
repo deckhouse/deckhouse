@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,4 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-apt-remove unattended-upgrades
+shutdown_grace_period="30s"
+shutdown_grace_period_critical_pods="5s"
+
+preemptible="$(curl -sS -H "Metadata-Flavor: Google" 169.254.169.254/computeMetadata/v1/instance/scheduling/preemptible || true)"
+
+if [[ "$preemptible" == "FALSE" ]]; then
+  shutdown_grace_period="90s"
+  shutdown_grace_period_critical_pods="5s"
+fi
+
+cat << EOF > /var/lib/bashible/cloud-provider-variables
+shutdown_grace_period="$shutdown_grace_period"
+shutdown_grace_period_critical_pods="$shutdown_grace_period_critical_pods"
+EOF

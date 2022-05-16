@@ -140,6 +140,16 @@ if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
 
+shutdownGracePeriod="0s"
+shutdownGracePeriodCriticalPods="0s"
+
+if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
+  source /var/lib/bashible/cloud-provider-variables
+
+  shutdownGracePeriod="$shutdown_grace_period"
+  shutdownGracePeriodCriticalPods="$shutdown_grace_period_critical_pods"
+fi
+
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -241,4 +251,6 @@ containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" 
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 {{- end }}
 allowedUnsafeSysctls:  ["net.*"]
+shutdownGracePeriod: ${shutdownGracePeriod}
+shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
 EOF
