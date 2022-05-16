@@ -50,7 +50,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() 
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should set default value", func() {
+		It("should be true value", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeTrue())
 		})
@@ -63,7 +63,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() 
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should set default value", func() {
+		It("should be false value", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeFalse())
 		})
@@ -76,7 +76,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() 
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should set default value", func() {
+		It("should be false value", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeFalse())
 		})

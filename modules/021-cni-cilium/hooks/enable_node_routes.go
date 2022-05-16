@@ -31,23 +31,27 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, enableNodeRoutes)
 
 func enableNodeRoutes(input *go_hook.HookInput) error {
+	input.Values.Set("cniCilium.createNodeRoutes", shouldEnableNodeRoutes(input))
+
+	return nil
+}
+
+func shouldEnableNodeRoutes(input *go_hook.HookInput) bool {
 	// if value is set directly - skip this hook
 	_, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok {
-		return nil
+		return false
 	}
 
 	providerRaw, ok := input.Values.GetOk("global.clusterConfiguration.cloud.provider")
 	if !ok {
-		return nil
+		return false
 	}
 
 	switch strings.ToLower(providerRaw.String()) {
 	case "openstack", "vsphere":
-		input.Values.Set("cniCilium.createNodeRoutes", true)
-	default:
-		return nil
+		return true
 	}
 
-	return nil
+	return false
 }
