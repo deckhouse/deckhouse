@@ -23,6 +23,12 @@ spec:
           action: keep
         - targetLabel: "nat_instance"
           replacement: "true"
+      relabelings:
+        - regex: endpoint|namespace
+          action: labeldrop
+        - sourceLabels: [ __meta_kubernetes_pod_ready ]
+          regex: "true"
+          action: keep
   selector:
     matchLabels:
       app: cloud-metrics-exporter
