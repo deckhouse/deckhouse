@@ -139,7 +139,7 @@ spec:
                           description: Проверка действия TLS-сертификата удаленного хоста.
                 rateLimit:
                   description: |
-                    Ограничиваем поток событий в хранилище.
+                    Параметр ограничения потока событий, передаваемых в хранилище.
                   properties:
                     linesPerMinute:
                       description: |

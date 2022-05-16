@@ -318,14 +318,14 @@ spec:
                 rateLimit:
                   type: object
                   description: |
-                    The rate limit option for clusterlogdestinations.
+                    Parameter for limiting the flow of events.
                   required:
                     - linesPerMinute
                   properties:
                     linesPerMinute:
                       type: number
                       description: |
-                        The linesPerMinute setting up number of events passed to a sink.
+                        The number of records per minute.
                 extraLabels:
                   type: object
                   description: |
