@@ -1,3 +1,4 @@
+{{- $cri_tools_version := "1.23.0" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := $key | toString }}
   {{- $patch := $value.patch | toString }}
@@ -29,7 +30,7 @@ shell:
   - apk add --no-cache curl
   setup:
   - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubeadm_{{ printf "%s.%s" $version $patch }}-00  | awk '{print $2}')"
-  - TOOLS_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep cri-tools_{{ printf "%s.0-00" $version }} | awk '{print $2}')"
+  - TOOLS_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep cri-tools_{{ printf "%s" $cri_tools_version }} | awk '{print $2}')"
   - curl -sL ${DEB_PACKAGE} --output /kubeadm_amd64.deb
   - curl -sL ${TOOLS_PACKAGE} --output /cri-tools_amd64.deb
 {{- end }}
