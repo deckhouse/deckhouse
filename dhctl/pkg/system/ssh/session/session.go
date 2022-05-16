@@ -114,20 +114,6 @@ func (s *Session) SetAvailableHosts(hosts []string) {
 	s.selectNewHost("")
 }
 
-// ReplaceAvailableHosts
-// Set Available hosts and try save current host if it exists in cluster
-// return true if current host found in new hosts
-func (s *Session) ReplaceAvailableHosts(hosts []string) bool {
-	defer s.lock.Unlock()
-	s.lock.Lock()
-
-	s.availableHosts = make([]string, len(hosts))
-	copy(s.availableHosts, hosts)
-
-	s.resetUsedHosts()
-	return s.selectNewHost(s.host)
-}
-
 func (s *Session) AvailableHosts() []string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -220,24 +206,18 @@ func (s *Session) resetUsedHosts() {
 }
 
 // selectNewHost selects new host from available and updates remaining hosts
-// newHostForSet - if not empty - try to choose this host
-//				 - if host not found choose from remaining hosts
-// return true if newHostForSet found and set
-func (s *Session) selectNewHost(newHostForSet string) bool {
+func (s *Session) selectNewHost(newHostForSet string) {
 	if len(s.availableHosts) == 0 {
 		s.host = ""
-		return false
+		return
 	}
 
 	hostIndx := 0
-	found := false
-
 	if newHostForSet != "" {
 		indx := stringsutil.Index(s.availableHosts, newHostForSet)
 		if indx >= 0 {
 			s.resetUsedHosts()
 			hostIndx = indx
-			found = true
 		}
 	}
 
@@ -249,6 +229,4 @@ func (s *Session) selectNewHost(newHostForSet string) bool {
 	s.remainingHosts = append(s.remainingHosts[:hostIndx], s.remainingHosts[hostIndx+1:]...)
 
 	s.host = host
-
-	return found
 }

@@ -40,21 +40,29 @@ type Hook struct {
 	runAfterAction    bool
 }
 
-func NewHook(kubeCl *client.KubernetesClient, nodesToCheckWithIPs map[string]string, clusterUUID string) *Hook {
-	proxyChecker := NewKubeProxyChecker().
-		WithExternalIPs(nodesToCheckWithIPs).
-		WithClusterUUID(clusterUUID)
+func NewHook(kubeCl *client.KubernetesClient, nodeToHostForChecks map[string]string, clusterUUID string) *Hook {
+	addProxyChecker := true
+	nodes := make([]string, 0)
+
+	for nodeName, host := range nodeToHostForChecks {
+		nodes = append(nodes, nodeName)
+		if host == "" {
+			addProxyChecker = false
+		}
+	}
 
 	checkers := []hook.NodeChecker{
 		hook.NewKubeNodeReadinessChecker(kubeCl),
-		proxyChecker,
-		NewManagerReadinessChecker(kubeCl),
 	}
 
-	nodes := make([]string, 0)
-	for nodeName := range nodesToCheckWithIPs {
-		nodes = append(nodes, nodeName)
+	if addProxyChecker {
+		proxyChecker := NewKubeProxyChecker().
+			WithExternalIPs(nodeToHostForChecks).
+			WithClusterUUID(clusterUUID)
+		checkers = append(checkers, proxyChecker)
 	}
+
+	checkers = append(checkers, NewManagerReadinessChecker(kubeCl))
 
 	return &Hook{
 		nodesNamesToCheck: nodes,
