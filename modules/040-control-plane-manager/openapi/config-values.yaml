@@ -218,7 +218,7 @@ properties:
           **Experimental**. It can be removed in the future.
         type: number
         format: int64
-        minimum: 536870912
+        minimum: 1048576
         maximum: 8589934592
       externalMembersNames:
         type: array
