@@ -32,6 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/deckhouse"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
+	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 // Variables with component versions. They set by 'go build' command.
@@ -104,6 +106,17 @@ func main() {
 
 	// deckhouse-controller helper subcommands
 	helpers.DefineHelperCommands(kpApp)
+
+	// deckhouse-controller edit subcommands
+	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+	{
+		dhctl_app.LoggerType = "json"
+		dhctl_app.Editor = "vim"
+		dhctl_app.KubeConfigInCluster = true
+		dhctl_app.TmpDirName = os.TempDir()
+
+		dhctl_commands.DefineEditCommands(editCmd /* wConnFlags */, false)
+	}
 
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
 }
