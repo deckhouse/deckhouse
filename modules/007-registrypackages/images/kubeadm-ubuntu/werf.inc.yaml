@@ -1,8 +1,8 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
+{{- $cri_tools_version := "1.23.0" }}
+  {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := $key | toString }}
   {{- $patch := $value.patch | toString }}
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
-  {{- $critools_package := "https://packages.cloud.google.com/apt/pool/cri-tools_1.19.0-00_amd64_b6fdfd86c8a3665ab10b9bd9565354977cd5abbaefeb2ee953bc4a13fe7d3326.deb" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ env "BASE_SCRATCH" }}
@@ -29,8 +29,9 @@ shell:
   beforeInstall:
   - apk add --no-cache curl
   setup:
-  - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubeadm_{{ printf "%s.%s" $version $patch }}-00  | awk '{print $2}')"
+  - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep "kubeadm_{{ printf "%s.%s" $version $patch }}-00" | awk '{print $2}')"
+  - TOOLS_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep "cri-tools_{{ printf "%s" $cri_tools_version }}" | awk '{print $2}')"
   - curl -sL ${DEB_PACKAGE} --output /kubeadm_amd64.deb
-  - curl -sL {{ $critools_package }} --output /cri-tools_amd64.deb
+  - curl -sL ${TOOLS_PACKAGE} --output /cri-tools_amd64.deb
 {{- end }}
 
