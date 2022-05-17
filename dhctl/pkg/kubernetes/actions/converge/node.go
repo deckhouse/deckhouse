@@ -35,7 +35,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
+var (
+	nodeGroupResource   = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
+	ErrNodeGroupChanged = fmt.Errorf("Node group was changed during accept diff.")
+)
 
 func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string) (string, error) {
 	var cloudData string
@@ -107,6 +110,41 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 
 		return err
 	})
+}
+func GetNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) (*unstructured.Unstructured, error) {
+	var ng *unstructured.Unstructured
+	err := retry.NewSilentLoop(fmt.Sprintf("Get NodeGroup %q", nodeGroupName), 45, 15*time.Second).Run(func() error {
+		var err error
+		ng, err = kubeCl.Dynamic().
+			Resource(nodeGroupResource).
+			Get(context.TODO(), nodeGroupName, metav1.GetOptions{})
+
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ng, nil
+}
+
+func UpdateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, ng *unstructured.Unstructured) error {
+	err := retry.NewLoop(fmt.Sprintf("Update node template in NodeGroup %q", nodeGroupName), 45, 15*time.Second).
+		BreakIf(errors.IsConflict).
+		Run(func() error {
+			_, err := kubeCl.Dynamic().
+				Resource(nodeGroupResource).
+				Update(context.TODO(), ng, metav1.UpdateOptions{})
+
+			return err
+		})
+
+	if errors.IsConflict(err) {
+		return ErrNodeGroupChanged
+	}
+
+	return err
 }
 
 func WaitForSingleNodeBecomeReady(kubeCl *client.KubernetesClient, nodeName string) error {

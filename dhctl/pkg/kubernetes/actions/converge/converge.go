@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -166,6 +168,7 @@ func (r *Runner) converge() error {
 	}
 
 	var nodeGroupsWithStateInCluster []string
+
 	for _, group := range terraNodeGroups {
 		// Skip if node group terraform state exists, we will update node group state below
 		if _, ok := nodesState[group.Name]; ok {
@@ -386,7 +389,12 @@ func (c *NodeGroupController) Run() error {
 		return err
 	}
 
-	return c.tryDeleteNodeGroup(nodeGroup)
+	groupSpec := c.getSpec(nodeGroup.Name)
+	if groupSpec == nil {
+		return c.tryDeleteNodeGroup(nodeGroup)
+	}
+
+	return c.tryUpdateNodeTemplate(nodeGroup, groupSpec.NodeTemplate)
 }
 
 func (c *NodeGroupController) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error {
@@ -460,6 +468,7 @@ func (c *NodeGroupController) updateNode(nodeGroup *NodeGroupGroupOptions, nodeN
 
 	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, extractOutputFunc)
 	if err != nil {
+		log.ErrorF("Terraform exited with an error:\n%s\n", err.Error())
 		return err
 	}
 
@@ -580,6 +589,51 @@ func (c *NodeGroupController) tryDeleteNodes(deleteNodesNames map[string][]byte,
 		return c.deleteRedundantNodes(nodeGroup, c.state.Settings, deleteNodesNames)
 	})
 }
+func (c *NodeGroupController) tryUpdateNodeTemplate(nodeGroup *NodeGroupGroupOptions, nodeTemplate map[string]interface{}) error {
+	nodeTemplatePath := []string{"spec", "nodeTemplate"}
+	for {
+		ng, err := GetNodeGroup(c.client, c.name)
+		if err != nil {
+			return err
+		}
+
+		templateInCluster, _, err := unstructured.NestedMap(ng.Object, nodeTemplatePath...)
+		if err != nil {
+			return err
+		}
+
+		diff := cmp.Diff(templateInCluster, nodeTemplate)
+		if diff == "" {
+			log.DebugF("Node template of the %s NodeGroup is not changed", c.name)
+			return nil
+		}
+
+		msg := fmt.Sprintf("Node template diff:\n\n%s\n", diff)
+
+		if !c.changeSettings.AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
+			log.InfoLn("Updating node group template was skipped")
+			return nil
+		}
+
+		err = unstructured.SetNestedMap(ng.Object, nodeTemplate, nodeTemplatePath...)
+		if err != nil {
+			return err
+		}
+
+		err = UpdateNodeGroup(c.client, nodeGroup.Name, ng)
+
+		if err == nil {
+			return nil
+		}
+
+		if errors.Is(err, ErrNodeGroupChanged) {
+			log.WarnLn(err.Error())
+			continue
+		}
+
+		return err
+	}
+}
 
 func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
 	if c.changeSettings.AutoDismissDestructive {
@@ -592,23 +646,20 @@ func (c *NodeGroupController) tryDeleteNodeGroup(nodeGroup *NodeGroupGroupOption
 		return nil
 	}
 
-	groupInConfig := false
-
-	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
-		if terranodeGroup.Name == c.name {
-			groupInConfig = true
-			break
-		}
-	}
-
-	if groupInConfig {
-		log.DebugF("Do not delete %s node group, because it present in config\n")
-		return nil
-	}
-
 	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
 		return DeleteNodeGroup(c.client, nodeGroup.Name)
 	})
+}
+
+func (c *NodeGroupController) getSpec(name string) *config.TerraNodeGroupSpec {
+	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
+		if terranodeGroup.Name == name {
+			cc := terranodeGroup
+			return &cc
+		}
+	}
+
+	return nil
 }
 
 func (c *NodeGroupController) updateNodes(nodeGroup *NodeGroupGroupOptions) error {
