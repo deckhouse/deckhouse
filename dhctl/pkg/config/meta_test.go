@@ -17,12 +17,14 @@ package config
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -76,11 +78,16 @@ clusterDomain: "cluster.local"
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  devBranch: main
+  releaseChannel: Stable
   # address of the registry where the installer image is located; in this case, the default value for Deckhouse CE is set
+{{- if .imagesRepo }}
   imagesRepo: {{ .imagesRepo }}
+{{- end }}
+
+{{- if .dockerCfg }}
   # a special string with parameters to access Docker registry
   registryDockerCfg: {{ .dockerCfg | b64enc }}
+{{- end }}
   configOverrides:
     prometheusMadisonIntegrationEnabled: false
     global:
@@ -131,21 +138,59 @@ provider:
 	return tpl.String()
 }
 
-func generateDockerCfg() string {
-	dockerCfgAuth := base64.StdEncoding.EncodeToString([]byte("a:b"))
-	return fmt.Sprintf(`{ "auths": { "r.example.com": { "auth": "%s" } } }`, dockerCfgAuth)
+func dockerCfgAuth(username, password string) string {
+	auth := fmt.Sprintf("%s:%s", username, password)
+	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-func TestPrepare(t *testing.T) {
-	t.Run("Registry", func(t *testing.T) {
-		dataToRender := map[string]interface{}{
-			"dockerCfg":  generateDockerCfg(),
-			"imagesRepo": "r.example.com/deckhouse/ce/",
-		}
-		configData := renderTestConfig(dataToRender)
+func generateDockerCfg(host, username, password string) string {
+	return fmt.Sprintf(`{"auths":{"%s":{"auth":"%s"}}}`, host, dockerCfgAuth(username, password))
+}
 
-		cfg, err := ParseConfigFromData(configData)
-		require.NoError(t, err)
+func generateOldDockerCfg(host string, username, password *string) string {
+	res := map[string]interface{}{
+		"auths": map[string]interface{}{
+			host: make(map[string]interface{}),
+		},
+	}
+
+	if username != nil {
+		err := unstructured.SetNestedField(res, *username, "auths", host, "username")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if password != nil {
+		err := unstructured.SetNestedField(res, *password, "auths", host, "password")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	auth, err := json.Marshal(res)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(auth)
+}
+
+func generateMetaConfig(t *testing.T, data map[string]interface{}) *MetaConfig {
+	configData := renderTestConfig(data)
+
+	cfg, err := ParseConfigFromData(configData)
+	require.NoError(t, err)
+
+	return cfg
+}
+
+func TestPrepareRegistry(t *testing.T) {
+	t.Run("Has imagesRepo and dockerCfg", func(t *testing.T) {
+		cfg := generateMetaConfig(t, map[string]interface{}{
+			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
+			"imagesRepo": "r.example.com/deckhouse/ce/",
+		})
 
 		t.Run("Trim right slash for imagesRepo", func(t *testing.T) {
 			require.Equal(t, cfg.DeckhouseConfig.ImagesRepo, "r.example.com/deckhouse/ce")
@@ -157,10 +202,101 @@ func TestPrepare(t *testing.T) {
 				Path:      "/deckhouse/ce",
 				Scheme:    "https",
 				CA:        "",
-				DockerCfg: "eyAiYXV0aHMiOiB7ICJyLmV4YW1wbGUuY29tIjogeyAiYXV0aCI6ICJZVHBpIiB9IH0gfQ==",
+				DockerCfg: "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
 			}
 
 			require.Equal(t, cfg.Registry, expectedData)
+		})
+	})
+
+	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
+		cfg := generateMetaConfig(t, make(map[string]interface{}))
+
+		t.Run("Registry object for CE edition", func(t *testing.T) {
+			expectedData := RegistryData{
+				Address:   "registry.deckhouse.io",
+				Path:      "/deckhouse/ce",
+				Scheme:    "https",
+				CA:        "",
+				DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+			}
+
+			require.Equal(t, cfg.Registry, expectedData)
+		})
+	})
+}
+
+func TestParseRegistryData(t *testing.T) {
+	t.Run("dockerCfg in current format (has auth)", func(t *testing.T) {
+		t.Run("sets auth key from auth string", func(t *testing.T) {
+			user, password := "user", "password"
+			cfg := generateMetaConfig(t, map[string]interface{}{
+				"dockerCfg":  generateDockerCfg("r.example.com", user, password),
+				"imagesRepo": "r.example.com/deckhouse/ce/",
+			})
+
+			m, err := cfg.ParseRegistryData()
+			require.NoError(t, err)
+
+			require.Equal(t, m["auth"], dockerCfgAuth(user, password))
+		})
+	})
+
+	t.Run("dockerCfg in old format (has username and password)", func(t *testing.T) {
+		t.Run("correct", func(t *testing.T) {
+			t.Run("sets auth key as base64 concatenation username and password with ':' separator", func(t *testing.T) {
+				user, password := "old_user", "old_password"
+				cfg := generateMetaConfig(t, map[string]interface{}{
+					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, &password),
+					"imagesRepo": "r.example.com/deckhouse/ce/",
+				})
+
+				m, err := cfg.ParseRegistryData()
+				require.NoError(t, err)
+
+				require.Equal(t, m["auth"], dockerCfgAuth(user, password))
+			})
+		})
+
+		t.Run("does not have username", func(t *testing.T) {
+			t.Run("sets empty auth key", func(t *testing.T) {
+				password := "old_password"
+				cfg := generateMetaConfig(t, map[string]interface{}{
+					"dockerCfg":  generateOldDockerCfg("r.example.com", nil, &password),
+					"imagesRepo": "r.example.com/deckhouse/ce/",
+				})
+
+				m, err := cfg.ParseRegistryData()
+				require.NoError(t, err)
+
+				require.Equal(t, m["auth"], "")
+			})
+		})
+
+		t.Run("does not have password", func(t *testing.T) {
+			t.Run("sets empty auth key", func(t *testing.T) {
+				user := "old_user"
+				cfg := generateMetaConfig(t, map[string]interface{}{
+					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, nil),
+					"imagesRepo": "r.example.com/deckhouse/ce/",
+				})
+
+				m, err := cfg.ParseRegistryData()
+				require.NoError(t, err)
+
+				require.Equal(t, m["auth"], "")
+			})
+		})
+	})
+
+	t.Run("default dockerCfg", func(t *testing.T) {
+		t.Run("sets empty auth key", func(t *testing.T) {
+			cfg := generateMetaConfig(t, make(map[string]interface{}))
+
+			m, err := cfg.ParseRegistryData()
+			require.NoError(t, err)
+
+			require.Equal(t, m["auth"], "")
 		})
 	})
 }

@@ -485,7 +485,9 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 	type dockerCfg struct {
 		Auths map[string]struct {
-			Auth string `json:"auth"`
+			Auth     string `json:"auth"`
+			Username string `json:"username"`
+			Password string `json:"password"`
 		} `json:"auths"`
 	}
 
@@ -509,7 +511,15 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 		}
 
 		if registry, ok := dc.Auths[m.Registry.Address]; ok {
-			registryAuth = registry.Auth
+			switch {
+			case registry.Auth != "":
+				registryAuth = registry.Auth
+			case registry.Username != "" && registry.Password != "":
+				auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
+				registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
+			default:
+				log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, m.Registry.Address)
+			}
 		}
 	}
 
