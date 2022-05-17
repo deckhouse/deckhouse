@@ -68,5 +68,9 @@ func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTran
 		transforms = append(transforms, DataStreamTransform())
 	}
 
+	if dest.Spec.RateLimit.LinesPerMinute != nil {
+		transforms = append(transforms, ThrottleTransform(dest.Spec.RateLimit))
+	}
+
 	return transforms
 }

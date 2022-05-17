@@ -55,6 +55,9 @@ type ClusterLogDestinationSpec struct {
 
 	// Add extra labels for sources
 	ExtraLabels map[string]string `json:"extraLabels,omitempty"`
+
+	// Add rateLimit for sink
+	RateLimit RateLimitSpec `json:"rateLimit,omitempty"`
 }
 
 type ClusterLogDestinationStatus struct {
@@ -65,6 +68,11 @@ type LokiAuthSpec struct {
 	Strategy string `json:"strategy,omitempty"`
 	Token    string `json:"token,omitempty"`
 	User     string `json:"user,omitempty"`
+}
+
+// RateLimitSpec is throttle-transform configuration.
+type RateLimitSpec struct {
+	LinesPerMinute *int32 `json:"linesPerMinute,omitempty"`
 }
 
 type ElasticsearchAuthSpec struct {

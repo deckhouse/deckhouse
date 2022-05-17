@@ -315,6 +315,17 @@ spec:
                           type: boolean
                           default: true
                           description: Validate the TLS certificate of the remote host.
+                rateLimit:
+                  type: object
+                  description: |
+                    Parameter for limiting the flow of events.
+                  required:
+                    - linesPerMinute
+                  properties:
+                    linesPerMinute:
+                      type: number
+                      description: |
+                        The number of records per minute.
                 extraLabels:
                   type: object
                   description: |
