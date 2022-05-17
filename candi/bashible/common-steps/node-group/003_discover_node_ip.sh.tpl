@@ -44,8 +44,8 @@ if [[ -z "$internal_network_cidrs" ]]; then
   if [[ "$($ip_route_get_cmd | wc -l)" -eq 1 ]]; then
     internal_network_cidrs="$($ip_route_get_cmd | awk '{print $1}')"
   else
-    bb-log-error "Cannot discover internal network CIDRs. Node has more than one interface, and nodeGroup.static.internalNetworkCIDRs is not set."
-    bb-log-error "Please set nodeGroup.static.internalNetworkCIDRs to one of the node networks:"
+    bb-log-error "Cannot discover internal network CIDRs. Node has more than one interface, and StaticClusterConfiguration internalNetworkCIDRs is not set."
+    bb-log-error "Please deploy StaticClusterConfiguration with internalNetworkCIDRs set to one of the node networks:"
     for network in $($ip_route_get_cmd | awk '{print $1}'); do
       bb-log-error "  - $network"
     done
