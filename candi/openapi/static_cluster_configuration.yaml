@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, internalNetworkCIDRs]
+    required: [apiVersion, kind]
     properties:
       apiVersion:
         type: string
@@ -14,7 +14,6 @@ apiVersions:
         enum: [StaticClusterConfiguration]
       internalNetworkCIDRs:
         type: array
-        minItems: 1
         items:
           type: string
           example: '192.168.42.0/24'

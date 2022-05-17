@@ -34,14 +34,25 @@ fi
 {{- end }}
 
 {{- if eq .nodeGroup.nodeType "Static" }}
-  {{- if not (hasKey .nodeGroup "static") }}
-    >&2 echo "ERROR: nodeGroup.static.internalNetworkCIDRs must exist for static node"
+ip_route_get_cmd="ip route show scope link proto kernel"
+  {{- if and (hasKey .nodeGroup "static") (hasKey .nodeGroup.static "internalNetworkCIDRs")}}
+internal_network_cidrs={{ .nodeGroup.static.internalNetworkCIDRs | join " " | quote }}
+  {{- end }}
+
+if [[ -z "$internal_network_cidrs" ]]; then
+  # if internal network cidrs is not set, and the node has one interface, use its network as internal_network_cidr
+  if [[ "$($ip_route_get_cmd | wc -l)" -eq 1 ]]; then
+    internal_network_cidrs="$($ip_route_get_cmd | awk '{print $1}')"
+  else
+    bb-log-error "Cannot discover internal network CIDRs. Node has more than one interface, and StaticClusterConfiguration internalNetworkCIDRs is not set."
+    bb-log-error "Please deploy StaticClusterConfiguration with internalNetworkCIDRs set to one of the node networks:"
+    for network in $($ip_route_get_cmd | awk '{print $1}'); do
+      bb-log-error "  - $network"
+    done
     exit 1
-  {{- else if not (hasKey .nodeGroup.static "internalNetworkCIDRs") }}
-    >&2 echo "ERROR: nodeGroup.static.internalNetworkCIDRs must exist for static node"
-    exit 1
-  {{- else }}
-# For Static node we use .nodeGroup.static.internalNetworkCIDRs
+  fi
+fi
+
 function is_ip_in_cidr() {
   ip="$1"
   IFS="/" read net_address net_prefix <<< "$2"
@@ -63,7 +74,7 @@ else
   ip_in_system=$(ip -f inet -br addr | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' -o)
 fi
 
-for cidr in {{ .nodeGroup.static.internalNetworkCIDRs | join " " }}; do
+for cidr in $internal_network_cidrs; do
   for ip in $ip_in_system; do
     if is_ip_in_cidr "$ip" "$cidr"; then
       echo $ip > /var/lib/bashible/discovered-node-ip
@@ -71,12 +82,11 @@ for cidr in {{ .nodeGroup.static.internalNetworkCIDRs | join " " }}; do
     fi
   done
 done
-  {{- end }}
 {{- end }}
 
 {{- if or (eq .runType "ClusterBootstrap") (eq .nodeGroup.nodeType "Static") }}
 if [ -z "$(cat /var/lib/bashible/discovered-node-ip)" ] ; then
-  bb-log-error "Failed to discover node_ip but it's required for cluster bootstrap or static cluster nodes"
+  bb-log-error "Failed to discover node_ip but its required for static cluster bootstrap or static cluster nodes"
   exit 1
 fi
 {{- end }}
