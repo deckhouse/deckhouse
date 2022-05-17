@@ -17,37 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-
-	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-}, generatePassword)
-
-func generatePassword(input *go_hook.HookInput) error {
-	if input.Values.Exists("deckhouseWeb.auth.externalAuthentication") {
-		input.ConfigValues.Remove("deckhouseWeb.auth.password")
-		if input.ConfigValues.Exists("deckhouseWeb.auth") && len(input.ConfigValues.Get("deckhouseWeb.auth").Map()) == 0 {
-			input.ConfigValues.Remove("deckhouseWeb.auth")
-		}
-
-		return nil
-	}
-
-	if input.Values.Exists("deckhouseWeb.auth.password") {
-		return nil
-	}
-
-	if !input.ConfigValues.Exists("deckhouseWeb.auth") {
-		input.ConfigValues.Set("deckhouseWeb.auth", json.RawMessage("{}"))
-	}
-
-	input.ConfigValues.Set("deckhouseWeb.auth.password", pwgen.AlphaNum(20))
-
-	return nil
-}
+var _ = generate_password.RegisterHook("deckhouseWeb")

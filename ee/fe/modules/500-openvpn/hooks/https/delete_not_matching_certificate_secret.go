@@ -5,8 +5,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package hooks
 
-import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
-)
+import "github.com/deckhouse/deckhouse/go_lib/hooks/delete_not_matching_certificate_secret"
 
-var _ = generate_password.RegisterHook("istio")
+var _ = delete_not_matching_certificate_secret.RegisterHook("openvpn", "d8-openvpn")
