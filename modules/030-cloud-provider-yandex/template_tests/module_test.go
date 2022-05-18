@@ -74,6 +74,7 @@ const globalValues = `
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
         yandexCsiPlugin: imagehash
+        exporter: exporter_image
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
@@ -104,6 +105,7 @@ const moduleValues = `
       shouldAssignPublicIPAddress: true
       routeTableID: testest
       region: myreg
+      natInstanceName: ""
     providerClusterConfiguration:
       apiVersion: deckhouse.io/v1
       existingNetworkID: enpma5uvcfbkuac1i1jb
@@ -131,10 +133,123 @@ const moduleValues = `
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
+	})
+
+	Context("Yandex exporter", func() {
+		assertExporterDeploymentSecret := func(h *Config, exists bool) {
+			deployment := h.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "cloud-metrics-exporter")
+			Expect(deployment.Exists()).To(Equal(exists))
+
+			secret := h.KubernetesResource("Secret", "d8-cloud-provider-yandex", "cloud-metrics-exporter-app-creds")
+			Expect(secret.Exists()).To(Equal(exists))
+			if exists {
+				Expect(secret.Field("data.api-key").String()).To(Equal("YXBpLWtleQ=="))
+				Expect(secret.Field("data.folder-id").String()).To(Equal("bXlmb2xkaWQ="))
+			}
+		}
+
+		assertDeployNatInstanceMonitoring := func(h *Config, exists bool) {
+			prometheusRuleExists := h.KubernetesResource("PrometheusRule", "d8-cloud-provider-yandex", "cloud-provider-yandex-nat-instance").Exists()
+			grafanaDashboardExists := h.KubernetesResource("GrafanaDashboardDefinition", "", "d8-cloud-provider-yandex-kubernetes-cluster-nat-instance").Exists()
+			monitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics")
+
+			Expect(monitor.Exists()).To(Equal(exists))
+			Expect(prometheusRuleExists).To(Equal(exists))
+			Expect(grafanaDashboardExists).To(Equal(exists))
+		}
+
+		Context("monitoring api-key does not set", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey", "")
+			})
+
+			Context("without NAT-instance", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("Should not create deployment with exporter and secret with creds for exporter", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertExporterDeploymentSecret(f, false)
+				})
+
+				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertDeployNatInstanceMonitoring(f, false)
+				})
+			})
+
+			Context("with NAT-instance", func() {
+				BeforeEach(func() {
+					f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.natInstanceName", "cluster-nat-instance")
+					f.HelmRender()
+				})
+
+				It("Should not create deployment with exporter and secret with creds for exporter", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertExporterDeploymentSecret(f, false)
+				})
+
+				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertDeployNatInstanceMonitoring(f, false)
+				})
+			})
+		})
+
+		Context("monitoring api-key sets", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey", "api-key")
+			})
+
+			Context("without NAT-instance", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("Should create deployment with exporter and secret with creds for exporter", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertExporterDeploymentSecret(f, true)
+				})
+
+				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertDeployNatInstanceMonitoring(f, false)
+				})
+			})
+
+			Context("with NAT-instance", func() {
+				BeforeEach(func() {
+					f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.natInstanceName", "cluster-nat-instance")
+					f.HelmRender()
+				})
+
+				It("Should create deployment with exporter and secret with creds for exporter", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertExporterDeploymentSecret(f, true)
+				})
+
+				It("Should not deploy monitor, prometheus rules and grafana dashboard for nat instance", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					assertDeployNatInstanceMonitoring(f, true)
+				})
+			})
+		})
+	})
+
 	Context("Yandex", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 			f.HelmRender()
 		})
 

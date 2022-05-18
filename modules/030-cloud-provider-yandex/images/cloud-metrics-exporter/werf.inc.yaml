@@ -1,0 +1,50 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ env "BASE_ALPINE" }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/exporter
+  to: /exporter
+  after: setup
+docker:
+  ENTRYPOINT: [ "/exporter"]
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
+git:
+- add: /modules/030-{{ .ModuleName }}/images/{{ .ImageName }}
+  to: /src
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+    - hack
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+
+ansible:
+  beforeInstall:
+    - apk:
+        name: git
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
+  install:
+    - shell: go mod download
+      args:
+        chdir: /src
+  setup:
+    - shell: go build -ldflags="-s -w" -o exporter .
+      args:
+        chdir: /src
+      environment:
+        GOOS: "linux"
+        GOARCH: "amd64"
+        CGO_ENABLED: "0"
