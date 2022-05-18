@@ -1,0 +1,456 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: deschedulers.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: Descheduler
+    listKind: DeschedulerList
+    plural: deschedulers
+    singular: descheduler
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: status.ready
+      name: Ready
+      type: boolean
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Descheduler is a description of a single descheduler instance.
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Defines the behavior of a descheduler instance.
+            properties:
+              deploymentTemplate:
+                description: Defines Template of a descheduler Deployment.
+                properties:
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    description: |
+                      The same as the `spec.nodeSelector` Pod parameter in Kubernetes.
+
+                      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+                    type: object
+                  resourcesRequests:
+                    description: Resource allocation policy.
+                    properties:
+                      mode:
+                        default: VPA
+                        description: Defines VPA mode that applies to a given descheduler Deployment.
+                        enum:
+                        - Manual
+                        - VPA
+                        - "Off"
+                        type: string
+                    type: object
+                  tolerations:
+                    description: |
+                      The same as `spec.tolerations` for the Kubernetes Pod.
+
+                      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+                    items:
+                      properties:
+                        effect:
+                          type: string
+                          enum: ["NoSchedule", "PreferNoSchedule", "NoExecute"]
+                          description: |
+                            Indicates the taint effect to match. Empty means match all taint effects.
+                        key:
+                          type: string
+                          description: |
+                            The taint key that the toleration applies to. Empty means match all taint keys.
+
+                            If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                        operator:
+                          description: |
+                            Represents a key's relationship to the value.
+
+                            Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.
+                          enum: ["Exists", "Equal"]
+                          x-doc-default: "Equal"
+                          type: string
+                        tolerationSeconds:
+                          description: |
+                            Represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint.
+
+                            By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.
+                          format: int64
+                          type: integer
+                        value:
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              deschedulerPolicy:
+                description: |
+                  `commonParameters` and `strategies` follow descheduler's [documentation](https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).
+                properties:
+                  parameters:
+                    description: Parameters that apply to all policies.
+                    properties:
+                      evictFailedBarePods:
+                        description: Allows Pods without `ownerReferences` and in failed phase to be evicted.
+                        type: boolean
+                      evictLocalStoragePods:
+                        description: Allows Pods using local storage to be evicted.
+                        type: boolean
+                      evictSystemCriticalPods:
+                        description: |
+                          Allows eviction of Pods of any priority (including Kubernetes system Pods)
+
+                          > **Note!** Setting `evictSystemCriticalPods` to true disables priority filtering entirely.
+                        type: boolean
+                      ignorePvcPods:
+                        description: Prevents Pods with PVCs from being evicted.
+                        type: boolean
+                      maxNoOfPodsToEvictPerNamespace:
+                        description: Restricts maximum of Pods to be evicted per namespace.
+                        type: integer
+                      maxNoOfPodsToEvictPerNode:
+                        description: Restricts maximum of Pods to be evicted per node.
+                        type: integer
+                      nodeSelector:
+                        description: NodeSelector for a set of nodes to operate over.
+                        type: string
+                    type: object
+                  strategies:
+                    description: |
+                      List of [strategies](./#strategies) with corresponding parameters for a given Descheduler instances.
+
+                      To enable a strategy without giving it any parameters, specify it like this: `removePodsViolatingNodeAffinity: {}`.
+                    properties:
+                      highNodeUtilization:
+                        description: |
+                          Finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled compactly into fewer nodes.
+
+                          Must be used with the scheduler strategy `MostRequestedPriority`.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#highnodeutilization)
+                        properties:
+                          nodeFit:
+                            type: boolean
+                          nodeResourceUtilizationThresholds:
+                            properties:
+                              numberOfNodes:
+                                type: integer
+                              targetThresholds:
+                                additionalProperties:
+                                  type: number
+                                type: object
+                              thresholds:
+                                additionalProperties:
+                                  type: number
+                                type: object
+                              useDeviationThresholds:
+                                type: boolean
+                            type: object
+                        type: object
+                      lowNodeUtilization:
+                        description: |
+                          The descheduler finds underutilized or overutilized nodes using cpu/memory/Pods (in %) thresholds and evict Pods from overutilized nodes hoping that these Pods will be rescheduled on underutilized nodes.
+
+                          > Note that this strategy takes into account Pod requests instead of actual resources consumed.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#lownodeutilization)
+                        properties:
+                          nodeFit:
+                            type: boolean
+                          nodeResourceUtilizationThresholds:
+                            properties:
+                              numberOfNodes:
+                                type: integer
+                              targetThresholds:
+                                additionalProperties:
+                                  type: number
+                                type: object
+                              thresholds:
+                                additionalProperties:
+                                  type: number
+                                type: object
+                              useDeviationThresholds:
+                                type: boolean
+                            type: object
+                        type: object
+                      podLifeTime:
+                        description: |
+                          Evicts Pods that are Pending for more than 24 hours.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#podlifetime)
+                        properties:
+                          labelSelector: &labelSelector
+                            description: |
+                              Specifies the label selector to filter Pods with.
+
+                              You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            properties:
+                              matchExpressions:
+                                description: List of label expressions for Pods.
+                                items:
+                                  properties:
+                                    key:
+                                      type: string
+                                    operator:
+                                      type: string
+                                    values:
+                                      items:
+                                        type: string
+                                      type: array
+                                  required:
+                                  - key
+                                  - operator
+                                  type: object
+                                type: array
+                              matchLabels:
+                                description: List of labels which Pod should have.
+                                additionalProperties:
+                                  type: string
+                                type: object
+                            type: object
+                          namespaces: &namespaces
+                            description: |
+                              Allows specifying a list of including, resp. excluding namespaces.
+                            properties:
+                              exclude:
+                                items:
+                                  type: string
+                                type: array
+                              include:
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - exclude
+                            - include
+                            type: object
+                          podLifeTime:
+                            properties:
+                              maxPodLifeTimeSeconds:
+                                type: integer
+                              podStatusPhases:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          thresholdPriority:
+                            format: int32
+                            type: integer
+                          thresholdPriorityClassName:
+                            type: string
+                        required:
+                        - thresholdPriority
+                        - thresholdPriorityClassName
+                        type: object
+                      removeDuplicates:
+                        description: |
+                          This strategy makes sure that no more than one Pod of the same controller (RS, RC, Deploy, Job) is running on the same node.
+
+                          If there are two such Pods on one node, the descheduler kills one of them.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#removeduplicates)
+                        properties:
+                          namespaces: *namespaces
+                          nodeFit:
+                            type: boolean
+                          removeDuplicates:
+                            properties:
+                              excludeOwnerKinds:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          thresholdPriority:
+                            format: int32
+                            type: integer
+                          thresholdPriorityClassName:
+                            type: string
+                        required:
+                        - thresholdPriority
+                        - thresholdPriorityClassName
+                        type: object
+                      removeFailedPods:
+                        description: |
+                          Evicts Pods that are in failed status phase.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#removefailedpods)
+                        properties:
+                          labelSelector: *labelSelector
+                          namespaces: *namespaces
+                          nodeFit:
+                            type: boolean
+                          removeFailedPods:
+                            properties:
+                              excludeOwnerKinds:
+                                items:
+                                  type: string
+                                type: array
+                              includingInitContainers:
+                                type: boolean
+                              minPodLifetimeSeconds:
+                                type: integer
+                              reasons:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          thresholdPriority:
+                            format: int32
+                            type: integer
+                          thresholdPriorityClassName:
+                            type: string
+                        required:
+                        - thresholdPriority
+                        - thresholdPriorityClassName
+                        type: object
+                      removePodsHavingTooManyRestarts:
+                        description: |
+                          Ensures that Pods having over a hundred container restarts (including init-containers) are removed from nodes.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#removepodshavingtoomanyrestarts)
+                        properties:
+                          labelSelector: *labelSelector
+                          namespaces: *namespaces
+                          nodeFit:
+                            type: boolean
+                          podsHavingTooManyRestarts:
+                            properties:
+                              includingInitContainers:
+                                type: boolean
+                              podRestartThreshold:
+                                format: int32
+                                type: integer
+                            type: object
+                          thresholdPriority:
+                            format: int32
+                            type: integer
+                          thresholdPriorityClassName:
+                            type: string
+                        required:
+                        - thresholdPriority
+                        - thresholdPriorityClassName
+                        type: object
+                      removePodsViolatingInterPodAntiAffinity:
+                        description: |
+                          Ensures that Pods violating inter-pod anti-affinity are removed from nodes.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#removepodsviolatinginterpodantiaffinity)
+                        properties:
+                          labelSelector: *labelSelector
+                          namespaces: *namespaces
+                          nodeFit:
+                            type: boolean
+                          thresholdPriority:
+                            format: int32
+                            type: integer
+                          thresholdPriorityClassName:
+                            type: string
+                        required:
+                        - thresholdPriority
+                        - thresholdPriorityClassName
+                        type: object
+                      removePodsViolatingNodeAffinity:
+                        description: |
+                          Removes a Pod from a node if the latter no longer satisfies a Pod's affinity rule (`requiredDuringSchedulingIgnoredDuringExecution`). The descheduler notices that and evicts the Pod if another node is available that satisfies the affinity rule.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#removepodsviolatingnodeaffinity)
+                        properties:
+                          labelSelector: *labelSelector
+                          namespaces: *namespaces
+                          nodeAffinityType:
+                            items:
+                              type: string
+                            type: array
+                          nodeFit:
+                            type: boolean
+                          thresholdPriority:
+                            format: int32
+                            type: integer
+                          thresholdPriorityClassName:
+                            type: string
+                        required:
+                        - thresholdPriority
+                        - thresholdPriorityClassName
+                        type: object
+                      removePodsViolatingNodeTaints:
+                        description: |
+                          Evicts Pods violating NoSchedule taints on nodes.
+
+                          Suppose a Pod set to tolerate some taint is running on a node with this taint. If the node’s taint is updated or removed, the Pod will be evicted.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#removepodsviolatingnodetaints)
+                        properties:
+                          excludedTaints:
+                            items:
+                              type: string
+                            type: array
+                          labelSelector: *labelSelector
+                          namespaces: *namespaces
+                          nodeFit:
+                            type: boolean
+                          thresholdPriority:
+                            format: int32
+                            type: integer
+                          thresholdPriorityClassName:
+                            type: string
+                        required:
+                        - thresholdPriority
+                        - thresholdPriorityClassName
+                        type: object
+                      removePodsViolatingTopologySpreadConstraint:
+                        description: |
+                          Ensures that Pods violating the [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) will be evicted from nodes.
+
+                          [More info...](https://github.com/kubernetes-sigs/descheduler#removepodsviolatingtopologyspreadconstraint)
+                        properties:
+                          includeSoftConstraints:
+                            type: boolean
+                          labelSelector: *labelSelector
+                          namespaces: *namespaces
+                          nodeFit:
+                            type: boolean
+                          thresholdPriority:
+                            format: int32
+                            type: integer
+                          thresholdPriorityClassName:
+                            type: string
+                        required:
+                        - includeSoftConstraints
+                        - thresholdPriority
+                        - thresholdPriorityClassName
+                        type: object
+                    type: object
+                type: object
+            type: object
+          status:
+            description: Most recently observed status of a descheduler instance.
+            properties:
+              ready:
+                type: boolean
+            required:
+            - ready
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

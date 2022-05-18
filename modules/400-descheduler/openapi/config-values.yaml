@@ -4,59 +4,59 @@ properties:
     type: boolean
     default: true
     description: |
-      This strategy ensures that all pods violating anti-affinity rules are removed from the nodes.
+      This strategy ensures that all Pods violating anti-affinity rules are removed from the nodes.
   removePodsViolatingInterPodAntiAffinity:
     type: boolean
     default: true
     description: |
-      This strategy ensures that all pods violating node affinity rules are removed from the nodes.
+      This strategy ensures that all Pods violating node affinity rules are removed from the nodes.
   removeDuplicates:
     type: boolean
     default: false
     description: |
-      This strategy ensures that only one pod associated with ReplicaSet (RS), ReplicationController (RC), StatefulSet, or Job runs on a node.
+      This strategy ensures that only one Pod associated with ReplicaSet (RS), ReplicationController (RC), StatefulSet, or Job runs on a node.
   lowNodeUtilization:
     type: boolean
     default: false
     description: |
-      The descheduler finds underutilized nodes and evicts pods from overutilized nodes hoping that these pods will be rescheduled on underutilized ones.
+      The descheduler finds underutilized nodes and evicts Pods from overutilized nodes hoping that these Pods will be rescheduled on underutilized ones.
   highNodeUtilization:
     type: boolean
     default: false
     description: |
-      This strategy nodes that are under utilized and evicts pods in the hope that these pods will be scheduled compactly into fewer nodes.
+      This strategy nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled compactly into fewer nodes.
   removePodsViolatingNodeTaints:
     type: boolean
     default: false
     description: |
-      This strategy ensures that pods violating NoSchedule taints on nodes are evicted.
+      This strategy ensures that Pods violating NoSchedule taints on nodes are evicted.
   removePodsViolatingTopologySpreadConstraint:
     type: boolean
     default: false
     description: |
-      This strategy ensures that pods violating the [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes.
+      This strategy ensures that Pods violating the [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes.
   removePodsHavingTooManyRestarts:
     type: boolean
     default: false
     description: |
-      This strategy ensures that pods having over a hundred container restarts (including init-containers) are removed from nodes.
+      This strategy ensures that Pods having over a hundred container restarts (including init-containers) are removed from nodes.
   podLifeTime:
     type: boolean
     default: false
     description: |
-      This strategy ensures that pods that are Pending for more than 24 hours are deleted from nodes.
+      This strategy ensures that Pods that are Pending for more than 24 hours are deleted from nodes.
   nodeSelector:
     type: object
     additionalProperties:
       type: string
     description: |
-      The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+      The same as the `spec.nodeSelector` Pod parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
-      The same as `spec.tolerations` for the Kubernetes pod.
+      The same as `spec.tolerations` for the Kubernetes Pod.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
     items:

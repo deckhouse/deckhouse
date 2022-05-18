@@ -3,19 +3,21 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- range $d := .Values.descheduler.internal.deschedulers }}
+  {{- $deschedulerSpec := $d.spec }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: descheduler
+  name: descheduler-{{ $d.metadata.name }}
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: descheduler
+    name: descheduler-{{ $d.metadata.name }}
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -26,38 +28,39 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 100Mi
+  {{- end }}
 {{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: descheduler
+  name: descheduler-{{ $d.metadata.name }}
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: descheduler
+      app: descheduler-{{ $d.metadata.name }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: descheduler
+  name: descheduler-{{ $d.metadata.name }}
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
-  replicas: {{ .Values.descheduler.internal.replicas }}
+  replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: descheduler
+      app: descheduler-{{ $d.metadata.name }}
   template:
     metadata:
       labels:
-        app: descheduler
+        app: descheduler-{{ $d.metadata.name }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }} # TODO, don't roll every single one
     spec:
       serviceAccountName: descheduler
       imagePullSecrets:
@@ -93,4 +96,5 @@ spec:
       volumes:
       - name: policy-volume
         configMap:
-          name: descheduler-policy-configmap
+          name: descheduler-policy-configmap-{{ $d.metadata.name }}
+{{- end }}

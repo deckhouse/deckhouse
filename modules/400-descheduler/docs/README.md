@@ -25,7 +25,8 @@ The following strategies are **enabled** by default:
 
 ### HighNodeUtilization
 
-This strategy finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled compactly into fewer nodes. This strategy must be used with the scheduler strategy `MostRequestedPriority`
+This strategy finds nodes that are under utilized and evicts Pods in the hope that these Pods will be scheduled
+compactly into fewer nodes. This strategy must be used with the scheduler strategy `MostRequestedPriority`.
 
 The thresholds for identifying underutilized nodes are currently preset and cannot be changed:
 * Criteria to identify underutilized nodes:

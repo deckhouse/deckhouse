@@ -1,20 +1,10 @@
 positive:
   configValues:
-    - removePodsViolatingNodeAffinity: true
-      removePodsViolatingInterPodAntiAffinity: true
-      removeDuplicates: true
-      lowNodeUtilization: true
-      highNodeUtilization: true
-      removePodsViolatingNodeTaints: true
-      removePodsViolatingTopologySpreadConstraint: true
-      removePodsHavingTooManyRestarts: true
-      podLifeTime: true
-    - removePodsViolatingNodeAffinity: false
-      removePodsViolatingInterPodAntiAffinity: false
-      removeDuplicates: false
-      lowNodeUtilization: false
-      highNodeUtilization: false
-      removePodsViolatingNodeTaints: false
-      removePodsViolatingTopologySpreadConstraint: false
-      removePodsHavingTooManyRestarts: false
-      podLifeTime: false
+  - {}
+  values:
+  - { internal: {"deschedulers": {}} }
+negative:
+  configValues:
+  - { somethingInConfig: yes }
+  values:
+  - { somethingInConfig: yes }
