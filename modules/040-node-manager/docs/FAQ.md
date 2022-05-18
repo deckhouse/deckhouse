@@ -9,7 +9,10 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 To add a new static node (e.g., VM or bare-metal server) to the cluster, you need to:
 
 1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
-2. Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r`
+2. Get the script for installing and configuring the node:
+   ```shell
+   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
+   ```
 3. Before configuring Kubernetes on the node, make sure that you have performed all the necessary actions for the node to work correctly in the cluster:
   - Added all the necessary mount points (NFS, Ceph,...) to `/etc/fstab`;
   - Installed the suitable `ceph-common` version on the node as well as other packages;
@@ -20,15 +23,16 @@ To add a new static node (e.g., VM or bare-metal server) to the cluster, you nee
 If you don't have `NodeGroup` in your cluster, then you can find information how to do it [here](#how-do-i-add-a-static-node-to-a-cluster).
 If you already have `NodeGroup`, you can automate the bootstrap process with any automation platform that you prefer. We will use Ansible as an example.
 
-1. Pick up one of Kubernetes API Server endpoints. Note that this IP have to be accessible from nodes that are prepared to be bootstrapped.
+1. Pick up one of Kubernetes API Server endpoints. Note that this IP have to be accessible from nodes that are prepared to be bootstrapped:
    ```shell
    kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
-2. Get Kubernetes API token for special `ServiceAccount` that is managed by Deckhouse.
+2. Get Kubernetes API token for special `ServiceAccount` that is managed by Deckhouse:
    ```shell
-   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) -o json | jq '.data.token' -r | base64 -d && echo ""
+   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
+     -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
-3. Create Ansible playbook with `vars` replaced with values from previous steps.
+3. Create Ansible playbook with `vars` replaced with values from previous steps:
    ```yaml
    - hosts: all
      become: yes
@@ -62,7 +66,7 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
            delay: 30
          when: bootstrapped.stat.exists == False
    ```
-4. You have to specify one more variable `node_group`. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, here is an example using inventory file.
+4. You have to specify one more variable `node_group`. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, here is an example using inventory file:
    ```
    [system]
    system-0
