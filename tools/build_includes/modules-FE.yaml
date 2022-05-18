@@ -3,8 +3,6 @@
   to: /deckhouse/modules/340-monitoring-applications
 - add: /ee/fe/modules/500-basic-auth
   to: /deckhouse/modules/500-basic-auth
-- add: /ee/fe/modules/500-openvpn
-  to: /deckhouse/modules/500-openvpn
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
 - add: /ee/modules/030-cloud-provider-vsphere
