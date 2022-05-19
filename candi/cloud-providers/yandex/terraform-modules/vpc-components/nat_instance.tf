@@ -29,6 +29,20 @@ data "yandex_vpc_subnet" "external_subnet" {
 locals {
   internal_subnet_zone = data.yandex_vpc_subnet.internal_subnet.zone
   external_subnet_zone = var.nat_instance_external_subnet_id == null ? null : join("", data.yandex_vpc_subnet.external_subnet.*.zone) # https://github.com/hashicorp/terraform/issues/23222#issuecomment-547462883
+
+  zone_to_cidr = tomap({
+    "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.is_existing_subnet_a ? data.yandex_vpc_subnet.kube_a[0] : null)
+    "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.is_existing_subnet_b ? data.yandex_vpc_subnet.kube_b[0] : null)
+    "ru-central1-c" = local.should_create_subnets ? local.kube_c_v4_cidr_block : (local.is_existing_subnet_c ? data.yandex_vpc_subnet.kube_c[0] : null)
+  })
+
+  with_internal_nat_instance_internal_cidr = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.kube_c[0].v4_cidr_blocks[0]
+  with_external_nat_instance_internal_cidr = var.nat_instance_external_subnet_id == null ? null : local.zone_to_cidr[local.external_subnet_zone]
+  manual_subnets_nat_instance_internal_cidr = local.should_create_subnets ? null : data.yandex_vpc_subnet.kube_c[0].v4_cidr_blocks[0]
+  nat_instance_cidr = coalesce(local.with_internal_nat_instance_internal_cidr, local.with_external_nat_instance_internal_cidr, local.manual_subnets_nat_instance_internal_cidr, local.kube_c_v4_cidr_block)
+
+  nat_instance_internal_address_calculated = var.should_create_nat_instance ? (var.nat_instance_internal_address == null ? cidrhost(local.nat_instance_cidr, 10) : var.nat_instance_internal_address) : null
+
   assign_external_ip_address = var.nat_instance_external_subnet_id == null ? true : false
 
   user_data = <<-EOT
