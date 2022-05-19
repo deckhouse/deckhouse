@@ -49,6 +49,12 @@ spec:
                   - password
                   - username
                   type: object
+                bearerToken:
+                  type: string
+                  description: Bearer token.
+                customAuthToken:
+                  type: string
+                  description: Custom token sent as a value of the X-Auth-Token header.
                 writeRelabelConfigs:
                   description: |
                     The list of remote write relabel configurations.

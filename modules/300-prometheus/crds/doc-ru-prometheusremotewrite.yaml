@@ -20,6 +20,10 @@ spec:
                       description: Пароль для аутентификации.
                     username:
                       description: Имя пользователя для аутентификации.
+                bearerToken:
+                  description: Токен на предъявителя.
+                customAuthToken:
+                  description: Пользовательский токен, передаваемый в качестве header X-Auth-Token.
                 writeRelabelConfigs:
                   description: |
                     Параметры для relabel'инга данных для отправки.
