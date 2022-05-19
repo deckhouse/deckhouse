@@ -78,6 +78,9 @@ spec:
         - name: root
           readOnly:  true
           mountPath: /host/root
+        - name: run-systemd
+          readOnly:  true
+          mountPath: /run/systemd
         - name: textfile
           readOnly: true
           mountPath: /host/textfile
@@ -150,6 +153,9 @@ spec:
       - name: root
         hostPath:
           path: /
+      - name: run-systemd
+        hostPath:
+          path: /run/systemd
       - name: dockersock
         hostPath:
           path: /var/run/docker.sock
