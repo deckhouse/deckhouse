@@ -223,6 +223,10 @@ properties:
                     password:
                       type: string
                       format: password
+                bearerToken:
+                  type: string
+                customAuthToken:
+                  type: string
                 writeRelabelConfigs:
                   type: array
                   items:
@@ -261,6 +265,7 @@ properties:
                 basicAuth:
                   password: password
                   username: username
+                customAuthToken: test
                 url: https://test-victoriametrics.domain.com/api/v1/write
                 writeRelabelConfigs:
                 - action: keep

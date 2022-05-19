@@ -147,6 +147,12 @@ spec:
       password:
         name: d8-prometheus-remote-write-{{ .name }}
         key: password
+    {{- else if .spec.bearerToken }}
+    bearerToken: {{ .spec.bearerToken }}
+    {{- end }}
+    {{- if .spec.customAuthToken }}
+    headers:
+      X-Auth-Token: {{ .spec.customAuthToken }}
     {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
