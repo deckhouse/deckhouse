@@ -30,7 +30,7 @@ All in all, in practice, it doesn’t matter how many knobs you have for tuning,
 
 ## What to use in which situation?
 
-By default, we use two replicas (the third is an automatically created diskless replica used for quorum). This approach guarantees protection against split-brain and a sufficient level of storage reliability, but the following features must be taken into account:
+By default, we use two replicas (the third is an automatically created `diskless` replica used for quorum). This approach guarantees protection against split-brain and a sufficient level of storage reliability, but the following features must be taken into account:
   - When one of the replicas (replica A) is unavailable, data is written only to a single replica (replica B). It means that:
     - If at this moment the second replica (replica B) is also turned off, writing and reading will be unavailable;
     - If at the same time the second replica (replica B) is irretrievably lost, then the data will be partially lost (there is only the old, outdated replica A);
