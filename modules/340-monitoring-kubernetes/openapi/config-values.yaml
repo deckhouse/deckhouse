@@ -1,5 +1,21 @@
 type: object
 properties:
+  nodeExporter:
+    type: object
+    description: node_exporter configuration
+    properties:
+      collectors:
+        type: object
+        description: Collector configurations
+        properties:
+          systemd:
+            type: object
+            description: systemd collector configuration
+            properties:
+              unitInclude:
+                type: string
+                description: Regex of units to monitor. Will enable systemd collector.
+                x-examples: [apparmor.+]
   highAvailability:
     type: boolean
     x-examples: [true, false]

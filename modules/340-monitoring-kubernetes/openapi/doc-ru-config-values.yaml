@@ -1,5 +1,16 @@
 type: object
 properties:
+  nodeExporter:
+    description: Конфигурация node_exporter
+    properties:
+      collectors:
+        description: Конфигурация коллекторов
+        properties:
+          systemd:
+            description: Конфигурация systemd коллектора
+            properties:
+              includeUnits:
+                description: Регулярное выражения, описывающие systemd unit'ы, которые нужно включить в мониторинг. Указание включит systemd коллектор.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
