@@ -53,7 +53,7 @@ locals {
   # if internal and external subnet are not set, but user pass subnets, get cidr for subnet in ru-central1-a zone
   # else use cidr from our created subnet in ru-central1-a zone
   # zone_to_cidr contains or our created subnet cidr's or user passed
-  from_manual_or_our_created_internal_cidr = local.zone_to_cidr["ru-central1-c"]
+  from_manual_or_our_created_internal_cidr = local.zone_to_cidr["ru-central1-a"]
 
   nat_instance_cidr = coalesce(local.with_internal_nat_instance_internal_cidr, local.with_external_nat_instance_internal_cidr, local.from_manual_or_our_created_internal_cidr)
 
@@ -129,7 +129,17 @@ resource "yandex_compute_instance" "nat_instance" {
       hostname,
       metadata,
       boot_disk[0].initialize_params[0].image_id,
-      boot_disk[0].initialize_params[0].size
+      boot_disk[0].initialize_params[0].size,
+      # By default, we used ru-central1-c, but it zone was deprecated
+      # https://cloud.yandex.ru/docs/overview/concepts/ru-central1-c-deprecation
+      # We choice ru-central1-a by default. This change can break cluster,
+      # if natInstance.internalSubnetID and natInstance.natInstanceInternalAddress was not set
+      # by TerraformAutoConverger.
+      # First, we should silent changes in network interfaces and zones and notify client about this changes
+      # and add instruction for fix it.
+      # After 4 releases, for example, in 1.38 release remove network_interface and zone from here.
+      network_interface,
+      zone
     ]
   }
 
