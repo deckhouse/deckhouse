@@ -25,7 +25,7 @@ import (
 )
 
 // Ignore error: type name will be used as deckhouse.DeckhouseController by other packages, and that stutters
-//nolint:golint
+//nolint:revive
 type DeckhouseController struct {
 	*addon_operator.AddonOperator
 

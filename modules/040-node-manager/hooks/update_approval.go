@@ -558,7 +558,7 @@ var metricStatuses = []string{
 
 func setNodeStatusesMetrics(input *go_hook.HookInput, nodeName, nodeGroup, nodeStatus string) {
 	for _, status := range metricStatuses {
-		var value float64 = 0
+		var value float64
 		if status == nodeStatus {
 			value = 1
 		}

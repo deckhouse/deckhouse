@@ -85,7 +85,7 @@ func GetOpenAPIYAMLFiles(rootPath string) ([]string, error) {
 }
 
 // RunOpenAPIValidator runs validator, get channel with file paths and returns channel with results
-// nolint: golint // its a private lib, we dont need an exported struct
+// nolint: revive // its a private lib, we dont need an exported struct
 func RunOpenAPIValidator(fileC chan fileValidation) chan fileValidation {
 	resultC := make(chan fileValidation, 1)
 

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	hh_mm = "15:04" // nolint: golint
+	hh_mm = "15:04" // nolint: revive
 )
 
 // Windows update windows
