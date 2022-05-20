@@ -65,7 +65,7 @@ spec:
         - '--collector.ntp.server-is-local'
         - '--collector.processes'
         - '--collector.interrupts'
-{{- if (.Values.monitoringKubernetes | dig "nodeExporter" "collectors" "systemd" "unitInclude") }}
+{{- if (.Values.monitoringKubernetes | dig "nodeExporter" "collectors" "systemd" "unitInclude" nil) }}
         - '--collector.systemd'
         - '--collector.systemd.unit-include={{ .Values.monitoringKubernetes.nodeExporter.collectors.systemd.unitInclude }}'
 {{- end }}
