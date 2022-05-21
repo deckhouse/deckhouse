@@ -46,10 +46,10 @@ bin/golangci-lint:
 
 .PHONY: lint lint-fix
 lint: bin/golangci-lint ## Run linter.
-	golangci-lint run
+	bin/golangci-lint run
 
 lint-fix: bin/golangci-lint ## Fix lint violations.
-	golangci-lint run --fix
+	bin/golangci-lint run --fix
 
 ##@ Generate
 
