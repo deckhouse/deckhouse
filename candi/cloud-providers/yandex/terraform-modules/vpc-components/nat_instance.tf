@@ -139,8 +139,8 @@ resource "yandex_compute_instance" "nat_instance" {
       # First, we should silent changes in network interfaces and zones and notify client about this changes
       # and add instruction for fix it.
       # After 4 releases, for example, in 1.38 release remove network_interface and zone from here.
-      #network_interface,
-      #zone
+      network_interface,
+      zone
     ]
   }
 
