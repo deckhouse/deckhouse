@@ -3,6 +3,10 @@
   {{- $ng := index . 1 }}
   {{- $bootstrap_token := index . 2 -}}
 #cloud-config
+  {{- if ($context.Values.global.enabledModules | has "cloud-provider-azure") }}
+mounts:
+- [ ephemeral0, /mnt/resource ]
+  {{- end }}
 package_update: True
 manage_etc_hosts: localhost
 write_files:
