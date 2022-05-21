@@ -61,7 +61,6 @@ locals {
 
   # but if user pass nat instance internal address directly (it for backward compatibility) use passed address,
   # else get 10 host address from cidr which got in previous step
-  # kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -o json cloud-provider-yandex | jq -r '.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap["ru-central1-c"]'
   nat_instance_internal_address_calculated = var.should_create_nat_instance ? (var.nat_instance_internal_address == null ? cidrhost(local.nat_instance_cidr, 10) : var.nat_instance_internal_address) : null
 
   assign_external_ip_address = var.nat_instance_external_subnet_id == null ? true : false
@@ -140,8 +139,8 @@ resource "yandex_compute_instance" "nat_instance" {
       # First, we should silent changes in network interfaces and zones and notify client about this changes
       # and add instruction for fix it.
       # After 4 releases, for example, in 1.38 release remove network_interface and zone from here.
-      network_interface,
-      zone
+      #network_interface,
+      #zone
     ]
   }
 
