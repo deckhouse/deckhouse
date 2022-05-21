@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
@@ -61,4 +63,20 @@ func HTTPGet(httpClient d8http.Client, url string, bearerToken string) ([]byte, 
 	}
 
 	return dataBytes, res.StatusCode, nil
+}
+
+func VersionToRevision(version string) string {
+	version = "v" + version
+
+	// v1.2.3-alpha.4 -> v1.2.3-alpha4
+	var re = regexp.MustCompile(`([a-z])\.([0-9])`)
+	version = re.ReplaceAllString(version, `$1$2`)
+
+	// v1.2.3-alpha4 -> v1x2x3-alpha4
+	version = strings.ReplaceAll(version, ".", "x")
+
+	// v1x2x3-alpha4 -> v1x2x3alpha4
+	version = strings.ReplaceAll(version, "-", "")
+
+	return version
 }

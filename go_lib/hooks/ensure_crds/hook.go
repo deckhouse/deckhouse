@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -45,10 +45,10 @@ import (
 func RegisterEnsureCRDsHook(crdsGlob string) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnStartup: &go_hook.OrderedConfig{Order: 5},
-	}, dependency.WithExternalDependencies(ensureCRDsHandler(crdsGlob)))
+	}, dependency.WithExternalDependencies(EnsureCRDsHandler(crdsGlob)))
 }
 
-func ensureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc dependency.Container) error {
+func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc dependency.Container) error {
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
 		result := new(multierror.Error)
 

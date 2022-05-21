@@ -19,9 +19,19 @@ webhooks:
   matchPolicy: Exact
   name: sidecar-injector.istio.io
   namespaceSelector:
-    matchLabels:
-      istio-injection: enabled
-  objectSelector: {}
+    matchExpressions:
+    - key: istio-injection
+      operator: In
+      values:
+      - enabled
+    - key: istio.io/rev
+      operator: DoesNotExist
+  objectSelector:
+    matchExpressions:
+    - key: sidecar.istio.io/inject
+      operator: NotIn
+      values:
+      - "false"
   reinvocationPolicy: Never
   rules:
   - apiGroups:

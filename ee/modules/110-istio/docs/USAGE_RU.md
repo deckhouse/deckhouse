@@ -468,3 +468,20 @@ spec:
  action: ALLOW
  rules: [{}]
 ```
+
+## Обновление control-plane Istio
+
+* Deckhouse позволяет инсталлировать несколько версий control-plane одновременно:
+  *  Одна глобальная, обслуживает Namespace-ы или поды без явного указания версии (label у Namespace `istio-injection: enabled`). Настраивается обязательным параметром `istio.globalVersion` в CM deckhouse.
+  *  Остальные — дополнительные, обслуживают Namespace-ы или поды с явным указанием версии (label у Namespace или у Pod `istio.io/rev: v1x13`). Настраиваются дополнительным параметром `istio.additionalVersions` в CM deckhouse.
+* Istio заявляет обратную совместимость между data-plane и control-plane в диапазоне двух минорных версий:
+![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
+* Алгоритм обновления (для примера, на версию `1.13`):
+  * Добавить желаемую версию в параметр модуля `istio.additionalVersions` в CM deckhouse (`additionalVersions: ["1.13"]`).
+  * Дождаться появления соответствующего пода `istiod-v1x13-xxx-yyy` в namespace `d8-istiod`.
+  * Для каждого прикладного Namespace, где включен istio:
+    * Поменять label `istio-injection: enabled` на `istio.io/rev: v1x13`.
+    * По очереди пересоздать поды в Namespace, параллельно контролируя работоспособность приложения.
+  * Поменять настройку `istio.globalVersion` на `1.13` и удалить `additionalVersions`.
+  * Убедиться, что старый под `istiod` удалился.
+  * Поменять лейблы прикладных Namespace на `istio-injection: enabled`.

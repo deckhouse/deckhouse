@@ -2,6 +2,8 @@ type: object
 properties:
   globalVersion:
     description: Явно заданная версия control-plane Istio, который обслуживает data-plane с неявной версией (Namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`). Должна быть из списка поддерживаемых версий (`kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.supportedVersions'`). По умолчанию — последняя версия из списка поддерживаемых версий.
+  additionalVersions:
+    description: Дополнительные версии control-plane Istio, которые будут установлены. Они будут обслуживать Namespace-ы, где явно указана версия с помощью лейбла `istio.io/rev=`.
   tlsMode:
     description: |
       Режим прозрачного шифрования трафика между Pod'ами ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).
