@@ -54,6 +54,9 @@ spec:
 {{- if eq $.Values.global.modules.https.mode "CertManager" }}
           - --default-issuer-kind=ClusterIssuer
           - --default-issuer-name={{ $.Values.global.modules.https.certManager.clusterIssuerName }}
+          {{- if $.Values.certManager.certificateOwnerRef }}
+          - --enable-certificate-owner-ref
+          {{- end }}
 {{- end }}
 {{- end }}
           resources:

@@ -100,6 +100,11 @@ spec:
                   type: array
                   items:
                     type: string
+                certificateOwnerRef:
+                  type: boolean
+                  description: |
+                    Whether to set the certificate resource as an owner of secret where the tls certificate is stored. When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
+                    The default value is the global value `certManager.certificateOwnerRef` set in the module configuration.
                 encodeUsagesInRequest:
                   description: EncodeUsagesInRequest controls whether key usages should be present in the CertificateRequest
                   type: boolean
