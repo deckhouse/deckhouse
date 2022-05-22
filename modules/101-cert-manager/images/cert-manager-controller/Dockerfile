@@ -10,9 +10,9 @@ COPY patches/certificate_owner_ref.patch ./
 ENV APP_VERSION v1.7.1
 ENV USE_BAZEL_VERSION 4.2.1
 RUN patch -p1 < certificate_owner_ref.patch && \
-  bazel build //cmd/controller --stamp=true
+  bazel build //cmd/controller --stamp=true && strip /build/cert-manager/bazel-bin/cmd/controller/controller_/controller
 
 FROM $BASE_ALPINE as final
-COPY --from=artifact /build/cert-manager/bazel-bin/cmd/controller/linux_amd64_pure_stripped/controller /bin/cert-manager-controller
+COPY --from=artifact /build/cert-manager/bazel-bin/cmd/controller/controller_/controller /bin/cert-manager-controller
 RUN apk add --no-cache ca-certificates
 ENTRYPOINT ["/bin/cert-manager-controller"]
