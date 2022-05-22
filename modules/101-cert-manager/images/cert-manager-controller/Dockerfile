@@ -1,11 +1,13 @@
 ARG BASE_ALPINE
-FROM l.gcr.io/google/bazel:3.5.0@sha256:ace9881e6e9c5d48b5fd637321361aeffe54000265894a65f7d818dc1065bd80 as artifact
+ARG BASE_GOLANG_17_BUSTER
+FROM $BASE_GOLANG_17_BUSTER as artifact
 RUN mkdir /build && cd /build \
-  && git clone -b "v1.17.1" --single-branch https://github.com/jetstack/cert-manager.git
+  && git clone -b "v1.7.1" --single-branch https://github.com/jetstack/cert-manager.git
 WORKDIR /build/cert-manager
-RUN apt install -qy ca-certificates && update-ca-certificates 2>/dev/null
+RUN apt install -qy ca-certificates unzip && update-ca-certificates 2>/dev/null
+RUN RUN curl -sSfL https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 && mv bazelisk-linux-amd64 /usr/local/bin/bazel && chmod +x /usr/local/bin/bazel
 COPY patches/certificate_owner_ref.patch ./
-ENV APP_VERSION v1.17.1
+ENV APP_VERSION v1.7.1
 RUN patch -p1 < certificate_owner_ref.patch && \
   bazel build //cmd/controller --stamp=true
 
