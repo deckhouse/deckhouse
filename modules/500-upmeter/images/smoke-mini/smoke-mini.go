@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -102,6 +103,11 @@ func setupHandlers() *http.ServeMux {
 	mux.HandleFunc("/dns", dnsHandler)
 	mux.HandleFunc("/neighbor", neighborHandler)
 	mux.HandleFunc("/neighbor-via-service", neighborViaServiceHandler)
+
+	// deckhouse e2e tests
+	mux.HandleFunc("/api", apiHandler)
+	mux.HandleFunc("/disk", diskHandler)
+	mux.HandleFunc("/prometheus", prometheusHandler)
 
 	return mux
 }
@@ -203,5 +209,112 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	fmt.Fprintf(w, "ok")
+}
+
+func apiHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info(r.RemoteAddr, r.RequestURI)
+
+	apiserverEndpoint := "https://127.0.0.1:6445/readyz/ping"
+
+	kubernetesServiceHost := os.Getenv("KUBERNETES_SERVICE_HOST")
+	kubernetesServicePort := os.Getenv("KUBERNETES_SERVICE_PORT_HTTPS")
+	namespace := os.Getenv("POD_NAMESPACE")
+	podName := os.Getenv("HOSTNAME")
+	if kubernetesServiceHost != "" && kubernetesServicePort != "" {
+		apiserverEndpoint = fmt.Sprintf("https://%s:%s/api/v1/namespaces/%s/pods/%s", kubernetesServiceHost, kubernetesServicePort, namespace, podName)
+	}
+
+	serviceaccountToken, err := ioutil.ReadFile(serviceAccountTokenPath)
+	if err != nil {
+		w.WriteHeader(500)
+		log.Error(err)
+		return
+	}
+
+	bearer := fmt.Sprintf("Bearer %s", string(serviceaccountToken))
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	req, nil := http.NewRequest("GET", apiserverEndpoint, nil)
+	req.Header.Add("Authorization", bearer)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(500)
+		return
+	}
+	defer resp.Body.Close()
+	log.Info(resp.StatusCode, resp.Request.URL)
+	if resp.StatusCode != 200 {
+		w.WriteHeader(500)
+		return
+	}
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(500)
+		return
+	}
+	fmt.Fprintf(w, "ok")
+}
+
+func diskHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info(r.RemoteAddr, r.RequestURI)
+	originalContent := fmt.Sprint(time.Now().UnixNano())
+	tmpFilePath := fmt.Sprintf("/disk/sm-%s", originalContent)
+	err := ioutil.WriteFile(tmpFilePath, []byte(originalContent), 0o644)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(500)
+		return
+	}
+	content, err := ioutil.ReadFile(tmpFilePath)
+	if err != nil {
+		w.WriteHeader(500)
+		log.Error(err)
+		return
+	}
+	err = os.Remove(tmpFilePath)
+	if err != nil {
+		w.WriteHeader(500)
+		log.Error(err)
+		return
+	}
+	if originalContent == string(content) {
+		fmt.Fprintf(w, "ok")
+	} else {
+		w.WriteHeader(500)
+	}
+}
+
+func prometheusHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info(r.RemoteAddr, r.RequestURI)
+	prometheusEndpoint := "https://prometheus.d8-monitoring:9090/api/v1/metadata?metric=prometheus_build_info"
+
+	serviceaccountToken, err := ioutil.ReadFile(serviceAccountTokenPath)
+	if err != nil {
+		w.WriteHeader(500)
+		log.Error(err)
+		return
+	}
+
+	bearer := fmt.Sprintf("Bearer %s", string(serviceaccountToken))
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	req, nil := http.NewRequest("GET", prometheusEndpoint, nil)
+	req.Header.Add("Authorization", bearer)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(500)
+		return
+	}
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(500)
+		return
+	}
 	fmt.Fprintf(w, "ok")
 }
