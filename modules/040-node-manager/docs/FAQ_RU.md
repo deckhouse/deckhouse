@@ -32,6 +32,7 @@ search: добавить ноду в кластер, добавить узел �
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 3. Создайте Ansible плейбук с `vars`, которые заменены на полученные на предыдущих шагах значения:
+
    ```yaml
    - hosts: all
      become: yes
@@ -91,7 +92,7 @@ search: добавить ноду в кластер, добавить узел �
 2. Получить скрипт для установки и настройки узла: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."adopt.sh"' -r`.
 3. Зайти на новый узел по SSH и выполнить команду из Secret'а: `echo <base64> | base64 -d | bash`.
 
-## Как изменить node-group у статичного узла?
+## Как изменить NodeGroup у статичного узла?
 
 Чтобы перенести существующий статичный узел из одной NodeGroup в другую, необходимо изменить у узла лейбл группы:
 
@@ -109,29 +110,29 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 1. Остановить сервис и таймер bashible: `systemctl stop bashible.timer bashible.service`.
 2. Удалить скрипты bashible: `rm -rf /var/lib/bashible`.
 3. Удалить с узла аннотации и лейблы:
-```shell
-kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- update.node.deckhouse.io/waiting-for-approval- update.node.deckhouse.io/disruption-approved- update.node.deckhouse.io/disruption-required- update.node.deckhouse.io/approved- update.node.deckhouse.io/draining- update.node.deckhouse.io/drained-
-kubectl label node <node_name> node.deckhouse.io/group-
-```
+   ```shell
+   kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- update.node.deckhouse.io/waiting-for-approval- update.node.deckhouse.io/disruption-approved- update.node.deckhouse.io/disruption-required- update.node.deckhouse.io/approved- update.node.deckhouse.io/draining- update.node.deckhouse.io/drained-
+   kubectl label node <node_name> node.deckhouse.io/group-
+   ```
 
 ## Как зачистить узел для последующего ввода в кластер?
 
-Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить NodeGroup, следуйте [этой инструкции](#как-изменить-node-group-у-статичного-узла).
+Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить NodeGroup, следуйте [этой инструкции](#как-изменить-nodegroup-у-статичного-узла).
 
 1. Удалите узел из кластера Kubernetes:
-    ```shell
-    kubectl drain <node> --ignore-daemonsets --delete-local-data
-    kubectl delete node <node>
-    ```
+   ```shell
+   kubectl drain <node> --ignore-daemonsets --delete-local-data
+   kubectl delete node <node>
+   ```
 1. Остановите все сервисы и запущенные контейнеры:
-    ```shell
-    systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-    systemctl stop bashible.service bashible.timer
-    systemctl stop kubelet.service
-    systemctl stop containerd
-    systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
-    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
-    ```
+   ```shell
+   systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
+   systemctl stop bashible.service bashible.timer
+   systemctl stop kubelet.service
+   systemctl stop containerd
+   systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
+   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   ```
 1. Удалите точки монтиторвания:
    ```shell
    for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
@@ -192,12 +193,12 @@ journalctl -fu bashible
 Если необходимо узнать, что происходит на узле (к примеру он долго создается), то можно посмотреть логи `cloud-init`. Для этого необходимо:
 1. Найти узел, который сейчас бутстрапится: `kubectl -n d8-cloud-instance-manager get machine | grep Pending`;
 1. Посмотреть информацию о `machine`: `kubectl -n d8-cloud-instance-manager describe machine kube-2-worker-01f438cf-757f758c4b-r2nx2`. Пример результата:
-  ```shell
-  Status:
-    Bootstrap Status:
-      Description:   Use 'nc 192.168.199.115 8000' to get bootstrap logs.
-      Tcp Endpoint:  192.168.199.115
-  ```
+   ```shell
+   Status:
+     Bootstrap Status:
+       Description:   Use 'nc 192.168.199.115 8000' to get bootstrap logs.
+       Tcp Endpoint:  192.168.199.115
+   ```
 
 1. Выполнить команду `nc 192.168.199.115 8000`, чтобы увидеть логи `cloud-init` и на чем зависла настройка узла.
 
@@ -209,11 +210,11 @@ journalctl -fu bashible
 
 Создать `NodeGroup` с такими параметрами:
 
-```shell
-  cri:
-    type: NotManaged
-  operatingSystem:
-    manageKernel: false
+```yaml
+cri:
+  type: NotManaged
+operatingSystem:
+  manageKernel: false
 ```
 
 После чего добавить узел под управление `node-manager`.
@@ -374,9 +375,10 @@ done
 
 После загрузки образов необходимо перезапустить kubelet.
 
-## Как изменить CRI для node-group?
+## Как изменить CRI для NodeGroup?
 
 Установить параметр `cri.type` в `Docker` или в `Containerd`.
+
 Пример YAML-манифеста NodeGroup:
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -393,15 +395,15 @@ spec:
 
 * Для Containerd:
   ```shell
-  kubectl patch nodegroup <имя node-group> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * Для Docker:
   ```shell
-  kubectl patch nodegroup <имя node-group> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
+  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
   ```
 
-> **Внимание!** Нельзя устанавливать `cri.type` для node-group, созданных при помощи `dhctl`, например, node-group `master`.
+> **Внимание!** Нельзя устанавливать `cri.type` для NodeGroup, созданных при помощи `dhctl` (например, NodeGroup `master`).
 
 После настройки нового CRI для NodeGroup модуль node-manager по одному drain'ит узлы и устанавливает на них новый CRI. Обновление узла
 сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup модуль node-manager либо автоматически разрешает обновление
@@ -422,8 +424,8 @@ spec:
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
-Если необходимо какую-то node-group оставить на другом CRI, то перед изменением `defaultCRI` необходимо установить CRI для этой node-group,
-как описано [здесь](#как-изменить-cri-для-node-group).
+Если необходимо какую-то NodeGroup оставить на другом CRI, то перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,
+как описано [здесь](#как-изменить-cri-для-nodegroup).
 
 > **Внимание!** Изменение `defaultCRI` влечет за собой изменение CRI на всех узлах, включая master-узлы.
 > Если master-узел один, данная операция является опасной и может привести к полной неработоспособности кластера!
@@ -433,7 +435,7 @@ spec:
 * Дополнительные шаги при переходе с Docker на Containerd
 
   Для каждого master-узла по очереди необходимо будет:
-  1. В случае, если для master node-group `approvalMode` установлен в `Manual`, подтвердить disruption:
+  1. В случае, если для master NodeGroup `approvalMode` установлен в `Manual`, подтвердить disruption:
      ```shell
      kubectl annotate node <имя master узла> update.node.deckhouse.io/disruption-approved=
      ```
@@ -448,7 +450,7 @@ spec:
   ```
 
   Для каждого master-узла по очереди необходимо будет:
-  1. В случае, если для master node-group `approvalMode` установлен в `Manual`, подтвердить disruption:
+  1. В случае, если для master NodeGroup `approvalMode` установлен в `Manual`, подтвердить disruption:
      ```shell
      kubectl annotate node <имя master узла> update.node.deckhouse.io/disruption-approved=
      ```
@@ -490,6 +492,7 @@ spec:
 Debian-based дистрибутивы содержат пакеты с драйверами Nvidia в базовом репозитории, поэтому нет необходимости подготавливать специальный образ c установленными драйверами.
 
 Разверните скрипты `NodeGroupConfiguration`:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -823,6 +826,7 @@ CentOS-based дистрибутивы не содержат драйверы Nvi
 Как установить драйвера Nvidia написано в [инструкции](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#redhat-installation). 
 
 Разверните скрипты `NodeGroupConfiguration`:
+
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -1139,9 +1143,11 @@ spec:
     curl -s -L https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.repo -o /etc/yum.repos.d/nvidia-container-toolkit.repo
     yum install -y nvidia-container-toolkit
 ```
+
 ### Как проверить что все прошло успешно?
 
-Развернуть Job:
+Создать в кластере Job:
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -1162,7 +1168,9 @@ spec:
           command:
             - nvidia-smi
 ```
+
 И посмотреть логи:
+
 ```shell
 $ kubectl logs job/nvidia-cuda-test
 Fri May  6 07:45:37 2022       
@@ -1187,7 +1195,8 @@ Fri May  6 07:45:37 2022
 +-----------------------------------------------------------------------------+
 ```
 
-Задеплоить Job:
+Создать в кластере Job:
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -1206,7 +1215,9 @@ spec:
           image: nvidia/samples:vectoradd-cuda10.2
           imagePullPolicy: "IfNotPresent"
 ```
+
 И посмотреть логи:
+
 ```shell
 $ kubectl logs job/gpu-operator-test
 [Vector addition of 50000 elements]

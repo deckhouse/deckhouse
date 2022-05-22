@@ -92,9 +92,9 @@ To make an existing Node controllable by the `node-manager`, perform the followi
 2. Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."adopt.sh"' -r`
 3. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
 
-## How do I change the node-group of a static node?
+## How do I change the NodeGroup of a static node?
 
-To switch an existing static node to another node-group, you need to change its group label:
+To switch an existing static node to another NodeGroup, you need to change its group label:
 
 ```shell
 kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
@@ -110,29 +110,29 @@ To take a node out of `node-manager` control, you need to:
 1. Stop the bashible service and timer: `systemctl stop bashible.timer bashible.service`.
 2. Delete bashible scripts: `rm -rf /var/lib/bashible`;
 3. Remove annotations and labels from the node:
-```shell
-kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- update.node.deckhouse.io/waiting-for-approval- update.node.deckhouse.io/disruption-approved- update.node.deckhouse.io/disruption-required- update.node.deckhouse.io/approved- update.node.deckhouse.io/draining- update.node.deckhouse.io/drained-
-kubectl label node <node_name> node.deckhouse.io/group-
-```
+   ```shell
+   kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- update.node.deckhouse.io/waiting-for-approval- update.node.deckhouse.io/disruption-approved- update.node.deckhouse.io/disruption-required- update.node.deckhouse.io/approved- update.node.deckhouse.io/draining- update.node.deckhouse.io/drained-
+   kubectl label node <node_name> node.deckhouse.io/group-
+   ```
 
 ## How to clean up a node for adding to the cluster?
 
-This is only needed if you have to move a static node from one cluster to another. Be aware that these operations remove local storage data. If you just need to change NodeGroup you have to follow [this instruction](#how-do-i-change-the-node-group-of-a-static-node).
+This is only needed if you have to move a static node from one cluster to another. Be aware that these operations remove local storage data. If you just need to change NodeGroup you have to follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
 
 1. Delete the node from the Kubernetes cluster:
-    ```shell
-    kubectl drain <node> --ignore-daemonsets --delete-local-data
-    kubectl delete node <node>
-    ```
+   ```shell
+   kubectl drain <node> --ignore-daemonsets --delete-local-data
+   kubectl delete node <node>
+   ```
 1. Stop all the services and running containers:
-    ```shell
-    systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-    systemctl stop bashible.service bashible.timer
-    systemctl stop kubelet.service
-    systemctl stop containerd
-    systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
-    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
-    ```
+   ```shell
+   systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
+   systemctl stop bashible.service bashible.timer
+   systemctl stop kubelet.service
+   systemctl stop containerd
+   systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
+   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   ```
 1. Unmount all mounted partitions:
    ```shell
    for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
@@ -210,11 +210,11 @@ If you have a GPU-enabled node and want to configure Docker to work with the `no
 
 Create a `NodeGroup` with the following parameters:
 
-```shell
-  cri:
-    type: NotManaged
-  operatingSystem:
-    manageKernel: false
+```yaml
+cri:
+  type: NotManaged
+operatingSystem:
+  manageKernel: false
 ```
 
 Then put the node under the control of `node-manager`.
@@ -317,7 +317,7 @@ cloudInstances:
 
 > **Note!** Use this switch only if you know what you are doing and clearly understand the consequences.
 
-Set the `mcmEmergencyBrake` parameter to true::
+Set the `mcmEmergencyBrake` parameter to true:
 
 ```yaml
 mcmEmergencyBrake: true
@@ -342,7 +342,7 @@ jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.i
 Copy the output of the command and add it to the `/root/.docker/config.json` file on the corrupted master.
 Next, you need to pull images of control plane components to the corrupted master:
 
-```
+```shell
 for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
   docker pull $image
 done
@@ -372,9 +372,10 @@ done
 
 You need to restart `kubelet` after pulling the images.
 
-## How to change CRI for node-group?
+## How to change CRI for NodeGroup?
 
-Set node-group`cri.type` to `Docker` or `Containerd`.
+Set NodeGroup `cri.type` to `Docker` or `Containerd`.
+
 NodeGroup YAML example:
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -391,15 +392,15 @@ Also, this operation can be done with patch:
 
 * For Containerd:
   ```shell
-  kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * For Docker:
   ```shell
-  kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
+  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
   ```
 
-> **Note!** You cannot set `cri.type` for node-groups, created using `dhctl`, node-group `master` for example.
+> **Note!** You cannot set `cri.type` for NodeGroups, created using `dhctl` (e.g. the `master` NodeGroup).
 
 After setting up a new CRI for NodeGroup, the node-manager module drains nodes one by one and installs a new CRI on them. Node update
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
@@ -420,8 +421,8 @@ Also, this operation can be done with patch:
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
-If it is necessary to leave some node-group on another CRI, then before changing the `defaultCRI` it is necessary to set CRI for this node-group,
-as described [here](#how-to-change-cri-for-node-group).
+If it is necessary to leave some NodeGroup on another CRI, then before changing the `defaultCRI` it is necessary to set CRI for this NodeGroup,
+as described [here](#how-to-change-cri-for-nodegroup).
 
 > **Note!** Changing `defaultCRI` entails changing CRI on all nodes, including master nodes.
 > If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!
@@ -432,7 +433,7 @@ When changing the CRI in the cluster, additional steps are required for the mast
 * Additional steps for changing from Docker to Containerd
 
   For each master node in turn, it will be necessary:
-  1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
+  1. If the master NodeGroup `approvalMode` is set to `Manual`, confirm the disruption:
      ```shell
      kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
      ```
@@ -447,7 +448,7 @@ When changing the CRI in the cluster, additional steps are required for the mast
   ```
 
   For each master node in turn, it will be necessary:
-  1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
+  1. If the master NodeGroup `approvalMode` is set to `Manual`, confirm the disruption:
      ```shell
      kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
      ```
@@ -1137,9 +1138,11 @@ spec:
     curl -s -L https://nvidia.github.io/libnvidia-container/${distribution}/libnvidia-container.repo -o /etc/yum.repos.d/nvidia-container-toolkit.repo
     yum install -y nvidia-container-toolkit
 ```
+
 ### How to check if it was successful?
 
 Deploy Job:
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -1160,7 +1163,9 @@ spec:
           command:
             - nvidia-smi
 ```
+
 And check the logs:
+
 ```shell
 $ kubectl logs job/nvidia-cuda-test
 Fri May  6 07:45:37 2022       
@@ -1186,6 +1191,7 @@ Fri May  6 07:45:37 2022
 ```
 
 Deploy Job:
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -1204,7 +1210,9 @@ spec:
           image: nvidia/samples:vectoradd-cuda10.2
           imagePullPolicy: "IfNotPresent"
 ```
+
 And check the logs:
+
 ```shell
 $ kubectl logs job/gpu-operator-test
 [Vector addition of 50000 elements]

@@ -47,6 +47,7 @@ spec:
 ## Добавить к сервису myservice.prod.svc дополнительные, вторичные subset-ы со своими правилами
 
 Эти subset-ы работают при использовании [VirtualService](istio-cr.html#virtualservice):
+
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -54,12 +55,12 @@ metadata:
   name: myservice-extra-subsets
 spec:
   host: myservice.prod.svc.cluster.local
-  trafficPolicy: # срабатывает если определён лишь классический Service.
+  trafficPolicy: # Срабатывает, если определён лишь классический Service.
     loadBalancer:
       simple: LEAST_CONN
   subsets: # subset-ы необходимо определить через VirtualService, где эти subset-ы указаны в маршрутах.
   - name: testv1
-    labels: # аналог selector у Service. Поды с такими лейблами попадут под действие этого subset-a.
+    labels: # Аналог selector у Service. Pod'ы с такими лейблами попадут под действие этого subset.
       version: v1
   - name: testv3
     labels:
@@ -71,7 +72,7 @@ spec:
 
 ## Circuit Breaker
 
-Для единственного сервиса потребуется единственный CR [DestinationRule](istio-cr.html#destinationrule).
+Для единственного сервиса потребуется единственный custom resource [DestinationRule](istio-cr.html#destinationrule).
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -89,7 +90,7 @@ spec:
 
 ## Retry
 
-Для единственного сервиса потребуется единственный CR [VirtualService](istio-cr.html#virtualservice).
+Для единственного сервиса потребуется единственный custom resource[VirtualService](istio-cr.html#virtualservice).
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -98,7 +99,7 @@ metadata:
   name: productpage-retry
 spec:
   hosts:
-    - productpage # либо полный FQDN, либо локальный для namespace домен.
+    - productpage # Либо полный FQDN, либо локальный для namespace домен.
   http:
   - route:
     - destination:
@@ -111,9 +112,9 @@ spec:
 
 ## Canary
 
-Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У подов разных версий разные лейблы (`version: v1` и `version: v2`).
+Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У Pod'ов разных версий разные лейблы (`version: v1` и `version: v2`).
 
-Требуется настроить два CR:
+Требуется настроить два custom resource:
 * [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения.
 * [VirtualService](istio-cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
 
@@ -126,12 +127,13 @@ spec:
   host: productpage
   subsets: # subset-ы работают только если к хосту обращаются через VirtualService, в котором эти subset-ы указаны в маршрутах.
   - name: v1
-    labels: # аналог selector у Service. Поды с такими лейблами попадут под действие этого subset-a.
+    labels: # Аналог selector у Service. Pod'ы с такими лейблами попадут под действие этого subset.
       version: v1
   - name: v2
     labels:
       version: v2
 ```
+
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -144,8 +146,8 @@ spec:
   - route:
     - destination:
         host: productpage
-        subset: v1 # ссылка на subset из DestinationRule
-      weight: 90 # процент трафика, который получат поды с лейблом version: v1.
+        subset: v1 # Ссылка на subset из DestinationRule.
+      weight: 90 # Процент трафика, который получат Pod'ы с лейблом version: v1.
   - route:
     - destination:
         host: productpage
@@ -155,6 +157,7 @@ spec:
 
 
 ### Распределение нагрузки между сервисами с разными версиями для Canary Deployment
+
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -167,7 +170,7 @@ spec:
   - route:
     - destination:
         host: reviews.prod.svc.cluster.local
-        subset: testv1 # ссылка на subset из DestinationRule
+        subset: testv1 # Ссылка на subset из DestinationRule.
       weight: 25
     - destination:
         host: reviews.prod.svc.cluster.local
@@ -176,6 +179,7 @@ spec:
 ```
 
 ##### Перенаправление location /uploads в другой сервис
+
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -187,24 +191,24 @@ spec:
   http:
   - match:
     - uri:
-        prefix: "/uploads" # если обратились на gallery.prod.svc.cluster.local/uploads/a.jpg
+        prefix: "/uploads" # Если обратились на gallery.prod.svc.cluster.local/uploads/a.jpg,
     rewrite:
-      uri: "/data" # то меняем uri на /data/a.jpg
+      uri: "/data" # ... то меняем uri на /data/a.jpg,
     route:
     - destination:
-        host: share.prod.svc.cluster.local # и обращаемся к share.prod.svc.cluster.local/data/a.jpg
+        host: share.prod.svc.cluster.local # ... и обращаемся к share.prod.svc.cluster.local/data/a.jpg,
   - route:
     - destination:
-        host: gallery.prod.svc.cluster.local # остальные запросы оставляем как есть
+        host: gallery.prod.svc.cluster.local # ...остальные запросы оставляем как есть.
 ```
 
 ## Ingress
 
 Для работы с Ingress требуется подготовить:
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](../../modules/402-ingress-nginx/).
+* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у custom resource [IngressNginxController](../../modules/402-ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/402-ingress-nginx/).
 * Ingress, который ссылается на Service. Обязательные аннотации для Ingress:
-  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Сайдкар istio-proxy перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
-  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в Pod'ы приложения. Сайдкар `istio-proxy` перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
+  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией sidecar сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -213,7 +217,7 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
-    nginx.ingress.kubernetes.io/service-upstream: "true" # Просим nginx проксировать трафик на ClusterIP вместо собственных IP подов.
+    nginx.ingress.kubernetes.io/service-upstream: "true" # Просим nginx проксировать трафик на ClusterIP вместо собственных IP Pod'ов.
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов. Чтобы не сообщать Istio о существовании внешнего домена `productpage.example.com`, мы просто используем внутренний домен, о котором Istio осведомлён.
 spec:
   rules:
@@ -228,6 +232,7 @@ spec:
               port:
                 number: 9080
 ```
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -247,8 +252,8 @@ spec:
 
 ### Алгоритм принятия решения
 
-**Важно!** Как только для приложения создаётся AuthorizationPolicy, начинает работать следующий алгоритм принятия решения о судьбе запроса:
-* Если под запрос есть правило DENY — запретить.
+**Важно!** Как только для приложения создаётся `AuthorizationPolicy`, начинает работать следующий алгоритм принятия решения о судьбе запроса:
+* Если запрос попадает под политику DENY — запретить запрос.
 * Если для данного приложения нет политик ALLOW — разрешить запрос.
 * Если запрос попадает под политику ALLOW — разрешить запрос.
 * Все остальные запросы — запретить.
@@ -277,7 +282,7 @@ spec:
           methods: ["POST"]
   ```
 
-* Здесь для приложения создана полтитика ALLOW. При ней будут разрешены только запросы из NS `bar`. Остальные — запрещены.
+* Здесь для приложения создана политика ALLOW. При ней будут разрешены только запросы из NS `bar`. Остальные — запрещены.
 
   ```yaml
   apiVersion: security.istio.io/v1beta1
@@ -296,7 +301,7 @@ spec:
           namespaces: ["bar"]
   ```
 
-* Здесь для приложения создана полтитика ALLOW. При этом она не имеет ни одного правила и поэтому ни один запрос под неё не попадёт, но она таки есть. Поэтому, согласно алгоритму, раз что-то разрешено, то всё остальное — запрещено. В данном случае всё остальное — это вообще все запросы.
+* Здесь для приложения создана политика ALLOW. При этом она не имеет ни одного правила и поэтому ни один запрос под неё не попадёт, но она таки есть. Поэтому, согласно алгоритму, раз что-то разрешено, то всё остальное — запрещено. В данном случае всё остальное — это вообще все запросы.
 
   ```yaml
   apiVersion: security.istio.io/v1beta1
@@ -308,7 +313,7 @@ spec:
     selector:
       matchLabels:
         app: myapp
-    action: ALLOW # default, можно не указывать
+    action: ALLOW # default, можно не указывать.
     rules: []
   ```
 
@@ -328,7 +333,7 @@ spec:
     - {}
   ```
 
-### Запретить вообще всё в рамках NS foo
+### Запретить вообще всё в рамках namespace foo
 
 Два способа:
 
@@ -357,7 +362,7 @@ spec:
   spec: {}
   ```
 
-### Запретить доступ только из NS foo
+### Запретить доступ только из namespace foo
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -373,7 +378,7 @@ spec:
        namespaces: ["foo"]
 ```
 
-### Разрешить запросы только в рамках нашего NS foo
+### Разрешить запросы только в рамках нашего namespace foo
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -421,7 +426,7 @@ spec:
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Разрешить любые запросы только кластеров foo или bar, при этом из NS baz
+### Разрешить любые запросы только кластеров foo или bar, при этом из namespace baz
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -472,16 +477,16 @@ spec:
 ## Обновление control-plane Istio
 
 * Deckhouse позволяет инсталлировать несколько версий control-plane одновременно:
-  *  Одна глобальная, обслуживает Namespace-ы или поды без явного указания версии (label у Namespace `istio-injection: enabled`). Настраивается обязательным параметром `istio.globalVersion` в CM deckhouse.
-  *  Остальные — дополнительные, обслуживают Namespace-ы или поды с явным указанием версии (label у Namespace или у Pod `istio.io/rev: v1x13`). Настраиваются дополнительным параметром `istio.additionalVersions` в CM deckhouse.
+  *  Одна глобальная, обслуживает namespace'ы или Pod'ы без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается обязательным параметром `istio.globalVersion` в ConfigMap `deckhouse`.
+  *  Остальные — дополнительные, обслуживают namespace'ы или Pod'ы с явным указанием версии (label у namespace или у Pod `istio.io/rev: v1x13`). Настраиваются дополнительным параметром `istio.additionalVersions` в ConfigMap `deckhouse`.
 * Istio заявляет обратную совместимость между data-plane и control-plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
 * Алгоритм обновления (для примера, на версию `1.13`):
-  * Добавить желаемую версию в параметр модуля `istio.additionalVersions` в CM deckhouse (`additionalVersions: ["1.13"]`).
-  * Дождаться появления соответствующего пода `istiod-v1x13-xxx-yyy` в namespace `d8-istiod`.
-  * Для каждого прикладного Namespace, где включен istio:
+  * Добавить желаемую версию в параметр модуля `istio.additionalVersions` в ConfigMap `deckhouse` (`additionalVersions: ["1.13"]`).
+  * Дождаться появления соответствующего Pod'а `istiod-v1x13-xxx-yyy` в namespace `d8-istiod`.
+  * Для каждого прикладного namespace, где включен istio:
     * Поменять label `istio-injection: enabled` на `istio.io/rev: v1x13`.
-    * По очереди пересоздать поды в Namespace, параллельно контролируя работоспособность приложения.
+    * По очереди пересоздать Pod'ы в namespace, параллельно контролируя работоспособность приложения.
   * Поменять настройку `istio.globalVersion` на `1.13` и удалить `additionalVersions`.
-  * Убедиться, что старый под `istiod` удалился.
-  * Поменять лейблы прикладных Namespace на `istio-injection: enabled`.
+  * Убедиться, что старый Pod `istiod` удалился.
+  * Поменять лейблы прикладных namespace на `istio-injection: enabled`.

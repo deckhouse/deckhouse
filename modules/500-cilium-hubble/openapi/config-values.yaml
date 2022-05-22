@@ -15,7 +15,7 @@ properties:
   tolerations:
     type: array
     description: |
-      The same as `spec.tolerations` for the Kubernetes pod.
+      The same as `spec.tolerations` for the Kubernetes Pod.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
     items:

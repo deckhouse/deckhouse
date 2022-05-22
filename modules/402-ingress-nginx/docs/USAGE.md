@@ -116,10 +116,10 @@ The controller must receive real IP addresses of clients — therefore its Servi
 So for the current example [metallb module configuration](../380-metallb/configuration.html) should be like this:
 ```yaml
 metallb:
- speaker: 
-   nodeSelector: 
+ speaker:
+   nodeSelector:
      node-role.deckhouse.io/frontend: ""
-   tolerations: 
+   tolerations:
     - effect: NoExecute
       key: dedicated.deckhouse.io
       value: frontend

@@ -6,7 +6,7 @@ title: "Модуль ingress-nginx"
 
 Поддерживает запуск и раздельное конфигурирование одновременно нескольких NGINX Ingress контроллеров — один **основной** и сколько угодно **дополнительных**. Например, это позволяет отделять внешние и intranet Ingress-ресурсы приложений.
 
-## Варианты терминирования трафика:
+## Варианты терминирования трафика
 Трафик к nginx-ingress может быть отправлен несколькими способами:
 - напрямую без внешнего балансировщика
 - через внешний LoadBalancer, в том числе поддерживаются:
@@ -48,7 +48,7 @@ title: "Модуль ingress-nginx"
 ### Основные принципы сбора статистики
 
 1. На каждый запрос, на стадии `log_by_lua_block`, вызывается наш модуль, который рассчитывает необходимые данные и складывает их в буфер (у каждого nginx worker'а свой буфер).
-2. На стадии `init_by_lua_block` для каждого nginx worker'а запускается процесс, который раз в секунду асинхронно отправляет данные в формате `protobuf` через tcp socket в `protobuf_exporter` (наша собственная разработка). 
+2. На стадии `init_by_lua_block` для каждого nginx worker'а запускается процесс, который раз в секунду асинхронно отправляет данные в формате `protobuf` через tcp socket в `protobuf_exporter` (наша собственная разработка).
 3. `protobuf_exporter` запущен sidecar-контейнером в Pod'е с ingress-controller'ом, принимает сообщения в формате protobuf, разбирает, агрегирует их по установленным нами правилам и экспортирует в формате для Prometheus.
 4. Prometheus каждые 30 секунд scrape'ает как сам ingress-controller (там есть небольшое количество нужных нам метрик), так и protobuf_exporter, и на основании этих данных все и работает!
 
@@ -57,24 +57,24 @@ title: "Модуль ingress-nginx"
 У всех собираемых метрик есть служебные лейблы, позволяющие идентифицировать экземпляр контроллера: `controller`, `app`, `instance` и `endpoint` (они видны в `/prometheus/targets`).
 
 * Все метрики (кроме geo), экспортируемые protobuf_exporter'ом, представлены в трех уровнях детализации:
-    * `ingress_nginx_overall_*` — "вид с вертолета", у всех метрик есть лейблы `namespace`, `vhost` и `content_kind`.
-    * `ingress_nginx_detail_*` — кроме лейблов уровня overall добавляются: `ingress`, `service`, `service_port` и `location`.
-    * `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бекендам. У этих метрик, кроме лейблов уровня detail, добавляется лейбл `pod_ip`.
+  * `ingress_nginx_overall_*` — "вид с вертолета", у всех метрик есть лейблы `namespace`, `vhost` и `content_kind`.
+  * `ingress_nginx_detail_*` — кроме лейблов уровня overall добавляются: `ingress`, `service`, `service_port` и `location`.
+  * `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бекендам. У этих метрик, кроме лейблов уровня detail, добавляется лейбл `pod_ip`.
 
 * Для уровней overall и detail собираются следующие метрики:
-    * `*_requests_total` — counter количества запросов (дополнительные лейблы: `scheme`, `method`).
-    * `*_responses_total` — counter количества ответов (дополнительные лейблы: `status`).
-    * `*_request_seconds_{sum,count,bucket}` — histogram времени ответа.
-    * `*_bytes_received_{sum,count,bucket}` — histogram размера запроса.
-    * `*_bytes_sent_{sum,count,bucket}` — histogram размера ответа.
-    * `*_upstream_response_seconds_{sum,count,bucket}` — histogram времени ответа upstream'а (используется сумма времен ответов всех upstream'ов, если их было несколько).
-    * `*_lowres_upstream_response_seconds_{sum,count,bucket}` — то же самое, что предыдущая метрика, только с меньшей детализацией (подходит для визуализации, но не подходит для расчета quantile).
-    * `*_upstream_retries_{count,sum}` — количество запросов, при обработке которых были retry бекендов, и сумма retry'ев.
+  * `*_requests_total` — counter количества запросов (дополнительные лейблы: `scheme`, `method`).
+  * `*_responses_total` — counter количества ответов (дополнительные лейблы: `status`).
+  * `*_request_seconds_{sum,count,bucket}` — histogram времени ответа.
+  * `*_bytes_received_{sum,count,bucket}` — histogram размера запроса.
+  * `*_bytes_sent_{sum,count,bucket}` — histogram размера ответа.
+  * `*_upstream_response_seconds_{sum,count,bucket}` — histogram времени ответа upstream'а (используется сумма времен ответов всех upstream'ов, если их было несколько).
+  * `*_lowres_upstream_response_seconds_{sum,count,bucket}` — то же самое, что предыдущая метрика, только с меньшей детализацией (подходит для визуализации, но не подходит для расчета quantile).
+  * `*_upstream_retries_{count,sum}` — количество запросов, при обработке которых были retry бекендов, и сумма retry'ев.
 
 * Для уровня overall собираются следующие метрики:
-    * `*_geohash_total` — counter количества запросов с определенным geohash (дополнительные лейблы: `geohash`, `place`).
+  * `*_geohash_total` — counter количества запросов с определенным geohash (дополнительные лейблы: `geohash`, `place`).
 
 * Для уровня detail_backend собираются следующие метрики:
-    * `*_lowres_upstream_response_seconds` — то же самое, что аналогичная метрика для overall и detail.
-    * `*_responses_total` — counter количества ответов (дополнительный лейбл `status_class`, а не просто `status`).
-    *  `*_upstream_bytes_received_sum` — counter суммы размеров ответов backend'а.
+  * `*_lowres_upstream_response_seconds` — то же самое, что аналогичная метрика для overall и detail.
+  * `*_responses_total` — counter количества ответов (дополнительный лейбл `status_class`, а не просто `status`).
+  * `*_upstream_bytes_received_sum` — counter суммы размеров ответов backend'а.

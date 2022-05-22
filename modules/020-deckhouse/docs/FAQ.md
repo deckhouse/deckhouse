@@ -21,7 +21,7 @@ Then you have to select which node you want to run kube-bench.
   curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | yq r - -j | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
   ```
 
-Then you can check report
+Then you can check report:
 ```shell
 kubectl logs job.batch/kube-bench
 ```
