@@ -85,7 +85,16 @@ var (
 			// ignore temporary flag that is already used (will be deleted after all CSIs are migrated)
 			"properties.storageClass.properties.compatibilityFlag",
 		},
+		"ee/modules/030-cloud-provider-vsphere/openapi/config-values.yaml": {
+			// ignore temporary flag that is already used (will be deleted after all CSIs are migrated)
+			"properties.storageClass.properties.compatibilityFlag",
+		},
 		"modules/030-cloud-provider-vsphere/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+		},
+		"ee/modules/030-cloud-provider-vsphere/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
@@ -103,6 +112,10 @@ var (
 			"properties.internal.properties.podNetworkMode",
 		},
 		"modules/040-node-manager/openapi/config-values.yaml": {
+			// ignore internal values
+			"properties.allowedBundles.items",
+		},
+		"ee/modules/040-node-manager/openapi/config-values.yaml": {
 			// ignore internal values
 			"properties.allowedBundles.items",
 		},
