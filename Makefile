@@ -8,16 +8,17 @@ TESTS_TIMEOUT="15m"
 FOCUS=""
 
 help:
-	@printf -- "\n"
-	@printf -- "${FORMATTING_BEGIN_BLUE}     ██████╗░███████╗░█████╗░██╗░░██╗██╗░░██╗░█████╗░██╗░░░██╗░██████╗███████╗${FORMATTING_END}\n"
-	@printf -- "${FORMATTING_BEGIN_BLUE}     ██╔══██╗██╔════╝██╔══██╗██║░██╔╝██║░░██║██╔══██╗██║░░░██║██╔════╝██╔════╝${FORMATTING_END}\n"
-	@printf -- "${FORMATTING_BEGIN_BLUE}     ██║░░██║█████╗░░██║░░╚═╝█████═╝░███████║██║░░██║██║░░░██║╚█████╗░█████╗░░${FORMATTING_END}\n"
-	@printf -- "${FORMATTING_BEGIN_BLUE}     ██║░░██║██╔══╝░░██║░░██╗██╔═██╗░██╔══██║██║░░██║██║░░░██║░╚═══██╗██╔══╝░░${FORMATTING_END}\n"
-	@printf -- "${FORMATTING_BEGIN_BLUE}     ██████╔╝███████╗╚█████╔╝██║░╚██╗██║░░██║╚█████╔╝╚██████╔╝██████╔╝███████╗${FORMATTING_END}\n"
-	@printf -- "${FORMATTING_BEGIN_BLUE}     ╚═════╝░╚══════╝░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝░╚════╝░░╚═════╝░╚═════╝░╚══════╝${FORMATTING_END}\n"
-	@printf -- "\n"
-	@printf -- "-----------------------------------------------------------------------------------\n"
-	@printf -- "\n"
+	@printf -- "${FORMATTING_BEGIN_BLUE}%s${FORMATTING_END}\n" \
+	"" \
+	"     ██████╗░███████╗░█████╗░██╗░░██╗██╗░░██╗░█████╗░██╗░░░██╗░██████╗███████╗" \
+	"     ██╔══██╗██╔════╝██╔══██╗██║░██╔╝██║░░██║██╔══██╗██║░░░██║██╔════╝██╔════╝" \
+	"     ██║░░██║█████╗░░██║░░╚═╝█████═╝░███████║██║░░██║██║░░░██║╚█████╗░█████╗░░" \
+	"     ██║░░██║██╔══╝░░██║░░██╗██╔═██╗░██╔══██║██║░░██║██║░░░██║░╚═══██╗██╔══╝░░" \
+	"     ██████╔╝███████╗╚█████╔╝██║░╚██╗██║░░██║╚█████╔╝╚██████╔╝██████╔╝███████╗" \
+	"     ╚═════╝░╚══════╝░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝░╚════╝░░╚═════╝░╚═════╝░╚══════╝" \
+	"" \
+	"-----------------------------------------------------------------------------------" \
+	""
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make ${FORMATTING_BEGIN_YELLOW}<target>${FORMATTING_END}\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  ${FORMATTING_BEGIN_BLUE}%-46s${FORMATTING_END} %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
@@ -42,17 +43,17 @@ validate: ## Check common patterns through all modules.
 
 bin/golangci-lint:
 	@mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
 
 .PHONY: lint lint-fix
 lint: bin/golangci-lint ## Run linter.
-	bin/golangci-lint run
+	@bin/golangci-lint run
 
 lint-fix: bin/golangci-lint ## Fix lint violations.
-	bin/golangci-lint run --fix
+	@bin/golangci-lint run --fix
 
 ##@ Generate
 
 .PHONY: generate
 generate: ## Run all generate-* jobs in bulk.
-	cd tools; go generate
+	@cd tools; go generate
