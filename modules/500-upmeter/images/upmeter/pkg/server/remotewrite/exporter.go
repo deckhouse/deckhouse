@@ -80,11 +80,26 @@ func (e *exporter) sendRequest(req *http.Request) error {
 	}
 	defer res.Body.Close()
 
-	// The response should have a status code of 200.
-	// EDIT: In fact, storages respond with 204, so we don't treat it is an error as well.
-	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("%v", res.Status)
+	return e.mapResponseToError(res)
+}
+
+var (
+	ErrInternalStorageError = fmt.Errorf("storage internal error")
+	ErrNotAcceptedByStorage = fmt.Errorf("not accepted by storage")
+	ErrNoCompleteEpisodes   = fmt.Errorf("no complete episodes for export")
+)
+
+func (e *exporter) mapResponseToError(res *http.Response) error {
+	if res.StatusCode >= 500 {
+		// should retry, the storage will recover eventually
+		return fmt.Errorf("got %d, %w", res.StatusCode, ErrInternalStorageError)
 	}
+
+	if res.StatusCode >= 400 {
+		// storage did not accept the data, re-sending will not help
+		return fmt.Errorf("got %d, %w", res.StatusCode, ErrNotAcceptedByStorage)
+	}
+
 	return nil
 }
 

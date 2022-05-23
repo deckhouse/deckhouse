@@ -119,8 +119,8 @@ func txSave30sEpisode(tx *dbcontext.DbContext, episode check.Episode) (*check.Ep
 	}
 
 	if storedEntity.Rowid == -1 {
-		// none saved, just insert new one
-		log.Infof("Inserting 30s episode %s", episode.String())
+		// none saved yet, insert new one
+		log.Debugf("Inserting 30s episode %s", episode.String())
 
 		err = dao30s.Insert(episode)
 		if err != nil {
@@ -133,7 +133,7 @@ func txSave30sEpisode(tx *dbcontext.DbContext, episode check.Episode) (*check.Ep
 	combined := episode.Combine(storedEntity.Episode, slotSize)
 
 	// note extra whitespace to align with "Inserting..."
-	log.Infof("Updating  30s episode %s", episode.String())
+	log.Debugf("Updating  30s episode %s", episode.String())
 
 	err = dao30s.Update(storedEntity.Rowid, combined)
 	if err != nil {

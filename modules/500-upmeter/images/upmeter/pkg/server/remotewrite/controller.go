@@ -45,6 +45,7 @@ type ControllerConfig struct {
 	// read metrics and track exporter state in the DB
 	DbCtx        *dbcontext.DbContext
 	OriginsCount int
+	UserAgent    string
 
 	Logger *log.Logger
 }
@@ -64,6 +65,7 @@ func (cc *ControllerConfig) Controller() *Controller {
 		kubeMonitor: kubeMonitor,
 		syncers:     syncers,
 		logger:      controllerLogger,
+		userAgent:   cc.UserAgent,
 	}
 
 	return controller
