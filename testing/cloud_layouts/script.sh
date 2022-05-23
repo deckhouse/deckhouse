@@ -391,7 +391,7 @@ function bootstrap() {
   provisioning_failed=
 
   >&2 echo 'Waiting until Machine provisioning finishes ...'
-  for ((i=1; i<=10; i++)); do
+  for ((i=1; i<=20; i++)); do
     if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get machines
@@ -402,7 +402,7 @@ ENDSSH
       break
     else
       provisioning_failed="true"
-      >&2 echo "Machine provisioning is still in progress (attempt #$i of 10). Sleeping 60 seconds ..."
+      >&2 echo "Machine provisioning is still in progress (attempt #$i of 20). Sleeping 60 seconds ..."
       sleep 60
     fi
   done
@@ -445,7 +445,7 @@ for ((i=0; i<10; i++)); do
 done
 
 if [[ -z "$smoke_mini_addr" ]]; then
-  >&2 echo "Couldn't get smoke-mini's address from Endpoints in 15 minutes."
+  >&2 echo "Couldn't get smoke-mini's address from Endpoints in 5 minutes."
   exit 1
 fi
 
@@ -455,7 +455,7 @@ else
   ingress=""
 fi
 
-for ((i=0; i<10; i++)); do
+for ((i=0; i<15; i++)); do
   for path in api disk dns prometheus; do
     # if any path unaccessible, curl returns error exit code, and script fails, so we use || true to avoid script fail.
     result="$(curl -m 5 -sS "${smoke_mini_addr}:8080/${path}")" || true
@@ -510,7 +510,7 @@ exit 1
 END_SCRIPT
 )
 
-  testRunAttempts=3
+  testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
     if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<<"${testScript}"; then
       test_failed=""
