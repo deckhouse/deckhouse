@@ -14,9 +14,9 @@ To add a new static node (e.g., VM or bare-metal server) to the cluster, you nee
    kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
    ```
 3. Before configuring Kubernetes on the node, make sure that you have performed all the necessary actions for the node to work correctly in the cluster:
-  - Added all the necessary mount points (NFS, Ceph,...) to `/etc/fstab`;
-  - Installed the suitable `ceph-common` version on the node as well as other packages;
-  - Configured the network in the cluster;
+   - Added all the necessary mount points (NFS, Ceph,...) to `/etc/fstab`;
+   - Installed the suitable `ceph-common` version on the node as well as other packages;
+   - Configured the network in the cluster;
 4. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
 
 ## How do I add a batch of static nodes to a cluster?
@@ -24,15 +24,20 @@ If you don't have `NodeGroup` in your cluster, then you can find information how
 If you already have `NodeGroup`, you can automate the bootstrap process with any automation platform that you prefer. We will use Ansible as an example.
 
 1. Pick up one of Kubernetes API Server endpoints. Note that this IP have to be accessible from nodes that are prepared to be bootstrapped:
+
    ```shell
    kubectl get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
+
 2. Get Kubernetes API token for special `ServiceAccount` that is managed by Deckhouse:
+
    ```shell
    kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
+
 3. Create Ansible playbook with `vars` replaced with values from previous steps:
+
    ```yaml
    - hosts: all
      become: yes
@@ -67,6 +72,7 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
          when: bootstrapped.stat.exists == False
    ```
 4. You have to specify one more variable `node_group`. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, here is an example using inventory file:
+
    ```
    [system]
    system-0
@@ -82,6 +88,7 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
    [worker:vars]
    node_group=worker
    ```
+
 5. Now you can simply run this playbook with your inventory file.
 
 ## How to put an existing cluster node under the node-manager's control?
@@ -110,6 +117,7 @@ To take a node out of `node-manager` control, you need to:
 1. Stop the bashible service and timer: `systemctl stop bashible.timer bashible.service`.
 2. Delete bashible scripts: `rm -rf /var/lib/bashible`;
 3. Remove annotations and labels from the node:
+
    ```shell
    kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- update.node.deckhouse.io/waiting-for-approval- update.node.deckhouse.io/disruption-approved- update.node.deckhouse.io/disruption-required- update.node.deckhouse.io/approved- update.node.deckhouse.io/draining- update.node.deckhouse.io/drained-
    kubectl label node <node_name> node.deckhouse.io/group-
@@ -120,11 +128,14 @@ To take a node out of `node-manager` control, you need to:
 This is only needed if you have to move a static node from one cluster to another. Be aware that these operations remove local storage data. If you just need to change NodeGroup you have to follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
 
 1. Delete the node from the Kubernetes cluster:
+
    ```shell
    kubectl drain <node> --ignore-daemonsets --delete-local-data
    kubectl delete node <node>
    ```
+
 1. Stop all the services and running containers:
+
    ```shell
    systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
    systemctl stop bashible.service bashible.timer
@@ -133,11 +144,15 @@ This is only needed if you have to move a static node from one cluster to anothe
    systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
    ```
+
 1. Unmount all mounted partitions:
+
    ```shell
    for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
    ```
+
 1. Delete all directories and files:
+
    ```shell
    rm -rf /var/lib/bashible
    rm -rf /var/cache/registrypackages
@@ -153,7 +168,9 @@ This is only needed if you have to move a static node from one cluster to anothe
    rm -rf /etc/systemd/system/sysctl-tuner*
    rm -rf /etc/systemd/system/kubelet*
    ```
+
 1. Delete all interfaces:
+
    ```shell
    ifconfig cni0 down
    ifconfig flannel.1 down
@@ -161,18 +178,24 @@ This is only needed if you have to move a static node from one cluster to anothe
    ip link delete cni0
    ip link delete flannel.1
    ```
+
 1. Cleanup systemd:
+
    ```shell
    systemctl daemon-reload
    systemctl reset-failed
    ```
+
 1. Start CRI:
+
    ```shell
    systemctl start containerd
    systemctl list-units --full --all | grep -q docker.service && systemctl start docker
    ```
+
 1. [Run](#how-do-i-add-a-static-node-to-a-cluster) the `bootstrap.sh` script.
 1. Turn on all the services:
+
    ```shell
    systemctl start kubelet.service
    systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
@@ -182,6 +205,7 @@ This is only needed if you have to move a static node from one cluster to anothe
 ## How do I know if something went wrong?
 
 The `node-manager` module creates the `bashible` service on each node. You can browse its logs using the following command:
+
 ```shell
 journalctl -fu bashible
 ```
@@ -193,6 +217,7 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
 - Find the node that is currently bootstrapping: `kubectl -n d8-cloud-instance-manager get machine | grep Pending`
 - To show details about a specific `machine`, enter: `kubectl -n d8-cloud-instance-manager describe machine kube-2-worker-01f438cf-757f758c4b-r2nx2`
   You will see the following information:
+
   ```shell
   Status:
     Bootstrap Status:
@@ -333,7 +358,7 @@ Below is an instruction on how you can restore the master node.
 
 Execute the following command to restore the master node in any cluster running under Deckhouse:
 
-```
+```shell
 kubectl -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
 jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.io".password)'
@@ -355,7 +380,7 @@ Please, pay attention that you must **delete the changes made to the `/root/.doc
 
 Execute the following command to restore the master node in any cluster running under Deckhouse:
 
-```
+```shell
 kubectl -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
 jq -r '.auths."registry.deckhouse.io".auth'
@@ -364,7 +389,7 @@ jq -r '.auths."registry.deckhouse.io".auth'
 Copy the command's output and use it for setting the AUTH variable on the corrupted master.
 Next, you need to pull images of `control plane` components to the corrupted master:
 
-```
+```shell
 for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
   crictl pull --auth $AUTH $image
 done
@@ -377,6 +402,7 @@ You need to restart `kubelet` after pulling the images.
 Set NodeGroup `cri.type` to `Docker` or `Containerd`.
 
 NodeGroup YAML example:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -391,11 +417,13 @@ spec:
 Also, this operation can be done with patch:
 
 * For Containerd:
+
   ```shell
   kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * For Docker:
+
   ```shell
   kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
   ```
@@ -411,11 +439,14 @@ It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in
 
 Also, this operation can be done with patch:
 * For Containerd
+
   ```shell
   data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
+
 * For Docker
+
   ```shell
   data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
   kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
@@ -434,14 +465,17 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
   For each master node in turn, it will be necessary:
   1. If the master NodeGroup `approvalMode` is set to `Manual`, confirm the disruption:
+
      ```shell
      kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
      ```
+
   2. Wait for the updated master node to switch to `Ready` state.
 
 * Additional steps for changing from Containerd to Docker
 
   Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
+
   ```shell
   mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json |
   jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
@@ -449,17 +483,22 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
   For each master node in turn, it will be necessary:
   1. If the master NodeGroup `approvalMode` is set to `Manual`, confirm the disruption:
+
      ```shell
      kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
      ```
+
   2. After updating the CRI and reboot, run the command:
+
      ```shell
      for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
        docker pull $image
      done
      ```
+
   3. Wait for the updated master node to switch to `Ready` state.
   4. Remove docker config from the updated master node:
+
      ```shell
      rm -f ~/.docker/config.json
      ```
@@ -490,6 +529,7 @@ spec:
 Debian-based distributions contain packages with Nvidia drivers in the base repository, so we do not need to prepare special images to support Nvidia GPU.
 
 Deploy `NodeGroupConfiguration` scripts:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -814,6 +854,7 @@ spec:
     apt-get update
     apt-get install -y nvidia-container-toolkit nvidia-driver-470
 ```
+
 For other Debian versions you will need to correct the `distribution` variable and Nvidia driver package name (the `nvidia-driver-470` in the example above).
 
 ### CentOS
@@ -823,6 +864,7 @@ The installation of Nvidia drivers in CentOS-based distributions is difficult to
 How to install Nvidia drivers is written in [instruction](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#redhat-installation).
 
 Deploy `NodeGroupConfiguration` scripts:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
