@@ -8,7 +8,7 @@ metadata:
   name: {{ $storageClass.name | quote }}
 provisioner: disk.csi.azure.com
 parameters:
-  type: {{ $storageClass.type | quote }}
+  skuName: {{ $storageClass.type | quote }}
   kind: managed
   {{- if eq $storageClass.type "UltraSSD_LRS" }}
   cachingmode: None
