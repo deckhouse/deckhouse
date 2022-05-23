@@ -46,11 +46,12 @@ bb-sync-file /etc/docker/certs.d/{{ .registry.address }}/ca.crt  - << "EOF"
 {{ .registry.ca }}
 EOF
 {{- end }}
-
-{{- if .registry.auth }}
-username="$(base64 -d <<< "{{ .registry.auth }}" | awk -F ":" '{print $1}')"
-password="$(base64 -d <<< "{{ .registry.auth }}" | awk -F ":" '{print $2}')"
-HOME=/ docker login --username "${username}" --password "${password}" {{ .registry.address }}
 {{- end }}
 
+{{- if .registry.auth }}
+if docker version >/dev/null 2>/dev/null; then
+  username="$(base64 -d <<< "{{ .registry.auth }}" | awk -F ":" '{print $1}')"
+  password="$(base64 -d <<< "{{ .registry.auth }}" | awk -F ":" '{print $2}')"
+  HOME=/ docker login --username "${username}" --password "${password}" {{ .registry.address }}
+fi
 {{- end }}
