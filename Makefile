@@ -29,31 +29,31 @@ TESTS_TIMEOUT="15m"
 
 .PHONY: tests-modules tests-matrix tests-openapi
 tests-modules: ## Run unit tests for modules hooks and templates.
-	@go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
+	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 
 tests-matrix: ## Test how helm templates are rendered with different input values generated from values examples. Use 'FOCUS' environment variable to run tests for a particular module.
-	@go test ./testing/matrix/ -v
+	go test ./testing/matrix/ -v
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	@go test -vet=off ./testing/openapi_cases/
+	go test -vet=off ./testing/openapi_cases/
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
-	@go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
+	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
 
 bin/golangci-lint:
-	@mkdir -p bin
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
+	mkdir -p bin
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
 
 .PHONY: lint lint-fix
 lint: bin/golangci-lint ## Run linter.
-	@bin/golangci-lint run
+	bin/golangci-lint run
 
 lint-fix: bin/golangci-lint ## Fix lint violations.
-	@bin/golangci-lint run --fix
+	bin/golangci-lint run --fix
 
 ##@ Generate
 
 .PHONY: generate
 generate: ## Run all generate-* jobs in bulk.
-	@cd tools; go generate
+	cd tools; go generate
