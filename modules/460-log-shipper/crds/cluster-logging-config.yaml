@@ -27,22 +27,23 @@ spec:
             Each CustomResource `ClusterLoggingConfig` describes rules for log fetching from cluster.
           properties:
             spec:
+              not:
+                required: [file, kubernetesPods]
+              oneOf:
+                - properties:
+                    kubernetesPods: {}
+                    type:
+                      enum: [KubernetesPods]
+                  required: [kubernetesPods]
+                - properties:
+                    file: {}
+                    type:
+                      enum: [File]
+                  required: [file]
               type: object
               required:
                 - type
                 - destinationRefs
-              anyOf:
-                - oneOf:
-                    - properties:
-                        type:
-                          enum: ["KubernetesPods"]
-                        kubernetesPods: {}
-                      required: ["kubernetesPods"]
-                    - properties:
-                        type:
-                          enum: ["File"]
-                        file: {}
-                      required: ["file"]
               properties:
                 type:
                   type: string
@@ -55,7 +56,6 @@ spec:
                     `File` source reads local file from node filesystem.
                 kubernetesPods:
                   type: object
-                  default: {}
                   properties:
                     namespaceSelector:
                       oneOf:
