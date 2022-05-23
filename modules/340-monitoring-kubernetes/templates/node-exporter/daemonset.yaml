@@ -65,7 +65,6 @@ spec:
         - '--collector.ntp.server-is-local'
         - '--collector.processes'
         - '--collector.interrupts'
-        - '--collector.systemd'
         - '--collector.filesystem.ignored-mount-points'
         - '(^/(dev|proc|sys|run|var/lib/kubelet)($|/))|(^/var/lib/docker/)'
         - '--collector.filesystem.ignored-fs-types'
