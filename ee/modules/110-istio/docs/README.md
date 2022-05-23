@@ -111,21 +111,21 @@ All data plane services are grouped into a mesh with the following features:
 
 Control plane components:
 * `istiod` — the main service with the following tasks:
-    * Continuous connection to the Kubernetes API and collecting information about services.
-    * Processing and validating all Istio-related Custom Resources using the Kubernetes Validating Webhook mechanism.
-    * Configuring each sidecar proxy individually:
-      * Generating authorization, routing, balancing rules, etc..
-      * Distributing information about other application services in the cluster.
-      * Issuing individual client certificates for implementing Mutual TLS. These certificates are unrelated to the certificates that Kubernetes uses for its own service needs.
-    * Automatic tuning of manifests that describe application Pods via the Kubernetes Mutating Webhook mechanism:
-      * Injecting an additional sidecar-proxy service container.
-      * Injecting an additional init container for configuring the network subsystem (configuring DNAT to intercept application traffic).
-      * Routing readiness and liveness probes through the sidecar-proxy.
+  * Continuous connection to the Kubernetes API and collecting information about services.
+  * Processing and validating all Istio-related Custom Resources using the Kubernetes Validating Webhook mechanism.
+  * Configuring each sidecar proxy individually:
+    * Generating authorization, routing, balancing rules, etc..
+    * Distributing information about other application services in the cluster.
+    * Issuing individual client certificates for implementing Mutual TLS. These certificates are unrelated to the certificates that Kubernetes uses for its own service needs.
+  * Automatic tuning of manifests that describe application Pods via the Kubernetes Mutating Webhook mechanism:
+    * Injecting an additional sidecar-proxy service container.
+    * Injecting an additional init container for configuring the network subsystem (configuring DNAT to intercept application traffic).
+    * Routing readiness and liveness probes through the sidecar-proxy.
 * `operator` — installs all the resources required to operate a specific version of the control plane.
 * `kiali` — dashboard for monitoring and controlling Istio resources as well as user services managed by Istio that allows you:
-    * Visualize inter-service connections.
-    * Viagnose problem inter-service connections.
-    * Diagnose the control plane state.
+  * Visualize inter-service connections.
+  * Viagnose problem inter-service connections.
+  * Diagnose the control plane state.
 
 The Ingress controller must be refined to receive user traffic:
 * You need to add sidecar-proxy to the controller Pods. It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the `IngressNginxController` resource).
@@ -147,8 +147,8 @@ The istiod controller and sidecar-proxy containers export their own metrics that
   * The controller's Pods have additional sidecar-proxy containers.
   * Unlike application Pods, the Ingress controller's sidecar-proxy intercepts only outgoing traffic from the controller to the services. The incoming traffic from the users is handled directly by the controller itself;
 * Ingress resources require refinement in the form of adding annotations:
-    * `nginx.ingress.kubernetes.io/service-upstream: "true"` — the Ingress controller will use the service's ClusterIP as upstream instead of the Pod addresses. In this case, traffic balancing between the Pods is handled by the sidecar-proxy. Use this option only if your service has a ClusterIP.
-    * `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc.cluster-dns-suffix"` — the Ingress controller's sidecar-proxy makes routing decisions based on the Host header. If this annotation is omitted, the controller will leave a header with the site address (e.g. `Host: example.com`).
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — the Ingress controller will use the service's ClusterIP as upstream instead of the Pod addresses. In this case, traffic balancing between the Pods is handled by the sidecar-proxy. Use this option only if your service has a ClusterIP.
+  * `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc.cluster-dns-suffix"` — the Ingress controller's sidecar-proxy makes routing decisions based on the Host header. If this annotation is omitted, the controller will leave a header with the site address (e.g. `Host: example.com`).
 * Resources of the Service type do not require any adaptation and continue to function properly. Just like before, applications have access to service addresses like `servicename`, `servicename.myns.svc`, etc;
 * DNS requests from within the Pods are transparently redirected to the sidecar-proxy for processing:
   * This way, domain names of the services in the neighboring clusters can be disassociated from their addresses.

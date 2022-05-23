@@ -6,7 +6,8 @@ title: "Модуль ingress-nginx: FAQ"
 
 В случае, если вы хотите ограничить доступ к вашему приложению внутри кластера ТОЛЬКО от Pod'ов ingress'а, необходимо в Pod с приложением добавить контейнер с kube-rbac-proxy:
 
-### Пример Deployment для защищенного приложения:
+### Пример Deployment для защищенного приложения
+
 {% raw %}
 ```yaml
 apiVersion: apps/v1
@@ -161,7 +162,6 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 {% endraw %}
 Подробнее о том, как работает аутентификация по сертификатам, можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs).
 
-
 ## Как настроить работу через MetalLB с доступом только из внутренней сети?
 
 Пример MetalLB с доступом только из внутренней сети
@@ -202,7 +202,6 @@ HPA выставляется с помощью аттрибутов `minReplicas
 При CPU utilization > 50% HPA закажет новую реплику для `hpa-scaler` (в рамках minReplicas и maxReplicas).
 
 `hpa-scaler` deployment обладает HardPodAntiAffinity, поэтому он попытается заказать себе новый узел (если это возможно в рамках своей NodeGroup), куда автоматически будет размещен еще один ingress-controller.
-
 
 ## Как использовать IngressClass с установленными IngressClassParameters
 

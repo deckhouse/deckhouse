@@ -6,7 +6,7 @@ The module is **automatically** enabled for the following cloud providers:
 - [OpenStack](../../modules/030-cloud-provider-openstack/);
 - [VMware vSphere](../../modules/030-cloud-provider-vsphere/).
 
-To enable it for the bare metal machines, add the following parameter to the `deckhouse` configMap:
+To enable it for the bare metal machines, add the following parameter to the `deckhouse` ConfigMap:
 ```yaml
 cniFlannelEnabled: "true"
 ```
