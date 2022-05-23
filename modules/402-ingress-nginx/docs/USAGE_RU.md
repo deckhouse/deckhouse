@@ -116,10 +116,10 @@ spec:
 Таким образом для данного примера [конфигурация модуля metallb](../380-metallb/configuration.html) должна быть такой:
 ```yaml
 metallb:
- speaker: 
-   nodeSelector: 
+ speaker:
+   nodeSelector:
      node-role.deckhouse.io/frontend: ""
-   tolerations: 
+   tolerations:
     - effect: NoExecute
       key: dedicated.deckhouse.io
       value: frontend

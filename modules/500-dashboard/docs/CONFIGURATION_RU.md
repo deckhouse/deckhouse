@@ -19,7 +19,7 @@ title: "Модуль dashboard: настройки"
     * `whitelistSourceRanges` — массив CIDR, которым разрешено проходить аутентификацию для доступа в dashboard.
     * `allowScale` — активация возможности скейлить Deployment и StatefulSet из web-интерфейса.
          * Используется, если не включен параметр `externalAuthentication`.
-* `https` — тип сертифиата, используемого для dashboard.
+* `https` — тип сертификата, используемого для dashboard.
     * При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     * `mode` — режим работы HTTPS:
         * `Disabled` — в данном режиме dashboard будет работать только по HTTP;

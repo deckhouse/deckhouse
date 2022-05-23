@@ -182,9 +182,9 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
    * Add a key by clicking the "Add key" button.
    * The `.json` file with the key data will be saved to your computer.
    * Encode the resulting file using the **base64** algorithm:
-       ```bash
-       base64 project-209317-556c656b81c4.json
-       ```
+     ```shell
+     base64 project-209317-556c656b81c4.json
+     ```
 
 2. Use the resulting **base-64** string for setting the  `cloudDNSServiceAccount` module parameter.
 

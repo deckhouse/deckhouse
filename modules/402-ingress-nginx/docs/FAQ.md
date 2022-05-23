@@ -7,6 +7,7 @@ title: "The ingress-nginx module: FAQ"
 Add the  kube-rbac-proxy container to the application Pod to allow only ingress Pods to access your application in the cluster:
 
 ### An example of the corresponding Kubernetes Deployment
+
 {% raw %}
 ```yaml
 apiVersion: apps/v1
@@ -160,7 +161,6 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 {% endraw %}
 [Here](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs) you can read more about how certificate authentication works.
 
-
 ## How do I configure MetalLB to be accessible from the internal network only?
 
 Below is an example of a MetalLB config with access from the internal network only.
@@ -190,7 +190,6 @@ spec:
     my-cookie: "$cookie_MY_COOKIE"
 ```
 
-
 ## How to enable HorizontalPodAutoscaling for IngressNginxController?
 
 > **Note!** HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
@@ -202,7 +201,6 @@ HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxCon
 If CPU utilization > 50% HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect of `minReplicas` and `maxReplicas`).
 
 `hpa-scaler` Deployment has HardPodAntiAffinity and it will order a new Node (inside it's NodeGroup), where one more ingress-controller will be set.
-
 
 ## How to use IngressClass with IngressClassParameters
 
