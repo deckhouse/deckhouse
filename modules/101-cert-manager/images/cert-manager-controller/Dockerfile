@@ -9,9 +9,8 @@ RUN curl -sSfL https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/
 COPY patches/certificate_owner_ref.patch ./
 ENV APP_VERSION v1.7.1
 ENV USE_BAZEL_VERSION 4.2.1
-ENV CGO_ENABLED 0
 RUN patch -p1 < certificate_owner_ref.patch && \
-  bazel build //cmd/controller --stamp=true && strip /build/cert-manager/bazel-bin/cmd/controller/controller_/controller
+  bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/controller && strip /build/cert-manager/bazel-bin/cmd/controller/controller_/controller
 
 FROM $BASE_ALPINE as final
 COPY --from=artifact /build/cert-manager/bazel-bin/cmd/controller/controller_/controller /bin/cert-manager-controller
