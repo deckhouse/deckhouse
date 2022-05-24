@@ -84,10 +84,11 @@ spec:
                           teams:
                             type: array
                             description: |
-                              A lsit of allowed GitHub commands.
-                              The user token will contain a combined set of commands from GitHub and commands from this list. If the set is empty, the authorization will be considered unsuccessful.
+                              A lsit of allowed GitHub teams (filter).
 
-                              The user token will contain all GitHub commands if the parameter is not set.
+                              The user token will contain a set intersection of teams from GitHub and teams from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                              The user token will contain all GitHub teams if the parameter is not set.
                             items:
                               type: string
                 gitlab: &gitlab
@@ -110,8 +111,9 @@ spec:
                     groups:
                       type: array
                       description: |
-                        A list of allowed GitLab groups (**group paths** and not names).
-                        The user token will contain a combined set of GitLab groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful.
+                        A list (filter) of allowed GitLab groups (**group paths** and not names).
+
+                        The user token will contain a set intersection of GitLab groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful.
 
                         The user token will contain all GitLab groups if the parameter is not set;
                       items:
@@ -138,10 +140,11 @@ spec:
                     teams:
                       type: array
                       description: |
-                        A list of allowed Bitbucket Cloud commands.
-                        The user token will contain a combined set of Bitbucket Cloud commands and commands from this list. If the set is empty, the authorization will be considered unsuccessful.
+                        A list of allowed Bitbucket Cloud teams (filter).
 
-                        The user token will contain the user commands in the `groups` claim (similar to other providers).
+                        The user token will contain a set intersection of Bitbucket Cloud teams and teams from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                        The user token will contain the user teams in the `groups` claim (similar to other providers).
                       items:
                         type: string
                     includeTeamGroups:
@@ -174,8 +177,9 @@ spec:
                     groups:
                       type: array
                       description: |
-                        A list of allowed Crowd groups.
-                        The user token will contain a combined set of Crowd groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful.
+                        A list of allowed Crowd groups (filter).
+
+                        The user token will contain a set intersection of Crowd groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful.
 
                         The user token will contain all Crowd groups if the parameter is not set.
                       items:
@@ -501,10 +505,11 @@ spec:
                           teams:
                             type: array
                             description: |
-                              A lsit of allowed GitHub commands.
-                              The user token will contain a combined set of commands from GitHub and commands from this list. If the set is empty, the authorization will be considered unsuccessful.
+                              A lsit of allowed GitHub teams (filter).
 
-                              The user token will contain all GitHub commands if the parameter is not set.
+                              The user token will contain a set intersection of teams from GitHub and teams from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                              The user token will contain all GitHub teams if the parameter is not set.
                             items:
                               type: string
                 gitlab: *gitlab
