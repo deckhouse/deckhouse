@@ -56,6 +56,7 @@
 ## Fixes
 
 
+ - **[candi]** Prepull the `kubernetes-api-proxy` image to avoid problems when we change from system to static pod `kubernetes-api-proxy`. [#1608](https://github.com/deckhouse/deckhouse/pull/1608)
  - **[candi]** Fix errors in withNAT layout [#1554](https://github.com/deckhouse/deckhouse/pull/1554)
  - **[candi]** Fixed race condition between old the kubernetes-api-proxy-configurator and bashible step. [#1482](https://github.com/deckhouse/deckhouse/pull/1482)
  - **[candi]** Fix startup config in Kubernetes API proxy configuration script. [#1426](https://github.com/deckhouse/deckhouse/pull/1426)
@@ -65,6 +66,7 @@
  - **[chrony]** Remove chronyd stale pid file on start [#1375](https://github.com/deckhouse/deckhouse/pull/1375)
  - **[cloud-provider-aws]** Fix OpenAPI specifications. [#1449](https://github.com/deckhouse/deckhouse/pull/1449)
  - **[cloud-provider-aws]** The necessary IAM policies for creating a peering connection have been added to the documentation. [#504](https://github.com/deckhouse/deckhouse/pull/504)
+ - **[cloud-provider-azure]** Fixed parameter name `type` -> `skuName`. [#1598](https://github.com/deckhouse/deckhouse/pull/1598)
  - **[cloud-provider-vsphere]** Fix OpenAPI specifications. [#1449](https://github.com/deckhouse/deckhouse/pull/1449)
  - **[cloud-provider-vsphere]** Correct behavior of nestedHardwareVirtualization parameter for VsphereInstanceClass. [#1331](https://github.com/deckhouse/deckhouse/pull/1331)
     Node groups with VsphereInstanceClass runtimeOptions.nestedHardwareVirtualization set to false have to be manually updated for this setting to take place. New nodes will be created with disabled nested hardware virtualization if it is disabled in configuration.
@@ -76,7 +78,9 @@
  - **[linstor]** automatically recover evicted nodes in LINSTOR [#1397](https://github.com/deckhouse/deckhouse/pull/1397)
  - **[linstor]** LINSTOR module now supports high-availability [#1147](https://github.com/deckhouse/deckhouse/pull/1147)
     Multimaster clusters will automatically turn LINSTOR into HA-mode
+ - **[log-shipper]** Reduced the amount of exported metrics by log-shipper agents. Fixes metrics leak for dynamic environments. [#1588](https://github.com/deckhouse/deckhouse/pull/1588)
  - **[log-shipper]** Migrate deprecated Elasticsearch fields. [#1454](https://github.com/deckhouse/deckhouse/pull/1454)
+ - **[monitoring-kubernetes]** Disabled node-exporter's systemd collector. It was not working correctly, so no one is dependent on it. [#1609](https://github.com/deckhouse/deckhouse/pull/1609)
  - **[namespace-configurator]** Exclude upmeter probe namespaces from namespace-configurator snapshots. [#1439](https://github.com/deckhouse/deckhouse/pull/1439)
  - **[node-local-dns]** Reworked health checking logic [#388](https://github.com/deckhouse/deckhouse/pull/388)
     Now Pods shouldn't crash unexpectedly now due to poor implementation of locking/probing.
