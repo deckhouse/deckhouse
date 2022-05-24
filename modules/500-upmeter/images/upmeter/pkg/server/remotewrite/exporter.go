@@ -25,6 +25,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -92,15 +93,23 @@ var (
 func (e *exporter) mapResponseToError(res *http.Response) error {
 	if res.StatusCode >= 500 {
 		// should retry, the storage will recover eventually
-		return fmt.Errorf("got %d, %w", res.StatusCode, ErrInternalStorageError)
+		return errWithStatusAndBody(res, ErrInternalStorageError)
 	}
 
 	if res.StatusCode >= 400 {
 		// storage did not accept the data, re-sending will not help
-		return fmt.Errorf("got %d, %w", res.StatusCode, ErrNotAcceptedByStorage)
+		return errWithStatusAndBody(res, ErrNotAcceptedByStorage)
 	}
 
 	return nil
+}
+
+func errWithStatusAndBody(res *http.Response, exportErr error) error {
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return fmt.Errorf("got %d, %w: (failed to read response body: %s)", res.StatusCode, exportErr, err.Error())
+	}
+	return fmt.Errorf("got %d, %w: %q", res.StatusCode, exportErr, body)
 }
 
 // addHeaders adds required headers, an Authorization header, and all headers in the
