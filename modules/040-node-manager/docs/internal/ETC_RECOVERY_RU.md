@@ -69,7 +69,7 @@ kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL
 
 #### Решение 2
 Если решение 1 не помогло, то:
-- Загружаем на сервер последнюю версию [etcdctl](https://github.com/etcd-io/etcd/releases).
+- Загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases)? желательно той же версии что и серверю
 - Останавливаем etcd.
 - Увеличиваем `quota-backend-bytes` в манифесте, если это необходимо.
 - Беками файлы, например, в `/var/lib/etcd-backup`
@@ -88,3 +88,12 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 ```
 ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s
 ```
+
+### Восстанавливаемся из бекапа
+- Загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases)? желательно той же версии, что и сервере.
+- Останавливаем etcd.
+- Удаляем папку c данными `rm -rf /var/lib/etcd/`
+- Восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`
+- Пытаемся запустить etcd
+
+
