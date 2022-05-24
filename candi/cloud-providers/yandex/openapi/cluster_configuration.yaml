@@ -72,13 +72,6 @@ apiVersions:
                 description: |
                   Amount of CPU cores to provision on a Yandex Compute Instance.
                 type: integer
-              coreFraction:
-                description: |
-                  Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
-                type: integer
-                example: 20
-                x-doc-default: 100
-                enum: [ 0,5,20,50,100 ]
               memory:
                 type: integer
                 description: |
@@ -227,6 +220,13 @@ apiVersions:
                 Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties
+                coreFraction:
+                  description: |
+                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  type: integer
+                  example: 20
+                  x-doc-default: 100
+                  enum: [ 0,5,20,50,100 ]
       existingNetworkID:
         type: string
         description: |
