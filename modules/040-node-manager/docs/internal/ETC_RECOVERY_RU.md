@@ -18,7 +18,9 @@ cp -R /var/lib/etcd/ /var/lib/etcd-backup
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 ```
 
-## Ситуация 1
+## Single-master
+
+### Ситуация 1
 Etcd выработал лимит `quota-backend-bytes` и после перезапуска в логах видим ошибку:
 ```
 {"level":"warn","ts":"2022-05-24T08:38:01.886Z","caller":"snap/db.go:88","msg":"failed to find [SNAPSHOT-INDEX].snap.db","snapshot-index":40004,"snapshot-file-path":"/var/lib/etcd/member/snap/0000000000009c44.snap.db","error":"snap: snapshot file doesn't exist"}
@@ -45,7 +47,7 @@ main.main()
 ```
 Исходя из [issue](https://github.com/etcd-io/etcd/issues/11949) такая ошибка может появиться и после некорректного завершения работы etcd.
 
-### Решение 1
+#### Решение 1
 [Источник](https://github.com/etcd-io/etcd/issues/11949#issuecomment-1029906679)
 - Останавливаем etcd
 - Беками файлы
@@ -65,8 +67,8 @@ kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL
 kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s'
 ```
 
-### Решение 2
-[Источник](https://github.com/etcd-io/etcd/issues/11949#issuecomment-1029906679)
+#### Решение 2
+Если решение 1 не помогло, то:
 - Загружаем на сервер последнюю версию [etcdctl](https://github.com/etcd-io/etcd/releases).
 - Останавливаем etcd.
 - Увеличиваем `quota-backend-bytes` в манифесте, если это необходимо.
