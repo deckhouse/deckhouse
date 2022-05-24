@@ -13,7 +13,7 @@ mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
 cp -R /var/lib/etcd/ /var/lib/etcd-backup
 ```
 
-Старт etcd после попытки восстановленияЖ
+Старт etcd после попытки восстановления:
 ```bash
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 ```
@@ -69,7 +69,7 @@ kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL
 
 #### Решение 2
 Если решение 1 не помогло, то:
-- загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases)? желательно той же версии, что и на сервере.
+- загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и на сервере.
 - останавливаем etcd (перемещаем манифест пода)
 - увеличиваем `quota-backend-bytes` в манифесте, если это необходимо
 - беками файлы, например, в `/var/lib/etcd-backup`
@@ -90,7 +90,7 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 ```
 
 ### Восстанавливаемся из бекапа
-- загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases)? желательно той же версии, что и сервере
+- загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и сервере
 - останавливаем etcd (перемещаем манифест пода)
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
 - восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`
