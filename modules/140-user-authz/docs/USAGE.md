@@ -43,95 +43,92 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 
 1. Create a `ServiceAccount` in the `d8-service-accounts` namespace (you can change the name):
 
-    ```bash
-    kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
-    ```
+   ```bash
+   kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
+   ```
 
-3. Grant the necessary rights to the `ServiceAccount` (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) CR)
+2. Grant the necessary rights to the `ServiceAccount` (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) CR)
 
-    ```bash
-    kubectl create -f - <<EOF
-    apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    metadata:
-      name: gitlab-runner-deploy
-    spec:
-      subjects:
-      - kind: ServiceAccount
-        name: gitlab-runner-deploy
-        namespace: d8-service-accounts
-      accessLevel: SuperAdmin
-      allowAccessToSystemNamespaces: true      # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
-    EOF
-    ```
+   ```bash
+   kubectl create -f - <<EOF
+   apiVersion: deckhouse.io/v1
+   kind: ClusterAuthorizationRule
+   metadata:
+     name: gitlab-runner-deploy
+   spec:
+     subjects:
+     - kind: ServiceAccount
+       name: gitlab-runner-deploy
+       namespace: d8-service-accounts
+     accessLevel: SuperAdmin
+     allowAccessToSystemNamespaces: true      # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+   EOF
+   ```
 
-    If the multitenancy mode is enabled in the Deckhouse configuration, you need to specify the `allowAccessToSystemNamespaces: true` parameter to give the ServiceAccount access to the system namespaces.
+   If the multitenancy mode is enabled in the Deckhouse configuration, you need to specify the `allowAccessToSystemNamespaces: true` parameter to give the ServiceAccount access to the system namespaces.
 
-4. Generate a `kube-config` (don't forget to substitute your values).
+3. Generate a `kube-config` (don't forget to substitute your values).
 
-    ```bash
-    cluster_name=my-cluster
-    user_name=gitlab-runner-deploy.my-cluster
-    context_name=${cluster_name}-${user_name}
-    file_name=kube.config
-    ```
+   ```bash
+   cluster_name=my-cluster
+   user_name=gitlab-runner-deploy.my-cluster
+   context_name=${cluster_name}-${user_name}
+   file_name=kube.config
+   ```
 
-    * The `cluster` section:
+   * The `cluster` section:
+     * If there is direct access to the API server, then use its IP address:
+       1. Get the CA of our Kubernetes cluster:
 
-        * If there is direct access to the API server, then use its IP address:
+          ```bash
+          cat /etc/kubernetes/kubelet.conf \
+            | grep certificate-authority-data | awk '{ print $2 }' \
+            | base64 -d > /tmp/ca.crt
+          ```
 
-          1. Get the CA of our Kubernetes cluster:
+       2. Generate a section using the API server's IP:
 
-            ```bash
-            cat /etc/kubernetes/kubelet.conf \
-              | grep certificate-authority-data | awk '{ print $2 }' \
-              | base64 -d > /tmp/ca.crt
-            ```
+          ```bash
+          kubectl config set-cluster $cluster_name --embed-certs=true \
+            --server=https://<API_SERVER_IP>:6443 \
+            --certificate-authority=/tmp/ca.crt \
+            --kubeconfig=$file_name
+          ```
 
-          2. Generate a section using the API server's IP:
+     * If there is no direct access to the API server, [enable](../../modules/150-user-authn/configuration.html#parameters) the `publishAPI` parameter containing the `whitelistSourceRanges` array. Or you can do that via a separate Ingress-controller using the `ingressClass` option with the finite `SourceRange`. That is, specify the requests' source addresses in the `acceptRequestsFrom` controller parameter.
+       1. Get the CA from the secret containing the `api.%s` domain's certificate:
 
-            ```bash
-            kubectl config set-cluster $cluster_name --embed-certs=true \
-              --server=https://<API_SERVER_IP>:6443 \
-              --certificate-authority=/tmp/ca.crt \
-              --kubeconfig=$file_name
-            ```
+          ```bash
+          kubectl -n d8-user-authn get secrets -o json \
+            $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
+            | jq -rc '.data."ca.crt" // .data."tls.crt"' \
+            | base64 -d > /tmp/ca.crt
+          ```
 
-        *  If there is no direct access to the API server, [enable](../../modules/150-user-authn/configuration.html#parameters) the `publishAPI` parameter containing the `whitelistSourceRanges` array. Or you can do that via a separate Ingress-controller using the `ingressClass` option with the finite `SourceRange`. That is, specify the requests' source addresses in the `acceptRequestsFrom` controller parameter.
+       2. Generate a section with the external domain:
 
-           1. Get the CA from the secret containing the `api.%s` domain's certificate:
+          ```bash
+          kubectl config set-cluster $cluster_name --embed-certs=true \
+            --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+            --certificate-authority=/tmp/ca.crt \
+            --kubeconfig=$file_name
+          ```
 
-             ```bash
-             kubectl -n d8-user-authn get secrets -o json \
-               $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
-               | jq -rc '.data."ca.crt" // .data."tls.crt"' \
-               | base64 -d > /tmp/ca.crt
-             ```
+   * Generate the `user` section using the token from the `ServiceAccount` secret:
 
-           2. Generate a section with the external domain:
+     ```bash
+     kubectl config set-credentials $user_name \
+       --token=$(kubectl get secret $(kubectl get sa gitlab-runner-deploy -n d8-service-accounts  -o json | jq -r .secrets[].name) -n d8-service-accounts -o json |jq -r '.data["token"]' | base64 -d) \
+       --kubeconfig=$file_name
+     ```
 
-             ```bash
-             kubectl config set-cluster $cluster_name --embed-certs=true \
-               --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-               --certificate-authority=/tmp/ca.crt \
-               --kubeconfig=$file_name
-             ```
+   * Generate the `context` to bind it all together:
 
-    * Generate the `user` section using the token from the `ServiceAccount` secret:
-
-        ```bash
-        kubectl config set-credentials $user_name \
-          --token=$(kubectl get secret $(kubectl get sa gitlab-runner-deploy -n d8-service-accounts  -o json | jq -r .secrets[].name) -n d8-service-accounts -o json |jq -r '.data["token"]' | base64 -d) \
-          --kubeconfig=$file_name
-        ```
-
-    * Generate the `context` to bind it all together:
-
-        ```bash
-        kubectl config set-context $context_name \
-          --cluster=$cluster_name --user=$user_name \
-          --kubeconfig=$file_name
-        ```
+     ```bash
+     kubectl config set-context $context_name \
+       --cluster=$cluster_name --user=$user_name \
+       --kubeconfig=$file_name
+     ```
 
 ### How to create a user using a client certificate
 

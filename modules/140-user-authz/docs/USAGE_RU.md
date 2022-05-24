@@ -43,29 +43,29 @@ spec:
 
 1. Создать `ServiceAccount` в namespace `d8-service-accounts` (имя можно изменить):
 
-    ```bash
-    kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
-    ```
+   ```bash
+   kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
+   ```
 
 2. Дать необходимые `ServiceAccount` права (используя CR [ClusterAuthorizationRule](cr.html#clusterauthorizationrule))
 
-    ```bash
-    kubectl create -f - <<EOF
-    apiVersion: deckhouse.io/v1
-    kind: ClusterAuthorizationRule
-    metadata:
-      name: gitlab-runner-deploy
-    spec:
-      subjects:
-      - kind: ServiceAccount
-        name: gitlab-runner-deploy
-        namespace: d8-service-accounts
-      accessLevel: SuperAdmin
-      allowAccessToSystemNamespaces: true      # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
-    EOF
-    ```
+   ```bash
+   kubectl create -f - <<EOF
+   apiVersion: deckhouse.io/v1
+   kind: ClusterAuthorizationRule
+   metadata:
+     name: gitlab-runner-deploy
+   spec:
+     subjects:
+     - kind: ServiceAccount
+       name: gitlab-runner-deploy
+       namespace: d8-service-accounts
+     accessLevel: SuperAdmin
+     allowAccessToSystemNamespaces: true      # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
+   EOF
+   ```
 
-    Если в конфигурации Deckhouse включен режим multitenancy (доступно только в версии Enterprise Edition), то, чтобы дать SA доступ в системные namespace'ы, нужно указать `allowAccessToSystemNamespaces: true`.
+   Если в конфигурации Deckhouse включен режим multitenancy (доступно только в версии Enterprise Edition), то, чтобы дать SA доступ в системные namespace'ы, нужно указать `allowAccessToSystemNamespaces: true`.
 
 3. Сгенерировать `kube-config`, подставив свои значения переменных в начале.
 
@@ -76,10 +76,9 @@ spec:
    file_name=kube.config
    ```
 
-    * Секция `cluster`:
-        * Если есть доступ напрямую до API-сервера, то используем его IP:
-
-          1. Достаем CA нашего кластера Kubernetes:
+   * Секция `cluster`:
+     * Если есть доступ напрямую до API-сервера, то используем его IP:
+       1. Достаем CA нашего кластера Kubernetes:
 
           ```bash
           cat /etc/kubernetes/kubelet.conf \
@@ -87,7 +86,7 @@ spec:
             | base64 -d > /tmp/ca.crt
           ```
 
-          2. Генерируем секцию с IP API-сервера:
+       2. Генерируем секцию с IP API-сервера:
 
           ```bash
           kubectl config set-cluster $cluster_name --embed-certs=true \
@@ -96,10 +95,10 @@ spec:
             --kubeconfig=$file_name
           ```
 
-        * Если прямого доступа до API-сервера нет, то [включаем](../../modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges`. Либо через отдельный
-          Ingress-controller при помощи опции `ingressClass` с конечным списком `SourceRange` прописываем в настройках контроллера `acceptRequestsFrom` только адреса с которых будут идти запросы.
-  
-          1. Достаем CA из secret'а с сертификатом для домена `api.%s`:
+     * Если прямого доступа до API-сервера нет, то [включаем](../../modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges`. Либо через отдельный
+       Ingress-controller при помощи опции `ingressClass` с конечным списком `SourceRange` прописываем в настройках контроллера `acceptRequestsFrom` только адреса с которых будут идти запросы.
+
+       1. Достаем CA из secret'а с сертификатом для домена `api.%s`:
 
           ```bash
           kubectl -n d8-user-authn get secrets -o json \
@@ -108,7 +107,7 @@ spec:
             | base64 -d > /tmp/ca.crt
           ```
 
-          2. Генерируем секцию с внешним доменом:
+       2. Генерируем секцию с внешним доменом:
 
           ```bash
           kubectl config set-cluster $cluster_name --embed-certs=true \
@@ -117,21 +116,21 @@ spec:
             --kubeconfig=$file_name
           ```
 
-    * Секция `user` с токеном из секрета `ServiceAccount`:
+   * Секция `user` с токеном из секрета `ServiceAccount`:
 
-        ```bash
-        kubectl config set-credentials $user_name \
-          --token=$(kubectl get secret $(kubectl get sa gitlab-runner-deploy -n d8-service-accounts  -o json | jq -r .secrets[].name) -n d8-service-accounts -o json |jq -r '.data["token"]' | base64 -d) \
-          --kubeconfig=$file_name
-        ```
+     ```bash
+     kubectl config set-credentials $user_name \
+       --token=$(kubectl get secret $(kubectl get sa gitlab-runner-deploy -n d8-service-accounts  -o json | jq -r .secrets[].name) -n d8-service-accounts -o json |jq -r '.data["token"]' | base64 -d) \
+       --kubeconfig=$file_name
+     ```
 
-    * Секция `context` для связи:
+   * Секция `context` для связи:
 
-        ```bash
-        kubectl config set-context $context_name \
-          --cluster=$cluster_name --user=$user_name \
-          --kubeconfig=$file_name
-        ```
+     ```bash
+     kubectl config set-context $context_name \
+       --cluster=$cluster_name --user=$user_name \
+       --kubeconfig=$file_name
+     ```
 
 ### Создание пользователя с помощью клиентского сертификата
 
