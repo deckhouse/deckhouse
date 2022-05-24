@@ -34,7 +34,7 @@ shell:
   - cd /build/cert-manager
   - curl -sSfL https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
   - export APP_VERSION="v{{ $version }}-flant"
   - export USE_BAZEL_VERSION="4.2.1"
   - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/controller
