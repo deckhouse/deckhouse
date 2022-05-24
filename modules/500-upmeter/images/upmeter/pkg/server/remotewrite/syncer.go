@@ -148,13 +148,18 @@ func (s *syncer) export(ctx context.Context) error {
 	if err = s.exporter.Export(ctx, timeseries); err != nil {
 		if errors.Is(err, ErrNotAcceptedByStorage) {
 			// will not retry
+			s.logger.Warnf("timeseries (%s) was not accepted by storage: %v", slot.Format("15:04:05"), err)
 			return s.clean(slot)
 		}
-		if errors.Is(err, ErrNoCompleteEpisodes) || errors.Is(err, ErrInternalStorageError) {
+		if errors.Is(err, ErrInternalStorageError) {
+			s.logger.Infof("timeseries (%s) sending postponed: %v", slot.Format("15:04:05"), err)
+			return nil
+		}
+		if errors.Is(err, ErrNoCompleteEpisodes) {
 			// will send later
 			return nil
 		}
-		return fmt.Errorf("exporting timeseries %s: %w", slot.Format("15:04:05"), err)
+		return fmt.Errorf("exporting timeseries (%s): %w", slot.Format("15:04:05"), err)
 	}
 
 	s.logger.Infof("exported timeseries %s", slot.Format("15:04:05"))
