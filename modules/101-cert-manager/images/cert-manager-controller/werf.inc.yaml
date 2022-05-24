@@ -35,10 +35,8 @@ shell:
   - curl -sSfL https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
-  - export APP_VERSION="v{{ $version }}"
   - export USE_BAZEL_VERSION="4.2.1"
-  - export PLATFORM="@io_bazel_rules_go//go/toolchain:linux_amd64"
-  - make controller
-  - make cainjector
-  - make webhook
-  - make acmesolver
+  - make controller APP_VERSION=v{{ $version }}-flant PLATFORM=@io_bazel_rules_go//go/toolchain:linux_amd64
+  - make cainjector APP_VERSION=v{{ $version }}-flant PLATFORM=@io_bazel_rules_go//go/toolchain:linux_amd64
+  - make webhook APP_VERSION=v{{ $version }}-flant PLATFORM=@io_bazel_rules_go//go/toolchain:linux_amd64
+  - make acmesolver APP_VERSION=v{{ $version }}-flant PLATFORM=@io_bazel_rules_go//go/toolchain:linux_amd64
