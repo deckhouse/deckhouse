@@ -1,21 +1,22 @@
 run:
   timeout: 10m
   skip-dirs:
-    - go_lib/dependency/k8s/drain # this code has been copied from kubectl cli. No need to lint external code
-    - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1 # # this code has been copied from kubernetes vertical-pod-autoscaler. No need to lint external code
+    # this code has been copied from kubectl cli. No need to lint external code.
+    - go_lib/dependency/k8s/drain
+    # this code has been copied from kubernetes vertical-pod-autoscaler. No need to lint external code.
+    - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
 issues:
   exclude:
   - ST1005.*
   - "should not use dot imports"
   - "don't use an underscore in package name"
+  - "exported: .*"
 
 linters-settings:
   gci:
     local-prefixes: github.com/deckhouse/
   goimports:
     local-prefixes: github.com/deckhouse/
-  golint:
-    min-confidence: 0
   errcheck:
     ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
 
@@ -27,7 +28,7 @@ linters:
   - gocritic
   - gofmt
   - goimports
-  - golint
   - gosimple
   - govet
   - misspell
+  - revive

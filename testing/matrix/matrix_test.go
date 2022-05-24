@@ -32,7 +32,7 @@ func TestMatrix(t *testing.T) {
 	require.NoError(t, err)
 
 	// Use environment variable to focus on specific module, e.g. D8_TEST_MATRIX_FOCUS=user-authn,user-authz
-	focus := os.Getenv("D8_TEST_MATRIX_FOCUS")
+	focus := os.Getenv("FOCUS")
 
 	focusNames := make(map[string]struct{})
 	if focus != "" {

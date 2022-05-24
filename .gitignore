@@ -43,3 +43,6 @@ layouts-tests-tmp/
 # macOS Finder files
 *.DS_Store
 ._*
+
+# Dev environment
+bin/
