@@ -1,0 +1,27 @@
+candi:
+  fixes:
+    - summary: >-
+        Prepull the `kubernetes-api-proxy` image to avoid problems when we change from system to
+        static pod `kubernetes-api-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1608
+cloud-provider-azure:
+  fixes:
+    - summary: Fixed parameter name `type` -> `skuName`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1598
+log-shipper:
+  fixes:
+    - summary: >-
+        Reduced the amount of exported metrics by log-shipper agents. Fixes metrics leak for dynamic
+        environments.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1588
+monitoring-kubernetes:
+  fixes:
+    - summary: >-
+        Disabled node-exporter's systemd collector. It was not working correctly, so no one is
+        dependent on it.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1609
+priority-class:
+  fixes:
+    - summary: Documentation fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1561
+
