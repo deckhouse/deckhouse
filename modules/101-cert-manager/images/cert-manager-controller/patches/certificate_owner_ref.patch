@@ -5,7 +5,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/deploy/crds/crd-certificates.yaml b/deploy/crds/crd-certificates.yaml
 --- a/deploy/crds/crd-certificates.yaml	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/deploy/crds/crd-certificates.yaml	(date 1653333269290)
++++ b/deploy/crds/crd-certificates.yaml	(date 1653379919441)
 @@ -82,6 +82,9 @@
                          enum:
                            - DER
@@ -16,6 +16,42 @@ diff --git a/deploy/crds/crd-certificates.yaml b/deploy/crds/crd-certificates.ya
                  commonName:
                    description: 'CommonName is a common name to be used on the Certificate. The CommonName should have a length of 64 characters or fewer to avoid generating invalid CSRs. This value is ignored by TLS clients when any subject alt name is set. This is x509 behaviour: https://tools.ietf.org/html/rfc6125#section-6.4.4'
                    type: string
+Index: internal/apis/certmanager/types_certificate.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/certmanager/types_certificate.go
+--- a/internal/apis/certmanager/types_certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
++++ b/internal/apis/certmanager/types_certificate.go	(date 1653379919441)
+@@ -172,6 +172,11 @@
+ 	// `--feature-gates=AdditionalCertificateOutputFormats=true` option on both
+ 	// the controller and webhook components.
+ 	AdditionalOutputFormats []CertificateAdditionalOutputFormat
++
++	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
++	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
++	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
++	CertificateOwnerRef *bool
+ }
+
+ // CertificatePrivateKey contains configuration options for private keys
+Index: internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
+--- a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
++++ b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go	(date 1653379919445)
+@@ -882,6 +882,7 @@
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	// WARNING: in.CertificateOwnerRef requires manual conversion: does not exist in peer-type
+ 	return nil
+ }
+
 Index: pkg/controller/certificates/internal/secretsmanager/secret_test.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -23,7 +59,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/controller/certificates/internal/secretsmanager/secret_test.go b/pkg/controller/certificates/internal/secretsmanager/secret_test.go
 --- a/pkg/controller/certificates/internal/secretsmanager/secret_test.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/pkg/controller/certificates/internal/secretsmanager/secret_test.go	(date 1653333269290)
++++ b/pkg/controller/certificates/internal/secretsmanager/secret_test.go	(date 1653379919449)
 @@ -24,9 +24,6 @@
  	"testing"
  	"time"
@@ -288,7 +324,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/controller/certificates/internal/secretsmanager/secret.go b/pkg/controller/certificates/internal/secretsmanager/secret.go
 --- a/pkg/controller/certificates/internal/secretsmanager/secret.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/pkg/controller/certificates/internal/secretsmanager/secret.go	(date 1653334711480)
++++ b/pkg/controller/certificates/internal/secretsmanager/secret.go	(date 1653379919445)
 @@ -107,10 +107,16 @@
  		WithAnnotations(secret.Annotations).WithLabels(secret.Labels).
  		WithData(secret.Data).WithType(secret.Type)
@@ -307,6 +343,30 @@ diff --git a/pkg/controller/certificates/internal/secretsmanager/secret.go b/pkg
  		ref := *metav1.NewControllerRef(crt, certificateGvk)
  		applyCnf = applyCnf.WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
  			APIVersion: &ref.APIVersion, Kind: &ref.Kind,
+@@ -118,6 +124,7 @@
+ 			Controller: ref.Controller, BlockOwnerDeletion: ref.BlockOwnerDeletion,
+ 		})
+ 	}
++	log.V(logf.DebugLevel).Info(fmt.Sprintf("certificateOwnerRef: %v, global enableSecretOwnerReferences: %v", *crt.Spec.CertificateOwnerRef, s.enableSecretOwnerReferences))
+
+ 	log.V(logf.DebugLevel).Info("applying secret")
+
+Index: internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
+--- a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
++++ b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go	(date 1653379919445)
+@@ -881,6 +881,7 @@
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	// WARNING: in.CertificateOwnerRef requires manual conversion: does not exist in peer-type
+ 	return nil
+ }
+
 Index: pkg/apis/certmanager/v1/zz_generated.deepcopy.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -314,7 +374,27 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
 --- a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go	(date 1653333269290)
++++ b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go	(date 1653379919445)
+@@ -467,6 +467,11 @@
+ 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
+ 		copy(*out, *in)
+ 	}
++	if in.CertificateOwnerRef != nil {
++		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
++		*out = new(bool)
++		**out = **in
++	}
+ 	return
+ }
+
+Index: internal/apis/certmanager/zz_generated.deepcopy.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/apis/certmanager/zz_generated.deepcopy.go b/internal/apis/certmanager/zz_generated.deepcopy.go
+--- a/internal/apis/certmanager/zz_generated.deepcopy.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
++++ b/internal/apis/certmanager/zz_generated.deepcopy.go	(date 1653379919445)
 @@ -467,6 +467,11 @@
  		*out = make([]CertificateAdditionalOutputFormat, len(*in))
  		copy(*out, *in)
@@ -334,7 +414,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
 --- a/test/unit/gen/certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/test/unit/gen/certificate.go	(date 1653333269294)
++++ b/test/unit/gen/certificate.go	(date 1653379919449)
 @@ -267,3 +267,9 @@
  		crt.Spec.AdditionalOutputFormats = additionalOutputFormats
  	}
@@ -352,12 +432,20 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/internal/apis/certmanager/v1/zz_generated.conversion.go b/internal/apis/certmanager/v1/zz_generated.conversion.go
 --- a/internal/apis/certmanager/v1/zz_generated.conversion.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1/zz_generated.conversion.go	(date 1653333269290)
++++ b/internal/apis/certmanager/v1/zz_generated.conversion.go	(date 1653379919441)
 @@ -834,6 +834,7 @@
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
-+	// WARNING: in.CertificateOwnerRef requires manual conversion: does not exist in peer-type
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	return nil
+ }
+
+@@ -866,6 +867,7 @@
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]v1.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
 
@@ -368,7 +456,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
 --- a/pkg/apis/certmanager/v1/types_certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/pkg/apis/certmanager/v1/types_certificate.go	(date 1653333269290)
++++ b/pkg/apis/certmanager/v1/types_certificate.go	(date 1653379919445)
 @@ -196,6 +196,12 @@
  	// the controller and webhook components.
  	// +optional
@@ -382,3 +470,27 @@ diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager
  }
 
  // CertificatePrivateKey contains configuration options for private keys
+Index: internal/apis/certmanager/v1beta1/zz_generated.conversion.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
+--- a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
++++ b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go	(date 1653379919445)
+@@ -869,14 +869,10 @@
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	// WARNING: in.CertificateOwnerRef requires manual conversion: does not exist in peer-type
+ 	return nil
+ }
+
+-// Convert_certmanager_CertificateSpec_To_v1beta1_CertificateSpec is an autogenerated conversion function.
+-func Convert_certmanager_CertificateSpec_To_v1beta1_CertificateSpec(in *certmanager.CertificateSpec, out *CertificateSpec, s conversion.Scope) error {
+-	return autoConvert_certmanager_CertificateSpec_To_v1beta1_CertificateSpec(in, out, s)
+-}
+-
+ func autoConvert_v1beta1_CertificateStatus_To_certmanager_CertificateStatus(in *CertificateStatus, out *certmanager.CertificateStatus, s conversion.Scope) error {
+ 	out.Conditions = *(*[]certmanager.CertificateCondition)(unsafe.Pointer(&in.Conditions))
+ 	out.LastFailureTime = (*v1.Time)(unsafe.Pointer(in.LastFailureTime))
