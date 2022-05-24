@@ -1,4 +1,6 @@
+# [<en>] section containing the parameters of instance class for worker nodes
 # [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # [<en>] type of the configuration section
@@ -19,6 +21,8 @@ spec:
   # [<ru>] возможно, захотите изменить
   machineSize: Standard_F4
 ---
+# [<en>] section containing the parameters of worker node group
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1

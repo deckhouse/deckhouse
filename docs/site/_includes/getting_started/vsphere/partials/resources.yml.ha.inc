@@ -51,8 +51,8 @@ spec:
     - *!CHANGE_ANOTHER_ZONE_TAG_NAME*
   nodeType: CloudEphemeral
 ---
-# [<en>] section containing the parameters of instance class for worker nodes
-# [<ru>] секция, описывающая параметры инстанс-класса для рабочего узла
+# [<en>] section containing the parameters of instance class for frontend nodes
+# [<ru>] секция, описывающая параметры инстанс-класса для frontend-узла
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -71,8 +71,8 @@ spec:
   rootDiskSize: 50
   template: *!CHANGE_TEMPLATE_NAME*
 ---
-# [<en>] section containing the parameters of worker node group
-# [<ru>] секция, описывающая параметры группы узлов worker
+# [<en>] section containing the parameters of frontend node group
+# [<ru>] секция, описывающая параметры группы узлов frontend
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1

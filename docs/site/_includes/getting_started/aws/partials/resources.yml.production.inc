@@ -25,7 +25,7 @@ spec:
 ---
 # [<en>] section containing the parameters of system node group
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры группы узлов system
+# [<ru>] секция, описывающая параметры группы узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -71,8 +71,8 @@ spec:
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of instance class for frontend nodes
-# [<en>] version of the Deckhouse API
 # [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
+# [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
@@ -94,8 +94,8 @@ spec:
   instanceType: c5.large
 ---
 # [<en>] section containing the parameters of frontend node group
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры группы узлов frontend
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -135,8 +135,8 @@ spec:
   instanceType: c5.xlarge
 ---
 # [<en>] section containing the parameters of worker node group
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры группы узлов worker
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup

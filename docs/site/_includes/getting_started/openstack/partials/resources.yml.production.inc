@@ -23,7 +23,7 @@ spec:
 ---
 # [<en>] section containing the parameters of system node group
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры группы узлов system
+# [<ru>] секция, описывающая параметры группы узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
