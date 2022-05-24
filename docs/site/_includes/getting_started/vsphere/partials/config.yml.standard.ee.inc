@@ -77,6 +77,10 @@ provider:
   server: *!CHANGE_SERVER*
   username: *!CHANGE_USERNAME*
   password: *!CHANGE_PASSWORD*
+  # [<ru>] Укажите true, если vCenter использует самоподписанный сертификат,
+  # [<ru>] иначе укажите false (или удалите строку с параметром insecure).
+  # [<en>] Set to true if vCenter has a self-signed certificate,
+  # [<en>] otherwise set false (or delete the string below with the insecure parameter).
   insecure: *!CHANGE_INSECURE*
 # [<en>] path to a Folder in which VirtualMachines will be create
 # [<en>] the folder itself will be created by the Deckhouse Installer
