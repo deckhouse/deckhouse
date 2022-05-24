@@ -37,7 +37,8 @@ shell:
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - export APP_VERSION="v{{ $version }}"
   - export USE_BAZEL_VERSION="4.2.1"
-  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/controller
-  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/cainjector
-  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/webhook
-  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/acmesolver
+  - export PLATFORM="@io_bazel_rules_go//go/toolchain:linux_amd64"
+  - make controller
+  - make cainjector
+  - make webhook
+  - make acmesolver
