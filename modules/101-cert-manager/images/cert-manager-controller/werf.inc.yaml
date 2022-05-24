@@ -10,7 +10,7 @@ shell:
   beforeInstall:
   - apk add --no-cache ca-certificates
 docker:
-  ENTRYPOINT ["/bin/cert-manager-controller"]
+  ENTRYPOINT: ["/bin/cert-manager-controller"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ env "BASE_GOLANG_17_BUSTER" }}

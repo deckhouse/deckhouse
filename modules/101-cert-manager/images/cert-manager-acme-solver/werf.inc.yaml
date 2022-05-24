@@ -10,4 +10,4 @@ shell:
   beforeInstall:
   - apk add --no-cache ca-certificates
 docker:
-  ENTRYPOINT ["/bin/acmesolver"]
+  ENTRYPOINT: ["/bin/acmesolver"]
