@@ -1,0 +1,13 @@
+{{- $version := "1.7.1" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ env "BASE_ALPINE" }}
+import:
+- artifact: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
+  add: /build/cert-manager/bazel-bin/cmd/cainjector/cainjector_/cainjector
+  to: /bin/cainjector
+  before: setup
+shell:
+  beforeInstall:
+  - apk add --no-cache ca-certificates
+docker:
+  ENTRYPOINT ["/bin/cainjector"]

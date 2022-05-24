@@ -1,0 +1,43 @@
+{{- $version := "1.7.1" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ env "BASE_ALPINE" }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /build/cert-manager/bazel-bin/cmd/controller/controller_/controller
+  to: /bin/cert-manager-controller
+  before: setup
+shell:
+  beforeInstall:
+  - apk add --no-cache ca-certificates
+docker:
+  ENTRYPOINT ["/bin/cert-manager-controller"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+from: {{ env "BASE_GOLANG_17_BUSTER" }}
+git:
+- add: /modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apt update
+  - apt install patch -y
+  install:
+  - mkdir /build
+  - cd /build
+  - git clone -b "v{{ $version }}" --single-branch https://github.com/jetstack/cert-manager.git
+  - cd /build/cert-manager
+  - curl -sSfL https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
+  - chmod +x /usr/local/bin/bazel
+  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - export APP_VERSION="v{{ $version }}"
+  - export USE_BAZEL_VERSION="4.2.1"
+  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/controller
+  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/cainjector
+  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/webhook
+  - bazel build --stamp=true --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //cmd/acmesolver
