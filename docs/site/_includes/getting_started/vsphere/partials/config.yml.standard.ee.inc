@@ -125,13 +125,15 @@ masterNodeGroup:
   # [<ru>] если будет больше одного master-узла, то control-plane на всех master-узлах будет развернут автоматическии
   replicas: 1
   # [<en>] Parameters of the VM image
-  # [<ru>] параметры инстанса
+  # [<ru>] Параметры инстанса
   instanceClass:
     numCPUs: 4
     memory: 8192
     rootDiskSize: 50
-    # [<en>] TODO
-    # [<ru>] имя образа, созданного в шаге "Сборка образа виртуальных машин"
+    # [<en>] The name of the image created in step 4 at the "Building a VM image" stage,
+    # [<en>] taking into account the vCenter folder path. Example: "folder/my-ubuntu-packer-image".
+    # [<ru>] Имя образа, созданного в шаге 4 на этапе "Сборка образа виртуальных машин",
+    # [<ru>] с учетом папки размещения образа в vCenter. Пример: "folder/my-ubuntu-packer-image".
     template: *!CHANGE_TEMPLATE_NAME*
     datastore: *!CHANGE_DATASTORE_NAME*
     # [<en>] main network connected to node

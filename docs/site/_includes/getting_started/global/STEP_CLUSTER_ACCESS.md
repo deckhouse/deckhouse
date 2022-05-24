@@ -20,10 +20,10 @@ kubectl get nodes
 # Access cluster using NGINX Ingress
 [IngressNginxController](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) was created during the installation process of the cluster.
 The only thing left is to configure access to web interfaces of components that are already installed in the cluster (Grafana, Prometheus, Dashboard, etc.).
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 LoadBalancer is already created, and you just need to point a DNS domain to it.
 First, you need to connect to your master node as described [previously](#access-cluster-kubernetes-api).
 
-{% if page.platform_type == 'cloud' %}
 Get the IP address of the load balancer. Run the following command from the root user:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}

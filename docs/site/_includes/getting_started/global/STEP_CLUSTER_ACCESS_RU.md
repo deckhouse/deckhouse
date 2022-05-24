@@ -20,10 +20,10 @@ kubectl get nodes
 # Доступ к кластеру через NGINX Ingress
 [IngressNginxController](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
 Теперь осталось настроить доступ к веб-интерфейсам компонентов, которые уже установлены в кластере, таким как Grafana, Prometheus, Dashboard и так далее.
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 LoadBalancer уже создан и вам остаётся только направить DNS-домен на него.
 В первую очередь необходимо подключиться к master-узлу, как это описано [выше](#доступ-к-кластеру-через-kubernetes-api).
 
-{% if page.platform_type == 'cloud' %}
 Получите IP адрес балансировщика. Для этого, на **master-узле** от пользователя `root` выполните команду:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
