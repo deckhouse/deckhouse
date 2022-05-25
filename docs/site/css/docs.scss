@@ -521,7 +521,7 @@
     list-style-type: decimal;
 }
 
-.docs ul ul > li::before, .docs ol ol > li::before {
+.docs ul ul > li::before {
     content: '';
     display: block;
     border: 1px solid #0066FF;
@@ -534,7 +534,7 @@
     top: 6px;
 }
 
-.docs ul ul ul li::before, .docs ol ol ol li::before {
+.docs ul ul ul li::before {
     content: '';
     display: block;
     background: #0066FF;
