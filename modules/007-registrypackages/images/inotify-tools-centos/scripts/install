@@ -14,7 +14,15 @@
 # limitations under the License.
 
 set -Eeo pipefail
-if ! rpm --quiet -q "$(rpm -qip inotify-tools.x86_64.rpm | grep Name | awk '{print $3}')"; then
- rpm -U inotify-tools.x86_64.rpm
+package="inotify-tools"
+package_file="${package}.x86_64.rpm"
+rpm_name="$(rpm -qip ${package_file} 2>/dev/null | grep Name | awk '{print $3}')"
+rpm_version="$(rpm -qip ${package_file} 2>/dev/null | grep Version | awk '{print $3}')"
+
+if ! rpm --quiet -q "${rpm_name}-${rpm_version}"; then
+  rpm -U $package_file
+else
+  echo "RPM ${package_file} already installed."
 fi
-yum versionlock add inotify-tools
+
+yum versionlock add ${package}
