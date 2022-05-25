@@ -713,7 +713,6 @@ metadata:
   name: test-source
 spec:
   type: KubernetesPods
-  #kubernetesPods: {}
   destinationRefs:
     - test-es-dest
 ---
@@ -753,6 +752,58 @@ spec:
 			Expect(secret).To(Not(BeEmpty()))
 
 			assertConfig(secret, "throttle.json")
+		})
+		Context("With deleting object", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(""))
+				f.RunHook()
+			})
+			It("Should delete secret and deactivate module", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeFalse())
+				Expect(f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config").Exists()).To(BeFalse())
+			})
+		})
+	})
+
+	Context("File to Elasticsearch", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include: ["/var/log/kube-audit/audit.log"]
+  destinationRefs:
+    - test-es-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-es-dest
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    index: "logs-%F"
+    pipeline: "testpipe"
+    endpoint: "http://192.168.1.1:9200"
+---
+`))
+			f.RunHook()
+		})
+
+		It("Should create secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("logShipper.internal.activated").Bool()).To(BeTrue())
+
+			secret := f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config")
+			Expect(secret).To(Not(BeEmpty()))
+
+			assertConfig(secret, "file-to-elastic.json")
 		})
 		Context("With deleting object", func() {
 			BeforeEach(func() {

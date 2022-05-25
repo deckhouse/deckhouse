@@ -49,7 +49,7 @@ func JSONParseTransform() *DynamicTransform {
 	}
 }
 
-func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
+func CreateDefaultTransforms(sourceType string, dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
 	transforms := []impl.LogTransform{
 		CleanUpAfterSourceTransform(),
 		JSONParseTransform(),
@@ -57,7 +57,9 @@ func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTran
 
 	switch dest.Spec.Type {
 	case model.DestElasticsearch, model.DestLogstash:
-		transforms = append(transforms, DeDotTransform())
+		if sourceType == model.SourceKubernetesPods {
+			transforms = append(transforms, DeDotTransform())
+		}
 
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))

@@ -95,6 +95,7 @@ func (g *Generator) convertPodLoggingConfig(podLoggingConfig v1alpha1.PodLogging
 
 		applier := transformApplier{
 			destination:   g.logDestinations[dest],
+			sourceType:    model.SourceKubernetesPods,
 			labelFilter:   podLoggingConfig.Spec.LabelFilters,
 			logFilter:     podLoggingConfig.Spec.LogFilters,
 			multilineType: podLoggingConfig.Spec.MultiLineParser.Type,
@@ -133,6 +134,7 @@ func (g *Generator) convertClusterLoggingConfig(clusterLoggingConfig v1alpha1.Cl
 
 		applier := transformApplier{
 			destination:   g.logDestinations[dest],
+			sourceType:    clusterLoggingConfig.Spec.Type,
 			labelFilter:   clusterLoggingConfig.Spec.LabelFilters,
 			logFilter:     clusterLoggingConfig.Spec.LogFilters,
 			multilineType: clusterLoggingConfig.Spec.MultiLineParser.Type,

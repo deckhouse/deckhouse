@@ -23,7 +23,10 @@ import (
 )
 
 type transformApplier struct {
-	destination   v1alpha1.ClusterLogDestination
+	destination v1alpha1.ClusterLogDestination
+
+	sourceType string
+
 	multilineType v1alpha1.MultiLineParserType
 
 	labelFilter []v1alpha1.Filter
@@ -32,7 +35,7 @@ type transformApplier struct {
 
 func (t *transformApplier) Do(transforms []impl.LogTransform) ([]impl.LogTransform, error) {
 	transforms = append(transforms, transform.CreateMultiLineTransforms(t.multilineType)...)
-	transforms = append(transforms, transform.CreateDefaultTransforms(t.destination)...)
+	transforms = append(transforms, transform.CreateDefaultTransforms(t.sourceType, t.destination)...)
 
 	labelFilterTransforms, err := transform.CreateLabelFilterTransforms(t.labelFilter)
 	if err != nil {
