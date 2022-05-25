@@ -16,7 +16,7 @@
 set -Eeo pipefail
 packages_to_install=""
 package_container_selinux="container-selinux"
-package_file_container_selinux="${package}.x86_64.rpm"
+package_file_container_selinux="${package_container_selinux}.x86_64.rpm"
 rpm_name_container_selinux="$(rpm -qip ${package_file_container_selinux} 2>/dev/null | grep Name | awk '{print $3}')"
 rpm_version_container_selinux="$(rpm -qip ${package_file_container_selinux} 2>/dev/null | grep Version | awk '{print $3}')"
 
@@ -27,7 +27,7 @@ else
 fi
 
 package_containerd_io="containerd.io"
-package_file_containerd_io="${package}.x86_64.rpm"
+package_file_containerd_io="${package_containerd_io}.x86_64.rpm"
 rpm_name_containerd_io="$(rpm -qip ${package_file_containerd_io} 2>/dev/null | grep Name | awk '{print $3}')"
 rpm_version_containerd_io="$(rpm -qip ${package_file_containerd_io} 2>/dev/null | grep Version | awk '{print $3}')"
 
