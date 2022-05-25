@@ -190,7 +190,7 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseGlobalHookFailsTooOften
-    expr: max(increase({job="deckhouse", __name__=~"deckhouse_global_hook.*_errors"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
+    expr: max(increase({job="deckhouse", __name__=~"deckhouse_global_hook.*_errors_total"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
     labels:
       severity_level: "9"
       tier: cluster
@@ -209,7 +209,7 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseModuleHookFailsTooOften
-    expr: max(increase({job="deckhouse", __name__=~"deckhouse_module_hook.*_errors"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
+    expr: max(increase({job="deckhouse", __name__=~"deckhouse_module_hook.*_errors_total"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
     labels:
       severity_level: "9"
       tier: cluster
@@ -228,7 +228,7 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotDiscoverModules
-    expr: max by (pod, instance) (increase(deckhouse_modules_discover_errors[__SCRAPE_INTERVAL_X_4__])) > 1
+    expr: max by (pod, instance) (increase(deckhouse_modules_discover_errors_total[__SCRAPE_INTERVAL_X_4__])) > 1
     labels:
       severity_level: "4"
       tier: cluster
@@ -245,7 +245,7 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotRunModule
-    expr: max(increase(deckhouse_module_run_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
+    expr: max(increase(deckhouse_module_run_errors_total[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
     labels:
       severity_level: "4"
       tier: cluster
@@ -262,7 +262,7 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotDeleteModule
-    expr: max(increase(deckhouse_module_delete_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
+    expr: max(increase(deckhouse_module_delete_errors_total[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
     labels:
       severity_level: "4"
       tier: cluster
@@ -279,7 +279,7 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotRunGlobalHook
-    expr: max(increase(deckhouse_global_hook_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
+    expr: max(increase(deckhouse_global_hook_errors_total[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
     labels:
       severity_level: "5"
       tier: cluster
@@ -296,7 +296,7 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotRunModuleHook
-    expr: max(increase(deckhouse_module_hook_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
+    expr: max(increase(deckhouse_module_hook_errors_total[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
     labels:
       severity_level: "7"
       tier: cluster
