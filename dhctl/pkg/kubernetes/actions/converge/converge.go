@@ -233,7 +233,7 @@ func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroup
 			return err
 		}
 
-		nodeCloudConfig, err := GetCloudConfig(r.kubeCl, group.Name)
+		nodeCloudConfig, err := GetCloudConfig(r.kubeCl, group.Name, ShowDeckhouseLogs)
 		if err != nil {
 			return err
 		}
@@ -342,9 +342,20 @@ func (c *NodeGroupController) getNodeGroupReadinessChecker(nodeGroup *NodeGroupG
 
 	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
 
+	confirm := func(msg string) bool {
+		return input.NewConfirmation().WithMessage(msg).Ask()
+	}
+
+	if c.changeSettings.AutoApprove {
+		confirm = func(_ string) bool {
+			return true
+		}
+	}
+
 	h := controlplane.NewHook(c.client, nodesToCheck, c.config.UUID).
 		WithSourceCommandName("converge").
-		WithNodeToConverge(convergedNode)
+		WithNodeToConverge(convergedNode).
+		WithConfirm(confirm)
 
 	return h
 }
@@ -355,7 +366,7 @@ func (c *NodeGroupController) Run() error {
 	replicas := getReplicasByNodeGroupName(c.config, nodeGroupName)
 	step := getStepByNodeGroupName(nodeGroupName)
 
-	nodeCloudConfig, err := GetCloudConfig(c.client, nodeGroupName)
+	nodeCloudConfig, err := GetCloudConfig(c.client, nodeGroupName, HideDeckhouseLogs)
 	if err != nil {
 		return err
 	}

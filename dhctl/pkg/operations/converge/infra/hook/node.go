@@ -36,33 +36,8 @@ type NodeChecker interface {
 	Name() string
 }
 
-func IsAllNodesReady(checkers []NodeChecker, nodes []string, sourceCommandName, processName string) error {
-	if checkers == nil {
-		return nil
-	}
-
-	if len(nodes) == 0 {
-		return fmt.Errorf("Do not have nodes for %s.", processName)
-	}
-
-	return log.Process(sourceCommandName, processName, func() error {
-		for _, nodeName := range nodes {
-			ready, err := IsNodeReady(checkers, nodeName, sourceCommandName)
-			if err != nil {
-				return err
-			}
-
-			if !ready {
-				return ErrNotReady
-			}
-		}
-
-		return nil
-	})
-}
-
 func IsNodeReady(checkers []NodeChecker, nodeName, sourceCommandName string) (bool, error) {
-	title := fmt.Sprintf("Node %s is ready", nodeName)
+	title := fmt.Sprintf("Node %s readiness check", nodeName)
 	var lastErr error
 
 	err := retry.NewLoop(title, 30, 10*time.Second).Run(func() error {
