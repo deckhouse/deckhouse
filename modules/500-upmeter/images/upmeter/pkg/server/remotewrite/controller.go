@@ -45,6 +45,7 @@ type ControllerConfig struct {
 	// read metrics and track exporter state in the DB
 	DbCtx        *dbcontext.DbContext
 	OriginsCount int
+	UserAgent    string
 
 	Logger *log.Logger
 }
@@ -64,6 +65,7 @@ func (cc *ControllerConfig) Controller() *Controller {
 		kubeMonitor: kubeMonitor,
 		syncers:     syncers,
 		logger:      controllerLogger,
+		userAgent:   cc.UserAgent,
 	}
 
 	return controller
@@ -143,6 +145,7 @@ func (s *updateHandler) OnAdd(rw *v1.RemoteWrite) {
 	if err != nil {
 		s.logger.Errorf("cannot add remote_write exporter %q: %v", rw.Name, err)
 	}
+	s.logger.Infof("added remote_write exporter %q", rw.Name)
 }
 
 func (s *updateHandler) OnModify(rw *v1.RemoteWrite) {
@@ -150,9 +153,11 @@ func (s *updateHandler) OnModify(rw *v1.RemoteWrite) {
 	if err != nil {
 		s.logger.Errorf("cannot update remote_write exporter %q: %v", rw.Name, err)
 	}
+	s.logger.Infof("updated remote_write exporter %q", rw.Name)
 }
 
 func (s *updateHandler) OnDelete(rw *v1.RemoteWrite) {
 	config := newExportConfig(rw, s.headers)
 	s.syncers.Delete(config) // TODO: ctx? final exporter requests can take some time
+	s.logger.Infof("deleted remote_write exporter %q", rw.Name)
 }

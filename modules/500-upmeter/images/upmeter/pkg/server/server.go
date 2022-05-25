@@ -96,7 +96,7 @@ func (s *server) Start(ctx context.Context) error {
 	}
 
 	// Metrics controller
-	s.remoteWriteController, err = initRemoteWriteController(ctx, dbctx, kubeClient, s.config.OriginsCount, s.logger)
+	s.remoteWriteController, err = initRemoteWriteController(ctx, dbctx, kubeClient, s.config.OriginsCount, s.logger, s.config.UserAgent)
 	if err != nil {
 		s.logger.Debugf("starting controller... did't happen: %v", err)
 		return fmt.Errorf("cannot start remote_write controller: %v", err)
@@ -182,7 +182,7 @@ func writeOk(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("OK"))
 }
 
-func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, kubeClient kube.KubernetesClient, originsCount int, logger *log.Logger) (*remotewrite.Controller, error) {
+func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, kubeClient kube.KubernetesClient, originsCount int, logger *log.Logger, userAgent string) (*remotewrite.Controller, error) {
 	config := &remotewrite.ControllerConfig{
 		// collecting/exporting episodes as metrics
 		Period: 2 * time.Second,
@@ -191,6 +191,7 @@ func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, 
 		// read metrics and track exporter state in the DB
 		DbCtx:        dbCtx,
 		OriginsCount: originsCount,
+		UserAgent:    userAgent,
 		Logger:       logger,
 	}
 	controller := config.Controller()

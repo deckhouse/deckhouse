@@ -101,6 +101,7 @@ spec:
           {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
           - --disable-probe={{ $probeRef }}
           {{- end }}
+          - --user-agent=Upmeter/1.0 (Deckhouse {{ $.Values.global.deckhouseEdition }} {{ $.Values.global.deckhouseVersion }})
         env:
           - name: UPMETER_DB_PATH
             value: "/db/downtime.db.sqlite"

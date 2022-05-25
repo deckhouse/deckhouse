@@ -81,6 +81,7 @@ spec:
             {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
             - --disable-probe={{ $probeRef }}
             {{- end }}
+            - --user-agent=UpmeterAgent/1.0 (Deckhouse {{ $.Values.global.deckhouseEdition }} {{ $.Values.global.deckhouseVersion }})
           volumeMounts:
           - mountPath: /db
             name: data

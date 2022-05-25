@@ -18,6 +18,7 @@ package remotewrite
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -30,8 +31,6 @@ import (
 	v1 "d8.io/upmeter/pkg/crd/v1"
 	"d8.io/upmeter/pkg/db/dao"
 )
-
-var ErrSkip = fmt.Errorf("skip export")
 
 // syncer links puller and exporter via channel in exporter
 type syncer struct {
@@ -100,8 +99,7 @@ func (s *syncer) exportLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			err := s.export(ctx)
-			if err != nil && err != ErrSkip {
+			if err := s.export(ctx); err != nil {
 				s.logger.Errorln(err)
 			}
 		case <-ctx.Done():
@@ -134,10 +132,10 @@ func (s *syncer) cleanupLoop(ctx context.Context) {
 func (s *syncer) export(ctx context.Context) error {
 	// Get
 	timeseries, slot, err := s.getTimeseries()
-	if err == ErrSkip {
-		return nil
-	}
 	if err != nil {
+		if errors.Is(err, ErrNoCompleteEpisodes) {
+			return nil
+		}
 		return fmt.Errorf("cannot get timeseries: %v", err)
 	}
 
@@ -147,49 +145,62 @@ func (s *syncer) export(ctx context.Context) error {
 	}
 
 	// Send to the remote storage
-	err = s.exporter.Export(ctx, timeseries)
-	if err != nil {
-		return fmt.Errorf("cannot export: %v", err)
+	if err = s.exporter.Export(ctx, timeseries); err != nil {
+		switch {
+		case errors.Is(err, ErrNotAcceptedByStorage):
+			// will not retry
+			s.logger.Warnf("timeseries (%s) was not accepted by storage: %v", slot.Format("15:04:05"), err)
+			return s.clean(slot)
+		case errors.Is(err, ErrInternalStorageError):
+			s.logger.Infof("timeseries (%s) sending postponed: %v", slot.Format("15:04:05"), err)
+			// will send later
+			return nil
+		case errors.Is(err, ErrNoCompleteEpisodes):
+			// will send later
+			return nil
+		default:
+			return fmt.Errorf("exporting timeseries (%s): %w", slot.Format("15:04:05"), err)
+		}
 	}
 
-	s.logger.Debugf("exported timeseries %s", slot.Format("15:04:05"))
+	s.logger.Infof("exported timeseries %s", slot.Format("15:04:05"))
+	return s.clean(slot)
+}
 
-	// Delete from the database
-	err = s.storage.Delete(s.syncID, slot)
+func (s *syncer) clean(slot time.Time) error {
+	err := s.storage.Delete(s.syncID, slot)
 	if err != nil {
-		return fmt.Errorf("cannot delete exported episodes %v: %v", slot.Format("15:04:05"), err)
+		return fmt.Errorf("cleaning exported episodes %s: %w", slot.Format("15:04:05"), err)
 	}
-
 	s.logger.Debugf("cleaned exported episodes %s", slot.Format("15:04:05"))
-
 	return nil
 }
 
 func (s *syncer) getTimeseries() ([]*prompb.TimeSeries, time.Time, error) {
-	var timestamp time.Time
+	var slot time.Time
 
 	episodes, err := s.storage.Get(s.syncID)
-	if err == dao.ErrNotFound {
-		return nil, timestamp, ErrSkip
-	}
 	if err != nil {
-		return nil, timestamp, err
+		if errors.Is(err, dao.ErrNotFound) {
+			return nil, slot, ErrNoCompleteEpisodes
+		}
+		return nil, slot, err
 	}
 
 	// Skip incomplete slots. Send only data from two slots ago and earlier.
 	//  - Current timestamp is incomplete.
 	//  - One timestamp ago is also incomplete, because the last 30s are sent after it finishes.
-	//  - Two slots ago should be complete.
-	timestamp = episodes[0].TimeSlot
+	//  - Two slots ago should be complete. When exporting 5m episodes, it causes 10m delay in timeseries.
+	slot = episodes[0].TimeSlot
 	twoSlotsAgo := time.Now().Truncate(s.slotSize).Add(-2 * s.slotSize)
-	if timestamp.After(twoSlotsAgo) {
-		return nil, timestamp, ErrSkip
+	if slot.After(twoSlotsAgo) {
+		return nil, slot, ErrNoCompleteEpisodes
 	}
 	s.logger.Debugf("got %d episodes", len(episodes))
 
-	timeseries := convEpisodes2Timeseries(timestamp, episodes, s.labels)
+	ts := convEpisodes2Timeseries(slot, episodes, s.labels)
 
-	return timeseries, timestamp, nil
+	return ts, slot, nil
 }
 
 func (s *syncer) Add(origin string, episodes []*check.Episode) error {

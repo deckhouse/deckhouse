@@ -125,8 +125,8 @@ func (e Episode) EqualTimers(a Episode) bool {
 }
 
 func (e Episode) String() string {
-	return fmt.Sprintf("start=%s probe='%s' s=%s f=%s u=%s n=%s",
-		e.TimeSlot.Format(time.StampMilli),
+	return fmt.Sprintf("slot=%s probe=%s up=%s down=%s uncertain=%s notmeasured=%s",
+		e.TimeSlot.Format(time.Stamp),
 		e.ProbeRef.Id(),
 		e.Up,
 		e.Down,
