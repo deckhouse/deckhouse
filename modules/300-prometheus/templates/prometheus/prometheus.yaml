@@ -32,7 +32,7 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
   image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.prometheus.prometheus }}"
-  version: v2.13.0
+  version: v2.28.0
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
@@ -152,7 +152,7 @@ spec:
     {{- end }}
     {{- if .spec.customAuthToken }}
     headers:
-      X-Auth-Token: {{ .spec.customAuthToken }}
+      X-Auth: {{ .spec.customAuthToken }}
     {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
