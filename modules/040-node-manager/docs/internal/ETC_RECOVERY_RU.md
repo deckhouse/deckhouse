@@ -50,7 +50,7 @@ main.main()
 #### Решение 1
 [Источник](https://github.com/etcd-io/etcd/issues/11949#issuecomment-1029906679)
 - останавливаем etcd (перемещаем манифест пода)
-- беками файлы
+- бекапим файлы
 - увеличиваем `quota-backend-bytes` в манифесте
 - удаляем snap файлы `rm /var/lib/etcd/member/snap/*.snap`
 - пытаемся запустить etcd
@@ -72,7 +72,7 @@ kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL
 - загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и на сервере.
 - останавливаем etcd (перемещаем манифест пода)
 - увеличиваем `quota-backend-bytes` в манифесте, если это необходимо
-- беками файлы, например, в `/var/lib/etcd-backup`
+- бекапим файлы, например, в `/var/lib/etcd-backup`
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
 - восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`.
 - пытаемся запустить etcd
@@ -90,7 +90,7 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 ```
 
 ### Восстанавливаемся из бекапа
-- загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и сервере
+- загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и на сервере
 - останавливаем etcd (перемещаем манифест пода)
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
 - восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`
@@ -105,16 +105,16 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 Далее, если ноды были потеряны безвозвратно, то добавлям новые через `dhctl converge` или вручную, если кластер статический.
 
 Если ноды возвратились, то они уже не являются членами кластера.
-- на нодах, которые не являются членами кластера выполняем следующие операции:
+На узлах, которые не являются членами кластера выполняем следующие операции:
 - останавливаем etcd (перемещаем манифест пода)
-- беками файлы (на всякий случай)
+- бекапим файлы (на всякий случай)
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
 
-Возвращаемся на рабочий кластер, и перезапускаем демонсет `d8-control-plane-manager`:
+Возвращаемся на рабочий кластер, и перезапускаем DaemonsSet `d8-control-plane-manager`:
 ```bash
 kubectl -n kube-system rollout restart daemonset d8-control-plane-manager
 ```
-Ожидаем переката всех control-plane подов и переход их в состояние `Ready` и смотрим что все etcd инстансы стали участниками кластера.
+Ожидаем переката всех Pod'ов control-plane и переход их в состояние `Ready` и смотрим что все etcd инстансы стали участниками кластера.
 ```
 ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
@@ -122,14 +122,14 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 
 На всех нодах:
 - останавливаем etcd (перемещаем манифест пода)
-- беками файлы (на всякий случай)
+- выполняем резервное копирование файлов (на всякий случай)
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
 - восстанавливаем на одной ноде как для [single-мастера](#восстанавливаемся-из-бекапа)
-- перезапускаем демонсет `d8-control-plane-manager`:
+- перезапускаем DaemonSet `d8-control-plane-manager`:
 ```bash
 kubectl -n kube-system rollout restart daemonset d8-control-plane-manager
 ```
-Ожидаем переката всех control-plane подов и переход их в состояние `Ready` и смотрим что все etcd инстансы стали участниками кластера:
+Ожидаем переката всех Pod'ов control-plane и переход их в состояние `Ready` и смотрим что все etcd-инстансы стали участниками кластера:
 ```
 ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
