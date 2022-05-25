@@ -49,6 +49,7 @@ properties:
   email:
     description: |
       Почтовый ящик проекта, на который LetsEncrypt будет слать уведомления.
-  certificateOwnerRef:
+  cleanupOrphanSecrets:
     description: |
-      Устанавливать ли сертификат в качестве владельца секрета, в котором хранится tls-сертификат. Если этот флаг установлен, секрет будет автоматически удален при удалении сертификата.
+      Delete a secret with a certificate automatically if the corresponding Certificate resource was deleted from the cluster.
+      Удалять секрет с сертификатом автоматически, если соответствующий ресурс Certificate удален из кластера.
