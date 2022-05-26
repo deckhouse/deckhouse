@@ -1,21 +1,27 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
-- add: /ee/candi/cloud-providers/openstack
-  to: /deckhouse/candi/cloud-providers/openstack
-ansible:
+  - add: /ee/candi/cloud-providers/openstack
+    to: /deckhouse/candi/cloud-providers/openstack
+import:
+- artifact: terraform-provider-openstack
+  add: /terraform-provider-openstack
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
+  before: setup
+shell:
   install:
-  - name: "Create a directory for terraform provider openstack"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
-      state: directory
-  - name: "Install terraform provider openstack"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-openstack/{{ env "TF_OPENSTACK_VERSION" }}/terraform-provider-openstack_{{ env "TF_OPENSTACK_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
-      mode: +x
-  - apk:
-      name: ca-certificates
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
+    - "apk update && apk add ca-certificates"
+    - "rm -rf /var/cache/apk/*"
+---
+artifact: terraform-provider-openstack
+# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
+# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
+from: {{ env "BASE_UBUNTU" }}
+shell:
+  beforeInstall:
+    - apt-get update && apt install -y wget unzip
+    - |
+      mkdir /out
+      wget -q https://releases.hashicorp.com/terraform-provider-openstack/{{ env "TF_OPENSTACK_VERSION" }}/terraform-provider-openstack_{{ env "TF_OPENSTACK_VERSION" }}_linux_amd64.zip -O /terraform-provider-openstack.zip
+      unzip -d /terraform-provider-openstack /terraform-provider-openstack.zip
+      chmod -R 755 /terraform-provider-openstack
