@@ -49,3 +49,7 @@ properties:
   email:
     description: |
       Почтовый ящик проекта, на который LetsEncrypt будет слать уведомления.
+  cleanupOrphanSecrets:
+    description: |
+      Delete a secret with a certificate automatically if the corresponding Certificate resource was deleted from the cluster.
+      Удалять секрет с сертификатом автоматически, если соответствующий ресурс Certificate удален из кластера.

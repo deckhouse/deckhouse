@@ -101,3 +101,10 @@ properties:
     description: |
       The email used for sending notifications by LetsEncrypt.
     x-examples: ["example@example.com"]
+
+  cleanupOrphanSecrets:
+    type: boolean
+    default: false
+    description: |
+      Delete a secret with a certificate automatically if the corresponding Certificate resource was deleted from the cluster.
+    x-examples: [true, false]

@@ -101,6 +101,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
+  certificateOwnerRef: false
   secretName: ingress-tls-status
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "status") }}
