@@ -588,25 +588,25 @@ shell:
   beforeInstall:
   - "apk update && apk install openssh-client gettext bash bash-completion coreutils util-linux sed gawk grep ca-certificates vim"
   - "rm -rf /var/cache/apk/*"
-setup:
-- |
-  cat <<"EOD" > /etc/inputrc
-{{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 2 }}
-  EOD
+  setup:
+  - |
+    cat <<"EOD" > /etc/inputrc
+    {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
+    EOD
 
-  cat <<"EOD" > /etc/bashrc
-  PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
-  source /etc/profile.d/bash_completion.sh
-  EOD
+    cat <<"EOD" > /etc/bashrc
+    PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
+    source /etc/profile.d/bash_completion.sh
+    EOD
 
-  ln -s /etc/bashrc /root/.bashrc
-  ln -s /etc/bashrc /.bashrc
+    ln -s /etc/bashrc /root/.bashrc
+    ln -s /etc/bashrc /.bashrc
 
-  cat <<"EOD" > /etc/vim/vimrc.local
-{{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 2 }}
-  EOD
+    cat <<"EOD" > /etc/vim/vimrc.local
+  {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
+    EOD
 
-  echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
+    echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
 
 ---
 image: release-channel-version
