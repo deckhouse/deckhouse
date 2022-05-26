@@ -550,6 +550,7 @@ import:
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   to: /root/.terraformrc
   add: /root/.terraformrc
+  before: setup
 - artifact: terraform-provider-aws # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
   add: /terraform-provider-aws
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
@@ -597,6 +598,13 @@ shell:
     cat <<"EOD" > /etc/bashrc
     PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
     source /etc/profile.d/bash_completion.sh
+    EOD
+
+    ln -s /etc/bashrc /root/.bashrc
+    ln -s /etc/bashrc /.bashrc
+
+    cat <<"EOD" > /etc/vim/vimrc.local
+    {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
