@@ -56,7 +56,7 @@ func TestTransformSnippet(t *testing.T) {
 			},
 		}
 
-		defaultTransforms := CreateDefaultTransforms(dest)
+		defaultTransforms := CreateDefaultTransforms(model.SourceKubernetesPods, dest)
 
 		transforms = append(transforms, defaultTransforms...)
 		transforms = append(transforms, CreateDefaultCleanUpTransforms(dest)...)
