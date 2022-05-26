@@ -47,7 +47,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
    kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
    ```
 
-2. Grant the necessary rights to the `ServiceAccount` (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) CR)
+2. Grant the necessary rights to the `ServiceAccount` (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) custom resource):
 
    ```shell
    kubectl create -f - <<EOF
@@ -67,7 +67,7 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 
    If the multitenancy mode is enabled in the Deckhouse configuration, you need to specify the `allowAccessToSystemNamespaces: true` parameter to give the ServiceAccount access to the system namespaces.
 
-3. Generate a `kube-config` (don't forget to substitute your values).
+3. Generate a `kube-config` (don't forget to substitute your values):
 
    ```shell
    cluster_name=my-cluster

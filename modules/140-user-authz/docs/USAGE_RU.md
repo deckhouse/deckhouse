@@ -47,7 +47,7 @@ spec:
    kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
    ```
 
-2. Дайте необходимые `ServiceAccount` права (используя CR [ClusterAuthorizationRule](cr.html#clusterauthorizationrule))
+2. Дайте необходимые `ServiceAccount` права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
 
    ```shell
    kubectl create -f - <<EOF
@@ -67,7 +67,7 @@ spec:
 
    Если в конфигурации Deckhouse включен режим multitenancy (доступно только в версии Enterprise Edition), то, чтобы дать SA доступ в системные namespace'ы укажите `allowAccessToSystemNamespaces: true`.
 
-3. Сгенерируйте `kube-config`, подставив свои значения переменных в начале.
+3. Сгенерируйте `kube-config`, подставив свои значения переменных в начале:
 
    ```shell
    cluster_name=my-cluster
