@@ -911,10 +911,6 @@ entries:
                 ru: Примеры
               url: /modules/031-linstor/usage.html
             - title:
-                en: Advanced Usage
-                ru: Расширенная конфигурация
-              url: /modules/031-linstor/advanced_usage.html
-            - title:
                 en: Reference
                 ru: Справка
               folders:
@@ -922,6 +918,10 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/031-linstor/configuration.html
+                - title:
+                    en: Advanced Usage
+                    ru: Расширенная конфигурация
+                  url: /modules/031-linstor/advanced_usage.html
             - title: FAQ
               url: /modules/031-linstor/faq.html
         - title: local-path-provisioner

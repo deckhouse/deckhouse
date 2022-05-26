@@ -1,92 +1,121 @@
 ---
-title: "Модуль linstor: примеры расширенной конфигурации"
+title: "Модуль linstor: расширенная конфигурация"
 ---
 
-Чтобы продолжить рекомендуется установить плагин [kubectl-linstor](https://github.com/piraeusdatastore/kubectl-linstor) или добавить bash-алиас:
+[Упрощенное руководство](configuration.html#конфигурация-хранилища-linstor) содержит шаги, в результате выполнения которых автоматически создаются storage-пулы и StorageClass'ы, при появлении на узле LVM-группы томов или LVMThin-пула с тегом `linstor-<имя_пула>`. Далее рассматривается шаги по ручному созданию storage-пулов и StorageClass'ов.
 
-```shell
-alias linstor='kubectl exec -n d8-linstor deploy/linstor-controller -- linstor'
-```
+Для выполнения дальнейших действий потребуется CLI-утилита `linstor`. Используйте один из следующих вариантов запуска утилиты `linstor`: 
+- Установите плагин [kubectl-linstor](https://github.com/piraeusdatastore/kubectl-linstor).
+- Добавьте alias в BASH для запуска утилиты `linstor` из Pod'а контроллера linstor:
 
-Дальнейшая настройка выполняется с помощью командной утилиты `linstor`.
+  ```shell
+  alias linstor='kubectl exec -n d8-linstor deploy/linstor-controller -- linstor'
+  ```
 
-Настройка узлов уже произведена автоматически. Для того чтобы начать использовать LINSTOR, вам нужно сделать две вещи:
+После включения модуля `linstor` кластер и его узлы настраиваются на использование LINSTOR. Для того чтобы начать использовать хранилище, необходимо:
 
-- Создать пулы хранения
-- Описать желаемые параметры в StorageClass
+- [Создать пулы хранения](#создание-пулов-хранения)
+- [Создать StorageClass](#создание-storageclass)
 
 ## Создание пулов хранения
 
-Отобразить список всех узлов:
-```shell
-linstor node list
-```
+1. Отобразите список всех узлов и блочных устройств для хранения.
+   - Отобразите список всех узлов:
 
-Отобразить список всех доступных блочных устройств для хранения:
-```shell
-linstor physical-storage list
-```
+     ```shell
+     linstor node list
+     ```
 
-Пример вывода:
-
-```
-+----------------------------------------------------------------+
-| Size          | Rotational | Nodes                             |
-|================================================================|
-| 1920383410176 | False      | node01[/dev/nvme1n1,/dev/nvme0n1] |
-| 1920383410176 | False      | node02[/dev/nvme1n1,/dev/nvme0n1] |
-| 1920383410176 | False      | node03[/dev/nvme1n1,/dev/nvme0n1] |
-+----------------------------------------------------------------+
-```
-
-> Внимание: здесь будут отображены только пустые девайсы без какой-либо разметки.
-> Тем не менее, создание пулов хранения из партиций и других блочных девайсов также поддерживается.
-
-> Вы также можете добавить уже существующий LVM пул в ваш кластер, для этого обратитесь к [FAQ](faq.html#как-добавить-существующий-lvm-или-lvmthin-пул).
-
-Создайте LVM или LVMThin пул из этих устройств:
-
-- Создать LVM пул хранения из двух устройств на одном из узлов можно следующим образом:
- 
-  ```shell
-  linstor physical-storage create-device-pool lvm node01 /dev/nvme0n1 /dev/nvme1n1 --pool-name linstor_data --storage-pool lvm
-  ```
+     Пример вывода:
   
-- Создать ThinLVM пул хранения из двух устройств на одном из узлов можно следующим образом:
-  ```shell
-  linstor physical-storage create-device-pool lvmthin node01 /dev/nvme0n1 /dev/nvme1n1 --pool-name data --storage-pool lvmthin
-  ```
+     ```
+     +----------------------------------------------------------------------------------------+
+     | Node                                | NodeType   | Addresses                  | State  |
+     |========================================================================================|
+     | node01                              | SATELLITE  | 192.168.199.114:3367 (SSL) | Online |
+     | node02                              | SATELLITE  | 192.168.199.60:3367 (SSL)  | Online |
+     | node03                              | SATELLITE  | 192.168.199.74:3367 (SSL)  | Online |
+     | linstor-controller-85455fcd76-2qhmq | CONTROLLER | 10.111.0.78:3367 (SSL)     | Online |
+     +----------------------------------------------------------------------------------------+
+     ```
 
-Возможные опции:
-- `--pool-name` - имя VG/LV создаваемой на узле
-- `--storage-pool` - то как будет называться пул в LINSTOR
+   - Отобразите список всех доступных блочных устройств для хранения:
 
-Вам необходимо создать несколько таких пулов для каждого узла. По возможности назовите их одинаково.
+     ```shell
+     linstor physical-storage list
+     ```
+  
+     Пример вывода:
+  
+     ```
+     +----------------------------------------------------------------+
+     | Size          | Rotational | Nodes                             |
+     |================================================================|
+     | 1920383410176 | False      | node01[/dev/nvme1n1,/dev/nvme0n1] |
+     | 1920383410176 | False      | node02[/dev/nvme1n1,/dev/nvme0n1] |
+     | 1920383410176 | False      | node03[/dev/nvme1n1,/dev/nvme0n1] |
+     +----------------------------------------------------------------+
+     ```
+     
+     > **Обратите внимание:** отображаются только пустые устройства, без какой-либо разметки.
+     > Тем не менее, создание пулов хранения из разделов и других блочных устройств также поддерживается.
+     >
+     > Вы также можете [добавить](faq.html#как-добавить-существующий-lvm-или-lvmthin-пул) уже существующий пул LVM или LVMthin в кластер.
 
-Как только пулы созданы, вы можете увидеть их выполнив следующую команду:
+1. Создайте пулы LVM или LVMThin.
 
-```shell
-linstor storage-pool list
-```
+   На необходимых узлах хранилища создайте несколько пулов из устройств, полученных на предыдущем шаге. По возможности, их названия должны быть одинаковыми.
 
-Пример вывода:
+   - Пример команды создания **LVM-пула** хранения из двух устройств на одном из узлов:
 
-```
-+---------------------------------------------------------------------------------------------------------------------------------+
-| StoragePool          | Node   | Driver   | PoolName          | FreeCapacity | TotalCapacity | CanSnapshots | State | SharedName |
-|=================================================================================================================================|
-| DfltDisklessStorPool | node01 | DISKLESS |                   |              |               | False        | Ok    |            |
-| DfltDisklessStorPool | node02 | DISKLESS |                   |              |               | False        | Ok    |            |
-| DfltDisklessStorPool | node03 | DISKLESS |                   |              |               | False        | Ok    |            |
-| lvmthin              | node01 | LVM_THIN | linstor_data/data |     3.49 TiB |      3.49 TiB | True         | Ok    |            |
-| lvmthin              | node02 | LVM_THIN | linstor_data/data |     3.49 TiB |      3.49 TiB | True         | Ok    |            |
-| lvmthin              | node03 | LVM_THIN | linstor_data/data |     3.49 TiB |      3.49 TiB | True         | Ok    |            |
-+---------------------------------------------------------------------------------------------------------------------------------+
-```
+     ```shell
+     linstor physical-storage create-device-pool lvm node01 /dev/nvme0n1 /dev/nvme1n1 --pool-name linstor_data --storage-pool lvm
+     ```
+
+     , где:
+     - `--pool-name` — имя VG/LV создаваемом на узле.
+     - `--storage-pool` — то, как будет называться пул хранения в LINSTOR.
+
+   - Пример команды создания **ThinLVM-пула** хранения из двух устройств на одном из узлов:
+
+     ```shell
+     linstor physical-storage create-device-pool lvmthin node01 /dev/nvme0n1 /dev/nvme1n1 --pool-name data --storage-pool lvmthin
+     ```
+
+     , где:
+     - `--pool-name` — имя VG/LV создаваемом на узле.
+     - `--storage-pool` — то, как будет называться пул хранения в LINSTOR.
+     
+1. Проверьте создание пулов хранения.
+
+   Как только пулы хранения созданы, можете увидеть их выполнив следующую команду:
+   
+   ```shell
+   linstor storage-pool list
+   ```
+
+   Пример вывода:
+
+   ```
+   +---------------------------------------------------------------------------------------------------------------------------------+
+   | StoragePool          | Node   | Driver   | PoolName          | FreeCapacity | TotalCapacity | CanSnapshots | State | SharedName |
+   |=================================================================================================================================|
+   | DfltDisklessStorPool | node01 | DISKLESS |                   |              |               | False        | Ok    |            |
+   | DfltDisklessStorPool | node02 | DISKLESS |                   |              |               | False        | Ok    |            |
+   | DfltDisklessStorPool | node03 | DISKLESS |                   |              |               | False        | Ok    |            |
+   | lvmthin              | node01 | LVM_THIN | linstor_data/data |     3.49 TiB |      3.49 TiB | True         | Ok    |            |
+   | lvmthin              | node02 | LVM_THIN | linstor_data/data |     3.49 TiB |      3.49 TiB | True         | Ok    |            |
+   | lvmthin              | node03 | LVM_THIN | linstor_data/data |     3.49 TiB |      3.49 TiB | True         | Ok    |            |
+   +---------------------------------------------------------------------------------------------------------------------------------+
+   ```
 
 ## Создание StorageClass
 
-Теперь опишите желаемое количество реплик и имя пула в котором они будут создаваться в вашем StorageClass и примените его в Kubernetes:
+Создайте StorageClass, где:
+- в `parameters."linstor.csi.linbit.com/placementCount"` укажите необходимое количество реплик;
+- в `parameters."linstor.csi.linbit.com/storagePool"` укажите имя пула хранения, в котором будут создаваться реплики.
+
+Пример StorageClass:
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -101,5 +130,3 @@ provisioner: linstor.csi.linbit.com
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
 ```
-
-На этом конфигурацию можно считать законченной.
