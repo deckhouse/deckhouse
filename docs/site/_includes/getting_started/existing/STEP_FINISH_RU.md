@@ -80,7 +80,7 @@ Status page
 Настройка CI/CD-системы
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/) и [создайте](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер.
+Включите модуль [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/) и [создайте](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер.
 
 Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
 </div>
