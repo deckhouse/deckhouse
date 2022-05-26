@@ -29,102 +29,109 @@ spec:
 ## Creating a user
 
 There are two types of users in Kubernetes:
+
 * Service accounts managed by Kubernetes via the API;
 * Regular users managed by some external tool that the cluster administrator configures. There are many authentication mechanisms and, accordingly, many ways to create users. Currently, two authentication methods are supported:
-    * Via the [user-authn](../../modules/150-user-authn/) module.
-    * Via the certificates.
+  * Via the [user-authn](../../modules/150-user-authn/) module.
+  * Via the certificates.
 
 When issuing the authentication certificate, you need to specify the name (`CN=<name>`), the required number of groups (`O=<group>`), and sign it using the root CA of the cluster. It is this mechanism that authenticates you in the cluster when, for example, you use kubectl on a bastion node.
 
-### Creating a ServiceAccount and granting it access
-* Create a `ServiceAccount` in the `d8-service-accounts` namespace
+### Creating a ServiceAccount for a machine and granting it access
 
-  An example of creating `gitlab-runner-deploy` `ServiceAccount`:
-  ```bash
-  kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
-  ```
+It may be required to give your machine static access to the Kubernetes API, e.g., for deploying applications from a CI system runner.
 
-* Grant the necessary rights to the `ServiceAccount` (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) CR)
+1. Create a `ServiceAccount` in the `d8-service-accounts` namespace (you can change the name):
 
-  An example:
-  ```bash
-  kubectl create -f - <<EOF
-  apiVersion: deckhouse.io/v1
-  kind: ClusterAuthorizationRule
-  metadata:
-    name: gitlab-runner-deploy
-  spec:
-    subjects:
-    - kind: ServiceAccount
-      name: gitlab-runner-deploy
-      namespace: d8-service-accounts
-    accessLevel: SuperAdmin
-    allowAccessToSystemNamespaces: true      # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
-  EOF
-  ```
+   ```shell
+   kubectl -n d8-service-accounts create serviceaccount gitlab-runner-deploy
+   ```
 
-	If the multitenancy mode is enabled in the Deckhouse configuration, you need to specify the `allowAccessToSystemNamespaces: true` parameter to give the ServiceAccount access to the system namespaces. 
+2. Grant the necessary rights to the `ServiceAccount` (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) custom resource):
 
-* Generate a `kube-config` (don't forget to substitute your values).
+   ```shell
+   kubectl create -f - <<EOF
+   apiVersion: deckhouse.io/v1
+   kind: ClusterAuthorizationRule
+   metadata:
+     name: gitlab-runner-deploy
+   spec:
+     subjects:
+     - kind: ServiceAccount
+       name: gitlab-runner-deploy
+       namespace: d8-service-accounts
+     accessLevel: SuperAdmin
+     allowAccessToSystemNamespaces: true      # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+   EOF
+   ```
 
-  ```bash
-  cluster_name=my-cluster
-  user_name=gitlab-runner-deploy.my-cluster
-  context_name=${cluster_name}-${user_name}
-  file_name=kube.config
-  ```
+   If the multitenancy mode is enabled in the Deckhouse configuration, you need to specify the `allowAccessToSystemNamespaces: true` parameter to give the ServiceAccount access to the system namespaces.
 
-  * The `cluster` section:
-      
-      * If there is direct access to the API server, then use its IP address:
-          
-        Get the CA of our Kubernetes cluster:
-        ```bash
-        cat /etc/kubernetes/kubelet.conf \
-          | grep certificate-authority-data | awk '{ print $2 }' \
-          | base64 -d > /tmp/ca.crt
-        ```
-          
-        Generate a section using the API server's IP:
-        ```bash
-        kubectl config set-cluster $cluster_name --embed-certs=true \
-          --server=https://<API_SERVER_IP>:6443 \
-          --certificate-authority=/tmp/ca.crt \
-          --kubeconfig=$file_name
-        ```
+3. Generate a `kube-config` (don't forget to substitute your values):
 
-      *  If there is no direct access to the API server, [enable](../../modules/150-user-authn/configuration.html#parameters) the `publishAPI` parameter containing the `whitelistSourceRanges` array. Or you can do that via a separate Ingress-controller using the `ingressClass` option with the finite `SourceRange`. That is, specify the requests' source addresses in the `acceptRequestsFrom` controller parameter.
+   ```shell
+   cluster_name=my-cluster
+   user_name=gitlab-runner-deploy.my-cluster
+   context_name=${cluster_name}-${user_name}
+   file_name=kube.config
+   ```
 
-         Get the CA from the secret containing the `api.%s` domain's certificate:
-         ```bash
-         kubectl -n d8-user-authn get secrets kubernetes-tls -o json \
-           | jq -rc '.data."ca.crt" // .data."tls.crt"' \
-           | base64 -d > /tmp/ca.crt
-         ```
+   * The `cluster` section:
+     * If there is direct access to the API server, then use its IP address:
+       1. Get the CA of our Kubernetes cluster:
 
-         Generate a section with the external domain:
-         ```
-         kubectl config set-cluster $cluster_name --embed-certs=true \
-           --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
-           --certificate-authority=/tmp/ca.crt \
-           --kubeconfig=$file_name
-         ```
+          ```shell
+          cat /etc/kubernetes/kubelet.conf \
+            | grep certificate-authority-data | awk '{ print $2 }' \
+            | base64 -d > /tmp/ca.crt
+          ```
 
-  * Generate the `user` section using the token from the `ServiceAccount` secret:
-    ```bash
-    kubectl config set-credentials $user_name \
-      --token=$(kubectl get secret $(kubectl get sa gitlab-runner-deploy -n d8-service-accounts  -o json | jq -r .secrets[].name) -n d8-service-accounts -o json |jq -r '.data["token"]' | base64 -d) \
-      --kubeconfig=$file_name
-    ```
+       2. Generate a section using the API server's IP:
 
-  * Generate the `context` to bind it all together:
-    ```bash
-    kubectl config set-context $context_name \
-      --cluster=$cluster_name --user=$user_name \
-      --kubeconfig=$file_name
-    ```
+          ```shell
+          kubectl config set-cluster $cluster_name --embed-certs=true \
+            --server=https://<API_SERVER_IP>:6443 \
+            --certificate-authority=/tmp/ca.crt \
+            --kubeconfig=$file_name
+          ```
+
+     * If there is no direct access to the API server, [enable](../../modules/150-user-authn/configuration.html#parameters) the `publishAPI` parameter containing the `whitelistSourceRanges` array. Or you can do that via a separate Ingress-controller using the `ingressClass` option with the finite `SourceRange`. That is, specify the requests' source addresses in the `acceptRequestsFrom` controller parameter.
+       1. Get the CA from the secret containing the `api.%s` domain's certificate:
+
+          ```shell
+          kubectl -n d8-user-authn get secrets -o json \
+            $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
+            | jq -rc '.data."ca.crt" // .data."tls.crt"' \
+            | base64 -d > /tmp/ca.crt
+          ```
+
+       2. Generate a section with the external domain:
+
+          ```shell
+          kubectl config set-cluster $cluster_name --embed-certs=true \
+            --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+            --certificate-authority=/tmp/ca.crt \
+            --kubeconfig=$file_name
+          ```
+
+   * Generate the `user` section using the token from the `ServiceAccount` secret:
+
+     ```shell
+     kubectl config set-credentials $user_name \
+       --token=$(kubectl get secret $(kubectl get sa gitlab-runner-deploy -n d8-service-accounts  -o json | jq -r .secrets[].name) -n d8-service-accounts -o json |jq -r '.data["token"]' | base64 -d) \
+       --kubeconfig=$file_name
+     ```
+
+   * Generate the `context` to bind it all together:
+
+     ```shell
+     kubectl config set-context $context_name \
+       --cluster=$cluster_name --user=$user_name \
+       --kubeconfig=$file_name
+     ```
 
 ### How to create a user using a client certificate
+
 #### Creating a user
 
 * Get the cluster's root certificate (ca.crt and ca.key).
@@ -175,6 +182,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
 #### Granting access to the created user
 
 Create `ClusterAuthorizationRule`:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -195,6 +203,7 @@ The multi-tenancy mode, which allows you to restrict access to namespaces, is en
 Working in multi-tenancy mode requires enabling the [Webhook authorization plugin](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and configuring a `kube-apiserver.` All actions necessary for the multi-tenancy mode are performed **automatically** by the [control-plane-manager](../../modules/040-control-plane-manager/) module; no additional steps are required.
 
 Changes to the `kube-apiserver` manifest that will occur after enabling multi-tenancy mode:
+
 * The `--authorization-mode` argument will be modified: the Webhook method will be added in front of the RBAC method (e.g., `--authorization-mode=Node,Webhook,RBAC`);
 * The `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml` will be added;
 * The `volumeMounts` parameter will be added:
@@ -204,6 +213,7 @@ Changes to the `kube-apiserver` manifest that will occur after enabling multi-te
     mountPath: /etc/kubernetes/authorization-webhook-config.yaml
     readOnly: true
   ```
+
 * The `volumes` parameter will be added:
 
   ```yaml
@@ -216,13 +226,14 @@ Changes to the `kube-apiserver` manifest that will occur after enabling multi-te
 ## How do I check that a user has access?
 
 Execute the command below with the following parameters:
+
 * `resourceAttributes` (the same as in RBAC) - target resources;
 * `user` - the name of the user;
 * `groups` - user groups;
 
-P.S. You can use Dex logs to find out groups and a username if this module is used together with the `user-authn` module (`kubectl -n d8-user-authn logs -l app=dex`); logs available only if the user is authorized).
+> You can use Dex logs to find out groups and a username if this module is used together with the `user-authn` module (`kubectl -n d8-user-authn logs -l app=dex`); logs available only if the user is authorized).
 
-```bash
+```shell
 cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
@@ -254,7 +265,7 @@ You will see if access is allowed and what role is used:
 
 If the **multitenancy** mode is enabled in your cluster, you need to perform another check to be sure that the user has access to the namespace:
 
-```bash
+```shell
 cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
@@ -280,7 +291,9 @@ EOF
   "allowed": false
 }
 ```
+
 The `allowed: false` message means that the webhook doesn't block access. In case of webhook denying the request, you will see, e.g., the following message:
+
 ```json
 {
   "allowed": false,

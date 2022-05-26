@@ -84,7 +84,7 @@ Deckhouse makes it easier to set up CI/CD system access to a cluster to deploy y
 Setting up a CI/CD system
 </h3>
 <div class="cards-item__text" markdown="1">
-[Create](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
+[Create](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
 
 You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
 </div>
