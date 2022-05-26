@@ -85,7 +85,7 @@ Deploying your first application
 Setting up a CI/CD system
 </h3>
 <div class="cards-item__text" markdown="1">
-Enable the [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/) module and [create](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
+Enable the [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/) module and [create](/{{ page.lang }}/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access) a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
 
 You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
 </div>
