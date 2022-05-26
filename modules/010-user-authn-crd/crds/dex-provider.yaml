@@ -84,7 +84,7 @@ spec:
                           teams:
                             type: array
                             description: |
-                              A lsit of allowed GitHub teams (filter).
+                              A list of allowed GitHub teams (filter).
 
                               The user token will contain a set intersection of teams from GitHub and teams from this list. If the set is empty, the authorization will be considered unsuccessful.
 
@@ -505,7 +505,7 @@ spec:
                           teams:
                             type: array
                             description: |
-                              A lsit of allowed GitHub teams (filter).
+                              A list of allowed GitHub teams (filter).
 
                               The user token will contain a set intersection of teams from GitHub and teams from this list. If the set is empty, the authorization will be considered unsuccessful.
 
