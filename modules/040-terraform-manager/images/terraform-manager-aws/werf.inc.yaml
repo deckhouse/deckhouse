@@ -23,5 +23,5 @@ shell:
     - |
       mkdir /terraform-provider-aws
       wget -q https://releases.hashicorp.com/terraform-provider-aws/{{ env "TF_AWS_VERSION" }}/terraform-provider-aws_{{ env "TF_AWS_VERSION" }}_linux_amd64.zip -O /terraform-provider-aws.zip
-      unzip -d /terraform-provider-yandex /terraform-provider-aws.zip
+      unzip -d /terraform-provider-aws /terraform-provider-aws.zip
       chmod -R 755 /terraform-provider-aws

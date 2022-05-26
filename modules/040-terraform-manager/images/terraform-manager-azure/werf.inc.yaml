@@ -23,5 +23,5 @@ shell:
     - |
       mkdir /terraform-provider-azure
       wget -q https://releases.hashicorp.com/terraform-provider-azurerm/{{ env "TF_AZURE_VERSION" }}/terraform-provider-azurerm_{{ env "TF_AZURE_VERSION" }}_linux_amd64.zip -O /terraform-provider-azure.zip
-      unzip -d /terraform-provider-yandex /terraform-provider-azure.zip
+      unzip -d /terraform-provider-azure /terraform-provider-azure.zip
       chmod -R 755 /terraform-provider-azure
