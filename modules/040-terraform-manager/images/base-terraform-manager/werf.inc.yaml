@@ -41,7 +41,8 @@ shell:
     - apt-get update && apt install -y wget unzip
     - |
       mkdir /terraform
-      wget https://releases.hashicorp.com/terraform/{{ env "TF_VERSION" }}/terraform_{{ env "TF_VERSION" }}_linux_amd64.zip -O - | unzip -d /terraform -
+      wget https://releases.hashicorp.com/terraform/{{ env "TF_VERSION" }}/terraform_{{ env "TF_VERSION" }}_linux_amd64.zip -O /terraform.zip
+      unzip -d /terraform /terraform.zip
       chmod 755 /terraform/terraform
       cat << EOD > /root/.terraformrc
       provider_installation {
