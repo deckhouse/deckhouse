@@ -25,6 +25,7 @@ module.exports = function findSections() {
 
 // For testing in Node REPL
 // const { find } = require('./.github/scripts/js/changelog-find-sections.js')
+// find([".", "modules", "ee/modules", "ee/fe/modules"], ["^\\.", "CHANGELOG", "^ee$", "^modules$"])
 module.exports.find = find;
 
 /**
