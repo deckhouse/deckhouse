@@ -548,8 +548,8 @@ import:
   to: /bin/terraform
   before: setup
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  to: /root/.terraformrc
-  add: /etc/terraformrc
+  add: /root/.terraformrc
+  to: /etc/terraformrc
   before: setup
 - artifact: terraform-provider-aws # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
   add: /terraform-provider-aws
