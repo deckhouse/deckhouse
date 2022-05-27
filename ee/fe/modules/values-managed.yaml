@@ -1,5 +1,3 @@
 # FE Bundle "Managed"
 monitoringApplicationsEnabled: true
-extendedMonitoringEnabled: true
-secretCopierEnabled: true
 flantIntegrationEnabled: true

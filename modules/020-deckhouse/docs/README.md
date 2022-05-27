@@ -67,12 +67,12 @@ In this case, you will hold a Deckhouse version until a new release will come.
 You may need this in a situation when some Deckhouse release has an error that hasn't occurred earlier and you want to roll back to the previous release but update as soon as a new release with a patch will come.
 
   Example:
-    `kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/fe:v1.30.5`
+    `kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5`
 
 - Set a specified image tag for deployment/deckhouse and remove `releaseChannel` from deckhouse ConfigMap.
     In this case, you will hold a specified version and will not get any more updates.
     ```sh
-    $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/fe:v1.30.5
+    $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
     $ kubectl -n d8-system edit cm deckhouse
       // remove releaseChannel
     ```

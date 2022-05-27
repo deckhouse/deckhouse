@@ -261,7 +261,7 @@
 
 .sidebar__item_hot > a:before,
 .sidebar__submenu > .sidebar__item_ee > a:before,
-.sidebar__submenu > .sidebar__item_fe > a:before,
+.sidebar__submenu > .sidebar__item_proprietaryOkmeter > a:before,
 .sidebar__submenu > .sidebar__item_experimental > a:before {
     font-size: 8px;
     color: #fff;
@@ -286,8 +286,8 @@
     content: 'Experimental';
 }
 
-.sidebar__submenu > .sidebar__item_fe > a:before {
-    content: 'Experimental';
+.sidebar__submenu > .sidebar__item_proprietaryOkmeter > a:before {
+    content: 'Proprietary';
 }
 
 .sidebar__submenu > .sidebar__item_ee > a:before {

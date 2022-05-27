@@ -7,18 +7,22 @@
 {%- endif %}
 
 {%- assign skip_item = false %}
-{%- if entry.versionType == 'ee' and site.versionType == 'CE' %}
+{%- if entry.d8Revision == 'ee' and site.d8Revision == 'CE' %}
 {%- assign skip_item = true %}
-{%- elsif entry.versionType == 'fe' and site.versionType == 'CE' %}
+{%- elsif entry.d8Revision == 'fe' and site.d8Revision == 'CE' %}
 {%- assign skip_item = true %}
-{%- elsif entry.versionType == 'fe' and site.versionType == 'EE' %}
+{%- elsif entry.d8Revision == 'fe' and site.d8Revision == 'EE' %}
 {%- assign skip_item = true %}
 {%- endif %}
 
 {% unless skip_item %}
 
-{%- if entry.versionType %}
-    {%- assign folder_entry_class = folder_entry_class | append: ' sidebar__item_' | append: entry.versionType %}
+{%- if entry.d8Revision %}
+    {%- assign folder_entry_class = folder_entry_class | append: ' sidebar__item_' | append: entry.d8Revision %}
+{%- endif %}
+
+{%- if entry.featureStatus %}
+    {%- assign folder_entry_class = folder_entry_class | append: ' sidebar__item_' | append: entry.featureStatus %}
 {%- endif %}
 
 {% assign entry_with_lang = entry.url | prepend: page.lang | prepend: "/" %}
@@ -39,7 +43,7 @@
 
 {%- if entry.folders %}
 <li class="{{ folder_entry_class }}">
-    <a href="#"{%- if entry.versionType %} title="{{ site.data.i18n.features[entry.versionType][page.lang] }}"{% endif -%}
+    <a href="#"{%- if entry.d8Revision %} title="{{ site.data.i18n.features[entry.d8Revision][page.lang] }}"{% endif -%}
     >{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a>
     <ul class="sidebar__submenu">
         {%- for entry in entry.folders %}

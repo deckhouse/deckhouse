@@ -140,7 +140,7 @@ ansible:
         dest: /srv/jekyll-data/site/_includes/footer.html
     - name: "Creating additional config..."
       shell: |
-        echo -e "\nversionType: {{ .Env }}" >> /tmp/_config_additional.yml
+        echo -e "\nd8Revision: {{ .Env }}" >> /tmp/_config_additional.yml
       args:
         executable: /bin/bash
     - name: "Generate documentation static"

@@ -87,6 +87,28 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/450-keepalived
+  to: /deckhouse/modules/450-keepalived
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/450-network-gateway
+  to: /deckhouse/modules/450-network-gateway
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/600-flant-integration
   to: /deckhouse/modules/600-flant-integration
   excludePaths:

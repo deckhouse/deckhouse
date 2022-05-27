@@ -87,7 +87,7 @@ Deckhouse can be configured to work with a third-party registry (e.g., a proxy r
 
 Define the following parameters in the `InitConfiguration` resource:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. The path to the Deckhouse image in the third-party registry matching the edition used (CE/EE/FE), for example `imagesRepo: registry.deckhouse.io/deckhouse/ce`;
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. The path to the Deckhouse image in the third-party registry matching the edition used (CE/EE), for example `imagesRepo: registry.deckhouse.io/deckhouse/ce`;
 * `registryDockerCfg: <BASE64>`. Base64-encoded auth credentials of the third-party registry.
 
 Use the following `registryDockerCfg` if anonymous access to Deckhouse images is allowed in the third-party registry:
@@ -164,7 +164,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 * Edit the `d8-system/deckhouse-registry` secret (note that all parameters are Base64-encoded):
   * Insert third-party registry credentials into `.dockerconfigjson`.
   * Replace `address` with the third-party registry's host address (e.g., `registry.example.com`).
-  * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/fe`).
+  * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/ee`).
   * If necessary, change `scheme` to `http` (if the third-party registry uses HTTP scheme).
   * If necessary, change or add the `ca` field with the root CA certificate that validates the third-party registry's https certificate (if the third-party registry uses self-signed certificates).
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.

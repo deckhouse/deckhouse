@@ -121,12 +121,17 @@ module Jekyll
             end
         end
 
-        if attributes.has_key?('x-doc-versionType')
-          case attributes['x-doc-versionType']
+        if attributes.has_key?('x-doc-d8Revision')
+          case attributes['x-doc-d8Revision']
           when "ee"
             result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['ee'][lang].capitalize + '**'))
-          when "fe"
-            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['fe'][lang].capitalize + '**'))
+          end
+        end
+
+        if attributes.has_key?('x-doc-featureStatus')
+          case attributes['x-doc-featureStatus']
+          when "proprietaryOkmeter"
+            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['proprietaryOkmeter'][lang].capitalize + '**'))
           when "experimental"
             result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['experimental'][lang].capitalize + '**'))
           end

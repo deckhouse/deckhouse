@@ -1126,7 +1126,7 @@ and with Kubernetes version 1.19 and 1.21.
 \`\`\`
 
 **Note 2:**
-'deploy', 'suspend' and 'e2e' commands should run after 'build modules FE' and 'build FE' jobs are finished.
+'deploy', 'suspend' and 'e2e' commands should run after 'build FE' job is finished.
 
 </details>`;
 

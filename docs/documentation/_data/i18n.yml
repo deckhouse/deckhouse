@@ -108,9 +108,9 @@ features:
   experimental:
     en: This feature is actively developed. It might significantly change in the future.
     ru: Находится в процессе активного развития. Функциональность может существенно измениться.
-  fe:
-    en: This feature is available in Enterprise Edition only. It might significantly change in the future. Currently, it's not intended to be used without special assistance from Flant.
-    ru: Доступно только в Enterprise Edition. Функциональность может существенно измениться. В настоящий момент не рекомендуется для самостоятельного использования.
+  proprietaryOkmeter:
+    en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
+    ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
   ee:
     en: This feature is available in Enterprise Edition only.
     ru: Доступно только в Enterprise Edition.
