@@ -28,10 +28,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
-// migration(no-storage-class): Delete obsolete upmeter PV if they are stuck with
+// migration(smokemini-no-storage-class): Delete obsolete upmeter PV if they are stuck with
 // reclaim retention policy or by any other reason.
 //
-// TODO: Delete this hook in Deckhouse v1.34, it is only for migration(no-storage-class)
+// TODO (shvgn): Delete this hook in Deckhouse v1.34, it is only for migration(smokemini-no-storage-class)
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
