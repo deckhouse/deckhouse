@@ -7,7 +7,7 @@ properties:
       - type: string
       - type: boolean
         enum: [ false ]
-    x-examples: [ false, "default"]
+    x-examples: [ false, "default" ]
     description: |
       The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
@@ -158,11 +158,12 @@ properties:
               - [ "1.1.1.1/32" ]
             description: An array if CIDRs that are allowed to authenticate.
       storageClass:
+        default: false
         oneOf:
           - type: string
           - type: boolean
             enum: [ false ]
-        x-examples: [ false, "default"]
+        x-examples: [ false, "default" ]
         description: |
           A storageClass to use when checking the health of disks.
 
@@ -215,7 +216,7 @@ properties:
                   Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
           customCertificate:
             type: object
-            default: {}
+            default: { }
             properties:
               secretName:
                 type: string
@@ -292,7 +293,7 @@ properties:
               Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
       customCertificate:
         type: object
-        default: {}
+        default: { }
         properties:
           secretName:
             type: string
@@ -329,8 +330,7 @@ properties:
         value:
           type: string
     x-examples:
-      -
-        - key: "key1"
+      - - key: "key1"
           operator: "Equal"
           value: "value1"
           effect: "NoSchedule"
