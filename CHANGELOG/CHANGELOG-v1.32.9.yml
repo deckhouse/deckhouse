@@ -5,6 +5,8 @@ candi:
       impact: Control-plane components restart on CentOS-based clusters.
 docs:
   fixes:
+    - summary: Fix build of the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1645
     - summary: Fixed rendering CRD file with a dot in the name.
       pull_request: https://github.com/deckhouse/deckhouse/pull/1610
     - summary: Fix spelling mistakes, slang and formatting in documentation.
