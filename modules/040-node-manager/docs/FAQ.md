@@ -2,6 +2,7 @@
 title: "Managing nodes: FAQ"
 search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 ---
+{% raw %}
 
 ## How do I add a static node to a cluster?
 
