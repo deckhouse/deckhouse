@@ -1,8 +1,8 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
-  - add: /candi/cloud-providers/azure
-    to: /deckhouse/candi/cloud-providers/azure
+- add: /candi/cloud-providers/azure
+  to: /deckhouse/candi/cloud-providers/azure
 import:
 - artifact: terraform-provider-azure
   add: /terraform-provider-azure

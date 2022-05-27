@@ -1,8 +1,8 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
-  - add: /candi/cloud-providers/yandex
-    to: /deckhouse/candi/cloud-providers/yandex
+- add: /candi/cloud-providers/yandex
+  to: /deckhouse/candi/cloud-providers/yandex
 import:
 - artifact: terraform-provider-yandex
   add: /terraform-provider-yandex
