@@ -33,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "clean_obsolete_pv",
-			Crontab: "* * * * *",
+			Crontab: "33 * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(func(input *go_hook.HookInput, dc dependency.Container) error {
