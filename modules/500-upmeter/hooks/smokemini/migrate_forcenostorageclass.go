@@ -19,8 +19,10 @@ import (
 	"github.com/flant/addon-operator/sdk"
 )
 
-// Enforce upmeter.smokeMini.storageClass = false by deleting it (false is the default in the config schema)
-// TODO: Delete this hook in Deckhouse v1.34
+// migration(no-storage-class): Enforce upmeter.smokeMini.storageClass = false by
+// deleting it (false is the default in the config schema)
+//
+// TODO: Delete this hook in Deckhouse v1.34, it is only for migration(no-storage-class):
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, func(input *go_hook.HookInput) error {
