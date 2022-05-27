@@ -1,26 +1,10 @@
 # Восстановление работоспособности ETCD
 Перед любой попыткой восстановления сделайте бекап файлов etcd на ноде.
-Перед этим убедитесь, что etcd не запущен. Чтобы остановить etcd, переместите манифест статик-пода
-etcd из директории с манифестами.
-
-Остановка etcd:
-```bash
-mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-```
-
-Пример бекапа файлов:
-```bash
-cp -R /var/lib/etcd/ /var/lib/etcd-backup
-```
-
-Старт etcd после попытки восстановления:
-```bash
-mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-```
+Перед этим убедитесь, что etcd не запущен. Чтобы остановить etcd, переместите манифест статик-пода etcd из директории с манифестами.
 
 ## Single-master
 
-### Ситуация 1
+### Failed to find database snapshot file (snap: snapshot file doesn't exist)
 Etcd выработал лимит `quota-backend-bytes` и после перезапуска в логах видим ошибку:
 ```
 {"level":"warn","ts":"2022-05-24T08:38:01.886Z","caller":"snap/db.go:88","msg":"failed to find [SNAPSHOT-INDEX].snap.db","snapshot-index":40004,"snapshot-file-path":"/var/lib/etcd/member/snap/0000000000009c44.snap.db","error":"snap: snapshot file doesn't exist"}
@@ -49,11 +33,11 @@ main.main()
 
 #### Решение 1
 [Источник](https://github.com/etcd-io/etcd/issues/11949#issuecomment-1029906679)
-- останавливаем etcd (перемещаем манифест пода)
-- бекапим файлы
-- увеличиваем `quota-backend-bytes` в манифесте
+- останавливаем etcd `mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml`
+- бекапим файлы `cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup`
+- увеличиваем `quota-backend-bytes` в манифесте `~/etcd.yaml` если это необходимо
 - удаляем snap файлы `rm /var/lib/etcd/member/snap/*.snap`
-- пытаемся запустить etcd
+- пытаемся запустить etcd `mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml`
 - если ошибка выше ушла, проверяем статус:
 ```bash
 kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table'
@@ -70,12 +54,12 @@ kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL
 #### Решение 2
 Если решение 1 не помогло, то:
 - загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и на сервере.
-- останавливаем etcd (перемещаем манифест пода)
-- увеличиваем `quota-backend-bytes` в манифесте, если это необходимо
-- бекапим файлы, копируя папку `cp -r /var/lib/etcd /var/lib/etcd-backup`
+- останавливаем etcd `mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml`
+- увеличиваем `quota-backend-bytes` в манифесте `~/etcd.yaml`, если это необходимо
+- бекапим файлы `cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup`
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
 - восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`.
-- пытаемся запустить etcd
+- пытаемся запустить etcd `mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml`
 - если ошибка выше ушла, проверяем статус
 ```bash
 ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table
@@ -91,40 +75,47 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 
 ### Восстанавливаемся из бекапа
 - загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и на сервере
-- останавливаем etcd (перемещаем манифест пода)
+- останавливаем etcd `mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml`
+- бекапим файлы `cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup`
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
-- восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`
-- пытаемся запустить etcd
+- восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore BACKUP_FILE --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`
+- пытаемся запустить etcd `mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml`
 
 ## Multi-master
 
 ### Потеря кворума
-- добавляем в манифест аргумент `--force-new-cluster` на оставшейся ноде
+- добавляем в манифест `/etc/kubernetes/manifests/etcd.yaml` аргумент `--force-new-cluster` на оставшейся ноде
 - ждем поднятия etcd
-- удаляем аргумент `--force-new-cluster`
-Далее, если ноды были потеряны безвозвратно, то добавлям новые через `dhctl converge` или вручную, если кластер статический.
+- удаляем аргумент `--force-new-cluster` из манифеста `/etc/kubernetes/manifests/etcd.yaml` 
+Далее, если ноды были потеряны безвозвратно, то добавляем новые через `dhctl converge` или вручную, если кластер статический.
 
 Если ноды возвратились, то они уже не являются членами кластера.
 На узлах, которые не являются членами кластера выполняем следующие операции:
-- останавливаем etcd (перемещаем манифест пода)
-- бекапим файлы (на всякий случай)
+- останавливаем etcd `mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml`
+- бекапим файлы (на всякий случай) `cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup`
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
 
 Возвращаемся на рабочий кластер, и перезапускаем DaemonsSet `d8-control-plane-manager`:
 ```bash
 kubectl -n kube-system rollout restart daemonset d8-control-plane-manager
 ```
-Ожидаем переката всех Pod'ов control-plane и переход их в состояние `Ready` и смотрим что все etcd инстансы стали участниками кластера.
+Ожидаем переката всех Pod'ов control-plane и переход их в состояние `Ready` и смотрим что все etcd инстансы стали участниками кластера:
 ```
 ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 ### Полная потеря данных и восстановление из бекапа
 
 На всех нодах:
-- останавливаем etcd (перемещаем манифест пода)
-- выполняем резервное копирование файлов (на всякий случай)
+- останавливаем etcd `mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml`
+- бекапим файлы (на всякий случай) `cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup`
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
-- восстанавливаем на одной ноде как для [single-мастера](#восстанавливаемся-из-бекапа)
+
+Выбираем произвольную ноду:
+- загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и на сервере
+- восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore BACKUP_FILE --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`
+- добавляем в манифест `~/etcd.yaml` аргумент `--force-new-cluster`
+- пытаемся запустить etcd `mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml`
+- удаляем аргумент `--force-new-cluster` из манифеста `/etc/kubernetes/manifests/etcd.yaml`
 - перезапускаем DaemonSet `d8-control-plane-manager`:
 ```bash
 kubectl -n kube-system rollout restart daemonset d8-control-plane-manager
