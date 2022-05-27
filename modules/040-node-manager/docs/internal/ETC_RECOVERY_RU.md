@@ -72,7 +72,7 @@ kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL
 - загружаем на сервер [etcdctl](https://github.com/etcd-io/etcd/releases), желательно той же версии, что и на сервере.
 - останавливаем etcd (перемещаем манифест пода)
 - увеличиваем `quota-backend-bytes` в манифесте, если это необходимо
-- бекапим файлы, например, в `/var/lib/etcd-backup`
+- бекапим файлы, копируя папку `cp -r /var/lib/etcd /var/lib/etcd-backup`
 - удаляем папку c данными `rm -rf /var/lib/etcd/`
 - восстанавливаем базу `ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`.
 - пытаемся запустить etcd
