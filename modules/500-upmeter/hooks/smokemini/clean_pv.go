@@ -17,14 +17,15 @@ package smokemini
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	v1 "k8s.io/api/core/v1"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 // Delete obsolete upmeter PV if they are stuck with reclaim retention policy or by any other reason.
