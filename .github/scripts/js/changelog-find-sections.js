@@ -32,7 +32,7 @@ module.exports.find = find;
  * @param {string[]} roots      the array of directories, e.g. [".", "modules", "ee/modules", "ee/fe/modules"]
  * @param {string[]} exclusions the array of sections to exclude, e.g. ["^\\.", "CHANGELOG", "ee", "modules"]
  * @returns the array of sections
- * call([".", "modules", "ee/modules", "ee/fe/modules"], ["^\\.", "CHANGELOG", "ee", "modules"])
+ * call([".", "modules", "ee/modules", "ee/fe/modules"], ["^\\.", "CHANGELOG", "^ee$", "^modules$"])
  */
 function find(roots = [], exclusions = []) {
   const foundSections = roots.flatMap((root) => getSections(root, exclusions));
