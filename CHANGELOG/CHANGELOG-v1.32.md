@@ -56,6 +56,8 @@
 ## Fixes
 
 
+ - **[candi]** Fix registry packages install scripts for CentOS. [#1621](https://github.com/deckhouse/deckhouse/pull/1621)
+    Control-plane components restart on CentOS-based clusters.
  - **[candi]** Prepull the `kubernetes-api-proxy` image to avoid problems when we change from system to static pod `kubernetes-api-proxy`. [#1608](https://github.com/deckhouse/deckhouse/pull/1608)
  - **[candi]** Fix errors in withNAT layout [#1554](https://github.com/deckhouse/deckhouse/pull/1554)
  - **[candi]** Fixed race condition between old the kubernetes-api-proxy-configurator and bashible step. [#1482](https://github.com/deckhouse/deckhouse/pull/1482)
