@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -57,15 +56,13 @@ func Run(cmd *exec.Cmd, opts ...SandboxOption) *gexec.Session {
 
 func WithFile(path string, contents []byte, envOpts ...EnvOption) SandboxOption {
 	return func(conf sandboxConfig) error {
-		filePath := filepath.Join(path)
-
-		err := ioutil.WriteFile(filePath, contents, os.FileMode(0644))
+		err := ioutil.WriteFile(path, contents, os.FileMode(0644))
 		if err != nil {
 			return err
 		}
 
 		for _, opt := range envOpts {
-			opt(conf.cmd, filePath)
+			opt(conf.cmd, path)
 		}
 
 		return nil

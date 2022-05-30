@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -473,7 +473,7 @@ status:
 		BeforeEach(func() {
 			state := nodeGroupWithoutZones
 			for i := 1; i <= 12; i++ {
-				state = state + fmt.Sprintf(nodeWorkerTemplate, i)
+				state += fmt.Sprintf(nodeWorkerTemplate, i)
 			}
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.ValuesSet("nodeManager.internal.cloudProvider.zones", []string{"zoneA", "zoneB", "zoneC"})

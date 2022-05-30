@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -89,7 +89,7 @@ var _ = Describe("Flant integration :: hooks :: license ::", func() {
 			registry := rand.String(8)
 			auth := getConfig()
 			passwordWithNoSpaces := auth.Password
-			auth.Password = auth.Password + "\n"
+			auth.Password += "\n"
 			auth.Auth = base64.StdEncoding.EncodeToString([]byte(auth.Username + ":" + auth.Password))
 			dockerCfg := prepareDockerConfig(auth, registry)
 
