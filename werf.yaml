@@ -333,7 +333,7 @@ ansible:
   - name: "Install GolangCI linter"
     shell: |
       curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-        | sh -s -- -b $(go env GOPATH)/bin v1.46.2
+        | sh -s -- -b $(go env GOPATH)/bin v1.42.0
 
   - raw: rm -rf /var/cache/apk/*
 

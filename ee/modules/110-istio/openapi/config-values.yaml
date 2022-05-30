@@ -33,6 +33,11 @@ properties:
       - `AllowAny` — allow.
       - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry CR or to organize egressgateway.
     default: AllowAny
+  enableHTTP10:
+    type: boolean
+    default: false
+    description: |
+      Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
   federation:
     type: object
     description: Parameters for federating with other clusters.
@@ -248,6 +253,19 @@ properties:
       root:
         type: string
         description: The root certificate in PEM format if `cert` is an intermediate certificate.
+  proxyConfig:
+    type: object
+    description: |
+      Mesh-wide defaults for [ProxyConfig configurations](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
+    default: {}
+    properties:
+      holdApplicationUntilProxyStarts:
+        type: boolean
+        default: false
+        description: |
+          With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
+
+          This global flag can be overriden per Pod by an annotation — `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
   controlPlane:
     type: object
     description: istiod specific settings.
@@ -498,6 +516,13 @@ properties:
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
             default: "false"
+  highAvailability:
+    type: boolean
+    x-examples: [true, false]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
   auth:
     type: object
     default: {}

@@ -16,6 +16,9 @@ properties:
       Для шифрования и аутентификации каждый сервис получит собственный индивидуальный ключ, подписанный корневым CA. Этот CA либо генерится при первом запуске модуля, либо указывается явно (см. `ca`).
 
       Управлять режимом mTLS можно отдельно для каждого приложения и его клиентских соединений с помощью ресурсов [AuthorizationPolicy](istio-cr.html#authorizationpolicy) и [DestinationRule](istio-cr.html#destinationrule).
+  enableHTTP10:
+    description: |
+      Обрабатывать ли HTTP/1.0 запросы в сайдкарах или отвергать их с кодом ответа `426 Upgrade Required`.
   outboundTrafficPolicyMode:
     description: |
       Как поступать с запросами в сторону внешних, то есть, не учтённых в меше сервисов.
@@ -132,6 +135,15 @@ properties:
         description: Цепочка сертификатов в формате PEM на случай  если `cert` — промежуточный сертификат.
       root:
         description: Корневой сертификат в формате PEM на  случай если `cert` — промежуточный сертификат.
+  proxyConfig:
+    description: |
+      Централизованная настройка [ProxyConfig](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
+    properties:
+      holdApplicationUntilProxyStarts:
+        description: |
+          Этот параметр заставляет sidecar-injector вставлять сайдкар на первое место в списке контейнеров пода. Также он добавляет postStart-хук дабы убедиться, что Envoy инициализировался раньше самого приложения. Это позволит избежать сетевых ошибок при старте пода.
+
+          Этот глобальный параметр может быть переопределён на уровне пода аннотацией `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
   controlPlane:
     description: Настройки для компонента istiod.
     properties:
@@ -235,7 +247,11 @@ properties:
               Имя secret'а в namespace `d8-system`, который будет использоваться для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
 
               Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
 
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
   auth:
     description: Опции, связанные с аутентификацией или авторизацией в приложении.
     properties:
