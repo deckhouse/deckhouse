@@ -1,6 +1,26 @@
-{{- /* Usage: {{ include "helm_lib_resources_management_pod_resources" <resources configuration> }} */ -}}
+{{- /* Usage: {{ include "helm_lib_resources_management_pod_resources" (list <resources configuration> [ephemeral storage requests]) }} */ -}}
 {{- /* returns rendered resources section based on configuration if it is */ -}}
 {{- define "helm_lib_resources_management_pod_resources" -}}
+  {{- $configuration     := index . 0 -}}
+
+  {{- $ephemeral_storage := "50Mi" -}}
+  {{- if eq (len .) 2 -}}
+    {{- $ephemeral_storage = index . 1 -}}
+  {{- end -}}
+
+  {{- $pod_resources := (include "helm_lib_resources_management_original_pod_resources" $configuration | fromYaml) -}}
+  {{- if not (hasKey $pod_resources "requests") -}}
+    {{- $_ := set $pod_resources "requests" (dict) -}}
+  {{- end -}}
+  {{- $_ := set $pod_resources.requests "ephemeral-storage" $ephemeral_storage -}}
+
+  {{- $pod_resources | toYaml -}}
+{{- end -}}
+
+
+{{- /* Usage: {{ include "helm_lib_resources_management_original_pod_resources" <resources configuration> }} */ -}}
+{{- /* returns rendered resources section based on configuration if it is */ -}}
+{{- define "helm_lib_resources_management_original_pod_resources" -}}
   {{- $configuration := . -}}
 
   {{- if $configuration -}}
