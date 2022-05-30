@@ -543,16 +543,40 @@ import:
   add: /dhctl/bin/dhctl
   to: /usr/bin/dhctl
   after: setup
+- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /terraform/terraform
+  to: /bin/terraform
+  before: setup
+- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /root/.terraformrc
+  to: /etc/terraformrc
+  before: setup
+- artifact: terraform-provider-aws # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
+  add: /terraform-provider-aws
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
+  before: setup
+- artifact: terraform-provider-azure # from modules/040-terraform-manager/images/terraform-manager-azure/werf.inc.yaml
+  add: /terraform-provider-azure
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AZURE_NAMESPACE" }}/{{ env "TF_AZURE_TYPE" }}/{{ env "TF_AZURE_VERSION" }}/linux_amd64
+  before: setup
+- artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
+  add: /terraform-provider-gcp/terraform-provider-gcp
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
+  after: setup
+- artifact: terraform-provider-yandex # from modules/040-terraform-manager/images/terraform-manager-yandex/werf.inc.yaml
+  add: /terraform-provider-yandex
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
+  before: setup
 {{- if ne .Env "CE" }}
+- artifact: terraform-provider-openstack # from ee/modules/040-terraform-manager/images/terraform-manager-openstack/werf.inc.yaml
+  add: /terraform-provider-openstack
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
+  before: setup
 - artifact: terraform-provider-vsphere # from modules/040-terraform-manager/images/terraform-manager-vsphere/werf.inc.yaml
   add: /terraform-provider-vsphere/terraform-provider-vsphere
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_VSPHERE_NAMESPACE" }}/{{ env "TF_VSPHERE_TYPE" }}/{{ env "TF_VSPHERE_VERSION" }}/linux_amd64/terraform-provider-vsphere
   after: setup
 {{- end }}
-- artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
-  add: /terraform-provider-gcp/terraform-provider-gcp
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
-  after: setup
 - image: images-tags
   add: /images_tags.json
   to: /deckhouse/candi/images_tags.json
@@ -561,119 +585,30 @@ docker:
   ENV:
     EDITOR: vim
     TF_CLI_CONFIG_FILE: /etc/terraformrc
-ansible:
+shell:
   beforeInstall:
-  - name: "Install dependencies"
-    apk:
-      name:
-      - openssh-client
-      - gettext
-      - bash
-      - bash-completion
-      - coreutils
-      - util-linux
-      - sed
-      - gawk
-      - grep
-      - ca-certificates
-      - vim
-
-  - name: "Install terraform"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform/{{ env "TF_VERSION" }}/terraform_{{ env "TF_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /bin
-      mode: +x
-
-  - raw: rm -rf /var/cache/apk/*
-
-  install:
-  - name: "Create a directory for terraform provider aws"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
-      state: directory
-  - name: "Install terraform provider aws"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-aws/{{ env "TF_AWS_VERSION" }}/terraform-provider-aws_{{ env "TF_AWS_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
-      mode: +x
-
-  - name: "Create a directory for terraform provider openstack"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
-      state: directory
-  - name: "Install terraform provider openstack"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-openstack/{{ env "TF_OPENSTACK_VERSION" }}/terraform-provider-openstack_{{ env "TF_OPENSTACK_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
-      mode: +x
-
-  - name: "Create a directory for terraform provider yandex"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
-      state: directory
-  - name: "Install terraform provider yandex"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-yandex/{{ env "TF_YANDEX_VERSION" }}/terraform-provider-yandex_{{ env "TF_YANDEX_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
-      mode: +x
-
-  - name: "Create a directory for terraform provider azurerm"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AZURE_NAMESPACE" }}/{{ env "TF_AZURE_TYPE" }}/{{ env "TF_AZURE_VERSION" }}/linux_amd64
-      state: directory
-  - name: "Install terraform provider azurerm"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-azurerm/{{ env "TF_AZURE_VERSION" }}/terraform-provider-azurerm_{{ env "TF_AZURE_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AZURE_NAMESPACE" }}/{{ env "TF_AZURE_TYPE" }}/{{ env "TF_AZURE_VERSION" }}/linux_amd64
-      mode: +x
-
+  - "apk update && apk add openssh-client gettext bash bash-completion coreutils util-linux sed gawk grep ca-certificates vim"
+  - "rm -rf /var/cache/apk/*"
   setup:
-  - name: "Shell comfort: inputrc"
-    copy:
-      content: |
-        {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 8 }}
-      dest: /etc/inputrc
+  - |
+    cat <<"EOD" > /etc/inputrc
+    {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
+    EOD
 
-  - name: "Shell comfort: bashrc"
-    copy:
-      content: |
-        PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
+    cat <<"EOD" > /etc/bashrc
+    PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
 
-        source /etc/profile.d/bash_completion.sh
+    source /etc/profile.d/bash_completion.sh
+    EOD
 
-      dest: /etc/bashrc
+    ln -s /etc/bashrc /root/.bashrc
+    ln -s /etc/bashrc /.bashrc
 
-  - name: "Shell comfort: add bashrc for root"
-    shell: ln -s /etc/bashrc /root/.bashrc
+    cat <<"EOD" > /etc/vim/vimrc.local
+    {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
+    EOD
 
-  - name: "Shell comfort: add bashrc for nobody"
-    shell: ln -s /etc/bashrc /.bashrc
-
-  - name: "Shell comfort: vimrc.local"
-    copy:
-      content: |
-        {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 8 }}
-      dest: /etc/vim/vimrc.local
-
-  - name: "Add dhctl completion"
-    shell: |
-      echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-
-  - name: "Configure terraform cli"
-    copy:
-      dest: "/etc/terraformrc"
-      content: |
-        provider_installation {
-          filesystem_mirror {
-            path    = "/usr/local/share/terraform/plugins"
-            include = ["*/*/*"]
-          }
-        }
+    echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
 
 ---
 image: release-channel-version
