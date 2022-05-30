@@ -3,14 +3,14 @@
 # Copyright 2020-2021 Authors of Cilium
 # SPDX-License-Identifier: Apache-2.0
 
-ARG GOLANG_IMAGE=docker.io/library/golang:1.18.0@sha256:b5a9ae5907066849cbb2b47af93713b1f030e3eb6b36d84f2ae5f354b25c80d4
-ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3322
+ARG GOLANG_IMAGE=docker.io/library/golang:1.17.9@sha256:c1bf2101f7e1e0b08ce8f792735a81cd71b9d81cbcdceef2382140694f1ffbaf
+ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:cf31af331f38d1d7158470e095b132acd126a7180a54f263d386da88eb681d93
 
-ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:547db7ec9a750b8f888a506709adb41f135b952e@sha256:4d6fa0aede3556c5fb5a9c71bc6b9585475ac9b1064f516d4c45c8fb691c9d9e
-ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:523f6b3928c309e0ee5ebbc2241604892912e507@sha256:4c31054bf0bf252117ef0e1b3d09c3a607baa7f06425b0d6432124a5333319c9
-ARG CILIUM_IPROUTE2_IMAGE=quay.io/cilium/cilium-iproute2:02c29c971c01f0b9a7b916327f0caedd83820c18@sha256:eeb019043163891b91b731bed237d1edfaac036993b75f839b7d8fe6dd82b866
+ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:0147a23fdada32bd51b4f313c645bcb5fbe188d6@sha256:24fd3ad32471d0e45844c856c38f1b2d4ac8bd0a2d4edf64cffaaa3fd0b21202
+ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:7a5420acb4a0fa276a549eb4674515eadb2821d7@sha256:3e204885a1b9ec2a5b593584608664721ef0bd221d3920c091c2e77eb259090c
+ARG CILIUM_IPROUTE2_IMAGE=quay.io/cilium/cilium-iproute2:824df0c341c724f4b12cc48762f80aa3d698b589@sha256:0af5e059b2a43c6383a3daa293182b50cb88f7761f543dacf43c1c3f8f79030c
 
-ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:9b4e9adc12f53046ee52059e9f5ed1b5e7c902e9@sha256:7bed24afabb3b88eb39f6d6a391be08dc085e32bee43573c63ade623febc3292
+ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:a5ba9ba04c230e4fe86c1eac885de7a911e9ce74@sha256:cb302f02973c69231c3a8837c950ac3ed1c1a1216404d46b9b786e033fed4351
 ARG CILIUM_RUNTIME_IMAGE=cilium-runtime
 
 FROM ${CILIUM_LLVM_IMAGE} as llvm-dist
@@ -67,19 +67,21 @@ FROM quay.io/cilium/cilium-envoy:9c0d933166ba192713f9e2fc3901f788557286ee@sha256
 # Hubble CLI
 #
 FROM ${CILIUM_BUILDER_IMAGE} as hubble
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.4.tar.gz | tar xvz -C /tmp/cilium-repo
-RUN bash /tmp/cilium-repo/cilium-1.11.4/images/cilium/download-hubble.sh
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.5.tar.gz | tar xvz -C /tmp/cilium-repo
+RUN bash /tmp/cilium-repo/cilium-1.11.5/images/cilium/download-hubble.sh
 RUN /out/linux/amd64/bin/hubble completion bash > /out/linux/bash_completion
 
 FROM ${CILIUM_BUILDER_IMAGE} as builder
 
 RUN apt-get update && apt-get install patch -y
 
-RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.4.tar.gz | tar xvz -C /tmp/cilium-repo
-WORKDIR /tmp/cilium-repo/cilium-1.11.4
+RUN mkdir /tmp/cilium-repo && curl -sSL https://github.com/cilium/cilium/archive/refs/tags/v1.11.5.tar.gz | tar xvz -C /tmp/cilium-repo
+WORKDIR /tmp/cilium-repo/cilium-1.11.5
 
 COPY patches/001-netfilter-compatibility-mode.patch /
-RUN patch -p1 < /001-netfilter-compatibility-mode.patch
+COPY patches/002-skip-host-ip-gc.patch /
+RUN patch -p1 < /001-netfilter-compatibility-mode.patch && \
+    patch -p1 < /002-skip-host-ip-gc.patch
 
 RUN make PKG_BUILD=1 \
     SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
