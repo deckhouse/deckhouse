@@ -170,3 +170,52 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * Only if Deckhouse won't be updated using a third-party registry, then you have to remove `releaseChannel` setting from configmap `d8-system/deckhouse`.
+
+## How do I change the configuration of a cluster?
+
+The general cluster parameters are stored in the `ClusterConfiguration' structure. It contains parameters such as:
+
+- cluster domain: `clusterDomain`; 
+- CRI used in the cluster: `defaultCRI`;
+- Kubernetes control plane version: `kubernetesVersion`;
+- cluster type (Static, Cloud, Hybrid): `clusterType`;   
+- address space of the cluster's Pods: `podSubnetCIDR`;
+- address space of the cluster's services: `serviceSubnetCIDR` etc.
+
+To change the general cluster parameters, run the command:
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+```
+
+## How do I change the configuration of a cloud provider in a cluster?
+
+Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called `OpenStackClusterConfiguration`. 
+
+Regardless of the cloud provider used, its settings can be changed using the command:
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+```
+
+## How do I change the configuration of a static cluster?
+
+Settings of a static cluster are stored in the `StaticClusterConfiguration` structure.
+
+To change the settings of a static cluster, run the command:
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+```
+
+## How do I upgrade the Kubernetes version in a cluster?
+
+To upgrade the Kubernetes version in a cluster change the `kubernetesVersion` parameter in the `ClusterConfiguration' structure by making the following steps:
+1. Run the command:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   ```
+
+1. Change the `kubernetesVersion` field.
+1. Save the changes.

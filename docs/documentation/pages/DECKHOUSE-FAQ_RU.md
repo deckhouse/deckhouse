@@ -173,4 +173,53 @@ deckhouse: |
   * Если registry использует самоподписные сертификаты, то изменить или добавить поле `ca`, куда внести корневой сертификат соответствующего сертификата registry;
 * Дождаться перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
 * Дождаться применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
-* Только если обновление Deckhouse через сторонний registry не планируется, то следует удалить `releaseChannel` из конфигмапа `d8-system/deckhouse`.
+* Только если обновление Deckhouse через сторонний registry не планируется, то следует удалить `releaseChannel` из ConfigMap `d8-system/deckhouse`.
+
+## Как изменить конфигурацию кластера
+
+Общие параметры кластера хранятся в структуре `ClusterConfiguration`. Она содержит такие параметры, как: 
+
+- домен кластера: `clusterDomain`; 
+- используемый CRI: `defaultCRI`;
+- используемая версия control plane Kubernetes: `kubernetesVersion`;
+- тип кластера (Static, Cloud, Hybrid): `clusterType`;
+- сеть Pod’ов кластера: `podSubnetCIDR`;
+- сеть для service’ов кластера: `serviceSubnetCIDR` и др.
+
+Чтобы изменить общие параметры кластера, выполните команду:
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+```
+
+## Как изменить конфигурацию облачного провайдера в кластере?
+
+Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться `OpenStackClusterConfiguration`. 
+
+Независимо от используемого облачного провайдера, его настройки можно изменить с помощью команды: 
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+```
+
+## Как изменить конфигурацию статического кластера?
+
+Настройки статического кластера хранятся в структуре `StaticClusterConfiguration`. 
+
+Чтобы изменить параметры статического кластера, выполните команду:
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit static-cluster-configuration
+```
+
+## Как обновить версию Kubernetes в кластере?
+
+Чтобы обновить версию Kubernetes в кластере, измените параметр `kubernetesVersion` в структуре `ClusterConfiguration' следующим способом:
+1. Выполните команду:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+   ```
+
+1. Измените параметр `kubernetesVersion`.
+1. Сохраните изменения.
