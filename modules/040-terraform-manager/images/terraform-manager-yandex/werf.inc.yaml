@@ -3,19 +3,25 @@ fromImage: {{ .ModuleName }}/base-terraform-manager
 git:
 - add: /candi/cloud-providers/yandex
   to: /deckhouse/candi/cloud-providers/yandex
-ansible:
+import:
+- artifact: terraform-provider-yandex
+  add: /terraform-provider-yandex
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
+  before: setup
+shell:
   install:
-  - name: "Create a directory for terraform provider yandex"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
-      state: directory
-  - name: "Install terraform provider yandex"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-yandex/{{ env "TF_YANDEX_VERSION" }}/terraform-provider-yandex_{{ env "TF_YANDEX_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
-      mode: +x
-  - apk:
-      name: ca-certificates
-      update_cache: yes
-  - command: rm -rf /var/cache/apk/*
+    - "apk update && apk add ca-certificates"
+    - "rm -rf /var/cache/apk/*"
+---
+artifact: terraform-provider-yandex
+# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
+# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
+from: {{ env "BASE_UBUNTU" }}
+shell:
+  beforeInstall:
+    - apt-get update && apt install -y wget unzip
+    - |
+      mkdir /out
+      wget -q https://releases.hashicorp.com/terraform-provider-yandex/{{ env "TF_YANDEX_VERSION" }}/terraform-provider-yandex_{{ env "TF_YANDEX_VERSION" }}_linux_amd64.zip -O /terraform-provider-yandex.zip
+      unzip -d /terraform-provider-yandex /terraform-provider-yandex.zip
+      chmod -R 755 /terraform-provider-yandex
