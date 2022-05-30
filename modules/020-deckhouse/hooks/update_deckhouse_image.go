@@ -176,7 +176,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 				return fmt.Errorf("update windows configuration is not valid: %s", err)
 			}
 			if !updatePermitted {
-				input.LogEntry.Debug("Deckhouse update does not get into update windows. Skipping")
+				input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
 				return nil
 			}
 		}
@@ -441,14 +441,8 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 
 	repo := input.Values.Get("global.modulesImages.registry").String()
 
-	st := statusPatch{
-		Phase:          v1alpha1.PhaseDeployed,
-		Approved:       true,
-		Message:        "",
-		TransitionTime: du.now,
-	}
-	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", predictedRelease.Name, object_patch.WithSubresource("/status"))
 	createUpdatingCM(input, predictedRelease.Version.String())
+
 	// patch deckhouse deployment is faster then set internal values and then upgrade by helm
 	// we can set "deckhouse.internal.currentReleaseImageName" value but lets left it this way
 	input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -462,6 +456,14 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 
 		return sdk.ToUnstructured(&depl)
 	}, "apps/v1", "Deployment", "d8-system", "deckhouse")
+
+	st := statusPatch{
+		Phase:          v1alpha1.PhaseDeployed,
+		Approved:       true,
+		Message:        "",
+		TransitionTime: du.now,
+	}
+	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", predictedRelease.Name, object_patch.WithSubresource("/status"))
 
 	if currentRelease != nil {
 		sp := statusPatch{
