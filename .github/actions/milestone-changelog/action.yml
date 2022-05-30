@@ -78,7 +78,10 @@ runs:
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3.10.1
       with:
-        commit-message: Re-generate changelog
+        commit-message: |
+          Re-generate changelog
+
+          Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
         base: main
         branch: changelog/${{ steps.args.outputs.milestone_title }}
         milestone: ${{ steps.args.outputs.milestone_number }}
