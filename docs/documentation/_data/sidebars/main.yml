@@ -387,6 +387,8 @@ entries:
                     en: Usage
                     ru: Примеры
                   url: /modules/042-kube-dns/usage.html
+                - title: FAQ
+                  url: /modules/042-kube-dns/faq.html
             - title: node-local-dns
               versionType: ee
               folders:
