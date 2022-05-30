@@ -68,14 +68,39 @@ modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
 `
+	cniCiliumValues = `
+bpfLBMode: "DSR"
+tunnelMode: "Disabled"
+internal:
+  hubble:
+    certs:
+      ca:
+        cert: CERT
+        key: KEY
+      server:
+        ca: CA
+        key: KEY
+        cert: CERT
+resourcesManagement:
+  mode: VPA
+  vpa:
+    mode: Auto
+    cpu:
+      min: "50m"
+      max: "2"
+    memory:
+      min: "256Mi"
+      max: "2Gi"
+`
 )
 
 var _ = Describe("Module :: cniCilium :: helm template ::", func() {
-	f := SetupHelmConfig(`{cniCilium: {bpfLBMode: "DSR", internal: {hubble: {certs: {ca: {cert: CERT, key: KEY}, server: {ca: CA, key: KEY, cert: CERT}}}}}}`)
+	f := SetupHelmConfig(``)
 
 	Context("Cluster with cniCilium", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
 			f.HelmRender()
 		})
 
