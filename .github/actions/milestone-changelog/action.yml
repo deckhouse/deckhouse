@@ -23,8 +23,21 @@ runs:
       with:
         result-encoding: string
         script: |
-          const findSections = require('./.github/scripts/js/changelog-find-sections.js')
-          return findSections().join("\n")
+          const { find } = require('./.github/scripts/js/changelog-find-sections.js')
+          const rootDirs = [
+            ".",
+            "modules",
+            "ee/modules",
+            "ee/fe/modules"
+          ]
+          const excludePatterns = [
+            "^\\.",
+            "CHANGELOG",
+            "^ee$",
+            "^modules$"
+          ]
+          const sections = find(rootDirs, excludePatterns)
+          return sections.join("\n")
 
     - name: Collect Changelog
       id: changelog
