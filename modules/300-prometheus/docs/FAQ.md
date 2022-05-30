@@ -458,3 +458,10 @@ spec:
   endpoints:
     - port: web
 ```
+
+## How to expand disk size
+
+1. To request a larger volume for a PVC, edit the PVC object and specify a larger size in `spec.resources.requests.storage` field.
+    * You can only expand a PVC if its storage class's allowVolumeExpansion field is set to true.
+2. When the disk size is changed, the message `Waiting for user to (re-)start a pod to finish file system resize of volume on node.` will appear in the PersistentVolumeClaim status.
+3. Restart the Pod to complete the file system resizing.
