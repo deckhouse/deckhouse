@@ -10,4 +10,5 @@ shell:
   beforeInstall:
   - apk add --no-cache ca-certificates
 docker:
+  USER: 65534
   ENTRYPOINT: ["/bin/acmesolver"]
