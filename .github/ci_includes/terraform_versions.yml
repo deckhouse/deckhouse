@@ -19,6 +19,6 @@ TF_VSPHERE_TYPE: vsphere
 TF_VSPHERE_VERSION: 2.0.2
 TF_YANDEX_NAMESPACE: yandex-cloud
 TF_YANDEX_TYPE: yandex
-TF_YANDEX_VERSION: 0.45.1
+TF_YANDEX_VERSION: 0.74.0
 # </template: terraform_versions_envs>
 {!{- end -}!}
