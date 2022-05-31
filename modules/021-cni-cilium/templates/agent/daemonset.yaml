@@ -150,7 +150,7 @@ spec:
           mountPath: /var/lib/cilium/tls/hubble
           readOnly: true
         resources:
-        {{ include "helm_lib_resources_management_pod_resources" $.Values.cniCilium.resourcesManagement | nindent 10 }}
+        {{ include "helm_lib_resources_management_pod_resources" (list $.Values.cniCilium.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
