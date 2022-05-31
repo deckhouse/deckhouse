@@ -72,7 +72,7 @@ func shouldSkipModuleResource(moduleName string, r *storage.ResourceIndex) bool 
 
 	// Controllers VPA is configured through cm settings
 	case "cni-cilium":
-		return r.Kind == "DaemonSet" && r.Namespace == "d8-cni-cilium" && r.Name == "ciliumagent"
+		return r.Kind == "DaemonSet" && r.Namespace == "d8-cni-cilium" && r.Name == "agent"
 
 	// Network gateway snat daemonset tolerations is configured through module values
 	case "network-gateway":
