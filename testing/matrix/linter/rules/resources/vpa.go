@@ -70,6 +70,10 @@ func shouldSkipModuleResource(moduleName string, r *storage.ResourceIndex) bool 
 	case "log-shipper":
 		return r.Kind == "DaemonSet" && r.Namespace == "d8-log-shipper" && r.Name == "log-shipper-agent"
 
+	// Controllers VPA is configured through cm settings
+	case "cni-cilium":
+		return r.Kind == "DaemonSet" && r.Namespace == "d8-cni-cilium" && r.Name == "ciliumagent"
+
 	// Network gateway snat daemonset tolerations is configured through module values
 	case "network-gateway":
 		return r.Kind == "DaemonSet" && r.Namespace == "d8-network-gateway" && r.Name == "snat"
