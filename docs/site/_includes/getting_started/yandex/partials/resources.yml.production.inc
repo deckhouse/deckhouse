@@ -1,14 +1,28 @@
+# [<en>] section containing the parameters of system node group
+# [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры группы узлов system
+# [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: system
 spec:
+  # [<en>] parameters for provisioning the cloud-based VMs
+  # [<ru>] параметры заказа облачных виртуальных машин
   cloudInstances:
+    # [<en>] the reference to the InstanceClass object
+    # [<ru>] ссылка на объект InstanceClass
     classReference:
       kind: YandexInstanceClass
       name: system
+    # [<en>] the maximum number of instances for the group in each zone
+    # [<ru>] максимальное количество инстансов в зоне
     maxPerZone: 1
+    # [<en>] the minimum number of instances for the group in each zone
+    # [<ru>] минимальное количество инстансов в зоне
     minPerZone: 1
+    # [<en>] list of availability zones to create instances in
+    # [<ru>] переопределение перечня зон, в которых создаются инстансы
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
     zones:
@@ -25,9 +39,15 @@ spec:
         value: system
   nodeType: CloudEphemeral
 ---
+# [<en>] section containing the parameters of instance class for system nodes
+# [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c системными компонентами
+# [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
+  # [<en>] name of instance class
+  # [<ru>] имя инстанс класса
   name: system
 spec:
   # [<en>] you might consider changing this
@@ -49,7 +69,11 @@ spec:
     classReference:
       kind: YandexInstanceClass
       name: frontend
+    # [<en>] the maximum number of instances for the group in each zone
+    # [<ru>] максимальное количество инстансов в зоне
     maxPerZone: 2
+    # [<en>] the minimum number of instances for the group in each zone
+    # [<ru>] минимальное количество инстансов в зоне
     minPerZone: 1
   disruptions:
     approvalMode: Automatic
@@ -62,9 +86,15 @@ spec:
         value: frontend
   nodeType: CloudEphemeral
 ---
+# [<en>] section containing the parameters of instance class for frontend nodes
+# [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
+# [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
+  # [<en>] name of instance class
+  # [<ru>] имя инстанс класса
   name: frontend
 # [<en>] you might consider changing this
 # [<ru>] возможно, захотите изменить
@@ -92,6 +122,10 @@ spec:
     approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
+# [<en>] section containing the parameters of instance class for worker nodes
+# [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
+# [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
