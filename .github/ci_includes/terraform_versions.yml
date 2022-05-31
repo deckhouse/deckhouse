@@ -3,7 +3,7 @@
 # Terraform settings
 TF_AWS_NAMESPACE: hashicorp
 TF_AWS_TYPE: aws
-TF_AWS_VERSION: 3.56.0
+TF_AWS_VERSION: 4.16.0
 TF_AZURE_NAMESPACE: hashicorp
 TF_AZURE_TYPE: azurerm
 TF_AZURE_VERSION: 2.36.0
