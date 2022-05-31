@@ -72,6 +72,8 @@ metadata:
   # [<en>] name of instance class
   # [<ru>] имя инстанс класса
   name: frontend
+# [<en>] you might consider changing this
+# [<ru>] возможно, захотите изменить
 spec:
   diskSizeGb: 40
   # [<en>] Machine type in use for this instance class
@@ -106,6 +108,10 @@ spec:
     # [<ru>] аналогично стандартному полю metadata.labels
     labels:
       node-role.deckhouse.io/frontend: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: frontend
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of instance class for worker nodes
