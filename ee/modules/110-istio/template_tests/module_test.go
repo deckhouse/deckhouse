@@ -505,6 +505,7 @@ a-b-c-1-2-3:
 requests:
   cpu: 50m
   memory: 256Mi
+  ephemeral-storage: 50Mi
 limits: {}
 `))
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x8x1")
@@ -555,6 +556,7 @@ static:
 requests:
   cpu: 11m
   memory: 22Mi
+  ephemeral-storage: 50Mi
 limits:
   cpu: 33
   memory: 44Gi
@@ -601,6 +603,7 @@ limits:
   cpu: 253m
   memory: "1342177280"
 requests:
+  ephemeral-storage: 50Mi
   cpu: 101m
   memory: 512Mi
 `))
@@ -656,6 +659,7 @@ limits:
   cpu: 7500m
   memory: "833"
 requests:
+  ephemeral-storage: 50Mi
   cpu: "3"
   memory: "333"
 `))
