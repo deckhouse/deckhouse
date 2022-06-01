@@ -190,7 +190,7 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseGlobalHookFailsTooOften
-    expr: max(increase({job="deckhouse", __name__=~"deckhouse_global_hook_errors_total"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1 or max(increase({job="deckhouse", __name__=~"deckhouse_global_hook_allowed_errors_total"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
+    expr: max(increase({job="deckhouse", __name__=~"deckhouse_global_hook_errors_total"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1 or max(increase({job="deckhouse", __name__=~"deckhouse_global_hook_allowed_errors_total"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
     labels:
       severity_level: "9"
       tier: cluster
