@@ -1,14 +1,14 @@
-ARG BASE_DEBIAN
-ARG BASE_GOLANG_17_BUSTER
+ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_GOLANG_18_BULLSEYE
 
-FROM $BASE_DEBIAN as linstor-builder
+FROM $BASE_DEBIAN_BULLSEYE as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
-ARG LINSTOR_VERSION=1.18.0
+ARG LINSTOR_VERSION=1.18.2
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
- && apt-get -y install build-essential git default-jdk-headless dh-systemd gradle python3-all \
+ && apt-get -y install build-essential debhelper git default-jdk-headless gradle python3-all \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -27,16 +27,16 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN as client-builder
+FROM $BASE_DEBIAN_BULLSEYE as client-builder
 
 ARG API_GITREPO=https://github.com/LINBIT/linstor-api-py
-ARG API_VERSION=1.13.0
+ARG API_VERSION=1.13.1
 ARG CLIENT_GITREPO=https://github.com/LINBIT/linstor-client
-ARG CLIENT_VERSION=1.13.0
+ARG CLIENT_VERSION=1.13.1
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
- && apt-get -y install build-essential debhelper git python3-all python3-setuptools help2man bash-completion docbook-xsl xsltproc \
+ && apt-get -y install build-essential debhelper git python3-all python3-setuptools help2man bash-completion docbook-xsl xsltproc dh-python \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -63,7 +63,7 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_GOLANG_17_BUSTER as k8s-await-election-builder
+FROM $BASE_GOLANG_18_BULLSEYE as k8s-await-election-builder
 
 ARG K8S_AWAIT_ELECTION_GITREPO=https://github.com/LINBIT/k8s-await-election
 ARG K8S_AWAIT_ELECTION_VERSION=0.3.1
@@ -76,14 +76,14 @@ RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN as utils-builder
+FROM $BASE_DEBIAN_BULLSEYE as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.20.2
+ARG UTILS_VERSION=9.21.1
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
- && apt-get -y install build-essential debhelper git flex clitest xsltproc locales libxml2-utils po4a bash-completion dh-systemd docbook-xsl udev asciidoctor \
+ && apt-get -y install build-essential debhelper git flex clitest xsltproc locales libxml2-utils po4a bash-completion docbook-xsl udev asciidoctor \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -119,17 +119,20 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN
-ARG PIRAEUS_COMMIT_REF=c0ccd4ecb07933ee5af2627bd3b8d37d0702f23c
+FROM $BASE_DEBIAN_BULLSEYE
+ARG PIRAEUS_COMMIT_REF=b428c87889d1d367a967fab7aade288610942113
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /thin-send-recv_*.deb /packages/
 COPY --from=k8s-await-election-builder /k8s-await-election /usr/bin/k8s-await-election
 
+
 # Source https://github.com/piraeusdatastore/piraeus/blob/master/dockerfiles/piraeus-server/Dockerfile
-RUN { echo 'APT::Install-Recommends "false";' ; echo 'APT::Install-Suggests "false";' ; } > /etc/apt/apt.conf.d/99_piraeus
-RUN apt-get update && \
+RUN { echo 'APT::Install-Recommends "false";' ; echo 'APT::Install-Suggests "false";' ; } > /etc/apt/apt.conf.d/99_piraeus && \
+	# Enable contrib repos for zfsutils \
+	 sed -r -i 's/^deb(.*)$/deb\1 contrib/' /etc/apt/sources.list && \
+   apt-get update && \
 	# Install useful utilities and general dependencies
 	 apt-get install -y udev drbd-utils jq net-tools iputils-ping iproute2 dnsutils netcat sysstat curl util-linux && \
 	# Install dependencies for optional features \
@@ -140,6 +143,8 @@ RUN apt-get update && \
 	  e2fsprogs \
 	# lsscsi: exos layer \
 	  lsscsi \
+    # lvm2: manage lvm storage pools \
+      lvm2 \
 	# multipath-tools: exos layer \
 	  multipath-tools \
 	# nvme-cli: nvme layer
@@ -152,8 +157,17 @@ RUN apt-get update && \
 	  xfsprogs \
 	# zstd: used with thin-send-recv to send snapshots to another LINSTOR cluster \
 	  zstd \
+	# zfsutils-linux: for zfs storage pools \
+	  zfsutils-linux \
+	 && \
+	# remove udev, no need for it in the container \
+	 apt-get remove -y udev \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && ln -sf /proc/mounts /etc/mtab \
+ && sed -i 's/udev_rules.*=.*/udev_rules=0/ ; s/udev_sync.*=.*/udev_sync=0/ ; s/obtain_device_list_from_udev.*=.*/obtain_device_list_from_udev=0/' /etc/lvm/lvm.conf \
+ && sed -i '/^devices {/a global_filter = [ "r|^/dev/drbd|" ]' /etc/lvm/lvm.conf
+
 
 # Install linstor-server
 RUN apt-get update \
@@ -170,17 +184,6 @@ RUN mkdir /var/log/linstor-controller && \
 	 # Ensure we log to files in containers, otherwise SOS reports won't show any logs at all
 	 sed -i 's#<!-- <appender-ref ref="FILE" /> -->#<appender-ref ref="FILE" />#' /usr/share/linstor-server/lib/conf/logback.xml
 
-# needs a newer lvm, debian bug #932433
-RUN printf 'Package: *\nPin: release a=%s\nPin-Priority: %s\n\n' stable 700 testing 650 > /etc/apt/preferences \
- && echo 'deb http://deb.debian.org/debian/ bullseye main contrib' >> /etc/apt/sources.list \
- && apt-get update \
- && apt-get install -y -t bullseye lvm2 \
- && apt-get remove -y udev \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/* \
- && ln -sf /proc/mounts /etc/mtab \
- && sed -i 's/udev_rules.*=.*/udev_rules=0/ ; s/udev_sync.*=.*/udev_sync=0/ ; s/obtain_device_list_from_udev.*=.*/obtain_device_list_from_udev=0/' /etc/lvm/lvm.conf \
- && sed -i '/^devices {/a global_filter = [ "r|^/dev/drbd|" ]' /etc/lvm/lvm.conf
 
 # controller
 EXPOSE 3376/tcp 3377/tcp 3370/tcp 3371/tcp

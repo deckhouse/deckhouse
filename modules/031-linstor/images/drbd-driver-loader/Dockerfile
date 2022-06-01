@@ -1,8 +1,8 @@
-ARG BASE_DEBIAN
+ARG BASE_DEBIAN_BULLSEYE
 
-FROM $BASE_DEBIAN as builder
+FROM $BASE_DEBIAN_BULLSEYE as builder
 ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
-ARG DRBD_VERSION=9.1.6
+ARG DRBD_VERSION=9.1.7
 
 RUN apt-get update \
  && apt-get install -y make git \
@@ -17,9 +17,7 @@ RUN git clone ${DRBD_GITREPO} /drbd \
  && mv ./docker/entry.sh /entry.sh \
  && chmod +x /entry.sh
 
-ARG BASE_DEBIAN
-
-FROM $BASE_DEBIAN
+FROM $BASE_DEBIAN_BULLSEYE
 
 RUN apt-get update \
  && apt-get install -y kmod gnupg wget make gcc patch curl \

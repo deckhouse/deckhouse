@@ -61,7 +61,6 @@ spec:
         image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.piraeusOperator }}"
         imagePullPolicy: IfNotPresent
         args:
-        - --bind-address=127.0.0.1
         - --create-monitoring=false
         env:
         - name: WATCH_NAMESPACE

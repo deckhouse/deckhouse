@@ -1,9 +1,9 @@
-ARG BASE_DEBIAN
-ARG BASE_GOLANG_17_BUSTER
+ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_GOLANG_18_BULLSEYE
 
-FROM $BASE_GOLANG_17_BUSTER as builder
+FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG LINSTOR_SCHEDULER_EXTENDER_GITREPO=https://github.com/piraeusdatastore/linstor-scheduler-extender
-ARG LINSTOR_SCHEDULER_EXTENDER_VERSION=0.2.0
+ARG LINSTOR_SCHEDULER_EXTENDER_VERSION=0.2.0-3-g2525276
 
 RUN git clone ${LINSTOR_SCHEDULER_EXTENDER_GITREPO} /usr/local/go/linstor-scheduler-extender \
  && cd /usr/local/go/linstor-scheduler-extender \
@@ -12,7 +12,7 @@ RUN git clone ${LINSTOR_SCHEDULER_EXTENDER_GITREPO} /usr/local/go/linstor-schedu
  && go build -ldflags="-X github.com/piraeusdatastore/linstor-scheduler-extender/pkg/consts.Version=v${LINSTOR_SCHEDULER_EXTENDER_VERSION}" \
  && mv ./linstor-scheduler-extender /
 
-FROM $BASE_DEBIAN
+FROM $BASE_DEBIAN_BULLSEYE
 COPY --from=builder /linstor-scheduler-extender /
 
 # needs a newer lvm, debian bug #932433

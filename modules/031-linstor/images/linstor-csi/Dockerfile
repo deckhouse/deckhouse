@@ -1,9 +1,9 @@
-ARG BASE_DEBIAN
-ARG BASE_GOLANG_17_BUSTER
+ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_GOLANG_18_BULLSEYE
 
-FROM $BASE_GOLANG_17_BUSTER as builder
+FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG LINSTOR_CSI_GITREPO=https://github.com/linbit/linstor-csi
-ARG LINSTOR_CSI_VERSION=0.18.0
+ARG LINSTOR_CSI_VERSION=0.19.1
 ARG LINSTOR_WAIT_UNTIL_GITREPO=https://github.com/LINBIT/linstor-wait-until
 ARG LINSTOR_WAIT_UNTIL_VERSION=0.1.1
 
@@ -20,7 +20,7 @@ RUN git clone ${LINSTOR_WAIT_UNTIL_GITREPO} /usr/local/go/linstor-wait-until \
  && go build \
  && mv ./linstor-wait-until /
 
-FROM $BASE_DEBIAN
+FROM $BASE_DEBIAN_BULLSEYE
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       xfsprogs \
