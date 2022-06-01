@@ -173,7 +173,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
 ## How do I change the configuration of a cluster?
 
-The general cluster parameters are stored in the `ClusterConfiguration' structure. It contains parameters such as:
+The general cluster parameters are stored in the `ClusterConfiguration` structure. It contains parameters such as:
 
 - cluster domain: `clusterDomain`; 
 - CRI used in the cluster: `defaultCRI`;
@@ -210,7 +210,7 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit static-c
 
 ## How do I upgrade the Kubernetes version in a cluster?
 
-To upgrade the Kubernetes version in a cluster change the `kubernetesVersion` parameter in the `ClusterConfiguration' structure by making the following steps:
+To upgrade the Kubernetes version in a cluster change the `kubernetesVersion` parameter in the `ClusterConfiguration` structure by making the following steps:
 1. Run the command:
 
    ```shell
