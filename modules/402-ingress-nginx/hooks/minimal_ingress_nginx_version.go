@@ -34,7 +34,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverMinimalNginxVersion)
 
 const (
-	minVersionValuesKey = "ingressNginx.internal.minimalControllerVersion"
+	minVersionValuesKey     = "ingressNginx.internal.minimalControllerVersion"
+	incompatibleVersionsKey = "ingressNginx.internal.hasIncompatibleIngressClass"
 )
 
 func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -43,30 +44,50 @@ func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 		return nil, err
 	}
 
+	ingressClass, ok, err := unstructured.NestedString(obj.Object, "spec", "ingressClass")
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, nil
 	}
 
-	return version, nil
+	return ingressNginxController{
+		Version:      version,
+		IngressClass: ingressClass,
+	}, nil
 }
 
 func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 	snap := input.Snapshots["ingressControllers"]
+	input.Values.Set(incompatibleVersionsKey, false)
 
 	var minVersion *semver.Version
+	classVersionMap := make(map[string]*semver.Version)
 
 	for _, s := range snap {
 		if s == nil {
 			continue
 		}
 
-		v, err := semver.NewVersion(s.(string))
+		ctrl := s.(ingressNginxController)
+		if ctrl.Version == "" {
+			ctrl.Version = input.Values.Get("ingressNginx.defaultControllerVersion").String()
+		}
+		ctrlVersion, err := semver.NewVersion(ctrl.Version)
 		if err != nil {
 			return err
 		}
 
-		if minVersion == nil || v.LessThan(minVersion) {
-			minVersion = v
+		if v, ok := classVersionMap[ctrl.IngressClass]; ok {
+			if versionsIncompatible(v, ctrlVersion) {
+				input.Values.Set(incompatibleVersionsKey, true)
+			}
+		}
+		classVersionMap[ctrl.IngressClass] = ctrlVersion
+
+		if minVersion == nil || ctrlVersion.LessThan(minVersion) {
+			minVersion = ctrlVersion
 		}
 	}
 
@@ -78,4 +99,25 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 	input.Values.Set(minVersionValuesKey, minVersion.String())
 
 	return nil
+}
+
+var (
+	borderVersion = semver.MustParse("1.0.0")
+)
+
+func versionsIncompatible(v1, v2 *semver.Version) bool {
+	if v1.GreaterThan(borderVersion) && v2.LessThan(borderVersion) {
+		return true
+	}
+
+	if v1.LessThan(borderVersion) && v2.GreaterThan(borderVersion) {
+		return true
+	}
+
+	return false
+}
+
+type ingressNginxController struct {
+	Version      string
+	IngressClass string
 }

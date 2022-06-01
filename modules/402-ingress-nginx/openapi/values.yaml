@@ -274,4 +274,8 @@ properties:
         type: string
         default: ""
         description: Minimal version of the existing Ingress Controllers
-        x-examples: [ "0.33", "1.1" ]
+        x-examples: [ "0.33", "0.46" ]
+      hasIncompatibleIngressClass:
+        type: boolean
+        default: false
+        description: Has 2+ controllers with different versions but same ingress class

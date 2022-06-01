@@ -64,6 +64,17 @@ function __main__() {
     fi
   fi
 
+  newCtrlClass=$(context::jq -r '.review.request.object.spec.ingressClass')
+  newCtrlVersion=$(context::jq -r '.review.request.object.spec.controllerVersion')
+  existent=($(kubectl get ingressnginxcontrollers.deckhouse.io -o jsonpath='{.items[?(@.spec.ingressClass == "'"$newCtrlClass"'")].spec.controllerVersion}' | grep -v null | sort | uniq))
+
+  for ex in "${existent[@]}"; do
+    if [[ "x$ex" != "x$newCtrlVersion" ]]; then
+      forbid "controllers with the same ingressClass but different versions are forbidden"
+      exit 0
+    fi
+  done
+
   # Allowed response.
   jq -nc '{"allowed": true}' > $VALIDATING_RESPONSE_PATH
 }

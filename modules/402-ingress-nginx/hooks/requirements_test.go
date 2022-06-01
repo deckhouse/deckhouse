@@ -59,7 +59,13 @@ type mockGetter struct {
 	Value string
 }
 
-func (mg mockGetter) Get(_ string) gjson.Result {
+func (mg mockGetter) Get(s string) gjson.Result {
+	if s == incompatibleVersionsKey {
+		return gjson.Result{
+			Type: gjson.False,
+			Raw:  "false",
+		}
+	}
 	return gjson.Result{
 		Type: gjson.String,
 		Str:  mg.Value,

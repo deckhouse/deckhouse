@@ -26,6 +26,11 @@ import (
 
 func init() {
 	f := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		hasIncompatibleCtrls := getter.Get(incompatibleVersionsKey).Bool()
+		if hasIncompatibleCtrls {
+			return false, errors.New("cluster has 2+ ingress controllers with the same ingress class but different versions")
+		}
+
 		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
 			return false, err

@@ -36,6 +36,7 @@ var _ = Describe("Global hooks :: discovery :: minimal_ingress_version ", func()
 		It("Should have no minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(minVersionValuesKey).Exists()).To(BeFalse())
+			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeFalse())
 		})
 	})
 
@@ -48,6 +49,7 @@ metadata:
   name: main
 spec:
   controllerVersion: "1.1"
+  ingressClass: "nginx"
 `))
 			f.RunHook()
 		})
@@ -55,6 +57,27 @@ spec:
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(minVersionValuesKey).String()).To(BeEquivalentTo("1.1.0"))
+			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeFalse())
+		})
+	})
+
+	Context("IngressNginxController with default version", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: "nginx"
+`))
+			f.RunHook()
+		})
+
+		It("Should have minimal version", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(minVersionValuesKey).String()).To(BeEquivalentTo("0.33.0"))
+			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeFalse())
 		})
 	})
 
@@ -67,6 +90,7 @@ metadata:
   name: first
 spec:
   controllerVersion: "1.1"
+  ingressClass: "test"
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -74,6 +98,7 @@ metadata:
   name: second
 spec:
   controllerVersion: "0.33"
+  ingressClass: "test2"
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -81,6 +106,7 @@ metadata:
   name: third
 spec:
   controllerVersion: "0.46"
+  ingressClass: "nginx"
 `))
 			f.RunHook()
 		})
@@ -88,6 +114,36 @@ spec:
 		It("Should have minimal version", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(minVersionValuesKey).String()).To(BeEquivalentTo("0.33.0"))
+			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeFalse())
+		})
+	})
+
+	Context("Has incompatible ingress controllers", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: first
+spec:
+  controllerVersion: "1.1"
+  ingressClass: "test"
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: second
+spec:
+  controllerVersion: "0.33"
+  ingressClass: "test"
+`))
+			f.RunHook()
+		})
+
+		It("Should have minimal version", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(minVersionValuesKey).String()).To(BeEquivalentTo("0.33.0"))
+			Expect(f.ValuesGet(incompatibleVersionsKey).Bool()).To(BeTrue())
 		})
 	})
 })
