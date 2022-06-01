@@ -26,8 +26,9 @@
    Компьютер, с которого будет производиться установка.{% unless page.platform_type == "existing" %} Он нужен только для запуска инсталлятора Deckhouse и не будет частью кластера.{% endunless %}
 
    Требования:
+   - установленный container runtime (docker, containerd) и docker-клиент для запуска инсталлятора;
 {% if page.platform_code == "bm-private" %}
-   - Доступ до проксирующего registry ([читайте подробнее](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
+   - доступ до проксирующего registry ([читайте подробнее](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
 {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.io` (установка также возможна и [в закрытом окружении](../bm-private/step2.html));
 {%- endif %}

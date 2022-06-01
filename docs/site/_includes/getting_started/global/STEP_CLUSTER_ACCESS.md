@@ -20,10 +20,10 @@ kubectl get nodes
 # Access cluster using NGINX Ingress
 [IngressNginxController](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) was created during the installation process of the cluster.
 The only thing left is to configure access to web interfaces of components that are already installed in the cluster (Grafana, Prometheus, Dashboard, etc.).
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 LoadBalancer is already created, and you just need to point a DNS domain to it.
 First, you need to connect to your master node as described [previously](#access-cluster-kubernetes-api).
 
-{% if page.platform_type == 'cloud' %}
 Get the IP address of the load balancer. Run the following command from the root user:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
@@ -47,20 +47,21 @@ echo "$BALANCER_IP"
 {% endif %}
 
 Point a DNS domain you specified in the "[Cluster Installation](./step3.html)" step to Deckhouse web interfaces in one of the following ways:
-<ul><li>If you have the DNS server and you can add a DNS records:
-  <ul>
-    <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
-      DNS</a> (e.g., <code>%s.kube.my</code>), then add
-      {%- if page.platform_code == 'aws' %} a corresponding wildcard CNAME record containing the hostname of load
-      balancer (<code>BALANCER_HOSTNAME</code>)
-      {%- else %} a corresponding wildcard A record containing the IP of load balancer (<code>BALANCER_IP</code>){%-
-      endif -%}, you've discovered previously.
-    </li>
-    <li>If your cluster DNS name template is <strong>NOT</strong> a <a
-            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>),
-      then add A or CNAME records containing the IP of load balancer (<code>BALANCER_IP</code>), you've discovered
-      previously, for the following Deckhouse service DNS names:
-      <div class="highlight">
+<ul>
+  <li>If you have the DNS server and you can add a DNS records:
+    <ul>
+      <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
+        DNS</a> (e.g., <code>%s.kube.my</code>), then add
+        {%- if page.platform_code == 'aws' %} a corresponding wildcard CNAME record containing the hostname of load
+        balancer (<code>BALANCER_HOSTNAME</code>)
+        {%- else %} a corresponding wildcard A record containing the IP of {% if page.platform_code == 'vsphere' %}the master node{% else %}the load balancer (<code>BALANCER_IP</code>){% endif %}{%-
+        endif -%}, you've discovered previously.
+      </li>
+      <li>If your cluster DNS name template is <strong>NOT</strong> a <a
+              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>),
+        then add A or CNAME records containing the IP of {% if page.platform_code == 'vsphere' %}the master node{% else %}the load balancer (<code>BALANCER_IP</code>){% endif %}, you've discovered
+        previously, for the following Deckhouse service DNS names:
+        <div class="highlight">
 <pre class="highlight">
 <code example-hosts>dashboard.example.com
 deckhouse.example.com
@@ -89,13 +90,24 @@ BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
 
     <p>To add records to the <code>/etc/hosts</code> file locally, follow these steps:</p>
 
-  <ul><li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address you got:</p>
+  <ul>
+{%- if page.platform_code != 'vsphere' %}
+    <li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address you got:</p>
 {% snippetcut %}
 ```bash
 export BALANCER_IP="<PUT_BALANCER_IP_HERE>"
 ```
 {% endsnippetcut %}
     </li>
+{%- else %}
+    <li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address of <strong>the master node</strong> you've got:</p>
+{% snippetcut %}
+```bash
+export BALANCER_IP="<MASTER_IP>"
+```
+{% endsnippetcut %}
+    </li>
+{%- endif %}
   <li><p>Add DNS records for the Deckhouse services:</p>
 {% snippetcut selector="example-hosts" %}
 ```bash

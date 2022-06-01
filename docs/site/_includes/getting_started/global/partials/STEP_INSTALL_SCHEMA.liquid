@@ -26,6 +26,7 @@ You will need:
    The computer from which the installation will be performed.{% unless page.platform_type == "existing" %} It is only needed to run the Deckhouse installer, and will not be part of the cluster.{% endunless %}
 
    Requirements:
+   - installed container runtime (dockerd, containerd) and docker client to run the installer;
 {% if page.platform_code == "bm-private" %}
    - access to a proxy registry ([read more](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
 {%- else %}

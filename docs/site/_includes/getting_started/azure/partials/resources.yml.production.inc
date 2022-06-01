@@ -1,3 +1,5 @@
+# [<en>] section containing the parameters of instance class for worker nodes
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
@@ -19,6 +21,8 @@ spec:
   # [<ru>] возможно, захотите изменить
   machineSize: Standard_F4
 ---
+# [<en>] section containing the parameters of worker node group
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
@@ -57,7 +61,9 @@ spec:
   # [<ru>] тип узлов, которые представляет эта группа
   nodeType: Cloud
 ---
+# [<en>] section containing the parameters of instance class for system nodes
 # [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # [<en>] type of the configuration section
@@ -78,7 +84,9 @@ spec:
   # [<ru>] возможно, захотите изменить
   machineSize: Standard_F4
 ---
+# [<en>] section containing the parameters of system node group
 # [<en>] version of the Deckhouse API
+# [<ru>] секция, описывающая параметры группы узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # [<en>] type of the configuration section
@@ -131,6 +139,8 @@ spec:
   # [<ru>] тип узлов, которые представляет эта группа
   nodeType: Cloud
 ---
+# [<en>] section containing the parameters of instance class for frontend nodes
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
@@ -152,6 +162,8 @@ spec:
   # [<ru>] возможно, захотите изменить
   machineSize: Standard_F4
 ---
+# [<en>] section containing the parameters of frontend node group
+# [<ru>] секция, описывающая параметры группы узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1

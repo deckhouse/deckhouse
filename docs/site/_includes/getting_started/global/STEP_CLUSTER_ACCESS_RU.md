@@ -20,10 +20,10 @@ kubectl get nodes
 # Доступ к кластеру через NGINX Ingress
 [IngressNginxController](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
 Теперь осталось настроить доступ к веб-интерфейсам компонентов, которые уже установлены в кластере, таким как Grafana, Prometheus, Dashboard и так далее.
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 LoadBalancer уже создан и вам остаётся только направить DNS-домен на него.
 В первую очередь необходимо подключиться к master-узлу, как это описано [выше](#доступ-к-кластеру-через-kubernetes-api).
 
-{% if page.platform_type == 'cloud' %}
 Получите IP адрес балансировщика. Для этого, на **master-узле** от пользователя `root` выполните команду:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
@@ -53,14 +53,13 @@ echo "$BALANCER_IP"
       <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
         DNS-шаблоном</a> (например, <code>%s.kube.my</code>), то добавьте
         {%- if page.platform_code == 'aws' %} соответствующую wildcard CNAME-запись со значением адреса балансировщика (<code>BALANCER_HOSTNAME</code>)
-        {%- else %} соответствующую wildcard A-запись со значением IP-адреса балансировщика (<code>BALANCER_IP</code>){%-
+        {%- else %} соответствующую wildcard A-запись со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла{% else %}балансировщика (<code>BALANCER_IP</code>){% endif %}{%-
         endif -%}, который вы получили выше.
       </li>
       <li>
         Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
               href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>),
-        то добавьте А или CNAME-записи со значением IP-адреса балансировщика (<code>BALANCER_IP</code>), который вы
-        получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
+        то добавьте А или CNAME-записи со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла{% else %}балансировщика (<code>BALANCER_IP</code>){% endif %}, который вы получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">
 <pre class="highlight">
 <code example-hosts>dashboard.example.com
@@ -90,13 +89,24 @@ BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
 
   <p>Для добавления записей в файл <code>/etc/hosts</code> на Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующие шаги:</p>
 
-<ul><li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес балансировщика:</p>
+<ul>
+{%- if page.platform_code != 'vsphere' %}
+<li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес балансировщика:</p>
 {% snippetcut %}
 ```bash
 export BALANCER_IP="<PUT_BALANCER_IP_HERE>"
 ```
 {% endsnippetcut %}
 </li>
+{%- else %}
+<li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес <strong>master-узла</strong>:</p>
+{% snippetcut %}
+```bash
+export BALANCER_IP="<MASTER_IP>"
+```
+{% endsnippetcut %}
+</li>
+{%- endif %}
   <li><p>Добавьте DNS-записи для веб-интерфейсов Deckhouse:</p>
 {% snippetcut selector="example-hosts" %}
 ```bash
