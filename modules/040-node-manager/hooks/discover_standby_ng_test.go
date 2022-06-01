@@ -473,7 +473,7 @@ status:
 		BeforeEach(func() {
 			state := nodeGroupWithoutZones
 			for i := 1; i <= 12; i++ {
-				state = state + fmt.Sprintf(nodeWorkerTemplate, i)
+				state += fmt.Sprintf(nodeWorkerTemplate, i)
 			}
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.ValuesSet("nodeManager.internal.cloudProvider.zones", []string{"zoneA", "zoneB", "zoneC"})

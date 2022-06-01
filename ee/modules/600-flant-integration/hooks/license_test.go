@@ -89,7 +89,7 @@ var _ = Describe("Flant integration :: hooks :: license ::", func() {
 			registry := rand.String(8)
 			auth := getConfig()
 			passwordWithNoSpaces := auth.Password
-			auth.Password = auth.Password + "\n"
+			auth.Password += "\n"
 			auth.Auth = base64.StdEncoding.EncodeToString([]byte(auth.Username + ":" + auth.Password))
 			dockerCfg := prepareDockerConfig(auth, registry)
 
