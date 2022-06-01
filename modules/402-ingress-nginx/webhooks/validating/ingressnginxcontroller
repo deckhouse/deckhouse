@@ -66,7 +66,7 @@ function __main__() {
 
   ctrlClass=$(context::jq -r '.review.request.object.spec.ingressClass')
   ctrlVersion=$(context::jq -r '.review.request.object.spec.controllerVersion')
-  ctrlName=$(context::jq -r '.review.request.object.metadata.name'))
+  ctrlName=$(context::jq -r '.review.request.object.metadata.name')
   kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq --arg class $ctrlClass --arg name $ctrlName -cr '.items[] | select(.spec.ingressClass == $class and .metadata.name != $name) | .spec.controllerVersion' | while read controllerVersion; do
     if [[ "x$controllerVersion" != "x$ctrlVersion" ]]; then
       forbid "controllers with the same ingressClass but different versions are forbidden"
