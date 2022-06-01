@@ -214,7 +214,12 @@
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseModuleHookFailsTooOften
-    expr: max(increase({job="deckhouse", __name__=~"deckhouse_module_hook_errors_total"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1 or max(increase({job="deckhouse", __name__=~"deckhouse_module_hook_allowed_errors_total"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
+    expr: |
+      max by (pod, instance, module, hook) (
+        increase(deckhouse_module_hook_errors_total{job="deckhouse"}[__SCRAPE_INTERVAL_X_4__])
+        or
+        increase(deckhouse_module_hook_allowed_errors_total{job="deckhouse"}[__SCRAPE_INTERVAL_X_4__])
+      ) > 1
     labels:
       severity_level: "9"
       tier: cluster
