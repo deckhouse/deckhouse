@@ -76,7 +76,7 @@ ansible:
         chdir: /go/src/app
 git:
   - url: https://github.com/flant/web-router.git
-    tag: v1.0.12
+    tag: v1.0.13
     add: /
     to: /go/src/app
     stageDependencies:
