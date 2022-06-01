@@ -20,8 +20,10 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
-  allowAccessToSystemNamespaces: false     # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
-  limitNamespaces:                         # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
+  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
+  allowAccessToSystemNamespaces: false
+  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
+  limitNamespaces:
   - review-.*
   - stage
 ```
@@ -30,7 +32,7 @@ spec:
 
 В Kubernetes есть две категории пользователей:
 
-* ServiceAccount-ы, учёт которых ведёт сам Kubernetes через API.
+* ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
 * Остальные пользователи, чей учёт ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера – существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживается два способа аутентификации:
   * Через модуль [user-authn](../../modules/150-user-authn/).
   * С помощью сертификатов.
@@ -61,7 +63,8 @@ spec:
        name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
-     allowAccessToSystemNamespaces: true      # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
+     # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition)
+     allowAccessToSystemNamespaces: true      
    EOF
    ```
 
@@ -182,7 +185,9 @@ spec:
 
 #### Предоставление доступа созданному пользователю
 
-Для предоставления доступа созданному пользователю создайте `ClusterAuthorizationRule`. Пример `ClusterAuthorizationRule`:
+Для предоставления доступа созданному пользователю создайте `ClusterAuthorizationRule`.
+
+Пример `ClusterAuthorizationRule`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -218,7 +223,7 @@ spec:
 * Добавление `volumes`:
 
   ```yaml
-  - name:authorization-webhook-config
+  - name: authorization-webhook-config
     hostPath:
       path: /etc/kubernetes/authorization-webhook-config.yaml
       type: FileOrCreate
@@ -303,9 +308,9 @@ EOF
 }
 ```
 
-## Кастомизация прав для предустановленных accessLevel
+## Настройка прав высокоуровневых ролей
 
-Если требуется добавить прав для определённого accessLevel, то достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
+Если требуется добавить прав для определённой [высокоуровневой роли](./#ролевая-модель), то достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
 
 Пример:
 
@@ -314,19 +319,31 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    user-authz.deckhouse.io/access-level: PrivilegedUser
-  name: d8-mymodule-ns:privileged-user
+    user-authz.deckhouse.io/access-level: Editor
+  name: myapp-ns:privileged-user
 rules:
 - apiGroups:
-  - mymodule.io
+  - networking.istio.io
   resources:
   - destinationrules
   - virtualservices
   - serviceentries
+  - gateways
   verbs:
   - create
-  - list
-  - get
-  - update
   - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - security.istio.io
+  resources:
+  - peerauthentications
+  - authorizationpolicies
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
 ```
