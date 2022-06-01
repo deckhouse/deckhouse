@@ -270,3 +270,8 @@ properties:
         default: []
         items:
           type: string
+      minimalControllerVersion:
+        type: string
+        default: ""
+        description: Minimal version of the existing Ingress Controllers
+        x-examples: [ "0.33", "1.1" ]
