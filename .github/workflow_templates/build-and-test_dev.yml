@@ -4,9 +4,6 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  push:
-    branches:
-      - *
   pull_request_target:
      types:
       - opened
