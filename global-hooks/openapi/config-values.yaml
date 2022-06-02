@@ -107,7 +107,7 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/en/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`. Also, you can use your own `ClusterIssuer`.
+                  The [cert-manager](https://deckhouse.io/en/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false
