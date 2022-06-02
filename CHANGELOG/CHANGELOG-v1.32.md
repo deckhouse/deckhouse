@@ -80,6 +80,7 @@
  - **[deckhouse]** Fix kubernetes upgrades with feature gates and limits deckhouse modules revision up to 3 [#1377](https://github.com/deckhouse/deckhouse/pull/1377)
  - **[deckhouse]** Fixed a bug for the case when the storage class is set to "false" [#1364](https://github.com/deckhouse/deckhouse/pull/1364)
  - **[helm_lib]** Update CSI controller without creating a new one. [#1481](https://github.com/deckhouse/deckhouse/pull/1481)
+ - **[ingress-nginx]** Updated requirements for Ingress Nginx controller versions. If conditions are not met, then further Deckhouse upgrade is blocked. [#1697](https://github.com/deckhouse/deckhouse/pull/1697)
  - **[linstor]** automatically recover evicted nodes in LINSTOR [#1397](https://github.com/deckhouse/deckhouse/pull/1397)
  - **[linstor]** LINSTOR module now supports high-availability [#1147](https://github.com/deckhouse/deckhouse/pull/1147)
     Multimaster clusters will automatically turn LINSTOR into HA-mode
