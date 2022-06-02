@@ -143,7 +143,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			resourcesToCreate = parsedResources
 		}
 
-		if resourcesToCreate == nil || len(resourcesToCreate) == 0 {
+		if len(resourcesToCreate) == 0 {
 			log.WarnLn("Resources to create were not found.")
 			return nil
 		}

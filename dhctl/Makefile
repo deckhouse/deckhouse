@@ -14,7 +14,7 @@
 
 
 # Dependency versions
-GOLANGCI_VERSION = 1.42.0
+GOLANGCI_VERSION = 1.46.2
 GOFUMPT_VERSION=0.1.1
 
 # Build versions
