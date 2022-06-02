@@ -67,7 +67,7 @@
     expr: sum by (controller_name, controller_version) (d8_ingress_nginx_controller{controller_version=~"0.25|0.26"})
     labels:
       tier: cluster
-      severity_level: "9"
+      severity_level: "6"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
@@ -77,6 +77,6 @@
 
         Please upgrade {{ $labels.controller_name }} `IngressNginxController`.
 
-        This version is deprecated and does not have the newest improvements and patches.
+        Support of this version will be removed in the release 1.33.
       summary: >
         Deprecated version of `IngressNginxController` {{ $labels.controller_version }} found.
