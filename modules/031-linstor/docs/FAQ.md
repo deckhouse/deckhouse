@@ -24,7 +24,7 @@ Comparison factors:
 All in all, in practice, it doesn’t matter how many knobs you have for tuning, only three factors are significant: 
 - **Read locality** — if all reading is performed locally, then it works at the speed (throughput, IOPS, latency) of the local disk (the difference is practically insignificant);
 - **1 network hop when writing** — in drbd, the replication is performed by the *client*, and in Ceph, by *server*, so Ceph latency for writing always has at least x2 from drbd;
-- **Complexity of code** — latency of calculations on the datapath (how much assembler code is executed for each io operation), drbd+lvm is simpler than drbd+lvmthin, and much simpler than Ceph-rbd. 
+- **Complexity of code** — latency of calculations on the datapath (how much assembler code is executed for each io operation), drbd+lvm is simpler than drbd+lvmthin, and much simpler than Ceph RBD. 
 
 ## What to use in which situation?
 
