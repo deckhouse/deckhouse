@@ -60,7 +60,7 @@ func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 
 func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 	snap := input.Snapshots["ingressControllers"]
-	input.Values.Set(incompatibleVersionsKey, false)
+	isIncompatible := false
 
 	var minVersion *semver.Version
 	classVersionMap := make(map[string]*semver.Version)
@@ -81,7 +81,7 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 
 		if v, ok := classVersionMap[ctrl.IngressClass]; ok {
 			if versionsIncompatible(v, ctrlVersion) {
-				input.Values.Set(incompatibleVersionsKey, true)
+				isIncompatible = true
 			}
 		}
 		classVersionMap[ctrl.IngressClass] = ctrlVersion
@@ -90,6 +90,8 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 			minVersion = ctrlVersion
 		}
 	}
+
+	input.Values.Set(incompatibleVersionsKey, isIncompatible)
 
 	if minVersion == nil {
 		input.Values.Remove(minVersionValuesKey)
