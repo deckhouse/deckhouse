@@ -94,6 +94,7 @@ const istioValues = `
         inlet: LoadBalancer
         nodePort: {}
     tracing: {}
+    proxyConfig: {}
     controlPlane:
       resourcesManagement:
         mode: VPA
