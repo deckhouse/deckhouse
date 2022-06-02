@@ -1,23 +1,26 @@
 {{- $context := . }}
-{{- $ingressClasses := list -}}
+{{- $ingressClasses := dict -}}
 
 {{- if and $context.Values.ingressNginx.internal $context.Values.ingressNginx.internal.ingressControllers }}
   {{- if gt (len $context.Values.ingressNginx.internal.ingressControllers) 0 }}
     {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+      {{- $controllerClass := "k8s.io/ingress-nginx" }} # this is must have to ingress controller < 1.0
       {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
       {{- if semverCompare ">=1.1" $controllerVersion }}
-        {{- $ingressClasses = append $ingressClasses $crd.spec.ingressClass }}
+        {{- $controllerClass = (printf "ingress-nginx.deckhouse.io/%s" $crd.spec.ingressClass) }}
+      {{- end }}
+      {{- if $crd.spec.ingressClass }}
+        {{- $_ := set $ingressClasses $crd.spec.ingressClass $controllerClass }}
       {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
 
-{{- $ingressClasses = $ingressClasses | uniq }}
 {{- range $ext := $context.Values.ingressNginx.internal.externalIngressClasses }}
-  {{- $ingressClasses = without $ingressClasses $ext }}
+  {{- $_ := unset $ingressClasses $ext }}
 {{- end }}
 
-{{- range $class := $ingressClasses }}
+{{- range $class, $controller := $ingressClasses }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
@@ -29,5 +32,5 @@ metadata:
     ingressclass.kubernetes.io/is-default-class: "true"
   {{- end }}
 spec:
-  controller: {{ printf "ingress-nginx.deckhouse.io/%s" $class }}
+  controller: {{ $controller }}
 {{- end }}

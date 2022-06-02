@@ -8,7 +8,6 @@ kind: Ingress
 metadata:
   name: main
   annotations:
-    kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-name: ingress_route
@@ -28,6 +27,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 {{- end }}
 spec:
+  ingressClassName: "nginx"
   tls:
   - hosts:
       - {{ $host }}
@@ -53,10 +53,10 @@ kind: Ingress
 metadata:
   name: early-redirect
   annotations:
-    kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/configuration-snippet: |
       rewrite ^/(.*)$ https://{{ $host }}/$1 permanent;
 spec:
+  ingressClassName: "nginx"
   tls:
   - hosts:
       - early.{{ $host }}

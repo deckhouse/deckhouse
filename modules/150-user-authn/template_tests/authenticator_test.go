@@ -84,7 +84,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			ingress := hec.KubernetesResource("Ingress", "d8-test", "test-dex-authenticator")
 			Expect(ingress.Exists()).To(BeTrue())
-			Expect(ingress.Field("metadata.annotations.kubernetes\\.io/ingress\\.class").String()).To(Equal("test"))
+			Expect(ingress.Field("spec.ingressClassName").String()).To(Equal("test"))
 			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-buffer-size").String()).To(Equal("32k"))
 			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(Equal("1.1.1.1,192.168.0.0/24"))
 

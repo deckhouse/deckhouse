@@ -4,7 +4,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: {{ .Values.userAuthn.publishAPI.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}

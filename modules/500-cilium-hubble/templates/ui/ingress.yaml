@@ -8,7 +8,6 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "cilium"
     web.deckhouse.io/export-icon: "https://cilium.io/icons/icon-144x144.png?v=81b4389fe4c26dfd1769148aa2f50bb0"
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/affinity-mode: persistent
     nginx.ingress.kubernetes.io/session-cookie-name: d8-hubble-affinity
@@ -29,6 +28,7 @@ metadata:
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ciliumHubble.auth.whitelistSourceRanges | join "," }}
     {{- end }}
 spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:
     - host: {{ include "helm_lib_module_public_domain" (list . "hubble") }}
       http:

@@ -72,7 +72,6 @@ metadata:
   name: my-prometheus-api
   namespace: d8-monitoring
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: my-basic-auth-secret
