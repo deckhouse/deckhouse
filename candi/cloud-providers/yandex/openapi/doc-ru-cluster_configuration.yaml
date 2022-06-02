@@ -25,9 +25,6 @@ apiVersions:
               cores:
                 description: |
                   Количество ядер у создаваемых инстансов.
-              coreFraction:
-                description: |
-                  Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее...](https://cloud.yandex.ru/docs/compute/concepts/performance-levels)
               memory:
                 description: |
                   Количество оперативной памяти (в мегабайтах) у создаваемых инстансов.
@@ -98,6 +95,9 @@ apiVersions:
                 Частичное содержимое полей [YandexInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
+                coreFraction:
+                  description: |
+                    Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее...](https://cloud.yandex.ru/docs/compute/concepts/performance-levels)
       existingNetworkID:
         description: |
           ID существующей VPC Network.
