@@ -31,9 +31,9 @@ spec:
       claimName: "test-volume"
 ```
 
-## Перенос приложения на другой узел при проблемах с хранилищем (fencing)
+## Перенос приложения при проблемах с узлом (fencing)
 
-При наличии лейбла `linstor.csi.linbit.com/on-storage-lost: remove` у Pod'а, модуль linstor автоматически удалит Pod'ы с узла где возникли проблемы с хранилищем, что вызовет их перезапуск на другом узле. 
+При наличии лейбла `linstor.csi.linbit.com/on-storage-lost: remove` у Pod'а, модуль linstor автоматически удалит Pod'ы с узла где возникли проблемы (с хранилищем, сетью и т.п.), что вызовет их перезапуск на другом узле. 
 
 Пример описания StatefulSet с лейблом `linstor.csi.linbit.com/on-storage-lost: remove`:
 

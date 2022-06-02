@@ -90,10 +90,10 @@ Specify the `schedulerName: linstor` parameter in the Pod description to use the
 
 [Example...](usage.html#using-the-linstor-scheduler)
 
-### Application transfer to another node in case of storage problems (fencing)
+### Application reschedule in case of node problem (fencing)
 
-In case your application does not support high availability and runs in a single instance, you may want to force a migration to another node when storage problems occur. 
+In case your application does not support high availability and runs in a single instance, you may want to force a migration from a node where problems occurred may arise. For example, if there are network issues, disk subsystem issues, etc.
 
-To solve the problem, specify the label `linstor.csi.linbit.com/on-storage-lost: remove` in the Pod description. The linstor module will automatically remove such Pods from the node where the storage problem occurred, allowing Kubernetes to restart the application on another node. 
+To solve the problem, specify the label `linstor.csi.linbit.com/on-storage-lost: remove` in the Pod description. The linstor module will automatically remove such Pods from the node where the problem occurred, allowing Kubernetes to restart the application on another node. 
 
-[Example...](usage.html#application-transfer-to-another-node-in-case-of-storage-problems-fencing)
+[Example...](usage.html#application-reschedule-in-case-of-node-problem-fencing)
