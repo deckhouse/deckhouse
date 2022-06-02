@@ -60,6 +60,10 @@ func isPodController(kind string) bool {
 	return kind == "Deployment" || kind == "DaemonSet" || kind == "StatefulSet"
 }
 
+func isPodControllerDaemonSet(kind string) bool {
+	return kind == "DaemonSet"
+}
+
 func shouldSkipModuleResource(moduleName string, r *storage.ResourceIndex) bool {
 	switch moduleName {
 	// Controllers VPA is configured through cr settings

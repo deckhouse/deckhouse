@@ -16,18 +16,6 @@ spec:
     updateMode: "Auto"
 {{- end }}
 ---
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
-metadata:
-  name: d8-kube-proxy
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-proxy")) | nindent 2 }}
-spec:
-  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
-  selector:
-    matchLabels:
-      k8s-app: kube-proxy
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:

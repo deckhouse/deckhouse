@@ -19,8 +19,6 @@ package linter
 import (
 	"fmt"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/resources"
@@ -60,6 +58,7 @@ func ApplyLintRules(module utils.Module, values string, objectStore *storage.Uns
 
 	resources.ControllerMustHaveVPA(&linter)
 	resources.ControllerMustHavePDB(&linter)
+	resources.DaemonSetMustNotHavePDB(&linter)
 
 	return linter.ErrorsList.ConvertToError()
 }
