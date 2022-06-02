@@ -12,6 +12,11 @@ properties:
       Включает создание маршрутов к Pod'ам на других узлах.
 
       Все узлы должны находиться в одной сети L2.
+
+  tunnelMode:
+    description: |
+      Режим работы тоннеля.
+
   svcSourceRangeCheck:
     description: |
       Включает проверку source IP и его соответствие loadBalancerSourceRanges Service'а.
@@ -23,3 +28,56 @@ properties:
   bpfLBMode:
     description: |
       Режим работы балансировщика eBPF.
+
+  resourcesManagement:
+    description: |
+      Настройки управления ресурсами cilium agent.
+    properties:
+      mode:
+      vpa:
+        description: |
+          Параметры для режима VPA.
+        properties:
+          mode:
+            description: |
+              Режим работы VPA.
+          cpu:
+            min:
+              description: |
+                Минимально допустимый requests для cpu.
+            max:
+              description: |
+                Максимально допустимый requests для cpu.
+            limitRatio:
+              description: |
+                Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у пода. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+          memory:
+            min:
+              description: |
+                Минимально допустимый requests для memory.
+            max:
+              description: |
+                Максимально допустимый requests для memory.
+            limitRatio:
+              description: |
+                Коэффициент для вычисления limits процессора. Опционально используется для подсчёта первичного limits процессора у пода. VPA при своей работе сохраняет пропорцию limits/requests и при вычислении подходящего, актуального requests настраивает limits в том же соотношении.
+      static:
+        description: |
+          Настройки управления ресурсами в статическом режиме.
+        properties:
+          requests:
+            properties:
+              cpu:
+                description: |
+                  Реквесты CPU.
+              memory:
+                description: |
+                  Реквесты памяти.
+          limits:
+            properties:
+              cpu:
+                description: |
+                  Лимиты CPU.
+              memory:
+                description: |
+                  Лимиты памяти.
