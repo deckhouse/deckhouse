@@ -207,7 +207,9 @@ local function fill_buffer()
   ngx.var.total_upstream_response_time = 0
   ngx.var.upstream_retries = 0
 
-  local var_server_name = ngx.var.server_name:gsub("~^%(%?<subdomain>%[\\w%-]%+%)", ""):gsub("^*", ""):gsub("$$", ""):gsub("\\", "")
+  -- Since the 0.41 version ingress controller renders weird vhost for wildcard hosts like ~^(?<subdomain>[\w-]+)\.example\.com$
+  -- For older versions we just cut of the asterisk from vhost
+  local var_server_name = ngx.var.server_name:gsub("^*", ""):gsub("~^%(%?<subdomain>%[\\w%-]%+%)", ""):gsub("$$", ""):gsub("\\", "")
 
   if var_server_name == "_" then
     _increment("c22", 22)
