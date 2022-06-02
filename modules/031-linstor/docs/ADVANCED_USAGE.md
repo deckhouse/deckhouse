@@ -64,7 +64,7 @@ After enabling the module, the cluster is automatically configured to use LINSTO
 
 1. Create an LVM or LVMThin pool of these devices.
 
-   Create several pools from the devices obtained in the previous step, make them with the same name if possible.
+   Create several storage-pools from the devices obtained in the previous step, make them with the same name in case of using as single storageClass
 
    - Example of a command to create an **LVM** storage pool of two devices on one of the nodes: 
 
