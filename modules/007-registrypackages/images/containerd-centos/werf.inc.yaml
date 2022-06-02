@@ -40,10 +40,10 @@ shell:
   - apk add --no-cache curl
   setup:
   {{- if contains "el7" $image_version }}
-  - wget https://download.docker.com/linux/centos/7/x86_64/stable/Packages/{{ $version }}.rpm --output-file /containerd.io.x86_64.rpm
-  - wget {{ index $selinux_version "7" }} --output-file /container-selinux.x86_64.rpm
+  - wget https://download.docker.com/linux/centos/7/x86_64/stable/Packages/{{ $version }}.rpm --output-document /containerd.io.x86_64.rpm
+  - wget {{ index $selinux_version "7" }} --output-document /container-selinux.x86_64.rpm
   {{- else if contains "el8" $image_version }}
-  - wget https://download.docker.com/linux/centos/8/x86_64/stable/Packages/{{ $version }}.rpm --output-file /containerd.io.x86_64.rpm
-  - wget {{ index $selinux_version "8" }} --output-file /container-selinux.x86_64.rpm
+  - wget https://download.docker.com/linux/centos/8/x86_64/stable/Packages/{{ $version }}.rpm --output-document /containerd.io.x86_64.rpm
+  - wget {{ index $selinux_version "8" }} --output-document /container-selinux.x86_64.rpm
   {{- end }}
 {{- end }}
