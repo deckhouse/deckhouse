@@ -12,14 +12,14 @@
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
-- name: cloud-credentials
+- name: cloud-config
   secret:
-    secretName: cloud-credentials
+    secretName: cloud-controller-manager
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
 - mountPath: /etc/credentials.json
-  name: cloud-credentials
+  name: cloud-config
   readOnly: true
   subPath: credentials.json
 {{- end }}
@@ -66,9 +66,9 @@
   hostPath:
     path: /sys
     type: Directory
-- name: cloud-credentials
+- name: cloud-config
   secret:
-    secretName: cloud-credentials
+    secretName: cloud-controller-manager
 {{- end }}
 
 {{- define "csi_node_volume_mounts" }}
@@ -82,7 +82,7 @@
 - name: sys
   mountPath: /sys
 - mountPath: /etc/credentials.json
-  name: cloud-credentials
+  name: cloud-config
   readOnly: true
   subPath: credentials.json
 {{- end }}

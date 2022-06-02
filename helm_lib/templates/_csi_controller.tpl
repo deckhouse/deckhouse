@@ -97,6 +97,8 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
+      annotations:
+        cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

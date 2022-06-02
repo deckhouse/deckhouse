@@ -101,7 +101,7 @@ spec:
               name: cloud-config
               readOnly: true
             - mountPath: /etc/credentials.json
-              name: cloud-credentials
+              name: cloud-config
               readOnly: true
               subPath: credentials.json
             - mountPath: /tmp
@@ -117,9 +117,6 @@ spec:
       - name: cloud-config
         secret:
           secretName: cloud-controller-manager
-      - name: cloud-credentials
-        secret:
-          secretName: cloud-credentials
       - name: tmp
         emptyDir: {}
 {{- end }}
