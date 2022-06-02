@@ -15,7 +15,7 @@ We take a practical view of the issue. A difference of several tens of percent �
 Comparison factors:
 - Sequential read and write: do not matter, because on any technology they always run into the network (which is 10Gb/s, which is 1Gb/s). From a practical point of view, this indicator can be completely ignored;
 - Random read and write (which is 1Gb/s, which is 10Gb/s):
-  - drbd+lvm 5 times better (latency — 5 times less, IOPS — 5 times more) than Ceph-rbd; 
+  - drbd+lvm 5 times better (latency — 5 times less, IOPS — 5 times more) than Ceph RBD; 
   - drbd+lvm is 2 times better than drbd+lvmthin.
 - If one of the replicas is located on local storage, then the read speed will be approximately equal to the storage device speed; 
 - If there are no replicas located on local storage, then the write speed will be approximately equal to half the network bandwidth for two replicas, or ⅓ network bandwidth for three replicas;
