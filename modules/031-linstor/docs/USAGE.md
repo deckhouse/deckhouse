@@ -33,7 +33,7 @@ spec:
       claimName: "test-volume"
 ```
 
-## Application reschedule in case of node problem (fencing)
+## Application reschedule in case of node problem (storage-based fencing)
 
 If the label `linstor.csi.linbit.com/on-storage-lost: remove` is present on a Pod, the linstor module automatically removes the Pods from the node where the problem occurred (network or storage issues, etc.). This leads to restarting them on another node.  
 
