@@ -4,7 +4,7 @@ title: "The linstor module"
 
 This module manages a replicated block storage solution in the cluster using the [LINSTOR](https://linbit.com/linstor/) and the [DRBD](https://linbit.com/drbd/) kernel module.
 
-LINSTOR is neither a file system nor block storage. LINSTOR is an orchestrator, acting as an abstraction layer that: 
+LINSTOR is an orchestrator, acting as an abstraction layer that: 
 - automates the creation of volumes using well-known and proven technologies such as LVM and ZFS; 
 - configures the replication of the volumes using DRBD.
 
