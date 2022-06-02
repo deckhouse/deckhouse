@@ -31,6 +31,7 @@
     Restart etcd due to update to version 3.5.3.
  - **[docs]** Added Deckhouse documentation overview page. [#1467](https://github.com/deckhouse/deckhouse/pull/1467)
  - **[flant-integration]** Describes what information Deckhouse sends out and how it can be disabled. [#1429](https://github.com/deckhouse/deckhouse/pull/1429)
+ - **[ingress-nginx]** Updated requirements for Ingress Nginx controller versions. If conditions are not met, then further Deckhouse upgrade is blocked [#1676](https://github.com/deckhouse/deckhouse/pull/1676)
  - **[ingress-nginx]** Add 1.1 IngressNginxController version which is "must have" for clusters with k8s version > 1.21 [#1209](https://github.com/deckhouse/deckhouse/pull/1209)
  - **[linstor]** Added more alerts for LINSTOR. [#1055](https://github.com/deckhouse/deckhouse/pull/1055)
  - **[linstor]** Grafana dashboard for LINSTOR [#1035](https://github.com/deckhouse/deckhouse/pull/1035)
@@ -56,6 +57,8 @@
 ## Fixes
 
 
+ - **[candi]** Fixed containerd registry package build for CentOS 8. [#1692](https://github.com/deckhouse/deckhouse/pull/1692)
+ - **[candi]** Fixed kubernetes-cni install script for CentOS. [#1682](https://github.com/deckhouse/deckhouse/pull/1682)
  - **[candi]** Fix registry packages install scripts for CentOS. [#1621](https://github.com/deckhouse/deckhouse/pull/1621)
     Control-plane components restart on CentOS-based clusters.
  - **[candi]** Prepull the `kubernetes-api-proxy` image to avoid problems when we change from system to static pod `kubernetes-api-proxy`. [#1608](https://github.com/deckhouse/deckhouse/pull/1608)
@@ -108,6 +111,7 @@
 
 
  - **[cert-manager]** Bump to version 1.7.1. Fix a possible bug with ACME solvers when you don't have a default ingress class like nginx (a very rare case). Minor bug fixes [#1082](https://github.com/deckhouse/deckhouse/pull/1082)
+ - **[cloud-provider-aws]** The `terraform-provider-aws` was updated to version `4.16`. [#1656](https://github.com/deckhouse/deckhouse/pull/1656)
  - **[istio]** Documentation refactoring. [#1281](https://github.com/deckhouse/deckhouse/pull/1281)
  - **[upmeter]** Remove redundant smoke-mini Ingress [#1237](https://github.com/deckhouse/deckhouse/pull/1237)
  - **[upmeter]** Add User-Agent header to all requests [#1213](https://github.com/deckhouse/deckhouse/pull/1213)
