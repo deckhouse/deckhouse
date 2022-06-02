@@ -8,7 +8,7 @@ COPY patches/makefile.patch /
 COPY patches/healthcheck.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
-    git clone --branch controller-v1.1.2 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
+    git clone --branch controller-v1.1.3 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
@@ -23,7 +23,7 @@ RUN apt-get update \
   && luarocks install lua-iconv 7-3
 
 # IngressNginxController docker image
-FROM k8s.gcr.io/ingress-nginx/controller:v1.1.2@sha256:28b11ce69e57843de44e3db6413e98d09de0f6688e33d4bd384002a44f78405c as controller_image
+FROM k8s.gcr.io/ingress-nginx/controller:v1.1.3@sha256:31f47c1e202b39fadecf822a9b76370bd4baed199a005b3e7d4d1455f4fd3fe2 as controller_image
 
 # Final image
 FROM $BASE_ALPINE

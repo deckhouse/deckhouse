@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "0.25", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "0.33", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
@@ -48,7 +48,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "0.26"
+  controllerVersion: "0.33"
   acceptRequestsFrom:
   - 127.0.0.1/32
   - 192.168.0.0/24
@@ -65,7 +65,7 @@ spec:
 "spec": {
   "config": {},
   "ingressClass": "nginx",
-  "controllerVersion": "0.26",
+  "controllerVersion": "0.33",
   "inlet": "LoadBalancer",
   "loadBalancer": {},
   "hstsOptions": {},
@@ -145,7 +145,7 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "nginx",
-"controllerVersion": "0.25",
+"controllerVersion": "0.33",
 "inlet": "LoadBalancer",
 "hstsOptions": {},
 "geoIP2": {},
@@ -165,7 +165,7 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "test",
-"controllerVersion": "0.25",
+"controllerVersion": "0.33",
 "inlet": "HostPortWithProxyProtocol",
 "hstsOptions": {},
 "geoIP2": {},
@@ -185,7 +185,7 @@ spec:
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.spec").String()).To(MatchJSON(`{
 "config": {},
 "ingressClass": "test",
-"controllerVersion": "0.25",
+"controllerVersion": "0.33",
 "inlet": "LoadBalancerWithProxyProtocol",
 "hstsOptions": {},
 "geoIP2": {},

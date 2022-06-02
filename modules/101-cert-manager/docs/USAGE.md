@@ -86,8 +86,6 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
    apiVersion: networking.k8s.io/v1
    kind: Ingress
    metadata:
-     annotations:
-       kubernetes.io/ingress.class: nginx
      name: domain-wildcard
      namespace: app-namespace
    spec:

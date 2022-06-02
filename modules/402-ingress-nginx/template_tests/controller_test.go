@@ -43,7 +43,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
-		hec.ValuesSet("ingressNginx.defaultControllerVersion", "0.25")
+		hec.ValuesSet("ingressNginx.defaultControllerVersion", "0.33")
 
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
@@ -73,7 +73,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     additionalLogFields:
       my-cookie: "$cookie_MY_COOKIE"
     validationEnabled: true
-    controllerVersion: "0.26"
+    controllerVersion: "0.46"
     inlet: LoadBalancer
     hsts: true
     hstsOptions:
@@ -97,7 +97,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     config:
       load-balance: ewma
     ingressClass: nginx
-    controllerVersion: "0.26"
+    controllerVersion: "0.33"
     inlet: LoadBalancerWithProxyProtocol
     resourcesRequests:
       mode: Static

@@ -8,7 +8,6 @@ kind: Ingress
 metadata:
   name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
   annotations:
-    kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-name: ingress_route
@@ -23,6 +22,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 {{- end }}
 spec:
+  ingressClassName: "nginx"
   tls:
   - hosts:
       - {{ $host }}

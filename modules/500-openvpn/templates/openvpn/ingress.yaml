@@ -9,7 +9,6 @@ metadata:
   annotations:
     web.deckhouse.io/export-name: "openvpn"
     web.deckhouse.io/export-icon: "/public/img/openvpn.png"
-    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
 {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.openvpn.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.openvpn.auth.externalAuthentication.authSignInURL }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.openvpn.auth.externalAuthentication.authURL }}
