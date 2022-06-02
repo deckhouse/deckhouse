@@ -11,6 +11,8 @@ data:
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}
 
+  metrics: "+cilium_bpf_map_pressure"
+
   agent-health-port: "9876"
   prometheus-serve-addr: "127.0.0.1:9090"
   operator-prometheus-serve-addr: "127.0.0.1:9092"
@@ -78,6 +80,7 @@ data:
   enable-remote-node-identity: "true"
 
   bpf-map-dynamic-size-ratio: "0.005"
+  bpf-policy-map-max: "65536"
 
   # Local hubble sever section
   enable-hubble: "true"

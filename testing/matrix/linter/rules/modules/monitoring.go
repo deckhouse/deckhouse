@@ -113,7 +113,7 @@ func monitoringModuleRule(moduleName, modulePath, moduleNamespace string) errors
 			moduleLabel(moduleName),
 			searchingFilePath,
 			"The content of the 'templates/monitoring.yaml' should be equal to:\n%s\nGot:\n%s",
-			fmt.Sprintf(desiredContentBuilder.String(), "YOUR NAMESAPCE TO DEPLOY RULES: d8-monitoring, d8-system or module namespaces"),
+			fmt.Sprintf(desiredContentBuilder.String(), "YOUR NAMESPACE TO DEPLOY RULES: d8-monitoring, d8-system or module namespaces"),
 			string(content),
 		)
 	}
