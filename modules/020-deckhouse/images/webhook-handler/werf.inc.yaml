@@ -24,8 +24,8 @@ git:
   includePaths:
   - '*/webhooks/'
 - add: /modules/020-deckhouse/images/webhook-handler/entrypoint.sh
-  to: /
+  to: /entrypoint.sh
 - add: /shell_lib/semver.sh
-  to: /frameworks/shell/
+  to: /frameworks/shell/semver.sh
 docker:
   ENTRYPOINT: ["/entrypoint.sh"]
