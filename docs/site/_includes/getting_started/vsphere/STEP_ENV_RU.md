@@ -67,12 +67,13 @@ govc tags.attach -c k8s-zone test_zone /DC/datastore/test_lun
 
 > Ввиду разнообразия подключаемых к vSphere SSO-провайдеров, шаги по созданию пользователя в данной статье не рассматриваются.
 
-Необходимо создать роль (Role) с указанными правами и прикрепить её к одному или нескольким Datacenter'ам, где нужно развернуть кластер Kubernetes.
+Необходимо создать роль (Role) с указанными правами и прикрепить её к **vCenter**, где нужно развернуть кластер
+Kubernetes.
 
 {% snippetcut %}
 ```shell
 govc role.create kubernetes \
-Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Global.GlobalTag Global.SystemTag \
+Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Folder.Create Global.GlobalTag Global.SystemTag \
 InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory InventoryService.Tagging.CreateTag \
 InventoryService.Tagging.DeleteCategory InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory \
 InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory InventoryService.Tagging.ModifyUsedByForTag \

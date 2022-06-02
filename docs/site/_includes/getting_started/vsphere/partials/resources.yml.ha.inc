@@ -52,7 +52,7 @@ spec:
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of instance class for frontend nodes
-# [<ru>] секция, описывающая параметры инстанс-класса для frontend-узла
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1

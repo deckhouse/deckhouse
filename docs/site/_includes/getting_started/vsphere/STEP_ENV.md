@@ -68,12 +68,12 @@ StorageClasses will be created automatically for each Datastore that is tagged w
 > We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
 You have to create a role with a following list of permissions and attach
-it to one or more Datacenter.
+it to **vCenter**.
 
 {% snippetcut %}
 ```shell
 govc role.create kubernetes \
-Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Global.GlobalTag Global.SystemTag \
+Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Folder.Create Global.GlobalTag Global.SystemTag \
 InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory InventoryService.Tagging.CreateTag \
 InventoryService.Tagging.DeleteCategory InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory \
 InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory InventoryService.Tagging.ModifyUsedByForTag \
