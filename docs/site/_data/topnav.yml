@@ -6,7 +6,7 @@ topnav:
       - title: Getting started
         url: /gs/
       - title: Documentation
-        url: /documentation/v1/
+        url: /documentation/v1/deckhouse-overview.html
       - title: Community
         url: /community/about.html
       - title: Products
@@ -38,7 +38,7 @@ topnav:
       - title: Быстрый старт
         url: /gs/
       - title: Документация
-        url: /documentation/v1/
+        url: /documentation/v1/deckhouse-overview.html
       - title: Сообщество
         url: /community/about.html
       - title: Продукты
