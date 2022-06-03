@@ -25,5 +25,5 @@ shell:
   beforeInstall:
   - apk add --no-cache curl
   setup:
-  - curl -sL https://github.com/moparisthebest/static-curl/releases/download/v{{ $version }}/curl-amd64 --output /d8-curl
+  - curl -sfL https://github.com/moparisthebest/static-curl/releases/download/v{{ $version }}/curl-amd64 --output /d8-curl
   - chmod +x /d8-curl /install /uninstall

@@ -36,6 +36,6 @@ shell:
   - apk add --no-cache curl
   setup:
   - DISTRO="$(awk -F "-" '{print $NF}' <<< "{{ $version }}")"
-  - curl -sL "https://download.docker.com/linux/ubuntu/dists/${DISTRO}/pool/stable/amd64/{{ $version | replace "=" "_" | replace "5:" "" }}_amd64.deb" --output /docker-ce_amd64.deb
-  - curl -sL "https://download.docker.com/linux/ubuntu/dists/${DISTRO}/pool/stable/amd64/{{ $version | replace "=" "_" | replace "5:" "" | replace "docker-ce" "docker-ce-cli" }}_amd64.deb" --output /docker-ce-cli_amd64.deb
+  - curl -sfL "https://download.docker.com/linux/ubuntu/dists/${DISTRO}/pool/stable/amd64/{{ $version | replace "=" "_" | replace "5:" "" }}_amd64.deb" --output /docker-ce_amd64.deb
+  - curl -sfL "https://download.docker.com/linux/ubuntu/dists/${DISTRO}/pool/stable/amd64/{{ $version | replace "=" "_" | replace "5:" "" | replace "docker-ce" "docker-ce-cli" }}_amd64.deb" --output /docker-ce-cli_amd64.deb
 {{- end }}

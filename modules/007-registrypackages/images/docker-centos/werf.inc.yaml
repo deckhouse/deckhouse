@@ -40,6 +40,6 @@ shell:
   - CLI_VERSION="$(sed "s/docker-ce/docker-ce-cli/" <<< "${VERSION}")"
   - RPM_PACKAGE="https://download.docker.com/linux/centos/${DISTRO}/x86_64/stable/Packages/${VERSION}.rpm"
   - RPM_PACKAGE_CLI="https://download.docker.com/linux/centos/${DISTRO}/x86_64/stable/Packages/${CLI_VERSION}.rpm"
-  - curl -sL ${RPM_PACKAGE} --output /docker-ce.x86_64.rpm
-  - curl -sL ${RPM_PACKAGE_CLI} --output /docker-ce-cli.x86_64.rpm
+  - curl -sfL ${RPM_PACKAGE} --output /docker-ce.x86_64.rpm
+  - curl -sfL ${RPM_PACKAGE_CLI} --output /docker-ce-cli.x86_64.rpm
 {{- end }}

@@ -31,6 +31,6 @@ shell:
   setup:
   - RPM_PACKAGE="$(curl -s https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/repodata/primary.xml | grep "<location href=" | grep "kubeadm-{{ printf "%s.%s" $version $patch }}-0" | awk -F "\"" '{print $2}')"
   - TOOLS_PACKAGE="$(curl -s https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/repodata/primary.xml | grep "<location href=" | grep "cri-tools-{{ printf "%s" $cri_tools_version }}" | awk -F "\"" '{print $2}')"
-  - curl -sL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${RPM_PACKAGE} --output /kubeadm.x86_64.rpm
-  - curl -sL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${TOOLS_PACKAGE} --output /cri-tools.x86_64.rpm
+  - curl -sfL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${RPM_PACKAGE} --output /kubeadm.x86_64.rpm
+  - curl -sfL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${TOOLS_PACKAGE} --output /cri-tools.x86_64.rpm
 {{- end }}

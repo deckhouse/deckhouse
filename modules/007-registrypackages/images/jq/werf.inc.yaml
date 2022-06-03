@@ -25,5 +25,5 @@ shell:
   beforeInstall:
   - apk add --no-cache curl
   setup:
-  - curl -sL https://github.com/stedolan/jq/releases/download/jq-{{ $version }}/jq-linux64 --output /jq
+  - curl -sfL https://github.com/stedolan/jq/releases/download/jq-{{ $version }}/jq-linux64 --output /jq
   - chmod +x /jq /install /uninstall
