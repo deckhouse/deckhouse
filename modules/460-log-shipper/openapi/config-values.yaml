@@ -62,12 +62,8 @@ properties:
           max: 4096
     - mode: Static
       static:
-        requests:
-          cpu: "55m"
-          memory: "256Ki"
-        limits:
-          cpu: "2000m"
-          memory: "2Mi"
+        cpu: "55m"
+        memory: "256Ki"
     oneOf:
       - properties:
           mode:

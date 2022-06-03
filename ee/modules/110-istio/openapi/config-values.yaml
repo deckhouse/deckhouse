@@ -17,6 +17,7 @@ properties:
   tlsMode:
     type: string
     enum: ["Off", MutualPermissive, Mutual]
+    x-examples: ["Mutual"]
     description: |
       The mode for transparent encryption of inter-pod traffic ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).
       - `Off` — outgoing requests are not encrypted; incoming unencrypted requests are accepted.
@@ -176,7 +177,6 @@ properties:
             example: "http://tracing.myjaeger.svc:16685/"
         x-examples:
         - {}
-        - jaegerURLForUsers: https://tracing-service:4443/jaeger
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
           jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
   sidecar:
@@ -530,7 +530,6 @@ properties:
     type: object
     default: {}
     x-examples:
-    - {}
     - externalAuthentication:
         authURL: "https://dex.d8.svc.cluster.local/dex/auth"
         authSignInURL: "https://example.com/dex/sign_in"
