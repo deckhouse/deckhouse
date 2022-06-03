@@ -120,8 +120,6 @@ func (c *InteractionsCounter) Zero() bool {
 }
 
 type OpenAPIValuesGenerator struct {
-	moduleName string
-
 	rootSchema *spec.Schema
 
 	schemaQueue *deque.Deque
@@ -187,7 +185,6 @@ func (g *OpenAPIValuesGenerator) generateAndPushBackNodes(tempNode *SchemaNode, 
 func (g *OpenAPIValuesGenerator) parseProperties(tempNode *SchemaNode, counter *InteractionsCounter) error {
 	for key, prop := range tempNode.Schema.Properties {
 		switch {
-
 		case prop.Extensions[ExamplesKey] != nil:
 			examples := prop.Extensions[ExamplesKey].([]interface{})
 			g.pushBackNodesFromValues(tempNode, key, examples, counter)

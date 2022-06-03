@@ -181,8 +181,7 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 		_, _ = kubeClient.BatchV1().Jobs(proxyJobNS).UpdateStatus(context.Background(), createdJob, v1.UpdateOptions{})
 	}
 
-	job, err = waitForJob(kubeClient)
-	if err != nil {
+	if _, err = waitForJob(kubeClient); err != nil {
 		return err
 	}
 
@@ -230,17 +229,19 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 
 func waitForJob(kubeClient k8s.Client) (*batchv1.Job, error) {
 	timeout := time.After(30 * time.Second)
-	ticker := time.Tick(2 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") == "true" {
-		ticker = time.Tick(1 * time.Nanosecond)
+		ticker = time.NewTicker(1 * time.Nanosecond)
 	}
+
+	defer ticker.Stop()
 
 	// Maybe we can replace it with watch.Until but it's not fully realized in a fake client.
 	// We need to more something to make it works
 	for {
 		select {
-		case <-ticker:
+		case <-ticker.C:
 			job, err := kubeClient.BatchV1().Jobs(proxyJobNS).Get(context.Background(), proxyJobName, v1.GetOptions{})
 			if err != nil {
 				continue

@@ -87,7 +87,6 @@ func legacyOrphanSecretsMetrics(input *go_hook.HookInput) error {
 			},
 			metrics.WithGroup(legacyMetricsGroup),
 		)
-
 	}
 
 	return nil

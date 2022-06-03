@@ -158,7 +158,6 @@ func revisionsMonitoring(input *go_hook.HookInput, dc dependency.Container) erro
 		var ok bool
 		if desiredRevision, ok = istioPod.Labels["istio.io/rev"]; !ok || desiredRevision == "v1x10x1" {
 			// migration — delete '|| desiredRevision == "v1x10x1"' when it will be retired
-			desiredRevision = ""
 			if desiredRevision, ok = namespaceRevisionMap[istioPod.GetNamespace()]; !ok {
 				// ALARM! The istio-driven pod has no desired revision, pod restarting will remove the sidecar
 				labels := map[string]string{

@@ -135,7 +135,7 @@ func handlerWithK8S(_ *go_hook.HookInput, dc dependency.Container) error {
 
 func handlerWithVersionedK8S(_ *go_hook.HookInput, dc dependency.Container) error {
 	k8 := dc.MustGetK8sClient()
-	res, _ := k8.Discovery().ServerResources()
+	_, res, _ := k8.Discovery().ServerGroupsAndResources()
 	fmt.Println(len(res))
 
 	return nil

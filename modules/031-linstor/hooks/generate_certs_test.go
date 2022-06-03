@@ -60,7 +60,7 @@ var _ = Describe("Modules :: linstor :: hooks :: generate_certs ::", func() {
 			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsClientCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
-			cert, err := x509.ParseCertificate(block.Bytes)
+			_, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// controller certificate
@@ -71,7 +71,7 @@ var _ = Describe("Modules :: linstor :: hooks :: generate_certs ::", func() {
 			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.httpsControllerCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
-			cert, err = x509.ParseCertificate(block.Bytes)
+			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Additional checks for controller certificate
@@ -318,7 +318,7 @@ data:
 			block, _ := pem.Decode([]byte(f.ValuesGet("linstor.internal.sslNodeCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
-			cert, err := x509.ParseCertificate(block.Bytes)
+			_, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// controller certificate
@@ -329,7 +329,7 @@ data:
 			block, _ = pem.Decode([]byte(f.ValuesGet("linstor.internal.sslControllerCert.cert").String()))
 			Expect(block).ShouldNot(BeNil())
 
-			cert, err = x509.ParseCertificate(block.Bytes)
+			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// Additional checks for controller certificate

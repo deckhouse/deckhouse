@@ -37,7 +37,6 @@ var (
 //   Example:
 //     label_name: {{ values.app }} -> .label_name = .values.app
 func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
-
 	var dataField string
 
 	tmpFields := make([]string, 0, len(extraFields))

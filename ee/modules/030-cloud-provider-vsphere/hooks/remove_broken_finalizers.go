@@ -15,14 +15,6 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var (
-	removeFinalizersPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"finalizers": nil,
-		},
-	}
-)
-
 type volumeAttachment struct {
 	Name    string
 	Message string

@@ -58,7 +58,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, unlabelNodes)
 
 func unlabelNodes(input *go_hook.HookInput) error {
-
 	snapshot := input.Snapshots["nodes"]
 	for _, labeledNodeRaw := range snapshot {
 		if labeledNodeRaw == nil {

@@ -109,7 +109,6 @@ func (f *filterByZone) collect(nodes []snapshot.Node, spread func(int, []int) []
 	for i, z := range zones {
 		nodeBuckets[i] = z.nodes
 		names[i] = z.name
-
 	}
 
 	dist := spread(len(f.state), nodeBuckets)
@@ -167,7 +166,6 @@ func spread(total int, buckets []int) []int {
 
 Outer:
 	for {
-
 		min, eq := minAndAllEqual(demands)
 
 		// Redistribute numbers per buckets

@@ -99,17 +99,6 @@ func applyCloudProviderSecretKindZonesFilter(obj *unstructured.Unstructured) (go
 	}, nil
 }
 
-func applyCloudInstanceSecretKindFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secretData, err := DecodeDataFromSecret(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]interface{}{
-		"instanceClassKind": secretData["instanceClassKind"],
-	}, nil
-}
-
 var getCRDsHookConfig = &go_hook.HookConfig{
 	Queue:        "/modules/node-manager",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},

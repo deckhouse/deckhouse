@@ -173,5 +173,4 @@ func parsePodControllerLabels(object storage.StoreObject) (map[string]string, er
 	default:
 		return nil, fmt.Errorf("object of kind %s is not a pod controller", kind)
 	}
-
 }

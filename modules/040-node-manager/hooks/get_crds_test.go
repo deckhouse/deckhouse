@@ -106,7 +106,6 @@ func Test_calculateUpdateEpoch(t *testing.T) {
 	if epoch1 != epoch0+int(EpochWindowSize) {
 		t.Fatalf("epoch for ts == epoch+1 (%d) should be the next epoch (%d). Got: %d", ts1, epoch0+14400, epoch1)
 	}
-
 }
 
 const TestTimestampForUpdateEpoch int64 = 1234567890

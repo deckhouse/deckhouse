@@ -108,7 +108,7 @@ func Test_stsSelectorByNode_Select(t *testing.T) {
 			name: "absent node is more important than unschedulable one",
 			input: func() (State, []snapshot.Node) {
 				state := fakeState()
-				nodes := fakeNodes(5)
+				nodes := fakeNodes(3)
 				state["b"].Node = ""
 				nodes[a].Schedulable = false
 				return state, nodes

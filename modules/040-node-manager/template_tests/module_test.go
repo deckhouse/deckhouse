@@ -691,7 +691,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -783,7 +783,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -925,7 +925,7 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -1040,7 +1040,7 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -1132,7 +1132,7 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 
@@ -1227,7 +1227,7 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+			assertBashibleAPIServerTLS(f)
 		})
 	})
 

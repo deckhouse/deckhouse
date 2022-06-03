@@ -141,8 +141,8 @@ func saveMachineClassChecksum(input *go_hook.HookInput) error {
 }
 
 type nodeGroupValue struct {
-	Name string `json:"name"`
-	Type string `json:"nodeType"`
+	Name string        `json:"name"`
+	Type ngv1.NodeType `json:"nodeType"`
 	Raw  interface{}
 }
 

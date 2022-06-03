@@ -108,7 +108,6 @@ func NewPipelineCluster(generator *LogConfigGenerator, destMap map[string]v1alph
 		cdest, ok := destMap[dstRef]
 		if !ok {
 			return nil, fmt.Errorf("destinationRef: %s for ClusterLoggingConfig: %s not found, skipping", dstRef, sourceConfig.Name)
-
 		}
 		dest := newLogDest(cdest.Spec.Type, cdest.Name, cdest.Spec)
 		pipeline.Destinations = append(pipeline.Destinations, dest)

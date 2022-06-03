@@ -168,9 +168,7 @@ func Test_projectList(t *testing.T) {
 
 			if len(projects) != test.wantCount {
 				t.Errorf("unexpected project count: got=%d, want=%d", len(projects), test.wantCount)
-
 			}
-
 		})
 	}
 }

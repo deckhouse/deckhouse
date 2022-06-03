@@ -66,7 +66,6 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func handleNamespaceConfiguration(input *go_hook.HookInput) error {
-
 	snap := input.Snapshots["namespaces"]
 	if len(snap) == 0 {
 		input.LogEntry.Debugln("Namespaces not found. Skip")
