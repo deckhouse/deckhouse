@@ -533,7 +533,7 @@ properties:
     - {}
     - externalAuthentication:
         authURL: "https://dex.d8.svc.cluster.local/dex/auth"
-        authSignInURL: "https://myhost.ru/dex/sign_in"
+        authSignInURL: "https://example.com/dex/sign_in"
       allowedUserGroups:
       - admins
     description: Options related to authentication or authorization in the application.
@@ -547,14 +547,14 @@ properties:
         properties:
           authURL:
             type: string
-            x-examples: ["https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth"]
+            x-examples: ["https://example.com/dex/auth"]
             description: |
               The URL of the authentication service.
 
               If the user is authenticated, the service should return an HTTP 200 response code.
           authSignInURL:
             type: string
-            x-examples: ["https://myhost.ru/dex/sign_in"]
+            x-examples: ["https://example.com/dex/sign_in"]
             description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
       password:
         type: string
