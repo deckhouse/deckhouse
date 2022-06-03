@@ -10,7 +10,7 @@ properties:
     description: |
       Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
     examples:
-      - ["1.13", "1.14"]
+    - ["1.13", "1.14"]
     default: []
     items:
       type: string
@@ -36,6 +36,7 @@ properties:
   enableHTTP10:
     type: boolean
     default: false
+    x-examples: [true]
     description: |
       Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
   federation:
@@ -135,6 +136,7 @@ properties:
         type: boolean
         description: Turn on or off tracing collection and displaying in kiali.
         default: false
+        x-examples: [true]
       collector:
         type: object
         description: Tracing collection settings.
@@ -261,6 +263,7 @@ properties:
     properties:
       holdApplicationUntilProxyStarts:
         type: boolean
+        x-examples: [true]
         default: false
         description: |
           With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
@@ -518,7 +521,7 @@ properties:
             default: "false"
   highAvailability:
     type: boolean
-    x-examples: [true, false]
+    x-examples: [true]
     description: |
       Manually enable the high availability mode.
 
@@ -579,6 +582,7 @@ properties:
         description: An array if CIDRs that are allowed to authenticate in module's public web interfaces.
       satisfyAny:
         type: boolean
+        x-examples: [true]
         default: false
         description: |
           Enables single authentication.
