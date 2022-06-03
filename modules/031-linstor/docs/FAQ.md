@@ -10,6 +10,8 @@ Briefly:
 
 ## Performance and reliability notes, comparison to Ceph
 
+> You may be interested in our article ["Comparing Ceph, LINSTOR, Mayastor, and Vitastor storage performance in Kubernetes"](https://www.reddit.com/r/kubernetes/comments/v3tzze/comparing_ceph_linstor_mayastor_and_vitastor/). 
+
 We take a practical view of the issue. A difference of several tens of percent — in practice it never matters. The difference is several times or more important. 
 
 Comparison factors:
