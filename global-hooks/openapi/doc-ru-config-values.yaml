@@ -101,7 +101,7 @@ properties:
         properties:
           httpProxy:
             description: |
-              Proxy URL для HTTP запросов.
+              Proxy URL для HTTP-запросов.
           httpsProxy:
             description: |
               Proxy URL для HTTPS запросов.
