@@ -32,7 +32,7 @@ spec:
                     ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
                 preemptible:
                   description: |
-                    Необходимость заказа preemptible instance.
+                    Необходимость заказа preemptible-инстансов.
                 diskType:
                   description: |
                     Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
@@ -88,7 +88,7 @@ spec:
                     ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
                 preemptible:
                   description: |
-                    Необходимость заказа preemptible instance.
+                    Необходимость заказа preemptible-инстансов.
                 diskType:
                   description: |
                     Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
