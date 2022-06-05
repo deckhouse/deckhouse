@@ -104,7 +104,7 @@ properties:
               Proxy URL для HTTP-запросов.
           httpsProxy:
             description: |
-              Proxy URL для HTTPS запросов.
+              Proxy URL для HTTPS-запросов.
           noProxy:
             description: |
               Список IP и доменных имен для которых проксирование не применяется.
