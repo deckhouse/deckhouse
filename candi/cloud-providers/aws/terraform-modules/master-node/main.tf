@@ -68,6 +68,7 @@ resource "aws_instance" "master" {
   vpc_security_group_ids = concat(local.base_security_groups, var.additional_security_groups)
   source_dest_check = false
   user_data = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
+  user_data_replace_on_change = false
   iam_instance_profile = "${var.prefix}-node"
 
   root_block_device {
