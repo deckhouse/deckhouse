@@ -103,3 +103,5 @@ properties:
         type: string
       supportsOnlineDiskResize:
         type: boolean
+      cniSecretData:
+        type: string
