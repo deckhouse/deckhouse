@@ -64,7 +64,7 @@ spec:
                   x-doc-default: standard-v2
                   type: string
                 preemptible:
-                  description: Should a provisioned Yandex Compute Instance be preemtible.
+                  description: Should a provisioned Yandex Compute Instance be preemptible.
                   type: boolean
                   x-doc-default: false
                 diskType:
@@ -180,7 +180,7 @@ spec:
                   type: string
                 preemptible:
                   description: |
-                    Should a provisioned Yandex Compute Instance be preemtible.
+                    Should a provisioned Yandex Compute Instance be preemptible.
                   type: boolean
                   x-doc-default: false
                 diskType:
