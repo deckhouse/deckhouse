@@ -12,3 +12,8 @@ Ability to create LoadBalancer with type `none`. LoadBalancer with this type wil
 ## 003-dont-delete-ingress-sg-rules-elb.patch
 
 We shouldn't delete Ingress SG rule, if it allows access from configured "ElbSecurityGroup", so that we won't disrupt access to Nodes from other ELBs.
+
+### 004-go-mod.patch
+
+Maintainers of the cloud-provider-aws forgot to make `go mod tidy` in the v1.22.3 tag, and we have dirty go.mod there.
+Probably you don't need this patch in later tags.
