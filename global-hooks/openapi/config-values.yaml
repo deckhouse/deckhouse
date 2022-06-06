@@ -189,12 +189,12 @@ properties:
             type: string
             pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
-              HTTP proxy URL.
+              Proxy URL for HTTP requests.
           httpsProxy:
             type: string
             pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
             description: |
-              HTTPS proxy URL.
+              Proxy URL for HTTPS requests.
           noProxy:
             description: |
               List of no proxy IP and domain entries.
