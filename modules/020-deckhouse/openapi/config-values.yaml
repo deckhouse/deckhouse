@@ -3,12 +3,14 @@ properties:
   logLevel:
     type: string
     enum: ["Debug", "Info", "Error"]
+    x-examples: ["Info"]
     description: |
       Deckhouse logging level.
     default: "Info"
   bundle:
     type: string
     enum: ["Default", "Minimal", "Managed"]
+    x-examples: ["Default"]
     description: |
       The Deckhouse bundle defines a set of modules enabled by default.
       - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs (the current list is available [here](https://github.com/deckhouse/deckhouse/blob/main/modules/values-default.yaml)).
@@ -18,6 +20,7 @@ properties:
   releaseChannel:
     type: string
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
+    x-examples: ["Stable"]
     description: |
       Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/en/documentation/v1/deckhouse-faq.html#change-the-release-channel) to it when such an opportunity appears).
 
@@ -79,6 +82,7 @@ properties:
               description: The days of the week on which the update window is applied.
               items:
                 type: string
+                x-examples: [Mon]
                 enum:
                   - Mon
                   - Tue

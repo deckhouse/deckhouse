@@ -39,7 +39,7 @@ properties:
           The password for HTTP authorization of the `admin` user (it is generated automatically, but you can change it).
 
           This parameter is used if the `externalAuthentication` is not enabled.
-        x-examples: ["qwerty123", "foobar"]
+        x-examples: ["qwerty123"]
       allowedUserGroups:
         type: array
         items:
@@ -92,7 +92,7 @@ properties:
           clusterIssuerName:
             type: string
             default: "letsencrypt"
-            x-examples: ["letsencrypt", "letsencrypt-staging", "selfsigned"]
+            x-examples: ["letsencrypt"]
             description: |
               What ClusterIssuer to use for getting an SSL certificate (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
       customCertificate:

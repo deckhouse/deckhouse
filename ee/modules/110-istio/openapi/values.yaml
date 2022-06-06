@@ -120,6 +120,7 @@ properties:
       multiclustersNeedIngressGateway:
         type: boolean
         default: false
+        x-examples: [true]
       customCertificateData:
         type: object
         properties:

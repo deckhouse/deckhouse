@@ -182,6 +182,7 @@ properties:
             description: |
               Audit logs target stream.
             default: File
+            x-examples: ["Stdout"]
             enum:
               - File
               - Stdout

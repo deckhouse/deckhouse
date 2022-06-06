@@ -10,13 +10,14 @@ properties:
     description: |
       Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
     examples:
-      - ["1.13", "1.14"]
+    - ["1.13", "1.14"]
     default: []
     items:
       type: string
   tlsMode:
     type: string
     enum: ["Off", MutualPermissive, Mutual]
+    x-examples: ["Mutual"]
     description: |
       The mode for transparent encryption of inter-pod traffic ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).
       - `Off` — outgoing requests are not encrypted; incoming unencrypted requests are accepted.
@@ -36,6 +37,7 @@ properties:
   enableHTTP10:
     type: boolean
     default: false
+    x-examples: [true]
     description: |
       Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
   federation:
@@ -135,6 +137,7 @@ properties:
         type: boolean
         description: Turn on or off tracing collection and displaying in kiali.
         default: false
+        x-examples: [true]
       collector:
         type: object
         description: Tracing collection settings.
@@ -174,7 +177,6 @@ properties:
             example: "http://tracing.myjaeger.svc:16685/"
         x-examples:
         - {}
-        - jaegerURLForUsers: https://tracing-service:4443/jaeger
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
           jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
   sidecar:
@@ -261,6 +263,7 @@ properties:
     properties:
       holdApplicationUntilProxyStarts:
         type: boolean
+        x-examples: [true]
         default: false
         description: |
           With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
@@ -518,7 +521,7 @@ properties:
             default: "false"
   highAvailability:
     type: boolean
-    x-examples: [true, false]
+    x-examples: [true]
     description: |
       Manually enable the high availability mode.
 
@@ -527,10 +530,9 @@ properties:
     type: object
     default: {}
     x-examples:
-    - {}
     - externalAuthentication:
         authURL: "https://dex.d8.svc.cluster.local/dex/auth"
-        authSignInURL: "https://myhost.ru/dex/sign_in"
+        authSignInURL: "https://example.com/dex/sign_in"
       allowedUserGroups:
       - admins
     description: Options related to authentication or authorization in the application.
@@ -544,14 +546,14 @@ properties:
         properties:
           authURL:
             type: string
-            x-examples: ["https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth"]
+            x-examples: ["https://example.com/dex/auth"]
             description: |
               The URL of the authentication service.
 
               If the user is authenticated, the service should return an HTTP 200 response code.
           authSignInURL:
             type: string
-            x-examples: ["https://myhost.ru/dex/sign_in"]
+            x-examples: ["https://example.com/dex/sign_in"]
             description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
       password:
         type: string
@@ -579,6 +581,7 @@ properties:
         description: An array if CIDRs that are allowed to authenticate in module's public web interfaces.
       satisfyAny:
         type: boolean
+        x-examples: [true]
         default: false
         description: |
           Enables single authentication.
