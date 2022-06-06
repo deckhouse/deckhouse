@@ -190,7 +190,7 @@ k8s:
     ccm:
       openstack: v1.19.2
       yandex: v0.21.3
-      aws: v1.19.0-alpha.1
+      aws: b390ec15ea471adc8312b4528cf37814852b993e
       vsphere: v1.19.1
       azure: v0.6.0@sha256:8073113a20882642a980b338635cdc5945e5673a18aef192090e6fde2b89a75c
       gcp: ca1e685df450fd5d32b57a659eb363b870b03937
