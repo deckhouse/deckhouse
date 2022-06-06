@@ -37,7 +37,6 @@ spec:
                         type:
                           enum: ["KubernetesPods"]
                         kubernetesPods: {}
-                      required: ["kubernetesPods"]
                     - properties:
                         type:
                           enum: ["File"]
