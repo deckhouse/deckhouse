@@ -17,7 +17,7 @@ if [[ "${FIRST_BASHIBLE_RUN}" != "yes" ]]; then
   exit 0
 fi
 
-pause_container="k8s.gcr.io/pause:3.2"
+pause_container="registry.k8s.io/pause:3.2"
 if [[ "$(docker image ls -q "${pause_container}" | wc -l)" -eq "0" ]]; then
   if ! docker pull "${pause_container}" >/dev/null 2>/dev/null; then
     docker pull registry.deckhouse.io/deckhouse/ce:pause-3.2

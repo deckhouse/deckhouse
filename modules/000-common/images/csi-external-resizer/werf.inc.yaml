@@ -16,6 +16,6 @@ docker:
   ENTRYPOINT: ["/csi-resizer"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: k8s.gcr.io/sig-storage/csi-resizer:{{ $value.csi.resizer }}
+from: registry.k8s.io/sig-storage/csi-resizer:{{ $value.csi.resizer }}
   {{- end }}
 {{- end }}

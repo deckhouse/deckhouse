@@ -19,5 +19,5 @@ docker:
   ENTRYPOINT: ["/usr/bin/kube-scheduler"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: k8s.gcr.io/kube-scheduler:v{{ printf "%s.%s" $version $patch }}@{{ $value.controlPlane.kubeScheduler }}
+from: registry.k8s.io/kube-scheduler:v{{ printf "%s.%s" $version $patch }}@{{ $value.controlPlane.kubeScheduler }}
 {{- end }}

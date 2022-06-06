@@ -658,7 +658,7 @@ spec:
     }
     
       {{- $max_concurrent_downloads := 3 }}
-      {{- $sandbox_image := "k8s.gcr.io/pause:3.2" }}
+      {{- $sandbox_image := "registry.k8s.io/pause:3.2" }}
       {{- if .images }}
         {{- if .images.common.pause }}
           {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
@@ -986,7 +986,7 @@ spec:
     }
     
       {{- $max_concurrent_downloads := 3 }}
-      {{- $sandbox_image := "k8s.gcr.io/pause:3.2" }}
+      {{- $sandbox_image := "registry.k8s.io/pause:3.2" }}
       {{- if .images }}
         {{- if .images.common.pause }}
           {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}

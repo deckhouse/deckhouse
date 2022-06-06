@@ -233,7 +233,7 @@ func createDeploymentObject(agentId string) *appsv1.Deployment {
 					Containers: []v1.Container{
 						{
 							Name:  "pause",
-							Image: "k8s.gcr.io/upmeter-nonexistent:3.1415",
+							Image: "registry.k8s.io/upmeter-nonexistent:3.1415",
 							Command: []string{
 								"/pause",
 							},
