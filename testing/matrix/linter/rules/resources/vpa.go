@@ -100,7 +100,6 @@ func parseTargetsAndTolerationGroups(scope *lintingScope) (map[storage.ResourceI
 		}
 
 		fillVPAMaps(scope, vpaTargets, vpaTolerationGroups, object)
-
 	}
 
 	return vpaTargets, vpaTolerationGroups
@@ -187,7 +186,6 @@ func ensureTolerations(scope *lintingScope, vpaTolerationGroups map[storage.Reso
 			"Get tolerations list for object failed: %v",
 			err,
 		)
-
 	}
 
 	isTolerationFound := false
@@ -206,7 +204,6 @@ func ensureTolerations(scope *lintingScope, vpaTolerationGroups map[storage.Reso
 			workloadLabelValue,
 			`Labels "workload-resource-policy.deckhouse.io" in corresponding VPA resource not found`,
 		)
-
 	}
 
 	if !isTolerationFound && workloadLabelValue != "" {

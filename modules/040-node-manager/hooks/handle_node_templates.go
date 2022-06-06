@@ -178,14 +178,14 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 			}
 
 			if nodeGroup.NodeType == ngv1.NodeTypeCloudEphemeral {
-				err = fixCloudNodeTaints(nodeObj, node, nodeGroup)
+				fixCloudNodeTaints(nodeObj, nodeGroup)
 			} else {
 				err = applyNodeTemplate(nodeObj, node, nodeGroup)
+				if err != nil {
+					return nil, err
+				}
 			}
 
-			if err != nil {
-				return nil, err
-			}
 			nodeObj.Status = v1.NodeStatus{}
 			return sdk.ToUnstructured(nodeObj)
 		}, "v1", "Node", "", node.Name)
@@ -197,11 +197,11 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 // fixCloudNodeTaints removes "node.deckhouse.io/uninitialized" taint when
 // NodeTemplate for Cloud node is applied by MCM.
 // TODO Taint deletion should be moved to a separate hook in the future.
-func fixCloudNodeTaints(nodeObj *v1.Node, node NodeSettings, nodeGroup NodeSettings) error {
+func fixCloudNodeTaints(nodeObj *v1.Node, nodeGroup NodeSettings) {
 	newTaints := taints.Slice(nodeObj.Spec.Taints).Merge(nodeGroup.Taints)
 
 	if !newTaints.Equal(nodeObj.Spec.Taints) {
-		return nil
+		return
 	}
 	newTaints = newTaints.WithoutKey(NodeUnininitalizedTaintKey)
 
@@ -212,7 +212,6 @@ func fixCloudNodeTaints(nodeObj *v1.Node, node NodeSettings, nodeGroup NodeSetti
 		// MergePatch: delete "node.deckhouse.io/uninitialized"
 		nodeObj.Spec.Taints = newTaints
 	}
-	return nil
 }
 
 func applyNodeTemplate(nodeObj *v1.Node, node NodeSettings, nodeGroup NodeSettings) error {

@@ -120,18 +120,3 @@ func monitoringModuleRule(moduleName, modulePath, moduleNamespace string) errors
 
 	return errors.EmptyRuleError
 }
-
-func compareContent(content, namespace string, rules, dashboards bool) bool {
-	desiredContentBuilder := strings.Builder{}
-	if dashboards {
-		desiredContentBuilder.WriteString("{{- include \"helm_lib_grafana_dashboard_definitions\" . }}\n")
-	}
-
-	if rules {
-		desiredContentBuilder.WriteString(
-			"{{- include \"helm_lib_prometheus_rules\" (list . %q) }}\n",
-		)
-	}
-
-	return content == desiredContentBuilder.String()
-}

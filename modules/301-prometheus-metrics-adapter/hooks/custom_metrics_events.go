@@ -46,7 +46,6 @@ func namespacedMetricConf(metricType string) go_hook.KubernetesConfig {
 }
 
 func generateKubeHookConfig() []go_hook.KubernetesConfig {
-
 	res := make([]go_hook.KubernetesConfig, 0, len(internal.AllMetricsTypes)*2)
 	for metricType := range internal.MetricsTypesForNsAndCluster() {
 		nsMetric := namespacedMetricConf(metricType)

@@ -59,7 +59,6 @@ type TestCases struct {
 	Negative TestCase
 
 	dir        string
-	moduleName string
 	hasFocused bool
 }
 

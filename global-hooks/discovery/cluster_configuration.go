@@ -122,7 +122,6 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 		if err != nil {
 			return err
 		}
-
 	}
 
 	return nil

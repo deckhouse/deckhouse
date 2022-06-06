@@ -69,10 +69,10 @@ type DynamicTransform struct {
 	DynamicArgsMap map[string]interface{} `json:"-"`
 }
 
-func (t DynamicTransform) MarshalJSON() ([]byte, error) {
+func (t *DynamicTransform) MarshalJSON() ([]byte, error) {
 	// TODO(nabokihms): think about this hack
 	type dt DynamicTransform // prevent recursion
-	b, _ := json.Marshal(dt(t))
+	b, _ := json.Marshal(dt(*t))
 
 	var m map[string]json.RawMessage
 	_ = json.Unmarshal(b, &m)
@@ -85,7 +85,8 @@ func (t DynamicTransform) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (t DynamicTransform) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (t *DynamicTransform) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// TODO(nabokihms): I fixed this function, but it previously did not work, yet results are the same in all tests
 	var transformMap map[string]interface{}
 	err := unmarshal(&transformMap)
 	if err != nil {
@@ -105,14 +106,14 @@ func (t DynamicTransform) UnmarshalYAML(unmarshal func(interface{}) error) error
 	delete(transformMap, "inputs")
 	delete(transformMap, "type")
 
-	newtr := DynamicTransform{
+	// nolint: ineffassign
+	t = &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Type:   tstr,
 			Inputs: inp,
 		},
 		DynamicArgsMap: transformMap,
 	}
-	t = newtr
 
 	return nil
 }

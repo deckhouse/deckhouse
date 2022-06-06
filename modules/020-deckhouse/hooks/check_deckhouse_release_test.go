@@ -348,7 +348,6 @@ func TestSort(t *testing.T) {
 			t.Fail()
 		}
 	}
-
 }
 
 func TestKebabCase(t *testing.T) {

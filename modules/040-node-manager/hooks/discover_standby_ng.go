@@ -312,7 +312,7 @@ func calculateStandbyRequestCPU(input *go_hook.HookInput, allocatableAmounts []*
 	}
 
 	// Get reserved CPU for system components on every node from global values.
-	reservedOnEveryNode, err := getQuantityFromValue(input, "global.modules.resourcesRequests.everyNode.cpu")
+	reservedOnEveryNode, _ := getQuantityFromValue(input, "global.modules.resourcesRequests.everyNode.cpu")
 
 	// Get reserved CPU for system components on standby node from NodeGroup.
 	reservedOnStandbyNode, err := resource.ParseQuantity(ng.StandbyNotHeldResources.CPU.String())
@@ -343,7 +343,7 @@ func calculateStandbyRequestMemory(input *go_hook.HookInput, allocatableAmounts 
 	}
 
 	// Get reserved Memory for system components on every node from global values.
-	reservedOnEveryNode, err := getQuantityFromValue(input, "global.modules.resourcesRequests.everyNode.memory")
+	reservedOnEveryNode, _ := getQuantityFromValue(input, "global.modules.resourcesRequests.everyNode.memory")
 
 	// Get reserved Memory for system components on standby node from NodeGroup.
 	reservedOnStandbyNode, err := resource.ParseQuantity(ng.StandbyNotHeldResources.Memory.String())

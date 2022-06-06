@@ -39,7 +39,7 @@ const (
 )
 
 func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	version, ok, err := unstructured.NestedString(obj.Object, "spec", "controllerVersion")
+	version, _, err := unstructured.NestedString(obj.Object, "spec", "controllerVersion")
 	if err != nil {
 		return nil, err
 	}

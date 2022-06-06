@@ -222,7 +222,6 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 
 	proms := []string{"main", "longterm"}
 	for _, promName := range proms {
-
 		promNameForPath := strings.ToUpper(promName[0:1]) + promName[1:]
 
 		var diskSize int64  // GiB
@@ -288,7 +287,6 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 
 		input.Values.Set(diskSizePath, diskSize)
 		input.Values.Set(retentionPath, retention)
-
 	}
 
 	return nil

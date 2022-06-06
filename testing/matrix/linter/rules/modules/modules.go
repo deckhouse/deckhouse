@@ -33,8 +33,6 @@ const (
 	ChartConfigFilename  = "Chart.yaml"
 	ValuesConfigFilename = "values_matrix_test.yaml"
 
-	defaultDeckhouseModulesDir = "/deckhouse/modules"
-
 	crdsDir    = "crds"
 	openapiDir = "openapi"
 	hooksDir   = "hooks"

@@ -34,9 +34,9 @@ type NodeType string
 
 const (
 	NodeTypeStatic         NodeType = "Static"
-	NodeTypeCloudEphemeral          = "CloudEphemeral"
-	NodeTypeCloudPermanent          = "CloudPermanent"
-	NodeTypeCloudStatic             = "CloudStatic"
+	NodeTypeCloudEphemeral NodeType = "CloudEphemeral"
+	NodeTypeCloudPermanent NodeType = "CloudPermanent"
+	NodeTypeCloudStatic    NodeType = "CloudStatic"
 )
 
 func (nt NodeType) String() string {

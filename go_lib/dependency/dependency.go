@@ -62,15 +62,14 @@ func NewDependencyContainer() Container {
 }
 
 type dependencyContainer struct {
-	etcdClient    etcd.Client
+	// etcdClient    etcd.Client
 	k8sClient     k8s.Client
 	crClient      cr.Client
 	vsphereClient vsphere.Client
 
-	m             sync.RWMutex
-	isTestEnv     *bool
-	httpClient    http.Client
-	kubeAuthToken *string
+	m          sync.RWMutex
+	isTestEnv  *bool
+	httpClient http.Client
 }
 
 func (dc *dependencyContainer) isTestEnvironment() bool {

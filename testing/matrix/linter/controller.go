@@ -195,7 +195,6 @@ func lint(c *ModuleController, task *Task) error {
 	err = ApplyLintRules(c.Module, task.values, &objectStore)
 	if err != nil {
 		return err
-
 	}
 	return nil
 }

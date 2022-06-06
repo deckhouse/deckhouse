@@ -14,15 +14,18 @@ issues:
 
 linters-settings:
   gci:
-    local-prefixes: github.com/deckhouse/
-  goimports:
-    local-prefixes: github.com/deckhouse/
+    sections:
+      - standard
+      - default
+      - prefix(github.com/deckhouse/)
   errcheck:
     ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
 
 linters:
   disable-all: true
   enable:
+  - deadcode
+  - dogsled
   - errcheck
   - gci
   - gocritic
@@ -30,5 +33,13 @@ linters:
   - goimports
   - gosimple
   - govet
+  - ineffassign
   - misspell
   - revive
+  - staticcheck
+  - structcheck
+  - typecheck
+  - unconvert
+  - unparam
+  - varcheck
+  - whitespace

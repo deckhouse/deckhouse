@@ -587,7 +587,6 @@ func objectDNSPolicy(object storage.StoreObject) errors.LintRuleError {
 		dnsPolicy,
 		"dnsPolicy must be `ClusterFirstWithHostNet` when hostNetwork is `true`",
 	)
-
 }
 
 func shouldSkipDNSPolicyResource(name string, kind string, namespace string, hostNetwork bool, dnsPolicy string) bool {

@@ -146,7 +146,6 @@ func orphanSecretsMetrics(input *go_hook.HookInput) error {
 			},
 			metrics.WithGroup(metricsGroup),
 		)
-
 	}
 
 	return nil

@@ -197,7 +197,7 @@ status: {}
 		Expect(err).ToNot(HaveOccurred())
 
 		job["status"] = newStatus
-		resJob, err := yaml.Marshal(job)
+		resJob, _ := yaml.Marshal(job)
 
 		return string(resJob)
 	}

@@ -222,7 +222,6 @@ func (fp fileParser) parseMap(upperKey string, m map[interface{}]interface{}) {
 					fp.resultC <- err
 				}
 			}
-
 		}
 		fp.parseValue(absKey, v)
 	}

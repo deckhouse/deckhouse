@@ -146,13 +146,12 @@ func manualControllerUpdate(input *go_hook.HookInput) error {
 	}
 
 	for _, controller := range controllers {
-		podsReadyForUpdate := true
-
 		// check pod count to avoid race during creation a new pod
 		if controller.CurrentPodCount != controller.DesiredPodCount {
-			podsReadyForUpdate = false
 			continue
 		}
+
+		podsReadyForUpdate := true
 
 		var podNameForDeletion string
 		for _, pod := range podsMap[controller.CRName] {

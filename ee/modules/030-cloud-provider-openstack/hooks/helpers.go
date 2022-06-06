@@ -44,6 +44,9 @@ var onlineResizeMinVersion = semver.MustParse("3.42")
 // isSupportsOnlineDiskResize checks if openstack supports online resize, used as go lib
 func isSupportsOnlineDiskResize() (bool, error) {
 	client, err := clientconfig.NewServiceClient("volume", nil)
+	if err != nil {
+		return false, err
+	}
 
 	allPages, err := apiversions.List(client).AllPages()
 	if err != nil {

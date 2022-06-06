@@ -557,8 +557,8 @@ func (hec *HookExecutionConfig) RunHook() {
 	hec.Session = sandbox_runner.Run(hookCmd, options...)
 	if hec.Session.ExitCode() != 0 {
 		By("Shell hook execution failed", func() {
-			fmt.Fprintf(GinkgoWriter, hookColoredOutput("stdout", hec.Session.Out.Contents()))
-			fmt.Fprintf(GinkgoWriter, hookColoredOutput("stderr", hec.Session.Err.Contents()))
+			fmt.Fprint(GinkgoWriter, hookColoredOutput("stdout", hec.Session.Out.Contents()))
+			fmt.Fprint(GinkgoWriter, hookColoredOutput("stderr", hec.Session.Err.Contents()))
 		})
 	}
 

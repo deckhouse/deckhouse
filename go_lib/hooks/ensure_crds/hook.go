@@ -95,7 +95,6 @@ func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc depend
 }
 
 func putCRDToCluster(input *go_hook.HookInput, dc dependency.Container, crdYAML []byte) error {
-
 	var (
 		crd            interface{}
 		specConversion *apiextensions.CustomResourceConversion
@@ -182,7 +181,6 @@ func getCRDFromCluster(dc dependency.Container, crdName string) (*v1.CustomResou
 }
 
 func splitYAML(resources []byte) ([][]byte, error) {
-
 	dec := yamlv3.NewDecoder(bytes.NewReader(resources))
 
 	var res [][]byte

@@ -35,7 +35,6 @@ func RegisterWaitToBecomeReadyHook() bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 	}, dependency.WithExternalDependencies(waitForAllMasterNodesToBecomeInitialized))
-
 }
 
 func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Container) (bool, error) {

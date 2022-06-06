@@ -347,7 +347,6 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 				return imts.Before(&jmts)
 			})
 			failureReason = lastMachineFailures[len(lastMachineFailures)-1].LastOperation.Description
-
 		}
 		statusMsg := fmt.Sprintf("%s %s", nodeGroup.Error, failureReason)
 		statusMsg = strings.TrimSpace(statusMsg)

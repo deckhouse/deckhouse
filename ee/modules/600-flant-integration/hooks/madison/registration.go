@@ -160,7 +160,6 @@ func getPrometheusHTTPSMode(dc dependency.Container) (string, error) {
 		return "", nil
 	}
 	return prometheus.HTTPS.Mode, nil
-
 }
 
 type madisonAuthKeyResp struct {
