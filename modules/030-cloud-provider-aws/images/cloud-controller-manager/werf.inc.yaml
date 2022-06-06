@@ -46,6 +46,7 @@ shell:
     {{- end }}
   - cd /src
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - go mod tidy
     {{- if semverCompare "=1.19" $version }}
 # pay attention when changing upstream version, k8s.io/legacy-cloud-providers may change, which will lead to unexpected results
   - go mod edit -replace=k8s.io/legacy-cloud-providers=/src/legacy-cloud-providers
