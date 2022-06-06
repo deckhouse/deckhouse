@@ -294,7 +294,7 @@ k8s:
     ccm:
       openstack: v1.23.1
       yandex: v0.23.0
-      aws: v1.23.0
+      aws: v1.23.1
       vsphere: v1.23.0
       azure: v1.23.10
       gcp: 66064c62c6c23110c7a93faca5fba668018df732
