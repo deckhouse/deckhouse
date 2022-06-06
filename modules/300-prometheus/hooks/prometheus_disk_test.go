@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: prometheus :: hooks :: prometheus_disk ::", func() {
+var _ = Describe("Modules :: prometheus :: hooks :: prometheus_disk ::", func() {
 	const (
 		prom = `
 ---
