@@ -50,6 +50,7 @@ shell:
 # pay attention when changing upstream version, k8s.io/legacy-cloud-providers may change, which will lead to unexpected results
   - go mod edit -replace=k8s.io/legacy-cloud-providers=/src/legacy-cloud-providers
     {{- end }}
+  - export VERSION={{ $value.ccm.aws }}
   - make aws-cloud-controller-manager
   {{- end }}
 {{- end }}
