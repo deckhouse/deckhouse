@@ -45,7 +45,7 @@ properties:
     properties:
       enabled:
         type: boolean
-        description: Designate this cluster as a federation member (see [Enabling federation](./#enabling-federation)).
+        description: Designate this cluster as a federation member (see [Enabling federation](./#enabling-the-federation)).
         default: false
         x-examples: [true]
   multicluster:
@@ -55,7 +55,7 @@ properties:
     properties:
       enabled:
         type: boolean
-        description: Designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-multicluster)).
+        description: Designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-the-multicluster)).
         default: false
         x-examples: [true]
   alliance:
