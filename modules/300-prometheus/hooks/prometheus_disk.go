@@ -278,7 +278,7 @@ func prometheusDisk(input *go_hook.HookInput, dc dependency.Container) error {
 				}
 			}
 
-			retention = diskSize * 9 / 10 // 90%
+			retention = diskSize * 8 / 10 // 80%
 		}
 
 		diskSizePath := fmt.Sprintf("prometheus.internal.prometheus%s.diskSizeGigabytes", promNameForPath)
