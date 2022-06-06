@@ -68,7 +68,6 @@ resource "aws_instance" "master" {
   vpc_security_group_ids = concat(local.base_security_groups, var.additional_security_groups)
   source_dest_check = false
   user_data = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
-  user_data_replace_on_change = false
   iam_instance_profile = "${var.prefix}-node"
 
   root_block_device {
@@ -84,7 +83,10 @@ resource "aws_instance" "master" {
 
   lifecycle {
     ignore_changes = [
+      # user_data changes on aws side
       user_data,
+      # new flag in terraform-provider-aws 4.7 breaks state
+      user_data_replace_on_change,
       ebs_optimized,
       #TODO: remove ignore after we enable automatic converge for master nodes
       volume_tags
