@@ -97,8 +97,10 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
+    {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
       annotations:
         cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
+    {{- end }}
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
