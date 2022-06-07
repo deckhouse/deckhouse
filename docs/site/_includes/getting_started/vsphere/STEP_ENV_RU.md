@@ -1,3 +1,5 @@
+{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+
 ## Список необходимых ресурсов vSphere
 
 * **User** пользователь с необходимым [набором прав](#права).
