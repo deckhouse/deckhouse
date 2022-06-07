@@ -1,4 +1,5 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
+{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
 To rule the Microsoft Azure cloud, you need an account and at least a single [Subscription connected to id](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 

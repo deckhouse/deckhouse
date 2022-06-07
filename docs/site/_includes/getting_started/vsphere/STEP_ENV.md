@@ -1,3 +1,5 @@
+{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+
 ## List of required vSphere resources
 
 * **User** with required set of [permissions](#permissions).

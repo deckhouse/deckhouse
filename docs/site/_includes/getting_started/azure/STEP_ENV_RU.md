@@ -1,4 +1,5 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
+{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
 Для управления облаком Microsoft Azure необходимо иметь соответствующую учётную запись и хотя бы одну привязанную [подписку (Subscription)](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 
