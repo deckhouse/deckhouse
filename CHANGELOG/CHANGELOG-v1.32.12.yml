@@ -1,0 +1,27 @@
+cloud-provider-aws:
+  fixes:
+    - summary: Fixed terraform scheme.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1710
+cloud-provider-yandex:
+  fixes:
+    - summary: Fixed misspelling in the YandexInstanceClass resource
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1713
+docs:
+  fixes:
+    - summary: Fix broken links
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1715
+    - summary: Fixed the proxy parameter of the global configuration in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1714
+linstor:
+  fixes:
+    - summary: Refactored documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1677
+log-shipper:
+  fixes:
+    - summary: Fixed cluster-logging-config CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1711
+prometheus:
+  fixes:
+    - summary: Set disk retention size to 80%.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1721
+
