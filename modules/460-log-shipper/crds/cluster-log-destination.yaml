@@ -53,10 +53,18 @@ spec:
                   required:
                     - type
                     - logstash
+                - properties:
+                    vector: {}
+                    type:
+                      enum:
+                        - Vector
+                  required:
+                    - type
+                    - vector
               properties:
                 type:
                   type: string
-                  enum: ["Loki", "Elasticsearch", "Logstash"]
+                  enum: ["Loki", "Elasticsearch", "Logstash", "Vector"]
                   description: Type of a log storage backend.
                 loki:
                   type: object
@@ -276,6 +284,53 @@ spec:
                     endpoint:
                       type: string
                       description: The base URL of the Logstash instance.
+                    tls:
+                      type: object
+                      description: Configures the TLS options for outgoing connections.
+                      properties:
+                        caFile:
+                          type: string
+                          description: Base64 encoded CA certificate in PEM format.
+                        clientCrt:
+                          type: object
+                          description: Configures client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: |
+                                Base64 encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: |
+                                Base64 encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64 encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Validate the configured remote host name against the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Validate the TLS certificate of the remote host.
+                vector:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    endpoint:
+                      type: string
+                      description: The base URL of the Vector instance.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
