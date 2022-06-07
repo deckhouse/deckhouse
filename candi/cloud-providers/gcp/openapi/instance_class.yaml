@@ -42,7 +42,7 @@ spec:
 
                     You can find a list of images in the [documentation](https://cloud.google.com/compute/docs/images#ubuntu).
 
-                    **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
+                    > **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
                   example: "https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"
                   x-doc-required: false
                   type: string
