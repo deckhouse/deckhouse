@@ -53,47 +53,77 @@ var _ = sdk.RegisterFunc(
 				}},
 				FilterFunc: filterName,
 			},
+			{
+				Name:       "statefulsets",
+				ApiVersion: "apps/v1",
+				Kind:       "Statefulset",
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{MatchNames: []string{
+						"d8-monitoring",
+					}},
+				},
+				NameSelector: &types.NameSelector{MatchNames: []string{
+					"prometheus-longterm",
+				}},
+				FilterFunc: filterName,
+			},
 		},
 	},
 	collectDisabledProbes,
 )
 
-type deploymentPresence struct {
+type appPresence struct {
 	ccm, mcm, bashible, autoscaler bool
+	smokeMini                      bool
+	prometheusLongterm             bool
 }
 
 // collectDisabledProbes collects the references of probes (or probe groups) depending on enabled modules
 // and deployed apps in the cluster
 func collectDisabledProbes(input *go_hook.HookInput) error {
-	// Parse input
-	snapshot := set.NewFromSnapshot(input.Snapshots["deployments"])
-	presence := deploymentPresence{
-		ccm:        snapshot.Has("cloud-controller-manager"),
-		mcm:        snapshot.Has("machine-controller-manager"),
-		bashible:   snapshot.Has("bashible-apiserver"),
-		autoscaler: snapshot.Has("cluster-autoscaler"),
+	// Input
+	var (
+		deplyments   = set.NewFromSnapshot(input.Snapshots["deployments"])
+		statefulsets = set.NewFromSnapshot(input.Snapshots["statefulsets"])
+	)
+	presence := appPresence{
+		ccm:                deplyments.Has("cloud-controller-manager"),
+		mcm:                deplyments.Has("machine-controller-manager"),
+		bashible:           deplyments.Has("bashible-apiserver"),
+		autoscaler:         deplyments.Has("cluster-autoscaler"),
+		smokeMini:          !input.Values.Get("upmeter.smokeMiniDisabled").Bool(),
+		prometheusLongterm: statefulsets.Has("prometheus-longterm"),
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
-	disabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
+	manuallyDisabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
 
-	// Process the cluster state, `disabledProbes` is modified
-	disableSyntheticProbes(input.Values, disabledProbes)
-	disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes)
-	disableScalingProbes(presence, enabledModules, disabledProbes)
-	disableLoadBalancingProbes(presence, enabledModules, disabledProbes)
+	// Calculation
+	disabledProbes := calcDisabledProbes(presence, enabledModules, manuallyDisabledProbes)
 
-	// Update the combined value of disabled probes
+	// Output
 	input.Values.Set("upmeter.internal.disabledProbes", disabledProbes.Slice())
 	return nil
 }
 
-func disableSyntheticProbes(values *go_hook.PatchableValues, disabledProbes set.Set) {
-	if values.Get("upmeter.smokeMiniDisabled").Bool() {
+func calcDisabledProbes(presence appPresence, enabledModules, disabledManually set.Set) set.Set {
+	disabledProbes := set.New().AddSet(disabledManually)
+
+	// `disabledProbes` is modified in the following calls
+	disableSyntheticProbes(presence, disabledProbes)
+	disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes)
+	disableExtensionsProbes(presence, enabledModules, disabledProbes)
+	disableLoadBalancingProbes(presence, enabledModules, disabledProbes)
+
+	return disabledProbes
+}
+
+func disableSyntheticProbes(presence appPresence, disabledProbes set.Set) {
+	if !presence.smokeMini {
 		disabledProbes.Add("synthetic/")
 	}
 }
 
-func disableLoadBalancingProbes(presence deploymentPresence, enabledModules, disabledProbes set.Set) {
+func disableLoadBalancingProbes(presence appPresence, enabledModules, disabledProbes set.Set) {
 	if !enabledModules.Has("metallb") {
 		disabledProbes.Add("load-balancing/metallb")
 	}
@@ -102,19 +132,39 @@ func disableLoadBalancingProbes(presence deploymentPresence, enabledModules, dis
 	}
 }
 
-func disableScalingProbes(presence deploymentPresence, enabledModules, disabledProbes set.Set) {
+func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbes set.Set) {
 	if !enabledModules.Has("node-manager") {
-		// The whole probe group is useless
-		disabledProbes.Add("scaling/")
-		return
+		disabledProbes.Add("extensions/cluster-scaling")
+		disabledProbes.Add("extensions/cluster-autoscaler")
+	} else {
+		shouldScale := presence.ccm && presence.mcm && presence.bashible
+		if !shouldScale {
+			disabledProbes.Add("extensions/cluster-scaling")
+		}
+		if !presence.autoscaler {
+			disabledProbes.Add("extensions/cluster-autoscaler")
+		}
 	}
 
-	shouldScale := presence.ccm && presence.mcm && presence.bashible
-	if !shouldScale {
-		disabledProbes.Add("scaling/cluster-scaling")
+	if !enabledModules.Has("prometheus") {
+		disabledProbes.Add("extensions/grafana")
+		disabledProbes.Add("extensions/prometheus-longterm")
 	}
-	if !presence.autoscaler {
-		disabledProbes.Add("scaling/cluster-autoscaler")
+
+	if !presence.prometheusLongterm {
+		disabledProbes.Add("extensions/prometheus-longterm")
+	}
+
+	if !enabledModules.Has("openvpn") {
+		disabledProbes.Add("extensions/openvpn")
+	}
+
+	if !enabledModules.Has("dashboard") {
+		disabledProbes.Add("extensions/dashboard")
+	}
+
+	if !enabledModules.Has("user-authn") {
+		disabledProbes.Add("extensions/dex")
 	}
 }
 

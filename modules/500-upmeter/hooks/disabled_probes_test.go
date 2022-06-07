@@ -18,10 +18,11 @@ package hooks
 
 import (
 	"fmt"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -54,59 +55,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 		})
 	})
 
-	Context("probes depending on modules", func() {
-		f := HookExecutionConfigInit(initValues, `{}`)
-
-		DescribeTable("disabled modules",
-			func(module, probeRef string) {
-				// Module is off, probe is off, the probe ref should be in the disabled list
-				f.ValuesSet("global.enabledModules", allModules().Delete(module).Slice())
-
-				f.RunHook()
-				Expect(f).To(ExecuteSuccessfully())
-
-				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-				Expect(disabledProbes).To(ContainElement(probeRef),
-					"we should have probe disabled (in the list) because the module is off")
-
-				// Module is on, probe is on, the probe ref should NOT be in the disabled list
-				f.ValuesSet("global.enabledModules", allModules().Slice())
-
-				f.RunHook()
-				Expect(f).To(ExecuteSuccessfully())
-
-				disabledProbes = f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-				Expect(disabledProbes).ToNot(ContainElement(probeRef),
-					"we should NOT have probe disabled (absent in the list) because the module is on")
-			},
-			Entry("Monitoring and autoscaling group muted by promehteus module",
-				"prometheus",
-				"monitoring-and-autoscaling/"),
-			Entry("Prometheus metrics adapter probe",
-				"prometheus-metrics-adapter",
-				"monitoring-and-autoscaling/prometheus-metrics-adapter"),
-			Entry("Vertical pod autoscaler probe",
-				"vertical-pod-autoscaler",
-				"monitoring-and-autoscaling/vertical-pod-autoscaler"),
-			Entry("Metrics sources probe",
-				"monitoring-kubernetes",
-				"monitoring-and-autoscaling/metrics-sources"),
-			Entry("Key metrics presence probe",
-				"monitoring-kubernetes",
-				"monitoring-and-autoscaling/key-metrics-present"),
-			Entry("Horizontal pod autoscaler probe",
-				"prometheus-metrics-adapter",
-				"monitoring-and-autoscaling/horizontal-pod-autoscaler"),
-			Entry("Scaling group",
-				"node-manager",
-				"scaling/"),
-			Entry("MetalLB probe",
-				"metallb",
-				"load-balancing/metallb"),
-		)
-	})
-
-	Context("scaling probes depending on deployed apps", func() {
+	Context("extensions probes depending on deployed apps", func() {
 		Context("no apps", func() {
 			f := HookExecutionConfigInit(initValues, `{}`)
 
@@ -117,11 +66,12 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
-			It("all scaling probes disabled", func() {
+			It("all extensions probes disabled", func() {
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
 
-				Expect(disabledProbes).To(ContainElement("scaling/cluster-scaling"))
-				Expect(disabledProbes).To(ContainElement("scaling/cluster-autoscaler"))
+				Expect(disabledProbes).To(ContainElement("extensions/cluster-scaling"))
+				Expect(disabledProbes).To(ContainElement("extensions/cluster-autoscaler"))
+				Expect(disabledProbes).To(ContainElement("extensions/prometheus-longterm"))
 			})
 		})
 
@@ -135,12 +85,9 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
-			It("only cluster-autoscaler enabled", func() {
+			It("extensions/cluster-autoscaler probe is enabled", func() {
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-
-				Expect(disabledProbes).To(ContainElement("scaling/cluster-scaling"))
-
-				Expect(disabledProbes).NotTo(ContainElement("scaling/cluster-autoscaler"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/cluster-autoscaler"))
 			})
 		})
 
@@ -158,35 +105,30 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
-			It("only cluster-scaling enabled", func() {
+			It("extensions/cluster-scaling probe is enabled", func() {
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
 
-				Expect(disabledProbes).NotTo(ContainElement("scaling/cluster-scaling"))
-
-				Expect(disabledProbes).To(ContainElement("scaling/cluster-autoscaler"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/cluster-scaling"))
 			})
 		})
 
-		Context("with everything", func() {
+		Context("with prometheus-longterm", func() {
 			f := HookExecutionConfigInit(initValues, `{}`)
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
-					deploymentInCloudInstanceManager("cluster-autoscaler")+
-						deploymentInCloudInstanceManager("machine-controller-manager")+
-						deploymentInCloudInstanceManager("bashible-apiserver")+
-						deploymentCCM("openstack"), 3,
+					statefulsetInMonitoring("prometheus-longterm"),
+					3,
 				))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
 			})
 
-			It("all enabled", func() {
+			It("extensions/prometheus-longterm probe is enabled", func() {
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
 
-				Expect(disabledProbes).NotTo(ContainElement("scaling/cluster-scaling"))
-				Expect(disabledProbes).NotTo(ContainElement("scaling/cluster-autoscaler"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/prometheus-longterm"))
 			})
 		})
 	})
@@ -228,6 +170,18 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 	})
 })
 
+func statefulsetInMonitoring(name string) string {
+	const format = `
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: %s
+  namespace: d8-monitoring
+`
+	return fmt.Sprintf(format, name)
+}
+
 func deploymentInCloudInstanceManager(name string) string {
 	const format = `
 ---
@@ -262,4 +216,314 @@ func allModules() set.Set {
 		"prometheus-metrics-adapter",
 		"vertical-pod-autoscaler",
 	)
+}
+
+func Test_calcDisabledProbes(t *testing.T) {
+	type args struct {
+		presence         appPresence
+		manuallyDisabled set.Set
+		enabledModules   set.Set
+	}
+	cases := []struct {
+		name              string
+		args              args
+		expectDisabled    set.Set
+		expectNotDisabled set.Set
+	}{
+		// Prometheus -> MAA group + grafana
+		{
+			name: "MAA group and Grafana probe are off without Prometheus",
+			expectDisabled: set.New(
+				"monitoring-and-autoscaling/",
+				"extensions/grafana",
+			),
+		},
+		{
+			name: "MAA group and Grafana probe are on with Prometheus",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectNotDisabled: set.New(
+				"monitoring-and-autoscaling/",
+				"extensions/grafana",
+			),
+		},
+
+		// Prometheus, PMA -> MAA/PMA probe
+		{
+			name: "PMA probe off",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New("monitoring-and-autoscaling/prometheus-metrics-adapter"),
+		},
+		{
+			name: "PMA probe on",
+			args: args{
+				enabledModules: set.New(
+					"prometheus",
+					"prometheus-metrics-adapter",
+				),
+			},
+			expectNotDisabled: set.New("monitoring-and-autoscaling/prometheus-metrics-adapter"),
+		},
+
+		// Prometheus, VPA -> MAA/VPA probe
+		{
+			name: "VPA probe off",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New("monitoring-and-autoscaling/vertical-pod-autoscaler"),
+		},
+		{
+			name: "VPA probe on",
+			args: args{
+				enabledModules: set.New(
+					"prometheus",
+					"vertical-pod-autoscaler",
+				),
+			},
+			expectNotDisabled: set.New("monitoring-and-autoscaling/vertical-pod-autoscaler"),
+		},
+
+		// Prometheus, PMA -> MAA/HPA probe
+		{
+			name: "HPA probe off",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New("monitoring-and-autoscaling/horizontal-pod-autoscaler"),
+		},
+		{
+			name: "HPA probe on",
+			args: args{
+				enabledModules: set.New(
+					"prometheus",
+					"prometheus-metrics-adapter",
+				),
+			},
+			expectNotDisabled: set.New("monitoring-and-autoscaling/horizontal-pod-autoscaler"),
+		},
+		// Prometheus, monitoring-kubernetes -> MAA/metrics-sources + MAA/key-metrics-present
+		{
+			name: "MAA/metrics-sources and MAA/key-metrics-present off",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New(
+				"monitoring-and-autoscaling/metrics-sources",
+				"monitoring-and-autoscaling/key-metrics-present",
+			),
+		},
+		{
+			name: "MAA/metrics-sources and MAA/key-metrics-present on",
+			args: args{
+				enabledModules: set.New(
+					"prometheus",
+					"monitoring-kubernetes",
+				),
+			},
+			expectNotDisabled: set.New(
+				"monitoring-and-autoscaling/metrics-sources",
+				"monitoring-and-autoscaling/key-metrics-present",
+			),
+		},
+		// Metallb -> load-balancing/metallb
+		{
+			name:           "Metallb off",
+			expectDisabled: set.New("load-balancing/metallb"),
+		},
+		{
+			name: "Metallb on",
+			args: args{
+				enabledModules: set.New("metallb"),
+			},
+			expectNotDisabled: set.New("load-balancing/metallb"),
+		},
+
+		// node-manager, autoscaler -> extensions/cluster-autoscaler
+		{
+			name:           "extensions/cluster-autoscaler off",
+			expectDisabled: set.New("extensions/cluster-autoscaler"),
+		},
+		{
+			name: "extensions/cluster-autoscaler off without autoscaler deployment",
+			args: args{
+				presence:       appPresence{bashible: true, smokeMini: true, ccm: true, mcm: true},
+				enabledModules: set.New("node-manager"),
+			},
+			expectDisabled: set.New("extensions/cluster-autoscaler"),
+		},
+		{
+			name: "extensions/cluster-autoscaler off without node-manager",
+			args: args{
+				presence: appPresence{autoscaler: true},
+			},
+			expectDisabled: set.New("extensions/cluster-autoscaler"),
+		},
+		{
+			name: "extensions/cluster-autoscaler on with node-manager and autoscaler deployment",
+			args: args{
+				presence:       appPresence{autoscaler: true},
+				enabledModules: set.New("node-manager"),
+			},
+			expectNotDisabled: set.New("extensions/cluster-autoscaler"),
+		},
+
+		// node-manager, MCM, CCM, bashible -> extensions/cluster-scaling
+		{
+			name:           "extensions/cluster-scaling off",
+			expectDisabled: set.New("extensions/cluster-scaling"),
+		},
+		{
+			name: "extensions/cluster-scaling off without MCM",
+			args: args{
+				presence:       appPresence{bashible: true, ccm: true, autoscaler: true},
+				enabledModules: set.New("node-manager"),
+			},
+			expectDisabled: set.New("extensions/cluster-scaling"),
+		},
+		{
+			name: "extensions/cluster-scaling off without CCM",
+			args: args{
+				presence:       appPresence{bashible: true, mcm: true, autoscaler: true},
+				enabledModules: set.New("node-manager"),
+			},
+			expectDisabled: set.New("extensions/cluster-scaling"),
+		},
+		{
+			name: "extensions/cluster-scaling off without bashible",
+			args: args{
+				presence:       appPresence{ccm: true, mcm: true, autoscaler: true},
+				enabledModules: set.New("node-manager"),
+			},
+			expectDisabled: set.New("extensions/cluster-scaling"),
+		},
+		{
+			name: "extensions/cluster-scaling off without node-manager",
+			args: args{
+				presence: appPresence{ccm: true, mcm: true, bashible: true},
+			},
+			expectDisabled: set.New("extensions/cluster-scaling"),
+		},
+		{
+			name: "extensions/cluster-scaling on with node-manager, MCM, CCM, and bashible deployments",
+			args: args{
+				presence:       appPresence{ccm: true, mcm: true, bashible: true},
+				enabledModules: set.New("node-manager"),
+			},
+			expectNotDisabled: set.New("extensions/cluster-scaling"),
+		},
+
+		// smokeMini -> Synthetic group
+		{
+			name:           "synthetic group off",
+			expectDisabled: set.New("synthetic/"),
+		},
+		{
+			name: "synthetic group on",
+			args: args{
+				presence: appPresence{smokeMini: true},
+			},
+			expectNotDisabled: set.New("synthetic/"),
+		},
+
+		// OpenVPN -> extensions/openvpn
+		{
+			name:           "extensions/openvpn off",
+			expectDisabled: set.New("extensions/openvpn"),
+		},
+		{
+			name: "extensions/openvpn on",
+			args: args{
+				enabledModules: set.New("openvpn"),
+			},
+			expectNotDisabled: set.New("extensions/openvpn"),
+		},
+
+		// Dashboard -> extensions/dashboard
+		{
+			name:           "extensions/dashboard off",
+			expectDisabled: set.New("extensions/dashboard"),
+		},
+		{
+			name: "extensions/dashboard on",
+			args: args{
+				enabledModules: set.New("dashboard"),
+			},
+			expectNotDisabled: set.New("extensions/dashboard"),
+		},
+
+		// Dex in d8-user-authn -> extensions/dex
+		{
+			name:           "extensions/dex off",
+			expectDisabled: set.New("extensions/dex"),
+		},
+		{
+			name: "extensions/dex on",
+			args: args{
+				enabledModules: set.New("user-authn"),
+			},
+			expectNotDisabled: set.New("extensions/dex"),
+		},
+
+		// prometheus-longterm -> extensions/prometheus-longterm
+		{
+			name:           "extensions/prometheus-longterm off",
+			expectDisabled: set.New("extensions/prometheus-longterm"),
+		},
+		{
+			name: "extensions/prometheus-longterm off when prometheus module is disabled",
+			args: args{
+				presence: appPresence{prometheusLongterm: true},
+			},
+			expectDisabled: set.New("extensions/prometheus-longterm"),
+		},
+		{
+			name: "extensions/prometheus-longterm off when longterm is absent",
+			args: args{
+				presence:       appPresence{prometheusLongterm: false},
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New("extensions/prometheus-longterm"),
+		},
+		{
+			name: "extensions/prometheus-longterm on",
+			args: args{
+				presence:       appPresence{prometheusLongterm: true},
+				enabledModules: set.New("prometheus"),
+			},
+			expectNotDisabled: set.New("extensions/prometheus-longterm"),
+		},
+
+		// Manually disabled probes are preserved
+		{
+			name: "manually disabled extensions/prometheus-longterm",
+			args: args{
+				presence:         appPresence{prometheusLongterm: true},
+				enabledModules:   set.New("prometheus"),
+				manuallyDisabled: set.New("extensions/prometheus-longterm"),
+			},
+			expectDisabled: set.New("extensions/prometheus-longterm"),
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			disabled := calcDisabledProbes(tt.args.presence, tt.args.enabledModules, tt.args.manuallyDisabled)
+
+			if tt.expectDisabled != nil {
+				for _, x := range tt.expectDisabled.Slice() {
+					assert.True(t, disabled.Has(x), "expected to have disabled %q", x)
+				}
+			}
+
+			if tt.expectNotDisabled != nil {
+				for _, x := range tt.expectNotDisabled.Slice() {
+					assert.False(t, disabled.Has(x), "expected to have enabled %q", x)
+				}
+			}
+		})
+	}
 }

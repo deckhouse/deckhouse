@@ -27,14 +27,14 @@ import (
 
 func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConfig {
 	const (
-		groupName = "synthetic"
+		groupSynthetic = "synthetic"
 	)
 
-	entry := logger.WithField("group", groupName)
+	entry := logger.WithField("group", groupSynthetic)
 
 	return []runnerConfig{
 		{
-			group:  groupName,
+			group:  groupSynthetic,
 			probe:  "access",
 			check:  "_",
 			period: 5 * time.Second,
@@ -48,7 +48,7 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 					WithField("checker", "SmokeMiniAvailable"),
 			},
 		}, {
-			group:  groupName,
+			group:  groupSynthetic,
 			probe:  "dns",
 			check:  "smoke",
 			period: 200 * time.Millisecond,
@@ -63,7 +63,7 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 					WithField("checker", "SmokeMiniAvailable"),
 			},
 		}, {
-			group:  groupName,
+			group:  groupSynthetic,
 			probe:  "dns",
 			check:  "internal",
 			period: 200 * time.Millisecond,
@@ -76,7 +76,7 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 					WithField("checker", "DnsAvailable"),
 			},
 		}, {
-			group:  groupName,
+			group:  groupSynthetic,
 			probe:  "neighbor",
 			check:  "_",
 			period: 5 * time.Second,
@@ -90,7 +90,7 @@ func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 					WithField("checker", "SmokeMiniAvailable"),
 			},
 		}, {
-			group:  groupName,
+			group:  groupSynthetic,
 			probe:  "neighbor-via-service",
 			check:  "_",
 			period: 5 * time.Second,

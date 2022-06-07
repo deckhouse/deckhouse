@@ -25,13 +25,13 @@ import (
 
 func initLoadBalancing(access kubernetes.Access) []runnerConfig {
 	const (
-		groupName = "load-balancing"
-		cpTimeout = 5 * time.Second
+		groupLoadBalancing = "load-balancing"
+		cpTimeout          = 5 * time.Second
 	)
 
 	return []runnerConfig{
 		{
-			group:  groupName,
+			group:  groupLoadBalancing,
 			probe:  "load-balancer-configuration",
 			check:  "cloud-controller-manager",
 			period: 10 * time.Second,
@@ -43,7 +43,7 @@ func initLoadBalancing(access kubernetes.Access) []runnerConfig {
 				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
-			group:  groupName,
+			group:  groupLoadBalancing,
 			probe:  "metallb",
 			check:  "controller",
 			period: 10 * time.Second,
@@ -55,7 +55,7 @@ func initLoadBalancing(access kubernetes.Access) []runnerConfig {
 				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
-			group:  groupName,
+			group:  groupLoadBalancing,
 			probe:  "metallb",
 			check:  "speaker",
 			period: 10 * time.Second,
