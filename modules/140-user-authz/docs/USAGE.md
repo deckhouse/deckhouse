@@ -8,7 +8,7 @@ title: "The user-authz module: usage"
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
-  name: test
+  name: test-rule
 spec:
   subjects:
   - kind: User
@@ -319,30 +319,36 @@ kind: ClusterRole
 metadata:
   annotations:
     user-authz.deckhouse.io/access-level: Editor
-  name: myapp-ns:privileged-user
+  name: user-editor
 rules:
 - apiGroups:
-  - networking.istio.io
+  - kuma.io
   resources:
-  - destinationrules
-  - virtualservices
-  - serviceentries
-  - gateways
+  - trafficroutes
+  - trafficroutes/finalizers
   verbs:
+  - get
+  - list
+  - watch
   - create
-  - delete
-  - deletecollection
-  - patch
   - update
+  - patch
+  - delete
 - apiGroups:
-  - security.istio.io
+  - flagger.app
   resources:
-  - peerauthentications
-  - authorizationpolicies
+  - canaries
+  - canaries/status
+  - metrictemplates
+  - metrictemplates/status
+  - alertproviders
+  - alertproviders/status
   verbs:
+  - get
+  - list
+  - watch
   - create
-  - delete
-  - deletecollection
-  - patch
   - update
+  - patch
+  - delete
 ```
