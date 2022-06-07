@@ -69,6 +69,7 @@
  - **[ceph-csi]** Fixed nodeSelector for csi-node pods in helm_lib [#1522](https://github.com/deckhouse/deckhouse/pull/1522)
  - **[ceph-csi]** Allow helm_lib_csi_node_manifests to be used for all cluster types for ceph-csi. [#1478](https://github.com/deckhouse/deckhouse/pull/1478)
  - **[chrony]** Remove chronyd stale pid file on start [#1375](https://github.com/deckhouse/deckhouse/pull/1375)
+ - **[cloud-provider-aws]** Fixed terraform scheme. [#1710](https://github.com/deckhouse/deckhouse/pull/1710)
  - **[cloud-provider-aws]** Fix OpenAPI specifications. [#1449](https://github.com/deckhouse/deckhouse/pull/1449)
  - **[cloud-provider-aws]** The necessary IAM policies for creating a peering connection have been added to the documentation. [#504](https://github.com/deckhouse/deckhouse/pull/504)
  - **[cloud-provider-azure]** Fixed parameter name `type` -> `skuName`. [#1598](https://github.com/deckhouse/deckhouse/pull/1598)
@@ -81,6 +82,7 @@
  - **[deckhouse]** Fixed a bug for the case when the storage class is set to "false" [#1364](https://github.com/deckhouse/deckhouse/pull/1364)
  - **[helm_lib]** Update CSI controller without creating a new one. [#1481](https://github.com/deckhouse/deckhouse/pull/1481)
  - **[ingress-nginx]** Updated requirements for Ingress Nginx controller versions. If conditions are not met, then further Deckhouse upgrade is blocked. [#1697](https://github.com/deckhouse/deckhouse/pull/1697)
+ - **[linstor]** Refactored documentation. [#1677](https://github.com/deckhouse/deckhouse/pull/1677)
  - **[linstor]** automatically recover evicted nodes in LINSTOR [#1397](https://github.com/deckhouse/deckhouse/pull/1397)
  - **[linstor]** LINSTOR module now supports high-availability [#1147](https://github.com/deckhouse/deckhouse/pull/1147)
     Multimaster clusters will automatically turn LINSTOR into HA-mode
@@ -101,6 +103,7 @@
  - **[openvpn]** Fixed OpenAPI [#1307](https://github.com/deckhouse/deckhouse/pull/1307)
  - **[openvpn]** Web interface changed to https://github.com/flant/ovpn-admin. Persistent storage has been replaced with Kubernetes secrets. Added HostPort inlet. [#522](https://github.com/deckhouse/deckhouse/pull/522)
     OpenVPN will be migrated from using PVC to store certificates to Kubernetes secrets. PVC will still remain in the cluster as a backup. If you don't need it, you should manually delete it from the cluster.
+ - **[prometheus]** Set disk retention size to 80%. [#1721](https://github.com/deckhouse/deckhouse/pull/1721)
  - **[prometheus]** Fixed PersistentVolumeClaim size calculation for local storage. [#1437](https://github.com/deckhouse/deckhouse/pull/1437)
  - **[prometheus]** Fix null pointer dereference in prometheus_disk.go hook [#1345](https://github.com/deckhouse/deckhouse/pull/1345)
  - **[prometheus]** Set Grafana sample limit to 5000 [#1215](https://github.com/deckhouse/deckhouse/pull/1215)
