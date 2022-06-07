@@ -25,15 +25,15 @@ import (
 
 func initControlPlane(access kubernetes.Access) []runnerConfig {
 	const (
-		groupName = "control-plane"
-		namespace = "d8-upmeter"
-		gcTimeout = 10 * time.Second
-		cpTimeout = 5 * time.Second
+		groupControlPlane = "control-plane"
+		namespace         = "d8-upmeter"
+		gcTimeout         = 10 * time.Second
+		cpTimeout         = 5 * time.Second
 	)
 
 	return []runnerConfig{
 		{
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "apiserver",
 			check:  "_",
 			period: 5 * time.Second,
@@ -42,7 +42,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 				Timeout: cpTimeout,
 			},
 		}, {
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "basic-functionality",
 			check:  "_",
 			period: 5 * time.Second,
@@ -54,7 +54,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "namespace",
 			check:  "_",
 			period: time.Minute,
@@ -66,7 +66,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "controller-manager",
 			check:  "_",
 			period: time.Minute,
@@ -81,7 +81,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
-			group:  groupName,
+			group:  groupControlPlane,
 			probe:  "scheduler",
 			check:  "_",
 			period: time.Minute,

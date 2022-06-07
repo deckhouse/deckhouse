@@ -273,6 +273,51 @@ const langPack: LangPack = {
           "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
+      grafana: {
+        title: "Grafana",
+        description: "Grafana shows metrics dashboards",
+        reasonUp: "at least one Pod of Grafana is in <code>Ready</code> state",
+        reasonDown: "there are no pods of Grafana in <code>Ready</code> state",
+        reasonUnknown:
+          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      openvpn: {
+        title: "OpenVPN",
+        description: "OpenVPN provides access to cluster networks of pods and services",
+        reasonUp: "at least one Pod of OpenVPN is in <code>Ready</code> state",
+        reasonDown: "there are no pods of OpenVPN in <code>Ready</code> state",
+        reasonUnknown:
+          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      "prometheus-longterm": {
+        title: "Longterm Prometheus",
+        description: "Prometheus-longterm stores sparse longterm metrics for retrospective observations.",
+        reasonUp: "at least one Pod is in <code>Ready</code> state, and the Prometheus API responds correctly",
+        reasonDown: "either no ready Pods present, or Prometheus responds with invalid data",
+        reasonUnknown:
+          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      dashboard: {
+        title: "Kubernetes Dashboard",
+        description: "General-purpose web UI for the cluster",
+        reasonUp: "at least one Pod of Dashboard is in <code>Ready</code> state",
+        reasonDown: "there are no pods of Dashboard in <code>Ready</code> state",
+        reasonUnknown:
+          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      dex: {
+        title: "Dex",
+        description: "OpenID Connect provider",
+        reasonUp: "at least one Pod of Dex is in <code>Ready</code> state and its API responds correctly",
+        reasonDown: "either no ready Pods present, or Dex responds with invalid data",
+        reasonUnknown:
+          "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
     },
     "load-balancing": {
       "load-balancer-configuration": {

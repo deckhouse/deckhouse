@@ -29,16 +29,16 @@ import (
 
 func initDeckhouse(access kubernetes.Access, logger *logrus.Logger) []runnerConfig {
 	const (
-		groupName = "deckhouse"
-		cpTimeout = 5 * time.Second
+		groupDeckhouse = "deckhouse"
+		cpTimeout      = 5 * time.Second
 	)
 
-	logEntry := logrus.NewEntry(logger).WithField("group", groupName)
+	logEntry := logrus.NewEntry(logger).WithField("group", groupDeckhouse)
 	monitor := crd.NewHookProbeMonitor(access.Kubernetes(), logEntry)
 
 	return []runnerConfig{
 		{
-			group:  groupName,
+			group:  groupDeckhouse,
 			probe:  "cluster-configuration",
 			check:  "_",
 			period: time.Minute,
