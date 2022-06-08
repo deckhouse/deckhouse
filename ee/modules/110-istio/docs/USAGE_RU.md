@@ -2,31 +2,6 @@
 title: "Модуль istio: примеры конфигурации"
 ---
 
-## Примеры ресурсов
-
-### IstioFederation
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: IstioFederation
-metadata:
-  name: example-cluster
-spec:
-  metadataEndpoint: https://istio.k8s.example.com/metadata/
-  trustDomain: example.local
-```
-
-### IstioMulticluster
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: IstioMulticluster
-metadata:
-  name: example-cluster
-spec:
-  metadataEndpoint: https://istio.k8s.example.com/metadata/
-```
-
 ## Включить балансировку для сервиса `ratings.prod.svc.cluster.local`
 
 Был обыкновенный сервис `myservice`, который балансился через iptables, а мы включили умную балансировку.
@@ -471,6 +446,52 @@ metadata:
 spec:
  action: ALLOW
  rules: [{}]
+```
+
+## Устройство федерации из двух кластеров с помощью CR IstioFederation
+
+сluster A:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-b
+spec:
+  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
+  trustDomain: cluster-b.local
+```
+
+сluster B:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-a
+spec:
+  metadataEndpoint: https://istio.k8s-a.example.com/metadata/
+  trustDomain: cluster-a.local
+```
+
+## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
+
+cluster A:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: cluster-b
+spec:
+  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
+```
+
+cluster B:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: cluster-a
+spec:
+  metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
 ## Обновление control-plane Istio
