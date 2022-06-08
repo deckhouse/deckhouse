@@ -62,6 +62,8 @@ runs:
         filename='./CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}.yml'
         cat > "$filename" <<"EOF"
         ${{ steps.changelog.outputs.release_yaml }}
+
+        See [CHANGELOG ${{ steps.changelog.outputs.minor_version }}](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) for more details.
         EOF
 
     # Cumulative markdown changelog
@@ -79,7 +81,7 @@ runs:
       uses: peter-evans/create-pull-request@v3.10.1
       with:
         commit-message: |
-          Re-generate changelog
+          Re-generate changelog ${{ steps.args.outputs.milestone_title }}
 
           Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
         base: main
