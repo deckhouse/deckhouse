@@ -133,5 +133,15 @@ func prometheusDisk(input *go_hook.HookInput) error {
 	input.Values.Set("prometheus.internal.prometheusLongterm.diskSizeGigabytes", longterm.VolumeSizeGiB)
 	input.Values.Set("prometheus.internal.prometheusLongterm.retentionGigabytes", longterm.RetentionSizeGiB)
 
+	// remove unnecessary parameters from configmap to further remove them from the openapi spec
+
+	if input.ConfigValues.Exists("prometheus.mainMaxDiskSizeGigabytes") {
+		input.ConfigValues.Remove("prometheus.mainMaxDiskSizeGigabytes")
+	}
+
+	if input.ConfigValues.Exists("prometheus.longtermMaxDiskSizeGigabytes") {
+		input.ConfigValues.Remove("prometheus.longtermMaxDiskSizeGigabytes")
+	}
+
 	return nil
 }
