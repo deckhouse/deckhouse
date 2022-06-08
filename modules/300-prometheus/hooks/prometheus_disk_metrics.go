@@ -108,7 +108,7 @@ func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) er
 			continue
 		}
 
-		fsSize, fsUsed, fsUsePercent := getFsSizeAndUsed(input, kubeClient, pod)
+		fsSize, fsUsed, fsUsePercent := getFsInfo(input, kubeClient, pod)
 
 		input.MetricsCollector.Set(
 			"d8_prometheus_fs_size",
@@ -143,7 +143,7 @@ func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) er
 	return nil
 }
 
-func getFsSizeAndUsed(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (fsSize, fsUsed, fsUsePercent float64) {
+func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (fsSize, fsUsed, fsUsePercent float64) {
 	containerName := "prometheus"
 	command := "df -PB1 /prometheus/"
 	output, _, err := execToPodThroughAPI(kubeClient, command, containerName, pod.Name, pod.Namespace)
