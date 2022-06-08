@@ -17,13 +17,7 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  enabled::disable_module_if_cluster_is_not_bootstraped
   enabled::disable_module_in_kubernetes_versions_less_than 1.20.0
-  if ! values::array_has global.enabledModules "snapshot-controller-crd" ; then
-    echo "You must enable the snapshot-controller-crd module for the module to work."
-    exit 1
-  fi
-
   echo "true" > "$MODULE_ENABLED_RESULT"
 }
 
