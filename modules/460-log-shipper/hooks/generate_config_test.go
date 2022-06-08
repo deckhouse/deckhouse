@@ -839,7 +839,7 @@ metadata:
 spec:
   type: Vector
   vector:
-    endpoint: "http://192.168.1.1:9200"
+    endpoint: "192.168.1.1:9200"
     tls:
       verifyCertificate: false
       verifyHostname: false

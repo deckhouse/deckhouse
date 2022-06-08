@@ -134,7 +134,7 @@ func TestConfig_4(t *testing.T) {
 
 	spec := v1alpha1.ClusterLogDestinationSpec{
 		Vector: v1alpha1.VectorSpec{
-			Endpoint: "https://192.168.0.1:9200",
+			Endpoint: "192.168.0.1:9200",
 			TLS:      v1alpha1.VectorTLSSpec{VerifyCertificate: false},
 		},
 	}

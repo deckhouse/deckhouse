@@ -24,6 +24,8 @@ import (
 type Vector struct {
 	CommonSettings
 
+	Version string `json:"version,omitempty"`
+
 	Address string `json:"address"`
 
 	TLS VectorTLS `json:"tls,omitempty"`
@@ -35,13 +37,6 @@ type VectorTLS struct {
 	CommonTLS         `json:",inline"`
 	VerifyCertificate bool `json:"verify_certificate"`
 	Enabled           bool `json:"enabled"`
-}
-
-type VectorEncoding struct {
-	ExceptFields    []string `json:"except_fields,omitempty"`
-	OnlyFields      []string `json:"only_fields,omitempty"`
-	Codec           string   `json:"codec,omitempty"`
-	TimestampFormat string   `json:"timestamp_format,omitempty"`
 }
 
 type VectorKeepalive struct {
@@ -79,9 +74,12 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDe
 			VerifyCertificate: spec.TLS.VerifyCertificate,
 			Enabled:           enabledTLS,
 		},
+		Version: "2",
 		Address: spec.Endpoint,
-		Keepalive: VectorKeepalive{
-			TimeSecs: 7200,
-		},
+		// TODO(nabokikhms): Only available for vector the first version sink, consider different load balancing solution
+		//
+		// Keepalive: VectorKeepalive{
+		//	TimeSecs: 7200,
+		// },
 	}
 }

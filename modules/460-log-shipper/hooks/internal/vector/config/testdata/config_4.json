@@ -19,16 +19,14 @@
   "sinks": {
     "d8_cluster_sink_testoutput": {
       "type": "vector",
+      "version": "2",
       "inputs": [
         "d8_cluster_source_testsource"
       ],
       "healthcheck": {
         "enabled": false
       },
-      "address": "https://192.168.0.1:9200",
-      "keepalive": {
-        "time_secs": 7200
-      }
+      "address": "192.168.0.1:9200"
     }
   }
 }
