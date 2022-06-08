@@ -65,7 +65,7 @@ index 39dab8f..af8217e 100644
 +	if isNone(annotations) {
 +		if path, healthCheckNodePort := servicehelpers.GetServiceHealthCheckPathPort(apiService); path != "" {
 +			for i := range v2Mappings {
-+				v2Mappings[i].HealthCheckConfig.Port = string(healthCheckNodePort)
++				v2Mappings[i].HealthCheckConfig.Port = strconv.Itoa(healthCheckNodePort)
 +				v2Mappings[i].HealthCheckConfig.Path = path
 +				v2Mappings[i].HealthCheckConfig.Protocol = elbv2.ProtocolEnumHttp
 +			}
