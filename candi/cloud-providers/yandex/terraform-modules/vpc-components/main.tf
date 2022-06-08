@@ -30,7 +30,7 @@ data "yandex_vpc_subnet" "kube_a" {
 }
 
 data "yandex_vpc_subnet" "kube_b" {
-  count     = not_have_existing_subnet_b ? 0 : 1
+  count     = local.not_have_existing_subnet_b ? 0 : 1
   subnet_id = var.existing_zone_to_subnet_id_map.ru-central1-b
 }
 
