@@ -62,6 +62,8 @@ runs:
         filename='./CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}.yml'
         cat > "$filename" <<"EOF"
         ${{ steps.changelog.outputs.release_yaml }}
+
+        See [CHANGELOG ${{ steps.changelog.outputs.minor_version }}](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) for more details.
         EOF
 
     # Cumulative markdown changelog
