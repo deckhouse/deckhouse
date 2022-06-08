@@ -108,11 +108,11 @@ func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) er
 			continue
 		}
 
-		podFsSize, podFsUsed, fsUsePercent := getFsSizeAndUsed(input, kubeClient, pod)
+		fsSize, fsUsed, fsUsePercent := getFsSizeAndUsed(input, kubeClient, pod)
 
 		input.MetricsCollector.Set(
 			"d8_prometheus_fs_size",
-			float64(podFsSize),
+			fsSize,
 			map[string]string{
 				"namespace": pod.Namespace,
 				"pod_name":  pod.Name,
@@ -122,7 +122,7 @@ func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) er
 
 		input.MetricsCollector.Set(
 			"d8_prometheus_fs_used",
-			float64(podFsUsed),
+			fsUsed,
 			map[string]string{
 				"namespace": pod.Namespace,
 				"pod_name":  pod.Name,
@@ -132,7 +132,7 @@ func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) er
 
 		input.MetricsCollector.Set(
 			"d8_prometheus_fs_use_percent",
-			float64(fsUsePercent),
+			fsUsePercent,
 			map[string]string{
 				"namespace": pod.Namespace,
 				"pod_name":  pod.Name,
@@ -143,7 +143,7 @@ func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) er
 	return nil
 }
 
-func getFsSizeAndUsed(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (fsSize int64, fsUsed int, fsUsePercent int) {
+func getFsSizeAndUsed(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (fsSize, fsUsed, fsUsePercent float64) {
 	containerName := "prometheus"
 	command := "df -PB1 /prometheus/"
 	output, _, err := execToPodThroughAPI(kubeClient, command, containerName, pod.Name, pod.Namespace)
@@ -152,9 +152,9 @@ func getFsSizeAndUsed(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFi
 	} else {
 		for _, s := range strings.Split(output, "\n") {
 			if strings.Contains(s, "prometheus") {
-				fsSize, _ = strconv.ParseInt(strings.Fields(s)[1], 10, 64)
-				fsUsed, _ = strconv.Atoi(strings.Fields(s)[2])
-				fsUsePercent, _ = strconv.Atoi(strings.Trim(strings.Fields(s)[4], "%"))
+				fsSize, _ = strconv.ParseFloat(strings.Fields(s)[1],64)
+				fsUsed, _ = strconv.ParseFloat(strings.Fields(s)[2],64)
+				fsUsePercent, _ = strconv.ParseFloat(strings.Trim(strings.Fields(s)[4], "%"),64)
 				break
 			}
 		}
