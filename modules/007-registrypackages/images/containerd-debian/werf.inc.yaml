@@ -40,5 +40,5 @@ shell:
   setup:
   - DISTRO="$(awk -F "-" '{print $NF}' <<< "{{ $version | replace "=" "_" }}")"
   - VERSION="$(sed "s/-${DISTRO}//" <<< "{{ $version | replace "=" "_" }}")"
-  - curl -sL "https://download.docker.com/linux/debian/dists/${DISTRO}/pool/stable/amd64/${VERSION}_amd64.deb" --output /containerd.io_amd64.deb
+  - curl -sfL "https://download.docker.com/linux/debian/dists/${DISTRO}/pool/stable/amd64/${VERSION}_amd64.deb" --output /containerd.io_amd64.deb
 {{- end }}

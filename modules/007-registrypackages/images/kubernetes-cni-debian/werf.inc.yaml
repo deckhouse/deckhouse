@@ -31,5 +31,5 @@ shell:
   - apk add --no-cache curl
   setup:
   - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubernetes-cni_{{ $version }}-00  | awk '{print $2}')"
-  - curl -sL ${DEB_PACKAGE} --output /kubernetes-cni_amd64.deb
+  - curl -sfL ${DEB_PACKAGE} --output /kubernetes-cni_amd64.deb
 {{- end }}

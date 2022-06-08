@@ -25,5 +25,5 @@ shell:
   beforeInstall:
   - apk add --no-cache curl
   setup:
-  - curl -sL "http://ftp.debian.org/debian/pool/main/v/virt-what/virt-what_{{ $version }}_amd64.deb" --output /virt-what_amd64.deb
+  - curl -sfL "http://ftp.debian.org/debian/pool/main/v/virt-what/virt-what_{{ $version }}_amd64.deb" --output /virt-what_amd64.deb
 

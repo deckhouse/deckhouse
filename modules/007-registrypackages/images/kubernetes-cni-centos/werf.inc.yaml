@@ -31,5 +31,5 @@ shell:
   - apk add --no-cache curl
   setup:
   - RPM_PACKAGE="$(curl -s https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/repodata/primary.xml | grep "<location href=" | grep "kubernetes-cni-{{ $version }}-0" | awk -F "\"" '{print $2}')"
-  - curl -sL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${RPM_PACKAGE} --output /kubernetes-cni.x86_64.rpm
+  - curl -sfL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${RPM_PACKAGE} --output /kubernetes-cni.x86_64.rpm
 {{- end }}

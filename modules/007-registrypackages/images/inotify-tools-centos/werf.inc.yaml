@@ -27,8 +27,8 @@ shell:
   - apk add --no-cache curl
   setup:
   {{- if eq $centos_version "7" }}
-  - curl -sL "https://mirrors.xtom.ee/epel/7/x86_64/Packages/i/inotify-tools-{{ index $version $centos_version }}.el7.x86_64.rpm" --output /inotify-tools.x86_64.rpm
+  - curl -sfL "https://mirrors.xtom.ee/epel/7/x86_64/Packages/i/inotify-tools-{{ index $version $centos_version }}.el7.x86_64.rpm" --output /inotify-tools.x86_64.rpm
   {{- else if eq $centos_version "8" }}
-  - curl -sL "https://mirrors.xtom.ee/epel/8/Everything/x86_64/Packages/i/inotify-tools-{{ index $version $centos_version }}.el8.x86_64.rpm" --output /inotify-tools.x86_64.rpm
+  - curl -sfL "https://mirrors.xtom.ee/epel/8/Everything/x86_64/Packages/i/inotify-tools-{{ index $version $centos_version }}.el8.x86_64.rpm" --output /inotify-tools.x86_64.rpm
   {{- end }}
 {{- end }}
