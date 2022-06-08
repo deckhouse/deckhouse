@@ -4,6 +4,11 @@ properties:
     type: integer
     default: 15
     description: How long to keep the data.
+  retentionPercent:
+    type: integer
+    minimum: 0
+    maximum: 100
+    description: The maximum percentage of disk space used for data storage.
   storageClass:
     type: string
     x-examples: ["ceph-ssd", "false"]
@@ -31,6 +36,11 @@ properties:
       How long to keep the data in longterm Prometheus.
 
       Setting this parameter to `0` will result in Longterm Prometheus not running in the cluster.
+  longtermRetentionPercent:
+    type: integer
+    minimum: 0
+    maximum: 100
+    description: The maximum percentage of disk space used for data storage in longterm Prometheus.
   auth:
     type: object
     default: {}
