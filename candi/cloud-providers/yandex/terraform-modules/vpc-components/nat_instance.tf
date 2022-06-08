@@ -33,17 +33,17 @@ locals {
   internal_subnet_zone = local.user_internal_subnet_zone == null ? (local.external_subnet_zone == null ? "ru-central1-a" : local.external_subnet_zone) : local.user_internal_subnet_zone
 
   zone_to_subnet_id = tomap({
-      "ru-central1-a" = local.should_create_subnets ? yandex_vpc_subnet.kube_a[0].id : (local.is_existing_subnet_a ? data.yandex_vpc_subnet.kube_a[0].id : null)
-      "ru-central1-b" = local.should_create_subnets ? yandex_vpc_subnet.kube_b[0].id : (local.is_existing_subnet_b ? data.yandex_vpc_subnet.kube_b[0].id : null)
-      "ru-central1-c" = local.should_create_subnets ? yandex_vpc_subnet.kube_c[0].id : (local.is_existing_subnet_c ? data.yandex_vpc_subnet.kube_c[0].id : null)
+      "ru-central1-a" = local.should_create_subnets ? yandex_vpc_subnet.kube_a[0].id : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].id)
+      "ru-central1-b" = local.should_create_subnets ? yandex_vpc_subnet.kube_b[0].id : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].id)
+      "ru-central1-c" = local.should_create_subnets ? yandex_vpc_subnet.kube_c[0].id : (local.not_have_existing_subnet_c ? null : data.yandex_vpc_subnet.kube_c[0].id)
     })
 
   # we can not use one map because we will get cycle
   # local.nat_instance_internal_address_calculated uses in route table and yandex_vpc_subnet.kube_* depend on route table
   zone_to_cidr = tomap({
-    "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.is_existing_subnet_a ? data.yandex_vpc_subnet.kube_a[0].v4_cidr_blocks[0] : null)
-    "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.is_existing_subnet_b ? data.yandex_vpc_subnet.kube_b[0].v4_cidr_blocks[0] : null)
-    "ru-central1-c" = local.should_create_subnets ? local.kube_c_v4_cidr_block : (local.is_existing_subnet_c ? data.yandex_vpc_subnet.kube_c[0].v4_cidr_blocks[0] : null)
+    "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].v4_cidr_blocks[0])
+    "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].v4_cidr_blocks[0])
+    "ru-central1-c" = local.should_create_subnets ? local.kube_c_v4_cidr_block : (local.not_have_existing_subnet_c ? null : data.yandex_vpc_subnet.kube_c[0].v4_cidr_blocks[0])
   })
 
   # if user set internal subnet id for nat instance get cidr from its subnet
@@ -131,16 +131,6 @@ resource "yandex_compute_instance" "nat_instance" {
       metadata,
       boot_disk[0].initialize_params[0].image_id,
       boot_disk[0].initialize_params[0].size,
-      # By default, we used ru-central1-c, but it zone was deprecated
-      # https://cloud.yandex.ru/docs/overview/concepts/ru-central1-c-deprecation
-      # We choice ru-central1-a by default. This change can break cluster,
-      # if natInstance.internalSubnetID and natInstance.natInstanceInternalAddress was not set
-      # by TerraformAutoConverger.
-      # First, we should silent changes in network interfaces and zones and notify client about this changes
-      # and add instruction for fix it.
-      # After 4 releases, for example, in 1.38 release remove network_interface and zone from here.
-      network_interface,
-      zone
     ]
   }
 
