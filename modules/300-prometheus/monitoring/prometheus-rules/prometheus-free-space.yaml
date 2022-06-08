@@ -1,30 +1,18 @@
-- name: d8.emptydir
+- name: d8.prometheus.disk_usage
   rules:
-  - alert: DeckhouseModuleUseEmptyDir
+  - alert: PrometheusDiskUsage
     expr: |
-      d8_emptydir_usage == 1
+      d8_prometheus_fs_use_percent > 90
     labels:
       tier: cluster
-      severity_level: "9"
+      severity_level: "4"
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      summary: Deckhouse module {{ $labels.module_name }} use emptydir as storage.
+      summary: Prometheus disk is over 90% used.
       description: |
-        Deckhouse module {{ $labels.module_name }} use emptydir as storage.
-
-  - alert: ClusterHasProblemsWithDeckhouseModuleUseEmptyDir
-    expr: |
-      count by (alertname) (ALERTS{alertname=~"DeckhouseModuleUseEmptyDir", alertstate="firing"})
-    labels:
-      tier: cluster
-      severity_level: "9"
-    annotations:
-      plk_markup_format: markdown
-      plk_protocol_version: "1"
-      plk_alert_type: "group"
-      plk_group_for__deckhouse_module_use_emptydir: DeckhouseModuleUseEmptyDir,prometheus=deckhouse
-      summary: One or more deckhouse modules using emptydir as storage.
-      description: |
-        One or more deckhouse modules using emptydir as storage.
+        For more information, use the command:
+        ```shell
+        kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
+        ```
