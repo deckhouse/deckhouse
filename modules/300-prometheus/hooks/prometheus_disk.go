@@ -82,7 +82,7 @@ func persistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 type storage struct {
-	VolumeSizeGiB int
+	VolumeSizeGiB    int
 	RetentionSizeGiB int
 	RetentionPercent int
 }
