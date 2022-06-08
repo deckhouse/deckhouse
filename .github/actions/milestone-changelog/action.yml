@@ -79,7 +79,7 @@ runs:
       uses: peter-evans/create-pull-request@v3.10.1
       with:
         commit-message: |
-          Re-generate changelog
+          Re-generate changelog ${{ steps.args.outputs.milestone_title }}
 
           Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
         base: main
