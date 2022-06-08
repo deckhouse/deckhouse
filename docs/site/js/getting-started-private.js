@@ -111,8 +111,8 @@ $(document).ready(function () {
     update_parameter('dhctl-registry-images-repo', 'imagesRepo', '<IMAGES_REPO_URI>', null, '[config-yml]');
     update_parameter('dhctl-registry-ca', 'registryCA', '<REGISTRY_CA>', null, '[config-yml]', 4);
     if (registrySchemeHTTP && registrySchemeHTTP === 'true') {
-      update_parameter('http', 'registryScheme', 'https', null, null);
-      updateTextInSnippet('[config-yml]', /registryScheme: https.+\n---/s, "registryScheme: http\n---");
+      update_parameter('HTTP', 'registryScheme', 'HTTPS', null, null);
+      updateTextInSnippet('[config-yml]', /registryScheme: HTTPS.+\n---/s, "registryScheme: HTTP\n---");
     }
 
     if ((registrySchemeHTTP && registrySchemeHTTP === 'true') || !registryCA || (registryCA && registryCA.length < 1)) {
@@ -121,7 +121,7 @@ $(document).ready(function () {
         return (this.innerText === "registryScheme");
       }).each(function (index) {
         delete_elements($(this).next().next().next(), 3);
-        updateTextInSnippet('[config-yml]', /(registryScheme: http[s]?).+\n---/s, "$1\n---");
+        updateTextInSnippet('[config-yml]', /(registryScheme: HTTP[S]?).+\n---/s, "$1\n---");
       });
 
     }

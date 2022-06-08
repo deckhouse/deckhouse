@@ -71,9 +71,9 @@ deckhouse:
   # [<en>] A special string with your token to access the Docker registry.
   # [<ru>] Строка с ключом для доступа к Docker registry.
   registryDockerCfg: <YOUR_PRIVATE_ACCESS_STRING_IS_HERE>
-  # [<en>] Registry access scheme (http or https).
-  # [<ru>] Протокол доступа к registry (http или https).
-  registryScheme: https
+  # [<en>] Registry access scheme (HTTP or HTTPS).
+  # [<ru>] Протокол доступа к registry (HTTP или HTTPS).
+  registryScheme: HTTPS
   # [<en>] Root CA certificate to validate the registry’s HTTPS certificate (if self-signed certificates are used).
   # [<ru>] Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
   registryCA: <REGISTRY_CA>
