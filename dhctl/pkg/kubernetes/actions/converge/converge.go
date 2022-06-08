@@ -366,6 +366,7 @@ func (c *NodeGroupController) Run() error {
 	replicas := getReplicasByNodeGroupName(c.config, nodeGroupName)
 	step := getStepByNodeGroupName(nodeGroupName)
 
+	// we hide deckhouse logs because we always have config
 	nodeCloudConfig, err := GetCloudConfig(c.client, nodeGroupName, HideDeckhouseLogs)
 	if err != nil {
 		return err
