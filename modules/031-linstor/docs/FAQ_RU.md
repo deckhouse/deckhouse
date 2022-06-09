@@ -74,6 +74,30 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
 
 - Дождаться перезапуска Pod'ов Prometheus.
 
+## linstor-node не может запуститься из-за невозможности загрузить drbd-модуля
+
+Проверьте состояние Pod'ов `linstor-node`:
+
+```shell
+kubectl get pod -n d8-linstor -l app.kubernetes.io/instance=linstor,\
+app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-node
+```
+
+Если вы видите что некоторые из них находятся в состоянии `Init:CrashLoopBackOff`, проверьте логи контейнера `kernel-module-injector`:
+
+```shell
+kubectl logs -n d8-linstor linstor-node-xxwf9 -c kernel-module-injector
+```
+
+Наиболее вероятные причины почему он не может загрузить модуль ядра:
+
+- Возможно у вас уже загружена in-tree версия модуля DRBDv8, когда как LINSTOR требует DRBDv9.
+  Проверить версию загруженного модуля: `cat /proc/drbd`. Если файл отсутствует значит модуль не загружен и проблема не в этом.
+
+- Возможно у вас включён Secure Boot.
+  Так как модуль DRBD, который мы поставляем, компилируется динамически для вашего ядра (аналог dkms), он не имеет цифровой подписи.
+  На данный момент мы не поддерживаем работу модуля DRBD в конфигурации с Secure Boot.
+
 ## Pod не может запуститься из-за ошибки `FailedMount`
 
 ### Pod завис на стадии `ContainerCreating`
