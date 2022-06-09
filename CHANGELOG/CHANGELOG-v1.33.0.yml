@@ -291,7 +291,7 @@ log-shipper:
       pull_request: https://github.com/deckhouse/deckhouse/pull/1612
     - summary: Add probes for kube-rbac-proxy container.
       pull_request: https://github.com/deckhouse/deckhouse/pull/1602
-    - summary: Add the rate-limit option to the ClusterLogsDestination CRD.
+    - summary: Add the `rateLimit` option to the `ClusterLogsDestination` CRD.
       pull_request: https://github.com/deckhouse/deckhouse/pull/1498
     - summary: Refactor configuration hook
       pull_request: https://github.com/deckhouse/deckhouse/pull/1475
