@@ -6,7 +6,8 @@ const labels = {
   'skip-validation': [
     'skip/no-cyrillic-validation',
     'skip/documentation-validation',
-    'skip/copyright-validation'
+    'skip/copyright-validation',
+    'skip/markdown-validation'
   ],
   e2e: [
     'e2e/run/aws',

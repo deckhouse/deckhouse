@@ -70,6 +70,8 @@ jobs:
       label_doc_changes: ${{ steps.on_push.outputs.label_doc_changes }}
       run_copyright: ${{ steps.on_push.outputs.run_copyright }}
       label_copyright: ${{ steps.on_push.outputs.label_copyright }}
+      run_markdown: ${{ steps.on_push.outputs.run_markdown }}
+      label_markdown: ${{ steps.on_push.outputs.label_markdown }}
       pr_title: ${{ steps.on_push.outputs.pr_title }}
       pr_description: ${{ steps.on_push.outputs.pr_description }}
       diff_url: ${{ steps.on_push.outputs.diff_url }}
@@ -111,7 +113,11 @@ jobs:
 
   copyright_validation:
     name: Copyright Validation
-{!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 -}!}
+{!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 }!}
+
+  markdown_validation:
+    name: Markdown Linter
+{!{ tmpl.Exec "validation_template" (slice $ctx "markdown") | strings.Indent 4 -}!}
 
 {!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}

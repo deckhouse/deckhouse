@@ -562,6 +562,7 @@ module.exports.checkValidationLabels = async ({ github, context, core }) => {
   core.setOutput('run_no_cyrillic', 'true');
   core.setOutput('run_doc_changes', 'true');
   core.setOutput('run_copyright', 'true');
+  core.setOutput('run_markdown', 'true');
 
   // This method runs on pull_request_target, so pull_request context is available.
 
@@ -599,6 +600,10 @@ module.exports.checkValidationLabels = async ({ github, context, core }) => {
     if (/copyright/.test(skipLabel)) {
       validationName = 'copyright';
       core.info(`Skip 'copyright'`);
+    }
+    if (/markdown/.test(skipLabel)) {
+      validationName = 'markdown';
+      core.info(`Skip 'markdown validation'`);
     }
 
     if (prHasSkipLabel) {

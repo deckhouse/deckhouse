@@ -1,3 +1,0 @@
-ignore_front_matter false
-verbose false
-style "#{File.dirname(__FILE__)}/mdrules.rb"
