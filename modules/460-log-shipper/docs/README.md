@@ -13,7 +13,7 @@ Each agent is a [vector](https://vector.dev/) instance running with a configurat
 1. Deckhouse is watching `ClusterLoggingConfig`, `ClusterLogsDestination` and `PodLoggingConfig` custom resources.
   The combination of a logging source and log destination is called `pipeline`.
 2. Deckhouse generates a configuration file and stores it into Kubernetes `Secret`.
-3. `Secret` is mounted to all log-shipper agent pods and the configuration is reloaded on changes by the `reloader` sidecar container.
+3. `Secret` is mounted to all log-shipper agent Pods and the configuration is reloaded on changes by the `reloader` sidecar container.
 
 ### Deployment topologies
 
@@ -25,9 +25,9 @@ Agents send logs directly to the storage, e.g., Loki, Elasticsearch.
 
 ![log-shipper distributed](../../images/460-log-shipper/log_shipper_distributed.png)
 
-* Less complicated scheme to use
-* Available out of the box without any external dependency besides storage
-* Complicated transformations consume more resources
+* Less complicated scheme to use.
+* Available out of the box without any external dependency besides storage.
+* Complicated transformations consume more resources.
 
 #### Centralized
 
@@ -37,9 +37,9 @@ Complicated mappings are applied on the aggregator's side.
 
 ![log-shipper centralized](../../images/460-log-shipper/log_shipper_centralized.png)
 
-* Less resources are used on worker nodes
-* Users can configure any possible mappings for aggregators and send logs to many more storages
-* Dedicated nodes for aggregates can be scaled up and down on loading changes
+* Fewer resources are used on worker nodes.
+* Users can configure any possible mappings for aggregators and send logs to many more storages.
+* Dedicated nodes for aggregates can be scaled up and down on loading changes.
 
 ### Log filters
 

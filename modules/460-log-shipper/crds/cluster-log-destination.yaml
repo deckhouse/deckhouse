@@ -330,7 +330,7 @@ spec:
                   properties:
                     endpoint:
                       type: string
-                      description: The base URL of the Vector instance. API v2 must be used for comunnication between instances.
+                      description: The base URL of the Vector instance. API v2 must be used for communication between instances.
                       pattern: ^(.+):([0-9]{1,5})$
                     tls:
                       type: object
@@ -362,7 +362,7 @@ spec:
                             keyPass:
                               type: string
                               format: string
-                              description: Base64 encoded pass phrase used to unlock the encrypted key file.
+                              description: Base64 encoded passphrase used to unlock the encrypted key file.
                         verifyHostname:
                           type: boolean
                           default: true
