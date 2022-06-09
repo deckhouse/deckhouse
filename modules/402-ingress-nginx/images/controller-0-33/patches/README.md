@@ -48,3 +48,6 @@ There is a problem, that when you set an invalid URL as a value for the nginx.in
 Thus, this is considered a security hole. Users can accidentally set an invalid URL by hand or because of an error in helm templates.
 
 https://github.com/kubernetes/ingress-nginx/pull/8256
+
+### Ingress class
+If ingress class annotation or spec field is not set, fallback to default class("nginx") and check it
