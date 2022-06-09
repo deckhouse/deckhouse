@@ -88,7 +88,7 @@ spec:
         - --scale-down-delay-after-failure=1m
         - --scale-down-utilization-threshold=0.6
         - --unremovable-node-recheck-timeout=30s
-        - --scale-down-delay-after-add=2m
+        - --scale-down-delay-after-add=10m
         - --address=127.0.0.1:8085
         - --v=2
         env:
