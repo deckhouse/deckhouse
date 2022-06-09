@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     patch -p1 < /omit-helm-secrets.patch && \
     patch -p1 < /healthcheck.patch && \
     patch -p1 < /deny-invalid-auth-locations.patch && \
+    patch -p1 < /ingress-class.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # luarocks assets for luajit artifact
