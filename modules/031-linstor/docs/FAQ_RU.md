@@ -74,7 +74,7 @@ linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
 
 - Дождаться перезапуска Pod'ов Prometheus.
 
-## linstor-node не может запуститься из-за невозможности загрузить drbd-модуля
+## linstor-node не может запуститься из-за невозможности загрузки drbd-модуля
 
 Проверьте состояние Pod'ов `linstor-node`:
 
