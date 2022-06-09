@@ -80,7 +80,7 @@
  - **[linstor]** LINSTOR updated to 1.18.1, DRBD module to 9.1.7, linstor-csi to 0.19.0, linstor-scheduler to v0.3.0 [#1559](https://github.com/deckhouse/deckhouse/pull/1559)
  - **[log-shipper]** Fix integration of the File source with the Elasticsearch destination. [#1625](https://github.com/deckhouse/deckhouse/pull/1625)
  - **[log-shipper]** Provide structural schemas for log-shipper CRDs [#1612](https://github.com/deckhouse/deckhouse/pull/1612)
- - **[log-shipper]** Add the rate-limit option to the ClusterLogsDestination CRD. [#1498](https://github.com/deckhouse/deckhouse/pull/1498)
+ - **[log-shipper]** Add the `rateLimit` option to the `ClusterLogsDestination` CRD. [#1498](https://github.com/deckhouse/deckhouse/pull/1498)
  - **[log-shipper]** Migrate deprecated elasticsearch fields [#1453](https://github.com/deckhouse/deckhouse/pull/1453)
  - **[log-shipper]** Send reloading signal to all vector processes in a container on config change. [#1430](https://github.com/deckhouse/deckhouse/pull/1430)
  - **[monitoring-kubernetes]** Fixes alert `UnsupportedContainerRuntimeVersion` to support the newest versions of containerd - 1.5.* and 1.6.* and docker 20.*. [#1506](https://github.com/deckhouse/deckhouse/pull/1506)
