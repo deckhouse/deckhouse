@@ -3,6 +3,9 @@ MD002:
   # Heading level
   level: 2
 
+# MD004/ul-style - Unordered list style
+MD004: false
+
 # MD026/no-trailing-punctuation - Trailing punctuation in heading
 MD026:
   # Punctuation characters
