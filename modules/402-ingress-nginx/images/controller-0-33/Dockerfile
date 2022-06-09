@@ -8,6 +8,7 @@ COPY patches/omit-helm-secrets.patch /
 COPY patches/healthcheck.patch /
 COPY patches/pod-ip.patch /
 COPY patches/deny-invalid-auth-locations.patch /
+COPY patches/ingress-class.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch controller-0.33.0 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
