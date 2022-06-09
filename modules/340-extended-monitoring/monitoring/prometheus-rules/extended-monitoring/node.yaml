@@ -12,13 +12,14 @@
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-warning"})
       )
+    for: 10m
     labels:
       severity_level: "6"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "10m"
+      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=extended-monitoring"
       plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
@@ -36,13 +37,14 @@
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-critical"})
       )
+    for: 2m
     labels:
       severity_level: "5"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "2m"
+      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=extended-monitoring"
       plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
@@ -60,13 +62,14 @@
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-warning"})
       )
+    for: 10m
     labels:
       severity_level: "6"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "10m"
+      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=extended-monitoring"
       plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
@@ -84,13 +87,14 @@
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-critical"})
       )
+    for: 2m
     labels:
       severity_level: "5"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "2m"
+      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=extended-monitoring"
       plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
@@ -105,12 +109,12 @@
       ) > on (node) group_left() (
         max by (node) (extended_monitoring_node_threshold{threshold="load-average-per-core-warning"})
       )
+    for: 30m
     labels:
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "30m"
       description: |-
         For the last 30 minutes, the load average on the {{ $labels.node }} Node has been higher or equal to {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
       summary: >

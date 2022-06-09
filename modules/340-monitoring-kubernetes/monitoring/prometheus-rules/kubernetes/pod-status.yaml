@@ -13,6 +13,7 @@
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
+        plk_create_group_if_not_exists__node_have_pods_with_incorrect_status: "NodeHavePodsWithIncorrectStatus,tier=cluster"
         plk_grouped_by__node_have_pods_with_incorrect_status: "NodeHavePodsWithIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }}"
         description: |
           There is a {{ $labels.namespace }}/{{ $labels.pod }} Pod in the cluster that runs on the {{ $labels.node }} and listed as NotReady while all the Pod's containers are Ready.
@@ -24,35 +25,3 @@
           2. Find all the Nodes affected: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c`;
           3. Restart `kubelet` on each Node: `systemctl restart kubelet`.
         summary: The state of the {{ $labels.namespace }}/{{ $labels.pod }} Pod running on the {{ $labels.node }} Node is incorrect. You need to restart `kubelet`.
-
-    - alert: NodeHavePodsWithIncorrectStatus
-      expr: count by (node) (ALERTS{alertname="PodStatusIsIncorrect", alertstate="firing"}) > 0
-      annotations:
-        plk_markup_format: markdown
-        plk_protocol_version: "1"
-        plk_alert_type: "group"
-        plk_grouped_by__cluster_have_nodes_with_incorrect_pod_status: "ClusterHaveNodesWithIncorrectPodStatus,prometheus=deckhouse"
-        description: |
-          There is a {{ $labels.node }} Node in the cluster with Pods in an incorrect state.
-
-          This could be due to the [Kubernetes bug](https://github.com/kubernetes/kubernetes/issues/80968).
-
-          The recommended course of action:
-          1. Find all the Pods having this state: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'`;
-          2. Find the Node affected: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c`;
-          3. Restart `kubelet` on this Node: `systemctl restart kubelet`.
-        summary: Pods with an incorrect status are running on the {{ $labels.node}} Node. You need to restart `kubelet`.
-
-    - alert: ClusterHaveNodesWithIncorrectPodStatus
-      expr: count(ALERTS{alertname="NodeHavePodsWithIncorrectStatus", alertstate="firing"}) > 0
-      annotations:
-        plk_markup_format: markdown
-        plk_protocol_version: "1"
-        plk_alert_type: "group"
-        description: |
-          There are Nodes in the cluster with Pods in an incorrect state.
-
-          This could be due to the [Kubernetes bug](https://github.com/kubernetes/kubernetes/issues/80968).
-
-          Please, refer to the relevant alert to find out which Node is affected.
-        summary: There is a node in the cluster for which kubelet restart is required.

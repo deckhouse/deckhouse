@@ -8,7 +8,6 @@
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       description: The certificate {{$labels.exported_namespace}}/{{$labels.name}} will expire in less than 2 weeks
       summary: Certificate will expire soon
 
@@ -20,7 +19,6 @@
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
       summary: Certificate expired
 
@@ -36,8 +34,8 @@
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
-      plk_grouped_by__main: D8CertmanagerMalfunctioning,tier=cluster,prometheus=deckhouse
+      plk_create_group_if_not_exists__d8_cert_manager_malfunctioning: D8CertmanagerMalfunctioning,tier=~tier,d8_module=cert-manager,d8_component=cert-manager
+      plk_grouped_by__d8_cert_manager_malfunctioning: D8CertmanagerMalfunctioning,tier=~tier
       summary: Certmanager cannot order a certificate.
       description: |
         Cermanager receives responses with the code `{{ $labels.status }}` on requesting {{ $labels.scheme }}://{{ $labels.host }}{{ $labels.path }}.

@@ -6,6 +6,7 @@
           kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
           * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-upmeter"}
         ) != 1
+      for: 5m
       labels:
         severity_level: "6"
         tier: cluster
@@ -14,7 +15,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_pending_until_firing_for: "5m"
+        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=server"
         plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "pod"
         summary: Upmeter server is not Ready
@@ -25,6 +26,7 @@
           kube_controller_pod{namespace="d8-upmeter", controller_type="DaemonSet", controller_name="upmeter-agent"}
           * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-upmeter"}
         ) != 1
+      for: 5m
       labels:
         severity_level: "6"
         tier: cluster
@@ -33,7 +35,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_pending_until_firing_for: "5m"
+        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=agent"
         plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "pod"
         summary: Upmeter agent is not Ready
@@ -50,6 +52,7 @@
             * on(pod) group_right() kube_pod_status_phase{namespace="d8-upmeter", phase="Running"} == 1
           )
         ) == 1
+      for: 5m
       labels:
         severity_level: "6"
         tier: cluster
@@ -58,7 +61,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_pending_until_firing_for: "5m"
+        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=server"
         plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "phase"
         summary: One or more Upmeter server pods is NOT Running
@@ -81,6 +84,7 @@
             * on(pod) group_right() kube_pod_status_phase{namespace="d8-upmeter", phase="Running"} == 1
           )
         ) == 1
+      for: 5m
       labels:
         severity_level: "6"
         tier: cluster
@@ -89,7 +93,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_pending_until_firing_for: "5m"
+        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=agent"
         plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "phase"
         summary: One or more Upmeter agent pods is NOT Running
@@ -99,28 +103,6 @@
 
           Check the status of its pod:
           `kubectl -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'`
-
-    - alert: D8UpmeterUnavailable
-      expr: |
-        count(ALERTS{alertname=~"D8UpmeterServerPodIsNotReady|D8UpmeterAgentPodIsNotReady|D8UpmeterServerReplicasUnavailable", alertstate="firing"}) > 0
-        OR
-        count(ALERTS{alertname=~"KubernetesStatefulSetReplicasUnavailable", namespace="d8-upmeter", statefulset="upmeter", alertstate="firing"}) > 0
-        OR
-        count(ALERTS{alertname=~"KubernetesDaemonSetReplicasUnavailable", namespace="d8-upmeter", daemonset="upmeter-agent", alertstate="firing"}) > 0
-      labels:
-        tier: cluster
-        d8_module: upmeter
-        d8_component: server
-      annotations:
-        plk_protocol_version: "1"
-        plk_markup_format: "markdown"
-        plk_alert_type: "group"
-        plk_group_for__upmeter_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace=d8-upmeter,prometheus=deckhouse,daemonset=upmeter-agent"
-        plk_group_for__upmeter_stuck: "KubernetesStatefulSetReplicasUnavailable,namespace=d8-upmeter,prometheus=deckhouse,statefulset=upmeter"
-        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse"
-        summary: Upmeter is unavailable
-        description: |
-          Upmeter is unavailable. Please check the linked alerts to find the real problem.
 
 - name: d8.upmeter.malfunctioning
   rules:
@@ -133,6 +115,7 @@
           kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
           * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-upmeter"}
         ) > 5
+      for: 5m
       labels:
         severity_level: "9"
         tier: cluster
@@ -141,6 +124,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=server"
         plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "pod"
         summary: Upmeter server is restarting too often.
@@ -150,24 +134,6 @@
           Upmeter server should not restart too often. It should always be running and collecting episodes.
           Check its logs to find the problem:
           `kubectl -n d8-upmeter logs -f upmeter-0 upmeter`
-
-    - alert: D8UpmeterMalfunctioning
-      expr: |
-        count(ALERTS{alertname=~"D8UpmeterServerPodIsRestartingTooOften", alertstate="firing"}) > 0
-        OR
-        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-upmeter", service="upmeter", alertstate="firing"}) > 0
-      labels:
-        tier: cluster
-        d8_module: upmeter
-        d8_component: server
-      annotations:
-        plk_protocol_version: "1"
-        plk_markup_format: "markdown"
-        plk_alert_type: "group"
-        plk_group_for__upmeter_responses_5xx: "IngressResponses5xx,namespace=d8-monitoring,prometheus=deckhouse,service=upmeter"
-        summary: Upmeter is malfunctioning
-        description: |
-          Upmeter is malfunctioning. Please check the linked alerts to find the real problem.
 
 - name: d8.upmeter.smoke-mini
   rules:
@@ -189,7 +155,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_grouped_by__d8_upmeter_malfunctioning: "D8SmokeMiniUnavailable,tier=cluster,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_smoke_mini_unavailable: "D8SmokeMiniUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=smoke-mini"
+        plk_grouped_by__d8_smoke_mini_unavailable: "D8SmokeMiniUnavailable,tier=cluster,prometheus=deckhouse"
         summary: Smoke-mini has unbound or lost persistent volume claims.
         description: |
           {{ $labels.persistentvolumeclaim }} persistent volume claim status is {{ $labels.phase }}.
@@ -199,19 +166,3 @@
 
           If you have no disk provisioning system in the cluster,
           you can disable ordering volumes for the some-mini through the module settings.
-
-    - alert: D8SmokeMiniUnavailable
-      expr: |
-        count(ALERTS{alertname=~"D8SmokeMiniNotBoundPersistentVolumeClaims", alertstate="firing"}) > 0
-      labels:
-        tier: cluster
-        d8_module: upmeter
-        d8_component: smoke-mini
-      annotations:
-        plk_protocol_version: "1"
-        plk_markup_format: "markdown"
-        plk_alert_type: "group"
-        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
-        summary: Smoke-mini is unavailable
-        description: |
-          Smoke-mini is unavailable. Please check the linked alerts to find the real problem.

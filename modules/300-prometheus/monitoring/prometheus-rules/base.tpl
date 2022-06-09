@@ -1,63 +1,9 @@
 - name: d8.prometheus.base
   rules:
-    - alert: D8MainPrometheusMalfunctioning
-      expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus", alertstate="firing"})
-      labels:
-        tier: cluster
-        d8_module: prometheus
-        d8_component: prometheus-main
-      annotations:
-        plk_markup_format: "markdown"
-        plk_protocol_version: "1"
-        plk_alert_type: "group"
-        plk_ignore_labels: "pod"
-        plk_group_for__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace=d8-monitoring,service=prometheus"
-        plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
-        description: |-
-          The Prometheus instance is malfunctioning. The detailed information is available in one of the relevant alerts.
-        summary: The Prometheus instance is malfunctioning.
-{{- if .Values.prometheus.longtermRetentionDays }}
-    - alert: D8LongtermPrometheusMalfunctioning
-      expr: max(ALERTS{alertname="PrometheusMalfunctioning", namespace="d8-monitoring", service="prometheus-longterm", alertstate="firing"})
-      labels:
-        tier: cluster
-        d8_module: prometheus
-        d8_component: prometheus-longterm
-      annotations:
-        plk_markup_format: "markdown"
-        plk_protocol_version: "1"
-        plk_alert_type: "group"
-        plk_ignore_labels: "pod"
-        plk_group_for__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace=d8-monitoring,service=prometheus-longterm"
-        plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
-        description: |
-          The Prometheus-longterm instance is malfunctioning. The detailed information is available in one of the relevant alerts.
-        summary: The Prometheus-longterm instance is malfunctioning.
-{{- end }}
-
-    - alert: D8PrometheusMalfunctioning
-      expr: |
-        count(ALERTS{alertname=~"D8MainPrometheusMalfunctioning|D8LongtermPrometheusMalfunctioning", alertstate="firing"}) > 0
-        OR
-        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="trickster", alertstate="firing"}) > 0
-        OR
-        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-monitoring", service="prometheus", alertstate="firing"}) > 0
-      labels:
-        tier: cluster
-        d8_module: prometheus
-      annotations:
-        plk_markup_format: "markdown"
-        plk_protocol_version: "1"
-        plk_alert_type: "group"
-        plk_group_for__trickster_responses_5xx: "IngressResponses5xx,namespace=d8-monitoring,prometheus=deckhouse,service=trickster"
-        plk_group_for__prometheus_responses_5xx: "IngressResponses5xx,namespace=d8-monitoring,prometheus=deckhouse,service=prometheus"
-        description: |
-          One of the Deckhouse Prometheus instances is malfunctioning. You can find out the exact problem and what Prometheus instance is affected in the relevant alerts.
-        summary: One of the Deckhouse Prometheus instances is malfunctioning.
-
 {{- if .Values.prometheus.longtermRetentionDays }}
     - alert: D8PrometheusLongtermTargetAbsent
       expr: absent(up{job="prometheus", namespace="d8-monitoring", service="prometheus-longterm"} == 1)
+      for: 30m
       labels:
         severity_level: "7"
         tier: cluster
@@ -66,8 +12,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_pending_until_firing_for: "30m"
-        plk_grouped_by__main: "D8LongtermPrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_longterm_prometheus_malfunctioning: "D8LongtermPrometheusMalfunctioning,tier=cluster,d8_module=prometheus,d8_component=prometheus-longterm"
+        plk_grouped_by__d8_longterm_prometheus_malfunctioning: "D8LongtermPrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         description: |-
           This Prometheus component is only used to display historical data and is not crucial. However, if its unavailability will last long enough, you will not be able to view the statistics.
 
@@ -83,6 +29,7 @@
 
     - alert: D8TricksterTargetAbsent
       expr: (max(up{job="prometheus", service="prometheus"}) == 1) * absent(up{job="trickster", namespace="d8-monitoring"} == 1)
+      for: 2m
       labels:
         severity_level: "5"
         tier: cluster
@@ -91,8 +38,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_pending_until_firing_for: "2m"
-        plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,d8_module=prometheus,d8_component=trickster"
+        plk_grouped_by__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         description: |-
           The following modules use this component:
           * `prometheus-metrics-adapter` — the unavailability of the component means that HPA (auto scaling) is not running and you cannot view resource consumption using `kubectl`;
@@ -102,7 +49,7 @@
           The recommended course of action:
           1. Analyze the Deployment stats: `kubectl -n d8-monitoring describe deployment trickster`;
           2. Analyze the Pod stats: `kubectl -n d8-monitoring describe pod -l app=trickster`;
-          3. Usually, Trickster is unavailable due to Prometheus-related issues because the Trickster's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app=prometheus,prometheus=main`.
+          3. Usually, Trickster is unavailable due to Prometheus-related issues because the Trickster's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main`.
         summary: >
           There is no Trickster target in Prometheus.
 
@@ -117,7 +64,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,d8_module=prometheus,d8_component=trickster"
+        plk_grouped_by__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         description: |-
           The following modules use this component:
           * `prometheus-metrics-adapter` — the unavailability of the component means that HPA (auto scaling) is not running and you cannot view resource consumption using `kubectl`;
@@ -127,6 +75,6 @@
           The recommended course of action:
           1. Analyze the Deployment information: `kubectl -n d8-monitoring describe deployment trickster`;
           2. Analyze the Pod information: `kubectl -n d8-monitoring describe pod -l app=trickster`;
-          3. Usually, Trickster is unavailable due to Prometheus-related issues because the Trickster's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app=prometheus,prometheus=main`.
+          3. Usually, Trickster is unavailable due to Prometheus-related issues because the Trickster's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main`.
         summary: >
           There is no Trickster target in Prometheus.

@@ -9,7 +9,6 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       description: |
         Deckhouse is on a custom branch instead of one of the regular release channels.
 
@@ -30,7 +29,6 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       plk_ignore_labels: "name"
       description: |
         Deckhouse release is waiting for manual approval.
@@ -48,7 +46,6 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       plk_ignore_labels: "name"
       description: |
         Deckhouse release is waiting for manual approval.
@@ -66,7 +63,6 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       plk_ignore_labels: "name"
       description: |
         Deckhouse release is waiting for manual approval.
@@ -84,7 +80,6 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       description: |
         Deckhouse release requirements is not met.
 

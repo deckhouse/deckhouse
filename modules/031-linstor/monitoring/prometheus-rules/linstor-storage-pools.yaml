@@ -9,7 +9,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_grouped_by__main: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=cluster,d8_module=linstor,d8_component=linstor-storage-pools"
+        plk_grouped_by__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
         summary: LINSTOR storage pool has errors
         description: |
           LINSTOR storage pool {{ $labels.storage_pool }} on node {{ $labels.exported_node }} has errors
@@ -27,8 +28,9 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_grouped_by__main: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
-        summary: Storage pool running out of free space 
+        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=cluster,d8_module=linstor,d8_component=linstor-storage-pools"
+        plk_grouped_by__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
+        summary: Storage pool running out of free space
         description: |
           LINSTOR storage pool {{ $labels.storage_pool }} on node {{ $labels.exported_node }} has less than 10% space left. Current free space: {{ $value }}%
 
@@ -42,14 +44,3 @@
              linstor resource-definition wait-sync <res>
              linstor resource delete {{ $labels.exported_node }} <res>
              ```
-
-    - alert: D8LinstorStoragePoolHealth
-      expr: count by (storage_pool, exported_node) (ALERTS{alertname=~"D8LinstorStoragePoolHasErrors|D8LinstorStoragePoolCapacityPressure", alertstate="firing"})
-      labels:
-        tier: cluster
-      annotations:
-        plk_protocol_version: "1"
-        plk_markup_format: "markdown"
-        plk_alert_type: "group"
-        summary: Some LINSTOR storage-pools are not healthy
-        description: Refer to the relevant alerts for more information.

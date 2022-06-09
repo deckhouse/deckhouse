@@ -7,7 +7,7 @@
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
-      plk_grouped_by__main: "D8LongtermPrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_longterm_prometheus_malfunctioning: "D8LongtermPrometheusMalfunctioning,tier=cluster,d8_module=prometheus,d8_component=prometheus-longterm"
+      plk_grouped_by__d8_longterm_prometheus_malfunctioning: "D8LongtermPrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
       summary: prometheus-longterm cannot scrape prometheus.
       description: prometheus-longterm cannot scrape "/federate" endpoint from Prometheus. Check error cause in prometheus-longterm WebUI or logs.

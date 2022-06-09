@@ -31,8 +31,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
-      plk_pending_until_firing_for: "5m"
       summary: The log-shipper-agent Pod cannot schedule on Node {{ $labels.node }}
       description: |
         The log-shipper-agent Pod cannot schedule on Node {{ $labels.node }}.
@@ -49,27 +47,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_group_for__main: "D8LogShipperNotScheduledOnNode,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_log_shipper_not_scheduled_on_node: "D8LogShipperNotScheduledOnNode,prometheus=deckhouse,d8_module=log-shipper,d8_component=agent"
+      plk_group_for__d8_log_shipper_not_scheduled_on_node: "D8LogShipperNotScheduledOnNode,prometheus=deckhouse"
       summary: Pods of log-shipper-agent cannot be scheduled in the cluster
       description: |
         Pods of log-shipper-agent cannot be scheduled in the cluster.
         Additional information can be found in linked alerts.
-
-  - alert: D8LogShipperUnavailable
-    expr: |
-      count(ALERTS{alertname=~"D8LogShipperAgentNotScheduledInCluster", alertstate="firing"}) > 0
-      OR
-      count(ALERTS{alertname=~"KubernetesDaemonSetReplicasUnavailable", namespace="d8-log-shipper", daemonset="log-shipper-agent", alertstate="firing"}) > 0
-    labels:
-      tier: cluster
-      d8_module: log-shipper
-      d8_component: agent
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      plk_group_for__log_shipper_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace=d8-log-shipper,prometheus=deckhouse,daemonset=log-shipper-agent"
-      plk_grouped_by__log_shipper_not_scheduled: "D8LogShipperAgentNotScheduledInCluster,tier=cluster,prometheus=deckhouse"
-      summary: LogShipper is unavailable.
-      description: |
-        There are problems with the log-shiper module in the cluster. You can find out the cause by looking through the groupped alerts.

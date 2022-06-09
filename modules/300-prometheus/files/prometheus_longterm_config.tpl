@@ -2,7 +2,7 @@ global:
   scrape_interval: 5m
   scrape_timeout: 3m
   evaluation_interval: 5m
-{{- if (hasKey .Values.prometheus.internal.alertmanagers "main") }}
+{{- if (hasKey .Values.prometheus.internal.alertmanagers "byService") }}
 alerting:
   alert_relabel_configs:
   - separator: ;
@@ -10,7 +10,7 @@ alerting:
     replacement: $1
     action: labeldrop
   alertmanagers:
-  {{- range .Values.prometheus.internal.alertmanagers.main }}
+  {{- range .Values.prometheus.internal.alertmanagers.byService }}
   - kubernetes_sd_configs:
     - role: endpoints
       namespaces:

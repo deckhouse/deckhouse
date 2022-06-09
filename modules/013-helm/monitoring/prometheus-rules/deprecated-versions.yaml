@@ -10,6 +10,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
+      plk_create_group_if_not_exists__helm_release_resource_versions_deprecated: "HelmReleasesHasResourcesWithDeprecatedVersions,tier=cluster"
+      plk_group_for__helm_release_resource_versions_deprecated: HelmReleaseHasResourcesWithDeprecatedVersions,prometheus=deckhouse
       summary: At least one HELM release contains resources with deprecated apiVersion, which will be removed in Kubernetes v{{ $labels.k8s_version }}.
       description: |
         To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1` in Prometheus.
@@ -26,6 +28,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
+      plk_create_group_if_not_exists__helm_release_resource_versions_deprecated: "HelmReleasesHasResourcesWithUnsupportedVersions,tier=cluster"
+      plk_group_for__helm_release_resource_versions_deprecated: HelmReleaseHasResourcesWithUnsupportedVersions,prometheus=deckhouse
       summary:
         At least one HELM release contains resources with unsupported apiVersion for Kubernetes v{{ $labels.k8s_version }}.
       description: |

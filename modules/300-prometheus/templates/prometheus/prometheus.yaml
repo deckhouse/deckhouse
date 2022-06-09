@@ -88,7 +88,7 @@ spec:
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchLabels:
-            app: prometheus
+            app.kubernetes.io/name: prometheus
             prometheus: main
         topologyKey: kubernetes.io/hostname
 {{- end }}
@@ -173,15 +173,36 @@ spec:
   additionalAlertManagerConfigs:
     name: prometheus-main-additional-configs
     key: alert-managers.yaml
-{{- if (hasKey .Values.prometheus.internal.alertmanagers "main") }}
+{{- $alertmanagers_byservice := false }}
+{{- $alertmanagers_internal := false }}
+{{- if hasKey .Values.prometheus.internal.alertmanagers "byService" }}
+  {{- $alertmanagers_byservice = true }}
+{{- end }}
+{{- if hasKey .Values.prometheus.internal.alertmanagers "internal" }}
+  {{- $alertmanagers_internal = true }}
+{{- end }}
+{{- if or $alertmanagers_byservice $alertmanagers_internal }}
   alerting:
     alertmanagers:
-  {{- range .Values.prometheus.internal.alertmanagers.main }}
+  {{- if $alertmanagers_byservice }}
+    {{- range .Values.prometheus.internal.alertmanagers.byService }}
     - namespace: {{ .namespace }}
       name: {{ .name }}
       port: {{ .port }}
       scheme: http
       pathPrefix: {{ .pathPrefix }}
+    {{- end }}
+  {{- end }}
+  {{- if $alertmanagers_internal }}
+    {{- range .Values.prometheus.internal.alertmanagers.internal }}
+    - namespace: d8-monitoring
+      name: {{ .name }}
+      port: https
+      scheme: https
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        insecureSkipVerify: true
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- if .Values.global.modules.publicDomainTemplate }}

@@ -10,10 +10,9 @@
       severity_level: "8"
     annotations:
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "30m"
-      plk_grouped_by__main: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
+      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
       summary: Certificate will expire soon.
       description: |
         Certificate in secret {{$labels.namespace}}/{{$labels.name}} will expire in less than 2 weeks
@@ -33,10 +32,9 @@
       severity_level: "8"
     annotations:
       plk_protocol_version: "1"
-      plk_incident_initial_status: "todo"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "30m"
-      plk_grouped_by__main: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
+      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
       summary: Certificate expired
       description: |
         Certificate in secret {{$labels.namespace}}/{{$labels.name}} expired.
@@ -45,18 +43,3 @@
         - If the certificate is managed by cert-manager, try inspecting certificate resource, the recommended course of action:
           1. Retrieve certificate name from the secret: `cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')`
           2. View the status of the Certificate and try to figure out why it is not updated: `kubectl describe cert -m {{$labels.namespace}} "$cert"`
-
-  - alert: CertificateSecretExpiration
-    expr: count(ALERTS{alertname=~"CertificateSecretExpiredSoon|CertificateSecretExpired", alertstate="firing"})
-    labels:
-      d8_module: extended-monitoring
-      d8_component: cert-exporter
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      description: |
-        Certificate in secret has problems with the validity period.
-
-        The detailed information is available in one of the relevant alerts.
-      summary: cert-exporter does not work as expected.

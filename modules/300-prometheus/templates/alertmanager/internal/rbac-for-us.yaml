@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alertmanager-internal
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "alertmanager")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:prometheus:alertmanager:internal:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "alertmanager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: alertmanager-internal
+  namespace: d8-monitoring

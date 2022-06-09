@@ -19,7 +19,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      plk_incident_initial_status: "todo"
       description: |-
         Unsupported version {{`{{$labels.container_runtime_version}}`}} of CRI installed on {{`{{$labels.node}}`}} node.
         Supported version of CRI for kubernetes {{`{{$labels.kubelet_version}}`}} version:
@@ -52,7 +51,6 @@
   #   annotations:
   #     plk_protocol_version: "1"
   #     plk_markup_format: markdown
-  #     plk_incident_initial_status: "todo"
   #     description: |-
   #       Found docker CRI installed on {{`{{$labels.node}}`}} node.
   #       Docker runtime is deprecated and will be removed in the nearest future.

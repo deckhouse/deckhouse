@@ -8,6 +8,7 @@
     )
     * on (namespace) group_left()
     max by (namespace) (extended_monitoring_enabled)
+  for: 30m
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -15,8 +16,8 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       You should check whether the `{{`{{ $labels.image }}`}}` image is available:
       in the `{{`{{ $labels.namespace }}`}}` Namespace;
@@ -31,6 +32,7 @@
     )
     * on (namespace) group_left()
     max by (namespace) (extended_monitoring_enabled)
+  for: 30m
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -38,8 +40,8 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       You should check whether the `{{`{{ $labels.image }}`}}` image name is spelled correctly:
       in the `{{`{{ $labels.namespace }}`}}` Namespace;
@@ -54,6 +56,7 @@
     )
     * on (namespace) group_left()
     max by (namespace) (extended_monitoring_enabled)
+  for: 30m
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -61,8 +64,8 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       The container registry is not available for the `{{`{{ $labels.image }}`}}` image:
       in the `{{`{{ $labels.namespace }}`}}` Namespace;
@@ -77,6 +80,7 @@
     )
     * on (namespace) group_left()
     max by (namespace) (extended_monitoring_enabled)
+  for: 30m
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -84,8 +88,8 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       Unable to login to the container registry using `imagePullSecrets` for the `{{`{{ $labels.image }}`}}` image
       in the `{{`{{ $labels.namespace }}`}}` Namespace;
@@ -100,6 +104,7 @@
     )
     * on (namespace) group_left()
     max by (namespace) (extended_monitoring_enabled)
+  for: 30m
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -107,8 +112,8 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       Insufficient privileges to pull the `{{`{{ $labels.image }}`}}` image using the `imagePullSecrets` specified
       in the `{{`{{ $labels.namespace }}`}}` Namespace;
@@ -123,6 +128,7 @@
     )
     * on (namespace) group_left()
     max by (namespace) (extended_monitoring_enabled)
+  for: 30m
   labels:
     severity_level: "7"
     d8_module: extended-monitoring
@@ -130,8 +136,8 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_pending_until_firing_for: "5m"
-    plk_grouped_by__main: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: |
       An unknown error occurred for the  `{{`{{ $labels.image }}`}}` image
       in the `{{`{{ $labels.namespace }}`}}` Namespace;
@@ -148,17 +154,3 @@
 {{- range list "Deployment" "StatefulSet" "DaemonSet" "CronJob" }}
   {{- include "image-availability-alerts-by-mode" . | nindent 2 }}
 {{- end }}
-
-  - alert: UnavailableImagesInNamespace
-    expr: (count by (namespace) (ALERTS{alertname=~".+ImageAbsent|.+BadImageFormat|.+RegistryUnavailable|.+AuthenticationFailure|.+AuthorizationFailure|.+UnknownError", alertstate="firing"})) > 0
-    labels:
-      d8_module: extended-monitoring
-      d8_component: image-availability-exporter
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      plk_create_group_if_not_exists__main: UnavailableImagesInCluster,prometheus=deckhouse,tier=~tier
-      plk_grouped_by__main: "UnavailableImagesInCluster,prometheus=deckhouse,tier=~tier"
-      summary: Some images are missing from the container registry in the `{{`{{ $labels.namespace }}`}}` Namespace.
-      description: Refer to the relevant alerts for more information.

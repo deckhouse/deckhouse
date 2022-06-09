@@ -180,3 +180,81 @@ spec:
   backoffLimit: 4
 ```
 The `job` must complete successfully.
+
+## Sending alerts to Telegram:
+
+Prometheus-operator does not support sending alerts to Telegram directly, so Alertmanager is configured to send alerts via a webhook and deploy the application, which sends the received data to Telegram.
+
+Deploy application:
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: telegram-alertmanager
+   namespace: d8-monitoring
+   labels:
+     app: telegram
+spec:
+   template:
+     metadata:
+       name: telegram-alertmanager
+       labels:
+         app: telegram
+     spec:
+       containers:
+         - name: telegram-alertmanager
+           image: janwh/alertmanager-telegram
+           ports:
+             - containerPort: 8080
+           env:
+             - name: TELEGRAM_CHAT_ID
+               value: "-30490XXXXX"
+             - name: TELEGRAM_TOKEN
+               value: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
+   replicas: 1
+   selector:
+     matchLabels:
+       app: telegram
+---
+apiVersion: v1
+kind: Service
+metadata:
+ labels:
+   app: telegram
+ name: telegram-alertmanager
+ namespace: d8-monitoring
+spec:
+ type: ClusterIP
+ selector:
+   app: telegram
+ ports:
+   - protocol: TCP
+     port: 8080
+```
+
+`TELEGRAM_CHAT_ID` and `TELEGRAM_TOKEN` must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.
+
+Deploy CRD CustomAlertManager:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: webhook
+spec:
+  internal:
+    receivers:
+    - name: webhook
+      webhookConfigs:
+      - sendResolved: true
+        url: http://telegram-alertmanager:8080/alerts
+    route:
+      groupBy:
+      - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: webhook
+      repeatInterval: 12h
+  type: Internal
+```

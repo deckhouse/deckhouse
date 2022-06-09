@@ -1,0 +1,23 @@
+{{- if (hasKey .Values.prometheus.internal.alertmanagers "internal") }}
+  {{- range .Values.prometheus.internal.alertmanagers.internal }}
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ .name }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "alertmanager" "alertmanagerConfig" .name )) | nindent 2 }}
+spec:
+    {{- if .inhibitRules }}
+  inhibitRules:
+    {{- .inhibitRules | toYaml | nindent 4 }}
+    {{- end }}
+    {{- if .route }}
+  route:
+    {{- .route | toYaml | nindent 4 }}
+    {{- end }}
+    {{- if .receivers }}
+  receivers:
+    {{- .receivers | toYaml | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

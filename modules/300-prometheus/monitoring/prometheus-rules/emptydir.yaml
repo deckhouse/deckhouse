@@ -3,28 +3,15 @@
   - alert: DeckhouseModuleUseEmptyDir
     expr: |
       d8_emptydir_usage == 1
+    for: 10m
     labels:
       tier: cluster
       severity_level: "9"
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_pending_until_firing_for: "10m"
+      plk_create_group_if_not_exists__deckhouse_module_use_empty_dir: DeckhouseModuleUseEmptyDir,prometheus=deckhouse,tier=cluster,d8_module=prometheus,d8_component=prometheus
+      plk_group_for__deckhouse_module_use_empty_dir: DeckhouseModuleUseEmptyDir,prometheus=deckhouse
       summary: Deckhouse module {{ $labels.module_name }} use emptydir as storage.
       description: |
         Deckhouse module {{ $labels.module_name }} use emptydir as storage.
-
-  - alert: ClusterHasProblemsWithDeckhouseModuleUseEmptyDir
-    expr: |
-      count by (alertname) (ALERTS{alertname=~"DeckhouseModuleUseEmptyDir", alertstate="firing"})
-    labels:
-      tier: cluster
-      severity_level: "9"
-    annotations:
-      plk_markup_format: markdown
-      plk_protocol_version: "1"
-      plk_alert_type: "group"
-      plk_group_for__deckhouse_module_use_emptydir: DeckhouseModuleUseEmptyDir,prometheus=deckhouse
-      summary: One or more deckhouse modules using emptydir as storage.
-      description: |
-        One or more deckhouse modules using emptydir as storage.

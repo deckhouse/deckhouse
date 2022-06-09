@@ -23,12 +23,12 @@
           kube_persistentvolumeclaim_info
         )
       )
+    for: 5m
     labels:
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
       description: |-
         PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
         Currently at: {{ .Value }}%
@@ -60,12 +60,12 @@
           kube_persistentvolumeclaim_info
         )
       )
+    for: 5m
     labels:
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "2m"
       description: |-
         PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
         Currently at: {{ .Value }}%
@@ -97,12 +97,12 @@
           kube_persistentvolumeclaim_info
         )
       )
+    for: 5m
     labels:
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "5m"
       description: |-
         PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
         Currently at: {{ .Value }}%
@@ -134,12 +134,12 @@
           kube_persistentvolumeclaim_info
         )
       )
+    for: 2m
     labels:
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "2m"
       description: |-
         PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
         Currently at: {{ .Value }}%

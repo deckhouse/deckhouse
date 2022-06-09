@@ -1,26 +1,7 @@
-- name: d8.control-plane-manager.availability
-  rules:
-  - alert: D8ControlPlaneManagerUnavailable
-    expr: |
-      count(ALERTS{alertname=~"D8ControlPlaneManagerPodNotRunning", alertstate="firing"}) > 0
-      OR
-      count(ALERTS{alertname=~"KubernetesDaemonSetReplicasUnavailable", namespace="kube-system", daemonset="d8-control-plane-manager", alertstate="firing"}) > 0
-    labels:
-      tier: cluster
-      d8_component: control-plane-manager
-      d8_module: control-plane-manager
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      plk_group_for__control_plane_manager_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace=kube-system,prometheus=deckhouse,daemonset=d8-control-plane-manager"
-      summary: Control plane manager is out of service
-      description: |
-        Control plane manager is out of service. What exactly is wrong can be found in linked alerts.
-
 - name: d8.control-plane-manager.malfunctioning
   rules:
   - alert: D8ControlPlaneManagerPodNotRunning
+    for: 10m
     expr: |
       max by (node) (
         kube_node_role{role="master"}
@@ -44,8 +25,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "10m"
-      plk_grouped_by__d8_control_plane_manager_malfunctioning: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,d8_module=control-plane-manager,d8_component=control-plane-manager"
+      plk_grouped_by__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Controller Pod not running on Node {{ $labels.node }}
       description: |-
         Pod `d8-control-plane-manager` fails or not scheduled on Node {{ $labels.node }}

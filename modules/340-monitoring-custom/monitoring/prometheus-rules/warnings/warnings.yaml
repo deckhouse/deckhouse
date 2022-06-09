@@ -8,7 +8,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
         There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
@@ -28,7 +27,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
         There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
@@ -48,7 +46,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
         There are PrometheusRules in the cluster that were not created by Deckhouse.
@@ -68,7 +65,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
         Services with the `prometheus-custom-target` label are used to collect metrics in the cluster.
@@ -84,8 +80,6 @@
     expr: count(ALERTS{alertname=~"D8CustomServiceMonitorFoundInCluster|D8CustomPodMonitorFoundInCluster|D8CustomPrometheusRuleFoundInCluster|D8OldPrometheusCustomTargetFormat|D8OldPrometheusTargetFormat", alertstate="firing"}) > 0
     annotations:
       plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
       plk_alert_type: "group"
       summary: The deprecated Deckhouse functionality is detected.
       description: |
