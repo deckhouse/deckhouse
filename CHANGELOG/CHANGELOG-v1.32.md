@@ -57,6 +57,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix kubeadm registrypackages build. [#1580](https://github.com/deckhouse/deckhouse/pull/1580)
  - **[candi]** Fixed containerd registry package build for CentOS 8. [#1692](https://github.com/deckhouse/deckhouse/pull/1692)
  - **[candi]** Fixed kubernetes-cni install script for CentOS. [#1682](https://github.com/deckhouse/deckhouse/pull/1682)
  - **[candi]** Fix registry packages install scripts for CentOS. [#1621](https://github.com/deckhouse/deckhouse/pull/1621)
@@ -82,6 +83,7 @@
  - **[deckhouse]** Fixed a bug for the case when the storage class is set to "false" [#1364](https://github.com/deckhouse/deckhouse/pull/1364)
  - **[helm_lib]** Update CSI controller without creating a new one. [#1481](https://github.com/deckhouse/deckhouse/pull/1481)
  - **[ingress-nginx]** Updated requirements for Ingress Nginx controller versions. If conditions are not met, then further Deckhouse upgrade is blocked. [#1697](https://github.com/deckhouse/deckhouse/pull/1697)
+ - **[linstor]** Add missing spatch dependency and disable SPAAS. [#1726](https://github.com/deckhouse/deckhouse/pull/1726)
  - **[linstor]** Refactored documentation. [#1677](https://github.com/deckhouse/deckhouse/pull/1677)
  - **[linstor]** automatically recover evicted nodes in LINSTOR [#1397](https://github.com/deckhouse/deckhouse/pull/1397)
  - **[linstor]** LINSTOR module now supports high-availability [#1147](https://github.com/deckhouse/deckhouse/pull/1147)
