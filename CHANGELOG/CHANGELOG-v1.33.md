@@ -71,6 +71,7 @@
  - **[cloud-provider-yandex]** Rollback changes to set `simple-bridge`  as default CNI for Yandex. [#1582](https://github.com/deckhouse/deckhouse/pull/1582)
  - **[helm]** Avoid failing on incorrect helm releases. [#1754](https://github.com/deckhouse/deckhouse/pull/1754)
  - **[helm]** Avoid hook failure on errors [#1523](https://github.com/deckhouse/deckhouse/pull/1523)
+ - **[ingress-nginx]** Fix build of the ingress-nginx 0.33 controller. [#1757](https://github.com/deckhouse/deckhouse/pull/1757)
  - **[ingress-nginx]** Fix workability of 0.33 controller with IngressClass resource. [#1753](https://github.com/deckhouse/deckhouse/pull/1753)
  - **[ingress-nginx]** move to ingressClassName spec [#1671](https://github.com/deckhouse/deckhouse/pull/1671)
     IngressNginx controllers 0.25 and 0.26 are removed. Ingress controller version 1.1 will restart.
@@ -89,6 +90,7 @@
  - **[monitoring-kubernetes]** Fix kubelet alerts [#1471](https://github.com/deckhouse/deckhouse/pull/1471)
  - **[monitoring-kubernetes]** 1. Detect proper version of a ebpf program to run on a given kernel.
     2. If a program fails to compile or attach to the kernel tracing facilities, do not crash the ebpf_exporter. [#1120](https://github.com/deckhouse/deckhouse/pull/1120)
+ - **[node-local-dns]** Changed priority-class to `cluster-medium`. [#1747](https://github.com/deckhouse/deckhouse/pull/1747)
  - **[node-local-dns]** Updated CoreDNS to v1.9.1 [#1537](https://github.com/deckhouse/deckhouse/pull/1537)
  - **[openvpn]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Openvpn and admin panel will be restarted.
