@@ -1,0 +1,78 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: spaas
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "spaas" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: spaas
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: spaas
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "spaas" )) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: spaas
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spaas
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "spaas" )) | nindent 2 }}
+spec:
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  selector:
+    matchLabels:
+      app: spaas
+  template:
+    metadata:
+      labels:
+        app: spaas
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "spaas")) | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: spaas
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.spaas }}"
+        imagePullPolicy: IfNotPresent
+        args:
+        - --addr=:2020
+        - --patchcache=/var/cache/saas/patches
+        - --tarcache=/var/cache/saas/tarballs
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+        - name: patches-dir
+          mountPath: /var/cache/saas/patches
+        - name: tmp-dir
+          mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      volumes:
+      - name: patches-dir
+        emptyDir: {}
+      - name: tmp-dir
+        emptyDir: {}

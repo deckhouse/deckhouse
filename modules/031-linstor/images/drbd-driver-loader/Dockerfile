@@ -9,9 +9,15 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+# Copy patches
+COPY ./patches /patches
+
 RUN git clone ${DRBD_GITREPO} /drbd \
  && cd /drbd \
  && git reset --hard drbd-${DRBD_VERSION} \
+ && git config --global user.name "Andrei Kvapil" \
+ && git config --global user.email "kvapss@gmail.com" \
+ && git am /patches/*.patch \
  && make tarball \
  && mv ./drbd-*.tar.gz /drbd.tar.gz \
  && mv ./docker/entry.sh /entry.sh \
@@ -20,12 +26,12 @@ RUN git clone ${DRBD_GITREPO} /drbd \
 FROM $BASE_DEBIAN_BULLSEYE
 
 RUN apt-get update \
- && apt-get install -y kmod gnupg wget make gcc patch curl coccinelle \
+ && apt-get install -y kmod gnupg wget make gcc patch curl \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /entry.sh /drbd.tar.gz /
-ENV SPAAS=false
+ENV SPAAS_URL=http://spaas:2020
 
 ENV LB_HOW compile
 ENTRYPOINT [ "/entry.sh" ]
