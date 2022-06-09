@@ -22,21 +22,19 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
-	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/kube-client/manifest/releaseutil"
 	"github.com/golang/protobuf/proto" // nolint: staticcheck
-	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -255,18 +253,12 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 		doneC <- true
 	}()
 	for rel := range releasesC {
-		d := yaml.NewDecoder(strings.NewReader(rel.Manifest))
-
-		for {
+		for _, manifestData := range releaseutil.SplitManifests(rel.Manifest) {
 			resource := new(manifest)
-			err := d.Decode(&resource)
+			err := yaml.Unmarshal([]byte(manifestData), &resource)
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					break
-				}
-
-				input.LogEntry.Errorf("manifest read error: %s", err)
-				break
+				input.LogEntry.Errorf("manifest (%s/%s) read error: %s", rel.Namespace, rel.Name, err)
+				continue
 			}
 
 			if resource == nil {
