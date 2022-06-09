@@ -69,7 +69,9 @@
  - **[ceph-csi]** Fixed missing registry secret. [#1733](https://github.com/deckhouse/deckhouse/pull/1733)
  - **[cloud-provider-aws]** Fix LoadBalancer type none target group creation. [#1741](https://github.com/deckhouse/deckhouse/pull/1741)
  - **[cloud-provider-yandex]** Rollback changes to set `simple-bridge`  as default CNI for Yandex. [#1582](https://github.com/deckhouse/deckhouse/pull/1582)
+ - **[helm]** Avoid failing on incorrect helm releases. [#1754](https://github.com/deckhouse/deckhouse/pull/1754)
  - **[helm]** Avoid hook failure on errors [#1523](https://github.com/deckhouse/deckhouse/pull/1523)
+ - **[ingress-nginx]** Fix workability of 0.33 controller with IngressClass resource. [#1753](https://github.com/deckhouse/deckhouse/pull/1753)
  - **[ingress-nginx]** move to ingressClassName spec [#1671](https://github.com/deckhouse/deckhouse/pull/1671)
     IngressNginx controllers 0.25 and 0.26 are removed. Ingress controller version 1.1 will restart.
  - **[ingress-nginx]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
