@@ -1,0 +1,11 @@
+candi:
+  fixes:
+    - summary: Fix kubeadm registrypackages build.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1580
+linstor:
+  fixes:
+    - summary: Add failed cases when drbd module cannot be loaded
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1742
+    - summary: Add missing spatch dependency and disable SPAAS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1726
+
