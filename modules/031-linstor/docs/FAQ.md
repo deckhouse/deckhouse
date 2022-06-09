@@ -74,6 +74,30 @@ To configure Prometheus to use LINSTOR for storing data:
 
 - Wait for the restart of Prometheus Pods.
 
+## linstor-node cannot start because the drbd module cannot be loaded
+
+Check the status of the `linstor-node` Pods:
+
+```shell
+kubectl get pod -n d8-linstor -l app.kubernetes.io/instance=linstor,\
+app.kubernetes.io/managed-by=piraeus-operator,app.kubernetes.io/name=piraeus-node
+```
+
+If you see that some of them get stuck in `Init:CrashLoopBackOff` state, check the logs of `kernel-module-injector` container:
+
+```shell
+kubectl logs -n d8-linstor linstor-node-xxwf9 -c kernel-module-injector
+```
+
+The most likely reasons why it cannot load the kernel module:
+
+- You may already have an in-tree kernel version of the DRBDv8 module loaded when LINSTOR requires DRBDv9.
+  Check loaded module version: `cat /proc/drbd`. If the file is missing, then the module is not loaded and this is not your case.
+
+- You have Secure Boot enabled.
+  Since the DRBD module we provide is compiled dynamically for your kernel (similar to dkms), it has no digital sign.
+  We do not currently support running the DRBD module with a Secure Boot configuration.
+
 ## Pod cannot start with the `FailedMount` error
 
 ### Pod is stuck in the `ContainerCreating` phase
