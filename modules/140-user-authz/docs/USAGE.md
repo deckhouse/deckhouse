@@ -8,7 +8,7 @@ title: "The user-authz module: usage"
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
-  name: test
+  name: test-rule
 spec:
   subjects:
   - kind: User
@@ -20,8 +20,10 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
-  allowAccessToSystemNamespaces: false     # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
-  limitNamespaces:                         # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+  # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+  allowAccessToSystemNamespaces: false
+  # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+  limitNamespaces:
   - review-.*
   - stage
 ```
@@ -61,7 +63,8 @@ It may be required to give your machine static access to the Kubernetes API, e.g
        name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
-     allowAccessToSystemNamespaces: true      # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+     # This option is only available if the enableMultiTenancy parameter is set (Enterprise Edition version)
+     allowAccessToSystemNamespaces: true
    EOF
    ```
 
@@ -181,7 +184,9 @@ It may be required to give your machine static access to the Kubernetes API, e.g
 
 #### Granting access to the created user
 
-Create `ClusterAuthorizationRule`:
+To grant access to the created user, create a `ClusterAuthorizationRule'.
+
+Example of a `ClusterAuthorizationRule`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -217,7 +222,7 @@ Changes to the `kube-apiserver` manifest that will occur after enabling multi-te
 * The `volumes` parameter will be added:
 
   ```yaml
-  - name:authorization-webhook-config
+  - name: authorization-webhook-config
     hostPath:
       path: /etc/kubernetes/authorization-webhook-config.yaml
       type: FileOrCreate
@@ -302,9 +307,9 @@ The `allowed: false` message means that the webhook doesn't block access. In cas
 }
 ```
 
-## Customizing rights of pre-installed AccessLevels
+## Customizing rights of high-level roles
 
-If you want to grant more privileges to a specific AccessLevel, you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
+If you want to grant more privileges to a specific [high-level role](./#role-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
 
 An example:
 
@@ -313,19 +318,37 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    user-authz.deckhouse.io/access-level: PrivilegedUser
-  name: d8-mymodule-ns:privileged-user
+    user-authz.deckhouse.io/access-level: Editor
+  name: user-editor
 rules:
 - apiGroups:
-  - mymodule.io
+  - kuma.io
   resources:
-  - destinationrules
-  - virtualservices
-  - serviceentries
+  - trafficroutes
+  - trafficroutes/finalizers
   verbs:
-  - create
-  - list
   - get
+  - list
+  - watch
+  - create
   - update
+  - patch
+  - delete
+- apiGroups:
+  - flagger.app
+  resources:
+  - canaries
+  - canaries/status
+  - metrictemplates
+  - metrictemplates/status
+  - alertproviders
+  - alertproviders/status
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
   - delete
 ```
