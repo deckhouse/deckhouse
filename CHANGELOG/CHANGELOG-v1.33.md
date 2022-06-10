@@ -92,6 +92,7 @@
     2. If a program fails to compile or attach to the kernel tracing facilities, do not crash the ebpf_exporter. [#1120](https://github.com/deckhouse/deckhouse/pull/1120)
  - **[node-local-dns]** Changed priority-class to `cluster-medium`. [#1747](https://github.com/deckhouse/deckhouse/pull/1747)
  - **[node-local-dns]** Updated CoreDNS to v1.9.1 [#1537](https://github.com/deckhouse/deckhouse/pull/1537)
+ - **[openvpn]** Fixes a bug that does not allow you to set additional domains. [#1764](https://github.com/deckhouse/deckhouse/pull/1764)
  - **[openvpn]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Openvpn and admin panel will be restarted.
  - **[prometheus]** Use new metrics names in alert rules. [#1627](https://github.com/deckhouse/deckhouse/pull/1627)
@@ -150,6 +151,7 @@
  - **[dashboard]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Kubernetes Dashboard will be restarted.
  - **[deckhouse]** Updated `BASE_ALPINE` and `BASE_ALPINE_3_15` variables to change versions of the Alpine Linux in base images from 3.12.1 to 3.12.12, and from 3.15 to 3.15.4. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
+ - **[deckhouse-controller]** Stop excess log messages about WaitForSynchronization tasks [#1763](https://github.com/deckhouse/deckhouse/pull/1763)
  - **[descheduler]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     The `descheduler` module will be restarted.
  - **[docs]** Suggest gp3 for bastion instance in AWS-based 'Getting started' [#1495](https://github.com/deckhouse/deckhouse/pull/1495)
