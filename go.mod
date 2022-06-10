@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.6-0.20220530163313-64684665cbed // branch: main
+	github.com/flant/addon-operator v1.0.6-0.20220610094134-7e814fbe92fb // branch: main
 	github.com/flant/kube-client v0.0.6
 	github.com/flant/shell-operator v1.0.11-0.20220530161430-d09fe6fbd3a8 // branch: main
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -37,7 +37,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.2
 	github.com/tidwall/gjson v1.12.1
 	github.com/tidwall/sjson v1.2.3
 	github.com/vmware/govmomi v0.24.1
@@ -46,7 +46,7 @@ require (
 	google.golang.org/grpc v1.32.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.5.1
 	k8s.io/api v0.21.4
 	k8s.io/apiextensions-apiserver v0.20.5
