@@ -123,17 +123,6 @@ sections:
         revision:
           ce: true
           ee: true
-      - description:
-          en: Experimental features
-          ru: Экспериментальные фичи
-        revision:
-          ce: false
-          ee: partial
-        hint:
-          ee:
-            en: Available as a part of the <a href='/en/services/managed.html'>Managed Deckhouse</a> service
-            ru: Доступно в рамках услуги <a href='/ru/services/managed.html'>Managed Deckhouse</a>
-        skipInDocumentation: true
   - id: other
     description:
       en: Other
