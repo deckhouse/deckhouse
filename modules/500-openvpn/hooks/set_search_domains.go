@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant CJSC
+Copyright 2021 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func setSearchDomain(input *go_hook.HookInput) error {
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
-	input.ConfigValues.Set("openvpn.pushToClientSearchDomains", []string{clusterDomain})
+	if !input.ConfigValues.Exists("openvpn.pushToClientSearchDomains") {
+		input.ConfigValues.Set("openvpn.pushToClientSearchDomains", []string{clusterDomain})
+	}
 
 	return nil
 }
