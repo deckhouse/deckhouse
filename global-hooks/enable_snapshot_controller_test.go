@@ -23,7 +23,8 @@ import (
 
 var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"enabledModules": []}}`, `{}`)
+
 	Context("Cluster without supported modules", func() {
 		BeforeEach(func() {
 			f.RunHook()
@@ -38,7 +39,7 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
 	Context("Cluster with linstor enabled", func() {
 		BeforeEach(func() {
-			f.ValuesSet("linstorEnabled", true)
+			f.ValuesSet("global.enabledModules", []string{"linstor"})
 			f.RunHook()
 		})
 

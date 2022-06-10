@@ -15,8 +15,7 @@
 package hooks
 
 import (
-	"fmt"
-
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -39,10 +38,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func enableSnapshotController(input *go_hook.HookInput) error {
 
+	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	for _, module := range supportedModules {
-		moduleEnable := fmt.Sprintf("%sEnabled", module)
-		enabled := input.Values.Get(moduleEnable).Bool()
-		if enabled {
+		if enabledModules.Has(module) {
 			input.Values.Set("snapshotControllerCrdEnabled", true)
 			input.Values.Set("snapshotControllerEnabled", true)
 			break
