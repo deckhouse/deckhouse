@@ -1,0 +1,13 @@
+docs:
+  fixes:
+    - summary: Minor site updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1765
+openvpn:
+  fixes:
+    - summary: Fixes a bug that does not allow you to set additional domains.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1764
+user-authz:
+  fixes:
+    - summary: Documentation updates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1690
+
