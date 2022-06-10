@@ -69,7 +69,10 @@ func mirrorProbeValue(input *go_hook.HookInput) error {
 		namespace  = ""
 	)
 
-	for _, raw := range input.Snapshots["probe_objects"] {
+	snaps := input.Snapshots["probe_objects"]
+	input.MetricsCollector.Set("d8_upmeter_upmeterhookprobe_count", float64(len(snaps)), nil)
+
+	for _, raw := range snaps {
 		obj := raw.(probeObject)
 
 		patchRaw := map[string]interface{}{

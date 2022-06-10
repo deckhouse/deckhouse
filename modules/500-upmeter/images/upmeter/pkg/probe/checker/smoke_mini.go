@@ -49,7 +49,7 @@ func (s SmokeMiniAvailable) Checker() check.Checker {
 		timeout: s.DnsTimeout,
 	}
 
-	// timouts are maintained in request context
+	// timeouts are maintained in request context
 	client := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConns:    5,
