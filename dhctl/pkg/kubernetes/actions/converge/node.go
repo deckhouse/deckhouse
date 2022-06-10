@@ -40,24 +40,29 @@ var (
 	ErrNodeGroupChanged = fmt.Errorf("Node group was changed during accept diff.")
 )
 
-func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string) (string, error) {
+const HideDeckhouseLogs = false
+const ShowDeckhouseLogs = true
+
+func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
 	err := log.Process("default", name, func() error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		if showDeckhouseLogs {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					_, _ = deckhouse.NewLogPrinter(kubeCl).Print(ctx)
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						_, _ = deckhouse.NewLogPrinter(kubeCl).Print(ctx)
+					}
 				}
-			}
-		}()
+			}()
+		}
 
 		err := retry.NewSilentLoop(name, 45, 5*time.Second).Run(func() error {
 			secret, err := kubeCl.CoreV1().

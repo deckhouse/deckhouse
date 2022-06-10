@@ -311,7 +311,7 @@ func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.Met
 				return err
 			}
 
-			cloudConfig, err := converge.GetCloudConfig(kubeCl, ng.Name)
+			cloudConfig, err := converge.GetCloudConfig(kubeCl, ng.Name, converge.ShowDeckhouseLogs)
 			if err != nil {
 				return err
 			}
@@ -379,7 +379,7 @@ func GetBastionHostFromCache() (string, error) {
 
 func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {
 	return log.Process("bootstrap", "Create master NodeGroup", func() error {
-		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName)
+		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName, converge.ShowDeckhouseLogs)
 		if err != nil {
 			return err
 		}

@@ -87,6 +87,7 @@ func (s *SCP) SCP() *SCP {
 		"-o", "ControlPersist=600s",
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "UserKnownHostsFile=.ssh_known_hosts",
+		"-o", "PasswordAuthentication=no",
 	}
 
 	if s.Session.ExtraArgs != "" {
