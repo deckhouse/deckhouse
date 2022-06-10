@@ -28,7 +28,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func setSearchDomain(input *go_hook.HookInput) error {
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
-	input.ConfigValues.Set("openvpn.pushToClientSearchDomains", []string{clusterDomain})
+	if !input.ConfigValues.Exists("openvpn.pushToClientSearchDomains") {
+		input.ConfigValues.Set("openvpn.pushToClientSearchDomains", []string{clusterDomain})
+	}
 
 	return nil
 }
