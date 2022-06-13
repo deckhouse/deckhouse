@@ -88,8 +88,8 @@ spec:
           - key: htpasswd
             path: htpasswd
   {{- else }}
-          - key: {{ $location.location | trimPrefix "/" }}
-            path: {{ $location.location | trimPrefix "/" }}
+          - key: {{ $location.location | trimPrefix "/" | quote }}
+            path: {{ $location.location | trimPrefix "/" | quote }}
   {{- end }}
 {{- end }}
       - name: tmp
