@@ -1,0 +1,5 @@
+linstor:
+  fixes:
+    - summary: Fix drbd module building.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1779
+
