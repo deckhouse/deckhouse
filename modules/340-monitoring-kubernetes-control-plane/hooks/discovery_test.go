@@ -42,7 +42,7 @@ spec:
     - --key-file=/etc/kubernetes/pki/etcd/server.key
     - --listen-client-urls=https://127.0.0.1:2379,https://10.0.3.240:2379
     - --listen-peer-urls=https://10.0.3.240:2380
-    image: k8s.gcr.io/etcd:3.3.10
+    image: registry.k8s.io/etcd:3.3.10
 `
 
 	etcdByManager = `

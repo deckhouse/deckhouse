@@ -16,6 +16,6 @@ docker:
   ENTRYPOINT: ["/csi-attacher"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: k8s.gcr.io/sig-storage/csi-attacher:{{ $value.csi.attacher }}
+from: registry.k8s.io/sig-storage/csi-attacher:{{ $value.csi.attacher }}
   {{- end }}
 {{- end }}

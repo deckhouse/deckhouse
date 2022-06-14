@@ -16,6 +16,6 @@ docker:
   ENTRYPOINT: ["/livenessprobe"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: k8s.gcr.io/sig-storage/livenessprobe:{{ $value.csi.livenessprobe }}
+from: registry.k8s.io/sig-storage/livenessprobe:{{ $value.csi.livenessprobe }}
   {{- end }}
 {{- end }}

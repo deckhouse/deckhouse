@@ -16,6 +16,6 @@ docker:
   ENTRYPOINT: ["/csi-provisioner"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: k8s.gcr.io/sig-storage/csi-provisioner:{{ $value.csi.provisioner }}
+from: registry.k8s.io/sig-storage/csi-provisioner:{{ $value.csi.provisioner }}
   {{- end }}
 {{- end }}

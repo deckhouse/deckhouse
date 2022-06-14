@@ -31,13 +31,13 @@ function update_version_map() {
   yq -i e ".k8s.\"${1}\".patch = ${2}" /deckhouse/candi/version_map.yml
   # Kube-proxy
   if yq -e e "select(.k8s.\"${1}\".controlPlane | has(\"kubeProxy\"))" /deckhouse/candi/version_map.yml >/dev/null 2>/dev/null; then
-    NEW_DIGEST="$(crane digest "k8s.gcr.io/kube-proxy:v${1}.${2}")"
+    NEW_DIGEST="$(crane digest "registry.k8s.io/kube-proxy:v${1}.${2}")"
     yq -i e ".k8s.\"${1}\".controlPlane.kubeProxy = \"${NEW_DIGEST}\"" /deckhouse/candi/version_map.yml
   fi
   # Kube-scheduler
   NEW_DIGEST=""
   if yq -e e "select(.k8s.\"${1}\".controlPlane | has(\"kubeScheduler\"))" /deckhouse/candi/version_map.yml >/dev/null 2>/dev/null; then
-    NEW_DIGEST="$(crane digest "k8s.gcr.io/kube-scheduler:v${1}.${2}")"
+    NEW_DIGEST="$(crane digest "registry.k8s.io/kube-scheduler:v${1}.${2}")"
     yq -i e ".k8s.\"${1}\".controlPlane.kubeScheduler = \"${NEW_DIGEST}\"" /deckhouse/candi/version_map.yml
   fi
 }
