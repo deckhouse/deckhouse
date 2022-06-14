@@ -97,7 +97,7 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
 
 	// Clean all prior garbage that could be left by agent restarts. We rely on agent ID in
-	// assumption that master nodes are not a subject for renamimg.
+	// assumption that master nodes are not a subject for renaming.
 	labels := map[string]string{agentLabelKey: c.agentId}
 	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, deployment.Kind, c.namespace, labels, c.garbageCollectionTimeout)
 
@@ -204,6 +204,7 @@ func createDeploymentObject(agentId string) *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
+				"app":           "upmeter",
 				"heritage":      "upmeter",
 				agentLabelKey:   agentId,
 				"upmeter-group": "control-plane",
@@ -222,6 +223,7 @@ func createDeploymentObject(agentId string) *appsv1.Deployment {
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
+						"app":           "upmeter",
 						"heritage":      "upmeter",
 						agentLabelKey:   agentId,
 						"upmeter-group": "control-plane",

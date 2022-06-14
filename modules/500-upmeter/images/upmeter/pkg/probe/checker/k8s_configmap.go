@@ -64,7 +64,7 @@ func (c *configMapLifecycleChecker) BusyWith() string {
 }
 
 func (c *configMapLifecycleChecker) Check() check.Error {
-	configMap := createConfigMap()
+	configMap := createConfigMapObject()
 	c.checker = c.new(configMap)
 	return c.checker.Check()
 }
@@ -155,7 +155,7 @@ func (c *configMapDeletionChecker) Check() check.Error {
 	return nil
 }
 
-func createConfigMap() *v1.ConfigMap {
+func createConfigMapObject() *v1.ConfigMap {
 	name := util.RandomIdentifier("upmeter-basic")
 
 	return &v1.ConfigMap{
@@ -166,6 +166,7 @@ func createConfigMap() *v1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
+				"app":           "upmeter",
 				"heritage":      "upmeter",
 				"upmeter-agent": util.AgentUniqueId(),
 				"upmeter-group": "control-plane",

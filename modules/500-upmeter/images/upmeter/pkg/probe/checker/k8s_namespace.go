@@ -157,6 +157,7 @@ func createNamespaceObject() *v1.Namespace {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
+				"app":           "upmeter",
 				"heritage":      "upmeter",
 				"upmeter-agent": util.AgentUniqueId(),
 				"upmeter-group": "control-plane",

@@ -163,8 +163,8 @@ kind: UpmeterHookProbe
 metadata:
   name: %q
   labels:
-    heritage: upmeter
     app: upmeter
+    heritage: upmeter
     upmeter-agent: %q
     upmeter-group: deckhouse
     upmeter-probe: cluster-configuration
