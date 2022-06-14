@@ -28,6 +28,8 @@ prometheusCrdEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
+snapshotControllerCrdEnabled: true
+snapshotControllerEnabled: true
 smokeMiniEnabled: true
 terraformManagerEnabled: true
 upmeterEnabled: true

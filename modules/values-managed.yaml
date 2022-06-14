@@ -22,6 +22,8 @@ prometheusCrdEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
+snapshotControllerCrdEnabled: true
+snapshotControllerEnabled: true
 upmeterEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerCrdEnabled: true
