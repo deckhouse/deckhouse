@@ -75,3 +75,17 @@ deckhouse: |
 ```shell
 kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 ```
+
+### Сбор информации для отладки
+
+Мы всегда рады помочь пользователям с расследованием сложных проблем. Чтобы собрать все необходимые данные, пользователь может:
+
+1. Выполнить команду:
+
+```sh
+kubectl -n d8-system exec deploy/deckhouse \
+  -- deckhouse-controller helper collect-debug-info \
+  > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+```
+
+2. Отправить архив команде Deckhouse для дальнейшего расследования.
