@@ -37,7 +37,7 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 	}
 
 	{
-		collectDebug := helpersCommand.Command("collect-debug-info ", "Collect debug info from your cluster.")
+		collectDebug := helpersCommand.Command("collect-debug-info", "Collect debug info from your cluster.")
 		collectDebug.Action(func(c *kingpin.ParseContext) error {
 			return debug.Collect()
 		})

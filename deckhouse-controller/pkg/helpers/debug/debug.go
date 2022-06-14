@@ -20,7 +20,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"log"
+	"os"
 	"os/exec"
 )
 
@@ -32,9 +32,9 @@ type Command struct {
 }
 
 func (c *Command) Save(tarWriter *tar.Writer) error {
-	fileContent, err := exec.Command(c.Cmd, c.Args...).CombinedOutput()
+	fileContent, err := exec.Command(c.Cmd, c.Args...).Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("execute %s %s command: %v", c.Cmd, c.Args, err)
 	}
 
 	header := &tar.Header{
@@ -109,17 +109,17 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "deckhouse-cm.yaml",
 			Cmd:  "kubectl",
-			Args: []string{"cm", "deckhouse", "-o", "yaml"},
+			Args: []string{"get", "cm", "deckhouse", "-o", "yaml"},
 		},
 		{
 			File: "mcm-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=machine-controller-manager", "--tail", "3000"},
+			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=machine-controller-manager", "--tail", "3000", "-c", "controller"},
 		},
 		{
 			File: "ccm-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", "kubectl -n $(kubectl get ns | grep d8-cloud-provider) logs -l app=cloud-controller-manager --tail=3000"},
+			Args: []string{"-c", "kubectl -n $(kubectl get ns -o custom-columns=NAME:metadata.name | grep d8-cloud-provider) logs -l app=cloud-controller-manager --tail=3000"},
 		},
 		{
 			File: "terraform-check.txt",
@@ -130,7 +130,7 @@ func createTarball() *bytes.Buffer {
 
 	for _, cmd := range debugCommands {
 		if err := cmd.Save(tarWriter); err != nil {
-			log.Println(err)
+			fmt.Fprint(os.Stderr, err.Error())
 		}
 	}
 
