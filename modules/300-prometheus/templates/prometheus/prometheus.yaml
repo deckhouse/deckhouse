@@ -175,10 +175,10 @@ spec:
     key: alert-managers.yaml
 {{- $alertmanagers_byservice := false }}
 {{- $alertmanagers_internal := false }}
-{{- if hasKey .Values.prometheus.internal.alertmanagers "byService" }}
+{{- if and (hasKey .Values.prometheus.internal.alertmanagers "byService") (gt (len .Values.prometheus.internal.alertmanagers.byService) 0) }}
   {{- $alertmanagers_byservice = true }}
 {{- end }}
-{{- if hasKey .Values.prometheus.internal.alertmanagers "internal" }}
+{{- if and (hasKey .Values.prometheus.internal.alertmanagers "internal") (gt (len .Values.prometheus.internal.alertmanagers.internal) 0) }}
   {{- $alertmanagers_internal = true }}
 {{- end }}
 {{- if or $alertmanagers_byservice $alertmanagers_internal }}
