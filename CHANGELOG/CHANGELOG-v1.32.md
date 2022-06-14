@@ -83,6 +83,7 @@
  - **[deckhouse]** Fixed a bug for the case when the storage class is set to "false" [#1364](https://github.com/deckhouse/deckhouse/pull/1364)
  - **[helm_lib]** Update CSI controller without creating a new one. [#1481](https://github.com/deckhouse/deckhouse/pull/1481)
  - **[ingress-nginx]** Updated requirements for Ingress Nginx controller versions. If conditions are not met, then further Deckhouse upgrade is blocked. [#1697](https://github.com/deckhouse/deckhouse/pull/1697)
+ - **[linstor]** Fix drbd module building. [#1779](https://github.com/deckhouse/deckhouse/pull/1779)
  - **[linstor]** Add missing spatch dependency and disable SPAAS. [#1726](https://github.com/deckhouse/deckhouse/pull/1726)
  - **[linstor]** Refactored documentation. [#1677](https://github.com/deckhouse/deckhouse/pull/1677)
  - **[linstor]** automatically recover evicted nodes in LINSTOR [#1397](https://github.com/deckhouse/deckhouse/pull/1397)
