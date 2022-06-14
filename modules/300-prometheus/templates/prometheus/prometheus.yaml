@@ -176,10 +176,14 @@ spec:
 {{- $alertmanagers_byservice := false }}
 {{- $alertmanagers_internal := false }}
 {{- if hasKey .Values.prometheus.internal.alertmanagers "byService" }}
-  {{- $alertmanagers_byservice = true }}
+  {{- if gt (len .Values.prometheus.internal.alertmanagers.byService) 0 }}
+    {{- $alertmanagers_byservice = true }}
+  {{- end }}
 {{- end }}
 {{- if hasKey .Values.prometheus.internal.alertmanagers "internal" }}
-  {{- $alertmanagers_internal = true }}
+  {{- if gt (len .Values.prometheus.internal.alertmanagers.internal) 0 }}
+    {{- $alertmanagers_internal = true }}
+  {{- end }}
 {{- end }}
 {{- if or $alertmanagers_byservice $alertmanagers_internal }}
   alerting:
