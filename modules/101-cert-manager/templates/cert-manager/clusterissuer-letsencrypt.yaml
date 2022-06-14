@@ -15,9 +15,9 @@ spec:
     solvers:
     - http01:
         ingress:
-          {{- if hasKey .Values.global.modules "ingressClass" -}}
-          class: {{- .Values.global.modules.ingressClass -}}
-          {{- end -}}
+          {{- if hasKey .Values.global.modules "ingressClass" }}
+          class: {{- .Values.global.modules.ingressClass }}
+          {{- end }}
           podTemplate:
             spec:
               serviceAccountName: acme-solver-deckhouse-sa
