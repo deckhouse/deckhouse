@@ -113,6 +113,7 @@ locals {
 
 resource "vsphere_virtual_machine" "node" {
   name             = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
+  resource_pool_id = data.vsphere_resource_pool.resource_pool[0].id
   resource_pool_id = length(local.resource_pool) == 0 ? null : data.vsphere_resource_pool.resource_pool[0].id
   datastore_id     = data.vsphere_datastore.datastore.id
   folder           = var.providerClusterConfiguration.vmFolderPath
