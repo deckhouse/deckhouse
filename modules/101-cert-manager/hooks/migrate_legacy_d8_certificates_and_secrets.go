@@ -55,6 +55,49 @@ func applyLegacySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	}, nil
 }
 
+type secretInfo struct {
+	Name        string
+	Namespace   string
+	Annotations map[string]string
+	Crt         []byte
+}
+
+func (m secretInfo) slugify() string {
+	return fmt.Sprintf("%s/%s", m.Namespace, m.Name)
+}
+
+func applyCertMetaFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// why we parse unstructured manually here?
+	// cert-manager 0.10.1 replace client go for old version
+	// k8s.io/client-go v0.19.11 => v11.0.1-0.20190409021438-1a26190bd76a+incompatible
+	// and store cert-manager files here will confuse
+	un := obj.UnstructuredContent()
+	specRaw, ok := un["spec"]
+	if !ok {
+		return nil, fmt.Errorf("cannot spec for certificate")
+	}
+
+	spec, ok := specRaw.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("cannot cast spec for certificate")
+	}
+
+	secretNameRaw, ok := spec["secretName"]
+	if !ok {
+		return nil, fmt.Errorf("cannot get spec.SecretName for certificate")
+	}
+
+	secretName, ok := secretNameRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("cannot cast spec.SecretName for certificate")
+	}
+
+	return secretInfo{
+		Namespace: obj.GetNamespace(),
+		Name:      secretName,
+	}, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("certificates"),
 	OnBeforeHelm: &go_hook.OrderedConfig{
