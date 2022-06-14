@@ -13,14 +13,13 @@ title: "Cloud provider — AWS: FAQ"
 
 1. Перейдите в регион, где работает vpc-a.
 1. Нажмите `VPC` -> `VPC Peering Connections` -> `Create Peering Connection` и настройте пиринговое соединение:
-  * Name: `vpc-a-vpc-b`.
-  * Заполните `Local` и `Another VPC`.
+* Name: `vpc-a-vpc-b`.
+* Заполните `Local` и `Another VPC`.
 1. Перейдите в регион, где работает vpc-b.
 1. Нажмите `VPC` -> `VPC Peering Connections`.
 1. Выделите созданное соединение и выберите `Action "Accept Request"`.
 1. Для vpc-a добавьте во все таблицы маршрутизации маршруты до CIDR vpc-b через пиринговое соединение.
 1. Для vpc-b добавьте во все таблицы маршрутизации маршруты до CIDR vpc-a через пиринговое соединение.
-
 
 ## Как создать кластер в новом VPC с доступом через имеющийся bastion-хост?
 
@@ -77,12 +76,14 @@ title: "Cloud provider — AWS: FAQ"
   "kubernetes.io/cluster/<prefix>" = "shared"
   ```
 
-  * Узнать `cluster_uuid` можно с помощью команды:
+* Узнать `cluster_uuid` можно с помощью команды:
+
     ```shell
     kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
     ```
 
-  * Узнать `prefix` можно с помощью команды:
+* Узнать `prefix` можно с помощью команды:
+
     ```shell
     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
     ```
@@ -91,7 +92,7 @@ title: "Cloud provider — AWS: FAQ"
 
 Задайте новый размер в соответствующем ресурсе PersistentVolumeClaim, в параметре `spec.resources.requests.storage`.
 
-Операция проходит полностью автоматически, и занимает до одной минуты. Никаких дополнительных действий не требуется. 
+Операция проходит полностью автоматически, и занимает до одной минуты. Никаких дополнительных действий не требуется.
 
 За ходом процесса можно наблюдать в events через команду `kubectl describe pvc`.
 

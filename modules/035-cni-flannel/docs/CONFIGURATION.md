@@ -7,6 +7,7 @@ The module is **automatically** enabled for the following cloud providers:
 - [VMware vSphere](../../modules/030-cloud-provider-vsphere/).
 
 To enable it for the bare metal machines, add the following parameter to the `deckhouse` ConfigMap:
+
 ```yaml
 cniFlannelEnabled: "true"
 ```
@@ -16,6 +17,7 @@ cniFlannelEnabled: "true"
 <!-- SCHEMA -->
 
 ## An example of the configuration
+
 ```yaml
 cniFlannel: |
   podNetworkMode: VXLAN

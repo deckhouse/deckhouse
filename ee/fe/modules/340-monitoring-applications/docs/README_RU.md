@@ -11,8 +11,8 @@ title: "Модуль monitoring-applications"
 
 Активировать приложения можно явно в [конфигурации](configuration.html).
 
-
 ## Доступность dashboard в Grafana
+
 Дашборды отображаются только для приложений, которые либо были обнаружены при автоматическом исследовании по лейблу сервиса
 `prometheus.deckhouse.io/target`, либо явно указаны в параметре `enabledApplications`.
 

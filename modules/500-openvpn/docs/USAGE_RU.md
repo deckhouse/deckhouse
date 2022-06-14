@@ -20,6 +20,7 @@ openvpn: |
 ```
 
 ## Пример для публичного IP-адреса на внешнем балансировщике
+
 ```yaml
 openvpnEnabled: "true"
 openvpn: |

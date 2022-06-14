@@ -14,7 +14,7 @@ This module integrates various Flant services. It:
 
 All data is sent through a single entry point. The `connect.deckhouse.io` service (hereinafter referred to as *Connect* or the *Connect service*) serves as a single entry point.
 
-When sending data, each Deckhouse cluster submits a license key as a [Bearer Token](https://oauth.net/2/bearer-tokens/) for authorization. The Connect service checks whether the key is valid and redirects the request to the target internal Flant service. 
+When sending data, each Deckhouse cluster submits a license key as a [Bearer Token](https://oauth.net/2/bearer-tokens/) for authorization. The Connect service checks whether the key is valid and redirects the request to the target internal Flant service.
 
 You must allow access to all IP addresses mapped to the following DNS names to send data from the cluster:
 - `сonnect.deckhouse.io`;
@@ -79,7 +79,7 @@ During Deckhouse release switching, an average of **150 log entries per minute**
 
 The flant-pricing module configures the [upmeter](../500-upmeter/) module to send metrics that allow Flant to monitor service level agreement (SLA) compliance for cluster and Deckhouse components.
 
-### How do I disable sending data by Deckhouse? 
+### How do I disable sending data by Deckhouse?
 
 Disable the `flantIntergation` module to deactivate registering in Madison and sending data.
 
@@ -164,4 +164,3 @@ It is selected according to priority from the following table of known statuses:
 | absent                | The cluster lacks a Node or NodeGroup.                                                    |
 | changed               | `terraform plan` implies changing objects in the cloud without deleting them.             |
 | ok                    | No discrepancies were found.                                                              |
-

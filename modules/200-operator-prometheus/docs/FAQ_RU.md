@@ -6,8 +6,8 @@ type:
 
 ## Установка еще одного prometheus-operator в кластер
 
-Пользователю может понадобится установить в кластер еще один prometheus-operator, 
-чтобы добавить Prometheus'ы или alertmanager'ы в кластер. 
+Пользователю может понадобится установить в кластер еще один prometheus-operator,
+чтобы добавить Prometheus'ы или alertmanager'ы в кластер.
 
 1. Чтобы не пересекаться с prometheus-operator из Deckhouse, необходимо указать флаг
    `--deny-namespaces=d8-monitoring` для пользовательской инсталляции prometheus-operator.

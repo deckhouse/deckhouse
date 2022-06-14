@@ -9,6 +9,7 @@ title: "Модуль ingress-nginx: FAQ"
 ### Пример Deployment для защищенного приложения
 
 {% raw %}
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -60,6 +61,7 @@ spec:
         configMap:
           name: kube-rbac-proxy
 ```
+
 {% endraw %}
 
 Приложение принимает запросы на адресе 127.0.0.1, что означает, что по незащищенному соединению к нему можно подключиться только изнутри Pod'а.
@@ -72,6 +74,7 @@ spec:
 В наших кластерах [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/020-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) - **d8-rbac-proxy**.
 Создавать её самостоятельно не нужно! Нужно только прикрепить её к serviceaccount'у вашего Deployment'а.
 {% raw %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -95,6 +98,7 @@ subjects:
 ```
 
 ### Конфигурация Kube-RBAC-Proxy
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -116,12 +120,14 @@ data:
           subresource: http
           name: my-app
 ```
+
 {% endraw %}
 Согласно конфигурации, у пользователя должны быть права на доступ к Deployment с именем `my-app`
 и его дополнительному ресурсу `http` в namespace `my-namespace`.
 
 Выглядят такие права в виде RBAC так:
 {% raw %}
+
 ```yaml
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -151,6 +157,7 @@ subjects:
 ```
 
 Для ingress'а ресурса необходимо добавить параметры:
+
 ```yaml
 nginx.ingress.kubernetes.io/backend-protocol: HTTPS
 nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -159,12 +166,14 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
   proxy_ssl_protocols TLSv1.2;
   proxy_ssl_session_reuse on;
 ```
+
 {% endraw %}
 Подробнее о том, как работает аутентификация по сертификатам, можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs).
 
 ## Как настроить работу через MetalLB с доступом только из внутренней сети?
 
 Пример MetalLB с доступом только из внутренней сети
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -179,6 +188,7 @@ spec:
 ```
 
 ## Как добавить дополнительные поля для логирования в nginx-controller?
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

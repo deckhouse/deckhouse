@@ -5,6 +5,7 @@ title: "Cloud provider — OpenStack: usage"
 Below are two simple examples of OpenStack cloud provider configuration.
 
 ## Example 1
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: OpenStackInstanceClass

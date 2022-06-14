@@ -26,6 +26,7 @@ prometheus: |
 У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью Custom Resource `PrometheusRemoteWrite`.
 
 ### Пример минимального PrometheusRemoteWrite
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -36,6 +37,7 @@ spec:
 ```
 
 ### Пример расширенного PrometheusRemoteWrite
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -55,7 +57,6 @@ spec:
     regex: my_cool_app_metrics_with_sensitive_data
 ```
 
-
 ## Подключение Prometheus к сторонней Grafana
 
 У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Всё что нужно - создать дополнительный `Ingress`-ресурс.
@@ -63,7 +64,6 @@ spec:
 > В приведенном ниже примере предполагается, что Secret `example-com-tls` уже существует в namespace d8-monitoring.
 
 > Имена для Ingress `my-prometheus-api` и Secret `my-basic-auth-secret` указаны для примера. Замените их на более подходящие в вашем случае.
-
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -108,6 +108,7 @@ type: Opaque
 data:
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
+
 Далее остается только добавить data source в Grafana:
 
 **В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>`**
@@ -156,7 +157,9 @@ subjects:
   name: app
   namespace: default
 ```
+
 Далее сделаем запрос используя `curl`:
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -180,9 +183,10 @@ spec:
       restartPolicy: Never
   backoffLimit: 4
 ```
+
 `Job` должен завершиться успешно.
 
-## Отправка алертов в Telegram:
+## Отправка алертов в Telegram
 
 Prometheus-operator не поддерживает прямую отправку алертов в Telegram, поэтому Alertmanager настраивается на отправку алертов через webhook в приложение, которое отправляет полученные данные в Telegram.
 
@@ -234,9 +238,11 @@ spec:
    - protocol: TCP
      port: 8080
 ```
+
 `TELEGRAM_CHAT_ID` и `TELEGRAM_TOKEN` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
 
 Задеплойте CRD CustomAlertManager:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager

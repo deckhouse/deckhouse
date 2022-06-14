@@ -23,22 +23,22 @@ title: "Модуль operator-prometheus"
 В целом, сервер Prometheus делает две ключевых вещи — **собирает метрики** и **выполняет правила**:
 * Для каждого *target'а* (цель для мониторинга), каждый `scrape_interval`, делает HTTP запрос на этот *target*, получает в ответ метрики в [своем формате](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details), которые сохраняет к себе в базу
 * Каждый `evaluation_interval` обрабатывает *rules*, на основании чего:
-    * или шлет алерты
-    * или записывает (себе же в базу) новые метрики (результат выполнения *rule'а*)
+  * или шлет алерты
+  * или записывает (себе же в базу) новые метрики (результат выполнения *rule'а*)
 
 ### Как настраивается Prometheus?
 
 * У сервера Prometheus есть *config* и есть *rule files* (файлы с правилами)
 * В `config` имеются следующие секции:
-    * `scrape_configs` — настройки поиска *target'ов* (целей для мониторинга, см. подробней следующий раздел).
-    * `rule_files` — список директорий, в которых лежат *rule'ы*, которые необходимо загружать:
+  * `scrape_configs` — настройки поиска *target'ов* (целей для мониторинга, см. подробней следующий раздел).
+  * `rule_files` — список директорий, в которых лежат *rule'ы*, которые необходимо загружать:
 
         ```yaml
         rule_files:
         - /etc/prometheus/rules/rules-0/*
         - /etc/prometheus/rules/rules-1/*
         ```
-    * `alerting` — настройки поиска *Alert Manager'ов*, в которые слать алерты. Секция очень похожа на `scrape_configs`, только результатом ее работы является список *endpoint'ов*, в которые Prometheus будет слать алерты.
+  * `alerting` — настройки поиска *Alert Manager'ов*, в которые слать алерты. Секция очень похожа на `scrape_configs`, только результатом ее работы является список *endpoint'ов*, в которые Prometheus будет слать алерты.
 
 ### Где Prometheus берет список *target'ов*?
 
@@ -46,9 +46,9 @@ title: "Модуль operator-prometheus"
 
     ![](../../images/200-operator-prometheus/targets.png)
 
-    * **(1)** Prometheus читает секцию конфига `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery
-    * **(2)** Механизм Service Discovery взаимодействует с API Kubernetes (в основном — получает endpoint`ы)
-    * **(3)** На основании происходящего в Kubernetes механизм Service Discovery обновляет Targets (список *target'ов*)
+  * **(1)** Prometheus читает секцию конфига `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery
+  * **(2)** Механизм Service Discovery взаимодействует с API Kubernetes (в основном — получает endpoint`ы)
+  * **(3)** На основании происходящего в Kubernetes механизм Service Discovery обновляет Targets (список *target'ов*)
 * В `scrape_configs` указан список *scrape job'ов* (внутреннее понятие Prometheus), каждый из которых определяется следующим образом:
 
     ```yaml
@@ -108,25 +108,26 @@ title: "Модуль operator-prometheus"
         replacement: $1
         action: replace
     ```
-* Таким образом, Prometheus сам отслеживает:
-    * добавление и удаление Pod'ов (при добавлении/удалении Pod'ов Kubernetes изменяет endpoint'ы, а Prometheus это видит и добавляет/удаляет *target'ы*)
-    * добавление и удаление сервисов (точнее endpoint'ов) в указанных namespace'ах
-* Изменение конфига требуется в следующих случаях:
-    * нужно добавить новый scrape config (обычно — новый вид сервисов, которые надо мониторить)
-    * нужно изменить список namespace'ов
 
+* Таким образом, Prometheus сам отслеживает:
+  * добавление и удаление Pod'ов (при добавлении/удалении Pod'ов Kubernetes изменяет endpoint'ы, а Prometheus это видит и добавляет/удаляет *target'ы*)
+  * добавление и удаление сервисов (точнее endpoint'ов) в указанных namespace'ах
+* Изменение конфига требуется в следующих случаях:
+  * нужно добавить новый scrape config (обычно — новый вид сервисов, которые надо мониторить)
+  * нужно изменить список namespace'ов
 
 ## Prometheus Operator
+
 ### Что делает Prometheus Operator?
 
 * С помощью механизма CRD (Custom Resource Definitions) определяет четыре custom ресурса:
-    * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheus) — определяет инсталляцию (кластер) Prometheus
-    * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor) — определяет, как "мониторить" (собирать метрики) набор сервисов
-    * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — определяет кластер Alertmanager'ов (мы не пользуемся, так как шлем метрики напрямую в [madison](https://madison.flant.com/))
-    * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusrule) — определяет список Prometheus rules
+  * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheus) — определяет инсталляцию (кластер) Prometheus
+  * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor) — определяет, как "мониторить" (собирать метрики) набор сервисов
+  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — определяет кластер Alertmanager'ов (мы не пользуемся, так как шлем метрики напрямую в [madison](https://madison.flant.com/))
+  * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusrule) — определяет список Prometheus rules
 * Следит за ресурсами `prometheus` и генерирует для каждого:
-    * StatefulSet (с самим Prometheus'ом)
-    * Secret с `prometheus.yaml` (конфиг Prometheus'а) и `configmaps.json` (конфиг для `prometheus-config-reloader`)
+  * StatefulSet (с самим Prometheus'ом)
+  * Secret с `prometheus.yaml` (конфиг Prometheus'а) и `configmaps.json` (конфиг для `prometheus-config-reloader`)
 * Следит за ресурсами `servicemonitor` и `prometheusrule` и на их основании обновляет конфиги (`prometheus.yaml` и `configmaps.json`, которые лежат в секрете).
 
 ### Что в Pod'е с Prometheus'ом?
@@ -134,14 +135,14 @@ title: "Модуль operator-prometheus"
 ![](../../images/200-operator-prometheus/pod.png)
 
 * Два контейнера:
-    * `prometheus` — сам Prometheus
-    * `prometheus-config-reloader` — [обвязка](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader), которая:
-        * следит за изменениями `prometheus.yaml` и, при необходимости, вызывает reload конфигурации Prometheus'у (специальным HTTP-запросом, см. [подробнее ниже](#как-обрабатываются-service-monitorы))
-        * следит за PrometheusRule'ами (см. [подробнее ниже](#как-обрабатываются-custome-resources-с-ruleами)) и по необходимости скачивает их и перезапускает Prometheus
+  * `prometheus` — сам Prometheus
+  * `prometheus-config-reloader` — [обвязка](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader), которая:
+    * следит за изменениями `prometheus.yaml` и, при необходимости, вызывает reload конфигурации Prometheus'у (специальным HTTP-запросом, см. [подробнее ниже](#как-обрабатываются-service-monitorы))
+    * следит за PrometheusRule'ами (см. [подробнее ниже](#как-обрабатываются-custome-resources-с-ruleами)) и по необходимости скачивает их и перезапускает Prometheus
 * Pod использует три volume:
-    * config — примонтированный secret (два файла: `prometheus.yaml` и `configmaps.json`). Подключен в оба контейнера.
-    * rules — `emptyDir`, который наполняет `prometheus-config-reloader`, а читает `prometheus`. Подключен в оба контейнера, но в `prometheus` в режиме read only.
-    * data — данные Prometheus. Подмонтирован только в `prometheus`.
+  * config — примонтированный secret (два файла: `prometheus.yaml` и `configmaps.json`). Подключен в оба контейнера.
+  * rules — `emptyDir`, который наполняет `prometheus-config-reloader`, а читает `prometheus`. Подключен в оба контейнера, но в `prometheus` в режиме read only.
+  * data — данные Prometheus. Подмонтирован только в `prometheus`.
 
 ### Как обрабатываются Service Monitor'ы?
 
@@ -163,6 +164,6 @@ title: "Модуль operator-prometheus"
 * **(3)** Как в случае добавления/удаления PrometheusRule'а, так и при изменении содержимого PrometheusRule'а, Prometheus Operator обновляет ConfigMap `prometheus-main-rulefiles-0`.
 * **(4)** Штатными средствами самого Kubernetes данные из ConfigMap прилетают в Pod
 * Изменение файла замечает `prometheus-config-reloader`, который:
-    * **(5)** скачивает изменившиеся ConfigMap'ы в директорию rules (это `emptyDir`)
-    * **(6)** по HTTP отправляет запрос Prometheus'у на перезагрузку
+  * **(5)** скачивает изменившиеся ConfigMap'ы в директорию rules (это `emptyDir`)
+  * **(6)** по HTTP отправляет запрос Prometheus'у на перезагрузку
 * **(7)** Prometheus перечитывает конфиг и видит изменившиеся *rule'ы*.

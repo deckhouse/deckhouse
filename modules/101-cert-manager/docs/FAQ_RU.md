@@ -123,7 +123,6 @@ CAA record does not match issuer
 Если вы хотите использовать Let’s Encrypt сертификаты, то у домена должна быть CAA запись: `issue "letsencrypt.org"`.
 Подробнее про CAA можно почитать [тут](https://www.xolphin.com/support/Terminology/CAA_DNS_Records) и [тут](https://letsencrypt.org/docs/caa/).
 
-
 ## Интеграция с Vault
 
 Вы можете использовать [данную инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) для выпуска сертификатов с помощью Vault.
@@ -135,6 +134,7 @@ CAA record does not match issuer
   kubectl create serviceaccount issuer
   ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
   ```
+
 - Создать Issuer:
 
   ```shell
@@ -159,6 +159,7 @@ CAA record does not match issuer
             key: token
   EOF
   ```
+
 - Создать ресурс Certificate, для получения TLS сертификата подписанного Vault CA:
 
   ```shell

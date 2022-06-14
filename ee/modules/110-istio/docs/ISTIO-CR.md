@@ -91,7 +91,6 @@ The following arguments are used in the decision-making algorithm:
   * port
   * uri
 
-
 ### Sidecar
 
 [Reference](https://istio.io/latest/docs/reference/config/networking/sidecar/)

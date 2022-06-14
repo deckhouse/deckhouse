@@ -11,15 +11,14 @@ Let's, for example, create a peering connection between two VPCs, vpc-a and vpc-
 To configure, follow these steps:
 
 1. Switch to the region where vpc-a is running.
-1. CLick ` VPC` -> `VPC Peering Connections` -> `Create Peering Connection` and then configure a peering connection:
-  * Name: `vpc-a-vpc-b`.
-  * Fill in `Local` and `Another VPC` fields.
+1. CLick `VPC` -> `VPC Peering Connections` -> `Create Peering Connection` and then configure a peering connection:
+* Name: `vpc-a-vpc-b`.
+* Fill in `Local` and `Another VPC` fields.
 1. Switch to the region where vpc-b is running.
 1. Click `VPC` -> `VPC Peering Connections`.
 1. Select the newly created perring connection and click `Action "Accept Request"`.
 1. Add routes to vpc-b's CIDR over a peering connection to the vpc-a's routing tables.
 1. Add routes to vpc-a's CIDR over a peering connection to the vpc-b's routing tables.
-
 
 ## How do I create a cluster in a new VPC with access over an existing bastion host?
 
@@ -76,13 +75,13 @@ To add a pre-created instance to the cluster, you need:
   "kubernetes.io/cluster/<prefix>" = "shared"
   ```
 
-  * You can find out the `cluster_uuid` using the command:
+* You can find out the `cluster_uuid` using the command:
 
     ```shell
     kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
     ```
 
-  * You can find out `prefix` using the command:
+* You can find out `prefix` using the command:
 
     ```shell
     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix

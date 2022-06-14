@@ -17,6 +17,7 @@ All the configuration of access rights is performed using [Custom Resources](cr.
 - Manages access to system namespaces such as `kube-system`, etc., (the `allowAccessToSystemNamespaces` parameter of the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule) Custom Resource);
 
 ## Role model
+
 In addition to the RBAC, you can use a set of high-level roles in the module:
 - `User` — has access to information about all objects (including viewing Pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
 - `PrivilegedUser` — the same as User + can exec into containers, read secrets, and delete Pods (and thus, restart them);
@@ -27,6 +28,7 @@ In addition to the RBAC, you can use a set of high-level roles in the module:
 - `SuperAdmin` — can perform any actions with any objects (note that [`limitNamespaces`](#module-features) restrictions remain valid).
 
 ## Implementation nuances
+
 **Caution!** Currently, the multi-tenancy mode (namespace-based authorization) is implemented according to a temporary scheme and **isn't guaranteed to be entirely safe and secure**!
 
 The `allowAccessToSystemNamespaces` and `limitNamespaces` options in the CR will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.

@@ -132,6 +132,7 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
   kubectl create serviceaccount issuer
   ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
   ```
+
 - Create an Issuer:
 
   ```shell
@@ -155,6 +156,7 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
             key: token
   EOF
   ```
+
 - Create a Certificate resource, to get a TLS certificate, which is issued by Vault CA:
 
   ```shell

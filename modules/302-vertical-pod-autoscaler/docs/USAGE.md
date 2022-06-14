@@ -3,6 +3,7 @@ title: "The vertical-pod-autoscaler module: usage"
 ---
 
 ## The module configuration
+
 ```yaml
 verticalPodAutoscaler: |
   nodeSelector:

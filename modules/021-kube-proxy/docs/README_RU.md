@@ -7,6 +7,7 @@ title: "Модуль kube-proxy"
 По умолчанию в целях безопасности при использовании сервисов с типом NodePort подключения принимаются только на InternalIP узлов. Для снятия данного ограничения предусмотрена аннотация на узел — `node.deckhouse.io/nodeport-bind-internal-ip: "false"`.
 
 Пример аннотации для NodeGroup:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: NodeGroup

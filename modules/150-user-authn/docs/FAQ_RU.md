@@ -10,6 +10,7 @@ title: "Модуль user-authn: FAQ"
 ### Пример CR `DexAuthenticator`
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
@@ -29,18 +30,21 @@ spec:
   - 1.1.1.1
   - 192.168.0.0/24
 ```
+
 {% endraw %}
 
 После появления CR `DexAuthenticator` в кластере, в указанном namespace'е появятся необходимые deployment, service, ingress, secret.
 Чтобы подключить своё приложение к dex, достаточно будет добавить в Ingress-ресурс вашего приложения следующие аннотации:
 
 {% raw %}
+
 ```yaml
 annotations:
   nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
   nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ домен вашего кластера, например | cluster.local }}/dex-authenticator/auth
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
+
 {% endraw %}
 
 ### Настройка ограничений на основе CIDR
@@ -48,10 +52,13 @@ annotations:
 В DexAuthenticator нет встроенной системы управления разрешением аутентификации на основе IP адреса пользователя. Вместо этого вы можете воспользоваться аннотациями для Ingress-ресурсов:
 
 * Если нужно ограничить доступ по IP и оставить прохождение аутентификации в dex, добавьте аннотацию с указанием разрешенных CIDR через запятую:
+
 ```yaml
 nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
 ```
+
 * Если вы хотите, чтобы пользователи из указанных сетей были освобождены от прохождения аутентификации в dex, а пользователи из остальных сетей были обязаны аутентифицироваться в Dex - добавьте следующую аннотацию:
+
 ```yaml
 nginx.ingress.kubernetes.io/satisfy: "any"
 ```
@@ -73,11 +80,13 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 Для начала, в ConfigMap `deckhouse` настройте `publishAPI`:
 
 {% raw %}
+
 ```yaml
   userAuthn: |
     publishAPI:
       enable: true
 ```
+
 {% endraw %}
 
 После по адресу `kubeconfig.%publicDomainTemplate%` появится веб-интерфейс, позволяющий сгенерировать `kubeconfig`.
@@ -90,7 +99,7 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 
 * --oidc-client-id=kubernetes
 * --oidc-groups-claim=groups
-* --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
+* --oidc-issuer-url=<https://dex.%addonsPublicDomainTemplate%/>
 * --oidc-username-claim=email
 
 В случае использования самоподписанных сертификатов для Dex будет добавлен ещё один аргумент, а также в Pod с apiserver будет смонтирован файл с CA:
@@ -106,8 +115,7 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 
 2. Kubeconfig generator сохраняет id token и refresh token в файл kubeconfig.
 
-3. После получения запроса с id token, kube-apiserver идет проверять, что token подписан провайдером, который мы настроили на первом шаге, при помощи ключей полученных с точки доступа JWKS. В качестве следующего шага, он сравнивает значения claim'ов `iss` и `aud` из token'а со значениями из конфигурации. 
-
+3. После получения запроса с id token, kube-apiserver идет проверять, что token подписан провайдером, который мы настроили на первом шаге, при помощи ключей полученных с точки доступа JWKS. В качестве следующего шага, он сравнивает значения claim'ов `iss` и `aud` из token'а со значениями из конфигурации.
 
 ## Как Dex защищен от подбора логина и пароля?
 

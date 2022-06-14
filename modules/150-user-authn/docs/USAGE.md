@@ -5,6 +5,7 @@ title: "The user-authn module: usage"
 ## An example of the module configuration
 
 {% raw %}
+
 ```yaml
   userAuthn: |
     kubeconfigGenerator:
@@ -14,9 +15,11 @@ title: "The user-authn module: usage"
     publishAPI:
       enable: true
 ```
+
 {% endraw %}
 
 ## Configuring a provider
+
 ### GitHub
 
 ```yaml
@@ -41,6 +44,7 @@ Paste the generated `Client ID` and `Client Secret` into the [DexProvider](cr.ht
 If the GitHub organization is managed by the client, go to `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` and request confirmation by clicking on `Send Request`. Then ask the client to confirm the request that will be sent to him by email.
 
 ### GitLab
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -57,6 +61,7 @@ spec:
     - administrators
     - users
 ```
+
 Create a new application in the GitLab project.
 
 To do this, you need to:
@@ -66,6 +71,7 @@ To do this, you need to:
 Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
 ### Atlassian Crowd
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -91,6 +97,7 @@ To do this, go to `Applications` -> `Add application`.
 Paste the generated `Application Name` and `Password` into the [DexProvider](cr.html#dexprovider) custom resource.
 
 ### Bitbucket Cloud
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -115,6 +122,7 @@ To do this, go to `Settings` -> `OAuth consumers` -> `New application` and speci
 Paste the generated `Key` and `Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
 ### OIDC (OpenID Connect)
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -136,6 +144,7 @@ To configure authentication, refer to your provider's documentation on how to cr
 Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
 ### LDAP
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -182,6 +191,7 @@ This configuration is suitable for applications that can independently perform o
 The [`DexClient`](cr.html#dexclient) custom resource enables applications to use dex.
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexClient
@@ -198,12 +208,14 @@ spec:
   trustedPeers:
   - opendistro-sibling
 ```
+
 {% endraw %}
 
 After the DexClient CR is created, Dex will register a client with a `dex-client-myname@mynamespace` ID (clientID).
 
 The client access password (clientSecret) will be stored in the secret object:
 {% raw %}
+
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -214,11 +226,13 @@ type: Opaque
 data:
   clientSecret: c2VjcmV0
 ```
+
 {% endraw %}
 
-## An example of creating a static user:
+## An example of creating a static user
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: User
@@ -233,4 +247,5 @@ spec:
   - admins
   ttl: 24h
 ```
+
 {% endraw %}

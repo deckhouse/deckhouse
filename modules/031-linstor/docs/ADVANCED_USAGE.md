@@ -15,7 +15,7 @@ To proceed further, the `linstor` CLI utility is required. Use one of the follow
 After enabling the module, the cluster is automatically configured to use LINSTOR. In order to start using the storage, you need to:
 
 - [Create storage pools](#creating-storage-pools)
-- [Create StorageClass](#creating-a-storageclass) 
+- [Create StorageClass](#creating-a-storageclass)
 
 ## Creating storage pools
 
@@ -56,7 +56,7 @@ After enabling the module, the cluster is automatically configured to use LINSTO
      | 1920383410176 | False      | node03[/dev/nvme1n1,/dev/nvme0n1] |
      +----------------------------------------------------------------+
      ```
-     
+
      > **Note:** you'll be able to see only empty devices without created partitions here.
      > However, creating storage pools on partitions and other block devices is also supported.
      >
@@ -66,7 +66,7 @@ After enabling the module, the cluster is automatically configured to use LINSTO
 
    Create several storage pools from the devices obtained in the previous step, make them with the same name in case of using as single storageClass.
 
-   - Example of a command to create an **LVM** storage pool of two devices on one of the nodes: 
+   - Example of a command to create an **LVM** storage pool of two devices on one of the nodes:
 
      ```shell
      linstor physical-storage create-device-pool lvm node01 /dev/nvme0n1 /dev/nvme1n1 --pool-name linstor_data --storage-pool lvm
@@ -85,11 +85,11 @@ After enabling the module, the cluster is automatically configured to use LINSTO
      , where:
      - `--pool-name` — name of the VG/LV created on the node;
      - `--storage-pool` — name of the storage pool created in LINSTOR.
-     
+
 1. Check that storage pools have been created.
 
-   Once the storage pools are created, you can see them by executing: 
-   
+   Once the storage pools are created, you can see them by executing:
+
    ```shell
    linstor storage-pool list
    ```

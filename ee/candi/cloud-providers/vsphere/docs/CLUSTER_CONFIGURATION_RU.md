@@ -7,4 +7,3 @@ title: "Cloud provider — VMware vSphere: настройки провайдер
 > Дополнительная информация о [Vsphere Cloud Load Balancers](https://github.com/kubernetes/cloud-provider-vsphere/tree/master/pkg/cloudprovider/vsphere/loadbalancer).
 
 <!-- SCHEMA -->
-

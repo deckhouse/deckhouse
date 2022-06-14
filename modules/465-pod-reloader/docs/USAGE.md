@@ -2,7 +2,7 @@
 title: "Module pod-reloader: usage"
 ---
 
-## Tracking all changes in all attached resources: mounted as volumes or used in environment values.
+## Tracking all changes in all attached resources: mounted as volumes or used in environment values
 
 ```yaml
 apiVersion: apps/v1
@@ -44,7 +44,7 @@ metadata:
   name: nginx-config
 ```
 
-## Tracking changes in specific resources.
+## Tracking changes in specific resources
 
 ```yaml
 apiVersion: apps/v1
@@ -74,7 +74,7 @@ metadata:
     pod-reloader.deckhouse.io/match: "true"
 ```
 
-## Tracking changes in resources from the list.
+## Tracking changes in resources from the list
 
 ```yaml
 apiVersion: apps/v1

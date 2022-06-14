@@ -36,6 +36,7 @@ title: "Модуль node-local-dns"
 - Добавляет *хитрое* правило в iptables: если сокет открыт — идти туда, если не открыт – работает обычная магия Kubernetes для clusterIP.
 
 Само правило, которое и позволяет сделать беспроблемный fallback:
+
 ```bash
 -A PREROUTING -d <IP-адрес kube-dns> -m socket --nowildcard -j NOTRACK
 ```

@@ -9,6 +9,7 @@ The module is enabled **by default**.
 <!-- SCHEMA -->
 
 ## An example of the configuration
+
 ```yaml
 chrony: |
   ntpServers:

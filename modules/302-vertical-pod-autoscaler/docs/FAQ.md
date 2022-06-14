@@ -3,6 +3,7 @@ title: "The vertical-pod-autoscaler module: FAQ"
 ---
 
 ## How do I view the Vertical Pod Autoscaler recommendations?
+
 You can view the VPA recommendations after the [VerticalPodAutoscaler](cr.html#verticalpodautoscaler) custom resource is created using the following command:
 
 ```shell
@@ -37,6 +38,7 @@ spec:
 ```
 
 Also, there is a Pod with the following resource configuration:
+
 ```yaml
 resources:
   limits:
@@ -47,6 +49,7 @@ resources:
 
 If the container consumes, say, 1 CPU and VPA recommendation for this container is 1.168 CPU, the module will calculate the ration between requests and limits. In our case, the ratio equals 100%.
 Thus, VPA will modify the Pod's resource configuration when the Pod is recreated:
+
 ```yaml
 resources:
   limits:
@@ -58,6 +61,7 @@ resources:
 ### Example No. 2
 
 Suppose we have a VPA object:
+
 ```yaml
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -74,6 +78,7 @@ spec:
 ```
 
 Also, there is a Pod with the following resource configuration:
+
 ```yaml
 resources:
   limits:
@@ -83,6 +88,7 @@ resources:
 ```
 
 In our case, the ratio of requests and limits is 25%, and the resource configuration of the container will be as follows (given that VPA recommends 1.168 CPU):
+
 ```yaml
 resources:
   limits:

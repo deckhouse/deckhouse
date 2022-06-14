@@ -5,6 +5,7 @@ title: "The local-path-provisioner module: FAQ"
 ## How to configure Prometheus to use local storage for storing data?
 
 Deploy CR `LocalPathProvisioner`:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
@@ -20,6 +21,7 @@ spec:
 - `spec.path` - node data path.
 
 Add to the Deckhouse configuration (configMap `d8-system/deckhouse`):
+
 ```yaml
 prometheus: |
   longtermStorageClass: localpath-system

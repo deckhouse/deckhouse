@@ -177,7 +177,6 @@ spec:
   url: http://loki.loki:3100
 ```
 
-
 ## Elasticsearch < 6.X usage
 
 For Elasticsearch < 6.0 doc_type indexing should be set.
@@ -256,6 +255,5 @@ spec:
   destinationRefs:
   - loki-storage
 ```
-
 
 > NOTE: If you need logs from only one or from a small group of a pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.

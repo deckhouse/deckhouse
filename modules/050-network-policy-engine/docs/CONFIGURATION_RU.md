@@ -8,4 +8,3 @@ title: "Модуль network-policy-engine: настройки"
 data:
   networkPolicyEngineEnabled: "true"
 ```
-

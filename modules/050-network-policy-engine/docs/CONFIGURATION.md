@@ -8,4 +8,3 @@ The module is **disabled by default**. To enable it, add the following lines to 
 data:
   networkPolicyEngineEnabled: "true"
 ```
-

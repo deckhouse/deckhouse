@@ -2,7 +2,7 @@
 title: "Модуль okmeter: примеры конфигурации"
 ---
 
-## Пример:
+## Пример
 
 ```yaml
 okmeterEnabled: "true"

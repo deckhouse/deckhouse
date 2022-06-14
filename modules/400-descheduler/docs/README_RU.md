@@ -7,6 +7,7 @@ title: "Модуль descheduler"
 descheduler каждые 15 минут вытесняет Pod'ы, которые удовлетворяют включенным в [конфигурации модуля](configuration.html) стратегиям. Это приводит к принудительному запуску процесса шедулинга в отношении вытесненных Pod'ов.
 
 ## Особенности работы descheduler
+
 * При вытеснении Pod'ов с нагруженного узла учитывается `priorityClass` (ознакомьтесь с модулем [priority-class](../010-priority-class/));
 * Pod'ы с [priorityClassName](../010-priority-class/configuration.html) `system-cluster-critical` или `system-node-critical` (*критичные* Pod'ы) не вытесняются;
 * Pod'ы без контроллера или с контроллером DaemonSet не вытесняются;
@@ -46,6 +47,7 @@ descheduler каждые 15 минут вытесняет Pod'ы, которые
   * Pod'ы — 80%
 
 ### PodLifeTime
+
 Эта стратегия гарантирует, что Pod'ы в состоянии Pending старше 24 часов, будут удалены с узлов.
 
 ### RemoveDuplicates
@@ -55,6 +57,7 @@ descheduler каждые 15 минут вытесняет Pod'ы, которые
 К примеру, у нас есть 3 узла (один из них более нагружен), и мы хотим выкатить 6 реплик приложения. Так как один из узлов перегружен, то scheduler привяжет к нагруженному узлу 0 или 1 Pod. Остальные реплики поедут на другие узлы, и в таком случае descheduler будет каждые 15 минут прибивать "лишние" Pod'ы на ненагруженных узлах и надеяться, что scheduler привяжет их к этому нагруженному узлу.
 
 ### RemovePodsHavingTooManyRestarts
+
 Эта стратегия гарантирует, что Pod'ы, имеющие больше 100 перезапусков контейнеров (включая init-контейнеры), будут удалены с узлов.
 
 ### RemovePodsViolatingInterPodAntiAffinity
@@ -67,7 +70,9 @@ descheduler каждые 15 минут вытесняет Pod'ы, которые
 Данная стратегия отвечает за кейс, когда Pod был привязан к узлу по условиям (`requiredDuringSchedulingIgnoredDuringExecution`), но потом узел перестал им удовлетворять. Тогда descheduler увидит это и сделает все, что бы Pod переехал туда, где он будет удовлетворять условиям.
 
 ### RemovePodsViolatingNodeTaints
+
 Эта стратегия гарантирует, что Pod'ы, нарушающие NoSchedule на узлах, будут удалены. Например, есть Pod, имеющий toleration и запущенный на узле с соответствующим taint. Если taint на узле будет изменён или удален, Pod будет вытеснен с узла.
 
 ### RemovePodsViolatingTopologySpreadConstraint
+
 Эта стратегия гарантирует, что Pod'ы, нарушающие [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов.

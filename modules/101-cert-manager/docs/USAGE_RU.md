@@ -33,13 +33,14 @@ spec:
 ## Заказ wildcard-сертификата с DNS в Cloudflare
 
 1. Получим `Global API Key` и `Email Address`:
-   * Заходим на страницу: https://dash.cloudflare.com/profile
+   * Заходим на страницу: <https://dash.cloudflare.com/profile>
    * В самом верху страницы написана ваша почта под `Email Address`
    * В самом низу страницы жмем на кнопку "View" напротив `Global API Key`
 
    В результате чего мы получаем ключ для взаимодействия с API Cloudflare и почту на которую зарегистрирован аккаунт.
 
 2. Редактируем конфигурационный ConfigMap deckhouse, добавляя такую секцию:
+
    ```shell
    kubectl -n d8-system edit cm deckhouse
    ```
@@ -49,9 +50,9 @@ spec:
      cloudflareGlobalAPIKey: APIkey
      cloudflareEmail: some@mail.somedomain
    ```
-   
+
    или
-   
+
    ```yaml
    certManager: |
      cloudflareAPIToken: some-token
@@ -59,7 +60,7 @@ spec:
    ```
 
    После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
-   
+
    * Конфигурация с помощью [APIToken](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) является рекомендуемой и более безопасной.
 
 3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Deckhouse:
@@ -110,7 +111,7 @@ spec:
 
 1. Создаем пользователя с необходимыми правами.
 
-   * Заходим на страницу управления политиками: https://console.aws.amazon.com/iam/home?region=us-east-2#/policies . Создаем политику с такими правами:
+   * Заходим на страницу управления политиками: <https://console.aws.amazon.com/iam/home?region=us-east-2#/policies> . Создаем политику с такими правами:
 
    ```json
    {
@@ -135,7 +136,7 @@ spec:
    }
    ```
 
-   * Заходим на страницу управления пользователями: https://console.aws.amazon.com/iam/home?region=us-east-2#/users . Создаем пользователя с созданной ранее политикой.
+   * Заходим на страницу управления пользователями: <https://console.aws.amazon.com/iam/home?region=us-east-2#/users> . Создаем пользователя с созданной ранее политикой.
 
 2. Редактируем ConfigMap Deckhouse, добавляя такую секцию:
 
@@ -173,13 +174,14 @@ spec:
 
 1. Создаем сервис-аккаунт с необходимой ролью.
 
-   * Заходим на страницу управления политиками: https://console.cloud.google.com/iam-admin/serviceaccounts.
+   * Заходим на страницу управления политиками: <https://console.cloud.google.com/iam-admin/serviceaccounts>.
    * Выбираем нужный проект.
    * Создаем сервис-аккаунт с желаемым названием, например `dns01-solver`.
    * Заходим в созданный сервис-аккаунт.
    * Создаём ключ по кнопке "Добавить ключ".
    * Будет скачан `.json`-файл с данными ключа имени.
    * Закодируем полученный файл в строку **base64**:
+
      ```shell
      base64 project-209317-556c656b81c4.json
      ```

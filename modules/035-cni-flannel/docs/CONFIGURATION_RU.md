@@ -7,6 +7,7 @@ title: "Модуль cni-flannel: настройки"
 - [VMware vSphere](../../modules/030-cloud-provider-vsphere/).
 
 Для включения в bare metal необходимо в ConfigMap `deckhouse` добавить:
+
 ```yaml
 cniFlannelEnabled: "true"
 ```
@@ -16,6 +17,7 @@ cniFlannelEnabled: "true"
 <!-- SCHEMA -->
 
 ## Пример конфигурации
+
 ```yaml
 cniFlannel: |
   podNetworkMode: VXLAN

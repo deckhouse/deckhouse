@@ -9,4 +9,3 @@ The `monitoring-kubernetes-control-plane` module is responsible for monitoring t
 * kube-etcd
 
 There are no standard rules for organizing a cluster. Thus, various components can be configured differently. The control plane monitoring looks for common patterns in the components' configuration and uses them to collect metrics. In the case of some "exotic" pattern, you can [define the configuration manually](configuration.html#parameters).
-

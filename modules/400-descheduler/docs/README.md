@@ -2,9 +2,9 @@
 title: "The descheduler module"
 ---
 
-The module runs a [descheduler](https://github.com/kubernetes-incubator/descheduler) with **predefined** [strategies](#strategies) in a cluster. 
+The module runs a [descheduler](https://github.com/kubernetes-incubator/descheduler) with **predefined** [strategies](#strategies) in a cluster.
 
-descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the [module configuration](configuration.html). This leads to forced run the scheduling process for evicted Pods.    
+descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the [module configuration](configuration.html). This leads to forced run the scheduling process for evicted Pods.
 
 ## Nuances of descheduler operation
 
@@ -47,6 +47,7 @@ The thresholds for identifying underutilized or overutilized nodes are currently
   * Pods — 80%
 
 ### PodLifeTime
+
 This strategy evicts Pods that are Pending for more than 24 hours.
 
 ### RemoveDuplicates
@@ -56,6 +57,7 @@ This strategy makes sure that no more than one Pod of the same controller (RS, R
 Suppose there are three nodes (say, the first node bears the greater load than the other two), and we want to deploy six application replicas. In this case, the scheduler will schedule 0 or 1 Pod to that overutilized node, while other replicas will be distributed between two other nodes. Thus, the descheduler will be killing "extra" Pods on those two nodes every 15 minutes, hoping that the scheduler will bind those Pods to the first node.
 
 ### RemovePodsHavingTooManyRestarts
+
 This strategy ensures that Pods having over a hundred container restarts (including init-containers) are removed from nodes.
 
 ### RemovePodsViolatingInterPodAntiAffinity
@@ -69,7 +71,9 @@ This strategy ensures that Pods violating inter-pod anti-affinity are removed fr
 This strategy removes a Pod from a node if the latter no longer satisfies a Pod's affinity rule (`requiredDuringSchedulingIgnoredDuringExecution`). The descheduler notices that and evicts the Pod if another node is available that satisfies the affinity rule.
 
 ### RemovePodsViolatingNodeTaints
+
 This strategy evicts Pods violating NoSchedule taints on nodes. Suppose a Pod set to tolerate some taint is running on a node with this taint. If the node’s taint is updated or removed, the Pod will be evicted.
 
 ### RemovePodsViolatingTopologySpreadConstraint
+
 This strategy ensures that Pods violating the [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) will be evicted from nodes.
