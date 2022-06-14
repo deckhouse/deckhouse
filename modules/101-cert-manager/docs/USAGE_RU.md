@@ -111,32 +111,32 @@ spec:
 
 1. Создаем пользователя с необходимыми правами.
 
-   * Заходим на страницу управления политиками: <https://console.aws.amazon.com/iam/home?region=us-east-2#/policies> . Создаем политику с такими правами:
+   * Заходим на [страницу управления политиками](https://console.aws.amazon.com/iam/home?region=us-east-2#/policies). Создаем политику с такими правами:
 
-   ```json
-   {
-       "Version": "2012-10-17",
-       "Statement": [
-           {
-               "Effect": "Allow",
-               "Action": "route53:GetChange",
-               "Resource": "arn:aws:route53:::change/*"
-           },
-           {
-               "Effect": "Allow",
-               "Action": "route53:ChangeResourceRecordSets",
-               "Resource": "arn:aws:route53:::hostedzone/*"
-           },
-           {
-               "Effect": "Allow",
-               "Action": "route53:ListHostedZonesByName",
-               "Resource": "*"
-           }
-       ]
-   }
-   ```
+     ```json
+     {
+         "Version": "2012-10-17",
+         "Statement": [
+             {
+                 "Effect": "Allow",
+                 "Action": "route53:GetChange",
+                 "Resource": "arn:aws:route53:::change/*"
+             },
+             {
+                 "Effect": "Allow",
+                 "Action": "route53:ChangeResourceRecordSets",
+                 "Resource": "arn:aws:route53:::hostedzone/*"
+             },
+             {
+                 "Effect": "Allow",
+                 "Action": "route53:ListHostedZonesByName",
+                 "Resource": "*"
+             }
+         ]
+     }
+     ```
 
-   * Заходим на страницу управления пользователями: <https://console.aws.amazon.com/iam/home?region=us-east-2#/users> . Создаем пользователя с созданной ранее политикой.
+   * Заходим на [страницу управления пользователями](https://console.aws.amazon.com/iam/home?region=us-east-2#/users). Создаем пользователя с созданной ранее политикой.
 
 2. Редактируем ConfigMap Deckhouse, добавляя такую секцию:
 
@@ -174,7 +174,7 @@ spec:
 
 1. Создаем сервис-аккаунт с необходимой ролью.
 
-   * Заходим на страницу управления политиками: <https://console.cloud.google.com/iam-admin/serviceaccounts>.
+   * Заходим на [страницу управления политиками](https://console.cloud.google.com/iam-admin/serviceaccounts).
    * Выбираем нужный проект.
    * Создаем сервис-аккаунт с желаемым названием, например `dns01-solver`.
    * Заходим в созданный сервис-аккаунт.

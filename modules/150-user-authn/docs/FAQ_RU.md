@@ -99,7 +99,7 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 
 * --oidc-client-id=kubernetes
 * --oidc-groups-claim=groups
-* --oidc-issuer-url=<https://dex.%addonsPublicDomainTemplate%/>
+* --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
 * --oidc-username-claim=email
 
 В случае использования самоподписанных сертификатов для Dex будет добавлен ещё один аргумент, а также в Pod с apiserver будет смонтирован файл с CA:

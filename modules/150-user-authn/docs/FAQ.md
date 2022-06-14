@@ -99,7 +99,7 @@ With the functional of the [control-plane-manager](../../modules/040-control-pla
 
 * --oidc-client-id=kubernetes
 * --oidc-groups-claim=groups
-* --oidc-issuer-url=<https://dex.%addonsPublicDomainTemplate%/>
+* --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
 * --oidc-username-claim=email
 
 If self-signed certificates are used, Dex will get one more argument. At the same time, the CA file will be mounted to the apiserver's Pod:
