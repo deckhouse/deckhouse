@@ -55,7 +55,7 @@ func CheckSSHHosts(userPassedHosts []string, nodesNames []string, runConfirm fun
 If you lose connection to node, converge may not be finished.
 Also, SSH connectivity to another nodes will not check before converge node.
 
-Do you want to contimue?
+Do you want to continue?
 `, warnMsg)
 
 		if !runConfirm(msg) {
