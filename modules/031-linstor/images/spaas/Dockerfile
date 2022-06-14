@@ -33,5 +33,5 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && ln -sf /proc/mounts /etc/mtab
 COPY --from=builder /spaas /
-COPY --from=builder /drbd/drbd-*.tar.gz /var/cache/saas/tarballs/
+COPY --from=builder /drbd/drbd-*.tar.gz /var/cache/spaas/tarballs/
 ENTRYPOINT ["/spaas"]

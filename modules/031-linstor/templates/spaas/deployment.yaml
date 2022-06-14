@@ -48,6 +48,7 @@ spec:
     spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "spaas")) | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
@@ -58,21 +59,47 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
         - --addr=:2020
-        - --patchcache=/var/cache/saas/patches
-        - --tarcache=/var/cache/saas/tarballs
+        - --patchcache=/var/cache/spaas/patches
+        - --tarcache=/var/cache/spaas/tarballs
+        - --certfile=/etc/spaas/certs/tls.crt
+        - --keyfile=/etc/spaas/certs/tls.key
+        - --debug
+        startupProbe:
+          failureThreshold: 24
+          httpGet:
+            path: /api/v1/hello
+            port: 2020
+            scheme: HTTPS
+        livenessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /api/v1/hello
+            port: 2020
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /api/v1/hello
+            port: 2020
+            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
         volumeMounts:
         - name: patches-dir
-          mountPath: /var/cache/saas/patches
+          mountPath: /var/cache/spaas/patches
         - name: tmp-dir
           mountPath: /tmp
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        - name: certs
+          mountPath: /etc/spaas/certs
+          readOnly: true
       volumes:
       - name: patches-dir
         emptyDir: {}
       - name: tmp-dir
         emptyDir: {}
+      - name: certs
+        secret:
+          secretName: spaas-certs

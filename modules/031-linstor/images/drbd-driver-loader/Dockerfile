@@ -31,7 +31,6 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /entry.sh /drbd.tar.gz /
-ENV SPAAS_URL=http://spaas:2020
 
 ENV LB_HOW compile
 ENTRYPOINT [ "/entry.sh" ]

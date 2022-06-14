@@ -1,3 +1,15 @@
+From ead3558d9c2be3c9ad722f77abf331305c0aa403 Mon Sep 17 00:00:00 2001
+From: Andrei Kvapil <kvapss@gmail.com>
+Date: Fri, 10 Jun 2022 16:27:29 +0200
+Subject: [PATCH] compat: make spaas url configurable
+
+Signed-off-by: Andrei Kvapil <kvapss@gmail.com>
+---
+ Makefile                                    | 1 +
+ drbd/Makefile                               | 2 ++
+ drbd/drbd-kernel-compat/gen_compat_patch.sh | 7 ++++---
+ 3 files changed, 7 insertions(+), 3 deletions(-)
+
 diff --git a/Makefile b/Makefile
 index 87c29518..37d7851d 100644
 --- a/Makefile
@@ -51,3 +63,6 @@ index c57b961c..b8595722 100644
      then
  	ex=${PIPESTATUS[*]}
  	(
+-- 
+2.32.0 (Apple Git-132)
+
