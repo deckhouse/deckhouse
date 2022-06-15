@@ -38,9 +38,9 @@ func enableNodeRoutes(input *go_hook.HookInput) error {
 
 func shouldEnableNodeRoutes(input *go_hook.HookInput) bool {
 	// if value is set directly - skip this hook
-	_, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
+	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok {
-		return false
+		return value.Bool()
 	}
 
 	providerRaw, ok := input.Values.GetOk("global.clusterConfiguration.cloud.provider")

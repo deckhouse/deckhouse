@@ -54,6 +54,18 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeTrue())
 		})
+
+		Context("with directly set value in config", func() {
+			BeforeEach(func() {
+				f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
+				f.RunHook()
+			})
+
+			It("should be false", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeFalse())
+			})
+		})
 	})
 
 	Context("Openstack cluster with directly node-routes set", func() {
