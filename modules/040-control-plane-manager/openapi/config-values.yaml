@@ -119,7 +119,6 @@ properties:
               The duration to cache responses from the webhook token authenticator.
             x-examples:
             - "5m"
-            - "1h"
       authz:
         type: object
         default: {}
