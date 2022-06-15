@@ -1,4 +1,6 @@
+---
 title: "Интеграция с Madison"
+---
 
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
 
@@ -10,7 +12,7 @@ title: "Интеграция с Madison"
 
 ### Схема интеграции
 
-![](img/madison.png)
+![Схема интеграции](img/madison.png)
 
 * У модуля есть секретный value `flantIntegration.internal.madison.backends`, который заполняется автоматически списком адресов, в
   которые резолвится madison-direct.flant.com (каждые 10 минут).
@@ -42,24 +44,24 @@ title: "Интеграция с Madison"
 
 ## Автоматическая регистрация
 
-* У Madison есть [API самонастройки](https://fox.flant.com/tnt/madison/issues/73), которое позволяет зарегистрировать 
+* У Madison есть [API самонастройки](https://fox.flant.com/tnt/madison/issues/73), которое позволяет зарегистрировать
   ключ для проекта. Регистрация проходит через специальный прокси-сервер connect.deckhouse.io, внутри которого спрятан
   общий ключ регистрации. Этот прокси-сервер проверяет валидность ключа лицензии и проксирует запрос регистрации в Madison.
-* Чтобы зарегистрироваться, нужно иметь ключ лицензии. Он указывается в конфигурации по пути `flantIntegration.licenseKey`. 
+* Чтобы зарегистрироваться, нужно иметь ключ лицензии. Он указывается в конфигурации по пути `flantIntegration.licenseKey`.
   Модуль ([хук license](https://fox.flant.com/sys/deckhouse-oss/-/tree/main/ee/modules/340-flant-integration/hooks/license.go))
-  записывает ключ лицензии в `flantIntegration.internal.licenseKey`. Если его нет в конфигурации, модуль пытается найти 
-  его в конфигурации доступа к реестру контейнеров. 
+  записывает ключ лицензии в `flantIntegration.internal.licenseKey`. Если его нет в конфигурации, модуль пытается найти
+  его в конфигурации доступа к реестру контейнеров.
 * При каждом запуске deckhouse (точнее при каждой установке модуля):
-    * если в `flantIntegration.madisonAuthKey` уже есть ключ, модуль пытается обновить данные проекта для этого ключа: 
+  * если в `flantIntegration.madisonAuthKey` уже есть ключ, модуль пытается обновить данные проекта для этого ключа:
       имя проекта и URL для grafana и prometheus.
-    * если в `flantIntegration.madisonAuthKey` ничего нет, модуль ([хук registration](https://fox.flant.com/sys/deckhouse-oss/-/tree/main/ee/modules/340-flant-integration/hooks/madison/registration.go))
-      пытается получить новый ключ в API самонастройки Madison (через прокси лицензий connect.deckhouse.io) и записать 
+  * если в `flantIntegration.madisonAuthKey` ничего нет, модуль ([хук registration](https://fox.flant.com/sys/deckhouse-oss/-/tree/main/ee/modules/340-flant-integration/hooks/madison/registration.go))
+      пытается получить новый ключ в API самонастройки Madison (через прокси лицензий connect.deckhouse.io) и записать
       его в `flantIntegration.madisonAuthKey`. Этот ключ и используется в `madison-proxy` для аутентификации в Madison;
 * Список зарегистрированных ключей можно найти в Madison у каждого проекта, например для tfprod
   можно [посмотреть здесь](https://madison.flant.com/projects/tfprod/prometheus_setups).
 * При архивации кластера в Madison срабатывает механизм автоматического отключения алертов. Хук `madison_revoke`
   регулярно (раз в 5 минут) проверяет статус кластера в Madison и если тот архивирован, то хук делает следующее:
-    * удаляет ключ `flantIntegration.madisonAuthKey` из хранилища values.
+  * удаляет ключ `flantIntegration.madisonAuthKey` из хранилища values.
 
 ## Как можно посмотреть отправленные алерты в madison
 

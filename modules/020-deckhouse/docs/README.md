@@ -57,23 +57,27 @@ Release pinning could be necessary if you want to hold a Deckhouse update for so
 
 There are 3 options to pin a release:
 - Set a [manual update mode](usage.html#manual-update-confirmation).
-In this case, you will hold a current release but patch-release will still be applied. Minor-release will not be changed without your approval.
 
-  Example:
-    The current release is `v1.29.3`, after setting a manual update mode Deckhouse will be able to update to version `v1.29.9` but won't be able to apply version `v1.30.0`.
+  In this case, you will hold a current release but patch-release will still be applied. Minor-release will not be changed without your approval.
+
+  Example: The current release is `v1.29.3`, after setting a manual update mode Deckhouse will be able to update to version `v1.29.9` but won't be able to apply version `v1.30.0`.
 
 - Set a specified image tag for deployment/deckhouse.
-In this case, you will hold a Deckhouse version until a new release will come.
-You may need this in a situation when some Deckhouse release has an error that hasn't occurred earlier and you want to roll back to the previous release but update as soon as a new release with a patch will come.
+
+  In this case, you will hold a Deckhouse version until a new release will come. You may need this in a situation when some Deckhouse release has an error that hasn't occurred earlier and you want to roll back to the previous release but update as soon as a new release with a patch will come.
 
   Example:
-    `kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5`
+  
+  ```shell
+  kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
+  ```
 
 - Set a specified image tag for deployment/deckhouse and remove `releaseChannel` from deckhouse ConfigMap.
-    In this case, you will hold a specified version and will not get any more updates.
 
-    ```sh
-    $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
-    $ kubectl -n d8-system edit cm deckhouse
-      // remove releaseChannel
-    ```
+  In this case, you will hold a specified version and will not get any more updates.
+
+  ```shell
+  $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
+  $ kubectl -n d8-system edit cm deckhouse
+    // remove releaseChannel
+  ```

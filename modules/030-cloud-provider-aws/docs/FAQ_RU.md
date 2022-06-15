@@ -71,19 +71,19 @@ title: "Cloud provider — AWS: FAQ"
 1. Прикрепить группу безопасности `<prefix>-node`.
 2. Прописать теги (чтобы cloud-controller-manager мог найти инстансы в облаке):
 
-   ```
+   ```text
    "kubernetes.io/cluster/<cluster_uuid>" = "shared"
    "kubernetes.io/cluster/<prefix>" = "shared"
    ```
 
    * Узнать `cluster_uuid` можно с помощью команды:
-   
+
      ```shell
      kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
      ```
-   
+
    * Узнать `prefix` можно с помощью команды:
-   
+
      ```shell
      kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
      ```

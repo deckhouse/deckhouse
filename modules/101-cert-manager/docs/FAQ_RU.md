@@ -115,7 +115,7 @@ spec:
 
 Если `cert-manager` не может заказать сертификаты с ошибкой:
 
-```
+```text
 CAA record does not match issuer
 ```
 

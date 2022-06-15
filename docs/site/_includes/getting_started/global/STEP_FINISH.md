@@ -161,7 +161,7 @@ Configuring DexProvider
 </h3>
 <div class="cards-item__text" markdown="1">
 You have to [configure](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) a
-`DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc., 
+`DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc.,
 will be authenticated using GitHub.
 </div>
 </div>

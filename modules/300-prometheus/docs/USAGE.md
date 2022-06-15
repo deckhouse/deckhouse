@@ -62,7 +62,7 @@ spec:
 Each `ingress-nginx-controller` has certificates that can be used to connect to Prometheus. All you need is to create an additional `Ingress` resource.
 
 > For the example below, it is presumed that Secret `example-com-tls` already exist in namespace d8-monitoring.
-
+>
 > Names for Ingress `my-prometheus-api` and Secret `my-basic-auth-secret` are there for example. Change them to the most suitable names for your case.
 
 ```yaml

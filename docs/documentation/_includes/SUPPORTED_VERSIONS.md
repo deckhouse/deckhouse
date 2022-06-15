@@ -3,9 +3,11 @@
 
 {%- if page.lang == 'ru' %}
 ## Linux
+
 В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux:
 {%- else %}
 ## Linux
+
 The following Linux Distributions are currently supported for nodes:
 {%- endif %}
 
@@ -14,15 +16,17 @@ The following Linux Distributions are currently supported for nodes:
 {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
 {%- for osData in osItem[1] %}
 {%- assign osVersion = osData[0]  %}
-  - {{ osName }} {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}{% if page.lang == 'ru' %}.{%- endif %}
+- {{ osName }} {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}{% if page.lang == 'ru' %}.{%- endif %}
 {%- endfor %}
 {%- endfor %}
 
 {% if page.lang == 'ru' %}
 ## Kubernetes
+
 В настоящий момент поддерживаются следующие версии Kubernetes:
 {%- else %}
 ## Kubernetes
+
 The following Kubernetes versions are currently supported:
 {%- endif %}
 <table>

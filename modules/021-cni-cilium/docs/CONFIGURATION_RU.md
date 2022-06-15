@@ -6,7 +6,7 @@ title: "Модуль cni-cilium: настройки"
 
 Для включения в bare metal, добавьте в ConfigMap `deckhouse`:
 
-```
+```yaml
 cniCiliumEnabled: "true"
 ```
 

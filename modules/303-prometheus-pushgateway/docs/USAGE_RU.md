@@ -25,7 +25,7 @@ prometheusPushgateway: |
 
 Через 30 секунд (после скрейпа данных) метрики будут доступны в Prometheus:
 
-```
+```text
 test_metric{instance="10.244.1.155:9091",job="app",pushgateway="first"} 3.14
 ```
 

@@ -25,7 +25,7 @@ PushGateway address: `http://first.kube-prometheus-pushgateway:9091`.
 
 The metrics will be available in Prometheus in 30 seconds (after the data are scraped):
 
-```
+```text
 test_metric{instance="10.244.1.155:9091",job="app",pushgateway="first"} 3.14
 ```
 

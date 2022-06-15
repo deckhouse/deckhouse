@@ -4,4 +4,3 @@
 In this Layout, a bastion host is created together with the cluster. Access to the cluster nodes will be possible through the bastion.
 
 Virtual machines access the Internet using a NAT Gateway with a shared (and single) source IP.
-

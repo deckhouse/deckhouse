@@ -177,7 +177,7 @@ spec:
       weight: 75
 ```
 
-##### Rerouting the /uploads location to another service
+#### Rerouting the /uploads location to another service
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3

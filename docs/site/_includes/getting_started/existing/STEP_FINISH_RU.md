@@ -13,21 +13,24 @@
 
 Доступ к документации ограничен basic-аутентификацией (больше вариантов аутентификации можно получить включив модуль [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/):  
 - Логин — `admin`
-- Пароль — сгенерирован автоматически. Узнать его можно в ConfigMap `deckhouse` в секции конфигурации модуля `deckhouse-web`, например, 
+- Пароль — сгенерирован автоматически. Узнать его можно в ConfigMap `deckhouse` в секции конфигурации модуля `deckhouse-web`, например,
 выполнив следующую команду:
+
   ```bash
   kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.deckhouseWeb}" | grep password
   ```
+
   Пример вывода:
+
   ```
   $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.deckhouseWeb}" | grep password 
   password: UJvSB4UYTa3fnDOco6LF
   ```
   
 > Если адрес [deckhouse.example.com](https://deckhouse.example.com) недоступен, возможные следующие причины
-- проблема на уровне Ingress-контроллера 
+- проблема на уровне Ingress-контроллера
 - проблема с DNS
-- сетевые проблемы (фильтрация, маршрутизация...) 
+- сетевые проблемы (фильтрация, маршрутизация...)
 </div>
 
 <section class="cards-blocks">
@@ -91,7 +94,7 @@ Status page
 Направляем трафик на приложение
 </h3>
 <div class="cards-item__text" markdown="1">
-Ознакомьтесь с возможностями модуля [ingress-nginx](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx//). 
+Ознакомьтесь с возможностями модуля [ingress-nginx](/{{ page.lang }}/documentation/v1/modules/402-ingress-nginx//).
 
 Создайте `Service` и `Ingress` для вашего приложения.
 </div>

@@ -1,44 +1,43 @@
-po---
+---
 title: "Разработка правил Prometheus"
 type:
-  - instruction
+- instruction
 search: Разработка правил Prometheus, prometheus alerting rules
 ---
 
-Общая информация
-----------------
+## Общая информация
 
 * Правила в Prometheus делятся на два типа:
-    * recording rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)) — позволяют предрасчитать PromQL выражение и сохранить результат в новую метрику (обычно это необходимо для ускорения работы Grafana или других правил).
-    * alerting rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/))— позволяют отправлять уведомления на основании результата выполнения PromQL выражения.
+  * recording rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)) — позволяют предрасчитать PromQL выражение и сохранить результат в новую метрику (обычно это необходимо для ускорения работы Grafana или других правил).
+  * alerting rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/))— позволяют отправлять уведомления на основании результата выполнения PromQL выражения.
 * Все правила распределены по модулям и лежат в каталоге [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/main/modules/300-prometheus/monitoring/prometheus-rules/)`. Правила делятся на три категории:
-    * в `coreos` лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
-    * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (Pod'ы, CronJob'ы, место на диске и пр.).
-    * в `applications` лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
+  * в `coreos` лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
+  * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (Pod'ы, CronJob'ы, место на диске и пр.).
+  * в `applications` лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
 * Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя deckhouse, пока отработает Prometheus Operator и компания).
 * Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. в документации модуля [Prometheus Operator](../../modules/200-operator-prometheus/)):
-    * Проверить, что ваши изменения попали в ConfigMap в Kubernetes:
-        * `kubectl -n d8-monitoring get prometheusrule/prometheus-rules-<ИМЯ ДИРЕКТОРИИ> -o yaml`
-        * Если изменений нет, то надо проверить, что deckhouse сдеплоилась успешно:
-            * `helm --tiller-namespace=d8-monitoring list` — prometheus должен быть в статусе DEPLOYED
-            * `kubectl -n d8s-system logs deploy/deckhouse -f` — в логе не должно быть ошибок
-    * Проверить, что prometheus-config-reloader увидел ваши изменения:
-          * В `kubectl -n d8-monitoring logs prometheus-main-0 prometheus-config-reloader -f` должна быть запись об этом:
+  * Проверить, что ваши изменения попали в ConfigMap в Kubernetes:
+    * `kubectl -n d8-monitoring get prometheusrule/prometheus-rules-<ИМЯ ДИРЕКТОРИИ> -o yaml`
+    * Если изменений нет, то надо проверить, что deckhouse сдеплоилась успешно:
+      * `helm --tiller-namespace=d8-monitoring list` — prometheus должен быть в статусе DEPLOYED
+      * `kubectl -n d8s-system logs deploy/deckhouse -f` — в логе не должно быть ошибок
+  * Проверить, что prometheus-config-reloader увидел ваши изменения:
+    * В `kubectl -n d8-monitoring logs prometheus-main-0 prometheus-config-reloader -f` должна быть запись об этом:
 
-                ts=2018-04-12T12:10:24Z caller=main.go:244 component=volume-watcher msg="ConfigMap modified."
-                ts=2018-04-12T12:10:24Z caller=main.go:204 component=volume-watcher msg="Updating rule files..."
-                ts=2018-04-12T12:10:24Z caller=main.go:209 component=volume-watcher msg="Rule files updated."
+      ```text
+      ts=2018-04-12T12:10:24Z caller=main.go:244 component=volume-watcher msg="ConfigMap modified."
+      ts=2018-04-12T12:10:24Z caller=main.go:204 component=volume-watcher msg="Updating rule files..."
+      ts=2018-04-12T12:10:24Z caller=main.go:209 component=volume-watcher msg="Rule files updated."
+      ```
 
-          * Если `prometheus-config-reloader` не видит изменений, то надо проверить prometheus-operator:
-              * `kubectl -n d8-operator-prometheus get pod` — посмотреть, что Pod запущен
-              * `kubectl -n d8-operator-prometheus logs -f deploy/prometheus-operator --tail=50` — посмотреть, что в логе нет ошибок
-          * Если `prometheus-config-reloader` не может релоаднуть prometheus, значит в правилах ошибка и надо смотреть лог Prometheus:
-              * `kubectl -n d8-monitoring logs prometheus-main-0 prometheus -f`
-          * **Важно!** Бывает так, что `prometheus-config-reloader` "зависает" на какой-то ошибке и перестает видеть новые изменения, а продолжает пытаться релоаднуть Prometheus со старой ошибочной конфигурацией. В этом случае единственное, что можно сделать, — зайти в Pod и прибить процесс `prometheus-config-reloader` (Kubernetes перезапустит контейнер).
+    * Если `prometheus-config-reloader` не видит изменений, то надо проверить prometheus-operator:
+      * `kubectl -n d8-operator-prometheus get pod` — посмотреть, что Pod запущен
+      * `kubectl -n d8-operator-prometheus logs -f deploy/prometheus-operator --tail=50` — посмотреть, что в логе нет ошибок
+    * Если `prometheus-config-reloader` не может релоаднуть prometheus, значит в правилах ошибка и надо смотреть лог Prometheus:
+      * `kubectl -n d8-monitoring logs prometheus-main-0 prometheus -f`
+    * **Важно!** Бывает так, что `prometheus-config-reloader` "зависает" на какой-то ошибке и перестает видеть новые изменения, а продолжает пытаться релоаднуть Prometheus со старой ошибочной конфигурацией. В этом случае единственное, что можно сделать, — зайти в Pod и прибить процесс `prometheus-config-reloader` (Kubernetes перезапустит контейнер).
 
-Лучшие практики
----------------
-
+## Лучшие практики
 
 ### Называть группу правил согласно нашему стандарту
 
@@ -46,13 +45,13 @@ search: Разработка правил Prometheus, prometheus alerting rules
 * в `kubernetes/nginx-ingress.yaml` есть три группы: `kubernetes.nginx-ingress.overview`, `kubernetes.nginx-ingress.details` и `kubernetes.nginx-ingress.controller`
 * в `applications/redis.yaml` есть только одна группа: `applications.redis`.
 
-
 ### Всегда явно указывать job
 
 Имя метрики, пусть даже оно вам кажется уникальным, может перестать быть таковым в любой момент — в одном из кластеров кто-то может добавить custom приложение, которое возвращает метрики с таким-же названием, и все — ваши правила поломаются. Однако мы очень четко контролируем лейбл job (благодаря servicemonitor'ам) и связка `название метрики` + `job` является гарантированно уникальной. Поэтому, **обязательно добавляйте имя job'а** во все запросы всех правил!
 
 Например, метрика `nginx_filterzone_responses_total` является стандартной (ее экспортирует [nginx-vts-exporter](https://github.com/hnlq715/nginx-vts-exporter)), поэтому если не указать явно название job'а, то любое custom приложение экспортирующее эти метрики сломает все графики и все алерты ingress-nginx.
-```
+
+```text
 sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, namespace, scheme, server_name)
                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                                      гарантирует защиту от конфликта
@@ -77,13 +76,14 @@ Prometheus rules — программируемая логика. Helm Chart tem
 
 Например, если вы хотите в каком-то алерте сделать возможность переопределения порогового значения, то:
 * Нужно сделать вот такой query: `foo_value > scalar(foo_threshold or vector(5))`.
-    * если метрика `foo_threshold` определена, то `foo_value` будет сравниваться с ее значением,
-    * если такой метрики нет — `foo_value` будет сравниваться с 5
+  * если метрика `foo_threshold` определена, то `foo_value` будет сравниваться с ее значением,
+  * если такой метрики нет — `foo_value` будет сравниваться с 5
 * Тогда в том кластере, где это необходимо, можно сделать custom'ный рул, который будет возвращать метрику `foo_threshold` с необходимым пороговым значением.
 
-Alerting rules severity
------------------------
+## Alerting rules severity
+
 Для указания критичности у alerting-правила используйте метку `severity_level` либо пару меток `impact` и `likehood`. Например:
+
 ```yaml
 spec:
   groups:
@@ -102,13 +102,16 @@ spec:
       labels:
         severity_level: "1"
 ```
+
 В таком случае в polk-e отобразится алерт с уровнем критичности S1.
 Для достижения аналогичного разультата можно использовать `impact` и `likehood`:
+
 ```yaml
       labels:
         impact: deadly
         likehood: certain
 ```
+
 Если инцидент можно описать негативными последствиями и вероятностью их наступления, то лучше применять второй способ — с метками `impact` и `likehood`. Например:
 * Отказ одного диска массива RAID5 из четырех дисков, на котором лежит БД.
   * Выход из строя еще одного диска приведет к краху массива и потере данных, поэтому `impact: deadly`.

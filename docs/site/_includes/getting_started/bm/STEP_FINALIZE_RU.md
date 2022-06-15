@@ -87,7 +87,6 @@ EOF
 </li>
 </ul>
 
-
 <script type="text/javascript">
 $(document).ready(function () {
     generate_password(true);

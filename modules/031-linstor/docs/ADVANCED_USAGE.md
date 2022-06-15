@@ -28,7 +28,7 @@ After enabling the module, the cluster is automatically configured to use LINSTO
 
      Example of the output:
   
-     ```
+     ```text
      +----------------------------------------------------------------------------------------+
      | Node                                | NodeType   | Addresses                  | State  |
      |========================================================================================|
@@ -47,7 +47,7 @@ After enabling the module, the cluster is automatically configured to use LINSTO
   
      Example of the output:
   
-     ```
+     ```text
      +----------------------------------------------------------------+
      | Size          | Rotational | Nodes                             |
      |================================================================|
@@ -96,7 +96,7 @@ After enabling the module, the cluster is automatically configured to use LINSTO
 
    Example of the output:
 
-   ```
+   ```text
    +---------------------------------------------------------------------------------------------------------------------------------+
    | StoragePool          | Node   | Driver   | PoolName          | FreeCapacity | TotalCapacity | CanSnapshots | State | SharedName |
    |=================================================================================================================================|

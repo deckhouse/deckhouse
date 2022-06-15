@@ -14,10 +14,13 @@ Let's see what is available in the [monitoring](/{{ page.lang }}/documentation/v
   Access to Grafana is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) module:
   - Login — `admin`;
   - Password — generated automatically. It can be found in the `deckhouse` ConfigMap in the configuration section of the `prometheus` module. Use the following command to get it:
+
     ```bash
     kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password
     ```
+
     Sample output:
+
     ```
     $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password 
     password: UJvSB4UYTa3fnDOco6LF
@@ -161,7 +164,7 @@ Configuring DexProvider
 </h3>
 <div class="cards-item__text" markdown="1">
 You have to [configure](/{{ page.lang }}/documentation/v1/modules/150-user-authn/usage.html) a
-`DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc., 
+`DexProvider` object to enable, e.g., GitHub-based authentication. After creating the `DexProvider` object, all access attempts to Deckhouse components such as Grafana, Dashboard, etc.,
 will be authenticated using GitHub.
 </div>
 </div>

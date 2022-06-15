@@ -105,7 +105,7 @@ title: "Модуль extended-monitoring: настройки"
 
 До:
 
-```
+```text
 max by (namespace, pod, container) (
   (
     rate(container_cpu_cfs_throttled_periods_total[5m])
@@ -118,7 +118,7 @@ max by (namespace, pod, container) (
 
 После:
 
-```
+```text
 max by (namespace, pod, container) (
   (
     rate(container_cpu_cfs_throttled_periods_total[5m])

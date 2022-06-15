@@ -77,7 +77,7 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
 
 4. You have to specify one more variable `node_group`. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, here is an example using inventory file:
 
-   ```
+   ```text
    [system]
    system-0
    system-1

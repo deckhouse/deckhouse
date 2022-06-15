@@ -14,16 +14,19 @@ The in-cluster documentation is available at [deckhouse.example.com](https://dec
 Access to the documentation is restricted via the basic authentication mechanism (additional authentication options are provided in the [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/) module:
 - Login — `admin`
 - Password — generated automatically. It can be found in the `deckhouse` ConfigMap in the configuration section of the `deckhouse-web` module. Use the following command to get it:
+
   ```bash
   kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.deckhouseWeb}" | grep password
   ```
+
   Sample output:
+
   ```
   $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.deckhouseWeb}" | grep password 
   password: UJvSB4UYTa3fnDOco6LF
   ```
 
->  The following problems may cause [deckhouse.example.com](https://deckhouse.example.com) to be unreachable:
+> The following problems may cause [deckhouse.example.com](https://deckhouse.example.com) to be unreachable:
 - Ingress controller-level issues;
 - DNS-related issues;
 - network problems (filtering, routing...).

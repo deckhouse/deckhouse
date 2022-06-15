@@ -42,7 +42,6 @@ run.
 We can copy the DB to /tmp, delete unnecessary data and shrink the file. In
 SQLite it is called "VACUUM", hence the name of this dir.
 
-
 ```bash
 $ tree
 .

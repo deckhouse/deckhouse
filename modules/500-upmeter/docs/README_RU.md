@@ -19,7 +19,7 @@ title: "Модуль upmeter"
 ## Интерфейс
 
 Пример web-интерфейса:
-![](../../images/500-upmeter/image1.png)
+![Пример web-интерфейса](../../images/500-upmeter/image1.png)
 
 Пример графиков по метрикам из upmeter в Grafana:
-![](../../images/500-upmeter/image2.png)
+![Пример графиков по метрикам из upmeter в Grafana](../../images/500-upmeter/image2.png)

@@ -44,8 +44,8 @@ The data collected provides the basis for calculating the [Managed Kubernetes](h
 The average number of samples sent per cluster is **35 lines every 30 seconds**.
 
 Here is an example of the data collected:
-![](../../images/600-flant-integration/image1.png)
-![](../../images/600-flant-integration/image2.png)
+![An example of the data collected 1](../../images/600-flant-integration/image1.png)
+![An example of the data collected 2](../../images/600-flant-integration/image2.png)
 
 In addition to the metrics collected by the flant-integration module, the [upmeter](../500-upmeter/) module collects the [availability metrics](#sla-metrics) to analyze SLA performance.
 
@@ -60,7 +60,7 @@ Once the new Deckhouse cluster is created:
 4. Deckhouse creates a `madison-proxy` Pod for each IP address. These are then used to receive Prometheus alerts.
 
 Below is the scheme of sending alerts from the cluster to Madison:
-![](../../images/600-flant-integration/image3.png)
+![Scheme of sending alerts from the cluster to Madison](../../images/600-flant-integration/image3.png)
 
 On average, the bandwidth consumed by alerts sent from the cluster is **2 kb/s**. However, keep in mind that the more incidents occur in a cluster, the more data is sent.
 
@@ -71,7 +71,7 @@ The Deckhouse operator is the centerpiece of the entire cluster. To collect the 
 The logs contain information **only about Deckhouse components (no secret cluster data)**. Sample messages are shown in the screenshot below. The data collected helps determine what and when the Deckhouse operator performed specific actions and with what results.
 
 Below is an example of Deckhouse operator logs:
-![](../../images/600-flant-integration/image4.png)
+![An example of Deckhouse operator logs](../../images/600-flant-integration/image4.png)
 
 During Deckhouse release switching, an average of **150 log entries per minute** is sent. During normal operation, an average of **20 log entries per minute** is sent.
 

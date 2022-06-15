@@ -6,7 +6,7 @@ This module is **disabled** by default.
 
 To enable it for the bare metal machines, add the following parameter to the `deckhouse` ConfigMap:
 
-```
+```yaml
 cniCiliumEnabled: "true"
 ```
 

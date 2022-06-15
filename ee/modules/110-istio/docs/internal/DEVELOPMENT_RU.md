@@ -35,16 +35,19 @@ searchable: false
     ```shell
     sed 's/irate(/rate(/g' -i *.json
     ```
+
   * Заменить `Resolution` на `1/1`:
 
     ```shell
     sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i *.json
     ```
+
   * Убрать `Min Step`:
 
     ```shell
     sed '/"interval":/d' -i *.json
     ```
+
   * Заменить все графики на `Staircase` (поломает графики `Stack` + `Percent`, которые придется поправить руками на `Bars`):
 
     ```shell

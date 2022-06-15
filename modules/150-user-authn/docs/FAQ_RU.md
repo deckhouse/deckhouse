@@ -53,19 +53,19 @@ annotations:
 
 * Если нужно ограничить доступ по IP и оставить прохождение аутентификации в dex, добавьте аннотацию с указанием разрешенных CIDR через запятую:
 
-```yaml
-nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
-```
+  ```yaml
+  nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
+  ```
 
 * Если вы хотите, чтобы пользователи из указанных сетей были освобождены от прохождения аутентификации в dex, а пользователи из остальных сетей были обязаны аутентифицироваться в Dex - добавьте следующую аннотацию:
 
-```yaml
-nginx.ingress.kubernetes.io/satisfy: "any"
-```
+  ```yaml
+  nginx.ingress.kubernetes.io/satisfy: "any"
+  ```
 
 ### Как работает аутентификация при помощи DexAuthenticator
 
-<img src="../../images/150-user-authn/dex_login.svg">
+![Как работает аутентификация при помощи DexAuthenticator](../../images/150-user-authn/dex_login.svg)
 
 1. Dex в большинстве случаев перенаправляет пользователя на страницу входа провайдера и ожидает, что пользователь будет перенаправлен на его `/callback` URL. Однако, такие провайдеры как LDAP или Atlassian Crowd не поддерживают этот вариант. Вместо этого пользователь должен ввести свои логин и пароль в форму входа в Dex, и Dex сам проверит их верность сделав запрос к API провайдера.
 
@@ -97,14 +97,14 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 
-* --oidc-client-id=kubernetes
-* --oidc-groups-claim=groups
-* --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
-* --oidc-username-claim=email
+* `--oidc-client-id=kubernetes`
+* `--oidc-groups-claim=groups`
+* `--oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/`
+* `--oidc-username-claim=email`
 
 В случае использования самоподписанных сертификатов для Dex будет добавлен ещё один аргумент, а также в Pod с apiserver будет смонтирован файл с CA:
 
-* --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
+* `--oidc-ca-file=/etc/kubernetes/oidc-ca.crt`
   {% endofftopic %}
 
 ### Как работает подключение к Kubernetes API при помощи сгенерированного kubeconfig

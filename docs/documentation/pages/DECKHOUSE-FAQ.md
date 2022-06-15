@@ -125,13 +125,13 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 The following parameters must be set if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
 * Enable `Docker Bearer Token Realm`:
-  ![](images/registry/nexus/nexus1.png)
+  ![Enable `Docker Bearer Token Realm`](images/registry/nexus/nexus1.png)
 
 * Enable anonymous registry access (otherwise, Bearer authentication [won't work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms)):
-  ![](images/registry/nexus/nexus2.png)
+  ![Enable anonymous registry access](images/registry/nexus/nexus2.png)
 
 * Set the `Maximum metadata age` to 0 (otherwise, the automatic update of Deckhouse will fail due to caching):
-  ![](images/registry/nexus/nexus3.png)
+  ![Set the `Maximum metadata age`](images/registry/nexus/nexus3.png)
 
 #### Harbor
 
@@ -144,7 +144,7 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
   * `Endpoint URL`: `https://registry.deckhouse.io`.
   * Specify the `Access ID` and `Access Secret` if you use Deckhouse Enterprise Edition; otherwise, leave them blank.
 
-![](images/registry/harbor/harbor1.png)
+![Create a Registry](images/registry/harbor/harbor1.png)
 
 * Create a new Project:
   * `Projects -> New Project`.
@@ -152,7 +152,7 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
   * `Access Level`: `Public`.
   * `Proxy Cache` — enable and choose the Registry, created in the previous step.
 
-![](images/registry/harbor/harbor2.png)
+![Create a new Project](images/registry/harbor/harbor2.png)
 
 Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
 
@@ -175,10 +175,10 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
 The general cluster parameters are stored in the `ClusterConfiguration` structure. It contains parameters such as:
 
-- cluster domain: `clusterDomain`; 
+- cluster domain: `clusterDomain`;
 - CRI used in the cluster: `defaultCRI`;
 - Kubernetes control plane version: `kubernetesVersion`;
-- cluster type (Static, Cloud, Hybrid): `clusterType`;   
+- cluster type (Static, Cloud, Hybrid): `clusterType`;
 - address space of the cluster's Pods: `podSubnetCIDR`;
 - address space of the cluster's services: `serviceSubnetCIDR` etc.
 
@@ -190,7 +190,7 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-
 
 ## How do I change the configuration of a cloud provider in a cluster?
 
-Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called `OpenStackClusterConfiguration`. 
+Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called `OpenStackClusterConfiguration`.
 
 Regardless of the cloud provider used, its settings can be changed using the command:
 

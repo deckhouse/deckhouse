@@ -31,7 +31,7 @@ kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
 
 Пример graph'а для одного канала передачи логов в формате ASCII:
 
-```
+```text
 +------------------------------------------------+
 |  d8_cluster_source_flant-integration-d8-logs   |
 +------------------------------------------------+
@@ -82,9 +82,9 @@ vector tap d8_tf_*
 
 Вы так же можете использовать интерактивную консоль `vector vrl` для отладки [VRL](https://vector.dev/docs/reference/vrl/) правил для изменения логов.
 
-Примел программы с использованием VRL:
+Пример программы с использованием VRL:
 
-```
+```text
 . = {"test1": "lynx", "test2": "fox"}
 del(.test2)
 .

@@ -106,7 +106,7 @@ The most likely reasons why it cannot load the kernel module:
 
 If the Pod is stuck in the `ContainerCreating` phase, and you see the following errors in `kubectl describe pod`:
 
-```
+```text
 rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking 
 for exclusive open failed: wrong medium type, check device health
 ```
@@ -125,7 +125,7 @@ The `InUse` flag will indicate which node the device is being used on.
 
 An example error in `kubectl describe pod`:
 
-```
+```text
 kubernetes.io/csi: attachment for pvc-be5f1991-e0f8-49e1-80c5-ad1174d10023 failed: CSINode b-node0 does not 
 contain driver linstor.csi.linbit.com
 ```
