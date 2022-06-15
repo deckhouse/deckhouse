@@ -23,22 +23,22 @@ The prometheus operator:
 Generally, the Prometheus server does two key things: it **collects metrics** and **evaluates rules**:
 * For each monitoring *target*, after each `scrape_interval`, it sends an HTTP request to this *target*. In response, it gets [custom-formatted](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details) metrics and saves them to a database.
 * At each `evaluation_interval`, it evaluates *rules* and either:
-    * sends alerts, or
-    * saves (to its own database) new metrics (the result of executing the *rule*).
+  * sends alerts, or
+  * saves (to its own database) new metrics (the result of executing the *rule*).
 
 ### How do I configure Prometheus?
 
 * The Prometheus server has a *config* and *rule files* (files containing rules).
 * The `config` file includes the following sections:
-    * `scrape_configs` — settings that define the method for discovering monitoring *targets* (see the next section for more details);
-    * `rule_files` — a list of directories where *rule* files are located:
+  * `scrape_configs` — settings that define the method for discovering monitoring *targets* (see the next section for more details);
+  * `rule_files` — a list of directories where *rule* files are located:
 
         ```yaml
         rule_files:
         - /etc/prometheus/rules/rules-0/*
         - /etc/prometheus/rules/rules-1/*
         ```
-    * `alerting` — settings to locate *Alert Managers* to which alerts are sent. This section is similar to `scrape_configs`, except that it defines a list of *endpoints* to which Prometheus sends alerts.
+  * `alerting` — settings to locate *Alert Managers* to which alerts are sent. This section is similar to `scrape_configs`, except that it defines a list of *endpoints* to which Prometheus sends alerts.
 
 ### How does Prometheus get the list of *targets*?
 
@@ -46,9 +46,9 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
     ![](../../images/200-operator-prometheus/targets.png)
 
-    * **(1)** Prometheus reads the `scrape_configs` section and uses it to configure its internal Service Discovery mechanism;
-    * **(2)** The Service Discovery mechanism interacts with the Kubernetes API (mostly, it gets endpoints);
-    * **(3)** Based on Kubernetes information, the Service Discovery mechanism updates Targets (the list of *targets*);
+  * **(1)** Prometheus reads the `scrape_configs` section and uses it to configure its internal Service Discovery mechanism;
+  * **(2)** The Service Discovery mechanism interacts with the Kubernetes API (mostly, it gets endpoints);
+  * **(3)** Based on Kubernetes information, the Service Discovery mechanism updates Targets (the list of *targets*);
 * `scrape_configs` contains a list of *scrape jobs* (the internal Prometheus concept), and each job is defined as follows:
 
     ```yaml
@@ -108,25 +108,26 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
         replacement: $1
         action: replace
     ```
-* This way, Prometheus tracks:
-    * the addition of Pods and deletion of them (Kubernetes changes the endpoints when adding/deleting Pods; Prometheus notices this and adds/deletes *targets*);
-    * the addition of services (or rather endpoints) and deletion of them in the specified namespaces.
-* The change of the configuration is necessary in the following cases:
-    * if you need to add a new scrape config (usually, it is due to adding a new type of services that need to be monitored);
-    * if you need to modify the list of namespaces.
 
+* This way, Prometheus tracks:
+  * the addition of Pods and deletion of them (Kubernetes changes the endpoints when adding/deleting Pods; Prometheus notices this and adds/deletes *targets*);
+  * the addition of services (or rather endpoints) and deletion of them in the specified namespaces.
+* The change of the configuration is necessary in the following cases:
+  * if you need to add a new scrape config (usually, it is due to adding a new type of services that need to be monitored);
+  * if you need to modify the list of namespaces.
 
 ## Prometheus Operator
+
 ### What does Prometheus Operator do?
 
 * Prometheus Operator defines four custom resources using the CRD (Custom Resource Definitions) mechanism:
-    * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheus) — defines the Prometheus installation (cluster);
-    * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor) — defines the method for monitoring (collecting metrics) a set of services;
-    * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — defines the Alertmanager cluster (it isn't used since metrics are sent directly to [madison](https://madison.flant.com/));
-    * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusrule) — defines a list of Prometheus rules;
+  * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheus) — defines the Prometheus installation (cluster);
+  * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor) — defines the method for monitoring (collecting metrics) a set of services;
+  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — defines the Alertmanager cluster (it isn't used since metrics are sent directly to [madison](https://madison.flant.com/));
+  * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusrule) — defines a list of Prometheus rules;
 * Monitors `prometheus` resources and generates for each resource:
-    * StatefulSet (with Prometheus);
-    * Secret containing `prometheus.yaml` (the Prometheus config) and `configmaps.json` (the `prometheus-config-reloader` config);
+  * StatefulSet (with Prometheus);
+  * Secret containing `prometheus.yaml` (the Prometheus config) and `configmaps.json` (the `prometheus-config-reloader` config);
 * Monitors `servicemonitor` and `prometheusrule`  resources and updates the config files (`prometheus.yaml` and `configmaps.json` stored in the secret) based on them.
 
 ### What does the Prometheus Pod contain?
@@ -134,14 +135,14 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 ![](../../images/200-operator-prometheus/pod.png)
 
 * The Prometheus Pod has two containers inside:
-    * `prometheus` —  the container with the Prometheus itself;
-    * `prometheus-config-reloader` — a [wrapping](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) that:
-        * monitors `prometheus.yaml` for changes and, if necessary, reloads the Prometheus configuration (via a dedicated HTTP request, see more [below](#how-are-service-monitors-handled));
-        * monitors PrometheusRules (see more [below](#how-are-custom-resources-with-rules-processed)) and, if necessary, pulls them and restarts Prometheus.
+  * `prometheus` —  the container with the Prometheus itself;
+  * `prometheus-config-reloader` — a [wrapping](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) that:
+    * monitors `prometheus.yaml` for changes and, if necessary, reloads the Prometheus configuration (via a dedicated HTTP request, see more [below](#how-are-service-monitors-handled));
+    * monitors PrometheusRules (see more [below](#how-are-custom-resources-with-rules-processed)) and, if necessary, pulls them and restarts Prometheus.
 * The Pod uses three volumes:
-    * config —  the secret (it contains `prometheus.yaml` and `configmaps.json`). It is mounted to both containers.
-    * rules — an `emptyDir` volume that reads the `prometheus` container and supplies data to the `prometheus-config-reloader` container. It is mounted to both containers (in read-only mode in the case of the Prometheus container).
-    * data — a Prometheus data volume. This one mounted to `prometheus` only.
+  * config —  the secret (it contains `prometheus.yaml` and `configmaps.json`). It is mounted to both containers.
+  * rules — an `emptyDir` volume that reads the `prometheus` container and supplies data to the `prometheus-config-reloader` container. It is mounted to both containers (in read-only mode in the case of the Prometheus container).
+  * data — a Prometheus data volume. This one mounted to `prometheus` only.
 
 ### How are Service Monitors handled?
 
@@ -163,6 +164,6 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 * **(3)** Prometheus Operator updates the `prometheus-main-rulefiles-0` ConfigMap in response to the addition/deletiion/modification of the PrometheusRule.
 * **(4)** The ConfigMap data are passed to the Pod using standard Kubernetes mechanisms.
 * `prometheus-config-reloader` notices that the file is changed and:
-    * **(5)** pulls the modified ConfigMaps to the rules directory (of an `emptyDir` type);
-    * **(6)** sends a reboot request to Prometheus over HTTP;
+  * **(5)** pulls the modified ConfigMaps to the rules directory (of an `emptyDir` type);
+  * **(6)** sends a reboot request to Prometheus over HTTP;
 * **(7)** Prometheus rereads the config and notices the modified *rules*.

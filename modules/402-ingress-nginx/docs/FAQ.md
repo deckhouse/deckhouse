@@ -9,6 +9,7 @@ Add the  kube-rbac-proxy container to the application Pod to allow only ingress 
 ### An example of the corresponding Kubernetes Deployment
 
 {% raw %}
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -60,6 +61,7 @@ spec:
         configMap:
           name: kube-rbac-proxy
 ```
+
 {% endraw %}
 
 The application only accepts localhost (127.0.0.1) requests. That means that an unsecured connection can only be established to it from within the Pod.
@@ -72,6 +74,7 @@ The proxy needs permissions to create `TokenReview` and `SubjectAccessReview` to
 Our clusters have a [built-in ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/020-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) called **d8-rbac-proxy** that is ideal for this kind of situation.
 You don't need to create it yourself! Just attach it to the ServiceAccount of your Deployment.
 {% raw %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -95,6 +98,7 @@ subjects:
 ```
 
 ### The Kube-RBAC-Proxy configuration
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -116,11 +120,13 @@ data:
           subresource: http
           name: my-app
 ```
+
 {% endraw %}
 According to the configuration, the user must have access to the `my-app` Deployment and its `http` subresource in the `my-namespace` namespace.
 
 Such permissions have the following RBAC form:
 {% raw %}
+
 ```yaml
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -150,6 +156,7 @@ subjects:
 ```
 
 You also need to add the following parameters to the ingress of the resource:
+
 ```yaml
 nginx.ingress.kubernetes.io/backend-protocol: HTTPS
 nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -158,12 +165,14 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
   proxy_ssl_protocols TLSv1.2;
   proxy_ssl_session_reuse on;
 ```
+
 {% endraw %}
 [Here](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs) you can read more about how certificate authentication works.
 
 ## How do I configure MetalLB to be accessible from the internal network only?
 
 Below is an example of a MetalLB config with access from the internal network only.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -178,6 +187,7 @@ spec:
 ```
 
 ## How to add extra log fields to a nginx-controller?
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

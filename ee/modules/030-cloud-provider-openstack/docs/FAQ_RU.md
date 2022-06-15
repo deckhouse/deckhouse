@@ -181,6 +181,7 @@ OpenStack API успешно рапортует об изменении разм
 Для устранения проблемы необходимо прописать в `cinder.conf` параметры доступа к Nova API. Например, так:
 
 {% raw %}
+
 ```ini
 [nova]
 interface = admin
@@ -194,6 +195,7 @@ region_name = {{ nova_service_region }}
 user_domain_id = default
 username = {{ nova_service_user_name }}
 ```
+
 {% endraw %}
 
 [Источник...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
@@ -201,11 +203,13 @@ username = {{ nova_service_user_name }}
 ## Как использовать rootDiskSize и когда он предпочтителен?
 
 Проверьте объем диска, указанного в используемом flavor OpenStack:  
+
 ```shell
 openstack flavor show m1.medium-50g -c disk
 ```
 
 Пример:
+
 ```
 # openstack flavor show m1.medium-50g -c disk
 +-------+-------+
@@ -238,8 +242,8 @@ OpenStack-провайдеры могут использовать разные 
 Также, вы можете создать новый образ OpenStack [следующим образом](#как-загрузить-образ-в-openstack).
 
 Пример:
+
 ```shell
 openstack volume type list
 openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
 ```
-

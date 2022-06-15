@@ -82,11 +82,13 @@ govc permissions.set  -principal имя_пользователя -role kubernete
 ## Инфраструктура
 
 ### Сети
+
 Для работы кластера необходим VLAN с DHCP и доступом в Интернет:
 * Если VLAN публичный (публичные адреса), то нужна вторая сеть, в которой необходимо развернуть сеть узлов кластера (в этой сети DHCP не нужен).
 * Если VLAN внутренний (приватные адреса), то эта же сеть будет сетью узлов кластера.
 
 ### Входящий трафик
+
 * Если у вас имеется внутренний балансировщик запросов, то можно обойтись им и направлять трафик напрямую на frontend-узлы кластера.
 * Если балансировщика нет, то для организации отказоустойчивых Loadbalancer'ов рекомендуется использовать MetalLB в режиме BGP. В кластере будут созданы frontend-узлы с двумя интерфейсами. Для этого дополнительно потребуются:
   * Отдельный VLAN для обмена трафиком между BGP-роутерами и MetalLB. В этом VLAN'e должен быть DHCP и доступ в Интернет.
@@ -96,6 +98,7 @@ govc permissions.set  -principal имя_пользователя -role kubernete
   * Диапазон, из которого анонсировать адреса.
 
 ### Использование хранилища данных
+
 В кластере может одновременно использоваться различное количество типов хранилищ. В минимальной конфигурации потребуются:
 * `Datastore`, в котором Kubernetes кластер будет заказывать `PersistentVolume`.
 * `Datastore`, в котором будут заказываться root-диски для VM (может быть тот же `Datastore`, что и для `PersistentVolume`).
@@ -106,16 +109,19 @@ govc permissions.set  -principal имя_пользователя -role kubernete
 
 1. [Установите Packer](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 1. Склонируйте [репозиторий Deckhouse](https://github.com/deckhouse/deckhouse/):
+
    ```bash
    git clone https://github.com/deckhouse/deckhouse/
    ```
 
 1. Перейдите в директорию `ee/modules/030-cloud-provider-vsphere/packer/` склонированного репозитория:
+
    ```bash
    cd deckhouse/ee/modules/030-cloud-provider-vsphere/packer/
    ```
 
 1. Создайте файл `vsphere.auto.pkrvars.hcl` со следующим содержимым:
+
    ```hcl
    vcenter_server = "<хостнейм или IP vCenter>"
    vcenter_username = "<имя пользователя>"
@@ -127,12 +133,14 @@ govc permissions.set  -principal имя_пользователя -role kubernete
    vcenter_folder = "<имя директории>"
    vm_network = "<имя сети, к которой подключится виртуальная машина при сборке образа>"
    ```
+
 {% raw %}
 1. Если ваш компьютер (с которого запущен Packer) не находится в одной сети с `vm_network`, а вы подключены через VPN-туннель, то замените `{{ .HTTPIP }}` в файле `<UbuntuVersion>.pkrvars.hcl` на IP-адрес вашего компьютера из VPN-сети в следующей строке:
 
     ```hcl
     " url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
     ```
+
 {% endraw %}
 
 1. Выберите версию Ubuntu и соберите образ:

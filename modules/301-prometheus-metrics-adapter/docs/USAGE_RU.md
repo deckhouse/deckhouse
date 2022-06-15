@@ -38,6 +38,7 @@ search: autoscaler, HorizontalPodAutoscaler
 Пример HPA для масштабирования по базовым метрикам из `metrics.k8s.io`: CPU и Memory Pod'ов. Особое внимание на `averageUtulization` — это значение отражает целевой процент ресурсов, который был **реквестирован**.
 
 {% raw %}
+
 ```yaml
 apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
@@ -79,6 +80,7 @@ spec:
         # Масштабирование, если для Pod'ов запрошено по 1GB памяти и в среднем использовано уже более 800MB.
         averageUtilization: 80
 ```
+
 {% endraw %}
 
 ## Масштабирование по кастомным метрикам
@@ -87,20 +89,20 @@ spec:
 
 Кастомные метрики необходимо регистрировать в API `/apis/custom.metrics.k8s.io/`, в нашем случае эту регистрацию производит `prometheus-metrics-adapter` (и он же реализует API). Потом на эти метрики можно будет ссылаться из объекта `HorizontalPodAutoscaler`. Настройка ванильного `prometheus-metrics-adapter` достаточно трудоёмкий процесс, но мы его несколько упростили, определив набор [Custom Resources](cr.html) с разным Scope:
 * Namespaced:
-    * `ServiceMetric`
-    * `IngressMetric`
-    * `PodMetric`
-    * `DeploymentMetric`
-    * `StatefulsetMetric`
-    * `NamespaceMetric`
-    * `DaemonSetMetric` (недоступен пользователям)
+  * `ServiceMetric`
+  * `IngressMetric`
+  * `PodMetric`
+  * `DeploymentMetric`
+  * `StatefulsetMetric`
+  * `NamespaceMetric`
+  * `DaemonSetMetric` (недоступен пользователям)
 * Cluster:
-    * `ClusterServiceMetric` (недоступен пользователям)
-    * `ClusterIngressMetric` (недоступен пользователям)
-    * `ClusterPodMetric` (недоступен пользователям)
-    * `ClusterDeploymentMetric` (недоступен пользователям)
-    * `ClusterStatefulsetMetric` (недоступен пользователям)
-    * `ClusterDaemonSetMetric` (недоступен пользователям)
+  * `ClusterServiceMetric` (недоступен пользователям)
+  * `ClusterIngressMetric` (недоступен пользователям)
+  * `ClusterPodMetric` (недоступен пользователям)
+  * `ClusterDeploymentMetric` (недоступен пользователям)
+  * `ClusterStatefulsetMetric` (недоступен пользователям)
+  * `ClusterDaemonSetMetric` (недоступен пользователям)
 
 С помощью Cluster-scoped-ресурса можно определить метрику глобально, а с помощью Namespaced-ресурса можно её локально переопределять. [Формат](cr.html) у всех CR — одинаковый.
 
@@ -109,6 +111,7 @@ spec:
 После регистрации кастомной метрики на нее можно сослаться. С точки зрения HPA, кастомные метрики бывают двух видов — `Pods` и `Object`. С `Object` всё просто — это отсылка к объекту в кластере, который имеет в Prometheus метрики с соответствующими лейблами (`namespace=XXX,ingress=YYY`). Эти лейблы будут подставляться вместо `<<.LabelMatchers>>` в вашем кастомном запросе.
 
 {% raw %}
+
 ```yaml
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2
@@ -142,6 +145,7 @@ spec:
         # Масштабирование, если значение кастомной метрики больше 10.
         value: 10
 ```
+
 {% endraw %}
 
 C `Pods` сложнее — из ресурса, который масштабирует HPA, будут извлечены все Pod'ы и по каждому будет собраны метрики с соответствующими лейблами (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...). Из этих метрик HPA посчитает среднее и использует для масштабирования. [Пример...](#примеры-с-использованием-кастомных-метрик-типа-pods)
@@ -151,6 +155,7 @@ C `Pods` сложнее — из ресурса, который масштаби
 Имеем очередь `send_forum_message` в RabbitMQ, для которого зарегистрирован сервис `rmq`. Если сообщений в очереди больше 42 — масштабируем.
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1beta1
 kind: ServiceMetric
@@ -186,6 +191,7 @@ spec:
         type: Value
         value: 42
 ```
+
 {% endraw %}
 
 #### Пример использования нестабильной кастомной метрики
@@ -196,6 +202,7 @@ spec:
 При этом мы не хотим реагировать на кратковременные вспышки, для этого усредняем метрику с помощью MQL-функции `avg_over_time()`.
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1beta1
 kind: ServiceMetric
@@ -231,6 +238,7 @@ spec:
         type: Value
         value: 42
 ```
+
 {% endraw %}
 
 #### Примеры с использованием кастомных метрик типа `Pods`
@@ -238,6 +246,7 @@ spec:
 Хотим, чтобы среднее количество php-fpm-воркеров в Deployment `mybackend` было не больше 5.
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1beta1
 kind: PodMetric
@@ -273,11 +282,13 @@ spec:
         # Масштабирование, если среднее значение метрики у всех Pod'ов Deployment'а больше 5.
         averageValue: 5
 ```
+
 {% endraw %}
 
 Масштабируем Deployment по процентному количеству active-воркеров php-fpm.
 
 {% raw %}
+
 ```yaml
 ---
 apiVersion: deckhouse.io/v1beta1
@@ -310,6 +321,7 @@ spec:
         # Масштабирование, если в среднем по Deployment 80% воркеров заняты.
         averageValue: 80
 ```
+
 {% endraw %}
 
 ### Регистрируем внешние метрики в Kubernetes API
@@ -321,6 +333,7 @@ spec:
 Пример `CustomPrometheusRules`:
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -338,6 +351,7 @@ spec:
       # Запрос, результаты которого попадут в итоговую метрику, нет смысла тащить в неё лишние лейблы.
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
+
 {% endraw %}
 
 ### Применяем внешние метрики в HPA
@@ -345,6 +359,7 @@ spec:
 После регистрации внешней метрики, на нее можно сослаться.
 
 {% raw %}
+
 ```yaml
 kind: HorizontalPodAutoscaler
 apiVersion: autoscaling/v2beta2
@@ -377,6 +392,7 @@ spec:
         # Масштабирование, если значение нашей метрики больше 10.
         value: 10
 ```
+
 {% endraw %}
 
 ### Пример с размером очереди в Amazon SQS
@@ -386,6 +402,7 @@ spec:
 В следующем примере подразумевается, что в Amazon SQS работает очередь `send_forum_message`. Если сообщений в очереди больше 42 — масштабируем. Для получения метрик из Amazon SQS понадобится exporter (например — [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)).
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -427,6 +444,7 @@ spec:
         type: Value
         value: 42
 ```
+
 {% endraw %}
 
 ## Способы отладки

@@ -69,7 +69,7 @@ To set up a hybrid cluster, follow these steps:
 
 ### Attaching storage devices to instances in a hybrid cluster
 
-To use PersistentVolumes on OpenStack nodes, you must create StorageClass with the appropriate OpenStack volume type. The `openstack volume type list` command lists all available types. 
+To use PersistentVolumes on OpenStack nodes, you must create StorageClass with the appropriate OpenStack volume type. The `openstack volume type list` command lists all available types.
 
 Here is the example config for the `ceph-ssd` volume type:
 
@@ -175,6 +175,7 @@ The OpenStack API states that the resize is completed successfully. However, Nov
 To get rid of this problem, you need to insert the Nova API access parameters into the `cinder.conf` file, e.g., as follows:
 
 {% raw %}
+
 ```ini
 [nova]
 interface = admin
@@ -188,6 +189,7 @@ region_name = {{ nova_service_region }}
 user_domain_id = default
 username = {{ nova_service_user_name }}
 ```
+
 {% endraw %}
 
 [Source...](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
@@ -195,11 +197,13 @@ username = {{ nova_service_user_name }}
 ## How to use rootDiskSize and when it is preferred?
 
 Check the disk value of the OpenStack flavor that you will use:
+
 ```shell
 openstack flavor show m1.medium-50g -c disk
 ```
 
 Example:
+
 ```
 # openstack flavor show m1.medium-50g -c disk
 +-------+-------+
@@ -236,6 +240,7 @@ If there are several types of disks in a *cloud provider*, you can set a default
 Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](#how-do-i-create-an-image-in-openstack) section describes how to do it
 
 Example:
+
 ```shell
 openstack volume type list
 openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME

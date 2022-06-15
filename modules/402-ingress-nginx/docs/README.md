@@ -7,6 +7,7 @@ Installs and manages the [NGINX Ingress Controller](https://github.com/kubernete
 The module supports running and configuring several NGINX Ingress controllers simultaneously (one of the controllers is the **primary** one; you can create as many **additional** controllers as you want). This approach allows you to separate extranet and intranet Ingress resources of applications.
 
 ## Traffic routing
+
 Traffic to nginx-ingress can be routed in several ways:
 - directly without the use of an external load balancer;
 - using an external LoadBalancer; the following LB varieties are supported:
@@ -19,6 +20,7 @@ Traffic to nginx-ingress can be routed in several ways:
   - OpenStack LB
 
 ## Terminating HTTPS
+
 The module allows you to manage HTTPS security policies for each of the NGINX Ingress controllers, including:
 - hsts parameters;
 - available SSL/TLS versions and encryption protocols.
@@ -26,6 +28,7 @@ The module allows you to manage HTTPS security policies for each of the NGINX In
 The module integrates with the [cert-manager](../../modules/101-cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
 
 ## Monitoring and statistics
+
 Our Ingress Nginx implementation has a Prometheus-based system for collecting statistical data built-in. It uses a variety of metrics based on:
 - the overall and upstream response time;
 - response codes;

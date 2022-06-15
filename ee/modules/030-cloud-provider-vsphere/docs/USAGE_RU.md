@@ -33,8 +33,6 @@ cloudProviderVsphere: |
     size: SMALL
 ```
 
-
-
 ## Пример custom resource `VsphereInstanceClass`
 
 ```yaml
@@ -50,4 +48,3 @@ spec:
   network: k8s-msk-178
   datastore: lun-1201
 ```
-

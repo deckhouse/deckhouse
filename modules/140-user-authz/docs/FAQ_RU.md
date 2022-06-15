@@ -49,6 +49,7 @@ spec:
 * Опции `limitNamespaces` будут объединены так, что Jane будет иметь доступ в их общее множество.
 
 Итоговые выданные права будут такими:
+
 ```yaml
 accessLevel: ClusterAdmin
 limitNamespaces:

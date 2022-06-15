@@ -3,7 +3,9 @@ title: "Модуль ingress-nginx: пример конфигурации"
 ---
 
 {% raw %}
+
 ## Общий пример
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -49,6 +51,7 @@ spec:
 ```
 
 ## Пример для GCP
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -60,6 +63,7 @@ spec:
 ```
 
 ## Пример для OpenStack
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -109,11 +113,13 @@ spec:
     key: dedicated.deckhouse.io
     value: frontend
 ```
+
 В случае использования MetalLB, его speaker поды должны быть запущены на тех–же нодах, что и поды ingress–контроллера.
 
 Контроллер должен получать реальные IP адреса клиентов — поэтому его Service создаётся с параметром `externalTrafficPolicy: Local` (запрещая меж–нодовый SNAT), и для удовлетворения данного параметра MetalLB speaker анонсирует этот Service только с тех нод, где запущены целевые поды.
 
 Таким образом для данного примера [конфигурация модуля metallb](../380-metallb/configuration.html) должна быть такой:
+
 ```yaml
 metallb:
  speaker:

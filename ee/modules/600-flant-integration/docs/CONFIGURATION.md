@@ -4,7 +4,7 @@ title: "The flant-integration module: configuration"
 
 This module is **disabled** by default.
 
-## Parameters 
+## Parameters
 
 <!-- SCHEMA -->
 

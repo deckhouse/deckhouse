@@ -91,7 +91,6 @@ title: "Модуль istio: Custom Resources (от istio.io)"
   * порт
   * uri
 
-
 ### Sidecar
 
 [Reference](https://istio.io/latest/docs/reference/config/networking/sidecar/)

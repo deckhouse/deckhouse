@@ -133,6 +133,7 @@ spec:
     labels:
       version: v2
 ```
+
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -153,8 +154,8 @@ spec:
       weight: 10
 ```
 
-
 ### Load balancing between services with different versions (Canary Deployment)
+
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -176,7 +177,8 @@ spec:
       weight: 75
 ```
 
-##### Rerouting the /uploads location to another service:
+##### Rerouting the /uploads location to another service
+
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService

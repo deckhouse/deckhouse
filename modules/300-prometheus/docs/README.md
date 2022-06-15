@@ -43,11 +43,13 @@ Deckhouse enables monitoring of a large set of "health" parameters of Kubernetes
 The detailed description is available [here](../../modules/402-ingress-nginx/#monitoring-and-statistics).
 
 ## Advanced monitoring mode
+
 Deckhouse also provides the advanced monitoring mode that implements custom metrics-based alerts. The following exporters are supported:
 - `extended-monitoring-exporter`. Implements extended scraping of metrics for namespaces (that have the `extended-monitoring.flant.com/enabled=””` annotation attached), including information about available inodes/space on disks, monitoring the node usage, the availability of Deployment, `StatefulSet`, `DaemonSet` Pods, etc.;
 - `image-availability-exporter`.  Adds metrics (and send alerts) for tracking the availability of the container image specified in the `image` field in the Pod's spec in `Deployments`, `StatefulSets`, `DaemonSets`, `CronJobs`.
 
 ### Alerting in advanced monitoring mode
+
 Deckhouse allows you to flexibly configure alerting for each namespace and assign criticality depending on the threshold value. You can set thresholds in various namespaces for parameters such as:
 - empty space and inodes on a disk;
 - CPU usage for a node and a container;

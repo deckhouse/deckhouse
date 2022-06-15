@@ -7,11 +7,13 @@ type:
 ## Как запретить использование chrony и использовать ntp-демоны на узлах?
 
 1. Выключите модуль chrony в Deckhouse CM:
+
 ```yaml
 chronyEnabled: "false"
 ```
 
 2. Создайте NodeGroupConfiguration custom step чтобы включить ntp-демоны на узлах (пример для systemd-timesyncd):
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration

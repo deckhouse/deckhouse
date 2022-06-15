@@ -45,6 +45,7 @@ In the *multi-master* mode, `control plane` components are automatically deploye
 - The additional proxy server that processes localhost requests is set up on each master node. By default, the proxy server sends requests to the local `kube-apiserver` instance. If it is unavailable, the proxy tries to connect to other `kube-apiserver` instances.
 
 ### Scaling master nodes
+
 The `control-plane` nodes are scaled automatically using the `node-role.kubernetes.io/master=””` label:
 - Attaching the `node-role.kubernetes.io/master=””` label to a node results in deploying `control plane` components on this node, connecting the new `etcd` node to the etcd cluster, and regenerating all the necessary certificates and config files.
 - Removing the `node-role.kubernetes.io/master=””` label results in deleting all `control plane` components on a node, gracefully removing it from the etcd cluster, and regenerating all the necessary config files and certificates.

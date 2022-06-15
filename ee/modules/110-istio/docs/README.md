@@ -4,7 +4,7 @@ title: "The istio module"
 
 ## What issues does Istio help to resolve?
 
-[Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach. 
+[Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.
 
 Among other things, Istio solves the following tasks in a transparent for applications way:
 
@@ -80,6 +80,7 @@ You can use the following arguments for defining authorization rules:
 > **Caution!** All customizable limits apply to each client Pod individually (on a per Pod basis)! Suppose you limited a service to one TCP connection. In this case, if you have three client Pods, the service will get three incoming connections.
 
 ## Observability
+
 ### Tracing
 
 Istio makes it possible to collect application traces and inject trace headers if there are none. In doing so, however, you have to keep in mind the following:
@@ -220,7 +221,6 @@ Below are their fundamental differences:
   <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
   Control presentation
 </p>
-
 
 #### Enabling the federation
 

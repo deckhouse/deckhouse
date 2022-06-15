@@ -100,10 +100,11 @@ Note that only the deactivation using the `extended-monitoring.flant.com/enabled
 
 ### How does it work?
 
-The module exports specific Kubernetes object annotations to Prometheus. It allows you to improve Prometheus rules by adding the thresholds for triggering alerts. 
+The module exports specific Kubernetes object annotations to Prometheus. It allows you to improve Prometheus rules by adding the thresholds for triggering alerts.
 Using metrics that this module exports, you can, e.g., replace the "magic" constants in rules.
 
 Before:
+
 ```
 max by (namespace, pod, container) (
   (
@@ -116,6 +117,7 @@ max by (namespace, pod, container) (
 ```
 
 After:
+
 ```
 max by (namespace, pod, container) (
   (

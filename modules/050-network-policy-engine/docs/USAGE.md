@@ -3,6 +3,7 @@ title: "The network-policy-engine module: usage"
 ---
 
 ## Examples of network policies
+
 ### Deny external traffic to Pods in the namespace, but allow traffic to external resources from within the namespace
 
 ```yaml

@@ -36,6 +36,7 @@ The module performs the following settings on each node:
 - Adds a sophisticated iptables rule that uses a socket if it is open and ordinary Kubernetes magic for clusterIP if it is not.
 
 And here is the rule itself that allows for an easy fallback:
+
 ```bash
 -A PREROUTING -d <kube-dns IP address> -m socket --nowildcard -j NOTRACK
 ```

@@ -10,9 +10,11 @@ To add a new static node (e.g., VM or bare-metal server) to the cluster, you nee
 
 1. Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a [`NodeGroup` called `worker`](usage.html#an-example-of-the-static-nodegroup-configuration).
 2. Get the script for installing and configuring the node:
+
    ```shell
    kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-worker -o json | jq '.data."bootstrap.sh"' -r
    ```
+
 3. Before configuring Kubernetes on the node, make sure that you have performed all the necessary actions for the node to work correctly in the cluster:
    - Added all the necessary mount points (NFS, Ceph,...) to `/etc/fstab`;
    - Installed the suitable `ceph-common` version on the node as well as other packages;
@@ -20,6 +22,7 @@ To add a new static node (e.g., VM or bare-metal server) to the cluster, you nee
 4. Connect to the new node over SSH and run the following command using the data from the secret: `echo <base64> | base64 -d | bash`
 
 ## How do I add a batch of static nodes to a cluster?
+
 If you don't have `NodeGroup` in your cluster, then you can find information how to do it [here](#how-do-i-add-a-static-node-to-a-cluster).
 If you already have `NodeGroup`, you can automate the bootstrap process with any automation platform that you prefer. We will use Ansible as an example.
 
@@ -71,6 +74,7 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
            delay: 30
          when: bootstrapped.stat.exists == False
    ```
+
 4. You have to specify one more variable `node_group`. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, here is an example using inventory file:
 
    ```
@@ -435,6 +439,7 @@ is accompanied by downtime (disruption). Depending on the `disruption` setting f
 node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
+
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with patch:
@@ -504,6 +509,7 @@ When changing the CRI in the cluster, additional steps are required for the mast
      ```
 
 ## How to add node configuration step?
+
 Additional node configuration steps are set by custom resource `NodeGroupConfiguration`.
 
 ## How to use containerd with Nvidia GPU support?
@@ -526,6 +532,7 @@ spec:
 ```
 
 ### Debian
+
 Debian-based distributions contain packages with Nvidia drivers in the base repository, so we do not need to prepare special images to support Nvidia GPU.
 
 Deploy `NodeGroupConfiguration` scripts:
@@ -858,6 +865,7 @@ spec:
 For other Debian versions you will need to correct the `distribution` variable and Nvidia driver package name (the `nvidia-driver-470` in the example above).
 
 ### CentOS
+
 CentOS-based distributions do not contain Nvidia drivers in the base repositories.
 
 The installation of Nvidia drivers in CentOS-based distributions is difficult to automate, so it is advisable to have a prepared image with the drivers installed.
@@ -1264,4 +1272,5 @@ Copy output data from the CUDA device to the host memory
 Test PASSED
 Done
 ```
+
 {% endraw %}

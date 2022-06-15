@@ -24,4 +24,3 @@ spec:
   cores: 4
   memory: 8192
 ```
-

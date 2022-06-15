@@ -3,6 +3,7 @@ title: "Модуль vertical-pod-autoscaler: примеры конфигура�
 ---
 
 ## Настройка модуля
+
 ```yaml
 verticalPodAutoscaler: |
   nodeSelector:

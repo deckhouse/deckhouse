@@ -9,6 +9,7 @@ title: "Модуль chrony: настройки"
 <!-- SCHEMA -->
 
 ## Пример конфигурации
+
 ```yaml
 chrony: |
   ntpServers:

@@ -83,11 +83,13 @@ govc permissions.set  -principal username -role kubernetes /datacenter
 ## Infrastructure
 
 ### Networking
+
 A VLAN with DHCP and Internet access is required for the running cluster:
 * If the VLAN is public (public addresses), then you have to create a second network to deploy cluster nodes (DHCP is not needed in this network).
 * If the VLAN is private (private addresses), then this network can be used for cluster nodes.
 
 ### Inbound traffic
+
 * You can use an internal load balancer (if present) and direct traffic directly to the front nodes of the cluster.
 * If there is no load balancer, you can use MetalLB in BGP mode to organize fault-tolerant load balancers (recommended). In this case, front nodes of the cluster will have two interfaces. For this, you will need:
   * A dedicated VLAN for traffic exchange between BGP routers and MetalLB. This VLAN must have DHCP and Internet access.
@@ -97,6 +99,7 @@ A VLAN with DHCP and Internet access is required for the running cluster:
   * A range to announce addresses from.
 
 ### Using the data store
+
 Various types of storage can be used in the cluster; for the minimum configuration, you will need:
 * Datastore for provisioning PersistentVolumes to the Kubernetes cluster.
 * Datastore for provisioning root disks for the VMs (it can be the same Datastore as for PersistentVolume).
@@ -107,16 +110,19 @@ To build a VM image, follow these steps:
 
 1. [Install Packer](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
 1. Clone the Deckhouse repository:
+
    ```bash
    git clone https://github.com/deckhouse/deckhouse/
    ```
 
 1. `cd` into the `ee/modules/030-cloud-provider-vsphere/packer/` folder of the repository:
+
    ```bash
    cd deckhouse/ee/modules/030-cloud-provider-vsphere/packer/
    ```
 
 1. Create a file name `vsphere.auto.pkrvars.hcl` with the following contents:
+
    ```hcl
    vcenter_server = "<hostname or IP of a vCenter>"
    vcenter_username = "<username>"
@@ -128,12 +134,14 @@ To build a VM image, follow these steps:
    vcenter_folder = "<Folder name>"
    vm_network = "<VM network in which you will build an image>"
    ```
+
 {% raw %}
 1. If your PC (the one you are running Packer from) is not located in the same network as `vm_network` (if you are connected through a tunnel), change `{{ .HTTPIP }}` in the `<UbuntuVersion>.pkrvars.hcl` to your PCs VPN IP:
 
    ```hcl
    " url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
    ```
+
 {% endraw %}
 
 1. Build a version of Ubuntu:

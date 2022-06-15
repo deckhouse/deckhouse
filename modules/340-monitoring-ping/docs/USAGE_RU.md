@@ -5,6 +5,7 @@ title: "Модуль monitoring-ping: примеры конфигурации"
 ## Добавление дополнительных IP адресов для мониторинга
 
 В конфигурацию модуля в ConfigMap deckhouse можно разместить подобную конструкцию:
+
 ```yaml
 monitoringPing: |
   externalTargets:

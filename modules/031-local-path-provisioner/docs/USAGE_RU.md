@@ -3,7 +3,9 @@ title: "Модуль local-path-provisioner: примеры конфигурац
 ---
 
 ## Пример CR `LocalPathProvisioner`
+
 Reclaim policy устанавливается по умолчанию в `Retain`.
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
@@ -16,7 +18,9 @@ spec:
 ```
 
 ## Пример CR `LocalPathProvisioner` с установленным `reclaimPolicy`
+
 Reclaim policy устанавливается в `Delete`.
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
@@ -28,4 +32,3 @@ spec:
   path: "/opt/local-path-provisioner"
   reclaimPolicy: "Delete"
 ```
-

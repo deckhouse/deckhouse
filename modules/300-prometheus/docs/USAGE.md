@@ -26,6 +26,7 @@ prometheus: |
 Prometheus supports remote_write'ing data from the local Prometheus to a separate longterm storage (e.g., [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). In Deckhouse, this mechanism is implemented using the `PrometheusRemoteWrite` Custom Resource.
 
 ### Example of the basic PrometheusRemoteWrite
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -36,6 +37,7 @@ spec:
 ```
 
 ### Example of the expanded PrometheusRemoteWrite
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -54,7 +56,6 @@ spec:
     action: drop
     regex: my_cool_app_metrics_with_sensitive_data
 ```
-
 
 ## Connecting Prometheus to an external Grafana instance
 
@@ -107,6 +108,7 @@ type: Opaque
 data:
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
+
 Next, you only need to add the data source to Grafana:
 
 **Set `https://prometheus-api.<cluster-domain>` as the URL**.
@@ -155,7 +157,9 @@ subjects:
   name: app
   namespace: default
 ```
+
 Next, define the following job containing the `curl` request:
+
 ```yaml
 apiVersion: batch/v1
 kind: Job
@@ -179,9 +183,10 @@ spec:
       restartPolicy: Never
   backoffLimit: 4
 ```
+
 The `job` must complete successfully.
 
-## Sending alerts to Telegram:
+## Sending alerts to Telegram
 
 Prometheus-operator does not support sending alerts to Telegram directly, so Alertmanager is configured to send alerts via a webhook and deploy the application, which sends the received data to Telegram.
 
@@ -237,6 +242,7 @@ spec:
 `TELEGRAM_CHAT_ID` and `TELEGRAM_TOKEN` must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.
 
 Deploy CRD CustomAlertManager:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager

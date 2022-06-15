@@ -2,7 +2,7 @@
 title: "The basic-auth module: usage"
 ---
 
-## An example of the configuration:
+## An example of the configuration
 
 ```yaml
 basicAuthEnabled: "true"
@@ -22,6 +22,7 @@ basicAuth: |
 ```
 
 ## Usage
+
 Just add to the Ingress resource an annotation similar to the one below:
 
 ```yaml

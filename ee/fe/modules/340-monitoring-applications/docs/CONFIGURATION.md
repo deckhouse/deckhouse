@@ -27,4 +27,3 @@ title: "The monitoring-applications module: configuration"
     | trickster     |                    |                    | 1000 |
     | grafana       |                    |                    | 1000 |
     | uwsgi         | <span class="doc-checkmark"></span> |                    | 1000 |
-

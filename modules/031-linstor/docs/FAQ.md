@@ -10,33 +10,33 @@ Briefly:
 
 ## Performance and reliability notes, comparison to Ceph
 
-> You may be interested in our article ["Comparing Ceph, LINSTOR, Mayastor, and Vitastor storage performance in Kubernetes"](https://www.reddit.com/r/kubernetes/comments/v3tzze/comparing_ceph_linstor_mayastor_and_vitastor/). 
+> You may be interested in our article ["Comparing Ceph, LINSTOR, Mayastor, and Vitastor storage performance in Kubernetes"](https://www.reddit.com/r/kubernetes/comments/v3tzze/comparing_ceph_linstor_mayastor_and_vitastor/).
 
-We take a practical view of the issue. A difference of several tens of percent — in practice it never matters. The difference is several times or more important. 
+We take a practical view of the issue. A difference of several tens of percent — in practice it never matters. The difference is several times or more important.
 
 Comparison factors:
 - Sequential read and write: do not matter, because on any technology they always run into the network (which is 10Gb/s, which is 1Gb/s). From a practical point of view, this indicator can be completely ignored;
 - Random read and write (which is 1Gb/s, which is 10Gb/s):
-  - DRBD + LVM 5 times better (latency — 5 times less, IOPS — 5 times more) than Ceph RBD; 
+  - DRBD + LVM 5 times better (latency — 5 times less, IOPS — 5 times more) than Ceph RBD;
   - DRBD + LVM is 2 times better than DRBD + LVMThin.
-- If one of the replicas is located on local storage, then the read speed will be approximately equal to the storage device speed; 
+- If one of the replicas is located on local storage, then the read speed will be approximately equal to the storage device speed;
 - If there are no replicas located on local storage, then the write speed will be approximately equal to half the network bandwidth for two replicas, or ⅓ network bandwidth for three replicas;
 - With a large number of clients (more than 10, with iodepth 64), Ceph starts to fall behind more (up to 10 times) and consume much more CPU.
 
-All in all, in practice, it doesn’t matter how many knobs you have for tuning, only three factors are significant: 
+All in all, in practice, it doesn’t matter how many knobs you have for tuning, only three factors are significant:
 - **Read locality** — if all reading is performed locally, then it works at the speed (throughput, IOPS, latency) of the local disk (the difference is practically insignificant);
 - **1 network hop when writing** — in DRBD, the replication is performed by the *client*, and in Ceph, by *server*, so Ceph latency for writing always has at least x2 from DRBD;
-- **Complexity of code** — latency of calculations on the datapath (how much assembler code is executed for each io operation), DRBD + LVM is simpler than DRBD + LVMThin, and much simpler than Ceph RBD. 
+- **Complexity of code** — latency of calculations on the datapath (how much assembler code is executed for each io operation), DRBD + LVM is simpler than DRBD + LVMThin, and much simpler than Ceph RBD.
 
 ## What to use in which situation?
 
 By default, we use two replicas (the third is an automatically created `diskless` replica used for quorum). This approach guarantees protection against split-brain and a sufficient level of storage reliability, but the following features must be taken into account:
-  - When one of the replicas (replica A) is unavailable, data is written only to a single replica (replica B). It means that:
-    - If at this moment the second replica (replica B) is also turned off, writing and reading will be unavailable;
-    - If at the same time the second replica (replica B) is irretrievably lost, then the data will be partially lost (there is only the old, outdated replica A);
-    - If the old replica (replica A) was also irretrievably lost, the data will be completely lost.
-  - When the second replica is turned off, in order to turn it back on (without operator intervention), both replicas must be available (in order to correctly work out the split-brain);
-  - Enabling a third replica solves both problems (at least two copies of data at any given time), but increases the overhead (network, disk).
+- When one of the replicas (replica A) is unavailable, data is written only to a single replica (replica B). It means that:
+  - If at this moment the second replica (replica B) is also turned off, writing and reading will be unavailable;
+  - If at the same time the second replica (replica B) is irretrievably lost, then the data will be partially lost (there is only the old, outdated replica A);
+  - If the old replica (replica A) was also irretrievably lost, the data will be completely lost.
+- When the second replica is turned off, in order to turn it back on (without operator intervention), both replicas must be available (in order to correctly work out the split-brain);
+- Enabling a third replica solves both problems (at least two copies of data at any given time), but increases the overhead (network, disk).
 
 It is strongly recommended to have one replica locally. This doubles the possible write bandwidth (with two replicas) and significantly increases the read speed. But if this is not the case, then everything still continues to work normally (but reading over the network, and double network utilization for writing).
 
@@ -47,16 +47,18 @@ Depending on the task, choose one of the following:
 ## How to add existing LVM or LVMThin pool?
 
 Example of adding an existing LVM pool:
+
 ```shell
 linstor storage-pool create lvm node01 lvmthin linstor_data
 ```
 
 Example of adding an existing LVMThin pool:
+
 ```shell
 linstor storage-pool create lvmthin node01 lvmthin linstor_data/data
 ```
 
-You can also add pools with some volumes have already been created. LINSTOR will just create new ones nearby. 
+You can also add pools with some volumes have already been created. LINSTOR will just create new ones nearby.
 
 ## How to configure Prometheus to use LINSTOR for storing data?
 
@@ -149,7 +151,7 @@ linstor node rst <name>
 
 ### Errors like `Input/output error`
 
-Such errors usually occur at the stage of creating the file system (mkfs). 
+Such errors usually occur at the stage of creating the file system (mkfs).
 
 Check `dmesg` on the node where your Pod is running:
 

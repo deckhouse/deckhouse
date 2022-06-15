@@ -9,5 +9,5 @@ title: "Модуль terraform-manager"
   * `terraform-state-exporter` — проверяет состояние Terraform'а и экспортирует метрики кластера.
 
 * Модуль включен по умолчанию, если в кластере есть Secret'ы:
-    * `kube-system/d8-provider-cluster-configuration`;
-    * `d8-system/d8-cluster-terraform-state`.
+  * `kube-system/d8-provider-cluster-configuration`;
+  * `d8-system/d8-cluster-terraform-state`.

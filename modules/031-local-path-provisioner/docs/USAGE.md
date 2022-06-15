@@ -3,7 +3,9 @@ title: "The local-path-provisioner module: configuration examples"
 ---
 
 ## Example CR `LocalPathProvisioner`
+
 Reclaim policy set by default to `Retain`.
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
@@ -16,7 +18,9 @@ spec:
 ```
 
 ## Example CR `LocalPathProvisioner` with `reclaimPolicy` set
+
 Reclaim policy set to `Delete`.
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner

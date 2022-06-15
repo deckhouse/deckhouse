@@ -5,6 +5,7 @@ title: "Cloud provider — OpenStack: примеры конфигурации"
 Ниже представлены два простых примера конфигурации cloud-провайдера OpenStack.
 
 ## Пример 1
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: OpenStackInstanceClass

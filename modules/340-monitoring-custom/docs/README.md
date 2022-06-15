@@ -10,7 +10,7 @@ The module extends the capabilities of the [prometheus](../../modules/300-promet
 To enable the `monitoring-custom` module to collect application metrics, you must:
 
 - Attach the `prometheus.deckhouse.io/custom-target` label to a Service or a Pod. The label value defines the name in the Prometheus list of targets.
-   - You should use the application's name (in lowercase, separated by a hyphen "-") as the value of the `prometheus.deckhouse.io/custom-target` label. This way, the application will be uniquely identified in the cluster.
+  - You should use the application's name (in lowercase, separated by a hyphen "-") as the value of the `prometheus.deckhouse.io/custom-target` label. This way, the application will be uniquely identified in the cluster.
 
      Suppose the application is deployed in the cluster more than once (in staging, testing, etc.) or even has several copies in the same namespace. In that case, you still only need to specify its name since all metrics have namespace/Pod labels anyway (and the service label if it is accessed via the Service). In other words, the application's name uniquely identifies the application in the cluster (and not a specific installation of it).
 - Set the `http-metrics` or `https-metrics` name to the port that will be used for collecting metrics to connect to it over HTTP or HTTPS, respectively.
@@ -25,6 +25,7 @@ To enable the `monitoring-custom` module to collect application metrics, you mus
     ```
 
   - Example No. 2:
+
     ```yaml
     annotations:
       prometheus.deckhouse.io/port: "443"
@@ -42,6 +43,7 @@ To enable the `monitoring-custom` module to collect application metrics, you mus
   * `prometheus.deckhouse.io/sample-limit` — sample limit for a Pod (1000 by default). The default value prevents a situation when the application suddenly starts to supply too many metrics, disrupting the entire monitoring process. This annotation must be attached to the resource with the `prometheus.deckhouse.io/custom-target` label;
 
 ### An example: Service
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -67,7 +69,8 @@ spec:
     app: my-app
 ```
 
-### An example: Deployment:
+### An example: Deployment
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment

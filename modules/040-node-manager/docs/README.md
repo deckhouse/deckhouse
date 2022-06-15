@@ -3,6 +3,7 @@ title: "Managing nodes"
 ---
 
 ## Primary functions
+
 The `node-manager` module is responsible for managing nodes and has the following primary functions:
 1. Managing multiple nodes as a related group (**NodeGroup**):
     * The ability to define metadata that are inherited by all nodes in the group.
@@ -40,6 +41,7 @@ The following Managed Kubernetes services are also supported (not all service fu
 - Amazon Elastic Kubernetes Service (EKS).
 
 ## Node grouping and group management
+
 Grouping and managing nodes as a related group mean that all nodes in the group will have the same metadata derived from the [`NodeGroup`](cr.html#nodegroup) custom resource.
 
 The group monitoring is available for nodes combined into a group:
@@ -48,12 +50,15 @@ The group monitoring is available for nodes combined into a group:
 - Alerts about unavailability of N or N% of nodes in a group, etc.
 
 ## Automatic deploying, configuring and updating Kubernetes nodes
+
 ### Supported platforms and Kubernetes versions
+
 Automatic deployment (partially supported for *static/hybrid* nodes/clusters), configuration, and continuing software updates are supported for all cluster types (cloud or bare metal based).
 
 The supported Kubernetes version is specified in parameters right down to the minor version. If the version is not set, the `node-manager` module will use the version specified in the `control plane` parameters.
 
 ### Deploying Kubernetes nodes
+
 Deckhouse automatically deploys cluster nodes by performing the following **idempotent** operations:
 - Configuring the OS and optimizing it for Docker and Kubernetes:
   - Installing the thoroughly tested and proven kernel version.
@@ -63,6 +68,7 @@ Deckhouse automatically deploys cluster nodes by performing the following **idem
 - Configuring Nginx and updating the list of upstream resources for balancing node requests to the Kubernetes API.
 
 ### Keeping nodes up-to-date
+
 The node-manager module keeps cluster nodes up-to-date according to the minor Kubernetes version [specified](configuration.html). The automatic update system supports two types of updates:
 - **Regular**. These updates are performed automatically and do not cause node stops or restarts.
 - **Disruption-related** (e.g., a kernel update, switching Docker version, a major change of the kubelet version, etc.). For this type of updates, you can choose manual or automatic mode. In automatic mode, the node is first drained, and then the update is performed.
@@ -72,6 +78,7 @@ The node-manager module keeps cluster nodes up-to-date according to the minor Ku
 The `node-manager` module has a set of built-in metrics for monitoring the update process, alerting about issues with the update, or when a decision to proceed needs to be made by an administrator.
 
 ## Provisioning nodes on supported cloud platforms
+
 Each supported cloud provider can provision nodes in an automated manner. For this, you have to specify the required parameters for each node or a group of nodes.
 
 Depending on the provider, these parameters can include:
@@ -84,9 +91,11 @@ Depending on the provider, these parameters can include:
 Creating, starting, and connecting virtual machines to the cluster are performed automatically.
 
 ### Autoscaling nodes
+
 There are two ways for setting the number of nodes in a group when nodes are provisioned as part of a group:
 - The fixed number of nodes. In this case, Deckhouse will maintain the specified number of nodes (e.g., by provisioning new nodes if the old ones fail).
 - The minimum/maximum number of nodes (range). The autoscaling of nodes is triggered when cluster resources are low and the pods are pending.
 
 ## Chaos monkey
+
 The instrument (you can enable it for each `NodeGroup` individually) for unexpected and random termination of nodes in a systemic manner. Chaos Monkey tests the resilience of cluster elements, applications, and infrastructure components.

@@ -5,6 +5,7 @@ title: "Cloud provider - OpenStack: Layouts"
 Four layouts are supported. Below is more information about each of them.
 
 ## Standard
+
 In this scheme, an internal cluster network is created with a gateway to the public network; the nodes do not have public IP addresses. Note that the floating IP is assigned to the master node.
 
 > **Caution!**
@@ -100,6 +101,7 @@ provider:
 ```
 
 ## StandardWithNoRouter
+
 An internal cluster network is created that does not have access to the public network. All nodes (including master ones) have two interfaces: the first one to the public network, the second one to the internal network. This layout should be used if you want all nodes in the cluster to be directly accessible.
 
 > **Caution!**

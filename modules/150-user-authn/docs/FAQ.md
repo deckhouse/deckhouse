@@ -10,6 +10,7 @@ In fact, by creating the DexAuthenticator in a cluster, user creates an instance
 ### An example of the `DexAuthenticator` CR
 
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
@@ -29,18 +30,21 @@ spec:
   - 1.1.1.1
   - 192.168.0.0/24
 ```
+
 {% endraw %}
 
 After the `DexAuthenticator` CR is created in the cluster, Kubernetes will make the necessary deployment, service, ingress, secret in the specified namespace.
 Add the following annotations to your app's Ingress resource to connect your application to dex:
 
 {% raw %}
+
 ```yaml
 annotations:
   nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
   nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ cluster domain, e.g., | cluster.local }}/dex-authenticator/auth
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
 ```
+
 {% endraw %}
 
 ### Setting up CIDR-based restrictions
@@ -48,10 +52,13 @@ annotations:
 DexAuthenticator does not have a built-in system for allowing the user authentication based on its IP address. Instead, you can use annotations for Ingress resources:
 
 * If you want to restrict access by IP and use Dex for authentication, add the following annotation with a comma-separated list of allowed CIDRs:
+
 ```yaml
 nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
 ```
+
 * Add the following annotation if you want to exclude users from specific networks from passing authentication via dex, and force users from all other networks to authenticate via dex:
+
 ```yaml
 nginx.ingress.kubernetes.io/satisfy: "any"
 ```
@@ -65,20 +72,21 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 2. DexAuthenticator sets the cookie with the whole refresh token (instead of storing it in Redis like an id token) because Redis does not persist data.
 If there is no id token by the id token ticket in Redis, the user will be able to get the new id token by providing the refresh token from the cookie.
 
-3. DexAuthenticator sets the `Authorization` header to the id token value from Redis. It is not required for services like Upmeter, because permissions to Upmeter entities are not highly grained. 
+3. DexAuthenticator sets the `Authorization` header to the id token value from Redis. It is not required for services like Upmeter, because permissions to Upmeter entities are not highly grained.
 On the other hand, for the Kubernetes Dashboard, it is a crucial functionality because it sends the id token further to access Kubernetes API.
-
 
 ## How can I generate a kubeconfig and access Kubernetes API?
 
 Firstly, in the `deckhouse` ConfigMap configure `publishAPI`:
 
 {% raw %}
+
 ```yaml
   userAuthn: |
     publishAPI:
       enable: true
 ```
+
 {% endraw %}
 
 After that you can access a web interface at `kubeconfig.%publicDomainTemplate%` that allows you to generate `kubeconfig`.
@@ -107,8 +115,7 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 
 2. Kubeconfig generator stores id token and refresh token to the kubeconfig file.
 
-3. After receiving request with an id token, kube-apiserver goes to validate, that the token is signed by the provider configured on the first step by getting keys from the JWKS endpoint. As the next step, it compares `iss` and `aud` claims values of the token with the values from configuration. 
-
+3. After receiving request with an id token, kube-apiserver goes to validate, that the token is signed by the provider configured on the first step by getting keys from the JWKS endpoint. As the next step, it compares `iss` and `aud` claims values of the token with the values from configuration.
 
 ## How secure is Dex from brute-forcing my credentials?
 

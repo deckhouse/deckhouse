@@ -5,6 +5,7 @@ title: "Module log-shipper: advanced usage"
 ## Как включить debug-логи?
 
 Установите опцию debug для модуля в `true` в configmap Deckhouse как в приведенном ниже куске конфигурации:
+
 ```yaml
 logShipper: |
   debug: true
@@ -15,6 +16,7 @@ logShipper: |
 ## Как узнать больше о каналах передачи log'ов?
 
 Для начала зайдите в pod на желаемом узле.
+
 ```bash
 kubectl -n d8-log-shipper get pods -o wide | grep $node
 kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
@@ -25,9 +27,10 @@ kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
 ### Посмотреть каналы как graph
 
 * Выполните команду `vector graph` чтобы получить graph [в формате DOT](https://graphviz.org/doc/info/lang.html).
-* Выставьте его в [webgraphviz](http://www.webgraphviz.com/) или другой похожий сервис, чтобы получить изображение. 
+* Выставьте его в [webgraphviz](http://www.webgraphviz.com/) или другой похожий сервис, чтобы получить изображение.
 
 Пример graph'а для одного канала передачи логов в формате ASCII:
+
 ```
 +------------------------------------------------+
 |  d8_cluster_source_flant-integration-d8-logs   |
@@ -66,11 +69,13 @@ kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
 Единственный аргумент, который принимает команда - ID стадии обработки (можно передавать в формате glob).
 
 Log'и до применения правил трансформации:
+
 ```bash
 vector tap d8_cluster_source_*
 ```
 
 Измененные логи:
+
 ```bash
 vector tap d8_tf_*
 ```
@@ -78,6 +83,7 @@ vector tap d8_tf_*
 Вы так же можете использовать интерактивную консоль `vector vrl` для отладки [VRL](https://vector.dev/docs/reference/vrl/) правил для изменения логов.
 
 Примел программы с использованием VRL:
+
 ```
 . = {"test1": "lynx", "test2": "fox"}
 del(.test2)
