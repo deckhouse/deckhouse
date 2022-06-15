@@ -9,15 +9,15 @@ title: "Cloud provider — Azure: подготовка окружения"
 Для управления ресурсами в облаке Microsoft Azure средствами Deckhouse необходимо создать service account. Для этого:
 1. Установите [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), авторизуйтесь и получите `Subscription ID`:
 
-  ```shell
-  export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
-  ```
+   ```shell
+   export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
+   ```
 
 2. Создайте service account:
 
-  ```shell
-  az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "DeckhouseCANDI"
-  ```
+   ```shell
+   az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$SUBSCRIPTION_ID" --name "DeckhouseCANDI"
+   ```
 
 Для дальнейшей работы с утилитой `az` необходимо авторизоваться, используя данные (login, password, tenant) созданного service account:
 
