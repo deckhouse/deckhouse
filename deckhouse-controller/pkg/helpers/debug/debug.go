@@ -77,14 +77,19 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"global", "values", "-o", "json"},
 		},
 		{
+			File: "deckhouse-enabled-modules.json",
+			Cmd:  "deckhouse-controller",
+			Args: []string{"module", "list", "-o", "json"},
+		},
+		{
 			File: "events.json",
 			Cmd:  "kubectl",
 			Args: []string{"get", "events", "-A", "-o", "json"},
 		},
 		{
-			File: "pods.json",
-			Cmd:  "kubectl",
-			Args: []string{"get", "pods", "-A", "-o", "json"},
+			File: "all.json",
+			Cmd:  "bash",
+			Args: []string{"-c", `for ns in $(kubectl get ns -o jsonpath='{$.items[*].metadata.name}' -l heritage=deckhouse | sed 's/\ /\n/g'); do kubectl -n $ns get all -o json; done | jq -s '[.[].items[]]'`},
 		},
 		{
 			File: "node-groups.json",
@@ -102,14 +107,19 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"get", "machines", "-A", "-o", "json"},
 		},
 		{
+			File: "deckhouse-releases.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "deckhousereleases", "-o", "json"},
+		},
+		{
 			File: "deckhouse-logs.json",
 			Cmd:  "kubectl",
 			Args: []string{"logs", "deploy/deckhouse", "--tail", "3000"},
 		},
 		{
-			File: "deckhouse-cm.yaml",
+			File: "deckhouse-cm.json",
 			Cmd:  "kubectl",
-			Args: []string{"get", "cm", "deckhouse", "-o", "yaml"},
+			Args: []string{"get", "cm", "deckhouse", "-o", "json"},
 		},
 		{
 			File: "mcm-logs.txt",
@@ -122,9 +132,14 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", "kubectl -n $(kubectl get ns -o custom-columns=NAME:metadata.name | grep d8-cloud-provider) logs -l app=cloud-controller-manager --tail=3000"},
 		},
 		{
-			File: "terraform-check.txt",
+			File: "terraform-check.json",
 			Cmd:  "kubectl",
-			Args: []string{"exec", "deploy/terraform-state-exporter", "--", "dhctl", "terraform", "check"},
+			Args: []string{"exec", "deploy/terraform-state-exporter", "--", "dhctl", "terraform", "check", "--logger-type", "json", "-o", "json"},
+		},
+		{
+			File: "alerts.json",
+			Cmd:  "bash",
+			Args: []string{"-c", `curl -kf -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://prometheus.d8-monitoring:9090/api/v1/rules?type=alert" | jq -rc '.data.groups[].rules[] | select(.state == "firing")'`},
 		},
 	}
 

@@ -76,7 +76,7 @@ Manual confirmation of the update to the version `v1.26.0`:
 kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 ```
 
-### Collect debug info
+## Collect debug info
 
 We always appreciate helping users with debugging complex issues. To collect all necessary info, a user should:
 
@@ -88,4 +88,4 @@ kubectl -n d8-system exec deploy/deckhouse \
   > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
 ```
 
-2. Send the archive to the Deckhouse team for further debugging.
+2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
