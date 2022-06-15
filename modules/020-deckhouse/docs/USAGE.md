@@ -89,3 +89,19 @@ We always appreciate helping users with debugging complex issues. Please follow 
    ```
 
 2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
+
+Data that will be collected:
+* Deckhouse queue state
+* global Deckhouse values (without any sensitive data)
+* enabled modules list
+* controllers and pods manifests from namespaces owned by Deckhouse
+* `nodes` state
+* `nodegroups` state
+* `machines` state
+* all `deckhousereleases` objects
+* `events` from all namespaces
+* Deckhouse logs
+* machine controller manager logs
+* cloud controller manager logs
+* all firing alerts from Prometheus
+* terraform-state-exporter metrics

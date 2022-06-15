@@ -91,7 +91,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "all.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `for ns in $(kubectl get ns -o jsonpath='{$.items[*].metadata.name}' -l heritage=deckhouse | sed 's/\ /\n/g'); do kubectl -n $ns get all -o json; done | jq -s '[.[].items[]]'`},
+			Args: []string{"-c", `for ns in $(kubectl get ns -o go-template='{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}{{"kube-system"}}' -l heritage=deckhouse); do kubectl -n $ns get all -o json; done | jq -sc '[.[].items[]]'`},
 		},
 		{
 			File: "node-groups.json",
