@@ -23,6 +23,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}

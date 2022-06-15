@@ -38,6 +38,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: cloud-controller-manager
@@ -57,7 +58,6 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       hostNetwork: true
       dnsPolicy: Default
-      revisionHistoryLimit: 2
       serviceAccountName: cloud-controller-manager
       containers:
         - name: gcp-cloud-controller-manager
