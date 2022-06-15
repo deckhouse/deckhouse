@@ -34,6 +34,7 @@ spec:
         app: hubble-relay
     spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      revisionHistoryLimit: 2
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
