@@ -298,6 +298,13 @@ metadata:
   name: prometheus-lens-proxy-conf
   namespace: lens-proxy
 data:
+  "39-log-format.sh": |
+    cat > /etc/nginx/conf.d/log-format.conf <<"EOF"
+    log_format  body  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"'
+                      ' req body: $request_body';
+    EOF
   "40-prometheus-proxy-conf.sh": |
     #!/bin/sh
     prometheus_service="$(getent hosts prometheus.d8-monitoring | awk '{print $2}')"
@@ -312,6 +319,7 @@ data:
         proxy_set_header Authorization "Bearer ${BEARER_TOKEN}";
         proxy_pass https://\$upstream:9090$request_uri;
       }
+      access_log /dev/stdout body;
     }
     EOF
 ---
@@ -345,6 +353,9 @@ spec:
         - mountPath: /docker-entrypoint.d/40-prometheus-proxy-conf.sh
           subPath: "40-prometheus-proxy-conf.sh"
           name: prometheus-lens-proxy-conf
+        - mountPath: /docker-entrypoint.d/39-log-format.sh
+          name: prometheus-lens-proxy-conf
+          subPath: 39-log-format.sh
       serviceAccountName: prometheus-lens-proxy
       volumes:
       - name: prometheus-lens-proxy-conf
@@ -369,7 +380,50 @@ spec:
 {% endofftopic %}
 
 После деплоя ресурсов, метрики Prometheus будут доступны по адресу `lens-proxy/prometheus-lens-proxy:8080`.
-Тип Prometheus в Lens - `Prometheus Operator`.
+Тип Prometheus в Lens — `Prometheus Operator`.
+
+Начиная с версии `5.2.7`, Lens требует наличия меток pod и namespace в метриках узла-экспортера.
+В противном случае потребление ресурсов узла не будет отображаться на диаграммах Lens.
+
+Чтобы исправить это, примените следующий ресурс:
+
+{% offtopic title="Ресурс, исправляющий отображение метрик..." %}
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
+metadata:
+  name: lens-hack
+spec:
+  groups:
+  - name: lens-hack
+    rules:
+    - expr: node_cpu_seconds_total{mode=~"user|system", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_cpu_seconds_total
+    - expr: node_filesystem_size_bytes{mountpoint="/", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_filesystem_size_bytes
+    - expr: node_filesystem_avail_bytes{mountpoint="/", pod!~".+", namespace!~".+"}
+        * on(node) group_left(namespace, pod) kube_pod_info{namespace="d8-monitoring",
+        created_by_name="node-exporter"}
+      record: node_filesystem_avail_bytes
+    - expr: node_memory_MemTotal_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_MemTotal_bytes
+    - expr: node_memory_MemFree_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_MemFree_bytes
+    - expr: node_memory_Buffers_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_Buffers_bytes
+    - expr: node_memory_Cached_bytes{pod!~".+", namespace!~".+"} * on(node) group_left(namespace,
+        pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
+      record: node_memory_Cached_bytes
+```
+{% endofftopic %}
 
 ## Как настроить ServiceMonitor или PodMonitor для работы с Prometheus?
 
