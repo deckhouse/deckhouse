@@ -14,16 +14,17 @@ type:
 
 2. Create `NodeGroupConfiguration` custom step to enable use NTP daemon on nodes (example for `systemd-timesyncd`):
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: enable_ntp_on_node.sh
-spec:
-  weight: 100
-  nodeGroups: ["*"]
-  bundles: ["*"]
-  content: |
-    systemctl enable systemd-timesyncd
-    systemctl start systemd-timesyncd
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: enable_ntp_on_node.sh
+   spec:
+     weight: 100
+     nodeGroups: ["*"]
+     bundles: ["*"]
+     content: |
+       systemctl enable systemd-timesyncd
+       systemctl start systemd-timesyncd
+   ```
+   

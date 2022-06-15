@@ -53,19 +53,19 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
 
 * If you want to restrict access by IP and use Dex for authentication, add the following annotation with a comma-separated list of allowed CIDRs:
 
-```yaml
-nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
-```
+  ```yaml
+  nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
+  ```
 
 * Add the following annotation if you want to exclude users from specific networks from passing authentication via dex, and force users from all other networks to authenticate via dex:
 
-```yaml
-nginx.ingress.kubernetes.io/satisfy: "any"
-```
+  ```yaml
+  nginx.ingress.kubernetes.io/satisfy: "any"
+  ```
 
 ### Authentication flow with DexAuthenticator
 
-<img src="../../images/150-user-authn/dex_login.svg">
+![Authentication flow with DexAuthenticator](../../images/150-user-authn/dex_login.svg)
 
 1. Dex redirects the user to the provider's login page in most cases and wait for the user to be redirected back to the `/callback` URL. However, some providers like LDAP or Atlassian Crowd do not support this flow. The user should write credentials to the Dex login form instead, and Dex will make a request to the provider's API to validate them.
 
