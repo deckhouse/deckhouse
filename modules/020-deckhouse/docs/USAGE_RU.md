@@ -91,7 +91,7 @@ kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
 
 Данные, которые будут собраны:
-* Состояние очереди Deckhouse
+* состояние очереди Deckhouse
 * Deckhouse values (без каких-либо конфиденциальных данных)
 * список включенных модулей
 * манифесты controller'ов и pod'ов manifests из всех пространств имен Deckhouse
