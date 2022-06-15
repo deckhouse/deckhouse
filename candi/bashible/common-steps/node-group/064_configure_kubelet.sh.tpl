@@ -217,6 +217,9 @@ serverTLSBootstrap: true
 {{- end }}
 featureGates:
   ExpandCSIVolumes: true
+{{- if semverCompare "=1.20" .kubernetesVersion }}
+  GracefulNodeShutdown: true
+{{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
