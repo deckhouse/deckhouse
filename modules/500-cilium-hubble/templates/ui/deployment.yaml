@@ -23,6 +23,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui" )) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: hubble-ui
@@ -37,7 +38,6 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
-      revisionHistoryLimit: 2
       serviceAccountName: "ui"
       imagePullSecrets:
         - name: deckhouse-registry

@@ -23,6 +23,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring-exporter")) | nindent 2 }}
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   strategy:
     type: Recreate
   selector:
@@ -39,7 +40,6 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
-      revisionHistoryLimit: 2
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: extended-monitoring-exporter
