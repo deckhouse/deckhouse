@@ -6,13 +6,13 @@ type:
 
 ## How do I disable chrony and use ntp daemon on nodes?
 
-1. Disable usage of chrony module in Deckhouse CM:
+1. Disable usage of chrony module in the `deckhouse` ConfigMap:
 
-```yaml
-chronyEnabled: "false"
-```
+   ```yaml
+   chronyEnabled: "false"
+   ```
 
-2. Create NodeGroupConfiguration custom step to enable use ntp daemon on nodes (example for systemd-timesyncd):
+2. Create `NodeGroupConfiguration` custom step to enable use NTP daemon on nodes (example for `systemd-timesyncd`):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

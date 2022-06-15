@@ -14,10 +14,13 @@
   Доступ к Grafana ограничен basic-аутентификацией (больше вариантов аутентификации можно получить, включив модуль [user-auth](/{{ page.lang }}/documentation/v1/modules/150-user-authn/):
   - Логин — `admin`;
   - Пароль — сгенерирован автоматически. Узнать его можно в ConfigMap `deckhouse` в секции конфигурации модуля `prometheus`, например, выполнив следующую команду:
+
     ```bash
     kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password
     ```
+
     Пример вывода:
+
     ```
     $ kubectl -n d8-system get cm deckhouse -o jsonpath="{.data.prometheus}" | grep password 
     password: UJvSB4UYTa3fnDOco6LF
@@ -44,7 +47,7 @@ Deckhouse, развернутый в кластере kind, вполне при�
 Dashboard
 </h3>
 <div class="cards-item__text" markdown="1">
-Включите модуль [dashboard](/{{ page.lang }}/documentation/v1/modules/500-dashboard/) и получите доступ к Kubernetes Dashboard по адресу [dashboard-127-0-0-1.nip.io](http://dashboard-127-0-0-1.nip.io/) 
+Включите модуль [dashboard](/{{ page.lang }}/documentation/v1/modules/500-dashboard/) и получите доступ к Kubernetes Dashboard по адресу [dashboard-127-0-0-1.nip.io](http://dashboard-127-0-0-1.nip.io/)
 
 Для работы Dashboard необходимо включить модуль [user-authz](/{{ page.lang }}/documentation/v1/modules/140-user-authz/).
 </div>
@@ -92,7 +95,7 @@ Deckhouse делает проще настройку доступа CI/CD-сис
 Направляем трафик на приложение
 </h3>
 <div class="cards-item__text" markdown="1">
-Ознакомьтесь с возможностями модуля [ingress-nginx](/{{ page.lang }}/documentation/v1/modules/140-user-authz/). 
+Ознакомьтесь с возможностями модуля [ingress-nginx](/{{ page.lang }}/documentation/v1/modules/140-user-authz/).
 
 Создайте `Service` и `Ingress` для вашего приложения.
 </div>

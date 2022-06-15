@@ -2,7 +2,7 @@
 title: System Configuration Framework - Bashible
 ---
 
-### Description
+## Description
 
 Bashible consists of small bash scripts, that are called `steps`.
 * Each step describes some task, e.g., docker installation, kubelet installation.
@@ -37,7 +37,7 @@ Bashible consists of small bash scripts, that are called `steps`.
   * Normal - daily bashible execution by schedule
   * ImageBuilding - setup a VM image
 
-### Steps location
+## Steps location
 
 * `bashible/`
   * `bashbooster/` – bashbooster framework directory (it makes writing bashible steps easier)
@@ -63,7 +63,7 @@ Bashible consists of small bash scripts, that are called `steps`.
       * `common_steps/` – common steps for all bundles
         * `bootstrap-networks.sh.tpl` – if file exists, it will be used instead of a file from a bundle
 
-### How to render bashible bundle?
+## How to render bashible bundle?
 
 Bundle compilation is possible with using `dhctl` tool.
 

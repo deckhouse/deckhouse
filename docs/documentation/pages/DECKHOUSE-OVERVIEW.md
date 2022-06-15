@@ -32,5 +32,3 @@ Can't find what you were looking for? Don't give up. Visit our [Telegram channel
 Users of the Enterprise Edition of the platform can [email us](mailto:support@deckhouse.io) — we'll be sure to help.
 
 Want to make Deckhouse better? Create an [issue](https://github.com/deckhouse/deckhouse/issues/), [discuss](https://github.com/deckhouse/deckhouse/discussions) your idea with us, or even [suggest a solution](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md)!
-
-

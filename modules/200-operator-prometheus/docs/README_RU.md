@@ -33,81 +33,80 @@ title: "Модуль operator-prometheus"
   * `scrape_configs` — настройки поиска *target'ов* (целей для мониторинга, см. подробней следующий раздел).
   * `rule_files` — список директорий, в которых лежат *rule'ы*, которые необходимо загружать:
 
-        ```yaml
-        rule_files:
-        - /etc/prometheus/rules/rules-0/*
-        - /etc/prometheus/rules/rules-1/*
-        ```
+    ```yaml
+    rule_files:
+    - /etc/prometheus/rules/rules-0/*
+    - /etc/prometheus/rules/rules-1/*
+    ```
+
   * `alerting` — настройки поиска *Alert Manager'ов*, в которые слать алерты. Секция очень похожа на `scrape_configs`, только результатом ее работы является список *endpoint'ов*, в которые Prometheus будет слать алерты.
 
 ### Где Prometheus берет список *target'ов*?
 
 * В целом Prometheus работает следующим образом:
 
-    ![](../../images/200-operator-prometheus/targets.png)
+  ![Работа Prometheus](../../images/200-operator-prometheus/targets.png)
 
   * **(1)** Prometheus читает секцию конфига `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery
   * **(2)** Механизм Service Discovery взаимодействует с API Kubernetes (в основном — получает endpoint`ы)
   * **(3)** На основании происходящего в Kubernetes механизм Service Discovery обновляет Targets (список *target'ов*)
 * В `scrape_configs` указан список *scrape job'ов* (внутреннее понятие Prometheus), каждый из которых определяется следующим образом:
 
-    ```yaml
-    scrape_configs:
-      # Общие настройки
-    - job_name: d8-monitoring/custom/0    # просто название scrape job'а, показывается в разделе Service Discovery
-      scrape_interval: 30s                  # как часто собирать данные
-      scrape_timeout: 10s                   # таймаут на запрос
-      metrics_path: /metrics                # path, который запрашивать
-      scheme: http                          # http или https
-
-      # Настройки service discovery
-      kubernetes_sd_configs:                # означает, что target'ы мы получаем из Kubernetes
-      - api_server: null                    # означает, что адрес API-сервера использовать из переменных окружения (которые есть в каждом Pod'е)
-        role: endpoints                     # target'ы брать из endpoint'ов
-        namespaces:
-          names:                            # искать endpoint'ы только в этих namespace'ах
-          - foo
-          - baz
-
-      # Настройки "фильтрации" (какие enpoint'ы брать, а какие нет) и "релейблинга" (какие лейблы добавить или удалить, на все получаемые метрики)
-      relabel_configs:
-      # Фильтр по значению label'а prometheus_custom_target (полученного из связанного с endpoint'ом service'а)
-      - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
-        regex: .+                           # подходит любой НЕ пустой лейбл
-        action: keep
-      # Фильтр по имени порта
-      - source_labels: [__meta_kubernetes_endpoint_port_name]
-        regex: http-metrics                 # подходит, только если порт называется http-metrics
-        action: keep
-      # Добавляем label job, используем значение label'а prometheus_custom_target у service'а, к которому добавляем префикс "custom-"
-      #
-      # Лейбл job это служебный лейбл Prometheus:
-      #    * он определяет название группы, в которой будет показываться target на странице targets
-      #    * и конечно же он будет у каждой метрики, полученной у этих target'ов, чтобы можно было удобно фильтровать в rule'ах и dashboard'ах
-      - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
-        regex: (.*)
-        target_label: job
-        replacement: custom-$1
-        action: replace
-      # Добавляем label namespace
-      - source_labels: [__meta_kubernetes_namespace]
-        regex: (.*)
-        target_label: namespace
-        replacement: $1
-        action: replace
-      # Добавляем label service
-      - source_labels: [__meta_kubernetes_service_name]
-        regex: (.*)
-        target_label: service
-        replacement: $1
-        action: replace
-      # Добавляем label instance (в котором будет имя Pod'а)
-      - source_labels: [__meta_kubernetes_pod_name]
-        regex: (.*)
-        target_label: instance
-        replacement: $1
-        action: replace
-    ```
+  ```yaml
+  scrape_configs:
+    # Общие настройки
+  - job_name: d8-monitoring/custom/0    # просто название scrape job'а, показывается в разделе Service Discovery
+    scrape_interval: 30s                  # как часто собирать данные
+    scrape_timeout: 10s                   # таймаут на запрос
+    metrics_path: /metrics                # path, который запрашивать
+    scheme: http                          # http или https
+    # Настройки service discovery
+    kubernetes_sd_configs:                # означает, что target'ы мы получаем из Kubernetes
+    - api_server: null                    # означает, что адрес API-сервера использовать из переменных окружения (которые есть в каждом Pod'е)
+      role: endpoints                     # target'ы брать из endpoint'ов
+      namespaces:
+        names:                            # искать endpoint'ы только в этих namespace'ах
+        - foo
+        - baz
+    # Настройки "фильтрации" (какие enpoint'ы брать, а какие нет) и "релейблинга" (какие лейблы добавить или удалить, на все получаемые метрики)
+    relabel_configs:
+    # Фильтр по значению label'а prometheus_custom_target (полученного из связанного с endpoint'ом service'а)
+    - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
+      regex: .+                           # подходит любой НЕ пустой лейбл
+      action: keep
+    # Фильтр по имени порта
+    - source_labels: [__meta_kubernetes_endpoint_port_name]
+      regex: http-metrics                 # подходит, только если порт называется http-metrics
+      action: keep
+    # Добавляем label job, используем значение label'а prometheus_custom_target у service'а, к которому добавляем префикс "custom-"
+    #
+    # Лейбл job это служебный лейбл Prometheus:
+    #    * он определяет название группы, в которой будет показываться target на странице targets
+    #    * и конечно же он будет у каждой метрики, полученной у этих target'ов, чтобы можно было удобно фильтровать в rule'ах и dashboard'ах
+    - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
+      regex: (.*)
+      target_label: job
+      replacement: custom-$1
+      action: replace
+    # Добавляем label namespace
+    - source_labels: [__meta_kubernetes_namespace]
+      regex: (.*)
+      target_label: namespace
+      replacement: $1
+      action: replace
+    # Добавляем label service
+    - source_labels: [__meta_kubernetes_service_name]
+      regex: (.*)
+      target_label: service
+      replacement: $1
+      action: replace
+    # Добавляем label instance (в котором будет имя Pod'а)
+    - source_labels: [__meta_kubernetes_pod_name]
+      regex: (.*)
+      target_label: instance
+      replacement: $1
+      action: replace
+  ```
 
 * Таким образом, Prometheus сам отслеживает:
   * добавление и удаление Pod'ов (при добавлении/удалении Pod'ов Kubernetes изменяет endpoint'ы, а Prometheus это видит и добавляет/удаляет *target'ы*)
@@ -132,7 +131,7 @@ title: "Модуль operator-prometheus"
 
 ### Что в Pod'е с Prometheus'ом?
 
-![](../../images/200-operator-prometheus/pod.png)
+![Что в Pod Prometheus](../../images/200-operator-prometheus/pod.png)
 
 * Два контейнера:
   * `prometheus` — сам Prometheus
@@ -146,7 +145,7 @@ title: "Модуль operator-prometheus"
 
 ### Как обрабатываются Service Monitor'ы?
 
-![](../../images/200-operator-prometheus/servicemonitors.png)
+![Как обрабатываются Service Monitor'ы](../../images/200-operator-prometheus/servicemonitors.png)
 
 * **(1)** Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec)).
 * **(2)** Для каждого Service Monitor'а, если в нем НЕ указан конкретный список namespace'ов (указано `any: true`), Prometheus Operator вычисляет (обращаясь к API Kubernetes) список namespace'ов, в которых есть Service'ы (подходящие под указанные в Service Monitor'е label'ы).
@@ -157,7 +156,7 @@ title: "Модуль operator-prometheus"
 
 ### Как обрабатываются Custome Resources с *rule'ами*?
 
-![](../../images/200-operator-prometheus/rules.png)
+![Как обрабатываются Custome Resources с rule'ами](../../images/200-operator-prometheus/rules.png)
 
 * **(1)** Prometheus Operator следит за PrometheusRule'ами (подходящими под указанный в ресурсе `prometheus` `ruleSelector`).
 * **(2)** Если появился новый (или был удален существующий) PrometheusRule — Prometheus Operator обновляет `prometheus.yaml` (а дальше срабатывает логика в точности соответствующая обработке Service Monitor'ов, которая описана выше).

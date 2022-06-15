@@ -12,7 +12,7 @@ Follow this [link](https://console.cloud.google.com/iam-admin/serviceaccounts), 
 
 The account must be assigned several necessary roles:
 
-```
+```text
 Compute Admin
 Service Account User
 Network Management Admin
@@ -55,7 +55,7 @@ To configure via the command line interface, follow these steps:
 
    List of roles required:
 
-   ```
+   ```text
    roles/compute.admin
    roles/iam.serviceAccountUser
    roles/networkmanagement.admin

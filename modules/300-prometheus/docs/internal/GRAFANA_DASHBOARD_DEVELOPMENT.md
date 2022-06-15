@@ -7,50 +7,54 @@ search: making Grafana graphs
 
 1. The [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) custom resource allows you to create Grafana dashboards. The [shell-operator](https://github.com/flant/shell-operator) sidecar container runs along with the main container in the Grafana Pod and monitors that resource. The hook creates/deletes/edits the specific dashboard in response to a corresponding event using some special mechanism.
 2. In modules, dashboard manifests are located at `<module_root>/monitoring/grafana-dashboards/`. They are automatically converted to [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) CRs, while:
-    * each subdirectory in the above directory corresponds to a Folder in Grafana,
-    * and each file corresponds to a Dashboard in Grafana.
+   * each subdirectory in the above directory corresponds to a Folder in Grafana,
+   * and each file corresponds to a Dashboard in Grafana.
 3. If you need to add a new Folder, just create a directory in the `grafana-dashboards/` and add at least one JSON manifest to it.
 4. You do not need to edit Dashboard files directly (unless you want to do a minor quick fix). Instead:
-    * Open the Dashboard in Grafana:
-        * if the Dashboard already exists, open it and click the ["Make editable" button](/docs/documentation/images/300-prometheus/grafana_make_editable.jpg);
-        * if the Dashboard is a new one, then create it (in any Folder - it will be moved to the folder that corresponds to the repository directory);
-        * if the Dashboard is a third-party one, import it to Grafana (via the "Import" button).
-    * Now you can edit your Dashboard until you are happy with it. Do not forget to click the "Save" button in Grafana periodically to keep your changes (just in case).
-    * [Export the Dashboard to JSON](/docs/documentation/images/300-prometheus/grafana_export.jpg) and save it to a file (the new or existing one).
-4. You can rename the Dashboard, rename the file, move the file from one Folder to another — everything will be configured automatically.
-5. Note that system Dashboards must be stored in `d8`-prefixed GrafanaDashboardDefinition custom resources.
+   * Open the Dashboard in Grafana:
+     * if the Dashboard already exists, open it and click the ["Make editable" button](/docs/documentation/images/300-prometheus/grafana_make_editable.jpg);
+     * if the Dashboard is a new one, then create it (in any Folder - it will be moved to the folder that corresponds to the repository directory);
+     * if the Dashboard is a third-party one, import it to Grafana (via the "Import" button).
+   * Now you can edit your Dashboard until you are happy with it. Do not forget to click the "Save" button in Grafana periodically to keep your changes (just in case).
+   * [Export the Dashboard to JSON](/docs/documentation/images/300-prometheus/grafana_export.jpg) and save it to a file (the new or existing one).
+5. You can rename the Dashboard, rename the file, move the file from one Folder to another — everything will be configured automatically.
+6. Note that system Dashboards must be stored in `d8`-prefixed GrafanaDashboardDefinition custom resources.
 
 ## How do I quickly optimize a third-party Dashboard?
 
 1. Find all ranges and replace them with `$__interval_sx4`:
 
-    ```bash
-    for dashboard in *.json; do
-      for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | sort | uniq); do
-        sed -e 's/\['$range'\]/[$__interval_sx4]/g' -i $dashboard
-      done
-    done
-    ```
+   ```shell
+   for dashboard in *.json; do
+     for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | sort | uniq); do
+       sed -e 's/\['$range'\]/[$__interval_sx4]/g' -i $dashboard
+     done
+   done
+   ```
+
 2. Replace `irate` with `rate`:
 
-    ```bash
-    sed 's/irate(/rate(/g' -i *.json
-    ```
+   ```shell
+   sed 's/irate(/rate(/g' -i *.json
+   ```
+
 3. Replace `Resolution` with `1/1`:
 
-    ```bash
-    sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i *.json
-    ```
+   ```shell
+   sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i *.json
+   ```
+
 4. Get rid of `Min Step`:
 
-    ```bash
-    sed '/"interval":/d' -i *.json
-    ```
+   ```shell
+   sed '/"interval":/d' -i *.json
+   ```
+
 5. Replace all graphs with `Staircase` (you will need to edit `Stack` + `Percent` graphs manually - switch them to `Bars`):
 
-    ```bash
-    sed 's/"steppedLine": false/"steppedLine": true/' -i *.json
-    ```
+   ```shell
+   sed 's/"steppedLine": false/"steppedLine": true/' -i *.json
+   ```
 
 ## Best practices
 
@@ -62,7 +66,7 @@ Save the uid when making any changes to the Dashboard (including renaming it and
 
 We do not recommend editing JSON files directly (there are more convenient ways to do this). However, after making changes to the Grafana interface and uploading the JSON file, you should take a careful look at what changes were made to it to make sure that you haven't messed anything up accidentally. (You can use `git add -p` & diffs in merge requests to check what changes were made to the file - it's your choice).
 
-When making changes to the complex Dashboards that use templates, try to edit them where they were created (usually at https://prometheus.kube.domain.my/) and keep the Variables intact. Thus, you will avoid unnecessary changes to the "dynamic data" in MRs.
+When making changes to the complex Dashboards that use templates, try to edit them where they were created (usually at <https://prometheus.kube.domain.my/>) and keep the Variables intact. Thus, you will avoid unnecessary changes to the "dynamic data" in MRs.
 
 ### How to "hide" the dashboard (or part of the dashboard) if data are lacking?
 
@@ -106,11 +110,11 @@ Granted, in some cases, the level of detail makes it difficult to track global t
 4. **never set the Min step**;
 5. **use `$__interval_sx3` as the range for the range vectors in the avg/max/min_over_time functions**;
 
-![](/docs/documentation/images/300-prometheus/grafana_accuracy.jpg)
+![Data accuracy and granularity](/docs/documentation/images/300-prometheus/grafana_accuracy.jpg)
 
 {% offtopic title="Reasons and details" %}
   <ul dir="auto">
-    <li>You can specify <code>step</code> in the Prometheus's API request. Suppose we have three hours of data and set a <code>step</code> of 30 seconds. In this case, we will get 360 data points (3 hours * 60 minutes * 2 points per minute), and they can easily fit on the graph. Now suppose we have data for 24 hours. In this case, the 30-second step does not make any sense since you cannot fit 2880 data points on a screen (unless, of course, you have a 4K monitor - but still, each data point will have the size of a pixel, and the human eye cannot discern so much tightly packed information). To solve this problem, Grafana implements a tricky mechanism to auto-determine the step size. It works as follows:
+    <li>You can specify <code>step</code> in the Prometheus's API request. Suppose we have three hours of data and set a <code>step</code> of 30 seconds. In this case, we will get 360 data points (3 hours *60 minutes* 2 points per minute), and they can easily fit on the graph. Now suppose we have data for 24 hours. In this case, the 30-second step does not make any sense since you cannot fit 2880 data points on a screen (unless, of course, you have a 4K monitor - but still, each data point will have the size of a pixel, and the human eye cannot discern so much tightly packed information). To solve this problem, Grafana implements a tricky mechanism to auto-determine the step size. It works as follows:
     <ul>
       <li>Grafana uses the size of the graph (whether it occupies the entire screen, 1/2, 1/4 of the screen, etc.), the size of the browser window, and the screen resolution to calculate how many points can be shown on the screen.</li>
       <li>Next, Grafana divides the selected browsing period by the number of points that can be shown to get the "minimum viable step". Thus, for the screen that can fit 800 data points, it gets the following ratios:
@@ -163,10 +167,9 @@ Grafana provides three modes for displaying the Null Value (no data).
 * `Null` should be used in all cases except for stacking since it clearly shows that there are no data.
 * The usage of the `null as zero` mode is recommended for stacking (otherwise, all the metrics will be lost if any one of them has a null value).
 
-| connected      | null      | null as zero      |
-|----------------|-----------|-------------------|
-| ![][connected] | ![][null] | ![][null as zero] |
-
+| connected               | null          | null as zero                  |
+|-------------------------|---------------|-------------------------------|
+| ![connected][connected] | ![null][null] | ![null as zero][null as zero] |
 
 [connected]: /docs/documentation/images/300-prometheus/grafana_null_value_connected.jpg
 [null]: /docs/documentation/images/300-prometheus/grafana_null_value_null.jpg
@@ -193,8 +196,8 @@ It makes sense to set automatic updates every 30 seconds since Prometheus scrape
 Before pushing changes to the repository, you have to make sure that there are no domains in the JSON file that may have been imported from Grafana.
 
 An example of a script to delete these domains:
-```bash
 
+```shell
 listOfDomains="
 google.com
 mycompany.com
@@ -207,9 +210,7 @@ for dashboard in $listOfDashboards; do
     sed -i -E  "s/([^\"]+$domain)/example.com/g" $dashboard
   done
 done
-
 ```
-
 
 ### TODO
 

@@ -177,7 +177,7 @@ spec:
       weight: 75
 ```
 
-##### Перенаправление location /uploads в другой сервис
+#### Перенаправление location /uploads в другой сервис
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3

@@ -97,14 +97,14 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 
-* --oidc-client-id=kubernetes
-* --oidc-groups-claim=groups
-* --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
-* --oidc-username-claim=email
+* `--oidc-client-id=kubernetes`
+* `--oidc-groups-claim=groups`
+* `--oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/`
+* `--oidc-username-claim=email`
 
 В случае использования самоподписанных сертификатов для Dex будет добавлен ещё один аргумент, а также в Pod с apiserver будет смонтирован файл с CA:
 
-* --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
+* `--oidc-ca-file=/etc/kubernetes/oidc-ca.crt`
   {% endofftopic %}
 
 ### Как работает подключение к Kubernetes API при помощи сгенерированного kubeconfig

@@ -115,7 +115,7 @@ spec:
 
 Suppose `cert-manager` gets the following error when trying to provide a certificate:
 
-```
+```text
 CAA record does not match issuer
 ```
 

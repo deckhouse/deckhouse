@@ -5,24 +5,22 @@ type:
 search: Developing Prometheus targets, prometheus target
 ---
 
-General information
-----------------
+## General information
 
 * The most common operation is adding a target for a new application (redis, rabbitmq, etc.). In most cases, you only need to copy one of the existing service monitors in the `applications` directory and edit the names.
 * However, if you need to do something more complex or mere copying does not produce the expected result, refer to the [Prometheus Operator](../../modules/200-operator-prometheus/) module documentation.
 * All existing targets are located in the `prometheus-targets` directory. They usually consist of a service monitor, some Prometheus exporter, and the necessary wrapping that binds them together.
 * All internal ServiceMonitors and PodMonitors should be created in the namespace `d8-monitoring`.
 
-Best practices
----------------
+## Best practices
 
 ### Set labels for Pod-oriented mertics
 
 Most metrics stored in Prometheus either contain Pod-related data or information about the parameters of the application running in the Pod. We call these metrics ~Pod-oriented~. They include (predominantly but not exclusively) the following metric varieties:
 * system metrics that reflect the performance parameters of the Pod (these are exported by kubelet);
 * application metrics:
-    * metrics of supported applications (redis, rabbitmq, etc.);
-    * custom metrics.
+  * metrics of supported applications (redis, rabbitmq, etc.);
+  * custom metrics.
 
 All Pod-oriented labels have a label with the Pod name (generally, it is called `instance`; for the kubelet-generated metrics, this label is called `pod_name`, and `pod` - for kube-state-metrics-generated ones). However, Pod names are not convenient to work with, and we prefer to use `service` and `namespace` parameters. Thus:
 * all Pod-oriented metrics have a `namespace` label;
@@ -32,10 +30,11 @@ All Pod-oriented labels have a label with the Pod name (generally, it is called 
 
 We strongly recommend configuring metric exporters so that only authenticated and authorized users can access them.
 
-For this, you can use the [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy) Kubernetes proxy. It is written in Go and can authenticate the user with `TokenReview` or a client certificate. 
+For this, you can use the [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy) Kubernetes proxy. It is written in Go and can authenticate the user with `TokenReview` or a client certificate.
 Authorization is performed using `SubjectAccessReview` according to the RBAC rules defined for the user.
 
-#### Below is an example of the Deployment of a secure exporter: 
+#### Below is an example of the Deployment of a secure exporter
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -82,6 +81,7 @@ spec:
         configMap:
           name: kube-rbac-proxy
 ```
+
 The metric exporter only accepts localhost (127.0.0.1) requests. That means that an unsecured connection can only be established to it from within the Pod.
 At the same time, the proxy listens on 0.0.0.0 and intercepts all external traffic to the Pod.
 
@@ -91,6 +91,7 @@ The proxy only needs permissions to create `TokenReview` and `SubjectAccessRevie
 
 Our clusters have a [built-in **d8-rbac-proxy** ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/020-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) that is ideal for this kind of situation.
 You don't need to create it yourself! You just need to attach it to the ServiceAccount of your Deployment.
+
 ```yaml
 ---
 apiVersion: v1
@@ -114,6 +115,7 @@ subjects:
 ```
 
 ### Configure Kube-RBAC-Proxy
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -133,9 +135,11 @@ data:
           subresource: prometheus-metrics
           name: my-exporter
 ```
+
 According to the configuration, the user must have access to the `my-exporter` Deployment and its `prometheus-metrics` subresource in the `my-namespace` namespace.
 
-Such permissions have the following RBAC form: 
+Such permissions have the following RBAC form:
+
 ```yaml
 ---
 apiVersion: rbac.authorization.k8s.io/v1

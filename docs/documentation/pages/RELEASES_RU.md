@@ -28,11 +28,11 @@ lang: ru
 <div class="releases__menu">
 {%- for channel in channels_sorted_reverse %}
     <div class="releases__menu-item releases__menu--channel--{{ channel.name }}">
-        <div class="releases__menu-item-header">            
+        <div class="releases__menu-item-header">
             <div class="releases__menu-item-title releases__menu--channel--{{ channel.name }}">
                 {{ channel.title }}
             </div>
-        </div>        
+        </div>
         <div class="releases__menu-item-description">
             {{ channel.description[page.lang] }}
         </div>

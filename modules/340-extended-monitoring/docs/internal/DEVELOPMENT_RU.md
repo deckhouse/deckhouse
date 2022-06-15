@@ -8,7 +8,8 @@ sidebartitle: "Prometheus Rules"
 ## Схема метрик
 
 Exporter extended-monitoring экспортирует метрики в следующем формате:
-```
+
+```text
 extended_monitoring_{0}_threshold{{namespace="{1}", threshold="{2}", {3}="{4}"}} {5}
 ```
 

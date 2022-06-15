@@ -129,13 +129,13 @@ deckhouse: |
 При использовании [Nexus](https://github.com/sonatype/nexus-public) в режиме registry-прокси необходимо соблюдение нескольких условий:
 
 * Включить `Docker Bearer Token Realm`:
-![](images/registry/nexus/nexus1.png)
+![Включить `Docker Bearer Token Realm`](images/registry/nexus/nexus1.png)
 
 * Включить анонимный доступ к registry (иначе [не будет работать](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer token-авторизация):
-![](images/registry/nexus/nexus2.png)
+![Включить анонимный доступ к registry](images/registry/nexus/nexus2.png)
 
 * Установить `Maximum metadata age` в 0 (иначе автоматическое обновление Deckhouse не будет работать корректно из-за кеширования):
-![](images/registry/nexus/nexus3.png)
+![Установить `Maximum metadata age`](images/registry/nexus/nexus3.png)
 
 #### Harbor
 
@@ -148,7 +148,7 @@ deckhouse: |
   * `Endpoint URL`: `https://registry.deckhouse.io`.
   * Укажите `Access ID` и `Access Secret`, если используете Deckhouse Enterprise Edition, иначе оставьте пустыми.
 
-![](images/registry/harbor/harbor1.png)
+![Настройка Registry](images/registry/harbor/harbor1.png)
 
 * Создайте новый проект:
   * `Projects -> New Project`.
@@ -156,7 +156,7 @@ deckhouse: |
   * `Access Level`: `Public`.
   * `Proxy Cache` — включите и выберите в списке Registry, созданный на предыдущем шаге.
 
-![](images/registry/harbor/harbor2.png)
+![Создание нового проекта](images/registry/harbor/harbor2.png)
 
 В результате образы Deckhouse будут доступны по адресу, например, `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
 
@@ -177,9 +177,9 @@ deckhouse: |
 
 ## Как изменить конфигурацию кластера
 
-Общие параметры кластера хранятся в структуре `ClusterConfiguration`. Она содержит такие параметры, как: 
+Общие параметры кластера хранятся в структуре `ClusterConfiguration`. Она содержит такие параметры, как:
 
-- домен кластера: `clusterDomain`; 
+- домен кластера: `clusterDomain`;
 - используемый CRI: `defaultCRI`;
 - используемая версия control plane Kubernetes: `kubernetesVersion`;
 - тип кластера (Static, Cloud, Hybrid): `clusterType`;
@@ -194,9 +194,9 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit cluster-
 
 ## Как изменить конфигурацию облачного провайдера в кластере?
 
-Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться `OpenStackClusterConfiguration`. 
+Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться `OpenStackClusterConfiguration`.
 
-Независимо от используемого облачного провайдера, его настройки можно изменить с помощью команды: 
+Независимо от используемого облачного провайдера, его настройки можно изменить с помощью команды:
 
 ```shell
 kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
@@ -204,7 +204,7 @@ kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller edit provider
 
 ## Как изменить конфигурацию статического кластера?
 
-Настройки статического кластера хранятся в структуре `StaticClusterConfiguration`. 
+Настройки статического кластера хранятся в структуре `StaticClusterConfiguration`.
 
 Чтобы изменить параметры статического кластера, выполните команду:
 

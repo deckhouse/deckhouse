@@ -27,7 +27,7 @@ You need to create a service account with the editor role with the cloud provide
    ```
 
 > You may need to increase [quotas](#quotas).
-
+>
 > [Reserve](faq.html#how-to-reserve-a-public-ip-address) a public IP address if necessary.
 
 ## Quotas

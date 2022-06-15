@@ -8,14 +8,16 @@
 
 - Open console and start documentation container with one of the following methods:
   - Using makefile:
+
     ```shell
     cd docs/documentation
     make up 
     ```
 
     > For development mode use `make dev` instead.
-    
+
   - or using the following commands:
+
     ```shell
     cd docs/documentation
     docker network create deckhouse
@@ -28,6 +30,7 @@
 
 - Open a separate console and start site container with one of the following methods:
   - using makefile:
+
     ```shell
     cd docs/site
     make up 
@@ -36,6 +39,7 @@
     > For development mode use `make dev` instead.
 
   - or using the following commands:
+
     ```shell
     cd docs/site
     export BASE_NGINX_ALPINE=nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555
@@ -45,18 +49,20 @@
     werf compose up --follow --docker-compose-command-options='-d'
     ```
 
-- Open http://localhost.
+- Open <http://localhost>.
 
 Don't forget to stop documentation and site containers by running:
+
 ```shell
 werf compose down
-``` 
+```
 
 ## How to debug
 
 There is the `docs/site/werf-debug.yaml` file to compile and the `docs/site/docker-compose-debug.yml` file to run the backend with [delve](https://github.com/go-delve/delve) debugger.
 
 Run from the docs/site folder of the project (or run docs/site/backend/debug.sh):
+
 ```shell
 werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'
 ```

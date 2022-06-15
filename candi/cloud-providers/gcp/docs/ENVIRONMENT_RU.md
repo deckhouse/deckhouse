@@ -12,7 +12,7 @@ title: "Cloud provider — GCP: подготовка окружения"
 
 Созданному service account'у должны быть присвоены несколько необходимых ролей:
 
-```
+```text
 Compute Admin
 Service Account User
 Network Management Admin
@@ -55,7 +55,7 @@ Network Management Admin
 
    Список необходимых ролей:
 
-   ```
+   ```text
    roles/compute.admin
    roles/iam.serviceAccountUser
    roles/networkmanagement.admin

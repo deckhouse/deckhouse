@@ -31,7 +31,7 @@ All following commands are assumed to be executed from the Pod's shell.
 
 Example of the graph output for a single pipeline in ASCII format:
 
-```
+```text
 +------------------------------------------------+
 |  d8_cluster_source_flant-integration-d8-logs   |
 +------------------------------------------------+
@@ -84,7 +84,7 @@ You can then use the `vector vrl` interactive console to debug [VRL](https://vec
 
 Example of a program on VRL:
 
-```
+```text
 . = {"test1": "lynx", "test2": "fox"}
 del(.test2)
 .

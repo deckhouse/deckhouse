@@ -18,11 +18,13 @@ Deckhouse состоит из оператора Deckhouse и модулей. М
 - `<moduleName>Enabled` (где `<moduleName>` — название модуля Deckhouse в camelCase) — параметр позволяет явно [включить или отключить модуль](#включение-и-отключение-модуля).
 
 Чтобы посмотреть конфигурацию Deckhouse выполните следующую команду:
+
 ```shell
 kubectl -n d8-system get cm/deckhouse -o yaml
 ```
 
 Пример ConfigMap `deckhouse`:
+
 ```yaml
 apiVersion: v1
 metadata:
@@ -46,6 +48,7 @@ data:
 * Наименование модулей пишется в стиле *camelCase*.
 
 Чтобы изменить конфигурацию Deckhouse отредактируйте ConfigMap `deckhouse`, например, следующим способом:
+
 ```shell
 kubectl -n d8-system edit cm/deckhouse
 ```
@@ -63,6 +66,7 @@ Deckhouse работает только с включёнными модулям
 Некоторые модули дополнительно настраиваются с помощью custom resource'ов. Воспользуйтесь поиском (наверху страницы) или найдите модуль в меню слева, чтобы получить документацию по его настройкам и используемым custom resource'ам.
 
 Пример настройки параметров модуля `kube-dns`:
+
 ```yaml
 data:
   kubeDns: |
@@ -83,6 +87,7 @@ data:
 Для включения или отключения модуля необходимо добавить в ConfigMap `deckhouse` параметр `<moduleName>Enabled`, который может принимать одно из двух значений: `"true"` или `"false"` (кавычки обязательны), где `<moduleName>` — название модуля в camelCase.
 
 Пример включения модуля `user-authn`:
+
 ```yaml
 data:
   userAuthnEnabled: "true"
@@ -118,6 +123,7 @@ data:
 </table>
 
 ## Управление размещением компонентов Deckhouse
+
 ### Выделение узлов под определенный вид нагрузки
 
 Если в параметрах модуля не указаны явные значения `nodeSelector/tolerations`, то для всех модулей используется следующая стратегия:
@@ -130,6 +136,7 @@ data:
 - которые работают на всех master-узлах (например, `prometheus-metrics-adapter`, `vertical-pod-autoscaler`).
 
 ### Особенности автоматики, зависящие от типа модуля
+
 {% raw %}
 * Модули *monitoring* (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
   * Порядок поиска узлов (для определения `nodeSelector`):
@@ -143,21 +150,21 @@ data:
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}`;
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`;
 * Модули *frontend* (исключительно модуль `ingress-nginx`):
-    * Порядок поиска узлов (для определения `nodeSelector`):
-        * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
-        * Наличие узла с лейблом `node-role.deckhouse.io/frontend`.
-    * Добавляемые toleration'ы (добавляются одновременно все):
-        * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
-        * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`;
+  * Порядок поиска узлов (для определения `nodeSelector`):
+    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
+    * Наличие узла с лейблом `node-role.deckhouse.io/frontend`.
+  * Добавляемые toleration'ы (добавляются одновременно все):
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`;
 * Все остальные модули:
-    * Порядок поиска узлов (для определения `nodeSelector`):
-        * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
+  * Порядок поиска узлов (для определения `nodeSelector`):
+    * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
 
-          Например: `node-role.deckhouse.io/cert-manager`.
-        * Наличие узла с лейблом `node-role.deckhouse.io/system`.
-    * Добавляемые toleration'ы (добавляются одновременно все):
-        * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
+      Например: `node-role.deckhouse.io/cert-manager`.
+    * Наличие узла с лейблом `node-role.deckhouse.io/system`.
+  * Добавляемые toleration'ы (добавляются одновременно все):
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`;
 
-          Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`;
-        * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
+      Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}`;
+    * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
 {% endraw %}

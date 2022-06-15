@@ -24,6 +24,7 @@ kubectl -n d8-system get cm/deckhouse -o yaml
 ```
 
 Example of the `deckhouse` ConfigMap:
+
 ```yaml
 apiVersion: v1
 metadata:
@@ -63,6 +64,7 @@ You can configure the module using the parameter with the module name in camelCa
 Some modules can also be configured using custom resources. Use the search bar at the top of the page or select a module in the left menu to see a detailed description of its settings and the custom resources used.
 
 Below is an example of the `kube-dns` module settings:
+
 ```yaml
 data:
   kubeDns: |
@@ -83,6 +85,7 @@ data:
 To enable/disable a module, add the `<moduleName>Enabled` parameter to the `deckhouse` ConfigMap with one of the following two values: `"true"` or `"false"` (note: quotation marks are mandatory), where `<moduleName>` is the name of the module in camelCase.
 
 Here is an example of enabling the `user-authn` module:
+
 ```yaml
 data:
   userAuthnEnabled: "true"
@@ -118,6 +121,7 @@ Depending on the [bundle used](./modules/020-deckhouse/configuration.html#parame
 </table>
 
 ## Managing placement of Deckhouse components
+
 ### Advanced scheduling
 
 If no `nodeSelector/tolerations` are explicitly specified in the module parameters, the following strategy is used for all modules:
@@ -130,6 +134,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
 - designed to run on master nodes (e.g., `prometheus-metrics-adapter` or some `vertical-pod-autoscaler` components).
 
 ### Module features that depend on its type
+
 {% raw %}
 * The *monitoring*-related modules (operator-prometheus, prometheus and vertical-pod-autoscaler):
   * Deckhouse examines nodes to determine a nodeSelector in the following order:
@@ -143,21 +148,21 @@ You cannot set `nodeSelector` and `tolerations` for modules:
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}</code>.
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>.
 * The *frontend*-related modules (nginx-ingress only):
-    * Deckhouse examines nodes to determine a nodeSelector in the following order:
-        * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
-        * It checks if a node with the <code>node-role.deckhouse.io/frontend</code> label is present in the cluster.
-    * Tolerations to add (note that tolerations are added all at once):
-        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>.
-        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}</code>.
+  * Deckhouse examines nodes to determine a nodeSelector in the following order:
+    * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster.
+    * It checks if a node with the <code>node-role.deckhouse.io/frontend</code> label is present in the cluster.
+  * Tolerations to add (note that tolerations are added all at once):
+    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>.
+    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}</code>.
 * Other modules:
-    * Deckhouse examines nodes to determine a nodeSelector in the following order:
-        * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster;
+  * Deckhouse examines nodes to determine a nodeSelector in the following order:
+    * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster;
 
-          E.g., <code>node-role.deckhouse.io/cert-manager</code>);
-        * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
-    * Tolerations to add (note that tolerations are added all at once):
-        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
+      E.g., <code>node-role.deckhouse.io/cert-manager</code>);
+    * It checks if a node with the <code>node-role.deckhouse.io/system</code> label is present in the cluster.
+  * Tolerations to add (note that tolerations are added all at once):
+    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
 
-          E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}</code>;
-        * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>.
+      E.g., <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}</code>;
+    * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>.
 {% endraw %}

@@ -210,7 +210,7 @@ openstack flavor show m1.medium-50g -c disk
 
 Пример:
 
-```
+```shell
 # openstack flavor show m1.medium-50g -c disk
 +-------+-------+
 | Field | Value |

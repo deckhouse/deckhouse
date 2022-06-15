@@ -27,11 +27,11 @@ We use <b>five release channels</b>.
 <div class="releases__menu">
 {%- for channel in channels_sorted_reverse %}
     <div class="releases__menu-item releases__menu--channel--{{ channel.name }}">
-        <div class="releases__menu-item-header">            
+        <div class="releases__menu-item-header">
             <div class="releases__menu-item-title releases__menu--channel--{{ channel.name }}">
                 {{ channel.title }}
             </div>
-        </div>        
+        </div>
         <div class="releases__menu-item-description">
             {{ channel.description[page.lang] }}
         </div>
@@ -43,4 +43,3 @@ We use <b>five release channels</b>.
 {::options parse_block_html="true" /}
 
 Deckhouse can "soft" switch between release channels using the [deckhouse](modules/020-deckhouse/) module: it is enough to specify the desired release channel in the [configuration](modules/020-deckhouse/configuration.html#parameters-releasechannel).
-

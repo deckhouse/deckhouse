@@ -105,7 +105,7 @@ Using metrics that this module exports, you can, e.g., replace the "magic" const
 
 Before:
 
-```
+```text
 max by (namespace, pod, container) (
   (
     rate(container_cpu_cfs_throttled_periods_total[5m])
@@ -118,7 +118,7 @@ max by (namespace, pod, container) (
 
 After:
 
-```
+```text
 max by (namespace, pod, container) (
   (
     rate(container_cpu_cfs_throttled_periods_total[5m])

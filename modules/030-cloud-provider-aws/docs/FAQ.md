@@ -69,23 +69,24 @@ There are two possible cases:
 To add a pre-created instance to the cluster, you need to:
 1. Attach a security group `<prefix>-node`.
 2. Add tags:
-   ```
+
+   ```text
    "kubernetes.io/cluster/<cluster_uuid>" = "shared"
    "kubernetes.io/cluster/<prefix>" = "shared"
    ```
 
    * You can find out the `cluster_uuid` using the command:
-   
+
      ```shell
      kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
      ```
-   
+
    * You can find out `prefix` using the command:
-   
+
      ```shell
      kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
      ```
-   
+
 ## How to increase the size of a volume?
 
 Set the new size in the corresponding PersistentVolumeClaim resource, in the `spec.resources.requests.storage` parameter.
