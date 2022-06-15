@@ -78,14 +78,14 @@ kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 
 ## Collect debug info
 
-We always appreciate helping users with debugging complex issues. To collect all necessary info, a user should:
+We always appreciate helping users with debugging complex issues. Please follow these steps so that we can help you:
 
-1. Execute the following command:
+1. Collect all the necessary information by running the following command:
 
-```sh
-kubectl -n d8-system exec deploy/deckhouse \
-  -- deckhouse-controller helper collect-debug-info \
-  > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
-```
+   ```sh
+   kubectl -n d8-system exec deploy/deckhouse \
+     -- deckhouse-controller helper collect-debug-info \
+     > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   ```
 
 2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
