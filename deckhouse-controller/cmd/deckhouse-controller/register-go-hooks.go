@@ -22,6 +22,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-operator-prometheus-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-prometheus-crd/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/010-snapshot-controller-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-user-authn-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-vertical-pod-autoscaler-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/013-helm/hooks"
