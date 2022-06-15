@@ -14,16 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ -z $1 ]]; then
-  echo -e "\nThere is no diff file."
-  exit 1
-fi
-
-if [[ ! -f $1 ]]; then
-  echo -e "\nDiff file '$1' is not found."
-  exit 1
-fi
-
 docker run --rm -v $PWD:/workdir --entrypoint sh ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 -c \
  "echo
   echo '######################################################################################################################'
@@ -31,16 +21,21 @@ docker run --rm -v $PWD:/workdir --entrypoint sh ghcr.io/igorshubovych/markdownl
   echo '###                   Markdown linter report'
   echo
   STATUS=0
-  for i in \$(grep -E '^\+\+\+ b\/.*\.md\$' $1 | sed -E 's#^\+\+\+ b\/##'); do
-      markdownlint --config testing/markdownlint.yaml \$i;
-      EXIT_CODE=\$?
-      if [ \$EXIT_CODE -ne "0" ]; then
-        STATUS=\$EXIT_CODE
-      fi
-  done
+  markdownlint --config testing/markdownlint.yaml -p testing/.markdownlintignore \"**/*.md\"
+  EXIT_CODE=\$?
+  if [ \$EXIT_CODE -ne "0" ]; then
+     echo
+     echo 'To run linter locally execute the following command in the Deckhouse repo:'
+     echo 'docker run --rm -ti -v \$PWD:/workdir ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 --config testing/markdownlint.yaml -p testing/.markdownlintignore \"**/*.md\"'
+     echo
+     echo 'To run linter locally and AUTOMATICALLY FIX basic problems execute the following command in the Deckhouse repo:'
+     echo 'docker run --rm -ti -v \$PWD:/workdir ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 --config testing/markdownlint.yaml -p testing/.markdownlintignore --fix \"**/*.md\"'
+     STATUS=\$EXIT_CODE
+  else
+     echo 'All checks passed.'
+  fi
   echo
-  echo '###'
-  echo '###                   Powered by https://github.com/DavidAnson/markdownlint'
+  echo '###                   Powered by https://github.com/DavidAnson/markdownlint/'
   echo '######################################################################################################################'
   echo
   exit \$STATUS
