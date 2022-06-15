@@ -87,6 +87,9 @@ apiServer:
   {{ if .apiserver.authnWebhookURL }}
     authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml
   {{- end -}}
+  {{ if .apiserver.authnWebhookCacheTTL }}
+    authentication-token-webhook-cache-ttl: {{.apiserver.authnWebhookCacheTTL | quote }}
+  {{- end -}}
   {{- if .apiserver.auditPolicy }}
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
     audit-log-format: json

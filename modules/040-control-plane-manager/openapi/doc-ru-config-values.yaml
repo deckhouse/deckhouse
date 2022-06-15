@@ -68,6 +68,9 @@ properties:
           webhookCA:
             description: |
               CA аутентификационного webhook'a.
+          webhookCacheTTL:
+            description: |
+              Продолжительность кэширования ответов от аутентификационного webhook'a.
       authz:
         description: |
           Параметры авторизации клиентов Kubernetes API.

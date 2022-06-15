@@ -48,6 +48,9 @@
     {{- if .Values.controlPlaneManager.apiserver.authn.webhookCA }}
       {{ $_ := set $tpl_context.apiserver "authnWebhookCA" .Values.controlPlaneManager.apiserver.authn.webhookCA }}
     {{- end }}
+    {{- if .Values.controlPlaneManager.apiserver.authn.webhookCacheTTL }}
+      {{ $_ := set $tpl_context.apiserver "authnWebhookCacheTTL" .Values.controlPlaneManager.apiserver.authn.webhookCacheTTL }}
+    {{- end }}
   {{- end }}
   {{- if hasKey .Values.controlPlaneManager.apiserver "authz" }}
     {{- if .Values.controlPlaneManager.apiserver.authz.webhookURL }}
