@@ -20,4 +20,4 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/045-snapshot-controller/crds/*.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/010-snapshot-controller-crd/crds/*.yaml")
