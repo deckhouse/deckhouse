@@ -119,11 +119,6 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"logs", "deploy/deckhouse", "--tail", "3000"},
 		},
 		{
-			File: "deckhouse-cm.json",
-			Cmd:  "kubectl",
-			Args: []string{"get", "cm", "deckhouse", "-o", "json"},
-		},
-		{
 			File: "mcm-logs.txt",
 			Cmd:  "kubectl",
 			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=machine-controller-manager", "--tail", "3000", "-c", "controller"},
