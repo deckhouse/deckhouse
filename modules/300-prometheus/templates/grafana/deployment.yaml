@@ -99,6 +99,11 @@ spec:
           value: "127.0.0.1"
         - name: GF_METRICS_ENABLED
           value: "true"
+        # TODO(nabokihms): enable legacy alerting, because our operator does not work with new alerts system
+        - name: GF_ALERTING_ENABLED
+          value: "true"
+        - name: GF_UNIFIED_ALERTING_ENABLED
+          value: "false"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_INSTALL_PLUGINS
