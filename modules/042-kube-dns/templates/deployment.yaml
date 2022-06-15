@@ -62,21 +62,7 @@ spec:
       # hardcoded, because kube-dns is a critical component and system-cluster-critical priority class exists by default
       priorityClassName: system-cluster-critical
       serviceAccountName: d8-kube-dns
-      # Policy #0: kube-dns must be able to work on every master and every specific node
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
-      - key: node-role.kubernetes.io/master
-      - key: node-role/system
-      - key: dedicated.deckhouse.io
-        operator: Equal
-        value: kube-dns
-      - key: dedicated.deckhouse.io
-        operator: Equal
-        value: system
-      - key: dedicated.deckhouse.io
-        operator: Equal
-        value: master
+      {{- include "helm_lib_tolerations" (tuple $context "any-node-with-no-csi") | nindent 6 }}
       containers:
       - name: coredns
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
