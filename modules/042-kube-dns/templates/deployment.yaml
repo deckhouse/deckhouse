@@ -41,6 +41,7 @@ spec:
 #      * there should be at least 2 replicas or more if someone configured it manually
 #      * there must not be more replicas then non-specific nodes
   replicas: {{ .Values.kubeDns.internal.replicas }}
+  revisionHistoryLimit: 2
   strategy:
     type: RollingUpdate
     rollingUpdate:

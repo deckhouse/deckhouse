@@ -272,6 +272,7 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 		l.ErrorsList.Add(objectSecurityContext(object))
 	}
 
+	l.ErrorsList.Add(objectRevisionHistoryLimit(object))
 	l.ErrorsList.Add(objectHostNetworkPorts(object))
 }
 
@@ -337,6 +338,46 @@ func newConvertError(object storage.StoreObject, err error) errors.LintRuleError
 		nil,
 		"Cannot convert object to %s: %v", object.Unstructured.GetKind(), err,
 	)
+}
+
+func objectRevisionHistoryLimit(object storage.StoreObject) errors.LintRuleError {
+	if object.Unstructured.GetKind() == "Deployment" {
+		converter := runtime.DefaultUnstructuredConverter
+		deployment := new(appsv1.Deployment)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), deployment)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		// https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#revision-history-limit
+		// Revision history limit controls the number of replicasets stored in the cluster for each deployment.
+		// Higher number means higher resource consumption, lower means inability to rollback.
+		//
+		// Since Deckhouse does not use rollback, we can set it to 2 to be able to manually check the previous version.
+		// It is more important to reduce the control plane pressure.
+		idealHistoryLimit := int32(2)
+		actualLimit := deployment.Spec.RevisionHistoryLimit
+
+		if actualLimit == nil {
+			return errors.NewLintRuleError(
+				"MANIFEST008",
+				object.Identity(),
+				nil,
+				"Deployment spec.revisionHistoryLimit must be equal to %d", idealHistoryLimit,
+			)
+		}
+
+		if *actualLimit > idealHistoryLimit {
+			return errors.NewLintRuleError(
+				"MANIFEST008",
+				object.Identity(),
+				*actualLimit,
+				"Deployment spec.revisionHistoryLimit must be equal to or lower than %d", idealHistoryLimit,
+			)
+		}
+	}
+	return errors.EmptyRuleError
 }
 
 func objectPriorityClass(object storage.StoreObject) errors.LintRuleError {

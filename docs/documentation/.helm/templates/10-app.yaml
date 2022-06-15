@@ -13,7 +13,7 @@ metadata:
     service: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
 spec:
   minReadySeconds: 5
-  revisionHistoryLimit: 5
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       service: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}

@@ -53,7 +53,7 @@ spec:
   selector:
     matchLabels:
       app: cluster-autoscaler
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 2
   replicas: 1
   template:
     metadata:

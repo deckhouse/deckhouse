@@ -24,6 +24,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "terraform-auto-converger")) | nindent 2 }}
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   strategy:
     type: Recreate
   selector:
