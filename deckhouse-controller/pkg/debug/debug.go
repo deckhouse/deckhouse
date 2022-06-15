@@ -22,6 +22,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 type Command struct {
@@ -152,8 +154,11 @@ func createTarball() *bytes.Buffer {
 	return &buf
 }
 
-func Collect() error {
-	res := createTarball()
-	fmt.Println(res.String())
-	return nil
+func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
+	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
+	collectDebug.Action(func(c *kingpin.ParseContext) error {
+		res := createTarball()
+		_, err := io.Copy(os.Stdout, res)
+		return err
+	})
 }

@@ -28,6 +28,7 @@ import (
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -116,6 +117,9 @@ func main() {
 
 	// deckhouse-controller helper subcommands
 	helpers.DefineHelperCommands(kpApp)
+
+	// deckhouse-controller collect-debug-info
+	debug.DefineCollectDebugInfoCommand(kpApp)
 
 	// deckhouse-controller edit subcommands
 	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")

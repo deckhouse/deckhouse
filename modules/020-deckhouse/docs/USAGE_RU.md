@@ -84,7 +84,7 @@ kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 
    ```sh
    kubectl -n d8-system exec deploy/deckhouse \
-     -- deckhouse-controller helper collect-debug-info \
+     -- deckhouse-controller collect-debug-info \
      > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 

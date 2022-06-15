@@ -18,7 +18,6 @@ import (
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/jwt"
 	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 )
@@ -33,13 +32,6 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		ttl := genJWTCommand.Flag("ttl", "TTL duration (ex. 10s).").Required().Duration()
 		genJWTCommand.Action(func(c *kingpin.ParseContext) error {
 			return jwt.GenJWT(*privateKeyPath, *claims, *ttl)
-		})
-	}
-
-	{
-		collectDebug := helpersCommand.Command("collect-debug-info", "Collect debug info from your cluster.")
-		collectDebug.Action(func(c *kingpin.ParseContext) error {
-			return debug.Collect()
 		})
 	}
 
