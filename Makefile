@@ -27,6 +27,10 @@ help:
 GOLANGCI_VERSION = 1.46.2
 TESTS_TIMEOUT="15m"
 
+##@ General
+
+deps: bin/golangci-lint bin/trivy ## Install dev dependencies.
+
 ##@ Tests
 
 .PHONY: tests-modules tests-matrix tests-openapi
@@ -48,11 +52,11 @@ bin/golangci-lint:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
 
 .PHONY: lint lint-fix
-lint: bin/golangci-lint ## Run linter.
-	bin/golangci-lint run
+lint: ## Run linter.
+	golangci-lint run
 
-lint-fix: bin/golangci-lint ## Fix lint violations.
-	bin/golangci-lint run --fix
+lint-fix: ## Fix lint violations.
+	golangci-lint run --fix
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
@@ -78,6 +82,21 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 
 ##@ Generate
 
-.PHONY: generate
+.PHONY: generate render-workflow
 generate: ## Run all generate-* jobs in bulk.
 	cd tools; go generate
+
+render-workflow: ## Generate CI workflow instructions.
+	./.github/render-workflows.sh
+
+##@ Reports
+
+bin/trivy:
+	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v0.28.1
+
+.PHONY: cve-report
+cve-report: ## Generate CVE report for a Deckhouse release.
+	./tools/cve/release.sh
+
+cve-base-images: ## Check CVE in our base images.
+	./tools/cve/base-images.sh
