@@ -75,3 +75,33 @@ deckhouse: |
 ```shell
 kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 ```
+
+## Сбор информации для отладки
+
+Мы всегда рады помочь пользователям с расследованием сложных проблем. Пожалуйста, выполните следующие шаги, чтобы мы смогли вам помочь:
+
+1. Выполните следующую команду, чтобы собрать необходимые данные:
+
+   ```sh
+   kubectl -n d8-system exec deploy/deckhouse \
+     -- deckhouse-controller collect-debug-info \
+     > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   ```
+
+2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
+
+Данные, которые будут собраны:
+* состояние очереди Deckhouse
+* Deckhouse values (без каких-либо конфиденциальных данных)
+* список включенных модулей
+* манифесты controller'ов и pod'ов manifests из всех пространств имен Deckhouse
+* состояние `nodes`
+* состояние `nodegroups`
+* состояние `machines`
+* все объекты `deckhousereleases`
+* `events` из всех пространств имен
+* логи Deckhouse
+* логи machine controller manager
+* логи cloud controller manager
+* все горящие уведомления в Prometheus
+* метрики terraform-state-exporter

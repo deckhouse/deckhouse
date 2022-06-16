@@ -75,3 +75,33 @@ Manual confirmation of the update to the version `v1.26.0`:
 ```shell
 kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 ```
+
+## Collect debug info
+
+We always appreciate helping users with debugging complex issues. Please follow these steps so that we can help you:
+
+1. Collect all the necessary information by running the following command:
+
+   ```sh
+   kubectl -n d8-system exec deploy/deckhouse \
+     -- deckhouse-controller collect-debug-info \
+     > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   ```
+
+2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
+
+Data that will be collected:
+* Deckhouse queue state
+* global Deckhouse values (without any sensitive data)
+* enabled modules list
+* controllers and pods manifests from namespaces owned by Deckhouse
+* `nodes` state
+* `nodegroups` state
+* `machines` state
+* all `deckhousereleases` objects
+* `events` from all namespaces
+* Deckhouse logs
+* machine controller manager logs
+* cloud controller manager logs
+* all firing alerts from Prometheus
+* terraform-state-exporter metrics
