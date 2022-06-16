@@ -140,7 +140,7 @@ spec:
                 vector:
                   properties:
                     endpoint:
-                      description: URL для подключения к Vector. Для общение между экземплярами должен использоваться API v2.
+                      description: Адрес для подключения к Vector. Для общение между экземплярами должен использоваться API v2.
                     tls:
                       description: Настройки защищённого TLS-соединения.
                       properties:

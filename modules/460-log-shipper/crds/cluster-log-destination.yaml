@@ -330,7 +330,7 @@ spec:
                   properties:
                     endpoint:
                       type: string
-                      description: The base URL of the Vector instance. API v2 must be used for communication between instances.
+                      description: An address of the Vector instance. API v2 must be used for communication between instances.
                       pattern: ^(.+):([0-9]{1,5})$
                     tls:
                       type: object
