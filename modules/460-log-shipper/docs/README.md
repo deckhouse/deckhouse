@@ -2,7 +2,7 @@
 title: "The log-shipper module"
 ---
 
-### Overview
+## Overview
 
 This module deploys log collector agents on nodes in the cluster. 
 The purpose of these agents is to do minimal transformations and send logs further. 
