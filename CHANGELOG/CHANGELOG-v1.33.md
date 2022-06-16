@@ -105,6 +105,7 @@
  - **[prometheus]** Removed the old prometheus_storage_class_change shell hook which has already been replaced by Go hooks. [#1396](https://github.com/deckhouse/deckhouse/pull/1396)
  - **[prometheus]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Prometheus will be restarted.
+ - **[snapshot-controller]** snapshot-controller does not allow install crd until `v1alpha1` is preserved in cluster. [#1802](https://github.com/deckhouse/deckhouse/pull/1802)
  - **[upmeter]** Fixed potential error loops in remote write exporter [#1579](https://github.com/deckhouse/deckhouse/pull/1579)
     If a storage responds with 4xx error, the unaccepted metrics will not be re-sent.
  - **[upmeter]** Added missing User-Agent header to remote write exporter, defined as `Upmeter/1.0 (Deckhouse <edition> <version>)` [#1579](https://github.com/deckhouse/deckhouse/pull/1579)
