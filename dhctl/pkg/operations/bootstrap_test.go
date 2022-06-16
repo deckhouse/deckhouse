@@ -15,14 +15,21 @@
 package operations
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -62,5 +69,145 @@ func TestBootstrapGetNodesFromCache(t *testing.T) {
 		require.Equal(t, "test-master-1", result["master"][1])
 
 		require.Equal(t, "test-static-ingress-0", result["static-ingress"][0])
+	})
+}
+
+func TestInstallDeckhouse(t *testing.T) {
+	createReadyDeckhousePod := func(fakeClient *client.KubernetesClient) {
+		pod := &v1.Pod{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Pod",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "deckhouse-pod",
+				Namespace: "d8-system",
+				Labels: map[string]string{
+					"app": "deckhouse",
+				},
+			},
+			Status: v1.PodStatus{
+				Phase: v1.PodRunning,
+				Conditions: []v1.PodCondition{
+					{
+						Type:   v1.PodReady,
+						Status: v1.ConditionTrue,
+					},
+				},
+			},
+		}
+
+		_, err := fakeClient.CoreV1().Pods("d8-system").Create(context.TODO(), pod, metav1.CreateOptions{})
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	createUUIDConfigMap := func(fakeClient *client.KubernetesClient, uuid string) {
+		cm := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      manifests.ClusterUUIDCm,
+				Namespace: manifests.ClusterUUIDCmNamespace,
+			},
+			Data: map[string]string{manifests.ClusterUUIDCmKey: uuid},
+		}
+
+		_, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	clusterUUID := "848c3b2c-eda6-11ec-9289-dff550c719eb"
+
+	conf := &deckhouse.Config{
+		ReleaseChannel: "Stable",
+		Bundle:         "minimal",
+		LogLevel:       "Info",
+		UUID:           clusterUUID,
+	}
+
+	assertDeploymentAndUUIDCmCreated := func(t *testing.T, fakeClient *client.KubernetesClient) {
+		// todo assert all manifests
+		_, err := fakeClient.AppsV1().Deployments("d8-system").Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+		require.NoError(t, err)
+
+		uuidCm, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(context.TODO(), manifests.ClusterUUIDCm, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		require.Equal(t, uuidCm.Data[manifests.ClusterUUIDCmKey], clusterUUID)
+	}
+
+	assertNotDeploymentCreatedAndUUIDCmIsSame := func(t *testing.T, fakeClient *client.KubernetesClient, uuid string) {
+		// todo assert all manifests
+		_, err := fakeClient.AppsV1().Deployments("d8-system").Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+		require.NotNil(t, err)
+
+		uuidCm, err := fakeClient.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(context.TODO(), manifests.ClusterUUIDCm, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		require.Equal(t, uuidCm.Data[manifests.ClusterUUIDCmKey], uuid)
+	}
+
+	t.Run("Does not have cluster uuid config map", func(t *testing.T) {
+		t.Run("should install deckhouse", func(t *testing.T) {
+			fakeClient := client.NewFakeKubernetesClient()
+			createReadyDeckhousePod(fakeClient)
+
+			err := InstallDeckhouse(fakeClient, conf)
+
+			require.NoError(t, err, "Deckhouse should installed")
+
+			assertDeploymentAndUUIDCmCreated(t, fakeClient)
+		})
+	})
+
+	t.Run("Has cluster uuid config map", func(t *testing.T) {
+		t.Run("with empty uuid", func(t *testing.T) {
+			t.Run("should not install deckhouse", func(t *testing.T) {
+				fakeClient := client.NewFakeKubernetesClient()
+				curUUID := ""
+
+				createReadyDeckhousePod(fakeClient)
+				createUUIDConfigMap(fakeClient, curUUID)
+
+				err := InstallDeckhouse(fakeClient, conf)
+
+				require.Error(t, err, "Deckhouse should not install")
+
+				assertNotDeploymentCreatedAndUUIDCmIsSame(t, fakeClient, curUUID)
+			})
+		})
+
+		t.Run("with another uuid", func(t *testing.T) {
+			t.Run("should not install deckhouse", func(t *testing.T) {
+				fakeClient := client.NewFakeKubernetesClient()
+
+				curUUID := uuid.New().String()
+
+				createReadyDeckhousePod(fakeClient)
+				createUUIDConfigMap(fakeClient, curUUID)
+
+				err := InstallDeckhouse(fakeClient, conf)
+
+				require.Error(t, err, "Deckhouse should not install")
+
+				assertNotDeploymentCreatedAndUUIDCmIsSame(t, fakeClient, curUUID)
+			})
+		})
+
+		t.Run("with same uuid", func(t *testing.T) {
+			t.Run("should install deckhouse", func(t *testing.T) {
+				fakeClient := client.NewFakeKubernetesClient()
+				createReadyDeckhousePod(fakeClient)
+				createUUIDConfigMap(fakeClient, clusterUUID)
+
+				err := InstallDeckhouse(fakeClient, conf)
+
+				require.NoError(t, err, "Deckhouse should not install")
+
+				assertDeploymentAndUUIDCmCreated(t, fakeClient)
+			})
+		})
 	})
 }

@@ -34,9 +34,8 @@ func CheckPreventBreakAnotherBootstrappedCluster(kubeCl *client.KubernetesClient
 	}
 
 	if err == nil {
-		var ok bool
-		uuidInCluster, ok = cmInCluster.Data[manifests.ClusterUUIDCmKey]
-		if !ok || uuidInCluster == "" {
+		uuidInCluster = cmInCluster.Data[manifests.ClusterUUIDCmKey]
+		if uuidInCluster == "" {
 			return fmt.Errorf("Cluster UUID config map found, but UUID is empty")
 		}
 	}
