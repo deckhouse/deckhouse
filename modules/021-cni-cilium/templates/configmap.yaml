@@ -14,8 +14,8 @@ data:
   metrics: "+cilium_bpf_map_pressure"
 
   agent-health-port: "9876"
-  prometheus-serve-addr: "127.0.0.1:9090"
-  operator-prometheus-serve-addr: "127.0.0.1:9092"
+  prometheus-serve-addr: "127.0.0.1:9092"
+  operator-prometheus-serve-addr: "127.0.0.1:9094"
   operator-api-serve-addr: "127.0.0.1:9234"
   enable-metrics: "true"
 
