@@ -307,11 +307,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				return manifests.ClusterUUIDConfigMap(cfg.UUID)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps("kube-system").Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps("kube-system").Update(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Update(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
 				return err
 			},
 		})
