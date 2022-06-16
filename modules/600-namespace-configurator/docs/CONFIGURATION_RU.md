@@ -2,11 +2,11 @@
 title: "Модуль namespace-configurator: настройки"
 ---
 
-Модуль по умолчанию **выключен**. Для включения добавьте в ConfigMap `deckhouse`:
+Модуль по умолчанию **включен**. Для выключения добавьте в ConfigMap `deckhouse`:
 
 ```yaml
 data:
-  namespaceConfiguratorEnabled: "true"
+  namespaceConfiguratorEnabled: "false"
 ```
 
 ## Параметры
