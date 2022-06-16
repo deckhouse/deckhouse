@@ -29,6 +29,7 @@
  - **[cni-cilium]** The new module responsible for providing a network between multiple nodes in a cluster using the [cilium](https://cilium.io/). [#592](https://github.com/deckhouse/deckhouse/pull/592)
     Without a way to migrate from existing CNIs at this moment.
  - **[cni-flannel]** Bumped flannel to 0.15.1. [#1173](https://github.com/deckhouse/deckhouse/pull/1173)
+ - **[control-plane-manager]** Added `authentication-token-webhook-cache-ttl` parameter to apiserver. [#1791](https://github.com/deckhouse/deckhouse/pull/1791)
  - **[control-plane-manager]** Calculate and add the `quota-backend-bytes` parameter to etcd. [#1389](https://github.com/deckhouse/deckhouse/pull/1389)
     Etcd will be restarted. The `quota-backend-bytes` parameter added to etcd is calculated depending on control-plane memory capacity.
  - **[deckhouse-controller]** Added the `edit` command for the `deckhouse-controller` to be able to modify cluster configuration files. [#1558](https://github.com/deckhouse/deckhouse/pull/1558)
@@ -63,12 +64,16 @@
 ## Fixes
 
 
+ - **[candi]** Enabled the `GracefulNodeShutdown` flag on K8s 1.20 to fix kubelet not starting. [#1777](https://github.com/deckhouse/deckhouse/pull/1777)
  - **[candi]** Fix build of the AWS cloud controller manager [#1716](https://github.com/deckhouse/deckhouse/pull/1716)
  - **[candi]** Remove master node `coreFraction` setting from YandexClusterConfiguration openapi spec [#1617](https://github.com/deckhouse/deckhouse/pull/1617)
  - **[candi]** Migrate to cgroupfs on containerd installations. [#1386](https://github.com/deckhouse/deckhouse/pull/1386)
  - **[ceph-csi]** Fixed missing registry secret. [#1733](https://github.com/deckhouse/deckhouse/pull/1733)
+ - **[chrony]** Chrony systemd unit on a node is added to stop list. [#1776](https://github.com/deckhouse/deckhouse/pull/1776)
  - **[cloud-provider-aws]** Fix LoadBalancer type none target group creation. [#1741](https://github.com/deckhouse/deckhouse/pull/1741)
+ - **[cloud-provider-vsphere]** Fix error in Terraform for static nodes in setups without nested resource pools. [#1785](https://github.com/deckhouse/deckhouse/pull/1785)
  - **[cloud-provider-yandex]** Rollback changes to set `simple-bridge`  as default CNI for Yandex. [#1582](https://github.com/deckhouse/deckhouse/pull/1582)
+ - **[cni-cilium]** The `enable_node_routes` hook now bails if a value is present in config. [#1792](https://github.com/deckhouse/deckhouse/pull/1792)
  - **[helm]** Avoid failing on incorrect helm releases. [#1754](https://github.com/deckhouse/deckhouse/pull/1754)
  - **[helm]** Avoid hook failure on errors [#1523](https://github.com/deckhouse/deckhouse/pull/1523)
  - **[ingress-nginx]** Fix build of the ingress-nginx 0.33 controller. [#1757](https://github.com/deckhouse/deckhouse/pull/1757)
@@ -95,6 +100,7 @@
  - **[openvpn]** Fixes a bug that does not allow you to set additional domains. [#1764](https://github.com/deckhouse/deckhouse/pull/1764)
  - **[openvpn]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Openvpn and admin panel will be restarted.
+ - **[prometheus]** Enable legacy alerting system for Grafana [#1795](https://github.com/deckhouse/deckhouse/pull/1795)
  - **[prometheus]** Use new metrics names in alert rules. [#1627](https://github.com/deckhouse/deckhouse/pull/1627)
  - **[prometheus]** Removed the old prometheus_storage_class_change shell hook which has already been replaced by Go hooks. [#1396](https://github.com/deckhouse/deckhouse/pull/1396)
  - **[prometheus]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
