@@ -225,6 +225,9 @@ spec:
     storage: false
     subresources:
       status: {}
+  - name: v1alpha1
+    served: false
+    storage: false
 status:
   acceptedNames:
     kind: ""

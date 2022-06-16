@@ -111,6 +111,9 @@ spec:
     served: true
     storage: false
     subresources: {}
+  - name: v1alpha1
+    served: false
+    storage: false
 status:
   acceptedNames:
     kind: ""
