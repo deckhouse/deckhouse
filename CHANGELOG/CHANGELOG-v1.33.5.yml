@@ -1,0 +1,15 @@
+cloud-provider-vsphere:
+  fixes:
+    - summary: Fix typo in terraform.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1805
+namespace-configurator:
+  fixes:
+    - summary: >-
+        The namespace-configurator module was mistakenly listed as disabled by default in the
+        documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1807
+snapshot-controller:
+  fixes:
+    - summary: snapshot-controller does not allow install crd until `v1alpha1` is preserved in cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1802
+
