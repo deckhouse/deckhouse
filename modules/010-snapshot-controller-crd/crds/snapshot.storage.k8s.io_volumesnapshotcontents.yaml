@@ -303,6 +303,15 @@ spec:
   - name: v1alpha1
     served: false
     storage: false
+    # This indicates the v1alpha1 version of the custom resource is deprecated.
+    # API requests to this version receive a warning in the server response.
+    deprecated: true
+    # This overrides the default warning returned to clients making v1alpha1 API requests.
+    deprecationWarning: "snapshot.storage.k8s.io/v1alpha1 VolumeSnapshot is deprecated; use snapshot.storage.k8s.io/v1 VolumeSnapshot"
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
 status:
   acceptedNames:
     kind: ""
