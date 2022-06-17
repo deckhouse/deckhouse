@@ -1,0 +1,12 @@
+diff --git a/controller/src/main/java/com/linbit/linstor/api/rest/v1/config/GrizzlyHttpService.java b/controller/src/main/java/com/linbit/linstor/api/rest/v1/config/GrizzlyHttpService.java
+index 968f962f8..427ac0258 100644
+--- a/controller/src/main/java/com/linbit/linstor/api/rest/v1/config/GrizzlyHttpService.java
++++ b/controller/src/main/java/com/linbit/linstor/api/rest/v1/config/GrizzlyHttpService.java
+@@ -321,6 +321,7 @@ public class GrizzlyHttpService implements SystemService
+         catch (SocketException sexc)
+         {
+             errorReporter.logError("Unable to start grizzly http server on " + listenAddress + ".");
++            sexc.printStackTrace();
+             // ipv6 failed, if it is localhost ipv6, retry ipv4
+             if (listenAddress.startsWith("[::]"))
+             {

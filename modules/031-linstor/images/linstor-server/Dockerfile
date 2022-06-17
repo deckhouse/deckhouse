@@ -12,9 +12,18 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+# Copy patches
+COPY ./patches /patches
+
 RUN git clone ${LINSTOR_GITREPO} /linstor-server
 WORKDIR /linstor-server
-RUN git checkout v${LINSTOR_VERSION}
+RUN git checkout v${LINSTOR_VERSION} \
+ && git config --global user.name "Andrei Kvapil" \
+ && git config --global user.email "kvapss@gmail.com" \
+ && git apply /patches/*.patch \
+ && git add . \
+ && git commit --amend --no-edit \
+ && git tag -f v${LINSTOR_VERSION}
 
 RUN git config --global url."https://github.com/".insteadOf git://github.com/ \
  && make debrelease \
