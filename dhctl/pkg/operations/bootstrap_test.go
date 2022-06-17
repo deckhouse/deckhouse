@@ -150,13 +150,13 @@ func TestInstallDeckhouse(t *testing.T) {
 	}
 
 	t.Run("Does not have cluster uuid config map", func(t *testing.T) {
-		t.Run("should install deckhouse", func(t *testing.T) {
+		t.Run("should install Deckhouse", func(t *testing.T) {
 			fakeClient := client.NewFakeKubernetesClient()
 			createReadyDeckhousePod(fakeClient)
 
 			err := InstallDeckhouse(fakeClient, conf)
 
-			require.NoError(t, err, "Deckhouse should installed")
+			require.NoError(t, err, "Should install Deckhouse")
 
 			assertDeploymentAndUUIDCmCreated(t, fakeClient)
 		})
@@ -164,7 +164,7 @@ func TestInstallDeckhouse(t *testing.T) {
 
 	t.Run("Cluster has uuid config map", func(t *testing.T) {
 		t.Run("with empty uuid", func(t *testing.T) {
-			t.Run("should not install deckhouse", func(t *testing.T) {
+			t.Run("should not install Deckhouse", func(t *testing.T) {
 				fakeClient := client.NewFakeKubernetesClient()
 				curUUID := ""
 
@@ -173,14 +173,14 @@ func TestInstallDeckhouse(t *testing.T) {
 
 				err := InstallDeckhouse(fakeClient, conf)
 
-				require.Error(t, err, "Deckhouse should not install")
+				require.Error(t, err, "Should not install Deckhouse")
 
 				assertNotDeploymentCreatedAndUUIDCmIsSame(t, fakeClient, curUUID)
 			})
 		})
 
 		t.Run("with another uuid", func(t *testing.T) {
-			t.Run("should not install deckhouse", func(t *testing.T) {
+			t.Run("should not install Deckhouse", func(t *testing.T) {
 				fakeClient := client.NewFakeKubernetesClient()
 
 				curUUID := uuid.New().String()
@@ -190,7 +190,7 @@ func TestInstallDeckhouse(t *testing.T) {
 
 				err := InstallDeckhouse(fakeClient, conf)
 
-				require.Error(t, err, "Deckhouse should not install")
+				require.Error(t, err, "Should not install Deckhouse")
 
 				assertNotDeploymentCreatedAndUUIDCmIsSame(t, fakeClient, curUUID)
 			})
@@ -204,7 +204,7 @@ func TestInstallDeckhouse(t *testing.T) {
 
 				err := InstallDeckhouse(fakeClient, conf)
 
-				require.NoError(t, err, "Deckhouse should not install")
+				require.NoError(t, err, "Should not install Deckhouse")
 
 				assertDeploymentAndUUIDCmCreated(t, fakeClient)
 			})
