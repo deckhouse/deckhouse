@@ -21,15 +21,15 @@ docker run --rm -v $PWD:/workdir --entrypoint sh ghcr.io/igorshubovych/markdownl
   echo '###                   Markdown linter report'
   echo
   STATUS=0
-  markdownlint --config testing/markdownlint.yaml -p testing/.markdownlintignore \"**/*.md\"
+  make lint-markdown
   EXIT_CODE=\$?
   if [ \$EXIT_CODE -ne "0" ]; then
      echo
      echo 'To run linter locally execute the following command in the Deckhouse repo:'
-     echo 'docker run --rm -ti -v \$PWD:/workdir ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 --config testing/markdownlint.yaml -p testing/.markdownlintignore \"**/*.md\"'
+     echo 'make lint-markdown'
      echo
      echo 'To run linter locally and AUTOMATICALLY FIX basic problems execute the following command in the Deckhouse repo:'
-     echo 'docker run --rm -ti -v \$PWD:/workdir ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 --config testing/markdownlint.yaml -p testing/.markdownlintignore --fix \"**/*.md\"'
+     echo 'make lint-markdown-fix'
      STATUS=\$EXIT_CODE
   else
      echo 'All checks passed.'
