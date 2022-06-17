@@ -162,7 +162,7 @@ func TestInstallDeckhouse(t *testing.T) {
 		})
 	})
 
-	t.Run("Has cluster uuid config map", func(t *testing.T) {
+	t.Run("Cluster has uuid config map", func(t *testing.T) {
 		t.Run("with empty uuid", func(t *testing.T) {
 			t.Run("should not install deckhouse", func(t *testing.T) {
 				fakeClient := client.NewFakeKubernetesClient()
