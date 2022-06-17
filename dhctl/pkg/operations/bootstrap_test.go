@@ -204,7 +204,7 @@ func TestInstallDeckhouse(t *testing.T) {
 
 				err := InstallDeckhouse(fakeClient, conf)
 
-				require.NoError(t, err, "Should not install Deckhouse")
+				require.NoError(t, err, "Should install Deckhouse")
 
 				assertDeploymentAndUUIDCmCreated(t, fakeClient)
 			})
