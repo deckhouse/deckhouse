@@ -46,7 +46,7 @@ func CheckPreventBreakAnotherBootstrappedCluster(kubeCl *client.KubernetesClient
 
 	if uuidInCluster != config.UUID {
 		return fmt.Errorf(`Cluster UUID's not equal in the cluster (%s) and in the cache (%s).
-Probably you are trying bootstrap cluster on nede with previous created cluster.
+Probably you are trying bootstrap cluster on node with previous created cluster.
 Please check hostname.`, uuidInCluster, config.UUID)
 	}
 
