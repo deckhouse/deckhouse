@@ -98,9 +98,12 @@ func isErrorLine(line *logLine) bool {
 
 // isModuleSuccess returns true on message about successful module run.
 func isModuleSuccess(line *logLine) bool {
+	// Message about successful ModuleRun since PR#126 in flant/addon-operator.
+	// https://github.com/flant/addon-operator/blob/7e814fbe92fb12af79c67c4226b4c2781d959f3c/pkg/addon-operator/operator.go#L1376
 	if line.Message == "ModuleRun success, module is ready" {
 		return true
 	}
+	// Message about successful ModuleRun prior PR#126 in flant/addon-operator.
 	if line.Message == "Module run success" {
 		return true
 	}
@@ -110,9 +113,12 @@ func isModuleSuccess(line *logLine) bool {
 // isConvergeDone returns true when ConvergeModules task is done reloading all modules.
 // Consider the first occurrence is the first converge success.
 func isConvergeDone(line *logLine) bool {
+	// Message about successful converge since PR#315 in flant/addon-operator.
+	// https://github.com/flant/addon-operator/blob/7e814fbe92fb12af79c67c4226b4c2781d959f3c/pkg/addon-operator/operator.go#L588
 	if line.Message == "ConvergeModules task done" {
 		return true
 	}
+	// Message about successful converge prior PR#315 in flant/addon-operator.
 	if line.Message == "Queue 'main' contains 0 converge tasks after handle 'ModuleHookRun'" {
 		return true
 	}
