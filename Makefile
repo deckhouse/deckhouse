@@ -52,11 +52,11 @@ lint: bin/golangci-lint ## Run linter.
 lint-fix: bin/golangci-lint ## Fix lint violations.
 	bin/golangci-lint run --fix
 
-lint-markdown: ## Run markdown linter
+lint-markdown: ## Run markdown linter.
 	docker run --rm -v ${PWD}:/workdir ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 \
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md"
 
-lint-markdown-fix: ## Run markdown linter
+lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 	docker run --rm -v ${PWD}:/workdir ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 \
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix
 

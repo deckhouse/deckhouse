@@ -14,29 +14,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-docker run --rm -v $PWD:/workdir --entrypoint sh ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 -c \
- "echo
-  echo '######################################################################################################################'
-  echo '###'
-  echo '###                   Markdown linter report'
-  echo
-  STATUS=0
-  make lint-markdown
-  EXIT_CODE=\$?
-  if [ \$EXIT_CODE -ne "0" ]; then
-     echo
-     echo 'To run linter locally execute the following command in the Deckhouse repo:'
-     echo 'make lint-markdown'
-     echo
-     echo 'To run linter locally and AUTOMATICALLY FIX basic problems execute the following command in the Deckhouse repo:'
-     echo 'make lint-markdown-fix'
-     STATUS=\$EXIT_CODE
-  else
-     echo 'All checks passed.'
-  fi
-  echo
-  echo '###                   Powered by https://github.com/DavidAnson/markdownlint/'
-  echo '######################################################################################################################'
-  echo
-  exit \$STATUS
-  "
+STATUS=0
+
+printf '
+######################################################################################################################
+###
+###                   Markdown linter report
+
+'
+
+make lint-markdown 1>/dev/null
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne "0" ]; then
+   printf '
+To run linter locally execute the following command in the Deckhouse repo:
+   make lint-markdown
+
+To run linter locally and AUTOMATICALLY FIX basic problems execute the following command in the Deckhouse repo:
+   make lint-markdown-fix
+
+'
+   STATUS=$EXIT_CODE
+else
+   echo 'All checks passed.'
+fi
+
+printf '
+###                   Powered by https://github.com/DavidAnson/markdownlint/
+######################################################################################################################
+
+'
+
+exit $STATUS
