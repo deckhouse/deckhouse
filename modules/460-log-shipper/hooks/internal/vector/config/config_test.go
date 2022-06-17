@@ -128,3 +128,24 @@ func TestConfig_3(t *testing.T) {
 
 	compareMock(t, conf, "config_3.json")
 }
+
+func TestConfig_4(t *testing.T) {
+	src := source.NewKubernetes("testsource", v1alpha1.KubernetesPodsSpec{}, false)
+
+	spec := v1alpha1.ClusterLogDestinationSpec{
+		Vector: v1alpha1.VectorSpec{
+			Endpoint: "192.168.0.1:9200",
+			TLS:      v1alpha1.VectorTLSSpec{VerifyCertificate: false},
+		},
+	}
+
+	dest := destination.NewVector("testoutput", spec)
+
+	gen := NewLogConfigGenerator()
+	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []impl.LogDestination{dest}})
+
+	conf, err := gen.GenerateConfig()
+	require.NoError(t, err)
+
+	compareMock(t, conf, "config_4.json")
+}

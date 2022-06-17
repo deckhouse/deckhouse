@@ -44,6 +44,8 @@ func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec) impl.
 		return destination.NewElasticsearch(name, spec)
 	case model.DestLogstash:
 		return destination.NewLogstash(name, spec)
+	case model.DestVector:
+		return destination.NewVector(name, spec)
 	}
 	return nil
 }

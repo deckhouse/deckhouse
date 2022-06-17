@@ -27,6 +27,7 @@ const (
 	DestElasticsearch = "Elasticsearch"
 	DestLogstash      = "Logstash"
 	DestLoki          = "Loki"
+	DestVector        = "Vector"
 )
 
 const (

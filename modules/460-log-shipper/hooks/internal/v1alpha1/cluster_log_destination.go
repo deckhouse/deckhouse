@@ -41,17 +41,20 @@ type ClusterLogDestination struct {
 }
 
 type ClusterLogDestinationSpec struct {
-	// Type of cluster log source: Loki, Elasticsearch, Logstash
+	// Type of cluster log source: Loki, Elasticsearch, Logstash, Vector
 	Type string `json:"type,omitempty"`
 
 	// Loki describes spec for loki endpoint
 	Loki LokiSpec `json:"loki"`
 
-	// Elasticsearch spec for Elasticsearch endpointy
+	// Elasticsearch spec for the Elasticsearch endpoint
 	Elasticsearch ElasticsearchSpec `json:"elasticsearch"`
 
-	// Logstash spec for Logstash endpointy
+	// Logstash spec for the Logstash endpoint
 	Logstash LogstashSpec `json:"logstash"`
+
+	// Vector spec for the Vector endpoint
+	Vector VectorSpec `json:"vector"`
 
 	// Add extra labels for sources
 	ExtraLabels map[string]string `json:"extraLabels,omitempty"`
@@ -106,6 +109,12 @@ type LogstashTLSSpec struct {
 	Enabled           bool `json:"enabled,omitempty"`
 }
 
+type VectorTLSSpec struct {
+	CommonTLSSpec     `json:",inline"`
+	VerifyCertificate bool `json:"verifyCertificate,omitempty"`
+	Enabled           bool `json:"enabled,omitempty"`
+}
+
 type LokiSpec struct {
 	Endpoint string `json:"endpoint,omitempty"`
 
@@ -132,4 +141,10 @@ type LogstashSpec struct {
 	Endpoint string `json:"endpoint,omitempty"`
 
 	TLS LogstashTLSSpec `json:"tls,omitempty"`
+}
+
+type VectorSpec struct {
+	Endpoint string `json:"endpoint,omitempty"`
+
+	TLS VectorTLSSpec `json:"tls,omitempty"`
 }

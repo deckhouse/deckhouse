@@ -99,7 +99,7 @@ func CleanUpParsedDataTransform() *DynamicTransform {
 func CreateDefaultCleanUpTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
 	transforms := make([]impl.LogTransform, 0)
 	switch dest.Spec.Type {
-	case model.DestElasticsearch, model.DestLogstash:
+	case model.DestElasticsearch, model.DestLogstash, model.DestVector:
 		transforms = append(transforms, CleanUpParsedDataTransform())
 	}
 	return transforms

@@ -23,7 +23,7 @@ RUN cargo build \
     -j $(($(nproc) /2)) \
     --offline \
     --no-default-features \
-    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,unix,vendor-all,vrl-cli" \
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,unix,vendor-all,vrl-cli" \
     && strip target/release/vector
 
 FROM $BASE_DEBIAN_BULLSEYE

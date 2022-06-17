@@ -1,0 +1,32 @@
+{
+  "sources": {
+    "d8_cluster_source_testsource": {
+      "type": "kubernetes_logs",
+      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "glob_minimum_cooldown_ms": 1000
+    }
+  },
+  "sinks": {
+    "d8_cluster_sink_testoutput": {
+      "type": "vector",
+      "version": "2",
+      "inputs": [
+        "d8_cluster_source_testsource"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "address": "192.168.0.1:9200"
+    }
+  }
+}
