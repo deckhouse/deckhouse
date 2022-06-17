@@ -59,6 +59,9 @@ func (l *logLine) StringWithLogLevel() string {
 	return fmt.Sprintf("\t%s/%s: [%s] %s\n", l.Module, l.Component, l.Level, l.Message)
 }
 
+// isErrorLine returns if log line is an error report:
+// - level="error" - log.Error from deckhouse and Go hooks.
+// - output="stderr" - errors from shell hooks.
 func isErrorLine(line *logLine) bool {
 	if line.Level == "error" {
 		badSubStrings := []string{
@@ -82,15 +85,39 @@ func isErrorLine(line *logLine) bool {
 		return true
 	}
 
+	// Consider stderr messages are errors too.
 	if line.Output == "stderr" {
 		// skip tiller output
 		if line.Component == "tiller" {
 			return false
 		}
 
-		return false
+		return true
 	}
 
+	return false
+}
+
+// isModuleSuccess returns true on message about successful module run.
+func isModuleSuccess(line *logLine) bool {
+	if line.Message == "ModuleRun success, module is ready" {
+		return true
+	}
+	if line.Message == "Module run success" {
+		return true
+	}
+	return false
+}
+
+// isConvergeDone returns true when ConvergeModules task is done reloading all modules.
+// Consider the first occurrence is the first converge success.
+func isConvergeDone(line *logLine) bool {
+	if line.Message == "ConvergeModules task done" {
+		return true
+	}
+	if line.Message == "Queue 'main' contains 0 converge tasks after handle 'ModuleHookRun'" {
+		return true
+	}
 	return false
 }
 
@@ -181,13 +208,12 @@ func (d *LogPrinter) printLogsByLine(content []byte) {
 			return true
 		}
 
-		// TODO use module.state label
-		if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
+		if isModuleSuccess(line) {
 			log.InfoF("\tModule %q run successfully\n", line.Module)
 			return true
 		}
 
-		if !d.stopOutputNoMoreConvergeTasks && line.Message == "Queue 'main' contains 0 converge tasks after handle 'ModuleHookRun'" {
+		if !d.stopOutputNoMoreConvergeTasks && isConvergeDone(line) {
 			log.InfoLn("No more converge tasks found in Deckhouse queue.")
 			d.stopOutputNoMoreConvergeTasks = true
 			return true
