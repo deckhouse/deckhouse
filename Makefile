@@ -7,6 +7,8 @@ FORMATTING_END = \033[0m
 TESTS_TIMEOUT="15m"
 FOCUS=""
 
+MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
+
 help:
 	@printf -- "${FORMATTING_BEGIN_BLUE}%s${FORMATTING_END}\n" \
 	"" \
@@ -53,11 +55,13 @@ lint-fix: bin/golangci-lint ## Fix lint violations.
 	bin/golangci-lint run --fix
 
 lint-markdown: ## Run markdown linter.
-	docker run --rm -v ${PWD}:/workdir ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 \
+	docker pull -q ${MDLINTER_IMAGE}
+	docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} \
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md"
 
 lint-markdown-fix: ## Run markdown linter and fix problems automatically.
-	docker run --rm -v ${PWD}:/workdir ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476 \
+	docker pull -q ${MDLINTER_IMAGE}
+	docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} \
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix
 
 ##@ Generate
