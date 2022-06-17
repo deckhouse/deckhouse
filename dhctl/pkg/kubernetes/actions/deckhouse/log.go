@@ -87,12 +87,10 @@ func isErrorLine(line *logLine) bool {
 
 	// Consider stderr messages are errors too.
 	if line.Output == "stderr" {
-		// skip tiller output
-		if line.Component == "tiller" {
-			return false
+		// Skip possible messages from tiller.
+		if line.Component != "tiller" {
+			return true
 		}
-
-		return true
 	}
 
 	return false

@@ -17,8 +17,9 @@ limitations under the License.
 package deckhouse
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_is_error_line(t *testing.T) {
