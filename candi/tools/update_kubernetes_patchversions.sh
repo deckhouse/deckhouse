@@ -82,6 +82,6 @@ if [[ "${CREATE_PR}" -eq "true" ]]; then
   git checkout -b "${BRANCH}"
   git add .
   git commit -m "[candi] New kubernetes control-plane components patchversions"
-  git push
+  git push --set-upstream origin "${BRANCH}"
 #  gh -B main -b "${PR_BODY}" -t "${PR_TITLE}"
 fi
