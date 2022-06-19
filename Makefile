@@ -57,3 +57,9 @@ lint-fix: bin/golangci-lint ## Fix lint violations.
 .PHONY: generate
 generate: ## Run all generate-* jobs in bulk.
 	cd tools; go generate
+
+##@ New kubernetes control-plane patchversions
+
+.PHONY: update-patchversions
+update-patchversions: ## Run update-patchversion script to generate new PR.
+	cd candi/tools; bash update_kubernetes_patchversions.sh
