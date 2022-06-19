@@ -77,9 +77,10 @@ for VERSION in $(yq e ../version_map.yml -o json | jq -r '.k8s | keys[]'); do
 done
 
 if [[ "${CREATE_PR}" -eq "true" ]]; then
-  git checkout -b "kubernetes-patchversions-$(date +"%y-%m-%d-%H-%M")"
+  BRANCH="kubernetes-patchversions-$(date +"%y-%m-%d-%H-%M")"
+  git checkout -b "${BRANCH}"
   git add .
   git commit -m "[candi] New kubernetes control-plane components patchversions"
   git push
-  gh -B main -b "${PR_BODY}" -t "${PR_TITLE}"
+#  gh -B main -b "${PR_BODY}" -t "${PR_TITLE}"
 fi
