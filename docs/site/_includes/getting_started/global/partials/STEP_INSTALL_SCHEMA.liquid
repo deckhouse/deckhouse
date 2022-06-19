@@ -44,12 +44,14 @@ You will need:
 
    During the installation, the Deckhouse installer running on the **personal computer** (see step 1) will connect to the cluster and deploy Deckhouse.
 {%- else %}
-1. **Master-node**.
+1. **Master-node (nodes)**{% if page.platform_type == 'cloud' %} (will be created automatically during the installation){% endif %}.
 
    A server {% if page.platform_type == 'baremetal' or page.platform_type == 'existing' %}(physical server or virtual machine){% else %}(virtual machine){% endif %}, the master node of the future cluster.
-{%- endif %}
-{% unless page.platform_type == "existing" %}
-   During the installation, the Deckhouse installer running on the **personal computer** (section 1) will connect to that host via SSH, install necessary packages, configure control plane Kubernetes, and deploy Deckhouse. Note that **master node-based** installation is **not supported** at the moment.
+
+   During the installation, the Deckhouse installer running on the **personal computer** (section 1)
+   {%- if page.platform_type == 'cloud' %} will connect to the cloud provider API to create a **master-node** of a Kubernetes cluster and deploy Deckhouse.
+   {%- else %} will connect to that host via SSH, install necessary packages, configure control plane Kubernetes, and deploy Deckhouse. Note that **master node-based** installation is **not supported** at the moment.
+   {%- endif %}
 
    Requirements:
    - at least 4 CPU cores;
@@ -67,9 +69,9 @@ You will need:
 
 3. Additional nodes (not required).
 {% if page.platform_type == 'cloud' %}
-   Depending on the purpose of the cluster and chosen node layout in the following steps, additional nodes will be automatically provisioned from the selected cloud provider.
+   Depending on the chosen node layout in the following steps of the guide and the final configuration, additional nodes will be automatically provisioned from the selected cloud provider if necessary.
 {%- else %}
-   Depending on the purpose of the cluster, you may need additional nodes, for example, dedicated nodes for monitoring, a load balancer, etc.
+   Depending on the purpose of the cluster, you may need additional nodes, for example, worker nodes, dedicated nodes for monitoring, dedicated nodes for load balancers (frontend nodes), etc.
 {%- endif %}
 
    Below are the minimum requirements for any node (node group):
@@ -85,7 +87,7 @@ You will need:
    Below are the minimum requirements for any node (node group) with the monitoring role ([learn more](/{{ page.lang }}/documentation/v1/#advanced-scheduling)):
    - at least 4 CPU cores;
    - at least 8 GB of RAM.
-{%- endunless %}
+{%- endif %}
 
    > By default, the default storage class defined in the cluster is used as storage for system components (or `emptydir`, if it is not defined). You can specify the storage class using the global parameter [storageClass](/{{ page.lang }}/documentation/v1/deckhouse-configure-global.html#parameters).
 
