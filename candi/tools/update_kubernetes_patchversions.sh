@@ -76,6 +76,7 @@ for VERSION in $(yq e ../version_map.yml -o json | jq -r '.k8s | keys[]'); do
   done
 done
 
+cd ../../
 if [[ "${CREATE_PR}" -eq "true" ]]; then
   BRANCH="kubernetes-patchversions-$(date +"%y-%m-%d-%H-%M")"
   git checkout -b "${BRANCH}"
