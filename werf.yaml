@@ -291,7 +291,7 @@ git:
   - modules/*/README.md
   - modules/*/images
   - modules/*/webhooks
-  - modules/0[1-9][1-9]-*/crds     # we need here only the 000-common/crds here
+  - modules/0[1-9][1-9]-*/crds     # we need here only the 000-common/crds
   - modules/[1-9][0-9][0-9]-*/crds
   - candi/cloud-providers/*/layouts
   - candi/cloud-providers/*/terraform-modules
@@ -337,6 +337,7 @@ ansible:
 
   - raw: rm -rf /var/cache/apk/*
 
+  setupCacheVersion: "2"
   setup:
   - name: "Migrate ee/fe internal packages imports"
     shell: |
