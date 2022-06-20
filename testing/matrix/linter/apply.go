@@ -19,6 +19,8 @@ package linter
 import (
 	"fmt"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/resources"
