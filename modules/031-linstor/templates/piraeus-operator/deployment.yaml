@@ -62,6 +62,16 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
         - --create-monitoring=false
+        - --metrics-bind-address=127.0.0.1:8383
+        - --health-probe-bind-address=:8081
+        readinessProbe:
+          httpGet:
+            port: 8081
+            path: /readyz
+        livenessProbe:
+          httpGet:
+            port: 8081
+            path: /healthz
         env:
         - name: WATCH_NAMESPACE
           valueFrom:
@@ -100,16 +110,6 @@ spec:
               upstreams:
               - upstream: http://127.0.0.1:8383/metrics
                 path: /metrics
-                authorization:
-                  resourceAttributes:
-                    namespace: d8-{{ .Chart.Name }}
-                    apiGroup: apps
-                    apiVersion: v1
-                    resource: deployments
-                    subresource: prometheus-metrics
-                    name: piraeus-operator
-              - upstream: http://127.0.0.1:8686/metrics
-                path: /metrics-cr
                 authorization:
                   resourceAttributes:
                     namespace: d8-{{ .Chart.Name }}

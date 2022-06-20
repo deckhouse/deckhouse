@@ -28,26 +28,6 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
-  - targetPort: 8383
-    scheme: https
-    path: /metrics-cr
-    bearerTokenSecret:
-      name: "prometheus-token"
-      key: "token"
-    tlsConfig:
-      insecureSkipVerify: true
-    relabelings:
-    - regex: endpoint|namespace|pod|container
-      action: labeldrop
-    - targetLabel: job
-      replacement: piraeus-operator
-    - sourceLabels: [__meta_kubernetes_pod_node_name]
-      targetLabel: node
-    - targetLabel: tier
-      replacement: cluster
-    - sourceLabels: [__meta_kubernetes_pod_ready]
-      regex: "true"
-      action: keep
   selector:
     matchLabels:
       app: piraeus-operator
