@@ -190,6 +190,8 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
    systemctl reset-failed
    ```
 
+1. Перезагрузите узел.
+
 1. Запустите обратно CRI:
 
    ```shell
