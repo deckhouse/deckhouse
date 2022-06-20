@@ -19,23 +19,6 @@ set -Eeo pipefail
 . functions.sh
 
 CREATE_PR=false
-PR_TITLE="New kubernetes patchversions"
-PR_BODY=$(cat <<"EOF"
-## Description
-New Kubernetes control-plane components patchversions.
-## Why do we need it, and what problem does it solve?
-Kubernetes control-plane components should be up to date.
-## Changelog entries
-```changes
-section: candi
-type: feature
-summary: New Kubernetes control-plane components patchversions.
-impact: Restart Kubernetes control-plane components.
-impact_level: default
-```
-EOF
-)
-
 function check_requirements() {
     check_jq
     check_gh
@@ -69,7 +52,7 @@ for VERSION in $(yq e ../version_map.yml -o json | jq -r '.k8s | keys[]'); do
     NEW_FULL_VERSION="$(curl -s "https://raw.githubusercontent.com/kubernetes/kubernetes/master/CHANGELOG/CHANGELOG-${VERSION}.md" | grep '## Downloads for v' | head -n 1 | grep -Eo "${VERSION}.[0-9]+")"
     NEW_PATCH="$(awk -F "." '{print $3}' <<< "${NEW_FULL_VERSION}")"
     if [[ "${NEW_PATCH}" -ne "${PATCH}" ]]; then
-      echo "New kubernetes patch version ${VERSION}.${NEW_PATCH} "
+      PR_DESCRIPTION="${PR_DESCRIPTION}New kubernetes patch version ${VERSION}.${NEW_PATCH}.\n"
       CREATE_PR=true
       update_version_map "${VERSION}" "${NEW_PATCH}"
     fi
@@ -78,10 +61,29 @@ done
 
 cd ../../
 if [[ "${CREATE_PR}" == "true" ]]; then
+  echo ${PR_DESCRIPTION}
+  PR_BODY="$(cat << EOF
+## Description
+New Kubernetes control-plane components patchversions.
+${PR_DESCRIPTION}
+## Why do we need it, and what problem does it solve?
+Kubernetes control-plane components should be up to date.
+## Changelog entries
+\`\`\`changes
+section: candi
+type: feature
+summary: New Kubernetes control-plane components patchversions.
+impact: Restart Kubernetes control-plane components.
+impact_level: default
+\`\`\`
+EOF
+)"
+  echo ${PR_BODY}
   BRANCH="kubernetes-patchversions-$(date +"%y-%m-%d-%H-%M")"
   git checkout -b "${BRANCH}"
   git add .
   git commit -m "[candi] New kubernetes control-plane components patchversions"
   git push --set-upstream origin "${BRANCH}"
-#  gh -B main -b "${PR_BODY}" -t "${PR_TITLE}"
+
+  gh -B main -b "${PR_BODY}" -t "New kubernetes patchversions"
 fi
