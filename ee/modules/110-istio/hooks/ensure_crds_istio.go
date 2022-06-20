@@ -17,8 +17,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup:    &go_hook.OrderedConfig{Order: 10}, // Sequence matters after revisions_discovery.go
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Sequence matters after revisions_discovery.go
+	OnStartup:    &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_revisions.go
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_revisions.go
 }, dependency.WithExternalDependencies(ensureCRDs))
 
 func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
