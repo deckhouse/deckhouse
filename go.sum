@@ -251,8 +251,8 @@ github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwo
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
-github.com/flant/addon-operator v1.0.6-0.20220615090816-e94460ef661b h1:QmW13nAaknXri+FXAIBZXcWmkLVI29Yd7k402mseKW8=
-github.com/flant/addon-operator v1.0.6-0.20220615090816-e94460ef661b/go.mod h1:dg8cjGlwWNguUq+DZCgv9V72dDz+OeF8oEdi+81mr0I=
+github.com/flant/addon-operator v1.0.6-0.20220620123828-eaf343743c09 h1:QFEkg43DD1Lp6hvgR4qiGePxwB6k4Hw/B6xEF9aX/OA=
+github.com/flant/addon-operator v1.0.6-0.20220620123828-eaf343743c09/go.mod h1:UVVSrUfAjbAWZZhv70538iDZZxnstYExiV/Y1PiltNU=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v0.0.6 h1:cHFMf7xGtJOgg+KBuPcA+7q+M7IJRSgf2pHVStv2aj0=
@@ -261,8 +261,8 @@ github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWD
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/logboek v0.3.4 h1://0FHwS7hoLHTz7H+JlLheKlu298edC+qV61ca9OJBQ=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.0.11-0.20220615085901-2cc8e0b2351e h1:uwH7haWcVjcsCiUJJxHes5NxsOd5t4XW/S6yjL1Do8I=
-github.com/flant/shell-operator v1.0.11-0.20220615085901-2cc8e0b2351e/go.mod h1:PKefoDxr05PFZjwegIl6v4s1NZjzKZNRbZOe7SyMFuk=
+github.com/flant/shell-operator v1.0.11-0.20220620115555-adbf8b30f752 h1:Tj7SYHkxTYvAukutKieNO41C8MsFZDnr3Ix8fdU5wbA=
+github.com/flant/shell-operator v1.0.11-0.20220620115555-adbf8b30f752/go.mod h1:PKefoDxr05PFZjwegIl6v4s1NZjzKZNRbZOe7SyMFuk=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
 github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8/go.mod h1:ZhphrRTfi2rbfLwlschooIH4+wKKDR4Pdxhh+TRoA20=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
