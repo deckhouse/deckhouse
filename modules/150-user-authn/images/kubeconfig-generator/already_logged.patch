@@ -232,7 +232,7 @@ index c6ab1b1..893a163 100644
 +	})
 +}
 diff --git a/templates/kubeconfig.html b/templates/kubeconfig.html
-index 35763de..51bde8d 100644
+index 35763de..e942d27 100644
 --- a/templates/kubeconfig.html
 +++ b/templates/kubeconfig.html
 @@ -26,7 +26,7 @@
@@ -244,15 +244,23 @@ index 35763de..51bde8d 100644
        </div>
        <h2 class="theme-heading">Generated Kubernetes Token - {{ .ShortDescription }}</h2>
 
-@@ -44,21 +44,31 @@
-           <button class="tablinks active" onclick="openTab(event, 'Linux')">Linux</button>
+@@ -41,24 +41,34 @@
+         </div>
+
+         <div class="tab">
+-          <button class="tablinks active" onclick="openTab(event, 'Linux')">Linux</button>
++          <button class="tablinks active" onclick="openTab(event, 'Kubelogin')">Kubelogin</button>
++          <button class="tablinks" onclick="openTab(event, 'Linux')">Linux</button>
            <button class="tablinks" onclick="openTab(event, 'MacOS')">MacOS</button>
            <button class="tablinks" onclick="openTab(event, 'Windows')">Windows</button>
-+          <button class="tablinks" onclick="openTab(event, 'Kubelogin')">Kubelogin</button>
 +          <button class="tablinks" onclick="openTab(event, 'RawConfig')">Raw Config</button>
            <button class="tablinks" onclick="openTab(event, 'IDToken')">ID Token</button>
          </div>
 
++        <div id="Kubelogin" class="tabcontent">
++          {{ template "kubelogin-tab-content" . }}
++        </div>
++
          <div id="Linux" class="tabcontent" style="display: block">
            {{ template "linux-tab-content" . }}
          </div>
@@ -267,10 +275,6 @@ index 35763de..51bde8d 100644
            {{ template "windows-tab-content" . }}
          </div>
 
-+        <div id="Kubelogin" class="tabcontent">
-+          {{ template "kubelogin-tab-content" . }}
-+        </div>
-+
 +        <div id="RawConfig" class="tabcontent">
 +          {{ template "raw-config-tab-content" . }}
 +        </div>
