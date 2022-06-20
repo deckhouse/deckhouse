@@ -50,7 +50,11 @@ You will need:
 
    During the installation, the Deckhouse installer running on the **personal computer** (section 1)
    {%- if page.platform_type == 'cloud' %} will connect to the cloud provider API to create a **master-node** of a Kubernetes cluster and deploy Deckhouse.
-   {%- else %} will connect to that host via SSH, install necessary packages, configure control plane Kubernetes, and deploy Deckhouse. Note that **master node-based** installation is **not supported** at the moment.
+
+   The number of master nodes created during the installation process depends on the set of nodes selected at the following stages of the guide.
+   {%- else %} will connect to that host via SSH, install necessary packages, configure control plane Kubernetes, and deploy Deckhouse.
+
+   **Note** that master node-based installation is **not currently supported**.
    {%- endif %}
 
    Requirements:
@@ -67,9 +71,9 @@ You will need:
    - SSH key access from the **personal computer** (section 1);
    - container runtime packages, such as containerd or docker, should not be installed on the node.
 
-3. Additional nodes (not required).
+1. Additional nodes (not required).
 {% if page.platform_type == 'cloud' %}
-   Depending on the chosen node layout in the following steps of the guide and the final configuration, additional nodes will be automatically provisioned from the selected cloud provider if necessary.
+   Depending on the cluster configuration chosen in the following steps of the guide, additional nodes will be automatically provisioned from the selected cloud provider.
 {%- else %}
    Depending on the purpose of the cluster, you may need additional nodes, for example, worker nodes, dedicated nodes for monitoring, dedicated nodes for load balancers (frontend nodes), etc.
 {%- endif %}
