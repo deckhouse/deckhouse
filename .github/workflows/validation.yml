@@ -333,7 +333,7 @@ jobs:
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_copyright.sh
 
-  markdown_validation:
+  markdown_linter:
     name: Markdown Linter
 
     needs:
@@ -355,9 +355,10 @@ jobs:
         with:
           name: pr_diff
 
-      - name: Run check
+      - name: Run linter
         env:
           DIFF_PATH: ./pr.diff
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_markdown }}
         run: |
-          ./.github/scripts/validation_run.sh ./testing/validate_markdown.sh
+          make lint-markdown
+

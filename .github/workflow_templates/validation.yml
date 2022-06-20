@@ -115,9 +115,9 @@ jobs:
     name: Copyright Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 }!}
 
-  markdown_validation:
+  markdown_linter:
     name: Markdown Linter
-{!{ tmpl.Exec "validation_template" (slice $ctx "markdown") | strings.Indent 4 -}!}
+{!{ tmpl.Exec "linter_template" (slice $ctx "markdown") | strings.Indent 4 -}!}
 
 {!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}
@@ -142,4 +142,29 @@ steps:
       SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_{!{ $type }!} }}
     run: |
       ./.github/scripts/validation_run.sh ./testing/validate_{!{ $type }!}.sh
+{!{- end -}!}
+
+{!{/* Template for linter jobs. */}!}
+{!{ define "linter_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $type := index . 1 }!}
+needs:
+  - discover
+  - pull_request_info
+if: needs.discover.outputs.run_{!{ $type }!} == 'true'
+runs-on: ubuntu-latest
+steps:
+  {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
+
+  - name: Restore diff artifact
+    uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+    with:
+      name: pr_diff
+
+  - name: Run linter
+    env:
+      DIFF_PATH: ./pr.diff
+      SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_{!{ $type }!} }}
+    run: |
+      make lint-{!{ $type }!}
 {!{- end -}!}

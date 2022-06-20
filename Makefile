@@ -54,15 +54,25 @@ lint: bin/golangci-lint ## Run linter.
 lint-fix: bin/golangci-lint ## Fix lint violations.
 	bin/golangci-lint run --fix
 
-lint-markdown: ## Run markdown linter.
-	docker pull -q ${MDLINTER_IMAGE}
-	docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} \
-		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md"
+lint-markdown-header:
+	@docker pull -q ${MDLINTER_IMAGE}; \
+  echo "\n\n######################################################################################################################"; \
+  echo '###'; \
+  echo '###                   Markdown linter report (powered by https://github.com/DavidAnson/markdownlint/)'; echo; \
+
+lint-markdown: lint-markdown-header ## Run markdown linter.
+	@bash -c \
+   "if docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} --config testing/markdownlint.yaml -p testing/.markdownlintignore '**/*.md' ; then \
+	    echo; echo 'All checks passed.' ; \
+	  else \
+	    echo ;\
+	    echo 'To run linter locally and fix common problems run: make lint-markdown-fix'; \
+	    exit 1; \
+	  fi"
 
 lint-markdown-fix: ## Run markdown linter and fix problems automatically.
-	docker pull -q ${MDLINTER_IMAGE}
-	docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} \
-		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix
+	@docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} \
+		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix && (echo 'Fixed successfully.')
 
 ##@ Generate
 
