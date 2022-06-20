@@ -17,7 +17,6 @@ limitations under the License.
 package checker
 
 import (
-	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,10 +61,6 @@ func newGarbageCollectorCheckerByLabels(access k8s.Access, kind, namespace strin
 		// inner state
 		firstRun: true,
 	}
-}
-
-func (c *garbageCollectorChecker) BusyWith() string {
-	return fmt.Sprintf("collecting garbage of %s/%s, listOpts=%s", c.namespace, c.kind, c.listOpts)
 }
 
 func (c *garbageCollectorChecker) Check() check.Error {

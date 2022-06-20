@@ -66,24 +66,24 @@ func NewClient(config *ClientConfig, timeout time.Duration) *Client {
 func (c *Client) Send(reqBody []byte) error {
 	req, err := http.NewRequest(http.MethodPost, c.url, bytes.NewReader(reqBody))
 	if err != nil {
-		return fmt.Errorf("cannot create POST request: %v", err)
+		return fmt.Errorf("preparing POST request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", c.UserAgent)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("did not send to upmeter: %v", err)
+		return fmt.Errorf("sending: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("cannot read upmeter response body: %v", err)
+		return fmt.Errorf("reding server response body: %v", err)
 	}
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("unexpected upmeter response status=%d, body=%q", resp.StatusCode, string(body))
+		return fmt.Errorf("unexpected upmeter response: status=%d, body=%q", resp.StatusCode, string(body))
 	}
 
 	return nil

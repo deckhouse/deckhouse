@@ -17,7 +17,6 @@ limitations under the License.
 package checker
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -76,10 +75,6 @@ type dsPodsReadinessChecker struct {
 	requestTimeout  time.Duration
 	creationTimeout time.Duration
 	deletionTimeout time.Duration
-}
-
-func (c *dsPodsReadinessChecker) BusyWith() string {
-	return fmt.Sprintf("getting daemonset %s/%s", c.namespace, c.name)
 }
 
 func (c *dsPodsReadinessChecker) Check() check.Error {

@@ -21,6 +21,7 @@ import (
 
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/probe/util"
 )
 
 func initControlPlane(access kubernetes.Access) []runnerConfig {
@@ -93,6 +94,19 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 				SchedulingTimeout:         20 * time.Second,
 				DeletionTimeout:           20 * time.Second,
 				GarbageCollectionTimeout:  gcTimeout,
+				ControlPlaneAccessTimeout: cpTimeout,
+			},
+		}, {
+			group:  groupControlPlane,
+			probe:  "cert-manager",
+			check:  "_",
+			period: time.Minute,
+			config: checker.CertificateSecretLifecycle{
+				Access:                    access,
+				Namespace:                 namespace,
+				AgentID:                   util.AgentUniqueId(),
+				CreationTimeout:           5 * time.Second,
+				DeletionTimeout:           20 * time.Second,
 				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		},

@@ -17,7 +17,6 @@ limitations under the License.
 package checker
 
 import (
-	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -71,10 +70,6 @@ type deploymentLifecycleChecker struct {
 
 	// inner state
 	checker check.Checker
-}
-
-func (c *deploymentLifecycleChecker) BusyWith() string {
-	return c.checker.BusyWith()
 }
 
 func (c *deploymentLifecycleChecker) Check() check.Error {
@@ -156,10 +151,6 @@ type deploymentCreationChecker struct {
 	deployment *appsv1.Deployment
 }
 
-func (c *deploymentCreationChecker) BusyWith() string {
-	return fmt.Sprintf("creating deployment %s/%s", c.namespace, c.deployment.Name)
-}
-
 func (c *deploymentCreationChecker) Check() check.Error {
 	client := c.access.Kubernetes()
 
@@ -175,10 +166,6 @@ type deploymentDeletionChecker struct {
 	access    k8s.Access
 	namespace string
 	name      string
-}
-
-func (c *deploymentDeletionChecker) BusyWith() string {
-	return fmt.Sprintf("deleting deployment %s/%s", c.namespace, c.name)
 }
 
 func (c *deploymentDeletionChecker) Check() check.Error {

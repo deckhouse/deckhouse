@@ -85,10 +85,6 @@ type smokeMiniChecker struct {
 	logger *log.Entry
 }
 
-func (c *smokeMiniChecker) BusyWith() string {
-	return "requesting smoke-mini " + c.path
-}
-
 func (c *smokeMiniChecker) Check() check.Error {
 	ips, lookupErr := c.lookuper.Lookup()
 	if lookupErr != nil {
@@ -213,10 +209,6 @@ func (d DnsAvailable) Checker() check.Checker {
 type dnsChecker struct {
 	lookuper lookuper
 	logger   *log.Entry
-}
-
-func (c *dnsChecker) BusyWith() string {
-	return "resolving"
 }
 
 func (c *dnsChecker) Check() check.Error {

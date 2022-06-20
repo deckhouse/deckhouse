@@ -17,7 +17,7 @@ limitations under the License.
 package checker
 
 import (
-	"fmt"
+	"context"
 	"time"
 
 	"d8.io/upmeter/pkg/check"
@@ -42,10 +42,6 @@ func sequence(first check.Checker, others ...check.Checker) check.Checker {
 	return &sequenceChecker{checkers: checkers}
 }
 
-func (c *sequenceChecker) BusyWith() string {
-	return c.checkers[c.current].BusyWith()
-}
-
 func (c *sequenceChecker) Check() check.Error {
 	for i, checker := range c.checkers {
 		c.current = i
@@ -64,10 +60,6 @@ type FailChecker struct {
 
 func failOnError(checker check.Checker) check.Checker {
 	return &FailChecker{checker}
-}
-
-func (c *FailChecker) BusyWith() string {
-	return c.checker.BusyWith()
 }
 
 func (c *FailChecker) Check() check.Error {
@@ -92,10 +84,6 @@ func withTimeout(checker check.Checker, timeout time.Duration) check.Checker {
 	}
 }
 
-func (c *timeoutChecker) BusyWith() string {
-	return c.checker.BusyWith()
-}
-
 func (c *timeoutChecker) Check() check.Error {
 	var err check.Error
 	withTimer(c.timeout,
@@ -103,7 +91,7 @@ func (c *timeoutChecker) Check() check.Error {
 			err = c.checker.Check()
 		},
 		func() {
-			err = check.ErrUnknown("timed out: %s", c.checker.BusyWith())
+			err = check.ErrUnknown("timed out")
 		},
 	)
 	return err
@@ -124,10 +112,6 @@ func withRetryEachSeconds(checker check.Checker, timeout time.Duration) check.Ch
 		tries:    int(timeout / interval),
 		interval: interval,
 	}
-}
-
-func (c *retryChecker) BusyWith() string {
-	return fmt.Sprintf("retrying %s", c.checker.BusyWith())
 }
 
 func (c *retryChecker) Check() check.Error {
@@ -169,4 +153,45 @@ func withTimer(interval time.Duration, jobCb, onTimerCb func()) {
 			return
 		}
 	}
+}
+
+// doOrFail is a handy wrapper. It wraps timeout checker and doer interface,
+// if time is out or doer returns error, the checker returns check.ErrFail
+func doOrFail(timeout time.Duration, doer doer) check.Checker {
+	return withTimeout(&failCheckWrapper{doer}, timeout)
+}
+
+// doOrUnknown is a handy wrapper. It wraps timeout checker and doer interface,
+// if time is out or doer returns error, the checker returns check.ErrUnknown
+func doOrUnknown(timeout time.Duration, doer doer) check.Checker {
+	return withTimeout(&unknownCheckWrapper{doer}, timeout)
+}
+
+// doer is more abstract interface for stopping the propagation of check.ErrSomething too deep.
+type doer interface {
+	Do(context.Context) error
+}
+
+// unknownCheckWrapper wraps any doer error with check.ErrUnknown
+type unknownCheckWrapper struct {
+	doer doer
+}
+
+func (c *unknownCheckWrapper) Check() check.Error {
+	if err := c.doer.Do(context.TODO()); err != nil {
+		return check.ErrUnknown(err.Error())
+	}
+	return nil
+}
+
+// failCheckWrapper wraps any doer error with check.ErrFail
+type failCheckWrapper struct {
+	doer doer
+}
+
+func (c *failCheckWrapper) Check() check.Error {
+	if err := c.doer.Do(context.TODO()); err != nil {
+		return check.ErrFail(err.Error())
+	}
+	return nil
 }

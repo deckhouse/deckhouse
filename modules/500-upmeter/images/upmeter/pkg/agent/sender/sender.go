@@ -81,7 +81,7 @@ func (s *Sender) sendLoop() {
 		case <-ticker.C:
 			err := s.export()
 			if err != nil {
-				log.Errorf("cannot export episodes: %v", err)
+				log.Errorf("sendLoop: %v", err)
 			}
 		case <-s.stop:
 			ticker.Stop()
@@ -143,14 +143,10 @@ func (s *Sender) send(episodes []check.Episode) error {
 
 	body, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("failed to marshal payload to JSON: %v", err)
+		return fmt.Errorf("marshalling to JSON: %v", err)
 	}
 
-	err = s.client.Send(body)
-	if err != nil {
-		return fmt.Errorf("failed to send data: %v", err)
-	}
-	return nil
+	return s.client.Send(body)
 }
 
 func (s *Sender) Stop() {

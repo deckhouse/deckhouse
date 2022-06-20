@@ -137,6 +137,16 @@ const langPack: LangPack = {
           "kube-apiserver is not available or probe execution is skipped because previous probe was not yet finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
+      "cert-manager": {
+        title: "Cert Manager",
+        description: "Every 1 minute a certificate is created and deleted to check the cert-manager handling of it",
+        reasonUp:
+          "certificate secret was created, and after the certificate was deleted, the secret disappeared",
+        reasonDown: "certificate secret was not created in 5 seconds, or was no deleted in 20 seconds",
+        reasonUnknown:
+          "error occurred during creation or deletion, or kube-apiserver is not available",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
       "controller-manager": {
         title: "Controller Manager",
         description: "Every 1 minute a Deployment is created and deleted",

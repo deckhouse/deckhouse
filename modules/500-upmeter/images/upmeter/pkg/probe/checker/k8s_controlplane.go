@@ -47,10 +47,6 @@ func (c *controlPlaneChecker) Check() check.Error {
 	return nil
 }
 
-func (c *controlPlaneChecker) BusyWith() string {
-	return "fetching kubernetes /version"
-}
-
 // newControlPlaneChecker returns the checker wrapped with timeout to be use it in other checkers as precondition
 func newControlPlaneChecker(access kubernetes.Access, timeout time.Duration) check.Checker {
 	return withTimeout(&controlPlaneChecker{access}, timeout)

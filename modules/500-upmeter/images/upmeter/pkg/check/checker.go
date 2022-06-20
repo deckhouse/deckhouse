@@ -23,8 +23,4 @@ package check
 type Checker interface {
 	// Check does the actual job to determine the result. Returns nil if everything is ok.
 	Check() Error
-
-	// BusyWith describes what the check is doing. Used in logging and possibly other details of the
-	// probe flow.
-	BusyWith() string
 }
