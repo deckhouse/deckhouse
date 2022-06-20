@@ -50,11 +50,6 @@ func Test_is_error_line(t *testing.T) {
 			`{"level":"info","output":"stdout","binding":"kubernetes","binding.name":"secrets","event.type":"OperatorStartup","hook":"300-prometheus/hooks/additional_configs_render","hook.type":"module","module":"prometheus","msg":"secret/prometheus-main-additional-configs unchanged","queue":"/modules/prometheus","task.id":"ba36269b-6699-42a0-9337-dce59b48f68b","time":"2022-06-17T08:53:27Z"}`,
 			false,
 		},
-		{
-			"stderr from tiller",
-			`{"operator.component":"tiller","msg":"some error message","level":"info","output":"stderr","time":"2022-06-17T08:53:27Z"}`,
-			false,
-		},
 	}
 
 	for _, tt := range tests {
