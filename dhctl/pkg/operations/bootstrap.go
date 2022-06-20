@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -223,7 +224,12 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 
 func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config) error {
 	return log.Process("bootstrap", "Install Deckhouse", func() error {
-		err := deckhouse.CreateDeckhouseManifests(kubeCl, config)
+		err := bootstrap.CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
+		if err != nil {
+			return err
+		}
+
+		err = deckhouse.CreateDeckhouseManifests(kubeCl, config)
 		if err != nil {
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
