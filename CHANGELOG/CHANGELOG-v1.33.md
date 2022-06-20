@@ -33,6 +33,7 @@
  - **[control-plane-manager]** Calculate and add the `quota-backend-bytes` parameter to etcd. [#1389](https://github.com/deckhouse/deckhouse/pull/1389)
     Etcd will be restarted. The `quota-backend-bytes` parameter added to etcd is calculated depending on control-plane memory capacity.
  - **[deckhouse-controller]** Added the `edit` command for the `deckhouse-controller` to be able to modify cluster configuration files. [#1558](https://github.com/deckhouse/deckhouse/pull/1558)
+ - **[dhctl]** Prevent to break already bootstrapped cluster when bootstrap new cluster [#1811](https://github.com/deckhouse/deckhouse/pull/1811)
  - **[dhctl]** For new Deckhouse installations images for control-plane (image for pause container, for example) will be used from the Deckhouse registry. [#1517](https://github.com/deckhouse/deckhouse/pull/1517)
  - **[extended-monitoring]** List objects from the kube-apiserver cache, avoid hitting etcd on each list. It should decrease control plane resource consumption. [#1535](https://github.com/deckhouse/deckhouse/pull/1535)
  - **[extended-monitoring]** The module is available in the Deckhouse Community Edition and enabled by default. [#1488](https://github.com/deckhouse/deckhouse/pull/1488)
@@ -74,6 +75,7 @@
  - **[cloud-provider-vsphere]** Fix error in Terraform for static nodes in setups without nested resource pools. [#1785](https://github.com/deckhouse/deckhouse/pull/1785)
  - **[cloud-provider-yandex]** Rollback changes to set `simple-bridge`  as default CNI for Yandex. [#1582](https://github.com/deckhouse/deckhouse/pull/1582)
  - **[cni-cilium]** The `enable_node_routes` hook now bails if a value is present in config. [#1792](https://github.com/deckhouse/deckhouse/pull/1792)
+ - **[deckhouse-controller]** Restore exponential backoff for delays between failed hooks restarts. [#1790](https://github.com/deckhouse/deckhouse/pull/1790)
  - **[helm]** Avoid failing on incorrect helm releases. [#1754](https://github.com/deckhouse/deckhouse/pull/1754)
  - **[helm]** Avoid hook failure on errors [#1523](https://github.com/deckhouse/deckhouse/pull/1523)
  - **[ingress-nginx]** Fix build of the ingress-nginx 0.33 controller. [#1757](https://github.com/deckhouse/deckhouse/pull/1757)
@@ -82,9 +84,11 @@
     IngressNginx controllers 0.25 and 0.26 are removed. Ingress controller version 1.1 will restart.
  - **[ingress-nginx]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Ingress controllers version 0.33+ will be restarted.
+ - **[istio]** Istio `globalVersion` detection fix. [#1769](https://github.com/deckhouse/deckhouse/pull/1769)
  - **[kube-dns]** Updated CoreDNS to v1.9.1 [#1537](https://github.com/deckhouse/deckhouse/pull/1537)
  - **[kube-dns]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Components of the `kube-dns` module will be restarted.
+ - **[linstor]** Fix monitoring of the `piraeus-operator`. [#1818](https://github.com/deckhouse/deckhouse/pull/1818)
  - **[linstor]** LINSTOR updated to 1.18.1, DRBD module to 9.1.7, linstor-csi to 0.19.0, linstor-scheduler to v0.3.0 [#1559](https://github.com/deckhouse/deckhouse/pull/1559)
  - **[log-shipper]** Fix integration of the File source with the Elasticsearch destination. [#1625](https://github.com/deckhouse/deckhouse/pull/1625)
  - **[log-shipper]** Provide structural schemas for log-shipper CRDs [#1612](https://github.com/deckhouse/deckhouse/pull/1612)
