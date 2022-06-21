@@ -157,7 +157,7 @@ spec:
       - url: 'http://webhookserver:8080/'
 ```
 
-Refer to the description of the [CustomAlertmanager](cr.html#customalertmanager) custom resource and the [CustomAlertmanager](cr.html#alertmanager) for more information about the parameters.
+Refer to the description of the [CustomAlertmanager](cr.html#customalertmanager) custom resource for more information about the parameters.
 
 ## How do I add an additional Alertmanager?
 
