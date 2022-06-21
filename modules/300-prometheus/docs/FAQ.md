@@ -384,12 +384,13 @@ spec:
 After the resources deployment, Prometheus metrics will be available at address `lens-proxy/prometheus-lens-proxy:8080`.
 Lens Prometheus type — `Prometheus Operator`.
 
-Starting from the version `5.2.7`, Lens requires `pod` and `namespace` labels to be present on node-exporter metrics. 
+Starting from the version `5.2.7`, Lens requires `pod` and `namespace` labels to be present on node-exporter metrics.
 Otherwise, node resource consumption will not appear on Lens charts.
 
 To fix this, apply the following resource:
 
 {% offtopic title="A resource that fix the display of metrics..." %}
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -424,6 +425,7 @@ spec:
         pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
       record: node_memory_Cached_bytes
 ```
+
 {% endofftopic %}
 
 ## How do I set up a ServiceMonitor or PodMonitor to work with Prometheus?

@@ -7,7 +7,7 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 Как вариант — возможно только получать рекомендации по ресурсам, без из автоматического изменения.
 
 У VPA есть 3 режима работы:
-- `"Auto"` (default) — в данный момент Auto и Recreate режимы работы делают одно и то же. Однако когда в kubernetes появится [Pod in-place resource update](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/autoscaling/vertical-pod-autoscaler.md#in-place-updates), данный режим будет делать именно его.
+- `"Auto"` (default) — в данный момент Auto и Recreate режимы работы делают одно и то же. Однако когда в kubernetes появится [Pod in-place resource update](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates), данный режим будет делать именно его.
 - `"Recreate"` — данный режим разрешает VPA изменять ресурсы у запущенных Pod'ов, т.е. рестартить их при работе. В случае работы одного Pod'а (`replicas: 1`) — это приведет к недоступности сервиса, на время рестарта. В данном режиме VPA не пересоздает Pod'ы, которые были созданы без контроллера.
 - `"Initial"` — VPA изменяет ресурсы Pod'ов только при создании Pod'ов, но не во время работы.
 - `"Off"` — VPA не изменяет автоматически никакие ресурсы. В данном случае, если есть VPA c таким режимом работы, мы можем посмотреть, какие ресурсы рекомендует поставить VPA (kubectl describe vpa <vpa-name>)
@@ -32,7 +32,7 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 ## Архитектура Vertical Pod Autoscaler
 
 VPA состоит из 3х компонентов:
-- `Recommender` — он мониторит настоящее (делая запросы в [Metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), который реализован в модуле [`prometheus-metrics-adapter`](../../modules/301-prometheus-metrics-adapter/)) и прошлое потребление ресурсов (делая запросы в Trickster перед Prometheus) и предоставляет рекомендации по CPU и memory для контейнеров.
+- `Recommender` — он мониторит настоящее (делая запросы в [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md), который реализован в модуле [`prometheus-metrics-adapter`](../../modules/301-prometheus-metrics-adapter/)) и прошлое потребление ресурсов (делая запросы в Trickster перед Prometheus) и предоставляет рекомендации по CPU и memory для контейнеров.
 - `Updater` — проверяет, что у Pod'ов с VPA выставлены корректные ресурсы и если нет, — убивает эти Pod'ы, чтобы контроллер пересоздал Pod'ы с новыми resource requests.
 - `Admission Plugin` — задает resource requests при создании новых Pod'ов (контроллером или из-за активности Updater'а).
 

@@ -33,7 +33,7 @@ spec:
 ## Заказ wildcard-сертификата с DNS в Cloudflare
 
 1. Получим `Global API Key` и `Email Address`:
-   * Заходим на страницу: <a href='https://dash.cloudflare.com/profile' data-proofer-ignore>https://dash.cloudflare.com/profile</a>.
+   * Заходим на страницу: <https://dash.cloudflare.com/profile>.
    * В самом верху страницы написана ваша почта под `Email Address`.
    * В самом низу страницы жмем на кнопку `View` напротив `Global API Key`.
 

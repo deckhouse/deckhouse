@@ -423,6 +423,7 @@ spec:
         pod) kube_pod_info{namespace="d8-monitoring", created_by_name="node-exporter"}
       record: node_memory_Cached_bytes
 ```
+
 {% endofftopic %}
 
 ## Как настроить ServiceMonitor или PodMonitor для работы с Prometheus?
