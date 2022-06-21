@@ -189,7 +189,7 @@ This is only needed if you have to move a static node from one cluster to anothe
    systemctl daemon-reload
    systemctl reset-failed
    ```
-   
+
 1. Reboot the node.
 
 1. Start CRI:
