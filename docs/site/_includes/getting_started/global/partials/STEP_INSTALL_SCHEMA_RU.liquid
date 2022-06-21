@@ -27,6 +27,7 @@
 
    Требования:
    - установленный container runtime (docker, containerd) и docker-клиент для запуска инсталлятора;
+     > Если вы запускаете инсталлятор под Windows, то сначала установите [Docker Desktop](https://docs.docker.com/desktop/windows/install/).
 {% if page.platform_code == "bm-private" %}
    - доступ до проксирующего registry ([читайте подробнее](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
 {%- else %}

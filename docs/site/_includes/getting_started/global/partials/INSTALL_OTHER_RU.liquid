@@ -2,7 +2,7 @@
 
 Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узлы**{% endif %}.
 {%- if page.platform_code == 'bm-private' %} Авторизуйтесь на **[персональном компьютере](step2.html#процесс-установки)** в container image registry, который вы указали на предыдущем этапе, затем выполните:
-{%- else %} Выполните на **[персональном компьютере](step2.html#процесс-установки)**:{% endif %}
+{%- else %} Выполните на **[персональном компьютере](step2.html#процесс-установки)** с macOS или Linux:{% endif %}
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}
@@ -30,47 +30,43 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 - В файл `/kubeconfig` контейнера необходимо смонтировать файл конфигурации kubectl с доступом к Kubernetes API. В руководстве предполагается, что он находится в файле `.kube/config` домашнего каталога пользователя.
 {% endif %}
 
+{% offtopic title="У меня Windows..." %}
+Если вы запускаете инсталлятор под Windows, то вам необходимо изменить приведенную выше команду установки следующим образом:
+- Замените выражение `$PWD` в параметрах команды `docker run` на путь к папке, где вы сохранили файлы конфигурации. Например: `docker run ... -v "c:\deckhouse\config.yml:/config" ...`.
+- Укажите путь к папке с SSH-ключами доступа на master-узел в параметре команды `docker run` вместо параметра `-v "$HOME/.ssh/:/tmp/.ssh/"`. Например: `docker run ... -v "c:\User\John.Dow\.ssh\:/tmp/.ssh/"`.
+{% endofftopic %}
+
 Внутри контейнера выполните команду:
 
 {% snippetcut %}
 ```shell
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
-dhctl bootstrap-phase install-deckhouse \
-  --kubeconfig=/kubeconfig \
-  --config=/config.yml
+dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
 {%- elsif page.platform_type == "baremetal" %}
-dhctl bootstrap \
-  --ssh-user=<username> \
-  --ssh-host=<master_ip> \
-  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
   --config=/config.yml \
 {%- if page.platform_code == "bm-private" %}
   --dont-use-public-control-plane-images \
 {%- endif %}
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
-dhctl bootstrap \
-  --ssh-user=<username> \
-  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml \
-  --resources=/resources.yml
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
 {%- endif %}
 ```
 {% endsnippetcut %}
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-Здесь, переменная `username` — это имя пользователя, от которого генерировался SSH-ключ для установки. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`, иначе — оставьте пустым.
+Здесь, в параметре `--ssh-user` указывается имя пользователя, от которого генерировался SSH-ключ для установки. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`, иначе — оставьте пустым.
 {%- else %}
-Здесь, переменная `username` —
-{%- if page.platform_code == "openstack" %} имя пользователя по умолчанию для выбранного образа виртуальной машины.
-{%- elsif page.platform_code == "azure" %} `azureuser` (для предложенных в этой документации образов).
-{%- elsif page.platform_code == "gcp" %} `user` (для предложенных в этой документации образов).
-{%- else %} `ubuntu` (для предложенных в этой документации образов).
+Здесь, в параметре `--ssh-user` указывается имя пользователя по умолчанию для выбранного образа виртуальной машины.
+{%- if page.platform_code == "azure" %} В случае c {{ page.platform_name[page.lang] }}, это `azureuser` (для предложенных в этом руководстве образов).
+{%- elsif page.platform_code == "gcp" %} В случае c {{ page.platform_name[page.lang] }}, это `user` (для предложенных в этом руководстве образов).
+{%- else %} Для предложенных в этом руководстве образов, это — `ubuntu`.
 {%- endif %}
 {%- endif %}
 
-{%- if page.platform_type == "cloud" %}
+{% if page.platform_type == "cloud" %}
 Примечания:
 <ul>
 <li>
@@ -82,10 +78,7 @@ dhctl bootstrap \
 <div markdown="0">
 {% snippetcut %}
 ```shell
-dhctl bootstrap-phase abort \
-  --ssh-user=<username> \
-  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml
+dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
 ```
 {% endsnippetcut %}
 </div></li>

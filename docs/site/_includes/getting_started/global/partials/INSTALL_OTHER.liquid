@@ -2,7 +2,7 @@
 
 Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing the master nodes{% endif %}.
 {%- if page.platform_code == 'bm-private' %} Log in on the **[personal computer](step2.html#installation-process)** to the container image registry you specified in the previous step, then run:
-{%- else %} Run on the **[personal computer](step2.html#installation-process)**:{% endif %}
+{%- else %} Run on the macOS or Linux **[personal computer](step2.html#installation-process)**:{% endif %}
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}
@@ -30,47 +30,43 @@ Notes:
 - Kubectl configuration file with access to Kubernetes API must be mount as the /kubeconfig file in the container.
 {% endif %}
 
+{% offtopic title="I am using Windows..." %}
+If you are running the installer in Windows, then you need to change the installation command provided above as follows:
+- Replace the `$PWD` expression in the `docker run` command with the path to the folder where you saved the configuration files. E.g.: `docker run ... -v "c:\deckhouse\config.yml:/config" ...`.
+- Specify the path to the folder with SSH keys to access the master node in the `docker run` command instead of the `-v "$HOME/.ssh/:/tmp/.ssh/"` parameter. E.g.: `docker run ... -v "c:\User\John.Dow\.ssh\:/tmp/.ssh/"`.
+{% endofftopic %}
+
 Now, to initiate the process of installation, you need to execute inside the container:
 
 {% snippetcut %}
 ```shell
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
-dhctl bootstrap-phase install-deckhouse \
-  --kubeconfig=/kubeconfig \
-  --config=/config.yml
+dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
 {%- elsif page.platform_type == "baremetal" %}
-dhctl bootstrap \
-  --ssh-user=<username> \
-  --ssh-host=<master_ip> \
-  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
   --config=/config.yml \
 {%- if page.platform_code == "bm-private" %}
   --dont-use-public-control-plane-images \
 {%- endif %}
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
-dhctl bootstrap \
-  --ssh-user=<username> \
-  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml \
-  --resources=/resources.yml
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
 {%- endif %}
 ```
 {% endsnippetcut %}
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-`username` variable here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`, otherwise leave it empty.
+The `--ssh-user` parameter here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`, otherwise leave it empty.
 {%- else %}
-`username` variable here refers to
-{%- if page.platform_code == "openstack" %} the default user for the relevant VM image.
-{%- elsif page.platform_code == "azure" %} `azureuser` (for the images suggested in this documentation).
-{%- elsif page.platform_code == "gcp" %} `user` (for the images suggested in this documentation).
-{%- else %} `ubuntu` (for the images suggested in this documentation).
+The `--ssh-user` parameter here refers to the default user for the relevant VM image.
+{%- if page.platform_code == "azure" %} It is `azureuser` in case of {{ page.platform_name[page.lang] }} (for the images suggested in this guide).
+{%- elsif page.platform_code == "gcp" %} It is `user` in case of {{ page.platform_name[page.lang] }} (for the images suggested in this guide).
+{%- else %} It is `ubuntu` for the images suggested in this guide.
 {%- endif %}
 {%- endif %}
 
-{%- if page.platform_type == "cloud" %}
+{% if page.platform_type == "cloud" %}
 Notes:
 <ul>
 <li>
@@ -82,10 +78,7 @@ The `-v "$PWD/dhctl-tmp:/tmp/dhctl"` parameter enables saving the state of the T
 <div markdown="0">
 {% snippetcut %}
 ```shell
-dhctl bootstrap-phase abort \
-  --ssh-user=<username> \
-  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml
+dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
 ```
 {% endsnippetcut %}
 </div></li>
