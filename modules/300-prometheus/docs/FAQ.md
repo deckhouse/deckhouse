@@ -12,8 +12,10 @@ search: prometheus monitoring, prometheus custom alert, prometheus custom alerti
 1. Create Endpoints for this Service and explicitly specify the `IP:PORT` pairs that your applications use to expose metrics.
 > Note that port names in Endpoints must match those in the Service.
 
-### An example:
+### An example
+
 Application metrics are freely available (no TLS involved) at `http://10.182.10.5:9114/metrics`.
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -46,6 +48,7 @@ Custom Grafana dashboards can be added to the project using the infrastructure a
 To add your dashboard to Grafana, create the dedicated [`GrafanaDashboardDefinition`](cr.html#grafanadashboarddefinition) Custom Resource in the cluster.
 
 An example:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
@@ -66,6 +69,7 @@ spec:
             "limit": 100,
 ...
 ```
+
 **Caution!** System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
 
 ## How do I add alerts and/or recording rules?
@@ -76,6 +80,7 @@ Parameters:
 - `groups` — is the only parameter where you need to define alert groups. The structure of the groups is similar to [that of prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
 
 An example:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -93,14 +98,17 @@ spec:
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
 ```
+
 ### How do I provision additional Grafana data sources?
+
 The `GrafanaAdditionalDatasource` allows you to provision additional Grafana data sources.
 
-A detailed description of the resource parameters is available in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). 
+A detailed description of the resource parameters is available in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
 
 See the datasource type in the documentation for the specific [datasource](https://grafana.com/docs/grafana/latest/datasources/).
 
 An example:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -120,13 +128,43 @@ spec:
 ```
 
 ## How do I enable secure access to metrics?
+
 To enable secure access to metrics, we strongly recommend using **kube-rbac-proxy**.
+
+## How do I add Alertmanager?
+
+Create a custom resource `CustomAlertmanager` with type `Internal`.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: webhook
+spec:
+  type: Internal
+  internal:
+    route:
+      groupBy: ['job']
+      groupWait: 30s
+      groupInterval: 5m
+      repeatInterval: 12h
+      receiver: 'webhook'
+    receivers:
+    - name: 'webhook'
+      webhookConfigs:
+      - url: 'http://webhookserver:8080/'
+```
+
+Refer to the description of the [CustomAlertmanager](cr.html#customalertmanager) custom resource for more information about the parameters.
 
 ## How do I add an additional Alertmanager?
 
-Create a Custom Resource `CustomAlertmanager`, it can point to Alertmanager through the FQDN or Kubernetes service
+Create a custom resource `CustomAlertmanager` with the type `External`, it can point to Alertmanager through the FQDN or Kubernetes service.
 
 FQDN Alertmanager example:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -139,6 +177,7 @@ spec:
 ```
 
 Alertmanager with a Kubernetes service:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -159,11 +198,12 @@ Refer to the description of the [CustomAlertmanager](cr.html#customalertmanager)
 
 The solution comes down to configuring alert routing in the Alertmanager.
 
-You will need to: 
+You will need to:
 1. Create a parameterless receiver.
-1. Route unwanted alerts to this receiver. 
+1. Route unwanted alerts to this receiver.
 
 Below is the sample `alertmanager.yaml` for this kind of a situation:
+
 ```yaml
 receivers:
 - name: blackhole
@@ -208,6 +248,7 @@ To avoid situations when VPA requests more resources for Prometheus or Longterm 
 To provide Lens access to Prometheus metrics, you need to create some resources in a cluster.
 
 {% offtopic title="Resource templates to be created..." %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -337,6 +378,7 @@ spec:
     port: 8080
     targetPort: 80
 ```
+
 {% endofftopic %}
 
 After the resources deployment, Prometheus metrics will be available at address `lens-proxy/prometheus-lens-proxy:8080`.
@@ -390,6 +432,7 @@ Add the `prometheus: main` label to the PodMonitor or ServiceMonitor.
 Add the label `prometheus.deckhouse.io/monitor-watcher-enabled: "true"` to the namespace where the PodMonitor or ServiceMonitor was created.
 
 Example:
+
 ```yaml
 ---
 apiVersion: v1

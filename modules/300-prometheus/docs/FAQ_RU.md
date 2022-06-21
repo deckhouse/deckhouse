@@ -10,10 +10,12 @@ search: prometheus мониторинг, prometheus custom alert, prometheus к�
 
 1. Сконфигурировать Service, по аналогии с сервисом для [сбора метрик с вашего приложения](../../modules/340-monitoring-custom/#пример-service), но без указания параметра `spec.selector`.
 1. Создать Endpoints для этого Service, явно указав в них `IP:PORT`, по которым ваши приложения отдают метрики.
-> Важный момент: имена портов в Endpoints должны совпадать с именами этих портов в Service. 
+> Важный момент: имена портов в Endpoints должны совпадать с именами этих портов в Service.
 
-### Пример:
+### Пример
+
 Метрики приложения доступны без TLS, по адресу `http://10.182.10.5:9114/metrics`.
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -46,6 +48,7 @@ subsets:
 Чтобы ваш dashboard появился в Grafana, необходимо создать в кластере специальный ресурс — [`GrafanaDashboardDefinition`](cr.html#grafanadashboarddefinition).
 
 Пример:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
@@ -66,6 +69,7 @@ spec:
             "limit": 100,
 ...
 ```
+
 **Важно!** Системные и добавленные через [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) dashboard нельзя изменить через интерфейс Grafana.
 
 ## Как добавить алерты и/или recording правила для вашего проекта?
@@ -76,6 +80,7 @@ spec:
 - `groups` — единственный параметр, в котором необходимо описать группы алертов. Структура групп полностью совпадает с [аналогичной в prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
 
 Пример:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -93,12 +98,15 @@ spec:
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
 ```
+
 ### Как подключить дополнительные data source для Grafana?
+
 Для подключения дополнительных data source к Grafana существует специальный ресурс — `GrafanaAdditionalDatasource`.
 
 Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). Тип ресурса, смотрите в документации по конкретному [datasource](https://grafana.com/docs/grafana/latest/datasources/).
 
 Пример:
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -118,13 +126,43 @@ spec:
 ```
 
 ## Как обеспечить безопасный доступ к метрикам?
+
 Для обеспечения безопасности настоятельно рекомендуем использовать **kube-rbac-proxy**.
 
-## Как добавить дополнительный Alertmanager?
+## Как добавить Alertmanager?
 
-Создать Custom Resource `CustomAlertmanager`, который может указывать на Alertmanager по FQDN или через сервис в Kubernetes-кластере.
+Создайте custom resource `CustomAlertmanager` с типом `Internal`.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: webhook
+spec:
+  type: Internal
+  internal:
+    route:
+      groupBy: ['job']
+      groupWait: 30s
+      groupInterval: 5m
+      repeatInterval: 12h
+      receiver: 'webhook'
+    receivers:
+    - name: 'webhook'
+      webhookConfigs:
+      - url: 'http://webhookserver:8080/'
+```
+
+Подробно о всех параметрах можно прочитать в описании custom resource [CustomAlertmanager](cr.html#customalertmanager).
+
+## Как добавить внешний дополнительный Alertmanager?
+
+Создайте custom resource `CustomAlertmanager` с типом `External`, который может указывать на Alertmanager по FQDN или через сервис в Kubernetes-кластере.
 
 Пример FQDN Alertmanager:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -137,6 +175,7 @@ spec:
 ```
 
 Пример Alertmanager с Kubernetes service:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomAlertmanager
@@ -157,11 +196,12 @@ spec:
 
 Решение сводится к настройке маршрутизации алертов в вашем Alertmanager.
 
-Потребуется: 
+Потребуется:
 1. Завести получателя без параметров.
-1. Смаршрутизировать лишние алерты в этого получателя. 
+1. Смаршрутизировать лишние алерты в этого получателя.
 
 В `alertmanager.yaml` это будет выглядеть так:
+
 ```yaml
 receivers:
 - name: blackhole
@@ -206,6 +246,7 @@ route:
 Для обеспечения доступа Lens к метрикам Prometheus, необходимо создать в кластере ряд ресурсов.
 
 {% offtopic title="Шаблоны ресурсов, которые необходимо применить..." %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -335,6 +376,7 @@ spec:
       port: 8080
       targetPort: 80
 ```
+
 {% endofftopic %}
 
 После деплоя ресурсов, метрики Prometheus будут доступны по адресу `lens-proxy/prometheus-lens-proxy:8080`.
@@ -383,12 +425,13 @@ spec:
 ```
 {% endofftopic %}
 
-## Как настроить ServiceMonitor или PodMonitor для работы с Prometheus? 
+## Как настроить ServiceMonitor или PodMonitor для работы с Prometheus?
 
 Добавьте лейбл `prometheus: main` к Pod/Service Monitor.
-Добавьте в namespace, в котором находится Pod/Service Monitor, лейбл `prometheus.deckhouse.io/monitor-watcher-enabled: "true"`. 
+Добавьте в namespace, в котором находится Pod/Service Monitor, лейбл `prometheus.deckhouse.io/monitor-watcher-enabled: "true"`.
 
 Пример:
+
 ```yaml
 ---
 apiVersion: v1

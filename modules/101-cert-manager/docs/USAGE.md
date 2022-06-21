@@ -33,13 +33,14 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 ## Issuing a DNS wildcard certificate using Cloudflare
 
 1. Get the `Global API Key` and `Email Address`:
-   * Go to https://dash.cloudflare.com/profile
+   * Go to <https://dash.cloudflare.com/profile>
    * You can find an active `Email Address` at the very top of the page.
-   * Click the "View" button at the bottom of the page next to the `Global API Key`
+   * Click the `View` button at the bottom of the page next to the `Global API Key`.
 
    You will see the key for interacting with the Cloudflare API (as well as the account email).
 
 2. Edit the deckhouse ConfigMap by adding the following section:
+
    ```shell
    kubectl -n d8-system edit cm deckhouse
    ```
@@ -49,9 +50,9 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
      cloudflareGlobalAPIKey: APIkey
      cloudflareEmail: some@mail.somedomain
    ```
-   
+
    or
-   
+
    ```yaml
    certManager: |
      cloudflareAPIToken: some-token
@@ -110,32 +111,32 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 
 1. Create a user with the appropriate permissions.
 
-   * For this, go to the policy management page (https://console.aws.amazon.com/iam/home?region=us-east-2#/policies) and create a policy as follows:
+   * For this, go to the policy [management page](https://console.aws.amazon.com/iam/home?region=us-east-2#/policies) and create a policy as follows:
 
-   ```json
-   {
-       "Version": "2012-10-17",
-       "Statement": [
-           {
-               "Effect": "Allow",
-               "Action": "route53:GetChange",
-               "Resource": "arn:aws:route53:::change/*"
-           },
-           {
-               "Effect": "Allow",
-               "Action": "route53:ChangeResourceRecordSets",
-               "Resource": "arn:aws:route53:::hostedzone/*"
-           },
-           {
-               "Effect": "Allow",
-               "Action": "route53:ListHostedZonesByName",
-               "Resource": "*"
-           }
-       ]
-   }
-   ```
+     ```json
+     {
+         "Version": "2012-10-17",
+         "Statement": [
+             {
+                 "Effect": "Allow",
+                 "Action": "route53:GetChange",
+                 "Resource": "arn:aws:route53:::change/*"
+             },
+             {
+                 "Effect": "Allow",
+                 "Action": "route53:ChangeResourceRecordSets",
+                 "Resource": "arn:aws:route53:::hostedzone/*"
+             },
+             {
+                 "Effect": "Allow",
+                 "Action": "route53:ListHostedZonesByName",
+                 "Resource": "*"
+             }
+         ]
+     }
+     ```
 
-   * Go to the user management page (https://console.aws.amazon.com/iam/home?region=us-east-2#/users) and create a user with the above policy.
+   * Go to the [user management page](https://console.aws.amazon.com/iam/home?region=us-east-2#/users) and create a user with the above policy.
 
 2. Edit the Deckhouse ConfigMap by adding the following section:
 
@@ -173,13 +174,14 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 
 1. Create a service account with the appropriate role:
 
-   * Go to the policy management page: https://console.cloud.google.com/iam-admin/serviceaccounts.
+   * Go to the [policy management page](https://console.cloud.google.com/iam-admin/serviceaccounts).
    * Select your project.
    * Create a service account with the desired name (e.g., `dns01-solver`).
    * Switch to the service account created.
    * Add a key by clicking the "Add key" button.
    * The `.json` file with the key data will be saved to your computer.
    * Encode the resulting file using the **base64** algorithm:
+
      ```shell
      base64 project-209317-556c656b81c4.json
      ```
