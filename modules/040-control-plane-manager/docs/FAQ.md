@@ -271,7 +271,7 @@ for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | j
   break
 done
 ```
-In the current directory etcd snapshot file `etc-backup.snapshot` will be created from one one of control-plane node.
+In the current directory etcd snapshot file `etc-backup.snapshot` will be created from one of control-plane node.
 From this file you can restore previous cluster state in the future.
 
 You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
