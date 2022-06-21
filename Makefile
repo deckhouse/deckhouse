@@ -99,6 +99,10 @@ render-workflow: ## Generate CI workflow instructions.
 
 ##@ Reports
 
+bin/regcopy: ## App to copy docker images to the Deckhouse registry
+	mkdir -p bin
+	cd tools/regcopy; go build -o $(PWD)/bin/regcopy
+
 bin/trivy:
 	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}
 
