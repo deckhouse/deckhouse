@@ -50,6 +50,7 @@ spec:
         - /updater
         - --address=:8943
         - --eviction-tolerance=0.1
+        - --eviction-rate-limit=1
         - --min-replicas=2
         - --stderrthreshold=0
         - --updater-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}

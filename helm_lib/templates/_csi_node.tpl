@@ -37,18 +37,6 @@ spec:
     updateMode: "Auto"
     {{- end }}
 ---
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
-metadata:
-  name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | nindent 2 }}
-spec:
-  {{- include "helm_lib_pdb_daemonset" $context | nindent 2 }}
-  selector:
-    matchLabels:
-      app: {{ $fullname }}
----
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:

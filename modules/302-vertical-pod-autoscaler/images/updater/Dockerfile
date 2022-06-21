@@ -1,9 +1,15 @@
-# Based on https://github.com/kubernetes/autoscaler/blob/vertical-pod-autoscaler-0.9.0/vertical-pod-autoscaler/pkg/updater/Dockerfile
 ARG BASE_ALPINE
-FROM registry.k8s.io/autoscaling/vpa-updater:0.9.0@sha256:f2f85053098e957b28e4b4fe8ec60354ce4073ab9a7822c7a2ef18e5a0614a28 as artifact
+ARG BASE_GOLANG_ALPINE
+FROM $BASE_GOLANG_ALPINE as artifact
+WORKDIR /src/
+COPY patches/daemonset-eviction.patch ./
+RUN apk add --no-cache git mercurial patch && \
+    wget https://codeload.github.com/kubernetes/autoscaler/tar.gz/vertical-pod-autoscaler/v0.9.2 -O - | tar -xz --strip-components=1 -C /src/ && \
+    patch -p1 < /src/daemonset-eviction.patch && \
+    cd vertical-pod-autoscaler/ && \
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o updater pkg/updater/main.go
 
 FROM $BASE_ALPINE
-COPY --from=artifact /updater /
-
+COPY --from=artifact /src/vertical-pod-autoscaler/updater /updater
 ENTRYPOINT ["/updater"]
 CMD ["--v=4", "--stderrthreshold=info"]

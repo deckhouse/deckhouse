@@ -21,19 +21,6 @@ spec:
         memory: {{ .Values.chrony.vpa.maxMemory | quote }}
 {{- end }}
 ---
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
-metadata:
-  name: chrony
-  namespace: d8-chrony
-  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | nindent 2 }}
-spec:
-  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
-  selector:
-    matchLabels:
-      app: chrony
-      tier: node
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:

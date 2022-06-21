@@ -74,7 +74,6 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 
 			chronyDaemonSetTest := f.KubernetesResource("DaemonSet", "d8-chrony", "chrony")
 			chronyVPATest := f.KubernetesResource("VerticalPodAutoscaler", "d8-chrony", "chrony")
-			chronyPDBTest := f.KubernetesResource("PodDisruptionBudget", "d8-chrony", "chrony")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -91,8 +90,6 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 			Expect(chronyVPATest.Field("spec.updatePolicy.updateMode").String()).To(Equal(`Auto`))
 			Expect(chronyVPATest.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.cpu").String()).To(Equal(`50m`))
 			Expect(chronyVPATest.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.memory").String()).To(Equal(`100Mi`))
-
-			Expect(chronyPDBTest.Exists()).To(BeTrue())
 		})
 	})
 })

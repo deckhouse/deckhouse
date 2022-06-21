@@ -60,6 +60,7 @@ func ApplyLintRules(module utils.Module, values string, objectStore *storage.Uns
 
 	resources.ControllerMustHaveVPA(&linter)
 	resources.ControllerMustHavePDB(&linter)
+	resources.DaemonSetMustNotHavePDB(&linter)
 
 	return linter.ErrorsList.ConvertToError()
 }
