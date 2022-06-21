@@ -27,4 +27,3 @@ type:
        systemctl enable systemd-timesyncd
        systemctl start systemd-timesyncd
    ```
-   

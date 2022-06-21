@@ -33,9 +33,9 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 ## Issuing a DNS wildcard certificate using Cloudflare
 
 1. Get the `Global API Key` and `Email Address`:
-   * Go to <https://dash.cloudflare.com/profile>
+   * Go to <a href='https://dash.cloudflare.com/profile' data-proofer-ignore>https://dash.cloudflare.com/profile</a>.
    * You can find an active `Email Address` at the very top of the page.
-   * Click the "View" button at the bottom of the page next to the `Global API Key`
+   * Click the `View` button at the bottom of the page next to the `Global API Key`.
 
    You will see the key for interacting with the Cloudflare API (as well as the account email).
 
