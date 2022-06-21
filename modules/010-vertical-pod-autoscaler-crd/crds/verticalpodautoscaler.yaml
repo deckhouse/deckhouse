@@ -138,7 +138,7 @@ spec:
                   updateMode:
                     description: |
                       The operation mode of the VPA controller
-                      - `Auto` — currently, Auto and Recreate modes do the same thing. This mode is reserved for the [Pod inplace resource update](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/autoscaling/vertical-pod-autoscaler.md#in-place-updates) in Kubernetes.
+                      - `Auto` — currently, Auto and Recreate modes do the same thing. This mode is reserved for the [Pod inplace resource update](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates) in Kubernetes.
                       - `Recreate` — this mode allows VPA to modify resource requirements of the running pods (i.e., restart them during operation). This mode might result in temporary unavailability of the service (due to restart) if you have just one replica (replicas: 1). In this mode, VPA does not recreate pods that were not created by a controller.
                       - `Initial` — VPA modifies pod resources only when pods are started (but not when pods are running).
                       - `Off` — VPA does not take any action to update the resource requests for the running containers. Autoscaler calculates recomendations and stores them in the status field of the VPA object. You can browse VPA recommendations using the following command: `kubectl describe vpa <vpa-name>`.
