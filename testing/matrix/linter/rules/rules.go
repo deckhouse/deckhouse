@@ -356,7 +356,7 @@ func objectRevisionHistoryLimit(object storage.StoreObject) errors.LintRuleError
 		//
 		// Since Deckhouse does not use rollback, we can set it to 2 to be able to manually check the previous version.
 		// It is more important to reduce the control plane pressure.
-		idealHistoryLimit := int32(2)
+		maxHistoryLimit := int32(2)
 		actualLimit := deployment.Spec.RevisionHistoryLimit
 
 		if actualLimit == nil {
@@ -364,16 +364,16 @@ func objectRevisionHistoryLimit(object storage.StoreObject) errors.LintRuleError
 				"MANIFEST008",
 				object.Identity(),
 				nil,
-				"Deployment spec.revisionHistoryLimit must be equal to %d", idealHistoryLimit,
+				"Deployment spec.revisionHistoryLimit must be less or equal to %d", maxHistoryLimit,
 			)
 		}
 
-		if *actualLimit > idealHistoryLimit {
+		if *actualLimit > maxHistoryLimit {
 			return errors.NewLintRuleError(
 				"MANIFEST008",
 				object.Identity(),
 				*actualLimit,
-				"Deployment spec.revisionHistoryLimit must be equal to or lower than %d", idealHistoryLimit,
+				"Deployment spec.revisionHistoryLimit must be less or equal to %d", maxHistoryLimit,
 			)
 		}
 	}
