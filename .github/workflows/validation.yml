@@ -207,6 +207,7 @@ jobs:
       label_doc_changes: ${{ steps.on_push.outputs.label_doc_changes }}
       run_copyright: ${{ steps.on_push.outputs.run_copyright }}
       label_copyright: ${{ steps.on_push.outputs.label_copyright }}
+      run_markdown: ${{ steps.on_push.outputs.run_markdown }}
       pr_title: ${{ steps.on_push.outputs.pr_title }}
       pr_description: ${{ steps.on_push.outputs.pr_description }}
       diff_url: ${{ steps.on_push.outputs.diff_url }}
@@ -330,3 +331,33 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_copyright }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_copyright.sh
+
+  markdown_linter:
+    name: Markdown Linter
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_markdown == 'true'
+    runs-on: ubuntu-latest
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: pr_diff
+
+      - name: Run linter
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_markdown }}
+        run: |
+          make lint-markdown
+

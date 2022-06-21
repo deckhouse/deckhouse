@@ -1,0 +1,104 @@
+# MD002/first-heading-h1/first-header-h1 - First heading should be a top-level heading (deprecated)
+MD002: false
+
+# MD004/ul-style - Unordered list style
+MD004: false
+
+# MD013/line-length - Line length
+MD013:
+  # Number of characters
+  line_length: 1000
+  # Number of characters for headings
+  heading_line_length: 128
+  # Number of characters for code blocks
+  code_block_line_length: 400
+  # Include code blocks
+  code_blocks: true
+  # Include tables
+  tables: true
+  # Include headings
+  headings: true
+  # Include headings
+  headers: true
+  # Strict length checking
+  strict: false
+  # Stern length checking
+  stern: false
+
+# MD022/blanks-around-headings/blanks-around-headers - Headings should be surrounded by blank lines
+MD022:
+  # Blank lines above heading
+  lines_above: 1
+  # Blank lines below heading
+  lines_below: 1
+
+# MD024/no-duplicate-heading/no-duplicate-header - Multiple headings with the same content
+MD024:
+  # Only check sibling headings
+  siblings_only: true
+
+# MD026/no-trailing-punctuation - Trailing punctuation in heading
+MD026:
+  # Punctuation characters
+  punctuation: ".,;:!。，；：！"
+
+# MD029/ol-prefix - Ordered list item prefix
+MD029:
+  # List style
+  style: "one_or_ordered"
+
+# MD033/no-inline-html - Inline HTML
+MD033: false
+
+# MD032/blanks-around-lists - Lists should be surrounded by blank lines
+MD032: false
+
+# MD041/first-line-heading/first-line-h1 - First line in a file should be a top-level heading
+MD041:
+  # Heading level
+  level: 1
+  # RegExp for matching title in front matter
+  front_matter_title: "^\\s*title\\s*[:=]"
+
+# MD042/no-empty-links - No empty links
+MD042: true
+
+# MD043/required-headings/required-headers - Required heading structure
+MD043:
+  # List of headings
+  headings: null
+  # List of headings
+  headers: null
+
+# MD044/proper-names - Proper names should have the correct capitalization
+MD044:
+  # List of proper names
+  names: []
+  # Include code blocks
+  code_blocks: true
+
+# MD045/no-alt-text - Images should have alternate text (alt text)
+MD045: true
+
+# MD046/code-block-style - Code block style
+MD046:
+  # Block style
+  style: "consistent"
+
+# MD047/single-trailing-newline - Files should end with a single newline character
+MD047: true
+
+# MD048/code-fence-style - Code fence style
+MD048:
+  # Code fence style
+  style: "consistent"
+
+# MD049/emphasis-style - Emphasis style should be consistent
+MD049:
+  # Emphasis style should be consistent
+  style: "consistent"
+
+# MD050/strong-style - Strong style should be consistent
+MD050:
+  # Strong style should be consistent
+  style: "consistent"
