@@ -208,7 +208,6 @@ jobs:
       run_copyright: ${{ steps.on_push.outputs.run_copyright }}
       label_copyright: ${{ steps.on_push.outputs.label_copyright }}
       run_markdown: ${{ steps.on_push.outputs.run_markdown }}
-      label_markdown: ${{ steps.on_push.outputs.label_markdown }}
       pr_title: ${{ steps.on_push.outputs.pr_title }}
       pr_description: ${{ steps.on_push.outputs.pr_description }}
       diff_url: ${{ steps.on_push.outputs.diff_url }}
