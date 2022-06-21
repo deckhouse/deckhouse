@@ -258,3 +258,23 @@ In this case, if the connection to the node is lost, the applications will be re
 Both these parameters directly impact the CPU and memory resources consumed by the control plane. By lowering timeouts, we force system components to send statuses more frequently and check the resource state more often.
 
 When deciding on the appropriate threshold values, consider resources consumed by the control nodes (graphs can help you with this). Note that the lower parameters are, the more resources you may need to allocate to these nodes.
+
+## How do make etcd backup?
+
+Login into any control-plane node with `root` user and use next script:
+
+```bash
+for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | jq -r '.items[].metadata.name'); do
+  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/etcd-backup' && \
+  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'cat /tmp/etcd-backup' > "etc-backup.snapshot" && \
+  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'rm /tmp/etcd-backup' && \
+  break
+done
+```
+In the current directory etcd snapshot file `etc-backup.snapshot` will be created from one one of control-plane node.
+From this file you can restore previous cluster state in the future.
+
+You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
+
+We recommend encrypt etcd snapshot backups and save them outside the Deckhouse cluster.
+You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc 
