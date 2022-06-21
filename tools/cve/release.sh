@@ -17,6 +17,15 @@
 set -Eeo pipefail
 shopt -s failglob
 
+# This script makes full CVE scan for a Deckhouse release.
+#
+# Usage: OPTION=<value> release.sh
+#
+# $REPO - Deckhouse images repo
+# $TAG - Deckhouse image tag (by default: the latest tag)
+# $SEVERITY - output only entries with specified severity levels (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
+
+
 if [[ "x$REPO" == "x" ]]; then
   REPO="registry.deckhouse.io/deckhouse/ce"
 fi

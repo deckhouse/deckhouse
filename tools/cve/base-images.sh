@@ -17,10 +17,20 @@
 set -Eeo pipefail
 shopt -s failglob
 
+# This script generates the report that contains all known CVEs for base images.
+# Base images are used to deploy binaries.
+# Thus, every CVE found by this script will be present in the full release report multiple times.
+#
+# Usage: OPTION=<value> base-images.sh
+#
+# $SEVERITY - output only entries with specified severity levels (UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL)
+
 if [[ "x$SEVERITY" == "x" ]]; then
   SEVERITY="CRITICAL,HIGH"
 fi
 
+# Hack to get the base images list.
+# We need to figure out the proper way to store this images and avoid template rendering.
 function __base_images_tags__ {
   docker run -i --rm \
     -e TARGET_UID=$(id -u) \
@@ -44,6 +54,7 @@ function __main__() {
   base_images=$(grep -v "#" <<< "$base_images") # remove comments
   base_images=$(grep -v "BASE_GOLANG" <<< "$base_images") # golang images are used for multistage builds
   base_images=$(grep -v "BASE_RUST" <<< "$base_images") # rust images are used for multistage builds
+  base_images=$(grep -v "BASE_JEKYLL" <<< "$base_images") # images to build docs
   base_images=$(awk '{ print $2 }' <<< "$base_images") # pick an actual images address
   base_images=$(jq -sr '.[]' <<< "$base_images") # unwrap quotes "string" -> string
 

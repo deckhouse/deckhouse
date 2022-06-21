@@ -21,10 +21,17 @@ help:
 	"" \
 	"-----------------------------------------------------------------------------------" \
 	""
-	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make ${FORMATTING_BEGIN_YELLOW}<target>${FORMATTING_END}\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  ${FORMATTING_BEGIN_BLUE}%-46s${FORMATTING_END} %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {\
+	    FS = ":.*##"; \
+	    printf                "Usage: ${FORMATTING_BEGIN_BLUE}OPTION${FORMATTING_END}=<value> make ${FORMATTING_BEGIN_YELLOW}<target>${FORMATTING_END}\n"\
+	  } \
+	  /^[a-zA-Z0-9_-]+:.*?##/ { printf "  ${FORMATTING_BEGIN_BLUE}%-46s${FORMATTING_END} %s\n", $$1, $$2 } \
+	  /^.?.?##~/              { printf "   %-46s${FORMATTING_BEGIN_YELLOW}%-46s${FORMATTING_END}\n", "", substr($$1, 6) } \
+	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
 GOLANGCI_VERSION = 1.46.2
+TRIVY_VERSION= 0.28.1
 TESTS_TIMEOUT="15m"
 
 ##@ General
@@ -37,7 +44,8 @@ deps: bin/golangci-lint bin/trivy ## Install dev dependencies.
 tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 
-tests-matrix: ## Test how helm templates are rendered with different input values generated from values examples. Use 'FOCUS' environment variable to run tests for a particular module.
+tests-matrix: ## Test how helm templates are rendered with different input values generated from values examples.
+  ##~ Options: $FOCUS=module-name
 	go test ./testing/matrix/ -v
 
 tests-openapi: ## Run tests against modules openapi values schemas.
@@ -92,11 +100,13 @@ render-workflow: ## Generate CI workflow instructions.
 ##@ Reports
 
 bin/trivy:
-	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v0.28.1
+	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}
 
 .PHONY: cve-report
 cve-report: ## Generate CVE report for a Deckhouse release.
+  ##~ Options: $SEVERITY=CRITICAL,HIGH $REPO=registry.deckhouse.io $TAG=v1.30.0
 	./tools/cve/release.sh
 
 cve-base-images: ## Check CVE in our base images.
+  ##~ Options: $SEVERITY=CRITICAL,HIGH
 	./tools/cve/base-images.sh
