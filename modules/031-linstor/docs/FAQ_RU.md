@@ -44,6 +44,27 @@ title: "Модуль linstor: FAQ"
 - DRBD + LVM — быстрей (в два раза) и надежней (LVM — проще);
 - DRBD + LVMThin — поддержка snapshot'ов и возможность overprovisioning.
 
+
+## Как назначить StorageClass по умолчанию
+
+Отоброзить список всех StorageClasses:
+
+```bash
+kubectl get storageclass
+```
+
+Снимите аннотацию с предыдущего StorageClass по умолчанию
+
+```bash
+kubectl annotate storageclass local-path storageclass.kubernetes.io/is-default-class-
+```
+
+Добавьте аннотацию для назначения нового StorageClass по умолчанию
+
+```bash
+kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-default-class=true
+```
+
 ## Как добавить существующий LVM или LVMThin-пул?
 
 Пример добавления LVM-пула:
