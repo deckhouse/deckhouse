@@ -45,7 +45,7 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 
 tests-matrix: ## Test how helm templates are rendered with different input values generated from values examples.
-  ##~ Options: $FOCUS=module-name
+  ##~ Options: FOCUS=module-name
 	go test ./testing/matrix/ -v
 
 tests-openapi: ## Run tests against modules openapi values schemas.
@@ -104,9 +104,9 @@ bin/trivy:
 
 .PHONY: cve-report
 cve-report: ## Generate CVE report for a Deckhouse release.
-  ##~ Options: $SEVERITY=CRITICAL,HIGH $REPO=registry.deckhouse.io $TAG=v1.30.0
+  ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/release.sh
 
 cve-base-images: ## Check CVE in our base images.
-  ##~ Options: $SEVERITY=CRITICAL,HIGH
+  ##~ Options: SEVERITY=CRITICAL,HIGH
 	./tools/cve/base-images.sh
