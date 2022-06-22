@@ -1,0 +1,22 @@
+cloud-provider-yandex:
+  fixes:
+    - summary: Revert checksum calculation for `platformID`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1846
+cni-cilium:
+  fixes:
+    - summary: Disable hubble in the agent if "cilium-hubble" module is disabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1845
+    - summary: Changed metrics ports so they won't clash with protobuf-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1840
+control-plane-manager:
+  features:
+    - summary: 'Bolt-on `healthCheckNodePort` of the control-plane Service and `trafficPolicy: Local`.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1839
+  fixes:
+    - summary: Fix D8KubeEtcdDatabaseSizeCloseToTheLimit alert expression
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1841
+linstor:
+  fixes:
+    - summary: Make the `linstor-controller` listen on IPv4-only address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1830
+

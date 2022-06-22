@@ -29,6 +29,7 @@
  - **[cni-cilium]** The new module responsible for providing a network between multiple nodes in a cluster using the [cilium](https://cilium.io/). [#592](https://github.com/deckhouse/deckhouse/pull/592)
     Without a way to migrate from existing CNIs at this moment.
  - **[cni-flannel]** Bumped flannel to 0.15.1. [#1173](https://github.com/deckhouse/deckhouse/pull/1173)
+ - **[control-plane-manager]** Bolt-on `healthCheckNodePort` of the control-plane Service and `trafficPolicy: Local`. [#1839](https://github.com/deckhouse/deckhouse/pull/1839)
  - **[control-plane-manager]** Added `authentication-token-webhook-cache-ttl` parameter to apiserver. [#1791](https://github.com/deckhouse/deckhouse/pull/1791)
  - **[control-plane-manager]** Calculate and add the `quota-backend-bytes` parameter to etcd. [#1389](https://github.com/deckhouse/deckhouse/pull/1389)
     Etcd will be restarted. The `quota-backend-bytes` parameter added to etcd is calculated depending on control-plane memory capacity.
@@ -73,6 +74,7 @@
  - **[chrony]** Chrony systemd unit on a node is added to stop list. [#1776](https://github.com/deckhouse/deckhouse/pull/1776)
  - **[cloud-provider-aws]** Fix LoadBalancer type none target group creation. [#1741](https://github.com/deckhouse/deckhouse/pull/1741)
  - **[cloud-provider-vsphere]** Fix error in Terraform for static nodes in setups without nested resource pools. [#1785](https://github.com/deckhouse/deckhouse/pull/1785)
+ - **[cloud-provider-yandex]** Revert checksum calculation for `platformID`. [#1846](https://github.com/deckhouse/deckhouse/pull/1846)
  - **[cloud-provider-yandex]** Rollback changes to set `simple-bridge`  as default CNI for Yandex. [#1582](https://github.com/deckhouse/deckhouse/pull/1582)
  - **[cni-cilium]** The `enable_node_routes` hook now bails if a value is present in config. [#1792](https://github.com/deckhouse/deckhouse/pull/1792)
  - **[deckhouse-controller]** Restore exponential backoff for delays between failed hooks restarts. [#1790](https://github.com/deckhouse/deckhouse/pull/1790)
@@ -88,6 +90,7 @@
  - **[kube-dns]** Updated CoreDNS to v1.9.1 [#1537](https://github.com/deckhouse/deckhouse/pull/1537)
  - **[kube-dns]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Components of the `kube-dns` module will be restarted.
+ - **[linstor]** Make the `linstor-controller` listen on IPv4-only address. [#1830](https://github.com/deckhouse/deckhouse/pull/1830)
  - **[linstor]** Fix monitoring of the `piraeus-operator`. [#1818](https://github.com/deckhouse/deckhouse/pull/1818)
  - **[linstor]** LINSTOR updated to 1.18.1, DRBD module to 9.1.7, linstor-csi to 0.19.0, linstor-scheduler to v0.3.0 [#1559](https://github.com/deckhouse/deckhouse/pull/1559)
  - **[log-shipper]** Fix integration of the File source with the Elasticsearch destination. [#1625](https://github.com/deckhouse/deckhouse/pull/1625)
