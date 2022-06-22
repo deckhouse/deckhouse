@@ -26,12 +26,23 @@
    Компьютер, с которого будет производиться установка.{% unless page.platform_type == "existing" %} Он нужен только для запуска инсталлятора Deckhouse и не будет частью кластера.{% endunless %}
 
    Требования:
-   - установленный container runtime (docker, containerd) и docker-клиент для запуска инсталлятора;
-     > Если вы запускаете инсталлятор под Windows, то сначала установите [Docker Desktop](https://docs.docker.com/desktop/windows/install/).
+   - ОС: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
+   - установленный docker для запуска инсталлятора Deckhouse (инструкции для [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
 {% if page.platform_code == "bm-private" %}
    - доступ до проксирующего registry ([читайте подробнее](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
 {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.io` (установка также возможна и [в закрытом окружении](../bm-private/step2.html));
+{%- endif %}
+{%- if page.platform_type == 'cloud' %}
+   - доступ до API облачного провайдера, учетная запись с правами на создание ресурсов и настроенная
+     {%- if page.platform_code == 'aws' %} утилита [awscli](https://aws.amazon.com/cli/)
+     {%- elsif page.platform_code == "gcp" %} утилита [gcloud](https://cloud.google.com/sdk/docs/install)
+     {%- elsif page.platform_code == "azure" %} утилита [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+     {%- elsif page.platform_code == "yandex" %} утилита [Yandex Cloud (CLI)](https://cloud.yandex.ru/docs/cli/quickstart)
+     {%- elsif page.platform_code == "openstack" %} [утилита](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html) управления через CLI
+     {%- elsif page.platform_code == "vsphere" %} утилита [govc](https://github.com/vmware/govmomi/tree/master/govc#installation)
+     {%- else %} CLI-утилита управления облачными ресурсами
+     {%- endif %};
 {%- endif %}
 {%- if page.platform_type == "existing" %}
    - `kubectl`, настроенный для доступа к существующему кластеру.
