@@ -1,13 +1,5 @@
 {{- $options := dict -}}
-
-{{- $platformID := .nil }}
-{{- if hasKey .nodeGroup.instanceClass "platformID" }}
-  {{- if ne .nodeGroup.instanceClass.platformID "standard-v3" }}
-    {{- $platformID = .nodeGroup.instanceClass.platformID }}
-  {{- end }}
-{{- end }}
-
-{{- $_ := set $options "platformID" $platformID -}}
+{{- $_ := set $options "platformID" .nodeGroup.instanceClass.platformID -}}
 {{- $_ := set $options "cores" .nodeGroup.instanceClass.cores -}}
 {{- if hasKey .nodeGroup.instanceClass "coreFraction" -}}
   {{- $_ := set $options "coreFraction" .nodeGroup.instanceClass.coreFraction -}}
