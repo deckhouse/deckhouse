@@ -138,14 +138,16 @@ releaseLoop:
 		case release.Version.Equal(newSemver):
 			input.LogEntry.Debugf("Release with version %s already exists", release.Version)
 			if releaseChecker.releaseMetadata.Suspend {
-				p := map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"annotations": map[string]string{
-							"release.deckhouse.io/suspended": "true",
+				if release.Phase == v1alpha1.PhasePending {
+					p := map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"annotations": map[string]string{
+								"release.deckhouse.io/suspended": "true",
+							},
 						},
-					},
+					}
+					input.PatchCollector.MergePatch(p, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name)
 				}
-				input.PatchCollector.MergePatch(p, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name)
 			}
 			return nil
 
