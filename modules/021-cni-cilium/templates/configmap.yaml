@@ -84,7 +84,11 @@ data:
   bpf-policy-map-max: "65536"
 
   # Local hubble sever section
+{{- if has .Values.global.enabledModules "cilium-hubble" }}
   enable-hubble: "true"
+{{- else }}
+  enable-hubble: "false"
+{{- end }}
   hubble-socket-path: "/var/run/cilium/hubble.sock"
   hubble-listen-address: ":4244"
 
