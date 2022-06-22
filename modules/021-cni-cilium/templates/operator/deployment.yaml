@@ -66,8 +66,7 @@ spec:
         name: operator
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         ports:
-        - containerPort: 9092
-          hostPort: 9092
+        - containerPort: 9094
           name: prometheus
           protocol: TCP
         livenessProbe:
@@ -105,7 +104,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:9092/metrics
+            - upstream: http://127.0.0.1:9094/metrics
               path: /metrics
               authorization:
                 resourceAttributes:

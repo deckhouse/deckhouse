@@ -120,8 +120,8 @@ spec:
               - /cni-uninstall.sh
         ports:
         - name: prometheus
-          containerPort: 9090
-          hostPort: 9090
+          containerPort: 9092
+          hostPort: 9092
           protocol: TCP
         securityContext:
           privileged: true
@@ -168,7 +168,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:9090/metrics
+            - upstream: http://127.0.0.1:9092/metrics
               path: /metrics
               authorization:
                 resourceAttributes:
