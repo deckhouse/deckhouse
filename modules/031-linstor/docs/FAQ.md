@@ -44,6 +44,25 @@ Depending on the task, choose one of the following:
 - DRBD + LVM — faster (x2) and more reliable (LVM is simpler);
 - DRBD + LVMThin — support for snapshots and the possibility of overcommitment.
 
+## Changing the default StorageClass
+
+List the StorageClasses in your cluster:
+
+```bash
+kubectl get storageclass
+```
+
+Mark the default StorageClass as non-default:
+
+```bash
+kubectl annotate storageclass local-path storageclass.kubernetes.io/is-default-class-
+```
+
+Mark a StorageClass as default:
+
+```bash
+kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-default-class=true
+```
 ## How to add existing LVM or LVMThin pool?
 
 Example of adding an existing LVM pool:
