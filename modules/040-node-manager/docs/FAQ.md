@@ -81,14 +81,14 @@ If you already have `NodeGroup`, you can automate the bootstrap process with any
    [system]
    system-0
    system-1
-   
+
    [system:vars]
    node_group=system
-   
+
    [worker]
    worker-0
    worker-1
-   
+
    [worker:vars]
    node_group=worker
    ```
@@ -564,18 +564,18 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-        
+
     bb-event-on 'bb-package-installed' 'post-install'
     post-install() {
       systemctl daemon-reload
       systemctl enable containerd.service
       systemctl restart containerd.service
     }
-        
+
     # set default
     desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | quote }}
     allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "allowedPattern" | quote }}
-    
+
     {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
       {{- $debianVersion := toString $key }}
       {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
@@ -585,26 +585,26 @@ spec:
     fi
       {{- end }}
     {{- end }}
-    
+
     if [[ -z $desired_version ]]; then
       bb-log-error "Desired version must be set"
       exit 1
     fi
-    
+
     should_install_containerd=true
     version_in_use="$(dpkg -l containerd.io 2>/dev/null | grep -E "(hi|ii)\s+(containerd.io)" | awk '{print $2"="$3}' || true)"
     if test -n "$allowed_versions_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
       should_install_containerd=false
     fi
-    
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       should_install_containerd=false
     fi
-    
+
     if [[ "$should_install_containerd" == true ]]; then
       # set default
       containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
-    
+
     {{- $debianName := dict "9" "Stretch" "10" "Buster" "11" "Bullseye" }}
     {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
       {{- $debianVersion := toString $key }}
@@ -612,18 +612,18 @@ spec:
         containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%s%s" ($value.containerd.desiredVersion | replace "containerd.io=" "" | replace "." "" | replace "-" "") (index $debianName $debianVersion)) }}"
       fi
     {{- end }}
-    
+
       crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
-    
+
       bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}"
     fi
-    
+
     # Upgrade containerd-flant-edition if needed
     containerd_fe_tag="{{ index .images.registrypackages "containerdFe1511" | toString }}"
     if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
       systemctl stop containerd.service
       bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
-    
+
       mkdir -p /etc/systemd/system/containerd.service.d
       bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF
     [Service]
@@ -656,12 +656,12 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-    
+
     bb-event-on 'bb-sync-file-changed' '_on_containerd_config_changed'
     _on_containerd_config_changed() {
       systemctl restart containerd.service
     }
-    
+
       {{- $max_concurrent_downloads := 3 }}
       {{- $sandbox_image := "registry.k8s.io/pause:3.2" }}
       {{- if .images }}
@@ -669,13 +669,13 @@ spec:
           {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
         {{- end }}
       {{- end }}
-    
+
     systemd_cgroup=true
     # Overriding cgroup type from external config file
     if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
       systemd_cgroup=false
     fi
-    
+
     # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
     bb-sync-file /etc/containerd/config.toml - << EOF
     version = 2
@@ -823,7 +823,7 @@ spec:
         base_image_size = ""
         async_remove = false
     EOF
-    
+
     bb-sync-file /etc/crictl.yaml - << "EOF"
     runtime-endpoint: unix:/var/run/containerd/containerd.sock
     image-endpoint: unix:/var/run/containerd/containerd.sock
@@ -900,14 +900,14 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-    
+
     bb-event-on 'bb-package-installed' 'post-install'
     post-install() {
       systemctl daemon-reload
       systemctl enable containerd.service
       systemctl restart containerd.service
     }
-        
+
     {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
       {{- $centosVersion := toString $key }}
       {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
@@ -917,42 +917,42 @@ spec:
     fi
       {{- end }}
     {{- end }}
-    
+
     if [[ -z $desired_version ]]; then
       bb-log-error "Desired version must be set"
       exit 1
     fi
-    
+
     should_install_containerd=true
     version_in_use="$(rpm -q containerd.io | head -1 || true)"
     if test -n "$allowed_versions_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
       should_install_containerd=false
     fi
-    
+
     if [[ "$version_in_use" == "$desired_version" ]]; then
       should_install_containerd=false
     fi
-    
+
     if [[ "$should_install_containerd" == true ]]; then
-    
+
     {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
       {{- $centosVersion := toString $key }}
       if bb-is-centos-version? {{ $centosVersion }} ; then
         containerd_tag="{{- index $.images.registrypackages (printf "containerdCentos%s" ($value.containerd.desiredVersion | replace "containerd.io-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
       fi
     {{- end }}
-    
+
       crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
-    
+
       bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}"
     fi
-    
+
     # Upgrade containerd-flant-edition if needed
     containerd_fe_tag="{{ index .images.registrypackages "containerdFe1511" | toString }}"
     if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
       systemctl stop containerd.service
       bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
-    
+
       mkdir -p /etc/systemd/system/containerd.service.d
       bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF
     [Service]
@@ -985,12 +985,12 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-    
+
     bb-event-on 'bb-sync-file-changed' '_on_containerd_config_changed'
     _on_containerd_config_changed() {
       systemctl restart containerd.service
     }
-    
+
       {{- $max_concurrent_downloads := 3 }}
       {{- $sandbox_image := "registry.k8s.io/pause:3.2" }}
       {{- if .images }}
@@ -998,13 +998,13 @@ spec:
           {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
         {{- end }}
       {{- end }}
-    
+
     systemd_cgroup=true
     # Overriding cgroup type from external config file
     if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_config)" == "cgroupfs" ]; then
       systemd_cgroup=false
     fi
-    
+
     # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
     bb-sync-file /etc/containerd/config.toml - << EOF
     version = 2
@@ -1152,7 +1152,7 @@ spec:
         base_image_size = ""
         async_remove = false
     EOF
-    
+
     bb-sync-file /etc/crictl.yaml - << "EOF"
     runtime-endpoint: unix:/var/run/containerd/containerd.sock
     image-endpoint: unix:/var/run/containerd/containerd.sock
@@ -1220,7 +1220,7 @@ And check the logs:
 
 ```shell
 $ kubectl logs job/nvidia-cuda-test
-Fri May  6 07:45:37 2022       
+Fri May  6 07:45:37 2022
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
 |-------------------------------+----------------------+----------------------+
@@ -1232,7 +1232,7 @@ Fri May  6 07:45:37 2022
 | N/A   32C    P0    22W / 300W |      0MiB / 32510MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
-                                                                               
+
 +-----------------------------------------------------------------------------+
 | Processes:                                                                  |
 |  GPU   GI   CI        PID   Type   Process name                  GPU Memory |

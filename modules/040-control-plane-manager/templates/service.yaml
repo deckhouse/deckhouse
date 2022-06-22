@@ -14,6 +14,9 @@ metadata:
       {{- end }}
     {{- end }}
 spec:
+  externalTrafficPolicy: Local
+  # must be changed if NodePort range is changed via "--service-node-port-range"
+  healthCheckNodePort: 32767
   type: LoadBalancer
     {{- if .Values.controlPlaneManager.apiserver.loadBalancer.sourceRanges }}
   loadBalancerSourceRanges:
