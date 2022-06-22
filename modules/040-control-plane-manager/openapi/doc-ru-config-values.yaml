@@ -127,7 +127,7 @@ properties:
     properties:
       maxDbSize:
         description: |
-          (quota-backend-bytes)[https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit] параметр.
+          [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) параметр.
           Deckhouse автоматически управляет `quota-backend-bytes` параметром.
           Если параметр `maxDbSize` установлен, то Deckhouse будет использовать это значение для параметра `quota-backend-bytes` etcd.
 
