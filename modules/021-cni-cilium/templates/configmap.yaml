@@ -84,7 +84,7 @@ data:
   bpf-policy-map-max: "65536"
 
   # Local hubble sever section
-{{- if has .Values.global.enabledModules "cilium-hubble" }}
+{{- if has "cilium-hubble" .Values.global.enabledModules }}
   enable-hubble: "true"
 {{- else }}
   enable-hubble: "false"
