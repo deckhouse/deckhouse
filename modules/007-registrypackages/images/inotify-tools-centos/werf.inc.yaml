@@ -15,7 +15,7 @@ import:
   before: setup
 docker:
   LABEL:
-    maintainer: Deckhouse maintainers https://deckhouse.io/
+    maintainer: "Deckhouse maintainers https://deckhouse.io"
     distro: centos
     version: {{ $centos_version }}
     inotify-tools: {{ index $version $centos_version }}

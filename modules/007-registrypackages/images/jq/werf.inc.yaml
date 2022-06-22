@@ -14,7 +14,7 @@ import:
   before: setup
 docker:
   LABEL:
-    maintainer: Deckhouse maintainers https://deckhouse.io/
+    maintainer: "Deckhouse maintainers https://deckhouse.io"
     distro: all
     version: all
     jq: {{ $version }}
