@@ -50,7 +50,7 @@ The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/119
 - back up your files:
 
   ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
+  cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
   ```
 
 - increase the `quota-backend-bytes` parameter in the `~/etcd.yaml` manifest, if necessary;
@@ -104,19 +104,19 @@ Do the following:
 - back up your files:
 
   ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
+  cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
   ```
 
 - delete the data directory:
 
   ```shell
-  rm -rf /var/lib/etcd/
+  rm -rf /var/lib/etcd/member/
   ```
 
 - restore the etcd database:
 
   ```shell
-  ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+  ETCDCTL_API=3 etcdctl snapshot restore /var/lib/deckhouse-etcd-backup/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check
   ```
 
@@ -160,13 +160,13 @@ Follow these steps to restore from a backup:
 - back up your files:
 
   ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
+  cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
   ```
 
 - delete the data directory:
 
   ```shell
-  rm -rf /var/lib/etcd/
+  rm -rf /var/lib/etcd/member/
   ```
 
 - restore the etcd database:
@@ -206,13 +206,13 @@ To turn them into cluster members, do the following on those nodes:
 - back up your files:
 
   ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
+  cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
   ```
 
 - delete the data directory:
 
   ```shell
-  rm -rf /var/lib/etcd/
+  rm -rf /var/lib/etcd/member/
   ```
 
 Switch to the running cluster and restart the `d8-control-plane-manager` DaemonSet:
@@ -230,7 +230,7 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-### Complete data loss and recovery from a backup
+### Complete data loss or recovery to previous state from a backup
 
 If there is a complete loss of data, perform the following steps on all nodes of the etcd cluster:
 - stop etcd:
@@ -242,19 +242,22 @@ If there is a complete loss of data, perform the following steps on all nodes of
 - back up your files:
 
   ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
+  cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
   ```
 
 - delete the data directory:
 
   ```shell
-  rm -rf /var/lib/etcd/
+  rm -rf /var/lib/etcd/member/
   ```
 
 Select any node and do the following:
 - upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server);
-- restore the etcd database: `ETCDCTL_API=3 etcdctl snapshot restore BACKUP_FILE --cacert /etc/kubernetes/pki/etcd/ca.crt \
-  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`
+- restore the etcd database: 
+  ```shell
+  ETCDCTL_API=3 etcdctl snapshot restore BACKUP_FILE --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd`
+  ```
 - add the `--force-new-cluster` flag to the `~/etcd.yaml` manifest;
 - try to run etcd:
 

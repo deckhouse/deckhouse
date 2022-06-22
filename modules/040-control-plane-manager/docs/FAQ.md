@@ -265,10 +265,19 @@ Login into any control-plane node with `root` user and use next script:
 
 ```bash
 for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | jq -r '.items[].metadata.name'); do
-  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/etcd-backup' && \
-  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'cat /tmp/etcd-backup' > "etc-backup.snapshot" && \
-  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'rm /tmp/etcd-backup' && \
-  break
+  kubectl -n kube-system exec "etcd-$node_name" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/etcd-backup' && \
+  kubectl -n kube-system exec "etcd-$node_name" -- sha256sum /tmp/etcd-backup | cut -f 1 -d" " | xargs echo -n > etc-backup.snapshot.shasum && \
+  kubectl -n kube-system exec "etcd-$node_name" -- cat /tmp/etcd-backup > etc-backup.snapshot && \
+  kubectl -n kube-system exec "etcd-$node_name" -- rm /tmp/etcd-backup
+  if [ "$?" != 0 ]; then
+    echo "Backup failed"
+    continue
+  fi 
+  if [ "$(cat etc-backup.snapshot.shasum)" == "$(sha256sum etc-backup.snapshot | cut -f 1 -d' ')" ]; then
+    break
+  else
+    echo "Backup failed"
+  fi
 done
 ```
 In the current directory etcd snapshot file `etc-backup.snapshot` will be created from one of control-plane node.
