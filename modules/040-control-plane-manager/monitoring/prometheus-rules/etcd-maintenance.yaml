@@ -1,7 +1,7 @@
 - name: d8.etcd-maintenance.quota-backend-bytes
   rules:
     - alert: D8KubeEtcdDatabaseSizeCloseToTheLimit
-      expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= max(d8_etcd_quota_backend_total) * 0.9
+      expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= scalar(max(d8_etcd_quota_backend_total) * 0.9)
       labels:
         severity_level: "6"
         tier: cluster
