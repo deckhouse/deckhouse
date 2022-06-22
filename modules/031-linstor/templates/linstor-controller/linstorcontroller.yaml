@@ -62,6 +62,7 @@ spec:
     Autoplacer/Weights/MaxThroughput: "0"
   logLevel: info
   httpBindAddress: "127.0.0.1"
+  httpsBindAddress: "0.0.0.0"
   sidecars:
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 4 }}
