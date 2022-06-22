@@ -46,7 +46,7 @@ properties:
         type: string
       webhookServerKey:
         type: string
-      crds:
+      crds: &crds
         type: array
         items:
           type: object
@@ -116,6 +116,7 @@ properties:
                         type: string
                         minLength: 1
         default: []
+      multitenancyCRDs: *crds
     x-examples:
     - webhookServerCrt: certificatestring
       webhookServerKey: keystring

@@ -21,7 +21,7 @@ function __config__(){
 configVersion: v1
 kubernetesValidating:
 - name: d8-authz-multitenancy.deckhouse.io
-  includeSnapshotsFrom: ["d8-authz-webhook-cm"]
+  includeSnapshotsFrom: ["d8-authz-multitenancy"]
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
@@ -29,7 +29,7 @@ kubernetesValidating:
     resources:   ["clusterauthorizationrules"]
     scope:       "Cluster"
 kubernetes:
-- name: d8-authz-webhook-cm
+- name: d8-authz-multitenancy
   apiVersion: v1
   kind: ConfigMap
   executeHookOnEvent: []
@@ -37,7 +37,7 @@ kubernetes:
   keepFullObjectsInMemory: false
   nameSelector:
     matchNames:
-    - user-authz-webhook
+    - d8-multitenancy
   namespace:
     nameSelector:
       matchNames: ["d8-user-authz"]
@@ -45,13 +45,13 @@ EOF
 }
 
 # This hook checks MultiTenancy flag for user-authz module
-# if flag is enabled - CM: user-authz-webhook is exists and we just exit
+# if flag is enabled - CM: d8-user-auth-multitenancy is exists and we just exit
 # if flag is disabled - we check CR ClusterAuthorizationRule for 'allowAccessToSystemNamespaces' or 'limitNamespaces'
 #   if any of those exists - disallow creation because of MultiTenancy
 
 function __main__() {
   # don't check ClusterAuthorizationRule if MultiTenancy is enabled
-  enableMultiTenancy=$(context::jq -r '.snapshots.["d8-authz-webhook-cm"] | length > 0')
+  enableMultiTenancy=$(context::jq -r '.snapshots.["d8-authz-multitenancy"] | length > 0')
   if [[ "$enableMultiTenancy" == "true" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}

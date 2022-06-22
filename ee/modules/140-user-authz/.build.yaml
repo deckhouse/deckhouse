@@ -1,1 +1,3 @@
-templates/webhook
+templates/*.yaml
+hooks/*.go
+hooks/internal/*.go

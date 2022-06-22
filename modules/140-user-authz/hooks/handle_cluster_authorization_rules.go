@@ -47,6 +47,14 @@ func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hoo
 		return nil, err
 	}
 
+	if _, ok := spec["allowAccessToSystemNamespaces"]; ok {
+		return nil, nil
+	}
+
+	if _, ok := spec["limitNamespaces"]; ok {
+		return nil, nil
+	}
+
 	car.Spec = spec
 	return car, nil
 }
@@ -65,13 +73,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func clusterAuthorizationRulesHandler(input *go_hook.HookInput) error {
 	snapshots := input.Snapshots[carSnapshot]
-	ccrs := make([]ClusterAuthorizationRule, 0, len(snapshots))
+	crds := make([]ClusterAuthorizationRule, 0)
+
 	for _, snapshot := range snapshots {
+		if snapshot == nil {
+			continue
+		}
 		ccr := snapshot.(*ClusterAuthorizationRule)
-		ccrs = append(ccrs, *ccr)
+		crds = append(crds, *ccr)
 	}
 
-	input.Values.Set("userAuthz.internal.crds", ccrs)
+	input.Values.Set("userAuthz.internal.crds", crds)
 
 	return nil
 }

@@ -119,8 +119,176 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/140-user-authz/templates/webhook
-  to: /deckhouse/modules/140-user-authz/templates/webhook
+- add: /ee/modules/140-user-authz/templates/multi-cluster-role-bindings.yaml
+  to: /deckhouse/modules/140-user-authz/templates/multi-cluster-role-bindings.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - packer
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/140-user-authz/templates/multi-cluster-roles.yaml
+  to: /deckhouse/modules/140-user-authz/templates/multi-cluster-roles.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - packer
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/140-user-authz/templates/multi-role-bindings.yaml
+  to: /deckhouse/modules/140-user-authz/templates/multi-role-bindings.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - packer
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/140-user-authz/templates/multitenancy.yaml
+  to: /deckhouse/modules/140-user-authz/templates/multitenancy.yaml
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - packer
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/140-user-authz/hooks/common_test.go
+  to: /deckhouse/modules/140-user-authz/hooks/common_test.go
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - packer
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/140-user-authz/hooks/multi_handle_rules.go
+  to: /deckhouse/modules/140-user-authz/hooks/multi_handle_rules.go
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - packer
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/140-user-authz/hooks/multi_handle_rules_test.go
+  to: /deckhouse/modules/140-user-authz/hooks/multi_handle_rules_test.go
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - packer
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/140-user-authz/hooks/internal/cluster_auth_rule.go
+  to: /deckhouse/modules/140-user-authz/hooks/internal/cluster_auth_rule.go
   excludePaths:
     - images
     - templates

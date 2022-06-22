@@ -1,0 +1,58 @@
+{{- range $crd := .Values.userAuthz.internal.multitenancyCRDs }}
+{{- if $crd.spec.limitNamespaces }}
+{{- if gt (len $crd.spec.limitNamespaces) 0 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:role:ns:editor:{{ $crd.name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "multitenancy" "true")) | nindent 2 }}
+rules:
+  - verbs:
+      - get
+      - delete
+      - deletecollection
+      - patch
+      - update
+    apiGroups:
+      - ""
+    resources:
+      - namespaces
+    resourceNames:
+    {{- range $crd.spec.limitNamespaces }}
+      - {{ . }}
+    {{- end }}
+{{- end }} # end len if
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:role:ns:reader
+  {{- include "helm_lib_module_labels" (list $ (dict "multitenancy" "true")) | nindent 2 }}
+rules:
+  - verbs:
+      - get
+      - list
+      - watch
+    apiGroups:
+      - ""
+    resources:
+      - namespaces
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:role:ns:creator
+  {{- include "helm_lib_module_labels" (list $ (dict "multitenancy" "true")) | nindent 2 }}
+rules:
+  - verbs:
+      - get
+      - list
+      - watch
+      - create
+    apiGroups:
+      - ""
+    resources:
+      - namespaces
+{{- end }}
