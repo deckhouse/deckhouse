@@ -24,7 +24,7 @@ import:
   before: setup
 docker:
   LABEL:
-    maintainer: "Deckhouse"
+    maintainer: '"Deckhouse maintainers https://deckhouse.io"'
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

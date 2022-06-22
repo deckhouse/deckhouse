@@ -18,7 +18,7 @@ import:
   before: setup
 docker:
   LABEL:
-    maintainer: "Deckhouse"
+    maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: centos
     version: all
     kubeadm: {{ printf "%s.%s" $version $patch }}
