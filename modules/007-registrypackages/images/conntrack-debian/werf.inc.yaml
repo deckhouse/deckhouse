@@ -12,6 +12,12 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    maintainer: Deckhouse maintainers https://deckhouse.io/
+    distro: debian
+    version: all
+    conntrack: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}
@@ -26,3 +32,4 @@ shell:
   - apk add --no-cache curl
   setup:
   - curl -sfL "http://ftp.debian.org/debian/pool/main/c/conntrack-tools/conntrack_{{ $version }}_amd64.deb" --output /conntrack_amd64.deb
+

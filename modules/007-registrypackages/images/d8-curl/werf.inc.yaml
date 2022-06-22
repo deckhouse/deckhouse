@@ -12,6 +12,12 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    maintainer: Deckhouse maintainers https://deckhouse.io/
+    distro: all
+    version: all
+    curl: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

@@ -17,6 +17,12 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    maintainer: Deckhouse maintainers https://deckhouse.io/
+    distro: centos
+    version: all
+    kubernetes-cni: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}
