@@ -33,7 +33,7 @@ Notes:
 {% offtopic title="I am using Windows..." %}
 If you are running the installer in Windows, then you need to change the installation command provided above as follows:
 - Replace the `$PWD` expression in the `docker run` command with the path to the folder where you saved the configuration files. E.g.: `docker run ... -v "c:\deckhouse\config.yml:/config" ...`.
-- Specify the path to the folder with SSH keys to access the master node in the `docker run` command instead of the `-v "$HOME/.ssh/:/tmp/.ssh/"` parameter. E.g.: `docker run ... -v "c:\User\John.Dow\.ssh\:/tmp/.ssh/"`.
+- Specify the path to the folder with SSH keys to access the master node in the `docker run` command instead of the `-v "$HOME/.ssh/:/tmp/.ssh/"` parameter. E.g.: `docker run ... -v "c:\Users\John.Dow\.ssh\:/tmp/.ssh/"`.
 {% endofftopic %}
 
 Now, to initiate the process of installation, you need to execute inside the container:

@@ -33,7 +33,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {% offtopic title="У меня Windows..." %}
 Если вы запускаете инсталлятор под Windows, то вам необходимо изменить приведенную выше команду установки следующим образом:
 - Замените выражение `$PWD` в параметрах команды `docker run` на путь к папке, где вы сохранили файлы конфигурации. Например: `docker run ... -v "c:\deckhouse\config.yml:/config" ...`.
-- Укажите путь к папке с SSH-ключами доступа на master-узел в параметре команды `docker run` вместо параметра `-v "$HOME/.ssh/:/tmp/.ssh/"`. Например: `docker run ... -v "c:\User\John.Dow\.ssh\:/tmp/.ssh/"`.
+- Укажите путь к папке с SSH-ключами доступа на master-узел в параметре команды `docker run` вместо параметра `-v "$HOME/.ssh/:/tmp/.ssh/"`. Например: `docker run ... -v "c:\Users\John.Dow\.ssh\:/tmp/.ssh/"`.
 {% endofftopic %}
 
 Внутри контейнера выполните команду:
