@@ -108,6 +108,21 @@ type deckhousePodInfo struct {
 	Ready     bool   `json:"ready"`
 }
 
+func (dpi deckhousePodInfo) isBootstrapImage() bool {
+	arr := strings.Split(dpi.Image, ":")
+	if len(arr) != 2 {
+		return false
+	}
+
+	switch strings.ToLower(arr[1]) {
+	case "alpha", "beta", "early-access", "stable", "rock-solid":
+		return true
+
+	default:
+		return false
+	}
+}
+
 const (
 	metricReleasesGroup = "d8_releases"
 	metricUpdatingGroup = "d8_updating"
@@ -139,7 +154,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// initialize updater
 	approvalMode := input.Values.Get("deckhouse.update.mode").String()
-	updater := newDeckhouseUpdater(approvalMode, deckhousePod.Ready)
+	updater := newDeckhouseUpdater(approvalMode, deckhousePod.Ready, deckhousePod.isBootstrapImage())
 
 	// fetch releases from snapshot and patch initial statuses
 	updater.FetchAndPrepareReleases(input)
@@ -349,7 +364,8 @@ type deckhouseUpdater struct {
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
 
-	deckhousePodIsReady bool
+	deckhousePodIsReady      bool
+	deckhouseIsBootstrapping bool
 }
 type deckhouseRelease struct {
 	Name    string
@@ -366,7 +382,7 @@ type deckhouseRelease struct {
 	Phase          string
 }
 
-func newDeckhouseUpdater(mode string, podIsReady bool) *deckhouseUpdater {
+func newDeckhouseUpdater(mode string, podIsReady, isBootstrapping bool) *deckhouseUpdater {
 	return &deckhouseUpdater{
 		now:                         time.Now().UTC(),
 		inManualMode:                mode == "Manual",
@@ -375,6 +391,7 @@ func newDeckhouseUpdater(mode string, podIsReady bool) *deckhouseUpdater {
 		forcedReleaseIndex:          -1,
 		skippedPatcheIndexes:        make([]int, 0),
 		deckhousePodIsReady:         podIsReady,
+		deckhouseIsBootstrapping:    isBootstrapping,
 	}
 }
 
@@ -394,6 +411,13 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 
 	if du.currentDeployedReleaseIndex != -1 {
 		currentRelease = &(du.releases[du.currentDeployedReleaseIndex])
+	}
+
+	// if deckhouse pod has bootstrap image -> apply first release
+	// doesn't matter which is update mode
+	if du.deckhouseIsBootstrapping && len(du.releases) == 1 {
+		du.runReleaseDeploy(input, predictedRelease, currentRelease)
+		return
 	}
 
 	// check: Deckhouse pod is ready. Ignore patch releases
