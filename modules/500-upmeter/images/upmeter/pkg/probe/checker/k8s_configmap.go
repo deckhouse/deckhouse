@@ -17,7 +17,6 @@ limitations under the License.
 package checker
 
 import (
-	"fmt"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -57,10 +56,6 @@ type configMapLifecycleChecker struct {
 
 	// inner state
 	checker check.Checker
-}
-
-func (c *configMapLifecycleChecker) BusyWith() string {
-	return c.checker.BusyWith()
 }
 
 func (c *configMapLifecycleChecker) Check() check.Error {
@@ -119,10 +114,6 @@ type configMapCreationChecker struct {
 	configMap *v1.ConfigMap
 }
 
-func (c *configMapCreationChecker) BusyWith() string {
-	return fmt.Sprintf("creating configmap %s/%s", c.namespace, c.configMap.Name)
-}
-
 func (c *configMapCreationChecker) Check() check.Error {
 	client := c.access.Kubernetes()
 
@@ -138,10 +129,6 @@ type configMapDeletionChecker struct {
 	access    kubernetes.Access
 	configMap *v1.ConfigMap
 	namespace string
-}
-
-func (c *configMapDeletionChecker) BusyWith() string {
-	return fmt.Sprintf("deleting configmap %s/%s", c.namespace, c.configMap.Name)
 }
 
 func (c *configMapDeletionChecker) Check() check.Error {

@@ -35,10 +35,6 @@ type objectIsNotListedChecker struct {
 	listOpts  *metav1.ListOptions
 }
 
-func (c *objectIsNotListedChecker) BusyWith() string {
-	return fmt.Sprintf("tracking object deletion %s/%s %s", c.namespace, c.kind, c.listOpts)
-}
-
 func (c *objectIsNotListedChecker) Check() check.Error {
 	list, err := listObjects(c.access.Kubernetes(), c.kind, c.namespace, *c.listOpts)
 	if err != nil {

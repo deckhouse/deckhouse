@@ -17,7 +17,6 @@ limitations under the License.
 package checker
 
 import (
-	"fmt"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -73,10 +72,6 @@ type podLifecycleChecker struct {
 	checker check.Checker
 }
 
-func (c *podLifecycleChecker) BusyWith() string {
-	return c.checker.BusyWith()
-}
-
 func (c *podLifecycleChecker) Check() check.Error {
 	pod := createPodObject(c.node, c.access.SchedulerProbeImage())
 	c.checker = c.new(pod)
@@ -129,10 +124,6 @@ type podCreationChecker struct {
 	pod       *v1.Pod
 }
 
-func (c *podCreationChecker) BusyWith() string {
-	return fmt.Sprintf("creating pod %s/%s", c.namespace, c.pod.Name)
-}
-
 func (c *podCreationChecker) Check() check.Error {
 	_, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).Create(c.pod)
 	if err != nil {
@@ -145,10 +136,6 @@ type podScheduledChecker struct {
 	access    kubernetes.Access
 	namespace string
 	listOpts  *metav1.ListOptions
-}
-
-func (c *podScheduledChecker) BusyWith() string {
-	return fmt.Sprintf("looking for scheduled pod ns=%s listOpts=%s", c.namespace, c.listOpts)
 }
 
 func (c *podScheduledChecker) Check() check.Error {
@@ -180,10 +167,6 @@ type pendingPodChecker struct {
 	listOpts  *metav1.ListOptions
 }
 
-func (c *pendingPodChecker) BusyWith() string {
-	return fmt.Sprintf("looking for pending pod ns=%s listOpts=%s", c.namespace, c.listOpts)
-}
-
 func (c *pendingPodChecker) Check() check.Error {
 	client := c.access.Kubernetes()
 
@@ -205,10 +188,6 @@ type podDeletionChecker struct {
 	access    kubernetes.Access
 	namespace string
 	listOpts  *metav1.ListOptions
-}
-
-func (c *podDeletionChecker) BusyWith() string {
-	return fmt.Sprintf("deleting pod ns=%s listOpts=%s", c.namespace, c.listOpts)
 }
 
 func (c *podDeletionChecker) Check() check.Error {
@@ -329,10 +308,6 @@ func (c *podReadinessChecker) Check() check.Error {
 	return check.ErrFail("no ready pods found %s,%s", c.namespace, c.labelSelector)
 }
 
-func (c *podReadinessChecker) BusyWith() string {
-	return fmt.Sprintf("getting pods to check at least one is ready %s,%s", c.namespace, c.labelSelector)
-}
-
 // podRunningOrReadyChecker checks that there is a pod in Ready condition in reasonable time.
 //   - if pod is running, but not ready in the `readinessTimeout` time, the check status is considered unknown.
 //   - if pod is running, but not ready in `readinessTimeout` or more, the check status is considered failed.
@@ -370,10 +345,6 @@ func (c *podRunningOrReadyChecker) Check() check.Error {
 		cherr = err
 	}
 	return cherr
-}
-
-func (c *podRunningOrReadyChecker) BusyWith() string {
-	return fmt.Sprintf("getting pods to check if they are running or ready %s,%s", c.namespace, c.labelSelector)
 }
 
 func isPodRunning(pod *v1.Pod) bool {

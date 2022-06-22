@@ -31,6 +31,7 @@ func Test_newProbeLister(t *testing.T) {
 	allProbesSorted := []check.ProbeRef{
 		{Group: "control-plane", Probe: "apiserver"},
 		{Group: "control-plane", Probe: "basic-functionality"},
+		{Group: "control-plane", Probe: "cert-manager"},
 		{Group: "control-plane", Probe: "controller-manager"},
 		{Group: "control-plane", Probe: "namespace"},
 		{Group: "control-plane", Probe: "scheduler"},

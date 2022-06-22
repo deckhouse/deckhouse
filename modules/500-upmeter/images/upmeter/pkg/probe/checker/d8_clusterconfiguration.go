@@ -237,10 +237,6 @@ func (c *setInitedValueChecker) create(value string) check.Error {
 	return nil
 }
 
-func (c *setInitedValueChecker) BusyWith() string {
-	return "setting inited value in object upmeterhookprobe.deckhouse.io/" + c.name
-}
-
 type hookProbeObjectGetter interface {
 	Get() *v1.HookProbe
 }
@@ -268,8 +264,4 @@ func (c *checkMirrorValueChecker) Check() check.Error {
 		)
 	}
 	return nil
-}
-
-func (c *checkMirrorValueChecker) BusyWith() string {
-	return "checking values in object upmeterhookprobe.deckhouse.io/" + c.name
 }

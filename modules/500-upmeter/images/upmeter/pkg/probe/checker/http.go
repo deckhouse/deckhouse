@@ -52,15 +52,6 @@ func (c *httpChecker) Check() check.Error {
 	return c.verifier.Verify(body)
 }
 
-func (c *httpChecker) BusyWith() string {
-	// It might feel that here we can be caught by a race condition.
-	// But in normal case request is always created before timeout message is used.
-	if c.req == nil {
-		return "(request not ready)"
-	}
-	return c.req.URL.String()
-}
-
 // httpVerifier defines HTTP request and body verification for an HTTP endpoint check
 type httpVerifier interface {
 	// Request to endpoint

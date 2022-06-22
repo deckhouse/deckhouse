@@ -38,6 +38,10 @@ rules:
   - apiGroups: [ "apps" ]
     resources: [ "daemonsets" ]
     verbs: [ "get" ]
+  # Cert-manager basic probe checking for secret creation
+  - apiGroups: [ "cert-manager.io" ]
+    resources: [ "certificates" ]
+    verbs: [ "create", "delete" ]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

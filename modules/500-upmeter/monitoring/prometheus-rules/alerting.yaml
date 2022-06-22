@@ -432,3 +432,48 @@
           These PVs have no valuable data on them an should be deleted.
 
           The list of PVs: `kubectl get pv | grep disk-smoke-mini`.
+
+- name: d8.upmeter.resources
+  rules:
+    - alert: D8UpmeterProbeGarbageSecretsByCertManager
+      expr: |
+        (
+          count (kube_secret_info{namespace="d8-upmeter", secret=~"upmeter-cm-probe.*"})
+          /
+          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+        ) >= 2
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse"
+        plk_labels_as_annotations: "secret"
+        summary: Garbage produced by cert-manager probe is not being cleaned.
+        description: |
+          Probe secrets found.
+
+          Upmeter agents should clean certificates, and thus secrets produced by cert-manager should clean, too.
+          There should not be more secrets than master nodes (upmeter-agent is a DaemonSet with master nodeSelector).
+          Also, they should be deleted within seconds.
+
+          This might be an indication of a problem with kube-apiserver, or cert-manager, or upmeter itself.
+          It is also possible, that the secrets were left by old upmeter-agent pods due to Upmeter update.
+
+          1. Check upmeter-agent logs
+
+          `kubectl -n d8-upmeter logs ds/upmeter-agent | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'`
+
+          2. Check that control plane and cert-manager are functional.
+
+          3. Delete certificates manually, and secrets, if needed:
+
+          ```
+          kubectl -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
+          kubectl -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- kubectl -n d8-upmeter delete secret
+          ```

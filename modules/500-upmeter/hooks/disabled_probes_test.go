@@ -497,6 +497,19 @@ func Test_calcDisabledProbes(t *testing.T) {
 			expectNotDisabled: set.New("extensions/prometheus-longterm"),
 		},
 
+		// certManager -> control-plane/cert-manager
+		{
+			name:           "control-plane/cert-manager off",
+			expectDisabled: set.New("control-plane/cert-manager"),
+		},
+		{
+			name: "control-plane/cert-manager on",
+			args: args{
+				enabledModules: set.New("cert-manager"),
+			},
+			expectNotDisabled: set.New("control-plane/cert-manager"),
+		},
+
 		// Manually disabled probes are preserved
 		{
 			name: "manually disabled extensions/prometheus-longterm",

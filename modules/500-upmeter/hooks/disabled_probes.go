@@ -113,10 +113,16 @@ func calcDisabledProbes(presence appPresence, enabledModules, disabledManually s
 	disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes)
 	disableExtensionsProbes(presence, enabledModules, disabledProbes)
 	disableLoadBalancingProbes(presence, enabledModules, disabledProbes)
+	disableControlPlaneProbes(enabledModules, disabledProbes)
 
 	return disabledProbes
 }
 
+func disableControlPlaneProbes(enabledModules, disabledProbes set.Set) {
+	if !enabledModules.Has("cert-manager") {
+		disabledProbes.Add("control-plane/cert-manager")
+	}
+}
 func disableSyntheticProbes(presence appPresence, disabledProbes set.Set) {
 	if !presence.smokeMini {
 		disabledProbes.Add("synthetic/")

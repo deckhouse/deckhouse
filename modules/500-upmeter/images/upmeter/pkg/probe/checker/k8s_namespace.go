@@ -17,7 +17,6 @@ limitations under the License.
 package checker
 
 import (
-	"fmt"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -57,10 +56,6 @@ type namespaceLifeCycleChecker struct {
 
 	// inner state
 	checker check.Checker
-}
-
-func (c *namespaceLifeCycleChecker) BusyWith() string {
-	return c.checker.BusyWith()
 }
 
 func (c *namespaceLifeCycleChecker) Check() check.Error {
@@ -114,10 +109,6 @@ type namespaceCreationChecker struct {
 	namespace *v1.Namespace
 }
 
-func (c *namespaceCreationChecker) BusyWith() string {
-	return fmt.Sprintf("creating namespace %q", c.namespace.GetName())
-}
-
 func (c *namespaceCreationChecker) Check() check.Error {
 	client := c.access.Kubernetes()
 	_, err := client.CoreV1().Namespaces().Create(c.namespace)
@@ -131,10 +122,6 @@ func (c *namespaceCreationChecker) Check() check.Error {
 type namespaceDeletionChecker struct {
 	access    k8s.Access
 	namespace *v1.Namespace
-}
-
-func (c *namespaceDeletionChecker) BusyWith() string {
-	return fmt.Sprintf("deleting namespace %q", c.namespace.GetName())
 }
 
 func (c *namespaceDeletionChecker) Check() check.Error {

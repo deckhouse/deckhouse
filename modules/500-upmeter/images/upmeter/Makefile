@@ -1,5 +1,5 @@
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION=1.45.2
+GOLANGCI_LINT_VERSION=1.46.2
 # https://github.com/mvdan/gofumpt
 GOFUMPT_VERSION=0.3.1
 GOARCH=amd64
@@ -35,6 +35,8 @@ fmt:
 	@# - goimports is not turned on since it is used mostly by gofumpt internally
 	$(GOFUMPT_BIN) -l -w -extra .
 	$(GOLANGCILINT_BIN) run ./... -c .golangci.yaml --fix
+	gci -w -local d8.io/upmeter .
+	goimports -w -local d8.io/upmeter .
 
 test:
 	go test -race ./...
