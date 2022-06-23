@@ -36,6 +36,8 @@ func enableNodeRoutes(input *go_hook.HookInput) error {
 	return nil
 }
 
+// use value from config
+// if not present, enable everywhere except clouds (other than openstack and vsphere)
 func shouldEnableNodeRoutes(input *go_hook.HookInput) bool {
 	// if value is set directly - skip this hook
 	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
@@ -44,14 +46,14 @@ func shouldEnableNodeRoutes(input *go_hook.HookInput) bool {
 	}
 
 	providerRaw, ok := input.Values.GetOk("global.clusterConfiguration.cloud.provider")
-	if !ok {
+	if ok {
+		switch strings.ToLower(providerRaw.String()) {
+		case "openstack", "vsphere":
+			return true
+		}
+
 		return false
 	}
 
-	switch strings.ToLower(providerRaw.String()) {
-	case "openstack", "vsphere":
-		return true
-	}
-
-	return false
+	return true
 }
