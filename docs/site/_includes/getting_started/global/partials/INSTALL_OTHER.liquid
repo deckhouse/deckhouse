@@ -1,28 +1,93 @@
 {% assign revision=include.revision %}
 
 Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing the master nodes{% endif %}.
-{%- if page.platform_code == 'bm-private' %} Log in on the **[personal computer](step2.html#installation-process)** to the container image registry you specified in the previous step, then run:
-{%- else %} Run on the macOS or Linux **[personal computer](step2.html#installation-process)**:{% endif %}
+{% if page.platform_code == 'bm-private' %}
+Log in on the **[personal computer](step2.html#installation-process)** to the container image registry you specified in the previous step.
+{%- endif %}
+
+Run the installer on the **[personal computer](step2.html#installation-process)**.
 
 {%- if revision == 'ee' %}
-{% snippetcut selector="docker-login" %}
-```text
+
+<a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
+  Linux / macOS
+</a>
+<a id='tab_installer_windows_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }}"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_windows_{{ revision }}');" >
+  Windows
+</a>
+
+<div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
+<!-- Linux or macOS install, EE -->
+{% snippetcut selector="docker-run" %}
+```shell
  echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
-{% endif %}{% if page.platform_type == "existing" or page.platform_code == "kind" %} -v "$HOME/.kube/config:/kubeconfig" \
-{% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
+  -v "$HOME/.kube/config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} \
+  -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
 ```
 {% endsnippetcut %}
+</div>
+<div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
+<!-- Windows install, EE -->
+Log in on the **[personal computer](step2.html#installation-process)** to the container image registry by providing the license key as a password:
+{% snippetcut selector="docker-login-windows" %}
+```text
+docker login -u license-token registry.deckhouse.io
+```
+{% endsnippetcut %}
+
+Run a container with the installer:
+{% snippetcut selector="docker-run-windows" %}
+```text
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
+{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} -v "%cd%\resources.yml:/resources.yml" -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+```
+{% endsnippetcut %}
+</div>
 {% else %}
-{% snippetcut selector="docker-login-ce" %}
+
+<a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
+  Linux / macOS
+</a>
+<a id='tab_installer_windows_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }}"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_windows_{{ revision }}');" >
+  Windows
+</a>
+
+<div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
+<!-- Linux or macOS install, CE -->
+{% snippetcut selector="docker-run-ce" %}
 ```shell
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
-{% endif %}{% if page.platform_type == "existing" or page.platform_code == "kind" %} -v "$HOME/.kube/config:/kubeconfig" \
-{% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %}
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
+  -v "$HOME/.kube/config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} \
+  -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
 {%- else %} registry.deckhouse.io/deckhouse/ce/install:stable{% endif %} bash
 ```
 {% endsnippetcut %}
+</div>
+<div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
+<!-- Windows install, CE -->
+{% snippetcut selector="docker-run-windows-ce" %}
+```text
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
+{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
+{%- if page.platform_type == "cloud" %} -v "%cd%\resources.yml:/resources.yml" -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
+{%- else %} registry.deckhouse.io/deckhouse/ce/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+```
+{% endsnippetcut %}
+</div>
 {% endif %}
 
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
@@ -30,11 +95,6 @@ Notes:
 - Kubectl configuration file with access to Kubernetes API must be mount as the /kubeconfig file in the container.
 {% endif %}
 
-{% offtopic title="I am using Windows..." %}
-If you are running the installer in Windows, then you need to change the installation command provided above as follows:
-- Replace the `$PWD` expression in the `docker run` command with the path to the folder where you saved the configuration files. E.g.: `docker run ... -v "c:\deckhouse\config.yml:/config" ...`.
-- Specify the path to the folder with SSH keys to access the master node in the `docker run` command instead of the `-v "$HOME/.ssh/:/tmp/.ssh/"` parameter. E.g.: `docker run ... -v "c:\Users\John.Dow\.ssh\:/tmp/.ssh/"`.
-{% endofftopic %}
 
 Now, to initiate the process of installation, you need to execute inside the container:
 
