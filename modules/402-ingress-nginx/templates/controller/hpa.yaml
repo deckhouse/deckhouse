@@ -52,6 +52,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
 spec:
   replicas: {{ $crd.spec.minReplicas }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: hpa-scaler

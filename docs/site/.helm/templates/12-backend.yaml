@@ -10,7 +10,7 @@ metadata:
     service: backend
 spec:
   minReadySeconds: 5
-  revisionHistoryLimit: 5
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       service: backend
