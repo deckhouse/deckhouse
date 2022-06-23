@@ -29,6 +29,9 @@ import:
 docker:
   LABEL:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
+    distro: centos
+    version: {{ $key }}
+    containerd: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}
