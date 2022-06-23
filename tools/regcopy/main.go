@@ -38,12 +38,11 @@ USAGE:
 
 1. Compile it using makefile - make bin/regcopy
 2. Copy images by executing `regcopy alpine:3.16.0`
-3.
 */
 
 const (
 	BaseImagesRegistryPathEnv = "BASE_IMAGES_REGISTRY_PATH"
-	DefaultRegistry           = "registry.deckhouse.io/base_images"
+	DefaultRegistry           = "registry-write.deckhouse.io/base_images"
 )
 
 func mutateConfig(base v1.Image) (v1.Image, error) {
@@ -106,6 +105,16 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Printf("sucessfully copied \"%s@%s\" -> \"%s@%s\"", remoteRef.String(), digest, newRef.String(), digest)
+		resultImage, err := remote.Image(newRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		resultDigest, err := resultImage.Digest()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf("sucessfully copied \"%s@%s\" -> \"%s@%s\"", remoteRef.String(), digest, newRef.String(), resultDigest)
 	}
 }
