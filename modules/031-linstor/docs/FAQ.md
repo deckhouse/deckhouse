@@ -63,6 +63,7 @@ Mark a StorageClass as default:
 ```bash
 kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-default-class=true
 ```
+
 ## How to add existing LVM or LVMThin pool?
 
 Example of adding an existing LVM pool:
