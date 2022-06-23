@@ -57,7 +57,7 @@ metadata:
     prometheus.deckhouse.io/path: "/my_app/metrics"           # по умолчанию /metrics
     prometheus.deckhouse.io/query-param-format: "prometheus"  # по умолчанию ''
     prometheus.deckhouse.io/allow-unready-pod: "true"         # по умолчанию Pod'ы НЕ в Ready игнорируются
-    prometheus.deckhouse.io/sample-limit: "5000"              # по умолчанию принимается не больше 1000 метрик от одного Pod'а
+    prometheus.deckhouse.io/sample-limit: "5000"              # по умолчанию принимается не больше 5000 метрик от одного Pod'а
 spec:
   ports:
   - name: my-app
@@ -88,7 +88,7 @@ spec:
         app: my-app
         prometheus.deckhouse.io/custom-target: my-app
       annotations:
-        prometheus.deckhouse.io/sample-limit: "5000"  # по умолчанию принимается не больше 1000 метрик от одного Pod'а
+        prometheus.deckhouse.io/sample-limit: "5000"  # по умолчанию принимается не больше 5000 метрик от одного Pod'а
     spec:
       containers:
       - name: my-app

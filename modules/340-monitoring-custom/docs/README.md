@@ -57,7 +57,7 @@ metadata:
     prometheus.deckhouse.io/path: "/my_app/metrics"           # /metrics by default
     prometheus.deckhouse.io/query-param-format: "prometheus"  # '' by default
     prometheus.deckhouse.io/allow-unready-pod: "true"         # by default, NON-ready Pods are ignored
-    prometheus.deckhouse.io/sample-limit: "5000"              # by default, the sample is limited to 1000 metrics for a single Pod
+    prometheus.deckhouse.io/sample-limit: "5000"              # by default, the sample is limited to 5000 metrics for a single Pod
 spec:
   ports:
   - name: my-app
@@ -88,7 +88,7 @@ spec:
         app: my-app
         prometheus.deckhouse.io/custom-target: my-app
       annotations:
-        prometheus.deckhouse.io/sample-limit: "5000"  # by default, the sample is limited to 1000 metrics for a single Pod
+        prometheus.deckhouse.io/sample-limit: "5000"  # by default, the sample is limited to 5000 metrics for a single Pod
     spec:
       containers:
       - name: my-app
