@@ -109,12 +109,18 @@ type deckhousePodInfo struct {
 }
 
 func (dpi deckhousePodInfo) isBootstrapImage() bool {
-	arr := strings.Split(dpi.Image, ":")
-	if len(arr) != 2 {
+	colonIndex := strings.LastIndex(dpi.Image, ":")
+	if colonIndex == -1 {
 		return false
 	}
 
-	switch strings.ToLower(arr[1]) {
+	tag := dpi.Image[colonIndex+1:]
+
+	if tag == "" {
+		return false
+	}
+
+	switch strings.ToLower(tag) {
 	case "alpha", "beta", "early-access", "stable", "rock-solid":
 		return true
 

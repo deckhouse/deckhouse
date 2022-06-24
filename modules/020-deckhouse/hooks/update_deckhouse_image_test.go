@@ -451,11 +451,11 @@ metadata:
 spec:
   containers:
     - name: deckhouse
-      image: dev-registry.deckhouse.io/sys/deckhouse-oss:alpha
+      image: dev-registry.deckhouse.io:5000/sys/deckhouse-oss:alpha
 status:
   containerStatuses:
     - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
-      imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
+      imageID: dev-registry.deckhouse.io:5000/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
       ready: true
 `
 	deckhouseNotReadyPod = `
