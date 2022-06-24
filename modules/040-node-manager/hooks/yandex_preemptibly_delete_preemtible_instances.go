@@ -95,9 +95,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "machines",
-			ApiVersion: "machine.sapcloud.io/v1alpha1",
-			Kind:       "Machine",
+			Name:                "machines",
+			ExecuteHookOnEvents: go_hook.Bool(false),
+			ApiVersion:          "machine.sapcloud.io/v1alpha1",
+			Kind:                "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-cloud-instance-manager"},
@@ -106,10 +107,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyMachineFilter,
 		},
 		{
-			Name:       "ics",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "YandexInstanceClass",
-			FilterFunc: isPreemptibleFilter,
+			Name:                "ics",
+			ExecuteHookOnEvents: go_hook.Bool(false),
+			ApiVersion:          "deckhouse.io/v1",
+			Kind:                "YandexInstanceClass",
+			FilterFunc:          isPreemptibleFilter,
 		},
 	},
 }, deleteMachines)
@@ -170,8 +172,13 @@ func deleteMachines(input *go_hook.HookInput) error {
 // delete all after 23h mark
 // afterwards delete in 15 minutes increments, no more than batch size
 func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDelete []string) {
-	const durationIterations = 12
-	var slidingDuration = preemtibleVMDeletionDuration - time.Hour
+	const (
+		durationIterations = 12
+		slidingStep        = 15 * time.Minute
+	)
+	var (
+		currentSlidingDuration = preemtibleVMDeletionDuration - time.Hour
+	)
 
 	sort.Slice(machines, func(i, j int) bool {
 		return machines[i].CreationTimestamp.Before(&machines[j].CreationTimestamp)
@@ -189,7 +196,7 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 
 	// short-circuit if there are Machines older than 23 hours
 	for _, m := range machines {
-		if expires(timeNow, m.CreationTimestamp.Time, slidingDuration) {
+		if expires(timeNow, m.CreationTimestamp.Time, currentSlidingDuration) {
 			machinesToDelete = append(machinesToDelete, m.Name)
 			cursor++
 		}
@@ -199,14 +206,14 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 	}
 
 	for t := 0; t < 12; t++ {
-		slidingDuration -= 15 * time.Minute
+		currentSlidingDuration -= slidingStep
 
 		for cursor < machineCount {
 			if len(machinesToDelete) >= batch {
 				break
 			}
 
-			if expires(timeNow, machines[cursor].CreationTimestamp.Time, slidingDuration) {
+			if expires(timeNow, machines[cursor].CreationTimestamp.Time, currentSlidingDuration) {
 				machinesToDelete = append(machinesToDelete, machines[cursor].Name)
 				cursor++
 			} else {
