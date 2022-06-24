@@ -17,6 +17,12 @@
 set -o pipefail
 set -e
 
+# Prevent starting another instance.
+if [[ -n "$DEBUG_UNIX_SOCKET" && -e "$DEBUG_UNIX_SOCKET" ]] ; then
+  echo "deckhouse-controller already started"
+  exit 1
+fi
+
 declare -A bundles_map; bundles_map=( ["Default"]="default" ["Minimal"]="minimal" ["Managed"]="managed" )
 
 bundle=${DECKHOUSE_BUNDLE:-Default}
@@ -34,4 +40,4 @@ EOF
 
 cat ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml >> ${MODULES_DIR}/values.yaml
 
-exec /sbin/tini -- /usr/bin/deckhouse-controller "$@"
+exec /sbin/tini -- /usr/bin/deckhouse-controller start

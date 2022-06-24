@@ -82,7 +82,6 @@ func main() {
 
 	// start main loop
 	startCmd := kpApp.Command("start", "Start deckhouse.").
-		Default().
 		Action(func(c *kingpin.ParseContext) error {
 			// Force separate port for hook metrics.
 			if sh_app.HookMetricsListenPort == "" {
