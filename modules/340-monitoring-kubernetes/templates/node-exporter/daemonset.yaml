@@ -87,10 +87,8 @@ spec:
           mountPath: /var/run/node-exporter-textfile
         - name: dockersock
           mountPath: /var/run/docker.sock
-        - name: containerdsock
-          mountPath: /var/run/containerd/containerd.sock
-        - name: crictl
-          mountPath: /usr/local/bin/crictl
+        - name: containerdconfig
+          mountPath: /var/run/containerd-config.toml
         - name: kube
           mountPath: /root/.kube
         resources:
@@ -140,12 +138,10 @@ spec:
       - name: dockersock
         hostPath:
           path: /var/run/docker.sock
-      - name: containerdsock
+      - name: containerdconfig
         hostPath:
-          path: /var/run/containerd/containerd.sock
-      - name: crictl
-        hostPath:
-          path: /usr/local/bin/crictl
+          path: /etc/containerd/config.toml
+          type: FileOrCreate
       - emptyDir:
           medium: Memory
         name: kube

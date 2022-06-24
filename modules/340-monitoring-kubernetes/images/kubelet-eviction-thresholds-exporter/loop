@@ -30,7 +30,7 @@ runtime_root_dir () {
     curl -sS --unix-sock /var/run/docker.sock http://system/info | jq -re '.DockerRootDir'
     ;;
   containerd)
-    crictl --runtime-endpoint unix:/var/run/containerd/containerd.sock info | jq -r '.config.containerdRootDir'
+    dasel -f /var/run/containerd-config.toml '.root' 2>/dev/null || echo "/var/lib/containerd"
     ;;
   *)
     echo "Unknown container runtime detected: $(runtime). Only \"docker\" and \"containerd\" are supported"
