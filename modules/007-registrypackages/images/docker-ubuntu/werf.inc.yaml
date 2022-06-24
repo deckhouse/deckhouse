@@ -28,7 +28,7 @@ docker:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: ubuntu
   {{- $distroname := regexSplit $image_version "-" -1 | last }}
-  {{- $key, $value := range $ubuntu_versions }}
+  {{- range $key, $value := $ubuntu_versions }}
     {{- if eq $value $distroname }}
     version: {{  $key }}
     {{- end }}

@@ -30,7 +30,7 @@ docker:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: debian
   {{- $distroname := regexSplit $image_version "-" -1 | last }}
-  {{- $key, $value := range $debian_versions }}
+  {{- range $key, $value := $debian_versions }}
     {{- if eq $value $distroname }}
     version: {{  $key }}
     {{- end }}
