@@ -39,7 +39,7 @@ metadata:
 spec:
   minReadySeconds: 15
   revisionHistoryLimit: 2
-  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: snapshot-controller
