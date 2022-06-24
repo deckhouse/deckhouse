@@ -29,8 +29,13 @@ docker:
   LABEL:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: ubuntu
-    version: {{ $key }}
-    containerd: {{ $version }}
+  {{- $distroname := regexSplit $image_version "-" -1 | last }}
+  {{- $key, $value := range $ubuntu_versions }}
+    {{- if eq $value $distroname }}
+    version: {{  $key }}
+    {{- end }}
+  {{- end }}
+    containerd: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

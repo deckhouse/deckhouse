@@ -1,4 +1,5 @@
 {{- $docker_versions := list }}
+{{- $ubuntu_versions := dict "16.04" "xenial" "18.04" "bionic" "20.04" "focal" "22.04" "jammy"}}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- range $key, $versions := $value.bashible.ubuntu }}
     {{- if $versions.docker.desiredVersion }}
@@ -26,7 +27,12 @@ docker:
   LABEL:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: ubuntu
-    version: {{ $key }}
+  {{- $distroname := regexSplit $image_version "-" -1 | last }}
+  {{- $key, $value := range $ubuntu_versions }}
+    {{- if eq $value $distroname }}
+    version: {{  $key }}
+    {{- end }}
+  {{- end }}
     docker: {{ $version }}
     docker-cli: {{ $version }}
 ---

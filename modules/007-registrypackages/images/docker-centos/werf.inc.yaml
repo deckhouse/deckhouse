@@ -26,9 +26,13 @@ docker:
   LABEL:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: centos
-    version: {{ $key }}
-    docker: {{ $version }}
-    docker-cli: {{ $version }}
+  {{- if contains "el7" $image_version }}
+    version: 7
+  {{- else if contains "el8" $image_version }}
+    version: 8
+  {{- end }}
+    docker: {{ $image_version }}
+    docker-cli: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

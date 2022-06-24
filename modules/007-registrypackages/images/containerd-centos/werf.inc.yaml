@@ -30,8 +30,14 @@ docker:
   LABEL:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: centos
-    version: {{ $key }}
-    containerd: {{ $version }}
+  {{- if contains "el7" $image_version }}
+    version: 7
+    containerd-selinux: "2.119.2-1.911c772"
+  {{- else if contains "el8" $image_version }}
+    version: 8
+    containerd-selinux: "2.167.0-1"
+  {{- end }}
+    containerd: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

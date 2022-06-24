@@ -1,4 +1,5 @@
 {{- $docker_versions := list }}
+{{- $debian_versions := dict "9" "stretch" "10" "buster" "11" "bullseye" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- range $key, $versions := $value.bashible.debian }}
     {{- if $versions.docker.desiredVersion }}
@@ -26,9 +27,14 @@ docker:
   LABEL:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: debian
-    version: {{ $key }}
-    docker: {{ $version }}
-    docker-cli: {{ $version }}
+  {{- $distroname := regexSplit $image_version "-" -1 | last }}
+  {{- $key, $value := range $debian_versions }}
+    {{- if eq $value $distroname }}
+    version: {{  $key }}
+    {{- end }}
+  {{- end }}
+    docker: {{ $image_version }}
+    docker-cli: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}
