@@ -16,6 +16,10 @@
 
 set -euf -o pipefail
 
+if [ x"${DEBUG}" == "xtrue" ]; then
+  set -x
+fi
+
 runtime () {
   # We use external binary instead of the option `--request-timeout 60s` because the option does not work in-cluster mode.
   # ref: https://github.com/kubernetes/kubernetes/issues/49343/
