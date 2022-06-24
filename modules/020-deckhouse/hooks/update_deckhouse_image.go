@@ -108,6 +108,9 @@ type deckhousePodInfo struct {
 	Ready     bool   `json:"ready"`
 }
 
+// while cluster bootstrapping we have the tag for deckhouse image like: alpha, beta, early-access, stable, rock-solid
+// it is set via dhctl, which does not know anything about releases and tags
+// We can use this bootstrap image for applying first release without any requirements (like update windows, canary, etc)
 func (dpi deckhousePodInfo) isBootstrapImage() bool {
 	colonIndex := strings.LastIndex(dpi.Image, ":")
 	if colonIndex == -1 {
