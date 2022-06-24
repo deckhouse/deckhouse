@@ -15,7 +15,6 @@ import:
   before: setup
 docker:
   LABEL:
-    maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: all
     version: all
     crictl: {{ $version }}

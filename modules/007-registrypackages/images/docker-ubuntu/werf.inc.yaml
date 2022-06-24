@@ -25,7 +25,6 @@ import:
   before: setup
 docker:
   LABEL:
-    maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: ubuntu
   {{- $distroname := regexSplit "-" $image_version -1 | last }}
   {{- range $key, $value := $ubuntu_versions }}

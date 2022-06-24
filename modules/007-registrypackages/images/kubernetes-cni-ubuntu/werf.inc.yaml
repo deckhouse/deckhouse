@@ -19,7 +19,6 @@ import:
   before: setup
 docker:
   LABEL:
-    maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: ubuntu
     version: all
     kubernetes-cni: {{ $version }}

@@ -28,7 +28,6 @@ import:
   before: setup
 docker:
   LABEL:
-    maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: centos
   {{- if contains "el7" $image_version }}
     version: 7
