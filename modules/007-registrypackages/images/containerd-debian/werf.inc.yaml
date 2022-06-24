@@ -29,7 +29,7 @@ docker:
   LABEL:
     maintainer: '"Deckhouse maintainers https://deckhouse.io"'
     distro: debian
-  {{- $distroname := regexSplit $image_version "-" -1 | last }}
+  {{- $distroname := regexSplit "-" $image_version -1 | last }}
   {{- range $key, $value := $debian_versions }}
     {{- if eq $value $distroname }}
     version: {{  $key }}
