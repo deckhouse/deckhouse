@@ -38,7 +38,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 
 	var openstackVolumeTypes []string
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar"}
+		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1"}
 	} else {
 		openstackVolumeTypes, err = getVolumeTypesArray()
 		if err != nil {
@@ -49,7 +49,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	storageClassesMap := make(map[string]string, len(openstackVolumeTypes))
 
 	for _, vt := range openstackVolumeTypes {
-		storageClassesMap[strings.ToLower(strings.ReplaceAll(vt, "_", ""))] = vt
+		storageClassesMap[strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(vt, "_", ""), " ", "-"))] = vt
 	}
 
 	excludes, ok := input.Values.GetOk("cloudProviderOpenstack.storageClass.exclude")

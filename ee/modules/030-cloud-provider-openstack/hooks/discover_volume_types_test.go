@@ -68,6 +68,10 @@ cloudProviderOpenstack:
   {
 	"name": "some-foo",
 	"type": "some-foo"
+  },
+  {
+	"name": "ssd-r1",
+	"type": "SSD R1"
   }
 ]
 `))
