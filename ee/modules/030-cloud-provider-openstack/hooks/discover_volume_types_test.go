@@ -99,6 +99,10 @@ cloudProviderOpenstack:
   {
 	"name": "other-bar",
 	"type": "other-bar"
+  },
+  {
+	"name": "ssd-r1",
+	"type": "SSD R1"
   }
 ]
 `))
