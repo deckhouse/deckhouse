@@ -1,0 +1,5 @@
+cilium-hubble:
+  fixes:
+    - summary: Copy custom certificate into d8-cni-cilium if it is used.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1879
+
