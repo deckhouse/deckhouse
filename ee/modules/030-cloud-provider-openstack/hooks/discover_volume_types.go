@@ -38,7 +38,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 
 	var openstackVolumeTypes []string
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1"}
+		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1", "-Xx$&? -foo", " YY fast SSD -foo"}
 	} else {
 		openstackVolumeTypes, err = getVolumeTypesArray()
 		if err != nil {
@@ -49,7 +49,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	storageClassesMap := make(map[string]string, len(openstackVolumeTypes))
 
 	for _, vt := range openstackVolumeTypes {
-		storageClassesMap[strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(vt, "_", ""), " ", "-"))] = vt
+		storageClassesMap[sanitizeLabel(vt)] = vt
 	}
 
 	excludes, ok := input.Values.GetOk("cloudProviderOpenstack.storageClass.exclude")
@@ -87,4 +87,32 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+// Sanitize labels to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+// But as we previously started to replace underscores with empty characters, we have to continue doing it.
+func sanitizeLabel(value string) string {
+	mapFn := func(r rune) rune {
+		if r >= 'a' && r <= 'z' ||
+			r >= 'A' && r <= 'Z' ||
+			r >= '0' && r <= '9' ||
+			r == '-' || r == '.' {
+			return r
+		}
+		return rune(0)
+	}
+
+	// only alphanumerics, dashes (-), dots (.) are valid
+	value = strings.Map(mapFn, value)
+
+	// must start/end with alphanumerics only
+	value = strings.Trim(value, "-.")
+
+	// length must be <= 63 characters
+	if len(value) > 63 {
+		value = value[:63]
+	}
+
+	// trim again if required after shortening
+	return strings.Trim(value, "-.")
 }
