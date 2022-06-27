@@ -38,7 +38,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 
 	var openstackVolumeTypes []string
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1", "-Xx$&? -foo", " YY fast SSD -foo"}
+		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1", "-Xx$&? -foo", " YY fast SSD -foo."}
 	} else {
 		openstackVolumeTypes, err = getVolumeTypesArray()
 		if err != nil {
@@ -49,7 +49,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	storageClassesMap := make(map[string]string, len(openstackVolumeTypes))
 
 	for _, vt := range openstackVolumeTypes {
-		storageClassesMap[sanitizeLabel(vt)] = vt
+		storageClassesMap[getStorageClassName(vt)] = vt
 	}
 
 	excludes, ok := input.Values.GetOk("cloudProviderOpenstack.storageClass.exclude")
@@ -89,9 +89,8 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	return nil
 }
 
-// Sanitize labels to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
-// But as we previously started to replace underscores with empty characters, we have to continue doing it.
-func sanitizeLabel(value string) string {
+// Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
+func getStorageClassName(value string) string {
 	mapFn := func(r rune) rune {
 		if r >= 'a' && r <= 'z' ||
 			r >= 'A' && r <= 'Z' ||
@@ -102,17 +101,9 @@ func sanitizeLabel(value string) string {
 		return rune(0)
 	}
 
-	// only alphanumerics, dashes (-), dots (.) are valid
+	// a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.'
 	value = strings.Map(mapFn, value)
 
-	// must start/end with alphanumerics only
-	value = strings.Trim(value, "-.")
-
-	// length must be <= 63 characters
-	if len(value) > 63 {
-		value = value[:63]
-	}
-
-	// trim again if required after shortening
+	// must start and end with an alphanumeric character
 	return strings.Trim(value, "-.")
 }
