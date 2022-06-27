@@ -88,7 +88,7 @@ spec:
         - name: dockersock
           mountPath: /var/run/docker.sock
         - name: containerdconfig
-          mountPath: /var/run/containerd-config.toml
+          mountPath: /etc/containerd/config.toml
         - name: kube
           mountPath: /root/.kube
         resources:
