@@ -131,7 +131,9 @@ $(document).ready(function () {
       $(this).text($(this).text().replace('<IMAGES_REPO_URI>', cleanedRegistryImagesRepo));
     });
 
-    updateTextInSnippet('[docker-login-ce]', '<IMAGES_REPO_URI>', cleanedRegistryImagesRepo);
+    updateTextInSnippet('[docker-run-ce]', '<IMAGES_REPO_URI>', cleanedRegistryImagesRepo);
+    updateTextInSnippet('[docker-run-windows-ce]', '<IMAGES_REPO_URI>', cleanedRegistryImagesRepo);
+    updateTextInSnippet('[docker-login-windows]', '<IMAGES_REPO_URI>', cleanedRegistryImagesRepo);
   }
 
   // delete empty lines in snippet

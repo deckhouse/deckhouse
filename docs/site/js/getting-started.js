@@ -201,7 +201,8 @@ function update_license_parameters(newtoken = '') {
     let replacePartStringDockerLogin = 'base64 -d <<< ' + passwordHash;
 
     update_parameter(config, 'registryDockerCfg', matchStringClusterConfig, null, '[config-yml]');
-    update_parameter(replacePartStringDockerLogin, '', matchStringDockerLogin, null, '[docker-login]');
+    update_parameter(replacePartStringDockerLogin, '', matchStringDockerLogin, null, '[docker-run]');
+    update_parameter(replacePartStringDockerLogin, '', matchStringDockerLogin, null, '[docker-run-windows]');
     $('.highlight code').filter(function () {
       return this.innerText.match(matchStringDockerLogin) == matchStringDockerLogin;
     }).each(function (index) {

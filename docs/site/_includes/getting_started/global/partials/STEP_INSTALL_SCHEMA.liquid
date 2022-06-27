@@ -23,14 +23,26 @@ Scheme of Deckhouse installation in a private environment:<br />
 You will need:
 1. **Personal computer**.
 
-   The computer from which the installation will be performed.{% unless page.platform_type == "existing" %} It is only needed to run the Deckhouse installer, and will not be part of the cluster.{% endunless %}
+   The computer from which the installation will be performed.{% unless page.platform_type == "existing" %} It is only needed to run the Deckhouse installer and will not be part of the cluster.{% endunless %}
 
    Requirements:
-   - installed container runtime (dockerd, containerd) and docker client to run the installer;
+   - OS: Windows 10+, macOS 10.15+, Linux (e.g. Ubuntu 18.04+, Fedora 35+);
+   - installed docker to run the installer (here are the instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
 {% if page.platform_code == "bm-private" %}
    - access to a proxy registry ([read more](/{{ page.lang }}/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
 {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry (it is also possible to use a [third-party registry](../bm-private/step2.html));
+{%- endif %}
+{%- if page.platform_type == 'cloud' %}
+   - access to the API of the cloud provider, an account with rights to create resources, and a configured
+     {%- if page.platform_code == 'aws' %} [awscli](https://aws.amazon.com/cli/) utility
+     {%- elsif page.platform_code == "gcp" %} [gcloud](https://cloud.google.com/sdk/docs/install) utility
+     {%- elsif page.platform_code == "azure" %} [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) utility
+     {%- elsif page.platform_code == "yandex" %} [Yandex Cloud (CLI)](https://cloud.yandex.ru/docs/cli/quickstart) utility
+     {%- elsif page.platform_code == "openstack" %} management [utility](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html) via CLI
+     {%- elsif page.platform_code == "vsphere" %} [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) utility
+     {%- else %} management utility via CLI
+     {%- endif %};
 {%- endif %}
 {%- if page.platform_type == "existing" %}
    - the kubectl command-line tool must be configured to communicate with your cluster.
