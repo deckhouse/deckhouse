@@ -19,11 +19,9 @@ on:
       - opened
       - synchronize
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
-  group: ${{ github.event.number }}-validation
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -61,99 +59,187 @@ jobs:
     name: Get pull request reference
     runs-on: ubuntu-latest
     outputs:
-      ref: ${{ steps.ref.outputs.ref }}
-      edition: ${{ steps.check_pr.outputs.edition || steps.check_push.outputs.edition }}
+      ref: ${{ steps.check_pr.outputs.ref }}
+      ref_slug: ${{ steps.check_pr.outputs.ref_slug }}
+      edition: ${{ steps.check_pr.outputs.edition }}
+      pr_title: ${{ steps.check_pr.outputs.pr_title }}
+      pr_description: ${{ steps.check_pr.outputs.pr_description }}
+      diff_url: ${{ steps.check_pr.outputs.diff_url }}
+      labels: ${{ steps.check_pr.outputs.labels }}
+
     # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
     if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
     steps:
-      - name: Check push trigger
+      - name: Get PR info for push trigger
         id: check_push
         if: ${{ github.event_name == 'push' }}
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            // Support 'push' trigger: use FE edition by default.
-            const edition = 'FE';
-            core.notice(`Enable default '${edition}' edition for 'push' trigger.`);
-            return core.setOutput('edition', edition);
+            // Support for 'push' trigger: find PR by commit SHA and pass response to check_pr step.
+            const { GITHUB_REF_NAME } = process.env
+            core.startGroup(`Fetching PR info for commit ${context.sha} in ${context.repo.name}:${GITHUB_REF_NAME} ...`)
+            try {
+              const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: context.sha
+              });
+              if (response.status !== 200 || !response.data || response.data.length === 0) {
+                return core.setFailed(`Bad response on listing PRs for commit ${context.sha}: ${JSON.stringify(response)}`);
+              }
+              // Get first associated pr.
+              let pr = response.data[0];
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.notice(`Found PR#{pr.number} for commit ${context.sha}`);
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Error listing pull requests for commit ${context.sha}: ${error}`)
+            } finally {
+              core.endGroup()
+            }
 
-      - name: Check if allow to run tests
-        id: check_pr
+      - name: Get PR info for pull_request trigger
+        id: check_pull_request
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            if (!context.payload.pull_request) {
-              return core.setFailed(`Unknown event, no pull request context. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
-            }
-
-            // Fetch fresh pull request state using sha.
+            // Support for 'pull_request' and 'pull_request_target' triggers:
+            // find PR by its number to get current labels.
             // Why? Workflow rerun of 'opened' pull request contains outdated labels.
-            const owner = context.payload.pull_request.head.repo.owner.login
-            const repo = context.payload.pull_request.head.repo.name
-            const commit_sha = context.payload.pull_request.head.sha
-            const head_label = context.payload.pull_request.head.label
-            core.info(`Pull request: ${JSON.stringify({ owner, repo, commit_sha, head_label })}`);
-            core.info(`Base repo: ${JSON.stringify({owner: context.repo.owner, repo: context.repo.repo})}`);
-            const response = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'all',
-              head: head_label
-            });
-            if (response.status != 200) {
-              return core.setFailed(`Cannot list PRs for head ${head_label} (${commit_sha}): ${JSON.stringify(response)}`);
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            core.startGroup(`Fetching info for PR#${prNumber} ...`);
+            try {
+              const response = await github.rest.pulls.get({owner, repo, pull_number: prNumber})
+              if (response.status != 200 || !response.data) {
+                return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
+              }
+              // Only labels are needed.
+              let pr = response.data;
+              core.info(`Labels from context: ${JSON.stringify(context.payload.pull_request.labels)}`);
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Fetch PR#${prNumber} error: ${error}`)
+            } finally {
+              core.endGroup()
             }
 
-            // No PR found, do not run next jobs.
-            if (!response.data || response.data.length === 0) {
-              return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+      - name: Check pull request
+        id: check_pr
+        uses: actions/github-script@v5.0.0
+        env:
+          PR_INFO: ${{ steps.check_push.outputs.pr_info || steps.check_pull_request.outputs.pr_info }}
+        with:
+          script: |
+            if (process.env.PR_INFO == '') {
+                return core.setFailed(`No pull request info: event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
             }
+            // Parse Pr info from environment variable.
+            const pr = JSON.parse(process.env.PR_INFO);
 
-            core.info(`Labels: ${JSON.stringify(response.data[0].labels)}`);
-
-            const prRepo = context.payload.pull_request.head.repo.full_name;
-            const targetRepo = context.payload.repository.full_name;
-            const isInternal = prRepo === targetRepo;
+            core.startGroup(`Detect PR properties`)
+            const pr_repo = pr.head.repo.full_name;
+            const target_repo = context.payload.repository.full_name;
+            const isInternal = pr_repo === target_repo;
             const isDependabot = (context.actor === 'dependabot[bot]');
-            const isChangelog = context.payload.pull_request.head.ref.startsWith('changelog/v');
-            const okToTest = response.data[0].labels.some((l) => l.name === 'status/ok-to-test');
-
+            const isChangelog = pr.head.ref.startsWith('changelog/v');
+            const okToTest = pr.labels.some((l) => l.name === 'status/ok-to-test');
+            core.info(`PR head repo          ${pr_repo}`)
+            core.info(`PR commit SHA         ${pr.head.sha}`)
+            core.info(`PR head label         ${pr.head.label}`)
+            core.info(`Target repo           ${target_repo}`)
             core.info(`PR internal?          ${isInternal}`)
             core.info(`PR from dependabot?   ${isDependabot}`)
             core.info(`PR changelog?         ${isChangelog}`)
             core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+            core.endGroup()
 
+            // Detect if PR can be ignored or should be checked for dangerous changes.
+            let shouldCheckFiles = false;
             if (isInternal && !isDependabot) {
               // Ignore changelog pull requests.
               if (isChangelog) {
-                return core.setFailed(`PR#${context.payload.pull_request.number} for changelog is ignored.`);
+                return core.setFailed(`PR#${pr.number} for changelog is ignored.`);
               }
             } else {
               // External and dependabot pull requests should be labeled with 'status/ok-to-test'.
               if (!okToTest) {
-                return core.setFailed(`PR#${context.payload.pull_request.number} without label 'status/ok-to-test' is ignored.`);
+                core.notice(`PR#${pr.number} requires label 'status/ok-to-test' to run tests and validations`)
+                return core.setFailed(`PR#${pr.number} without label 'status/ok-to-test' is ignored.`);
               }
+              shouldCheckFiles = true;
+            }
+            if (shouldCheckFiles) {
+              core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
             }
 
-            const isEE = response.data[0].labels.some((l) => l.name === 'edition/ee');
-            const isCE = response.data[0].labels.some((l) => l.name === 'edition/ce');
-            const edition = isCE ? 'CE' : (isEE ? 'EE' : process.env.WERF_ENV);
-            core.info(`PR has 'edition/*'?   ${isCE || isEE} (${edition})`);
-            core.notice(`Enable '${edition}' edition.`);
+            // Set edition from current labels.
+            const defaultEdition = process.env.WERF_ENV ? process.env.WERF_ENV : 'FE';
+            const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
+            const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
+            const edition = hasCE ? 'CE' : (hasEE ? 'EE' : defaultEdition);
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}`);
+            core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
+
+            // Construct head commit ref using pr number.
+            const ref = `refs/pull/${ pr.number }/head`;
+            core.notice(`Use ref: '${ref}'`)
+
+            // Pass pr.diff_url to download diff via regular request.
+            // Pass pr.url to get diff via API request.
+            let diff_url = pr.diff_url;
+            if (!!context.payload.repository.private) {
+              core.notice(`Detect private repo. Pass PR url to download diff via Github API.`);
+              diff_url = pr.url;
+            }
+
+            // Set outputs.
+            core.setCommandEcho(true)
+            core.setOutput('should_check', shouldCheckFiles.toString());
+            core.setOutput('ref', ref);
+            core.setOutput('ref_slug', `pr${pr.number}`);
             core.setOutput('edition', edition);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_description', pr.body);
+            core.setOutput('diff_url', diff_url);
+            core.setOutput('labels', JSON.stringify(pr.labels));
+            core.setCommandEcho(false);
 
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
-        if: ${{ startsWith(github.event_name, 'pull_request') }}
+        if: steps.check_pr.outputs.should_check == 'true'
         uses: actions/checkout@v2.4.0
         with:
-          ref: "refs/pull/${{ github.event.number }}/head"
+          ref: ${{ steps.check_pr.outputs.ref }}
 
       # Detect dangerous changes in external PR.
       - name: Check for dangerous changes
         uses: dorny/paths-filter@v2
-        if: ${{ startsWith(github.event_name, 'pull_request') && github.event.pull_request.head.repo.full_name != github.repository }}
+        if: steps.check_pr.outputs.should_check == 'true'
         id: changes
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
@@ -175,22 +261,6 @@ jobs:
           script: |
             core.setFailed('External PR contains dangerous changes.')
 
-      # Set output.
-      - name: Return PR head commit ref
-        id: ref
-        uses: actions/github-script@v5.0.0
-        with:
-          script: |
-            // context.ref is set for 'push' and 'workflow_dispatch' triggers.
-            let ref = context.ref;
-            if (context.eventName.startsWith('pull_request')) {
-              ref = `refs/pull/${ context.issue.number }/head`
-            }
-            if (context.eventName === 'workflow_dispatch' &&  context.payload.inputs && context.payload.inputs.pull_request_ref) {
-              ref = context.payload.inputs.pull_request_ref;
-            }
-            core.info(`ref: '${ref}'`)
-            core.setOutput('ref', ref)
   # </template: pull_request_info>
 
   # Get pull request info for validation scripts.
@@ -201,17 +271,14 @@ jobs:
       - pull_request_info
     runs-on: ubuntu-latest
     outputs:
-      run_no_cyrillic: ${{ steps.on_push.outputs.run_no_cyrillic }}
-      label_no_cyrillic: ${{ steps.on_push.outputs.label_no_cyrillic }}
-      run_doc_changes: ${{ steps.on_push.outputs.run_doc_changes }}
-      label_doc_changes: ${{ steps.on_push.outputs.label_doc_changes }}
-      run_copyright: ${{ steps.on_push.outputs.run_copyright }}
-      label_copyright: ${{ steps.on_push.outputs.label_copyright }}
-      run_markdown: ${{ steps.on_push.outputs.run_markdown }}
-      pr_title: ${{ steps.on_push.outputs.pr_title }}
-      pr_description: ${{ steps.on_push.outputs.pr_description }}
-      diff_url: ${{ steps.on_push.outputs.diff_url }}
-
+      run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
+      label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
+      run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
+      label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
+      run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
+      label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
+      run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
+      label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
     steps:
 
       # <template: checkout_step>
@@ -220,18 +287,23 @@ jobs:
         with:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
-      - id: on_push
+      - id: check_labels
         name: Check labels on push
         uses: actions/github-script@v5.0.0
+        env:
+          PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const labels = JSON.parse(process.env.PR_LABELS)
+
             const ci = require('./.github/scripts/js/ci');
-            return await ci.checkValidationLabels({ github, context, core });
+            return ci.checkValidationLabels({ core, labels });
 
       - name: Download diff for pull request
         env:
-          DIFF_URL: ${{ steps.on_push.outputs.diff_url }}
+          DIFF_URL: ${{ needs.pull_request_info.outputs.diff_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./.github/scripts/validation_run.sh --download-only ./pr.diff
 
@@ -245,8 +317,8 @@ jobs:
   no_cyrillic_validation:
     name: No Cyrillic Validation
     env:
-      VALIDATE_TITLE: ${{ needs.discover.outputs.pr_title }}
-      VALIDATE_DESCRIPTION: ${{ needs.discover.outputs.pr_description }}
+      VALIDATE_TITLE: ${{ needs.pull_request_info.outputs.pr_title }}
+      VALIDATE_DESCRIPTION: ${{ needs.pull_request_info.outputs.pr_description }}
 
     needs:
       - discover

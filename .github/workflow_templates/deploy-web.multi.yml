@@ -37,11 +37,9 @@ on:
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 
-  # Analog of Gitlab's "interruptible: true" behaviour.
-  # Note: Concurrency is currently in beta and subject to change.
-  # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Cancel in-progress jobs for the same tag/branch.
 concurrency:
-  group: ${{ github.ref }}-deploy-web-{!{ .webEnv }!}
+  group: ${{ github.workflow }}-${{ github.ref }}-{!{ .webEnv }!}
   cancel-in-progress: true
 
 jobs:

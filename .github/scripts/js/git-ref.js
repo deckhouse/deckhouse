@@ -71,7 +71,7 @@ module.exports.parseGitRef = parseGitRef;
 
 // vX.Y.Z
 const semVerReleaseTagNameFullMatch = /^(v\d+\.\d+)\.\d+$/
-const semVerReleaseTagName = /(v\d+\.\d+)\.\d+/
+const semVerReleaseTagName = /v(\d+\.\d+)\.\d+/
 // test-vX.Y.Z
 const semVerTestTagNameFullMatch = /^test-v?(\d+\.\d+)\.\d+/
 // release-X.Y

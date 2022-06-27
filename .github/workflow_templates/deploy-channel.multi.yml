@@ -40,8 +40,6 @@ env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
   DEPLOY_CHANNEL: {!{ .channel }!}
 
-# Note: no concurrency section for deploy workflows.
-
 jobs:
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 
