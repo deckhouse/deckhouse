@@ -5,6 +5,7 @@ title: "The linstor module: FAQ"
 ## What is difference between LVM and LVMThin?
 
 Briefly:
+
 - LVM is simpler and has performance comparable to native drives;
 - LVMThin allows you to use snapshots and overprovisioning, but twice as slow.
 
@@ -15,6 +16,7 @@ Briefly:
 We take a practical view of the issue. A difference of several tens of percent — in practice it never matters. The difference is several times or more important.
 
 Comparison factors:
+
 - Sequential read and write: do not matter, because on any technology they always run into the network (which is 10Gb/s, which is 1Gb/s). From a practical point of view, this indicator can be completely ignored;
 - Random read and write (which is 1Gb/s, which is 10Gb/s):
   - DRBD + LVM 5 times better (latency — 5 times less, IOPS — 5 times more) than Ceph RBD;
@@ -24,6 +26,7 @@ Comparison factors:
 - With a large number of clients (more than 10, with iodepth 64), Ceph starts to fall behind more (up to 10 times) and consume much more CPU.
 
 All in all, in practice, it doesn’t matter how many knobs you have for tuning, only three factors are significant:
+
 - **Read locality** — if all reading is performed locally, then it works at the speed (throughput, IOPS, latency) of the local disk (the difference is practically insignificant);
 - **1 network hop when writing** — in DRBD, the replication is performed by the *client*, and in Ceph, by *server*, so Ceph latency for writing always has at least x2 from DRBD;
 - **Complexity of code** — latency of calculations on the datapath (how much assembler code is executed for each io operation), DRBD + LVM is simpler than DRBD + LVMThin, and much simpler than Ceph RBD.
@@ -31,6 +34,7 @@ All in all, in practice, it doesn’t matter how many knobs you have for tuning,
 ## What to use in which situation?
 
 By default, we use two replicas (the third is an automatically created `diskless` replica used for quorum). This approach guarantees protection against split-brain and a sufficient level of storage reliability, but the following features must be taken into account:
+
 - When one of the replicas (replica A) is unavailable, data is written only to a single replica (replica B). It means that:
   - If at this moment the second replica (replica B) is also turned off, writing and reading will be unavailable;
   - If at the same time the second replica (replica B) is irretrievably lost, then the data will be partially lost (there is only the old, outdated replica A);
@@ -41,6 +45,7 @@ By default, we use two replicas (the third is an automatically created `diskless
 It is strongly recommended to have one replica locally. This doubles the possible write bandwidth (with two replicas) and significantly increases the read speed. But if this is not the case, then everything still continues to work normally (but reading over the network, and double network utilization for writing).
 
 Depending on the task, choose one of the following:
+
 - DRBD + LVM — faster (x2) and more reliable (LVM is simpler);
 - DRBD + LVMThin — support for snapshots and the possibility of overcommitment.
 
@@ -83,6 +88,7 @@ You can also add pools with some volumes have already been created. LINSTOR will
 ## How to configure Prometheus to use LINSTOR for storing data?
 
 To configure Prometheus to use LINSTOR for storing data:
+
 - [Configure](configuration.html#linstor-storage-configuration) storage-pools and StorageClass;
 - Specify the [longtermStorageClass](../300-prometheus/configuration.html#parameters-longtermstorageclass) and [storageClass](../300-prometheus/configuration.html#parameters-storageclass) parameters in the [prometheus](../300-prometheus/) module configuration. E.g.:
 
@@ -127,7 +133,7 @@ The most likely reasons why it cannot load the kernel module:
 If the Pod is stuck in the `ContainerCreating` phase, and you see the following errors in `kubectl describe pod`:
 
 ```text
-rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking 
+rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking
 for exclusive open failed: wrong medium type, check device health
 ```
 
@@ -146,7 +152,7 @@ The `InUse` flag will indicate which node the device is being used on.
 An example error in `kubectl describe pod`:
 
 ```text
-kubernetes.io/csi: attachment for pvc-be5f1991-e0f8-49e1-80c5-ad1174d10023 failed: CSINode b-node0 does not 
+kubernetes.io/csi: attachment for pvc-be5f1991-e0f8-49e1-80c5-ad1174d10023 failed: CSINode b-node0 does not
 contain driver linstor.csi.linbit.com
 ```
 
