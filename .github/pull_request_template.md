@@ -16,6 +16,16 @@
   If it fixes an obvious bug, please tell users about the impact and effect of the problem.
 -->
 
+## What is the expected result?
+<!---
+  How one can checnk these changes after applying?  
+
+  Describe, what (resource, state, event, etc.) MUST or MUST NOT change/happen after applying these changes.
+-->
+
+## Checklist
+- [ ] The code is covered by unit tests (hooks, templates, matrix)
+
 ## Changelog entries
 <!---
   Describe the changes so they will be included in a release changelog.
