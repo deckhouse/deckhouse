@@ -55,6 +55,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/500-dashboard/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-okmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-openvpn/hooks"
