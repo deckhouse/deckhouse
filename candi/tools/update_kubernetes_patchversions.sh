@@ -18,10 +18,15 @@ set -Eeo pipefail
 
 . functions.sh
 
-CREATE_PR=false
+# install dependencies
+if [[ $1 == "install-deps" ]]; then
+    install_jq
+    install_crane
+    install_yq
+fi
+
 function check_requirements() {
     check_jq
-    check_gh
     check_crane
     check_yq
 }
@@ -58,27 +63,3 @@ for VERSION in $(yq e ../version_map.yml -o json | jq -r '.k8s | keys[]'); do
     fi
   done
 done
-
-if [[ "${CREATE_PR}" == "true" ]]; then
-  cd ../../
-  BRANCH="kubernetes-patchversions-$(date +"%y-%m-%d-%H-%M")"
-  git checkout -b "${BRANCH}"
-  git add .
-  git commit -m "[candi] New kubernetes control-plane components patchversions"
-  git push --set-upstream origin "${BRANCH}"
-  cat <<EOF | gh pr create -d -B main -F - -t "New kubernetes patchversions"
-## Description
-New Kubernetes control-plane components patchversions.
-${PR_DESCRIPTION}
-## Why do we need it, and what problem does it solve?
-Kubernetes control-plane components should be up to date.
-## Changelog entries
-\`\`\`changes
-section: candi
-type: feature
-summary: New Kubernetes control-plane components patchversions.
-impact: Restart Kubernetes control-plane components.
-impact_level: default
-\`\`\`
-EOF
-fi

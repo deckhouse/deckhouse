@@ -23,10 +23,13 @@ function check_jq() {
     fi
 }
 
-function check_gh() {
-    if ! gh --version &>/dev/null; then
-      >&2 echo "ERROR: gh is not installed. Please install it from https://cli.github.com"
-      return 1
+function install_jq() {
+    # Mac OS
+    if brew --version >/dev/null; then
+      brew install jq
+    # Linux
+    else
+      curl curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -o /usr/local/bin/jq && chmod +x /usr/local/bin/jq
     fi
 }
 
@@ -34,6 +37,16 @@ function check_crane() {
     if ! crane version &>/dev/null; then
       >&2 echo "ERROR: crane is not installed. Please install it from https://github.com/google/go-containerregistry/tree/main/cmd/crane"
       return 1
+    fi
+}
+
+function install_crane() {
+    # Mac OS
+    if brew --version >/dev/null; then
+      brew install crane
+    # Linux
+    else
+      curl curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - crane && mv crane /usr/local/bin && chmod +x /usr/local/bin/crane
     fi
 }
 
@@ -46,6 +59,16 @@ function check_yq() {
     if ! yq --version | grep -q ".*4\.[0-9]*.*"; then
       >&2 echo "ERROR: yq version should be equal 4"
       return 1
+    fi
+}
+
+function install_yq() {
+    # Mac OS
+    if brew --version >/dev/null; then
+      brew install yq
+    # Linux
+    else
+      curl curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_linux_amd64 -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
     fi
 }
 
