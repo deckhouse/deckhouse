@@ -48,7 +48,11 @@ runtime_root_dir () {
     curl -sS --unix-sock /var/run/docker.sock http://system/info | jq -re '.DockerRootDir'
     ;;
   containerd)
-    dasel -f /var/run/containerd-config.toml '.root' 2>/dev/null || echo "/var/lib/containerd"
+    root_dir="$(grep "^root" /etc/containerd/config.toml | sed "s/ //g"  | sed "s/\"//g" |cut -d"=" -f2)"
+    if [ -z "${root_dir}" ]; then
+      root_dir="/var/lib/containerd"
+    fi
+    echo ${root_dir}
     ;;
   *)
     echo "Unknown container runtime detected: $(runtime). Only \"docker\" and \"containerd\" are supported"
