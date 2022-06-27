@@ -12,6 +12,11 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    jq: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

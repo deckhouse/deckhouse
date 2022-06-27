@@ -13,6 +13,11 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    containerd: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_GOLANG_16_BUSTER" }}

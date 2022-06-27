@@ -14,6 +14,11 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: centos
+    version: all
+    kubectl: {{ printf "%s.%s" $version $patch }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

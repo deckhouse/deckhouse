@@ -25,6 +25,16 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: debian
+  {{- $distroname := regexSplit "-" $image_version -1 | last }}
+  {{- range $key, $value := $debian_versions }}
+    {{- if eq $value $distroname }}
+    version: {{  $key }}
+    {{- end }}
+  {{- end }}
+    containerd: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

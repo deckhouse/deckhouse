@@ -1,4 +1,5 @@
 {{- $docker_versions := list }}
+{{- $ubuntu_versions := dict "16.04" "xenial" "18.04" "bionic" "20.04" "focal" "22.04" "jammy"}}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- range $key, $versions := $value.bashible.ubuntu }}
     {{- if $versions.docker.desiredVersion }}
@@ -22,6 +23,17 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: ubuntu
+  {{- $distroname := regexSplit "-" $image_version -1 | last }}
+  {{- range $key, $value := $ubuntu_versions }}
+    {{- if eq $value $distroname }}
+    version: {{  $key }}
+    {{- end }}
+  {{- end }}
+    docker: {{ $version }}
+    docker-cli: {{ $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}

@@ -22,6 +22,15 @@ import:
   - install
   - uninstall
   before: setup
+docker:
+  LABEL:
+    distro: centos
+  {{- if contains "el7" $image_version }}
+    version: 7
+  {{- else if contains "el8" $image_version }}
+    version: 8  {{- end }}
+    docker: {{ $image_version }}
+    docker-cli: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}
