@@ -74,12 +74,12 @@ cloudProviderOpenstack:
 	"type": "SSD R1"
   },
   {
-	"name": "xx-foo",
-	"type": "-Xx$&? -foo"
+	"name": "xx--foo",
+	"type": "-Xx__$()? -foo-"
   },
   {
-	"name": "yyfastssd-foo",
-	"type": " YY fast SSD -foo"
+	"name": "yy-fast-ssd-foo",
+	"type": "  YY fast SSD-foo."
   }
 ]
 `))

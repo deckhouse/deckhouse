@@ -39,7 +39,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 
 	var openstackVolumeTypes []string
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1", "-Xx$&? -foo", " YY fast SSD -foo."}
+		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1", "-Xx__$()? -foo-", "  YY fast SSD-foo."}
 	} else {
 		openstackVolumeTypes, err = getVolumeTypesArray()
 		if err != nil {
@@ -98,6 +98,8 @@ func getStorageClassName(value string) string {
 			r >= '0' && r <= '9' ||
 			r == '-' || r == '.' {
 			return unicode.ToLower(r)
+		} else if r == ' ' {
+			return '-'
 		}
 		return rune(-1)
 	}
