@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: spaas
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "spaas" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "spaas")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -23,7 +23,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: spaas
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "spaas" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "spaas" "workload-resource-policy.deckhouse.io" "system")) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
@@ -38,6 +38,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "spaas" )) | nindent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: spaas
@@ -47,7 +48,8 @@ spec:
         app: spaas
     spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "spaas")) | nindent 6 }}
       imagePullSecrets:
@@ -64,12 +66,14 @@ spec:
         - --certfile=/etc/spaas/certs/tls.crt
         - --keyfile=/etc/spaas/certs/tls.key
         - --debug
+        {{- if semverCompare ">=1.20-0" .Capabilities.KubeVersion.Version }}
         startupProbe:
           failureThreshold: 24
           httpGet:
             path: /api/v1/hello
             port: 2020
             scheme: HTTPS
+        {{- end }}
         livenessProbe:
           failureThreshold: 8
           httpGet:
@@ -79,14 +83,20 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 15
+          {{- if semverCompare "<1.20-0" .Capabilities.KubeVersion.Version }}
+          initialDelaySeconds: 120
+          {{- end }}
         readinessProbe:
           httpGet:
             path: /api/v1/hello
             port: 2020
             scheme: HTTPS
+          {{- if semverCompare "<1.20-0" .Capabilities.KubeVersion.Version }}
+          initialDelaySeconds: 120
+          {{- end }}
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
         volumeMounts:
         - name: patches-dir
           mountPath: /var/cache/spaas/patches

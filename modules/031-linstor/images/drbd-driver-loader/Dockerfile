@@ -9,15 +9,15 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy patches
-COPY ./patches /patches
-
 RUN git clone ${DRBD_GITREPO} /drbd \
  && cd /drbd \
  && git reset --hard drbd-${DRBD_VERSION} \
- && git config --global user.name "Andrei Kvapil" \
- && git config --global user.email "kvapss@gmail.com" \
- && git am /patches/*.patch \
+ # TODO: remove after 9.1.7 \
+    && GIT_COMMIT="bd96720a720c02fbbf5368ced50aae85a6ec8ebe" \
+    && git config --global user.name $(git --no-pager show -s --format='%an' $GIT_COMMIT) \
+    && git config --global user.email $(git --no-pager show -s --format='%ae' $GIT_COMMIT) \
+    && git cherry-pick $GIT_COMMIT \
+    && git tag -f drbd-${DRBD_VERSION} \
  && make tarball \
  && mv ./drbd-*.tar.gz /drbd.tar.gz \
  && mv ./docker/entry.sh /entry.sh \
