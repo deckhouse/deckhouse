@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -96,9 +97,9 @@ func getStorageClassName(value string) string {
 			r >= 'A' && r <= 'Z' ||
 			r >= '0' && r <= '9' ||
 			r == '-' || r == '.' {
-			return r
+			return unicode.ToLower(r)
 		}
-		return rune(0)
+		return rune(-1)
 	}
 
 	// a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.'
