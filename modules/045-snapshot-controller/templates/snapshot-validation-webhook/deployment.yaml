@@ -37,7 +37,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "snapshot-validation-webhook" )) | nindent 2 }}
 spec:
-  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   selector:
     matchLabels:
       app: snapshot-validation-webhook
@@ -58,7 +58,7 @@ spec:
       containers:
       - name: snapshot-validation
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
-        args: 
+        args:
         - --tls-cert-file=/etc/snapshot-validation-webhook/certs/tls.crt
         - --tls-private-key-file=/etc/snapshot-validation-webhook/certs/tls.key
         - --port=4443
