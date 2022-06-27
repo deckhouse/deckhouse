@@ -33,6 +33,7 @@
  - **[control-plane-manager]** Added `authentication-token-webhook-cache-ttl` parameter to apiserver. [#1791](https://github.com/deckhouse/deckhouse/pull/1791)
  - **[control-plane-manager]** Calculate and add the `quota-backend-bytes` parameter to etcd. [#1389](https://github.com/deckhouse/deckhouse/pull/1389)
     Etcd will be restarted. The `quota-backend-bytes` parameter added to etcd is calculated depending on control-plane memory capacity.
+ - **[deckhouse]** Automatically apply the first release on Deckhouse bootstrap. [#1851](https://github.com/deckhouse/deckhouse/pull/1851)
  - **[deckhouse-controller]** Added the `edit` command for the `deckhouse-controller` to be able to modify cluster configuration files. [#1558](https://github.com/deckhouse/deckhouse/pull/1558)
  - **[dhctl]** Prevent to break already bootstrapped cluster when bootstrap new cluster [#1811](https://github.com/deckhouse/deckhouse/pull/1811)
  - **[dhctl]** For new Deckhouse installations images for control-plane (image for pause container, for example) will be used from the Deckhouse registry. [#1517](https://github.com/deckhouse/deckhouse/pull/1517)
@@ -98,6 +99,7 @@
  - **[log-shipper]** Add the rate-limit option to the ClusterLogsDestination CRD. [#1498](https://github.com/deckhouse/deckhouse/pull/1498)
  - **[log-shipper]** Migrate deprecated elasticsearch fields [#1453](https://github.com/deckhouse/deckhouse/pull/1453)
  - **[log-shipper]** Send reloading signal to all vector processes in a container on config change. [#1430](https://github.com/deckhouse/deckhouse/pull/1430)
+ - **[monitoring-kubernetes]** Make the `kubelet-eviction-threshold-exporter` workable in managed Kubernetes platforms (AWS, GKE, Yandex, etc). [#1866](https://github.com/deckhouse/deckhouse/pull/1866)
  - **[monitoring-kubernetes]** Fixes alert `UnsupportedContainerRuntimeVersion` to support the newest versions of containerd - 1.5.* and 1.6.* and docker 20.*. [#1506](https://github.com/deckhouse/deckhouse/pull/1506)
  - **[monitoring-kubernetes]** Fix kubelet alerts [#1471](https://github.com/deckhouse/deckhouse/pull/1471)
  - **[monitoring-kubernetes]** 1. Detect proper version of a ebpf program to run on a given kernel.
@@ -112,6 +114,7 @@
  - **[prometheus]** Removed the old prometheus_storage_class_change shell hook which has already been replaced by Go hooks. [#1396](https://github.com/deckhouse/deckhouse/pull/1396)
  - **[prometheus]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Prometheus will be restarted.
+ - **[snapshot-controller]** Reduce the number of replicas for snapshot-controller to a maximum of 2. [#1864](https://github.com/deckhouse/deckhouse/pull/1864)
  - **[snapshot-controller]** The `snapshot-controller` does not allow install CRD until `v1alpha1` is preserved in cluster. [#1808](https://github.com/deckhouse/deckhouse/pull/1808)
  - **[snapshot-controller]** snapshot-controller does not allow install crd until `v1alpha1` is preserved in cluster. [#1802](https://github.com/deckhouse/deckhouse/pull/1802)
  - **[upmeter]** Fixed potential error loops in remote write exporter [#1579](https://github.com/deckhouse/deckhouse/pull/1579)
