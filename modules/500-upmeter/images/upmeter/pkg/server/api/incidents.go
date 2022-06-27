@@ -25,7 +25,7 @@ import (
 )
 
 func fetchIncidents(monitor *downtime.Monitor, muteDowntimeTypes []string, group string, rng ranges.StepRange) ([]check.DowntimeIncident, error) {
-	allIncidents, err := monitor.GetDowntimeIncidents()
+	allIncidents, err := monitor.List()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get incidents: %v", err)
 	}

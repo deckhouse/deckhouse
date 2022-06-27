@@ -73,7 +73,7 @@ func (m *Monitor) Start(ctx context.Context) error {
 	// Load initial CRD list
 	err := m.monitor.CreateInformers()
 	if err != nil {
-		return fmt.Errorf("create informers: %v", err)
+		return fmt.Errorf("creating informer: %v", err)
 	}
 
 	m.monitor.Start(ctx)
@@ -88,13 +88,13 @@ func (m *Monitor) getLogger() *log.Entry {
 	return m.monitor.GetConfig().LogEntry
 }
 
-func (m *Monitor) Subscribe(handler HookProbeChangeHandler) {
+func (m *Monitor) Subscribe(handler Handler) {
 	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
 		// One event and one object per change, we always have single item in these lists.
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
 
-		obj, err := convertHookProbe(raw)
+		obj, err := convert(raw)
 		if err != nil {
 			m.getLogger().Errorf("cannot convert UpmeterHookProbe object: %v", err)
 			return
@@ -114,7 +114,7 @@ func (m *Monitor) Subscribe(handler HookProbeChangeHandler) {
 func (m *Monitor) List() ([]*HookProbe, error) {
 	res := make([]*HookProbe, 0)
 	for _, obj := range m.monitor.GetExistedObjects() {
-		hp, err := convertHookProbe(obj.Object)
+		hp, err := convert(obj.Object)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +123,7 @@ func (m *Monitor) List() ([]*HookProbe, error) {
 	return res, nil
 }
 
-func convertHookProbe(o *unstructured.Unstructured) (*HookProbe, error) {
+func convert(o *unstructured.Unstructured) (*HookProbe, error) {
 	var hp HookProbe
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &hp)
 	if err != nil {
@@ -132,7 +132,7 @@ func convertHookProbe(o *unstructured.Unstructured) (*HookProbe, error) {
 	return &hp, nil
 }
 
-type HookProbeChangeHandler interface {
+type Handler interface {
 	OnAdd(*HookProbe)
 	OnModify(*HookProbe)
 	OnDelete(*HookProbe)

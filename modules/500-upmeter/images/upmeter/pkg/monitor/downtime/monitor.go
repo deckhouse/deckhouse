@@ -65,7 +65,7 @@ func (m *Monitor) Start() error {
 	// Load initial CRD list
 	err := m.Monitor.CreateInformers()
 	if err != nil {
-		return fmt.Errorf("create informers: %v", err)
+		return fmt.Errorf("creating informer: %v", err)
 	}
 
 	m.Monitor.Start(m.ctx)
@@ -76,10 +76,10 @@ func (m *Monitor) Stop() {
 	m.Monitor.Stop()
 }
 
-func (m *Monitor) GetDowntimeIncidents() ([]check.DowntimeIncident, error) {
+func (m *Monitor) List() ([]check.DowntimeIncident, error) {
 	res := make([]check.DowntimeIncident, 0)
 	for _, obj := range m.Monitor.GetExistedObjects() {
-		incs, err := convDowntimeIncident(obj.Object)
+		incs, err := convert(obj.Object)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +88,7 @@ func (m *Monitor) GetDowntimeIncidents() ([]check.DowntimeIncident, error) {
 	return res, nil
 }
 
-func convDowntimeIncident(obj *unstructured.Unstructured) ([]check.DowntimeIncident, error) {
+func convert(obj *unstructured.Unstructured) ([]check.DowntimeIncident, error) {
 	var incidentObj Downtime
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &incidentObj)
 	if err != nil {

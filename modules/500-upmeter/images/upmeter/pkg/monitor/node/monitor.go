@@ -24,6 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -51,8 +52,8 @@ func (m *Monitor) Start(ctx context.Context) error {
 			LogLabels    map[string]string
 			MetricLabels map[string]string
 		}{
-			"upmeterremotewrite-monitor",
-			"upmeterremotewrite-monitor",
+			"node-monitor",
+			"node-monitor",
 			map[string]string{},
 			map[string]string{},
 		},
@@ -61,9 +62,9 @@ func (m *Monitor) Start(ctx context.Context) error {
 			types.WatchEventModified,
 			types.WatchEventDeleted,
 		},
-		ApiVersion:              "deckhouse.io/v1",
-		Kind:                    "UpmeterRemoteWrite",
-		LogEntry:                m.logger.WithField("component", "upmeterremotewrite-monitor"),
+		ApiVersion:              "v1",
+		Kind:                    "Node",
+		LogEntry:                m.logger.WithField("component", "node-monitor"),
 		KeepFullObjectsInMemory: true,
 	}
 
@@ -94,9 +95,9 @@ func (m *Monitor) Subscribe(handler Handler) {
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
 
-		obj, err := convert(raw)
+		obj, err := convertNode(raw)
 		if err != nil {
-			m.getLogger().Errorf("cannot convert UpmeterRemoteWrite object: %v", err)
+			m.getLogger().Errorf("cannot convert Node object: %v", err)
 			return
 		}
 
@@ -111,29 +112,29 @@ func (m *Monitor) Subscribe(handler Handler) {
 	})
 }
 
-func (m *Monitor) List() ([]*RemoteWrite, error) {
-	res := make([]*RemoteWrite, 0)
+func (m *Monitor) List() ([]*v1.Node, error) {
+	list := make([]*v1.Node, 0)
 	for _, obj := range m.monitor.GetExistedObjects() {
-		rw, err := convert(obj.Object)
+		node, err := convertNode(obj.Object)
 		if err != nil {
 			return nil, err
 		}
-		res = append(res, rw)
+		list = append(list, node)
 	}
-	return res, nil
+	return list, nil
 }
 
-func convert(o *unstructured.Unstructured) (*RemoteWrite, error) {
-	var rw RemoteWrite
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &rw)
+func convertNode(o *unstructured.Unstructured) (*v1.Node, error) {
+	var node v1.Node
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &node)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to v1.RemoteWrite: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to v1.Node: %v", err)
 	}
-	return &rw, nil
+	return &node, nil
 }
 
 type Handler interface {
-	OnAdd(*RemoteWrite)
-	OnModify(*RemoteWrite)
-	OnDelete(*RemoteWrite)
+	OnAdd(*v1.Node)
+	OnModify(*v1.Node)
+	OnDelete(*v1.Node)
 }
