@@ -25,7 +25,9 @@ post-install() {
 
 if bb-yum-package? docker-ce; then
   bb-deckhouse-get-disruptive-update-approval
-  systemctl stop kubelet.service
+  if systemctl is-active -q kubelet.service; then
+    systemctl stop kubelet.service
+  fi
   # Stop docker containers if they run
   docker stop $(docker ps -q) || true
   systemctl stop docker.service
