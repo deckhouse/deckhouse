@@ -253,9 +253,10 @@ If there is a complete loss of data, perform the following steps on all nodes of
 
 Select any node and do the following:
 - upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server);
+- copy backup file to `~/etc-backup.snapshot`
 - restore the etcd database: 
   ```shell
-  ETCDCTL_API=3 etcdctl snapshot restore BACKUP_FILE --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  ETCDCTL_API=3 etcdctl snapshot restore ~/etc-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd`
   ```
 - add the `--force-new-cluster` flag to the `~/etcd.yaml` manifest;
