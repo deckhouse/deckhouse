@@ -140,7 +140,7 @@ bashible: &bashible
       kernel:
         generic:
           desiredVersion: "3.10.0-1127.el7.x86_64"
-          allowedPattern: "3.10|5.[01]"
+          allowedPattern: "3.10|5.[014]"
     '8':
       docker:
         desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
