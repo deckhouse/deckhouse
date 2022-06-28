@@ -87,6 +87,8 @@ spec:
           mountPath: /var/run/node-exporter-textfile
         - name: dockersock
           mountPath: /var/run/docker.sock
+        - name: containerddir
+          mountPath: /etc/containerd
         - name: containerdconfig
           mountPath: /etc/containerd/config.toml
         - name: kube
@@ -138,6 +140,10 @@ spec:
       - name: dockersock
         hostPath:
           path: /var/run/docker.sock
+      - name: containerddir
+        hostPath:
+          path: /etc/containerd
+          type: DirectoryOrCreate
       - name: containerdconfig
         hostPath:
           path: /etc/containerd/config.toml
