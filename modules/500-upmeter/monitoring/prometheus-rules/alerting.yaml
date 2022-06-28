@@ -433,8 +433,6 @@
 
           The list of PVs: `kubectl get pv | grep disk-smoke-mini`.
 
-- name: d8.upmeter.resources
-  rules:
     - alert: D8UpmeterProbeGarbageSecretsByCertManager
       expr: |
         (
