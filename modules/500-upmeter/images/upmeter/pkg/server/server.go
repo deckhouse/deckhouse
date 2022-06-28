@@ -28,11 +28,11 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/crd"
 	"d8.io/upmeter/pkg/db"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/downtime"
 	"d8.io/upmeter/pkg/probe"
 	"d8.io/upmeter/pkg/probe/calculated"
 	"d8.io/upmeter/pkg/registry"
@@ -53,7 +53,7 @@ type server struct {
 	logger *log.Logger
 
 	server                *http.Server
-	downtimeMonitor       *crd.DowntimeMonitor
+	downtimeMonitor       *downtime.Monitor
 	remoteWriteController *remotewrite.Controller
 }
 
@@ -64,8 +64,21 @@ type Config struct {
 
 	DatabasePath string
 
-	OriginsCount   int
+	OriginsCount int
+
 	DisabledProbes []string
+	DynamicProbes  *DynamicProbesConfig
+}
+
+type DynamicProbesConfig struct {
+	IngressControllers []string
+	NodeGroups         []string
+}
+
+func NewConfig() *Config {
+	return &Config{
+		DynamicProbes: &DynamicProbesConfig{},
+	}
 }
 
 func New(config *Config, logger *log.Logger) *server {
@@ -105,7 +118,7 @@ func (s *server) Start(ctx context.Context) error {
 	go cleanOld30sEpisodes(ctx, dbctx)
 
 	// Probe probeLister that can only list groups and probes
-	probeLister := newProbeLister(s.config.DisabledProbes)
+	probeLister := newProbeLister(s.config.DisabledProbes, s.config.DynamicProbes)
 
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")
@@ -157,7 +170,7 @@ func cleanOld30sEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
 	}
 }
 
-func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *crd.DowntimeMonitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
+func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *downtime.Monitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
 	mux := http.NewServeMux()
 
 	// Setup API handlers
@@ -198,18 +211,21 @@ func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, 
 	return controller, controller.Start(ctx)
 }
 
-func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient) (*crd.DowntimeMonitor, error) {
-	m := crd.NewMonitor(ctx)
+func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient) (*downtime.Monitor, error) {
+	m := downtime.NewMonitor(ctx)
 	m.Monitor.WithKubeClient(kubeClient)
 	return m, m.Start()
 }
 
-func newProbeLister(disabled []string) *registry.RegistryProbeLister {
+func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.RegistryProbeLister {
 	noLogger := newDummyLogger()
 	noFilter := probe.NewProbeFilter(disabled)
 	noAccess := &kubernetes.Accessor{}
-
-	runLoader := probe.NewLoader(noFilter, noAccess, noLogger)
+	dynamicConfig := probe.DynamicConfig{
+		IngressNginxControllers: dynamic.IngressControllers,
+		NodeGroups:              dynamic.NodeGroups,
+	}
+	runLoader := probe.NewLoader(noFilter, noAccess, dynamicConfig, noLogger)
 	calcLoader := calculated.NewLoader(noFilter, noLogger)
 
 	return registry.NewProbeLister(runLoader, calcLoader)

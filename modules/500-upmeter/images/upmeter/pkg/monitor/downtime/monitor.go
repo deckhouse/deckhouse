@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package crd
+package downtime
 
 import (
 	"context"
@@ -26,24 +26,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"d8.io/upmeter/pkg/check"
-	v1 "d8.io/upmeter/pkg/crd/v1"
 )
 
-type DowntimeMonitor struct {
+type Monitor struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	Monitor kube_events_manager.Monitor
 }
 
-func NewMonitor(ctx context.Context) *DowntimeMonitor {
-	m := &DowntimeMonitor{}
+func NewMonitor(ctx context.Context) *Monitor {
+	m := &Monitor{}
 	m.ctx, m.cancel = context.WithCancel(ctx)
 	m.Monitor = kube_events_manager.NewMonitor()
 	m.Monitor.WithContext(m.ctx)
 	return m
 }
 
-func (m *DowntimeMonitor) Start() error {
+func (m *Monitor) Start() error {
 	m.Monitor.WithConfig(&kube_events_manager.MonitorConfig{
 		Metadata: struct {
 			MonitorId    string
@@ -51,8 +50,8 @@ func (m *DowntimeMonitor) Start() error {
 			LogLabels    map[string]string
 			MetricLabels map[string]string
 		}{
-			"monitor-crds",
-			"monitor-crds",
+			"downtime-crds",
+			"downtime-crds",
 			map[string]string{},
 			map[string]string{},
 		},
@@ -73,11 +72,11 @@ func (m *DowntimeMonitor) Start() error {
 	return m.ctx.Err()
 }
 
-func (m *DowntimeMonitor) Stop() {
+func (m *Monitor) Stop() {
 	m.Monitor.Stop()
 }
 
-func (m *DowntimeMonitor) GetDowntimeIncidents() ([]check.DowntimeIncident, error) {
+func (m *Monitor) GetDowntimeIncidents() ([]check.DowntimeIncident, error) {
 	res := make([]check.DowntimeIncident, 0)
 	for _, obj := range m.Monitor.GetExistedObjects() {
 		incs, err := convDowntimeIncident(obj.Object)
@@ -90,7 +89,7 @@ func (m *DowntimeMonitor) GetDowntimeIncidents() ([]check.DowntimeIncident, erro
 }
 
 func convDowntimeIncident(obj *unstructured.Unstructured) ([]check.DowntimeIncident, error) {
-	var incidentObj v1.Downtime
+	var incidentObj Downtime
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &incidentObj)
 	if err != nil {
 		return nil, err

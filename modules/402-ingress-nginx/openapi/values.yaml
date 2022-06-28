@@ -4,13 +4,14 @@ type: object
 properties:
   internal:
     type: object
-    default: {}
+    default: { }
     x-required-for-helm:
-    - ingressControllers
+      - ingressControllers
+      - upmeterDiscovery
     properties:
       admissionCertificate:
         type: object
-        default: {}
+        default: { }
         x-required-for-helm:
           - ca
           - key
@@ -26,55 +27,55 @@ properties:
             type: string
             x-examples: [ "testcrt" ]
       nginxAuthTLS:
-        type: ['null', array]
-        default: []
+        type: [ 'null', array ]
+        default: [ ]
         items:
           type: object
           properties:
             controllerName:
               type: string
-              x-examples: ["test"]
+              x-examples: [ "test" ]
             ingressClass:
               type: string
-              x-examples: ["nginx"]
+              x-examples: [ "nginx" ]
             data:
               type: object
-              default: {}
+              default: { }
               properties:
                 certificate:
                   type: string
-                  x-examples: ["---certificate-string---"]
+                  x-examples: [ "---certificate-string---" ]
                 key:
                   type: string
-                  x-examples: ["---key-string---"]
+                  x-examples: [ "---key-string---" ]
                 certificate_updated:
                   type: boolean
-                  x-examples: [true]
+                  x-examples: [ true ]
       ingressControllers:
-        type: ['null', array]
-        default: []
+        type: [ 'null', array ]
+        default: [ ]
         items:
           type: object
           properties:
             name:
               type: string
-              x-examples: ["test"]
+              x-examples: [ "test" ]
             spec:
               type: object
-              default: {}
+              default: { }
               x-required-for-helm:
                 - ingressClass
                 - inlet
               properties:
                 ingressClass:
                   type: string
-                  x-examples: ["nginx"]
+                  x-examples: [ "nginx" ]
                 inlet:
                   type: string
-                  x-examples: ["HostWithFailover"]
+                  x-examples: [ "HostWithFailover" ]
                 controllerVersion:
                   type: string
-                  x-examples: ["0.33"]
+                  x-examples: [ "0.33" ]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -84,36 +85,36 @@ properties:
                 validationEnabled:
                   type: boolean
                 nodeSelector:
-                    type: object
-                    additionalProperties:
-                      type: string
-                    description: |
-                      The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-                      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
                 tolerations:
-                    type: array
-                    description: |
-                      The same as `spec.tolerations` for the Kubernetes pod.
+                  type: array
+                  description: |
+                    The same as `spec.tolerations` for the Kubernetes pod.
 
-                      Use [automatic](https://deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
-                    items:
-                      type: object
-                      properties:
-                        effect:
-                          type: string
-                        key:
-                          type: string
-                        operator:
-                          type: string
-                        tolerationSeconds:
-                          type: integer
-                          format: int64
-                        value:
-                          type: string
+                    Use [automatic](https://deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                      key:
+                        type: string
+                      operator:
+                        type: string
+                      tolerationSeconds:
+                        type: integer
+                        format: int64
+                      value:
+                        type: string
                 loadBalancer:
                   type: object
-                  default: {}
+                  default: { }
                   properties:
                     sourceRanges:
                       type: array
@@ -128,7 +129,7 @@ properties:
                       type: string
                 loadBalancerWithProxyProtocol:
                   type: object
-                  default: {}
+                  default: { }
                   properties:
                     sourceRanges:
                       type: array
@@ -139,7 +140,7 @@ properties:
                       additionalProperties: true
                 hostPort:
                   type: object
-                  default: {}
+                  default: { }
                   properties:
                     httpPort:
                       type: integer
@@ -151,7 +152,7 @@ properties:
                       type: string
                 hostPortWithProxyProtocol:
                   type: object
-                  default: {}
+                  default: { }
                   properties:
                     httpPort:
                       type: integer
@@ -159,7 +160,7 @@ properties:
                       type: integer
                 hostWithFailover:
                   type: object
-                  default: {}
+                  default: { }
                   additionalProperties: true
                 acceptRequestsFrom:
                   type: array
@@ -200,42 +201,42 @@ properties:
                   additionalProperties: true
                 resourcesRequests:
                   type: object
-                  default: {}
+                  default: { }
                   properties:
                     mode:
                       type: string
-                      x-examples: ["VPA", "Static"]
+                      x-examples: [ "VPA", "Static" ]
                     vpa:
                       type: object
-                      default: {}
+                      default: { }
                       properties:
                         mode:
                           type: string
                         cpu:
                           type: object
-                          default: {}
+                          default: { }
                           properties:
                             max:
                               type: string
-                              x-examples: ["200m"]
+                              x-examples: [ "200m" ]
                             min:
                               type: string
                         memory:
                           type: object
-                          default: {}
+                          default: { }
                           properties:
                             max:
                               type: string
                             min:
                               type: string
-                              x-examples: ["100Mi"]
+                              x-examples: [ "100Mi" ]
                     static:
                       type: object
-                      default: {}
+                      default: { }
                       properties:
                         cpu:
                           type: string
-                          x-examples: ["100m"]
+                          x-examples: [ "100m" ]
                         memory:
                           type: string
                 customErrors:
@@ -267,7 +268,7 @@ properties:
                           type: string
       externalIngressClasses:
         type: array
-        default: []
+        default: [ ]
         items:
           type: string
       minimalControllerVersion:
@@ -279,3 +280,15 @@ properties:
         type: boolean
         default: false
         description: Has 2+ controllers with different versions but same ingress class
+      upmeterDiscovery:
+        type: object
+        required:
+          - controllerNames
+        default:
+          controllerNames: [ ]
+        properties:
+          controllerNames:
+            type: array
+#            default: []
+            items:
+              type: string

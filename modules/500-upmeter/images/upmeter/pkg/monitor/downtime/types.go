@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package downtime
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 	"d8.io/upmeter/pkg/check"
 )
 
-type DowntimeSpec struct {
+type Spec struct {
 	StartDate   string   `json:"startDate"`
 	EndDate     string   `json:"endDate"`
 	Type        string   `json:"type"`
@@ -35,12 +35,12 @@ type DowntimeSpec struct {
 	Affected    []string `json:"affected"`
 }
 
-// DowntimeIncident is the Schema for the downtime incidents
+// Downtime is the Schema for the downtime incidents
 type Downtime struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec []DowntimeSpec `json:"spec,omitempty"`
+	Spec []Spec `json:"spec,omitempty"`
 }
 
 // DowntimeList contains a list of DowntimeIncident

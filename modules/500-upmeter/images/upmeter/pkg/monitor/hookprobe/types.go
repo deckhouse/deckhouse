@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package hookprobe
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// HookProbeSpec is the spec in the HookProbe CRD
-type HookProbeSpec struct {
+// Spec is the spec in the HookProbe CRD
+type Spec struct {
 	Inited string `json:"inited"`
 	Mirror string `json:"mirror"`
 }
@@ -31,7 +31,7 @@ type HookProbe struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec HookProbeSpec `json:"spec,omitempty"`
+	Spec Spec `json:"spec,omitempty"`
 }
 
 // HookProbeList contains a list of HookProbe objects

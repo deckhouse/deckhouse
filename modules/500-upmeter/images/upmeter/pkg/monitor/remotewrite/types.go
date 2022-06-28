@@ -14,32 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package remotewrite
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RemoteWriteConfig is the config for sending metrics used while exporting. Refer to cortex.Config.
-type RemoteWriteConfig struct {
+// Config for sending metrics via Prometheus Remote Write 1.0 Protocol. Used for metrics export. Refer to cortex.Config.
+type Config struct {
 	Endpoint    string            `json:"url"`
 	BasicAuth   map[string]string `json:"basicAuth"`
 	BearerToken string            `json:"bearerToken"`
 }
 
-// RemoteWriteSpec is the spec in the RemoteWrite CRD
-type RemoteWriteSpec struct {
-	Config           RemoteWriteConfig `json:"config"`
+// Spec is the spec in the RemoteWrite CRD
+type Spec struct {
+	Config           Config            `json:"config"`
 	AdditionalLabels map[string]string `json:"additionalLabels"`
 	IntervalSeconds  int64             `json:"intervalSeconds"`
 }
 
-// RemoteWrite is the Schema for the remote_write options
+// RemoteWrite is the Schema for the upmeterremotewrites.deckhouse.io
 type RemoteWrite struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec RemoteWriteSpec `json:"spec,omitempty"`
+	Spec Spec `json:"spec,omitempty"`
 }
 
 // RemoteWriteList contains a list of RemoteWrite objects

@@ -13,7 +13,7 @@ interface tooltipData {
  * Note the punctuation in status slots.
  */
 function tooltip(data: tooltipData): string {
-  const { title, description, reasonUp, reasonDown, reasonUnknown, reasonNodata } = data
+  const {title, description, reasonUp, reasonDown, reasonUnknown, reasonNodata} = data
   return `
 <p><b>${title}</b></p>
 <p>${description}</p>
@@ -114,6 +114,22 @@ const langPack: LangPack = {
       title: "Deckhouse",
       description: `
             <p>Checks the availability of deckhouse and working hook.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
+            `,
+    },
+    nginx: {
+      ...GROUP_DEFAULT_TOOLTIP,
+      title: "Nginx",
+      description: `
+            <p>Checks the availability of Ingress Nginx Controller.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
+            `,
+    },
+    nodegroups: {
+      ...GROUP_DEFAULT_TOOLTIP,
+      title: "Node Groups",
+      description: `
+            <p>Checks the availability of nodes as specified in NodeGroups.</p>
             <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
     },
@@ -447,20 +463,20 @@ export function getGroupSpec(group: string): tooltipData {
     return spec
   }
 
-  return fallbackTooltip({ title: `Group ${group}` })
+  return fallbackTooltip({title: `Group ${group}`})
 }
 
 export function getProbeSpec(group: string, probe: string): tooltipData {
   const probeSpecs = langPack.probe[group]
   if (!probeSpecs) {
-    // we might miss the group
-    return fallbackTooltip({ title: `${group}/${probe}` })
+    // for dynamic probes, we cannot control probe names in advance, so just show what we got.
+    return fallbackTooltip({title: `${probe}`})
   }
 
   const spec = probeSpecs[probe]
   if (!spec) {
     // we have the group, so the title of probe is the probe key
-    return fallbackTooltip({ title: probe })
+    return fallbackTooltip({title: probe})
   }
 
   return spec

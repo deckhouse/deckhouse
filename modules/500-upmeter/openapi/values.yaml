@@ -69,6 +69,25 @@ properties:
             type: string
           ca.crt:
             type: string
+      dynamicProbes:
+        type: object
+        default: { }
+        properties:
+          ingressControllerNames:
+            type: array
+            default: [ ]
+            items:
+              type: string
+          cloudEphemeralNodeGroupNames:
+            type: array
+            default: [ ]
+            items:
+              type: string
+          zones:
+            type: array
+            default: [ ]
+            items:
+              type: string
 definitions:
   stsEntry:
     type: object

@@ -26,9 +26,9 @@ rules:
   - apiGroups: [ "" ]
     resources: [ "nodes", "pods" ]
     verbs: [ "get", "list" ]
-  # Deckhouse hooks checked via the CR change sync
+  # Deckhouse hooks checked via the CR change sync, and nodegroup probes
   - apiGroups: [ "deckhouse.io" ]
-    resources: [ "upmeterhookprobes" ]
+    resources: [ "upmeterhookprobes" , "nodegroups" ]
     verbs: [ "*" ]
   # Metrics Adapter API
   - apiGroups: [ "custom.metrics.k8s.io" ]

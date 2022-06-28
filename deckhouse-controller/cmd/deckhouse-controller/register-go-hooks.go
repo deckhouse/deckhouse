@@ -61,6 +61,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/500-openvpn/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-openvpn/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/dynamic_probe"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini"
 	_ "github.com/deckhouse/deckhouse/modules/600-namespace-configurator/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
