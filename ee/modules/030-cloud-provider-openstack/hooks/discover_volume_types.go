@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -38,7 +39,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 
 	var openstackVolumeTypes []string
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar"}
+		openstackVolumeTypes = []string{"__DEFAULT__", "some-foo", "bar", "other-bar", "SSD R1", "-Xx__$()? -foo-", "  YY fast SSD-foo."}
 	} else {
 		openstackVolumeTypes, err = getVolumeTypesArray()
 		if err != nil {
@@ -49,7 +50,7 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	storageClassesMap := make(map[string]string, len(openstackVolumeTypes))
 
 	for _, vt := range openstackVolumeTypes {
-		storageClassesMap[strings.ToLower(strings.ReplaceAll(vt, "_", ""))] = vt
+		storageClassesMap[getStorageClassName(vt)] = vt
 	}
 
 	excludes, ok := input.Values.GetOk("cloudProviderOpenstack.storageClass.exclude")
@@ -87,4 +88,25 @@ func handleDiscoverVolumeTypes(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+// Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
+func getStorageClassName(value string) string {
+	mapFn := func(r rune) rune {
+		if r >= 'a' && r <= 'z' ||
+			r >= 'A' && r <= 'Z' ||
+			r >= '0' && r <= '9' ||
+			r == '-' || r == '.' {
+			return unicode.ToLower(r)
+		} else if r == ' ' {
+			return '-'
+		}
+		return rune(-1)
+	}
+
+	// a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.'
+	value = strings.Map(mapFn, value)
+
+	// must start and end with an alphanumeric character
+	return strings.Trim(value, "-.")
 }
