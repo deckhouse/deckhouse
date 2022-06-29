@@ -296,7 +296,7 @@ type release struct {
 	Manifest  string `json:"manifest,omitempty" protobuf:"bytes,5,opt,name=manifest,proto3"`
 
 	// set helm version manually
-	HelmVersion string
+	HelmVersion string `json:"-"`
 }
 
 type manifest struct {
