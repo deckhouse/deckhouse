@@ -27,7 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
+var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
@@ -133,8 +133,8 @@ metadata:
   namespace: d8-cloud-instance-manager
 spec:
   class:
-    kind: AWSInstanceClass
-    name: test
+    kind: AWSMachineClass
+    name: test-cx35
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -144,8 +144,8 @@ metadata:
   deletionTimestamp: "1970-01-01T00:00:00Z"
 spec:
   class:
-    kind: YandexInstanceClass
-    name: test
+    kind: YandexMachineClass
+    name: test-cx25
 `)
 
 	for i, offset := range offsets {
@@ -163,8 +163,8 @@ metadata:
   creationTimestamp: %s
 spec:
   class:
-    kind: YandexInstanceClass
-    name: test
+    kind: YandexMachineClass
+    name: test-cx5
 `, i, string(ts)))
 	}
 

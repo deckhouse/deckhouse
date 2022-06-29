@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -163,7 +164,10 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		if _, ok := preemptibleInstanceClassesSet[machine.MachineClassName]; !ok {
+		splittedMachineClassName := strings.Split(machine.MachineClassName, "-")
+		instanceClassName := strings.Join(splittedMachineClassName[:len(splittedMachineClassName)-1], "")
+
+		if _, ok := preemptibleInstanceClassesSet[instanceClassName]; !ok {
 			continue
 		}
 
