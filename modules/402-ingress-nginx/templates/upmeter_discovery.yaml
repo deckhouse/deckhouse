@@ -1,4 +1,4 @@
----
+{{- if len .Values.ingressNginx.internal.upmeterDiscovery.controllerNames }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,3 +8,4 @@ metadata:
 data:
   names: |
     {{ .Values.ingressNginx.internal.upmeterDiscovery.controllerNames | toJson }}
+{{- end }}

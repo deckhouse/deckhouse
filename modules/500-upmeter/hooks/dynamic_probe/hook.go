@@ -53,11 +53,11 @@ var _ = sdk.RegisterFunc(
 				ApiVersion: "v1",
 				Kind:       "ConfigMap",
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"upmeter-discovery-nodegroups"},
+					MatchNames: []string{"upmeter-discovery-cloud-ephemeral-nodegroups"},
 				},
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
-						MatchNames: []string{"d8-system"},
+						MatchNames: []string{"d8-cloud-instance-manager"},
 					},
 				},
 				FilterFunc: filterNamesFromConfigmap,

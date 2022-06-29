@@ -117,8 +117,8 @@ func discoveredNodeGroups(names ...string) string {
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: upmeter-discovery-nodegroups
-  namespace: d8-system
+  name: upmeter-discovery-cloud-ephemeral-nodegroups
+  namespace: d8-cloud-instance-manager
 data:
   names: %q
 `
