@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 30},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "ingressClasses",
+			Name:                         "ingress_classes",
 			ApiVersion:                   "networking.k8s.io/v1",
 			Kind:                         "IngressClass",
 			ExecuteHookOnSynchronization: pointer.Bool(false),
@@ -50,6 +50,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, handleIngressClasses)
+
+var (
+	// edge version, with which we compare existed controllers
+	edgeVersion = semver.MustParse("v1.0.0")
+)
 
 func applyIngressClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ic v1.IngressClass
@@ -66,7 +71,7 @@ func applyIngressClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleIngressClasses(input *go_hook.HookInput) error {
-	snap := input.Snapshots["ingressClasses"]
+	snap := input.Snapshots["ingress_classes"]
 	if len(snap) == 0 {
 		return nil
 	}
@@ -78,7 +83,6 @@ func handleIngressClasses(input *go_hook.HookInput) error {
 	}
 
 	conArray := input.Values.Get("ingressNginx.internal.ingressControllers").Array()
-	edgeVersion, _ := semver.NewVersion("v1.0.0")
 
 	for _, con := range conArray {
 		var controller Controller
@@ -95,6 +99,11 @@ func handleIngressClasses(input *go_hook.HookInput) error {
 			return err
 		}
 
+		existingController, ok := existingClasses[ingressClass]
+		if !ok {
+			continue
+		}
+
 		version, ok, err := unstructured.NestedString(controller.Spec, "controllerVersion")
 		if err != nil {
 			return err
@@ -105,11 +114,6 @@ func handleIngressClasses(input *go_hook.HookInput) error {
 		semV := semver.MustParse(version)
 		if semV.GreaterThan(edgeVersion) {
 			controllerName = fmt.Sprintf("ingress-nginx.deckhouse.io/%s", ingressClass)
-		}
-
-		existingController, ok := existingClasses[ingressClass]
-		if !ok {
-			continue
 		}
 
 		if existingController != controllerName {
