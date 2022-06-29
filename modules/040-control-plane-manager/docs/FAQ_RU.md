@@ -103,7 +103,7 @@ title: "Управление control plane: FAQ"
    rm -f /etc/kubernetes/admin.conf /root/.kube/config
    rm -rf /etc/kubernetes/deckhouse
    rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
-   rm -rf /var/lib/etcd
+   rm -rf /var/lib/etcd/member/
    ```
 
 ## Как посмотреть список member'ов в etcd?

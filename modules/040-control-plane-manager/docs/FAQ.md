@@ -101,7 +101,7 @@ All the other actions are performed automatically. Wait until the master nodes a
    rm -f /etc/kubernetes/admin.conf /root/.kube/config
    rm -rf /etc/kubernetes/deckhouse
    rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
-   rm -rf /var/lib/etcd
+   rm -rf /var/lib/etcd/member/
    ```
 
 ## How do I view the list of etcd members?
