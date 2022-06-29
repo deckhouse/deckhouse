@@ -140,14 +140,18 @@ if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-shutdownGracePeriod="0s"
-shutdownGracePeriodCriticalPods="0s"
+shutdownGracePeriod="2m"
+shutdownGracePeriodCriticalPods="15s"
 
 if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   source /var/lib/bashible/cloud-provider-variables
 
-  shutdownGracePeriod="$shutdown_grace_period"
-  shutdownGracePeriodCriticalPods="$shutdown_grace_period_critical_pods"
+  if [[ -n "$shutdown_grace_period" ]]; then
+    shutdownGracePeriod="$shutdown_grace_period"
+  fi
+  if [[ -n "$shutdown_grace_period_critical_pods" ]]; then
+    shutdownGracePeriodCriticalPods="$shutdown_grace_period_critical_pods"
+  fi
 fi
 
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
