@@ -13,7 +13,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 rules:
   # Control-plane
-  - apiGroups: [ "" ]
+  - apiGroups: [""]
     resources:
       - namespaces
     verbs:
@@ -23,25 +23,25 @@ rules:
       - delete
   # - In monitoring, we check daemonset availability based on available nodes
   # - In various probes, we check pods readiness
-  - apiGroups: [ "" ]
-    resources: [ "nodes", "pods" ]
-    verbs: [ "get", "list" ]
+  - apiGroups: [""]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
   # Deckhouse hooks checked via the CR change sync, and nodegroup probes
-  - apiGroups: [ "deckhouse.io" ]
-    resources: [ "upmeterhookprobes" , "nodegroups" ]
-    verbs: [ "*" ]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["upmeterhookprobes" , "nodegroups"]
+    verbs: ["*"]
   # Metrics Adapter API
-  - apiGroups: [ "custom.metrics.k8s.io" ]
-    resources: [ "metrics" ]
-    verbs: [ "get" ]
+  - apiGroups: ["custom.metrics.k8s.io"]
+    resources: ["metrics"]
+    verbs: ["get"]
   # Metrics-sources probe, node-exporter
-  - apiGroups: [ "apps" ]
-    resources: [ "daemonsets" ]
-    verbs: [ "get" ]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["get"]
   # Cert-manager basic probe checking for secret creation
-  - apiGroups: [ "cert-manager.io" ]
-    resources: [ "certificates" ]
-    verbs: [ "create", "delete" ]
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates"]
+    verbs: ["create", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -65,8 +65,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 rules:
   # Fetching smoke-mini; creating configmaps, deployments, pods
-  - apiGroups: [ "*" ]
-    resources: [ "*" ]
+  - apiGroups: ["*"]
+    resources: ["*"]
     verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
