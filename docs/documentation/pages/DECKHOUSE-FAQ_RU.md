@@ -160,6 +160,44 @@ deckhouse: |
 
 В результате образы Deckhouse будут доступны по адресу, например, `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
 
+### Ручная загрузка образов в изолированный приватный registry
+
+Загрузите скрипт на хост, с которого есть доступ до `registry.deckhouse.io`. `Docker`, `crane` и `jq` должны быть установлены на хосте.
+
+```shell
+curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
+chmod 700 d8-pull.sh
+```
+
+Пример вызова команды скачивания образов:
+
+```shell
+./d8-pull.sh --license YOUR_DECKHOUSE_LICENSE_KEY --output-dir /your/output-dir/
+```
+
+Загрузите директорию с образами, полученную на предыдущем шаге, на хост, с которого есть доступ до изолированного приватного registry. `Crane` должен быть установлен на хосте.
+Загрузите скрипт на этот хост:
+
+```shell
+curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
+chmod 700 d8-push.sh
+```
+
+Пример вызова команды загрузки образов в изолированный приватный registry:
+
+```shell
+./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username YOUR_USERNAME --password YOUR_PASSWORD
+```
+
+## Как создать кластер и запустить Deckhouse без использования каналов обновлений?
+
+Данный способ следует использовать только в случае, если в изолированном приватном registry нет образов, содержащих информацию о каналах обновлений.
+
+* Если вы хотите создать кластер, то вы должны использовать точный тег образа Deckhouse, чтобы установить Deckhouse Platform.
+Например, если вы хотите установить релиз v1.32.13, то вы должны использовать образ `your.private.registry.com/deckhouse/install:v1.32.13`. Также вы должны указать `devBranch: v1.32.13` вместо `releaseChannel: XXX` в `config.yml`.
+* Если у вас уже есть рабочий кластер, то вы должны удалить `releaseChannel` из ConfigMap `d8-system/deckhouse` и указать выбранный образ Deckhouse в поле `image` в Deployment `d8-system/deckhouse`. Дальнейшее обновление необходимо производить также изменяя образ вручную.
+Например, для релиза v1.32.13 следует указывать в поле `image` значение `your.private.registry.com/deckhouse:v1.32.13`.
+
 ## Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 Для переключения кластера Deckhouse на использование стороннего registry необходимо выполнить следующие действия:

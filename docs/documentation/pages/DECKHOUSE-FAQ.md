@@ -156,6 +156,44 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
 
 Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/{d8s-edition}:{d8s-version}`.
 
+### Manually upload images to an air-gapped registry
+
+Download script on a host that have access to `registry.deckhouse.io`. `Docker`, `crane` and `jq` must be installed on this host.
+
+```shell
+curl -fsSL -o d8-pull.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-pull.sh
+chmod 700 d8-pull.sh
+```
+
+Example of pulling images:
+
+```shell
+./d8-pull.sh --license YOUR_DECKHOUSE_LICENSE_KEY --output-dir /your/output-dir/
+```
+
+Upload the folder from the previous step to a host with access to an air-gapped registry. `Crane` must be installed on this host.
+Download script on a host that has access to an air-gapped registry.
+
+```shell
+curl -fsSL -o d8-push.sh https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/release/d8-push.sh
+chmod 700 d8-push.sh
+```
+
+Example of pushing images:
+
+```shell
+./d8-push.sh --source-dir /your/source-dir/ --path your.private.registry.com/deckhouse --username YOUR_USERNAME --password YOUR_PASSWORD
+```
+
+## How to bootstrap a cluster and run Deckhouse without the usage of release channels?
+
+This case is only valid if you don't have release channel images in your air-gapped registry.
+
+* If you want to bootstrap a cluster, you have to use the exact tag of a Docker image to install the Deckhouse Platform.
+For example, if you want to install release v1.32.13, you have to use image `your.private.registry.com/deckhouse/install:v1.32.13`. And you have to use `devBranch: v1.32.13` instead of `releaseChannel: XXX` in `config.yml`.
+* If you already have a cluster up and running, you have to remove `releaseChannel` setting from the ConfigMap `d8-system/deckhouse` and set the appropriate `image` parameter for `d8-system/deckhouse` Deployment. Further updates have to be done by a manual update of the `image` parameter of the `d8-system/deckhouse` Deployment.
+For example, you have to set `image` to `your.private.registry.com/deckhouse:v1.32.13` for release v1.32.13.
+
 ## How do I switch a running Deckhouse cluster to use a third-party registry?
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
