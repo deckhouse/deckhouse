@@ -196,6 +196,8 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			if err != nil {
 				return 0, err
 			}
+			// release can contains wrong namespace (set by helm and werf) and confuse user wit hwrong metric
+			// fetch namespace from secret is more reliable
 			release.Namespace = secret.Namespace
 			release.HelmVersion = "3"
 
@@ -238,6 +240,8 @@ func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			if err != nil {
 				return 0, err
 			}
+			// release can contains wrong namespace (set by helm and werf) and confuse user wit hwrong metric
+			// fetch namespace from secret is more reliable
 			release.Namespace = secret.Namespace
 			release.HelmVersion = "2"
 

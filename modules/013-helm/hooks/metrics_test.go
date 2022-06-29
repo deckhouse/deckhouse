@@ -67,6 +67,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 					case "resource_versions_compatibility":
 						Expect(*metric.Value).To(Equal(float64(1))) // 1 means deprecated
 						Expect(metric.Labels["k8s_version"]).To(Equal("1.22"))
+						Expect(metric.Labels["helm_release_namespace"]).To(Equal("appns")) // we check namespace injection, because the release contains 'defau;t' namespace
 
 						switch metric.Labels["api_version"] {
 						case "networking.k8s.io/v1beta1":
