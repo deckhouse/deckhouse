@@ -141,3 +141,25 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers.
 	docker rm -f site_site_1 site_front_1 documentation; docker network rm deckhouse
+
+##@ Update kubernetes control-plane patchversions
+
+.PHONY: update-k8s-patch-versions-deps
+update-k8s-patch-versions-deps: ## Install jq,yq,crane deps for update-patchversion script.
+	make install-jq && make install-yq && make install-crane
+
+.PHONY: install-jq
+install-jq: ## Install jq deps for update-patchversion script.
+	cd candi/tools; bash update_kubernetes_patchversions.sh install-jq
+
+.PHONY: install-yq
+install-yq: ## Install yq deps for update-patchversion script.
+	cd candi/tools; bash update_kubernetes_patchversions.sh install-yq
+
+.PHONY: install-crane
+install-crane: ## Install crane deps for update-patchversion script.
+	cd candi/tools; bash update_kubernetes_patchversions.sh install-crane
+
+.PHONY: update-k8s-patch-versions
+update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
+	cd candi/tools; bash update_kubernetes_patchversions.sh

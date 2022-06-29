@@ -19,11 +19,17 @@ set -Eeo pipefail
 . functions.sh
 
 # install dependencies
-if [[ $1 == "install-deps" ]]; then
-    install_jq
-    install_crane
-    install_yq
-fi
+case "$1" in
+install-jq)
+  install_jq
+  ;;
+install-yq)
+  install_yq
+  ;;
+install-crane)
+  install_crane
+  ;;
+esac
 
 function check_requirements() {
     check_jq
