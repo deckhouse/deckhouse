@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: upmeter :: hooks :: upmeter_discovery ::", func() {
+var _ = Describe("Modules :: node-manager :: hooks :: upmeter_discovery ::", func() {
 	var (
 		valuesKey  = "nodeManager.internal.upmeterDiscovery.ephemeralNodeGroupNames"
 		initValues = `{"nodeManager":{"internal":{ "upmeterDiscovery": { "ephemeralNodeGroupNames": [] }}}}`
