@@ -135,6 +135,9 @@ func deleteMachines(input *go_hook.HookInput) error {
 		machines                      []*Machine
 	)
 
+	print(spew.Sdump(icsSnapshot))
+	print(spew.Sdump(machineSnapshot))
+
 	for _, icRaw := range icsSnapshot {
 		ic, ok := icRaw.(*YandexInstanceClass)
 		if !ok {
@@ -169,7 +172,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 
 	// FIXME: delete debug
 	for _, m := range machines {
-		fmt.Printf("Will try to delete machine: %s\n", m.Name)
+		print(fmt.Sprintf("Will try to delete machine: %s\n", m.Name))
 	}
 
 	if len(machines) == 0 {
@@ -189,7 +192,8 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 	const (
 		// 12 * 0.25 = 3 hours
 		durationIterations = 12
-		slidingStep        = 15 * time.Minute
+		// FIXME: revert test 15 minutes
+		slidingStep = 5 * time.Minute
 	)
 	var (
 		// FIXME: revert test "21 *" multiplication
@@ -224,7 +228,7 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 	for t := 0; t < 12; t++ {
 		currentSlidingDuration -= slidingStep
 		// FIXME: delete debug
-		fmt.Printf("slidingDuration=%d", currentSlidingDuration)
+		print(fmt.Sprintf("slidingDuration=%d", currentSlidingDuration))
 
 		for cursor < machineCount {
 			if len(machinesToDelete) >= batch {
@@ -232,7 +236,7 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 			}
 
 			if expires(timeNow, machines[cursor].CreationTimestamp.Time, currentSlidingDuration) {
-				_, _ = spew.Printf("evaling machine: %#v\n", machines[cursor])
+				print(spew.Sprintf("evaling machine: %#v\n", machines[cursor]))
 				machinesToDelete = append(machinesToDelete, machines[cursor].Name)
 				cursor++
 			} else {
