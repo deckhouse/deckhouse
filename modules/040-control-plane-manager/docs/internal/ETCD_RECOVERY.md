@@ -251,14 +251,41 @@ If there is a complete loss of data, perform the following steps on all nodes of
   rm -rf /var/lib/etcd/member/
   ```
 
-Select any node and do the following:
+Select any node as first recovered.
+
+On another (two) nodes do the following:
+- stop kubelet
+  ```shell
+  systemctl stop kubelet.service
+  ```
+- remove all containers:
+  ```shell
+  systemctl list-units --full --all | grep -q docker.service && systemctl restart docker
+  kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+  ```
+- clean node
+  ```shell
+  rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
+  rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
+  rm -f /etc/kubernetes/authorization-webhook-config.yaml
+  rm -f /etc/kubernetes/admin.conf /root/.kube/config
+  rm -rf /etc/kubernetes/deckhouse
+  rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+  ```
+On the selected node do the following:
 - upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server);
+  ```shell
+  wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+  tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+  ```
 - copy backup file to `~/etc-backup.snapshot`
-- restore the etcd database: 
+- restore the etcd database:
+
   ```shell
   ETCDCTL_API=3 etcdctl snapshot restore ~/etc-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd`
   ```
+
 - add the `--force-new-cluster` flag to the `~/etcd.yaml` manifest;
 - try to run etcd:
 
@@ -267,10 +294,37 @@ Select any node and do the following:
   ```
 
 - remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest;
-- restart the `d8-control-plane-manager` DaemonSet:
+- set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica)
+- remove master role label from nodes objects expect selected (recover in current time)
+  ```shell
+  kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+  kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+  ```
+
+- restart and wait readiness Deckhouse
+  ```shell
+  kubectl -n d8-system rollout restart deployment deckhouse
+  ```
+  if you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes;
+
+- check node etcd member has peer and client host as internal node ip
+  ```shell
+  ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+  ```
+
+On another nodes, start kubelet:
 
   ```shell
-  kubectl -n kube-system rollout restart daemonset d8-control-plane-manager
+  systemctl start kubelet.service
+  ```
+
+and wait for control plane Pod rolling over and becoming `Ready`.
+
+For each another master nodes:
+- add master role
+
+  ```shell
+  kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
   ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`.
