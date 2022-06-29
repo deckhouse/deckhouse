@@ -39,8 +39,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "ingress_classes",
 			ApiVersion:                   "networking.k8s.io/v1",
 			Kind:                         "IngressClass",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage": "deckhouse",
