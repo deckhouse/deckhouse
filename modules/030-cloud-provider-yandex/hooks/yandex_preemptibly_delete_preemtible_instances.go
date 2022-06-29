@@ -93,12 +93,19 @@ func isPreemptibleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "every-15",
+			Crontab: "0/15 * * * *",
+		},
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                "machines",
-			ExecuteHookOnEvents: go_hook.Bool(false),
-			ApiVersion:          "machine.sapcloud.io/v1alpha1",
-			Kind:                "Machine",
+			Name:                   "machines",
+			ExecuteHookOnEvents:    go_hook.Bool(false),
+			WaitForSynchronization: go_hook.Bool(false),
+			ApiVersion:             "machine.sapcloud.io/v1alpha1",
+			Kind:                   "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-cloud-instance-manager"},
@@ -107,11 +114,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyMachineFilter,
 		},
 		{
-			Name:                "ics",
-			ExecuteHookOnEvents: go_hook.Bool(false),
-			ApiVersion:          "deckhouse.io/v1",
-			Kind:                "YandexInstanceClass",
-			FilterFunc:          isPreemptibleFilter,
+			Name:                   "ics",
+			ExecuteHookOnEvents:    go_hook.Bool(false),
+			WaitForSynchronization: go_hook.Bool(false),
+			ApiVersion:             "deckhouse.io/v1",
+			Kind:                   "YandexInstanceClass",
+			FilterFunc:             isPreemptibleFilter,
 		},
 	},
 }, deleteMachines)
@@ -173,11 +181,13 @@ func deleteMachines(input *go_hook.HookInput) error {
 // afterwards delete in 15 minutes increments, no more than batch size
 func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDelete []string) {
 	const (
+		// 12 * 0.25 = 3 hours
 		durationIterations = 12
 		slidingStep        = 15 * time.Minute
 	)
 	var (
-		currentSlidingDuration = preemtibleVMDeletionDuration - time.Hour
+		// FIXME: revert test "21 *" multiplication
+		currentSlidingDuration = preemtibleVMDeletionDuration - 21*time.Hour
 	)
 
 	sort.Slice(machines, func(i, j int) bool {
