@@ -159,7 +159,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		if machine.MachineClassKind != "YandexInstanceClass" {
+		if machine.MachineClassKind != "YandexMachineClass" {
 			continue
 		}
 
