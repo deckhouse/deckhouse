@@ -89,8 +89,6 @@ spec:
           mountPath: /var/run/docker.sock
         - name: containerddir
           mountPath: /etc/containerd
-        - name: containerdconfig
-          mountPath: /etc/containerd/config.toml
         - name: kube
           mountPath: /root/.kube
         resources:
@@ -144,10 +142,6 @@ spec:
         hostPath:
           path: /etc/containerd
           type: DirectoryOrCreate
-      - name: containerdconfig
-        hostPath:
-          path: /etc/containerd/config.toml
-          type: FileOrCreate
       - emptyDir:
           medium: Memory
         name: kube
