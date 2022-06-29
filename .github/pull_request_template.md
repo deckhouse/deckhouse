@@ -24,7 +24,11 @@
 -->
 
 ## Checklist
-- [ ] The code is covered by unit tests (hooks, templates, matrix)
+- [ ] The code is covered by hook tests
+- [ ] The code is covered by matix tests
+- [ ] The code is covered by template tests
+- [ ] Documentation updated according to the changes
+- [ ] Changes were tested in the Kubernetes cluster manually
 
 ## Changelog entries
 <!---
