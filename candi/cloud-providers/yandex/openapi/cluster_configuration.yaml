@@ -86,7 +86,7 @@ apiVersions:
                 type: integer
                 description: |
                   Yandex Compute Instance disk size in gigabytes.
-                example: 20
+                example: 50
                 x-doc-default: 50
               externalIPAddresses:
                 type: array
