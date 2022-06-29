@@ -18,7 +18,7 @@
 
 ## What is the expected result?
 <!---
-  How one can checnk these changes after applying?  
+  How can one check these changes after applying?  
 
   Describe, what (resource, state, event, etc.) MUST or MUST NOT change/happen after applying these changes.
 -->
