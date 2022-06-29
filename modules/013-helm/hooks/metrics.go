@@ -65,6 +65,9 @@ const unsupportedVersionsYAML = `
   "networking.k8s.io/v1beta1": ["Ingress"]
   "extensions/v1beta1": ["Ingress"]
 
+"1.24":
+  "snapshot.storage.k8s.io/v1beta1": ["VolumeSnapshot"]
+
 "1.25":
   "batch/v1beta1": ["CronJob"]
   "discovery.k8s.io/v1beta1": ["EndpointSlice"]
@@ -193,6 +196,10 @@ func getHelm3Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			if err != nil {
 				return 0, err
 			}
+			// release can contains wrong namespace (set by helm and werf) and confuse user wit hwrong metric
+			// fetch namespace from secret is more reliable
+			release.Namespace = secret.Namespace
+			release.HelmVersion = "3"
 
 			releasesC <- release
 			totalReleases++
@@ -233,6 +240,10 @@ func getHelm2Releases(ctx context.Context, client k8s.Client, releasesC chan<- *
 			if err != nil {
 				return 0, err
 			}
+			// release can contains wrong namespace (set by helm and werf) and confuse user wit hwrong metric
+			// fetch namespace from secret is more reliable
+			release.Namespace = secret.Namespace
+			release.HelmVersion = "2"
 
 			releasesC <- release
 			totalReleases++
@@ -270,6 +281,7 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 				input.MetricsCollector.Set("resource_versions_compatibility", float64(incompatibility), map[string]string{
 					"helm_release_name":      rel.Name,
 					"helm_release_namespace": rel.Namespace,
+					"helm_version":           rel.HelmVersion,
 					"k8s_version":            k8sCompatibilityVersion,
 					"resource_name":          resource.Metadata.Name,
 					"resource_namespace":     resource.Metadata.Namespace,
@@ -285,7 +297,10 @@ func runReleaseProcessor(k8sCurrentVersion *semver.Version, input *go_hook.HookI
 type release struct {
 	Name      string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name,proto3"`
 	Namespace string `json:"namespace,omitempty" protobuf:"bytes,8,opt,name=namespace,proto3"`
-	Manifest  string `json:"manifest,omitempty" protobuf:"bytes,5,opt,name=manifest,proto3" `
+	Manifest  string `json:"manifest,omitempty" protobuf:"bytes,5,opt,name=manifest,proto3"`
+
+	// set helm version manually
+	HelmVersion string `json:"-"`
 }
 
 type manifest struct {

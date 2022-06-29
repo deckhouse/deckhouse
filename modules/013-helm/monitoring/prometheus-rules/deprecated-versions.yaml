@@ -12,7 +12,7 @@
       plk_protocol_version: "1"
       summary: At least one HELM release contains resources with deprecated apiVersion, which will be removed in Kubernetes v{{ $labels.k8s_version }}.
       description: |
-        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1` in Prometheus.
+        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1` in Prometheus.
 
         You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
 
@@ -29,6 +29,6 @@
       summary:
         At least one HELM release contains resources with unsupported apiVersion for Kubernetes v{{ $labels.k8s_version }}.
       description: |
-        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2` in Prometheus.
+        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2` in Prometheus.
 
         You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.

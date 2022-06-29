@@ -61,6 +61,7 @@ func handleDeprecatedAPIStartup(input *go_hook.HookInput, dc dependency.Containe
 		input.MetricsCollector.Set("resource_versions_compatibility", value, map[string]string{
 			"helm_release_name":      metricRecord.Metric.HelmReleaseName,
 			"helm_release_namespace": metricRecord.Metric.HelmReleaseNamespace,
+			"helm_version":           metricRecord.Metric.HelmVersion,
 			"k8s_version":            metricRecord.Metric.K8sVersion,
 			"resource_name":          metricRecord.Metric.ResourceName,
 			"resource_namespace":     metricRecord.Metric.ResourceNamespace,
@@ -109,6 +110,7 @@ type promMetrics struct {
 				Kind                 string `json:"kind"`
 				HelmReleaseName      string `json:"helm_release_name"`
 				HelmReleaseNamespace string `json:"helm_release_namespace"`
+				HelmVersion          string `json:"helm_version"`
 				K8sVersion           string `json:"k8s_version"`
 				ResourceName         string `json:"resource_name"`
 				ResourceNamespace    string `json:"resource_namespace"`
