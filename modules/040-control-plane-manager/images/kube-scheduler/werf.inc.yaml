@@ -3,7 +3,7 @@
   {{- $patch := $value.patch | toString }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 import:
   - image: common/pause
     add: /pause

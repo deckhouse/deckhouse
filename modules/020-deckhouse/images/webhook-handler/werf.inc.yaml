@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ env "BASE_SHELL_OPERATOR" }}
+from: {{ .Images.BASE_SHELL_OPERATOR }}
 ansible:
   beforeInstall:
     - name: "Install yq"

@@ -15,7 +15,7 @@
   {{- $image_version := $version | replace "containerd.io=" "" | replace "." "-" | replace "~" "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ env "BASE_SCRATCH" }}
+from: {{ $.Images.BASE_SCRATCH }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -37,7 +37,7 @@ docker:
     containerd: {{ $image_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /

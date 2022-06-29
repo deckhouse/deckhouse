@@ -31,34 +31,28 @@ fi
 
 # Hack to get the base images list.
 # We need to figure out the proper way to store this images and avoid template rendering.
-function __base_images_tags__ {
-  docker run -i --rm \
-    -e TARGET_UID=$(id -u) \
-    -e TARGET_GID=$(id -g) \
-    -e TARGET_UMASK=$(umask) \
-    -e TARGET_OSTYPE=${OSTYPE} \
-    -v $(pwd)/.github/ci_includes:/in/ci_includes \
-    hairyhenderson/gomplate:v3.10.0-alpine \
-      --left-delim '{!{' \
-      --right-delim '}!}' \
-      --plugin echo=/bin/echo \
-      --template /in/ci_includes \
-      -i '{!{ tmpl.Exec "image_versions_envs" . }!}'
+function base_images_tags {
+  base_images=$(grep . $(pwd)/candi/image_versions.yml) # non empty lines
+  base_images=$(grep -v "#" <<< "$base_images") # remove comments
+
+  reg_path=$(grep "REGISTRY_PATH" <<< ${base_images} | awk '{ print $2 }' | jq -r)
+
+  base_images=$(grep -v "REGISTRY_PATH" <<< "$base_images") # Not an image
+  base_images=$(grep -v "BASE_GOLANG" <<< "$base_images") # golang images are used for multistage builds
+  base_images=$(grep -v "BASE_RUST" <<< "$base_images") # rust images are used for multistage builds
+  base_images=$(grep -v "BASE_JEKYLL" <<< "$base_images") # images to build docs
+
+  base_images=$(awk '{ print $2 }' <<< "$base_images") # pick an actual images address
+  base_images=$(jq -sr --arg reg "$reg_path" 'map(. | "\($reg)\(.)") | .[]' <<< "$base_images") # "string" -> registry.deckhouse.io/base_images/string
+
+  echo "$base_images"
 }
 
 function __main__() {
   echo "Severity: $SEVERITY"
   echo ""
 
-  base_images=$(__base_images_tags__)
-  base_images=$(grep -v "#" <<< "$base_images") # remove comments
-  base_images=$(grep -v "BASE_GOLANG" <<< "$base_images") # golang images are used for multistage builds
-  base_images=$(grep -v "BASE_RUST" <<< "$base_images") # rust images are used for multistage builds
-  base_images=$(grep -v "BASE_JEKYLL" <<< "$base_images") # images to build docs
-  base_images=$(awk '{ print $2 }' <<< "$base_images") # pick an actual images address
-  base_images=$(jq -sr '.[]' <<< "$base_images") # unwrap quotes "string" -> string
-
-  for image in $base_images ; do
+  for image in $(base_images_tags) ; do
     echo "----------------------------------------------"
     echo "👾 Image: $image"
     echo ""

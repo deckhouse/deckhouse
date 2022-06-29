@@ -196,7 +196,7 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 }
 
 func isWerfInstructionUnacceptable(from string) (bool, string) {
-	if !strings.HasPrefix(from, `{{ env "BASE_`) {
+	if !strings.HasPrefix(from, `{{ .Images.BASE_`) || !strings.HasPrefix(from, `{{ $.Images.BASE_`) {
 		return true, "`from:` parameter for `image:` should be one of our BASE_ images"
 	}
 	return false, ""

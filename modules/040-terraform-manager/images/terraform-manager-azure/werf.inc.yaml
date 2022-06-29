@@ -6,7 +6,7 @@ git:
 import:
 - artifact: terraform-provider-azure
   add: /terraform-provider-azure
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AZURE_NAMESPACE" }}/{{ env "TF_AZURE_TYPE" }}/{{ env "TF_AZURE_VERSION" }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64
   before: setup
 shell:
   install:
@@ -16,12 +16,12 @@ shell:
 artifact: terraform-provider-azure
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ env "BASE_UBUNTU" }}
+from: {{ .Images.BASE_UBUNTU }}
 shell:
   beforeInstall:
     - apt-get update && apt install -y wget unzip
     - |
       mkdir /terraform-provider-azure
-      wget -q https://releases.hashicorp.com/terraform-provider-azurerm/{{ env "TF_AZURE_VERSION" }}/terraform-provider-azurerm_{{ env "TF_AZURE_VERSION" }}_linux_amd64.zip -O /terraform-provider-azure.zip
+      wget -q https://releases.hashicorp.com/terraform-provider-azurerm/{{ .TF.azure.version }}/terraform-provider-azurerm_{{ .TF.azure.version }}_linux_amd64.zip -O /terraform-provider-azure.zip
       unzip -d /terraform-provider-azure /terraform-provider-azure.zip
       chmod -R 755 /terraform-provider-azure

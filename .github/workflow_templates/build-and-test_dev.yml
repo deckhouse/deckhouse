@@ -12,8 +12,6 @@ on:
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
-{!{ tmpl.Exec "image_versions_envs" | strings.Indent 2 }!}
-{!{ tmpl.Exec "terraform_versions_envs" | strings.Indent 2 }!}
 
 # Analog of Gitlab's "interruptible: true" behaviour.
 # Note: Concurrency is currently in beta and subject to change.

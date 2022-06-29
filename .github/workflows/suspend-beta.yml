@@ -25,15 +25,9 @@ env:
   # <template: werf_envs>
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
-  # We use stapel image from own registry due to docker hub pull amount limitation.
-  # To re-push stapel image from docker hub use command:
-  # `skopeo copy docker://flant/werf-stapel:0.6.1 docker://registry-write.deckhouse.io/flant/werf-stapel:0.6.1`
-  WERF_STAPEL_IMAGE_NAME: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/flant/werf-stapel"
-  WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
-  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in Github.
+  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-  BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # </template: werf_envs>

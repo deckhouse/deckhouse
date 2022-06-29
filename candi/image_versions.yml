@@ -1,0 +1,30 @@
+#
+# Use crane command to copy image to our registry:
+#
+# $ crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
+#
+# See: https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
+#
+
+# REGISTRY_PATH is a special key which is concatenated with other base images
+REGISTRY_PATH: "registry.deckhouse.io/base_images/"
+
+BASE_ALPINE: "alpine:3.12.12@sha256:cb64bbe7fa613666c234e1090e91427314ee18ec6420e9426cf4e7f314056813"
+BASE_ALPINE_3_15: "alpine:3.15.4@sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89"
+BASE_DEBIAN: "debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"
+BASE_DEBIAN_BULLSEYE: "debian:bullseye@sha256:039f72a400b48c272c6348f0a3f749509b18e611901a21379abc7eb6edd53392"
+BASE_GOLANG_16_ALPINE: "golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
+BASE_GOLANG_16_BUSTER: "golang:1.16.3-buster@sha256:9d64369fd3c633df71d7465d67d43f63bb31192193e671742fa1c26ebc3a6210"
+BASE_GOLANG_17_ALPINE: "golang:1.17.3-alpine3.14@sha256:78a88e6a712e60f9d942450e02508f3c0d8aa931853f02793a4c3aa30063eae0"
+BASE_GOLANG_17_BUSTER: "golang:1.17.3-buster@sha256:be7aa81b44dc85ddf4008bc5f3d5a5acfca8517620d0c4a393601c8e0495fb05"
+BASE_GOLANG_18_BULLSEYE: "golang:1.18.2-bullseye@sha256:cce22ced9c7e52c3c669c20c01792ea584045213843a580634d9aec652d199a4"
+BASE_GOLANG_ALPINE: "golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
+BASE_GOLANG_BUSTER: "golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab"
+BASE_JEKYLL: "jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34"
+BASE_NGINX_ALPINE: "nginx:1.21.6-alpine@sha256:050385609d832fae11b007fbbfba77d0bba12bf72bc0dca0ac03e09b1998580f"
+BASE_NODE_16_ALPINE: "node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
+BASE_PYTHON_ALPINE: "python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
+BASE_RUST: "rust:1.57.0@sha256:7d2592d1a6a73055fbadc0c76868046736ce5fa834ed5c201e3b21f27c28947e"
+BASE_SCRATCH: "spotify/scratch@sha256:db4cabf15c8b9eb70dabe1da385b6d9b2cac6d658b813fbb57dc5231ddd52420"
+BASE_SHELL_OPERATOR: "flant/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
+BASE_UBUNTU: "ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"

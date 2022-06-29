@@ -3,7 +3,7 @@
   {{- $patch := $value.patch | toString }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 import:
 - image: common/pause
   add: /pause
@@ -15,7 +15,7 @@ import:
   includePaths:
   - kubeadm-*
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-etcd-artifact
+- artifact: {{ $.ModuleName }}/etcd-artifact
   add: /usr/local/bin/etcdctl
   before: setup
 git:
@@ -36,9 +36,9 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.23" $version }}
-from: {{ env "BASE_GOLANG_17_BUSTER" }}
+from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
     {{- else }}
-from: {{ env "BASE_GOLANG_16_BUSTER" }}
+from: {{ $.Images.BASE_GOLANG_16_BUSTER }}
     {{- end }}
 git:
 - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -60,6 +60,3 @@ shell:
   - make all WHAT=cmd/kubeadm
   - mv _output/bin/kubeadm /usr/local/bin/kubeadm-{{ $version }}
 {{- end }}
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-etcd-artifact
-from: {{ env "BASE_ETCD" }}

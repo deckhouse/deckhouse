@@ -1,7 +1,7 @@
 giterminismConfigVersion: 1
 config:
   goTemplateRendering:	# The rules for the Go-template functions
-    allowEnvVariables: [ /TF_.+/, /BASE_.+/, /CI_.+/, /REPO_MCM_.+/, "WERF_ENV" ]
+    allowEnvVariables: [ /CI_.+/, /REPO_MCM_.+/ ]
     allowUncommittedFiles: [ "tools/build_includes/*" ]
   stapel:
     mount:
