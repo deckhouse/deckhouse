@@ -2,9 +2,9 @@ positive:
   configValues:
     - {}
   values:
-    - { internal: {} }
+    - {internal: {}}
 negative:
   configValues:
-    - { somethingInConfig: yes }
+    - {somethingInConfig: yes}
   values:
-    - { somethingInConfig: yes }
+    - {somethingInConfig: yes}

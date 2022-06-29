@@ -4,7 +4,7 @@ properties:
     type: boolean
     default: true
     x-examples:
-    - false
+      - false
     description: |
       Set to 'false' to disable early OOM killer in case it behaves incorrectly.
   instancePrefix:
@@ -19,7 +19,7 @@ properties:
     type: boolean
     default: false
     x-examples:
-    - false
+      - false
     description: |
       Set to 'true' to disable machine-controller-manager in case of potentially cluster-damaging changes.
 

@@ -4,14 +4,14 @@ type: object
 properties:
   internal:
     type: object
-    default: { }
+    default: {}
     x-required-for-helm:
       - ingressControllers
       - upmeterDiscovery
     properties:
       admissionCertificate:
         type: object
-        default: { }
+        default: {}
         x-required-for-helm:
           - ca
           - key
@@ -19,63 +19,63 @@ properties:
         properties:
           ca:
             type: string
-            x-examples: [ "testca" ]
+            x-examples: ["testca"]
           key:
             type: string
-            x-examples: [ "testkey" ]
+            x-examples: ["testkey"]
           cert:
             type: string
-            x-examples: [ "testcrt" ]
+            x-examples: ["testcrt"]
       nginxAuthTLS:
-        type: [ 'null', array ]
-        default: [ ]
+        type: ['null', array]
+        default: []
         items:
           type: object
           properties:
             controllerName:
               type: string
-              x-examples: [ "test" ]
+              x-examples: ["test"]
             ingressClass:
               type: string
-              x-examples: [ "nginx" ]
+              x-examples: ["nginx"]
             data:
               type: object
-              default: { }
+              default: {}
               properties:
                 certificate:
                   type: string
-                  x-examples: [ "---certificate-string---" ]
+                  x-examples: ["---certificate-string---"]
                 key:
                   type: string
-                  x-examples: [ "---key-string---" ]
+                  x-examples: ["---key-string---"]
                 certificate_updated:
                   type: boolean
-                  x-examples: [ true ]
+                  x-examples: [true]
       ingressControllers:
-        type: [ 'null', array ]
-        default: [ ]
+        type: ['null', array]
+        default: []
         items:
           type: object
           properties:
             name:
               type: string
-              x-examples: [ "test" ]
+              x-examples: ["test"]
             spec:
               type: object
-              default: { }
+              default: {}
               x-required-for-helm:
                 - ingressClass
                 - inlet
               properties:
                 ingressClass:
                   type: string
-                  x-examples: [ "nginx" ]
+                  x-examples: ["nginx"]
                 inlet:
                   type: string
-                  x-examples: [ "HostWithFailover" ]
+                  x-examples: ["HostWithFailover"]
                 controllerVersion:
                   type: string
-                  x-examples: [ "0.33" ]
+                  x-examples: ["0.33"]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -114,7 +114,7 @@ properties:
                         type: string
                 loadBalancer:
                   type: object
-                  default: { }
+                  default: {}
                   properties:
                     sourceRanges:
                       type: array
@@ -129,7 +129,7 @@ properties:
                       type: string
                 loadBalancerWithProxyProtocol:
                   type: object
-                  default: { }
+                  default: {}
                   properties:
                     sourceRanges:
                       type: array
@@ -140,7 +140,7 @@ properties:
                       additionalProperties: true
                 hostPort:
                   type: object
-                  default: { }
+                  default: {}
                   properties:
                     httpPort:
                       type: integer
@@ -152,7 +152,7 @@ properties:
                       type: string
                 hostPortWithProxyProtocol:
                   type: object
-                  default: { }
+                  default: {}
                   properties:
                     httpPort:
                       type: integer
@@ -160,7 +160,7 @@ properties:
                       type: integer
                 hostWithFailover:
                   type: object
-                  default: { }
+                  default: {}
                   additionalProperties: true
                 acceptRequestsFrom:
                   type: array
@@ -201,42 +201,42 @@ properties:
                   additionalProperties: true
                 resourcesRequests:
                   type: object
-                  default: { }
+                  default: {}
                   properties:
                     mode:
                       type: string
-                      x-examples: [ "VPA", "Static" ]
+                      x-examples: ["VPA", "Static"]
                     vpa:
                       type: object
-                      default: { }
+                      default: {}
                       properties:
                         mode:
                           type: string
                         cpu:
                           type: object
-                          default: { }
+                          default: {}
                           properties:
                             max:
                               type: string
-                              x-examples: [ "200m" ]
+                              x-examples: ["200m"]
                             min:
                               type: string
                         memory:
                           type: object
-                          default: { }
+                          default: {}
                           properties:
                             max:
                               type: string
                             min:
                               type: string
-                              x-examples: [ "100Mi" ]
+                              x-examples: ["100Mi"]
                     static:
                       type: object
-                      default: { }
+                      default: {}
                       properties:
                         cpu:
                           type: string
-                          x-examples: [ "100m" ]
+                          x-examples: ["100m"]
                         memory:
                           type: string
                 customErrors:
@@ -268,14 +268,14 @@ properties:
                           type: string
       externalIngressClasses:
         type: array
-        default: [ ]
+        default: []
         items:
           type: string
       minimalControllerVersion:
         type: string
         default: ""
         description: Minimal version of the existing Ingress Controllers
-        x-examples: [ "0.33", "0.46" ]
+        x-examples: ["0.33", "0.46"]
       hasIncompatibleIngressClass:
         type: boolean
         default: false
@@ -285,10 +285,9 @@ properties:
         required:
           - controllerNames
         default:
-          controllerNames: [ ]
+          controllerNames: []
         properties:
           controllerNames:
             type: array
-#            default: []
             items:
               type: string
