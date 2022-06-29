@@ -8,6 +8,8 @@ helm:
       pull_request: https://github.com/deckhouse/deckhouse/pull/1882
 ingress-nginx:
   fixes:
+    - summary: Fix pointer
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1898
     - summary: Handle IngressClass resources when migrating from controller < 1.0 version to > 1.0 version
       pull_request: https://github.com/deckhouse/deckhouse/pull/1892
     - summary: >-
