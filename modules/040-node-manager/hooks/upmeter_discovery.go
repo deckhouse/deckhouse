@@ -25,6 +25,28 @@ import (
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/apis/nodegroups/v1"
 )
 
+// filterDynamicProbeNodeGroups returns the name of a nodegroup to consider or emptystring if it should be skipped
+func filterDynamicProbeNodeGroups(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var nodeGroup ngv1.NodeGroup
+	err := sdk.FromUnstructured(obj, &nodeGroup)
+	if err != nil {
+		return "", err
+	}
+
+	// Filter only cloud node groups
+	if nodeGroup.Spec.NodeType != ngv1.NodeTypeCloudEphemeral {
+		return "", nil
+	}
+
+	// Filter node groups that can violate availability
+	minPerZone := nodeGroup.Spec.CloudInstances.MinPerZone
+	if minPerZone == nil || *minPerZone < 1 {
+		return "", nil
+	}
+
+	return obj.GetName(), nil
+}
+
 // This hook discovers nodegroup names for dynamic probes in upmeter
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
@@ -63,26 +85,4 @@ func parseNames(results []go_hook.FilterResult) []string {
 	}
 	s.Delete("") // throw away invalid ones
 	return s.Slice()
-}
-
-// filterDynamicProbeNodeGroups returns the name of a nodegroup to consider or emptystring if it should be skipped
-func filterDynamicProbeNodeGroups(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var nodeGroup ngv1.NodeGroup
-	err := sdk.FromUnstructured(obj, &nodeGroup)
-	if err != nil {
-		return "", err
-	}
-
-	// Filter only cloud node groups
-	if nodeGroup.Spec.NodeType != ngv1.NodeTypeCloudEphemeral {
-		return "", nil
-	}
-
-	// Filter node groups that can violate availability
-	minPerZone := nodeGroup.Spec.CloudInstances.MinPerZone
-	if minPerZone == nil || *minPerZone < 1 {
-		return "", nil
-	}
-
-	return obj.GetName(), nil
 }
