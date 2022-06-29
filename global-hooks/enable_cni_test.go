@@ -27,6 +27,44 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+const (
+	deckhouseCM = `
+---
+apiVersion: v1
+data:
+  deckhouse: |
+    bundle: Default
+    logLevel: Info
+  global: |
+    modules:
+      publicDomainTemplate: '%s.test.com'
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+  namespace: d8-system
+`
+	deckhouseCMWithCNI = `
+---
+apiVersion: v1
+data:
+  cniCiliumEnabled: "true"
+  deckhouse: |
+    bundle: Default
+    logLevel: Info
+  global: |
+    modules:
+      publicDomainTemplate: '%s.test.com'
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+  namespace: d8-system
+`
+)
+
 var _ = Describe("Global hooks :: enable_cni ::", func() {
 	cniConfig := func(name string) string {
 		s := &v1core.Secret{
@@ -62,7 +100,7 @@ var _ = Describe("Global hooks :: enable_cni ::", func() {
 
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 
-	Context("Cluster has not d8-cni-configuration secret", func() {
+	Context("Cluster has not d8-cni-configuration secret and has not deckhouse CM", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
@@ -73,17 +111,28 @@ var _ = Describe("Global hooks :: enable_cni ::", func() {
 		})
 	})
 
-	Context("Cluster has d8-cni-configuration secret", func() {
+	Context("Cluster has not d8-cni-configuration secret and has deckhouse CM", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(deckhouseCM))
+			f.RunHook()
+		})
+
+		It("ExecuteSuccessfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Cluster has d8-cni-configuration secret and has deckhouse CM without cni module enabled", func() {
 		Context("With valid cni name", func() {
 			for cniName, module := range cniNameToModule {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(cniConfig(cniName)))
+					f.BindingContexts.Set(f.KubeStateSet(cniConfig(cniName) + deckhouseCM))
 					f.RunHook()
 				})
 
 				It("Enables cni module "+module, func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet(module).Exists()).To(BeFalse())
+					Expect(f.ValuesGet(module).Exists()).To(BeTrue())
 				})
 
 				It("Disables another cni modules", func() {
@@ -104,7 +153,7 @@ var _ = Describe("Global hooks :: enable_cni ::", func() {
 
 					It("Does not change cni module", func() {
 						Expect(f).To(ExecuteSuccessfully())
-						Expect(f.ValuesGet(module).Exists()).To(BeFalse())
+						Expect(f.ValuesGet(module).Exists()).To(BeTrue())
 					})
 				})
 			}
@@ -129,4 +178,17 @@ var _ = Describe("Global hooks :: enable_cni ::", func() {
 			})
 		})
 	})
+
+	Context("Cluster has d8-cni-configuration secret and has deckhouse CM with cni module enabled", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(cniConfig("flannel") + deckhouseCMWithCNI))
+			f.RunHook()
+		})
+
+		It("ExecuteSuccessfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+	})
+
 })
