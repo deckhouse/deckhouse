@@ -1,7 +1,6 @@
 ---
 project: deckhouse-web
 configVersion: 1
-context: .
 cleanup:
   keepPolicies:
   - references:
@@ -18,7 +17,7 @@ gitWorktree:
   forceShallowClone: true
 ---
 # Base Images
-{{ $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
+{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
     {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
     {{- if ne $k "REGISTRY_PATH" }}
