@@ -39,6 +39,7 @@ spec:
                   example: 'My Folder'
                 definition:
                   type: string
+                  pattern: '^[ \t]*\{(.|\n)*\}[ \t]*$'
                   description: |
                     The dashboard's JSON manifest.
 
