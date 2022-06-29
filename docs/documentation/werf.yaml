@@ -4,6 +4,7 @@
 ---
 project: deckhouse-web
 configVersion: 1
+context: .
 ---
 # Base Images
 {{ $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}

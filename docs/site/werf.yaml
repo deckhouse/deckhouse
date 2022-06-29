@@ -1,6 +1,7 @@
 ---
 project: deckhouse-web
 configVersion: 1
+context: .
 cleanup:
   keepPolicies:
   - references:
