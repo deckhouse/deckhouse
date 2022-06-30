@@ -3,23 +3,41 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          type: object
-          description: Ресурс для подключения дополнительных Alertmanagers к Prometheus.
+          description: Ресурс для подключения дополнительных Alertmanager'ов к Prometheus.
           properties:
             spec:
               properties:
+                type:
+                  description: Тип Alertmanager'а.
                 external:
                   properties:
                     address:
                       description: 'URL внешнего сервиса Alertmanager.'
                     service:
-                      description: 'Сервис Alertmanager внутри kubernetes кластера.'
-                    basicAuth:
-                      description: 'Настройки Basic авторизации.'
-                    bearerToken:
-                      description: 'Bearer токен.'
+                      description: 'Сервис Alertmanager внутри кластера Kubernetes.'
+                    auth:
+                      description: 'Настройки авторизации.'
+                      properties:
+                        basic:
+                          description: 'Настройки Basic-авторизации.'
+                          properties:
+                            username:
+                              description: 'Имя пользователя.'
+                            password:
+                              description: 'Пароль пользователя.'
+                            bearerToken:
+                              description: 'Bearer-токен.'
                     tls:
-                      desciption: 'Настройки TLS.'
+                      description: 'Настройки TLS.'
+                      properties:
+                        ca:
+                          description: CA-сертификат.
+                        cert:
+                          description: Сертификат клиента.
+                        key:
+                          description: Ключ клиента.
+                        insecureSkipVerify:
+                          description: Отключить проверку сертификата.
                 internal:
                   type: object
                   properties:

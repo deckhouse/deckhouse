@@ -29,6 +29,7 @@ spec:
               properties:
                 type:
                   type: string
+                  description: Type of the Alertmanager.
                   enum: ["External", "Internal"]
                 external:
                   type: object
@@ -71,9 +72,11 @@ spec:
                           properties:
                             username:
                               type: string
+                              description: 'User name.'
                             password:
                               type: string
                               format: password
+                              description: 'User password.'
                             bearerToken:
                               type: string
                               description: 'Bearer token authorization.'
@@ -83,12 +86,16 @@ spec:
                       properties:
                         ca:
                           type: string
+                          description: CA cert to use.
                         cert:
+                          description: Client certificate.
                           type: string
                         key:
                           type: string
+                          description: Client key.
                         insecureSkipVerify:
                           type: boolean
+                          description: Disable certificate validation.
                           default: false
                 internal:
                   type: object
