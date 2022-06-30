@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("ingress-nginx :: hooks :: upmeter_discovery ::", func() {
+var _ = Describe("Modules :: ingress-nginx :: hooks :: upmeter_discovery ::", func() {
 	var (
 		valuesKey  = "ingressNginx.internal.upmeterDiscovery.controllerNames"
 		initValues = `{"ingressNginx":{"internal":{ "upmeterDiscovery": { "controllerNames": [] }}}}`
