@@ -152,6 +152,14 @@ spec:
           mountPath: /etc/grafana/dashboards
         - name: tmp
           mountPath: /tmp
+        startupProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "[ $(ls -1 /etc/grafana/dashboards | wc -l) -ne 0 ]"
+          failureThreshold: 60
+          periodSeconds: 10
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
