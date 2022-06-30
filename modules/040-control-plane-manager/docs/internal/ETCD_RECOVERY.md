@@ -113,8 +113,8 @@ On the selected node do the following:
   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
   ```
 
-- remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest;
-- set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica)
+- remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest after successful up etcd;
+- set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica);
 - remove master role label from nodes objects expect selected (recover in current time)
 
   ```shell
@@ -159,6 +159,7 @@ For each another master nodes:
   ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`.
+
   ```shell
   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
   ```
