@@ -70,16 +70,20 @@ var _ = sdk.RegisterFunc(
 	collectDynamicProbeConfig,
 )
 
+type upmeterDiscovery struct {
+	EphemeralNodeGroupNames []string `json:"ephemeralNodeGroupNames"`
+}
+
 // collectDynamicProbeConfig sets names of objects to internal values
 func collectDynamicProbeConfig(input *go_hook.HookInput) error {
 	// Input
-	var (
-		key   = "nodeManager.internal.upmeterDiscovery.ephemeralNodeGroupNames"
-		names = parseNames(input.Snapshots["nodegroups"])
-	)
+	key := "nodeManager.internal.upmeterDiscovery"
+	discovery := upmeterDiscovery{
+		EphemeralNodeGroupNames: parseNames(input.Snapshots["nodegroups"]),
+	}
 
 	// Output
-	input.Values.Set(key, names)
+	input.Values.Set(key, discovery)
 	return nil
 }
 

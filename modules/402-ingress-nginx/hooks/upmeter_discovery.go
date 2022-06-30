@@ -37,16 +37,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, collectDynamicProbeConfig)
 
+type upmeterDiscovery struct {
+	ControllerNames []string `json:"controllerNames"`
+}
+
 // collectDynamicProbeConfig sets names of objects to internal values
 func collectDynamicProbeConfig(input *go_hook.HookInput) error {
+
 	// Input
-	var (
-		key   = "ingressNginx.internal.upmeterDiscovery.controllerNames"
-		names = parseNames(input.Snapshots["ingress_nginx_controllers"])
-	)
+	key := "ingressNginx.internal.upmeterDiscovery"
+	discovery := upmeterDiscovery{
+		ControllerNames: parseNames(input.Snapshots["ingress_nginx_controllers"]),
+	}
 
 	// Output
-	input.Values.Set(key, names)
+	input.Values.Set(key, discovery)
 	return nil
 }
 

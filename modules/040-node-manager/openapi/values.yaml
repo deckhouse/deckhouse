@@ -4,8 +4,6 @@ type: object
 properties:
   internal:
     type: object
-    required:
-      - upmeterDiscovery
     default: {}
     properties:
       machineControllerManagerEnabled:
@@ -270,8 +268,6 @@ properties:
         type: object
         required:
           - ephemeralNodeGroupNames
-        default:
-          ephemeralNodeGroupNames: []
         properties:
           ephemeralNodeGroupNames:
             type: array

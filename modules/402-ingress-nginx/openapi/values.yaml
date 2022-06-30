@@ -7,7 +7,6 @@ properties:
     default: {}
     x-required-for-helm:
       - ingressControllers
-      - upmeterDiscovery
     properties:
       admissionCertificate:
         type: object
@@ -284,8 +283,6 @@ properties:
         type: object
         required:
           - controllerNames
-        default:
-          controllerNames: []
         properties:
           controllerNames:
             type: array
