@@ -21,9 +21,10 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	ngv1 "d8.io/upmeter/internal/nodegroups/v1"
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 )
@@ -114,8 +115,8 @@ type nodeGroupFetcher struct {
 }
 
 type nodegroupProps struct {
-	minPerZone            int64
-	maxUnavailablePerZone int64
+	minPerZone            int32
+	maxUnavailablePerZone int32
 	zones                 []string
 }
 
@@ -129,66 +130,20 @@ func (f *nodeGroupFetcher) GetNodeGroup(name string) (nodegroupProps, error) {
 		return nodegroupProps{}, err
 	}
 
-	return f.parseProps(nodegroup)
-}
-
-func (f *nodeGroupFetcher) parseProps(nodegroup *unstructured.Unstructured) (nodegroupProps, error) {
-	/*
-		  NodeGroup
-			spec:
-			  cloudInstances:
-				zones: []string
-				minPerZone: int64
-				maxPerZone: int64
-				maxUnavailablePerZone: int64
-				maxSurgePerZone: int64
-	*/
-
-	var (
-		props nodegroupProps
-		err   error
-
-		name = nodegroup.GetName()
-	)
-
-	props.minPerZone, err = f.parseNodegroupInstanceLimit(nodegroup, "minPerZone")
-	if err != nil {
-		return props, fmt.Errorf("parse minPerZone in nodegroup %q: %v", name, err)
+	var ng ngv1.NodeGroup
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(nodegroup.UnstructuredContent(), &ng); err != nil {
+		return nodegroupProps{}, err
 	}
 
-	props.maxUnavailablePerZone, err = f.parseNodegroupInstanceLimit(nodegroup, "maxUnavailablePerZone")
-	if err != nil {
-		return props, fmt.Errorf("parse maxUnavailablePerZone in nodegroup %q: %v", name, err)
+	props := nodegroupProps{
+		minPerZone:            *ng.Spec.CloudInstances.MinPerZone,
+		maxUnavailablePerZone: *ng.Spec.CloudInstances.MaxUnavailablePerZone,
+		zones:                 ng.Spec.CloudInstances.Zones,
 	}
-
-	props.zones, err = f.parseZones(nodegroup)
-	if err != nil {
-		return props, fmt.Errorf("parse zones in nodegroup %q: %v", name, err)
-	}
-
 	return props, nil
 }
 
-func (f *nodeGroupFetcher) parseZones(ng *unstructured.Unstructured) ([]string, error) {
-	value, _, err := unstructured.NestedStringSlice(ng.UnstructuredContent(), "spec", "cloudInstances", "zones")
-	if err != nil {
-		return nil, err
-	}
-	return value, nil
-}
-
-func (f *nodeGroupFetcher) parseNodegroupInstanceLimit(ng *unstructured.Unstructured, field string) (int64, error) {
-	value, ok, err := unstructured.NestedInt64(ng.UnstructuredContent(), "spec", "cloudInstances", field)
-	if err != nil {
-		return 0, err
-	}
-	if !ok {
-		value = 0
-	}
-	return value, nil
-}
-
-func (f *nodeGroupFetcher) CountHealthyNodesByZone(nodeGroup string) (map[string]int64, error) {
+func (f *nodeGroupFetcher) CountHealthyNodesByZone(nodeGroup string) (map[string]int32, error) {
 	timeoutSeconds := int64(f.timeout.Seconds())
 	nodeList, err := f.access.Kubernetes().CoreV1().Nodes().List(metav1.ListOptions{
 		LabelSelector:  "node.deckhouse.io/group=" + nodeGroup,
@@ -198,7 +153,7 @@ func (f *nodeGroupFetcher) CountHealthyNodesByZone(nodeGroup string) (map[string
 		return nil, err
 	}
 
-	byZone := map[string]int64{}
+	byZone := map[string]int32{}
 
 	for _, node := range nodeList.Items {
 		zone, ok := node.GetLabels()["topology.kubernetes.io/zone"]
