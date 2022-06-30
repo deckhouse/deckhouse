@@ -72,6 +72,7 @@
  - **[candi]** Remove master node `coreFraction` setting from YandexClusterConfiguration openapi spec [#1617](https://github.com/deckhouse/deckhouse/pull/1617)
  - **[candi]** Migrate to cgroupfs on containerd installations. [#1386](https://github.com/deckhouse/deckhouse/pull/1386)
  - **[ceph-csi]** Fixed missing registry secret. [#1733](https://github.com/deckhouse/deckhouse/pull/1733)
+ - **[chrony]** Refactored alerts. [#1903](https://github.com/deckhouse/deckhouse/pull/1903)
  - **[chrony]** Chrony systemd unit on a node is added to stop list. [#1776](https://github.com/deckhouse/deckhouse/pull/1776)
  - **[cilium-hubble]** Copy custom certificate into d8-cni-cilium if it is used. [#1879](https://github.com/deckhouse/deckhouse/pull/1879)
  - **[cloud-provider-aws]** Fix LoadBalancer type none target group creation. [#1741](https://github.com/deckhouse/deckhouse/pull/1741)
@@ -92,6 +93,7 @@
     IngressNginx controllers 0.25 and 0.26 are removed. Ingress controller version 1.1 will restart.
  - **[ingress-nginx]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Ingress controllers version 0.33+ will be restarted.
+ - **[istio]** Data-plane metrics scrape fix for fresh istio versions. [#1907](https://github.com/deckhouse/deckhouse/pull/1907)
  - **[istio]** Istio `globalVersion` detection fix. [#1769](https://github.com/deckhouse/deckhouse/pull/1769)
  - **[kube-dns]** Updated CoreDNS to v1.9.1 [#1537](https://github.com/deckhouse/deckhouse/pull/1537)
  - **[kube-dns]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
