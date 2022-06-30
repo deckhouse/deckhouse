@@ -31,7 +31,7 @@ import (
 var _ = Describe("Modules :: ingress-nginx :: hooks :: upmeter_discovery ::", func() {
 	var (
 		valuesKey  = "ingressNginx.internal.upmeterDiscovery.controllerNames"
-		initValues = `{"ingressNginx":{"internal":{ "upmeterDiscovery": { "controllerNames": [] }}}}`
+		initValues = `{"ingressNginx":{"internal":{ }}}` // no value intentionally
 
 		f = HookExecutionConfigInit(initValues, `{}`)
 	)

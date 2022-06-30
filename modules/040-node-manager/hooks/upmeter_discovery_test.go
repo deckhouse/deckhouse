@@ -31,7 +31,7 @@ import (
 var _ = Describe("Modules :: node-manager :: hooks :: upmeter_discovery ::", func() {
 	var (
 		valuesKey  = "nodeManager.internal.upmeterDiscovery.ephemeralNodeGroupNames"
-		initValues = `{"nodeManager":{"internal":{ "upmeterDiscovery": { "ephemeralNodeGroupNames": [] }}}}`
+		initValues = `{"nodeManager":{"internal":{} }}` // no inited values intentionally
 
 		f = HookExecutionConfigInit(initValues, `{}`)
 	)
