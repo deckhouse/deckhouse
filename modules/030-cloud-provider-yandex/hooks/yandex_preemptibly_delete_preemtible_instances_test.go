@@ -27,7 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
+var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
