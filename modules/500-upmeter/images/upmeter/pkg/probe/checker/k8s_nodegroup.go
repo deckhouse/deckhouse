@@ -143,7 +143,7 @@ func (f *nodeGroupFetcher) GetNodeGroup(name string) (nodegroupProps, error) {
 		// MaxUnavailablePerZone is zero by default
 		props.maxUnavailablePerZone = *ng.Spec.CloudInstances.MaxUnavailablePerZone
 	}
-	
+
 	return props, nil
 }
 

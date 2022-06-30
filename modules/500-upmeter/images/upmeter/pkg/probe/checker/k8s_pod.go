@@ -215,7 +215,6 @@ func createPodObject(nodeName string, image *kubernetes.ProbeImage) *v1.Pod {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: podName,
 			Labels: map[string]string{
-				"app":           "upmeter",
 				"heritage":      "upmeter",
 				"upmeter-agent": util.AgentUniqueId(),
 				"upmeter-group": "control-plane",

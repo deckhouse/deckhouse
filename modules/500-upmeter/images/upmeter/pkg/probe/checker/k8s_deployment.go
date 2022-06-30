@@ -191,7 +191,6 @@ func createDeploymentObject(agentId string) *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"app":           "upmeter",
 				"heritage":      "upmeter",
 				agentLabelKey:   agentId,
 				"upmeter-group": "control-plane",
