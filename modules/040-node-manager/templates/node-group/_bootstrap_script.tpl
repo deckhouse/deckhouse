@@ -1,4 +1,5 @@
 {{- define "node_group_bashible_bootstrap_script" -}}
+  bootstrap_job_log_pid=""
   {{- $context := . -}}
 
   {{- include "node_group_bashible_bootstrap_script_base_bootstrap" $context }}
@@ -38,7 +39,6 @@ while [ "$patch_pending" = true ] ; do
 done
 
 # Start output bootstrap logs
-bootstrap_job_log_pid=""
 if type socat >/dev/null 2>&1; then
   socat -u FILE:/var/log/cloud-init-output.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
   bootstrap_job_log_pid=$!
@@ -58,8 +58,8 @@ until /var/lib/bashible/bashible.sh; do
 done;
 
 # Stop output bootstrap logs
-if [ -n "$bootstrap_job_log_pid" ] && kill -s 0 "$bootstrap_job_log_pid" 2>/dev/null; then
-  kill -9 "$bootstrap_job_log_pid"
+if [ -n "${bootstrap_job_log_pid-}" ] && kill -s 0 "${bootstrap_job_log_pid-}" 2>/dev/null; then
+  kill -9 "${bootstrap_job_log_pid-}"
 fi
 
 {{- end }}
