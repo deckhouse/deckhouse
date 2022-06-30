@@ -33,7 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/apis/nodegroups/v1"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (

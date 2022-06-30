@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/apis/nodegroups/v1"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 type StandbyNodeGroupInfo struct {

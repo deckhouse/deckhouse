@@ -35,9 +35,9 @@ import (
 	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
-	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/apis/nodegroups/v1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var (
