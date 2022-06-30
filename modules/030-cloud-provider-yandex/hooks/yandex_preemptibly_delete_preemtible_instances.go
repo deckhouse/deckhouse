@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -136,9 +135,6 @@ func deleteMachines(input *go_hook.HookInput) error {
 		machines                      []*Machine
 	)
 
-	print(spew.Sdump(icsSnapshot))
-	print(spew.Sdump(machineSnapshot))
-
 	for _, icRaw := range icsSnapshot {
 		ic, ok := icRaw.(*YandexInstanceClass)
 		if !ok {
@@ -174,11 +170,6 @@ func deleteMachines(input *go_hook.HookInput) error {
 		machines = append(machines, machine)
 	}
 
-	// FIXME: delete debug
-	for _, m := range machines {
-		print(fmt.Sprintf("Will try to delete machine: %s\n", m.Name))
-	}
-
 	if len(machines) == 0 {
 		return nil
 	}
@@ -196,12 +187,10 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 	const (
 		// 12 * 0.25 = 3 hours
 		durationIterations = 12
-		// FIXME: revert test 15 minutes
-		slidingStep = 5 * time.Minute
+		slidingStep        = 15 * time.Minute
 	)
 	var (
-		// FIXME: revert test "21 *" multiplication
-		currentSlidingDuration = preemtibleVMDeletionDuration - 21*time.Hour
+		currentSlidingDuration = preemtibleVMDeletionDuration - time.Hour
 	)
 
 	sort.Slice(machines, func(i, j int) bool {
@@ -231,8 +220,6 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 
 	for t := 0; t < 12; t++ {
 		currentSlidingDuration -= slidingStep
-		// FIXME: delete debug
-		print(fmt.Sprintf("slidingDuration=%d", currentSlidingDuration))
 
 		for cursor < machineCount {
 			if len(machinesToDelete) >= batch {
@@ -240,7 +227,6 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 			}
 
 			if expires(timeNow, machines[cursor].CreationTimestamp.Time, currentSlidingDuration) {
-				print(spew.Sprintf("evaling machine: %#v\n", machines[cursor]))
 				machinesToDelete = append(machinesToDelete, machines[cursor].Name)
 				cursor++
 			} else {
