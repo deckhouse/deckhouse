@@ -177,13 +177,13 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
   EOF
   ```
 
-
 ## How to secure cert-manager credentials
 
 If you don't want to store credentials in the Deckhouse configmap (security reasons for example), feel free to create
 your own ClusterIssuer / Issuer. 
 For example, you can create your own ClusterIssuer for route53 in this way:
 1. Create secret with credentials:
+
     ```shell
     kubectl apply -f - <<EOF
     apiVersion: v1
@@ -198,6 +198,7 @@ For example, you can create your own ClusterIssuer for route53 in this way:
     ```
 
 2. Create simple ClusterIssuer with reference to that secret:
+
     ```shell
     kubectl apply -f - <<EOF
     apiVersion: cert-manager.io/v1
@@ -222,6 +223,7 @@ For example, you can create your own ClusterIssuer for route53 in this way:
     ```
 
 3. Order certificates as usual, using created ClusterIssuer:
+
     ```shell
     kubectl apply -f - <<EOF
     apiVersion: cert-manager.io/v1

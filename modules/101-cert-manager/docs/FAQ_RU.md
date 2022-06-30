@@ -180,13 +180,13 @@ CAA record does not match issuer
   EOF
   ```
 
-
 ## Как защитить учетные данные cert-manager
 
 Если вы не хотите хранить учетные данные в Deckhouse ConfigMap (например, по соображениям безопасности), вы можете создать
 свой собственный ClusterIssuer / Issuer. 
 Например, вы можете создать свой ClusterIssuer для route53 следующим образом:
 1. Создайте секрет с учетными данными:
+
     ```shell
     kubectl apply -f - <<EOF
     apiVersion: v1
@@ -201,6 +201,7 @@ CAA record does not match issuer
     ```
 
 2. Создайте простой ClusterIssuer со ссылкой на этот секрет:
+
     ```shell
     kubectl apply -f - <<EOF
     apiVersion: cert-manager.io/v1
@@ -225,6 +226,7 @@ CAA record does not match issuer
     ```
 
 3. Закажите сертификаты как обычно, используя созданный ClusterIssuer:
+
     ```shell
     kubectl apply -f - <<EOF
     apiVersion: cert-manager.io/v1
