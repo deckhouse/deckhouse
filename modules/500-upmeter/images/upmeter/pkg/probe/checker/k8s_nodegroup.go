@@ -137,17 +137,13 @@ func (f *nodeGroupFetcher) GetNodeGroup(name string) (nodegroupProps, error) {
 		return props, err
 	}
 
-	if ng.Spec.CloudInstances.MinPerZone == nil {
-		return props, fmt.Errorf("minPerZone is not specified")
-	}
 	props.minPerZone = *ng.Spec.CloudInstances.MinPerZone
-
-	if ng.Spec.CloudInstances.MaxUnavailablePerZone == nil {
-		return props, fmt.Errorf("maxUnavailablePerZone is not specified")
-	}
-	props.maxUnavailablePerZone = *ng.Spec.CloudInstances.MaxUnavailablePerZone
-
 	props.zones = ng.Spec.CloudInstances.Zones
+	if ng.Spec.CloudInstances.MaxUnavailablePerZone != nil {
+		// MaxUnavailablePerZone is zero by default
+		props.maxUnavailablePerZone = *ng.Spec.CloudInstances.MaxUnavailablePerZone
+	}
+	
 	return props, nil
 }
 
