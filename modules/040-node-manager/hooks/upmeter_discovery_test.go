@@ -62,16 +62,30 @@ var _ = Describe("Modules :: node-manager :: hooks :: upmeter_discovery ::", fun
 			[]string{"system"},
 		),
 		Entry(
-			"Nodegroup other than CloudEphemeral are ignored",
+			"Nodegroup with minPerZone == 0 is ignored",
 			[]string{
-				cloudStaticNodeGroupYAML("gpu"),
+				cloudEphemeralNodeGroupYAML("spot", 0, "a", "b"),
 			},
 			[]string{},
 		),
 		Entry(
-			"Nodegroup with minPerZone == 0 is ignored",
+			"Nodegroup with minPerZone-maxUnavailable > 0 is counted",
 			[]string{
-				cloudEphemeralNodeGroupYAML("spot", 0, "a", "b"),
+				cloudEphemeralNodeGroupWithMaxUnavailableYAML("system", 2, 1, "a", "b"),
+			},
+			[]string{"system"},
+		),
+		Entry(
+			"Nodegroup with minPerZone-maxUnavailable == 0 is ignored",
+			[]string{
+				cloudEphemeralNodeGroupWithMaxUnavailableYAML("spot", 2, 2, "a", "b"),
+			},
+			[]string{},
+		),
+		Entry(
+			"Nodegroup other than CloudEphemeral are ignored",
+			[]string{
+				cloudStaticNodeGroupYAML("gpu"),
 			},
 			[]string{},
 		),
@@ -110,6 +124,23 @@ spec:
 `
 	zstr := "[" + strings.Join(zones, ",") + "]"
 	return fmt.Sprintf(tpl, name, minPerZone, zstr)
+}
+
+func cloudEphemeralNodeGroupWithMaxUnavailableYAML(name string, minPerZone int64, maxUnavailablePerZone int64, zones ...string) string {
+	tpl := `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: %q
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: %d
+    maxUnavailablePerZone: %d
+    zones: %s
+`
+	zstr := "[" + strings.Join(zones, ",") + "]"
+	return fmt.Sprintf(tpl, name, minPerZone, maxUnavailablePerZone, zstr)
 }
 
 func cloudStaticNodeGroupYAML(name string) string {

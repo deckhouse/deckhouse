@@ -39,8 +39,14 @@ func filterDynamicProbeNodeGroups(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	// Filter node groups that can violate availability
-	minPerZone := nodeGroup.Spec.CloudInstances.MinPerZone
+	var (
+		minPerZone            = nodeGroup.Spec.CloudInstances.MinPerZone
+		maxUnavailablePerZone = nodeGroup.Spec.CloudInstances.MaxUnavailablePerZone
+	)
 	if minPerZone == nil || *minPerZone < 1 {
+		return "", nil
+	}
+	if maxUnavailablePerZone != nil && *minPerZone-*maxUnavailablePerZone < 1 {
 		return "", nil
 	}
 
