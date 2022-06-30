@@ -122,24 +122,31 @@ On the selected node do the following:
   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
   ```
 
+On another nodes, start kubelet:
+
+  ```shell
+  systemctl start kubelet.service
+  ```
+
+On first recovered node do the following:
 - restart and wait readiness Deckhouse
 
   ```shell
   kubectl -n d8-system rollout restart deployment deckhouse
   ```
 
-  if you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes;
+  If Deckhouse Pod stuck in Terminating state, force delete Pod
+
+  ```shell
+  kubectl -n d8-system delete po -l app=deckhouse --force
+  ```
+
+  If you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes;
 
 - check node etcd member has peer and client host as internal node ip
 
   ```shell
   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-  ```
-
-On another nodes, start kubelet:
-
-  ```shell
-  systemctl start kubelet.service
   ```
 
 and wait for control plane Pod rolling over and becoming `Ready`.
@@ -152,6 +159,9 @@ For each another master nodes:
   ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`.
+  ```shell
+  watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+  ```
 
 Make sure that all etcd instances are now cluster members:
 
