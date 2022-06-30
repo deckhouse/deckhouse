@@ -9,6 +9,12 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 
 Follow these steps to restore from a backup:
 - upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server);
+
+  ```shell
+  wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+  tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+  ```
+
 - stop etcd:
 
   ```shell
@@ -27,11 +33,13 @@ Follow these steps to restore from a backup:
   rm -rf /var/lib/etcd/member/
   ```
 
+- copy backup file to `~/etc-backup.snapshot`
+
 - restore the etcd database:
 
   ```shell
-  ETCDCTL_API=3 etcdctl snapshot restore BACKUP_FILE --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-    --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check
+  ETCDCTL_API=3 etcdctl snapshot restore ~/etc-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+    --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
   ```
 
 - start etcd:
