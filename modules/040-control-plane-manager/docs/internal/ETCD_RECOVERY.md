@@ -406,7 +406,7 @@ Do the following:
   
 #### Multi-master
 
-##### If this error affect one node:
+##### If this error affect one node
 
 - defragment etcd on another (two) nodes (if necessary):
 
@@ -414,6 +414,7 @@ Do the following:
   kubectl -n kube-system exec -ti ETCD_POD_NOT_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s'
   ```
+
 - remove master role label from affected node
 
   ```shell
@@ -453,7 +454,7 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-##### If this error affect > 1 nodes:
+##### If this error affect > 1 nodes
 
 - upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server);
 
