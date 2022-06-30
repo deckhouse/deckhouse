@@ -183,7 +183,7 @@ CAA record does not match issuer
 ## Как защитить учетные данные cert-manager
 
 Если вы не хотите хранить учетные данные в Deckhouse ConfigMap (например, по соображениям безопасности), вы можете создать
-свой собственный ClusterIssuer / Issuer. 
+свой собственный ClusterIssuer / Issuer.
 Например, вы можете создать свой ClusterIssuer для route53 следующим образом:
 1. Создайте секрет с учетными данными:
 
