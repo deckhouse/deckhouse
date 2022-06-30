@@ -87,7 +87,7 @@ On another (two) nodes do the following:
   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
   ```
 
-- clean node
+- clear node
 
   ```shell
   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
@@ -189,8 +189,15 @@ Perform the following steps to restore the quorum in the etcd cluster:
 - add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node;
 - wait for etcd to start;
 - remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
+- remove master role label from nodes objects expect selected (recover in current time)
+
+  ```shell
+  kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+  kubectl label no LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+  ```
 
 If nodes have been lost permanently, add new ones using the `dhctl converge` command (or manually if the cluster is static).
+Don't forget to delete objects of lost nodes.
 
 If the nodes have been lost temporarily, they are no longer members of the cluster.
 
@@ -214,13 +221,29 @@ To turn them into cluster members, do the following on those nodes:
   rm -rf /var/lib/etcd/member/
   ```
 
-Switch to the running cluster and restart the `d8-control-plane-manager` DaemonSet:
+- clear node
 
-```shell
-kubectl -n kube-system rollout restart daemonset d8-control-plane-manager
-```
+  ```shell
+  rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
+  rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
+  rm -f /etc/kubernetes/authorization-webhook-config.yaml
+  rm -f /etc/kubernetes/admin.conf /root/.kube/config
+  rm -rf /etc/kubernetes/deckhouse
+  rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+  ```
+
+For each lost nodes:
+- add master role
+
+  ```shell
+  kubectl label no LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+  ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`.
+
+  ```shell
+  watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+  ```
 
 Make sure that all etcd instances are now cluster members:
 
@@ -399,7 +422,7 @@ Do the following:
 
 On the affected node:
 
-- clean node
+- clear node
 
   ```shell
   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
@@ -473,7 +496,7 @@ On another (two) nodes do the following:
   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
   ```
 
-- clean node
+- clear node
 
   ```shell
   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
