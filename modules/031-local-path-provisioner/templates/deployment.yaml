@@ -1,3 +1,8 @@
+{{- define "local_path_provisioner_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- $context := . }}
 {{- range $localPathProvisioner := $context.Values.localPathProvisioner.internal.localPathProvisioners }}
   {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -7,7 +12,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
   namespace: d8-{{ $context.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -15,6 +20,14 @@ spec:
     name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "local-path-provisioner"
+      minAllowed:
+        {{- include "local_path_provisioner_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
   {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -90,6 +103,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "local_path_provisioner_resources" $context | nindent 12 }}
+  {{- end }}
+
       volumes:
       - name: config-volume
         configMap:

@@ -1,3 +1,13 @@
+{{- define "prometheus_resources" }}
+cpu: 200m
+memory: 1000Mi
+{{- end }}
+
+{{- define "config_reloader_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -16,9 +26,18 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: "prometheus"
+      minAllowed:
+        {{- include "prometheus_resources" . | nindent 8 }}
       maxAllowed:
         cpu: {{ .Values.prometheus.vpa.maxCPU | default .Values.prometheus.internal.vpa.maxCPU | quote }}
         memory: {{ .Values.prometheus.vpa.maxMemory | default .Values.prometheus.internal.vpa.maxMemory | quote }}
+    - containerName: config-reloader
+      minAllowed:
+        {{- include "config_reloader_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -73,10 +92,16 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
+{{- end }}
   - name: config-reloader
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | nindent 8 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- include "config_reloader_resources" . | nindent 8 }}
+{{- end }}
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -235,3 +260,6 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- include "prometheus_resources" . | nindent 6 }}
+{{- end }}

@@ -14,7 +14,6 @@ properties:
             longtermMaxMemory: "1650Mi"
             maxCPU: "6600m"
             maxMemory: "4950Mi"
-          - {}
         properties:
           maxCPU:
             oneOf:

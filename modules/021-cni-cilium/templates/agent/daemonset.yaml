@@ -7,7 +7,10 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "agent" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "agent" "agent" $.Values.cniCilium.resourcesManagement ) | nindent 2}}
+  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "agent" "agent" .Values.cniCilium.resourcesManagement ) | nindent 2}}
+  {{- if .Values.cniCilium.resourcesManagement.vpa }}
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- end }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -42,7 +45,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: cilium-agent
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.cniCilium.cilium }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.cniCilium.cilium }}"
         command:
         - cilium-agent
         args:
@@ -153,7 +156,8 @@ spec:
         {{ include "helm_lib_resources_management_pod_resources" (list $.Values.cniCilium.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
+
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9734"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
@@ -184,11 +188,14 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
       - name: mount-cgroup
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.cniCilium.cilium }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.cniCilium.cilium }}"
         env:
         - name: CGROUP_ROOT
           value: "/run/cilium/cgroupv2"
@@ -209,7 +216,7 @@ spec:
         securityContext:
           privileged: true
       - name: clean-cilium-state
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.cniCilium.cilium }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.cniCilium.cilium }}"
         command:
         - /init-container.sh
         env:

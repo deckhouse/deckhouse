@@ -1,3 +1,13 @@
+{{- define "control_plane_manager_resources" }}
+cpu: 25m
+memory: 40Mi
+{{- end }}
+
+{{- define "image_holder_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
 {{- $kubeImageRepoSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "-" }}
 {{- $kubeImageTagSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "" }}
 
@@ -141,6 +151,22 @@ spec:
     name: d8-control-plane-manager
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: control-plane-manager
+      minAllowed:
+        {{- include "control_plane_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 80Mi
+    {{- range $name, $imageTag := $images }}
+    - containerName: image-holder-{{ $name | kebabcase }}
+      minAllowed:
+        {{- include "image_holder_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 10m
+        memory: 10Mi
+    {{- end }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -211,11 +237,19 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "control_plane_manager_resources" . | nindent 12 }}
+{{- end }}
 {{- range $name, $imageTag := $images }}
       - name: image-holder-{{ $name | kebabcase }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $imageTag }}"
         command:
         - /pause
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        resources:
+          requests:
+            {{- include "image_holder_resources" $ | nindent 12 }}
+  {{- end }}
 {{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

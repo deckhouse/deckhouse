@@ -1,3 +1,12 @@
+{{- define "metadata_discovery_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+{{- define "metadata_exporter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -14,6 +23,20 @@ spec:
     name: metadata-exporter
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: metadata-discovery
+      minAllowed:
+        {{- include "metadata_discovery_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: metadata-exporter
+      minAllowed:
+        {{- include "metadata_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -81,6 +104,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "metadata_discovery_resources" . | nindent 12 }}
+  {{- end }}
         volumeMounts:
         - name: istio-ca-root-cert
           mountPath: /certs/
@@ -105,6 +131,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "metadata_discovery_resources" . | nindent 12 }}
+  {{- end }}
         volumeMounts:
         - name: metadata
           mountPath: /metadata/

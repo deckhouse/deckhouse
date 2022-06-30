@@ -19,36 +19,18 @@ properties:
             default: {}
             additionalProperties: false
             properties:
-              milliCpuEveryNode:
-                type: number
-                format: double
-                minimum: 0
-                x-examples: [ 123456 ]
-              memoryEveryNode:
-                type: integer
-                format: int64
-                minimum: 0
-                x-examples: [ 123456 ]
               milliCpuControlPlane:
                 type: integer
                 format: int64
                 minimum: 0
                 x-examples: [ 1024 ]
+                default: 0
               memoryControlPlane:
                 type: integer
                 format: int64
                 minimum: 0
                 x-examples: [ 536870912 ]
-              milliCpuMaster:
-                type: integer
-                format: int64
-                minimum: 0
-                x-examples: [ 123456 ]
-              memoryMaster:
-                type: integer
-                format: int64
-                minimum: 0
-                x-examples: [ 123456 ]
+                default: 0
   clusterConfiguration:
     $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
   clusterIsBootstrapped:
@@ -70,7 +52,8 @@ properties:
     items:
       type: string
     x-examples:
-    - ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class", "operator-prometheus-crd"]
+    - ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
+    - ["cert-manager", "prometheus", "priority-class"]
   discovery:
     additionalProperties: true
     type: object

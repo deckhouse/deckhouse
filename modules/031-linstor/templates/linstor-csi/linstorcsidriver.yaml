@@ -1,4 +1,39 @@
 # Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/operator-csi-driver.yaml
+{{- define "csi_attacher_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "csi_provisioner_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "csi_resizer_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "linstor_csi_plugin_resources" }}
+cpu: 35m
+memory: 50Mi
+{{- end }}
+
+{{- define "csi_snapshotter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "csi_livenessprobe_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "csi_node_driver_registrar_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -15,7 +50,44 @@ spec:
     name: linstor-csi-controller
   updatePolicy:
     updateMode: "Auto"
-
+  resourcePolicy:
+    containerPolicies:
+    - containerName: csi-attacher
+      minAllowed:
+        {{- include "csi_attacher_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: csi-provisioner
+      minAllowed:
+        {{- include "csi_provisioner_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: csi-resizer
+      minAllowed:
+        {{- include "csi_resizer_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: linstor-csi-plugin
+      minAllowed:
+        {{- include "linstor_csi_plugin_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 70m
+        memory: 100Mi
+    - containerName: csi-snapshotter
+      minAllowed:
+        {{- include "csi_snapshotter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: csi-livenessprobe
+      minAllowed:
+        {{- include "csi_livenessprobe_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -30,6 +102,26 @@ spec:
     name: linstor-csi-node
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: linstor-csi-plugin
+      minAllowed:
+        {{- include "linstor_csi_plugin_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 70m
+        memory: 100Mi
+    - containerName:  csi-livenessprobe
+      minAllowed:
+        {{- include "csi_livenessprobe_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: csi-node-driver-registrar
+      minAllowed:
+        {{- include "csi_node_driver_registrar_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
 {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -121,5 +213,8 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- include "csi_attacher_resources" . | nindent 6 }}
+  {{- end }}
   kubeletPath: /var/lib/kubelet
   logLevel: info

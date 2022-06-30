@@ -1,3 +1,8 @@
+{{- define "nginx_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- if .Values.flantIntegration.madisonAuthKey }}
   {{- range $.Values.flantIntegration.internal.madison.backends }}
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -15,6 +20,14 @@ spec:
     name: madison-proxy-{{ . | sha256sum }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: nginx
+      minAllowed:
+        {{- include "nginx_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -89,6 +102,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "nginx_resources" . | nindent 12 }}
+  {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}

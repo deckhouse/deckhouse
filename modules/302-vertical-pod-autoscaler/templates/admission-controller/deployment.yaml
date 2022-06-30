@@ -1,3 +1,7 @@
+{{- define "admission_controller_resources" }}
+cpu: 25m
+memory: 100Mi
+{{- end }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -12,6 +16,14 @@ spec:
     name: vpa-admission-controller
   updatePolicy:
     updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: admission-controller
+      minAllowed:
+        {{- include "admission_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 200Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -69,6 +81,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "admission_controller_resources" . | nindent 12 }}
+{{- end }}
       volumes:
         - name: tls-certs
           secret:

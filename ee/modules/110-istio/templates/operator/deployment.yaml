@@ -1,3 +1,8 @@
+{{- define "operator_resources" }}
+cpu: 25m
+memory: 100Mi
+{{- end }}
+
 {{- range $revision := .Values.istio.internal.operatorRevisionsToInstall }}
   {{- if $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd" }}
 ---
@@ -14,6 +19,14 @@ spec:
     name: operator-{{ $revision }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: operator
+      minAllowed:
+        {{- include "operator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 200Mi
   {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -78,6 +91,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "istio_proxy_resources" . | nindent 12 }}
+  {{- end }}
+
         ports:
         - containerPort: 8383
           name: http-metrics

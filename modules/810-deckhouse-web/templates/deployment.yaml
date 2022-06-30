@@ -39,6 +39,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "web_resources" . | nindent 12 }}
+  {{- end }}
         volumeMounts:
           - name: config
             mountPath: /usr/share/nginx/html/config

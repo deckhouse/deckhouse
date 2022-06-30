@@ -1,3 +1,8 @@
+{{- define "control_plane_proxy_resources" }}
+cpu: 10m
+memory: 15Mi
+{{- end }}
+
 {{- $context := . }}
 {{- range $hash, $instance := .Values.monitoringKubernetesControlPlane.internal.proxy.instances }}
   {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -15,6 +20,16 @@ spec:
     name: control-plane-proxy-{{ $hash }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    {{- range $component := $instance.components }}
+    - containerName: {{ $component.name | kebabcase }}
+      minAllowed:
+        {{- include "control_plane_proxy_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 30Mi
+    {{- end }}
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -186,6 +201,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+    {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "control_plane_proxy_resources" $context | nindent 12 }}
+    {{- end }}
   {{- end }}
       volumes:
   {{- range $component := $instance.components }}

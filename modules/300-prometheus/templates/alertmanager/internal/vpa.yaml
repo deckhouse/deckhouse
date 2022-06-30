@@ -1,3 +1,8 @@
+{{- define "alertmanager_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
   {{- if (hasKey .Values.prometheus.internal.alertmanagers "internal") }}
     {{- range .Values.prometheus.internal.alertmanagers.internal }}
@@ -15,6 +20,15 @@ spec:
     name: alertmanager-{{ .name }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: alertmanager-{{ .name }}
+      minAllowed:
+        {{- include "alertmanager_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" $ | nindent 4 }}
     {{- end }}
   {{- end }}
 {{- end }}

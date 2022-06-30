@@ -1,4 +1,9 @@
-# Source https://github.com/piraeusdatastore/linstor-affinity-controller/blob/main/charts/linstor-affinity-controller/templates/deployment.yaml
+# Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/ha-controller-deployment.yaml
+{{- define "linstor_affinity_controller_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -14,6 +19,14 @@ spec:
     name: linstor-affinity-controller
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: linstor-affinity-controller
+      minAllowed:
+        {{- include "linstor_affinity_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
 {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -24,7 +37,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: linstor-affinity-controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-affinity-controller" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-ha-controller" )) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
@@ -134,3 +147,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "listor_affinity_controller_resources" . | nindent 14 }}
+{{- end }}
+

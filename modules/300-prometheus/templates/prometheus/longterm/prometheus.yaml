@@ -1,3 +1,13 @@
+{{- define "longterm_prometheus_resources" }}
+cpu: 50m
+memory: 500Mi
+{{- end }}
+
+{{- define "longterm_config_reloader_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if .Values.prometheus.longtermRetentionDays }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -17,9 +27,18 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: "prometheus"
+      minAllowed:
+        {{- include "longterm_prometheus_resources" . | nindent 8 }}
       maxAllowed:
         cpu: {{ .Values.prometheus.vpa.longtermMaxCPU | default .Values.prometheus.internal.vpa.longtermMaxCPU | quote }}
         memory: {{ .Values.prometheus.vpa.longtermMaxMemory | default .Values.prometheus.internal.vpa.longtermMaxMemory | quote }}
+    - containerName: config-reloader
+      minAllowed:
+        {{- include "longterm_config_reloader_resources" . | nindent 8 }}
+      maxAllowed:
+        memory: 50Mi
+        cpu: 20m
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -71,10 +90,16 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
+  {{- end }}
   - name: config-reloader
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | nindent 8 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- include "longterm_config_reloader_resources" . | nindent 8 }}
+  {{- end }}
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -118,4 +143,7 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- include "longterm_prometheus_resources" . | nindent 6 }}
+  {{- end }}
 {{- end }}

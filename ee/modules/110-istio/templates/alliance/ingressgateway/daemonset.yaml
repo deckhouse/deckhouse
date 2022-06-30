@@ -1,3 +1,8 @@
+{{- define "istio_proxy_resources" }}
+cpu: 50m
+memory: 100Mi
+{{- end }}
+
 {{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
   {{- $revision := .Values.istio.internal.globalRevision }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -15,7 +20,15 @@ spec:
     name: ingressgateway
   updatePolicy:
     updateMode: "Initial"
-  {{- end }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: istio-proxy
+      minAllowed:
+        {{- include "istio_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        memory: 200Mi
+        cpu: 100m
+ {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -152,6 +165,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "istio_proxy_resources" . | nindent 12 }}
+  {{- end }}
         volumeMounts:
         - mountPath: /etc/istio/proxy
           name: istio-envoy

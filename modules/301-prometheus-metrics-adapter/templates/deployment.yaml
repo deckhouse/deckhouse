@@ -1,3 +1,12 @@
+{{- define "prometheus_metrics_adapter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+{{- define "prometheus_reverse_proxy_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +22,20 @@ spec:
     name: prometheus-metrics-adapter
   updatePolicy:
     updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus-metrics-adapter"
+      minAllowed:
+        {{- include "prometheus_metrics_adapter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "prometheus-reverse-proxy"
+      minAllowed:
+        {{- include "prometheus_reverse_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -78,6 +101,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "prometheus_metrics_adapter_resources" . | nindent 12 }}
+{{- end }}
       - name: prometheus-reverse-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheusMetricsAdapter.prometheusReverseProxy }}"
@@ -99,6 +125,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "prometheus_reverse_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: adapter-cert
         secret:

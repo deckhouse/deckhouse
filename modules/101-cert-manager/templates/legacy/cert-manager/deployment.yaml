@@ -1,3 +1,8 @@
+{{- define "legacy_cert_manager_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if semverCompare "< 1.22" .Values.global.discovery.kubernetesVersion }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -14,6 +19,15 @@ spec:
     name: legacy-cert-manager
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "cert-manager"
+      minAllowed:
+        {{- include "legacy_cert_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -66,6 +80,10 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "legacy_cert_manager_resources" . | nindent 14 }}
+  {{- end }}
+
           env:
           - name: POD_NAMESPACE
             valueFrom:
@@ -102,4 +120,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+  {{- end }}
 {{- end }}

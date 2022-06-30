@@ -1,3 +1,16 @@
+{{- define "openvpn_tcp_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+{{- define "openvpn_udp_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+{{- define "openvpn_admin_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -15,30 +28,29 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: {{ .Chart.Name }}
+  {{- if .Values.openvpn.udpEnabled }}
+    - containerName: openvpn-udp
       minAllowed:
-        memory: 50Mi
-        cpu: 50m
+        {{- include "openvpn_udp_resources" . | nindent 8 }}
       maxAllowed:
+        cpu: 350m
         memory: 300Mi
-        cpu: 350m
-      mode: Auto
-    - containerName: {{ .Chart.Name }}-admin
+  {{- end }}
+  {{- if .Values.openvpn.tcpEnabled }}
+    - containerName: openvpn-tcp
       minAllowed:
-        memory: 50Mi
-        cpu: 50m
+        {{- include "openvpn_tcp_resources" . | nindent 8 }}
       maxAllowed:
-        memory: 512Mi
         cpu: 350m
-      mode: Auto
-    - containerName: kube-rbac-proxy
+        memory: 300Mi
+  {{- end }}
+    - containerName: ovpn-admin
       minAllowed:
-        memory: 20Mi
-        cpu: 20m
+        {{- include "openvpn_admin_resources" . | nindent 8 }}
       maxAllowed:
+        cpu: 100m
         memory: 100Mi
-        cpu: 200m
-      mode: Auto
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -113,6 +125,9 @@ spec:
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "openvpn_tcp_resources" . | nindent 12 }}
+  {{- end }}
 {{- end }}
 {{- if .Values.openvpn.udpEnabled }}
 # openvpn-udp
@@ -145,6 +160,9 @@ spec:
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "openvpn_udp_resources" . | nindent 12 }}
+  {{- end }}
 {{- end }}
 # ovpn-admin
       - name: ovpn-admin
@@ -206,6 +224,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "openvpn_admin_resources" . | nindent 12 }}
+  {{- end }}
 # kube-rbac-proxy
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
@@ -238,6 +259,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
       volumes:
       - name: config
         configMap:

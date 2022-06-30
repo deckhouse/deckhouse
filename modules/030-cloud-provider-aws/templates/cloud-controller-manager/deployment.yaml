@@ -1,3 +1,8 @@
+{{- define "aws_cloud_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
 {{- if hasKey .Values.global.modulesImages.tags.cloudProviderAws $ccmImageName }}
@@ -16,6 +21,14 @@ spec:
     name: cloud-controller-manager
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "aws-cloud-controller-manager"
+      minAllowed:
+        {{- include "aws_cloud_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
   {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -111,6 +124,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "aws_cloud_controller_manager_resources" . | nindent 14 }}
+  {{- end }}
       volumes:
       - hostPath:
           path: /etc/kubernetes/pki
