@@ -267,18 +267,29 @@ controlPlaneManager: |
 Войдите на любой control-plane узел под пользователем `root` и используйте следующий bash-скрипт:
 
 ```bash
+#!/usr/bin/env bash
+
 for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | jq -r '.items[].metadata.name'); do
-  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/etcd-backup' && \
-  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'cat /tmp/etcd-backup' > "etc-backup.snapshot" && \
-  kubectl -n kube-system exec -ti "etcd-$node_name" -- /bin/sh -c 'rm /tmp/etcd-backup' && \
-  break
+  kubectl -n kube-system exec "etcd-$node_name" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/etcd-backup' && \
+  kubectl -n kube-system exec "etcd-$node_name" -- sha256sum /tmp/etcd-backup | cut -f 1 -d" " | xargs echo -n > etc-backup.snapshot.shasum && \
+  kubectl -n kube-system exec "etcd-$node_name" -- cat /tmp/etcd-backup > etc-backup.snapshot && \
+  kubectl -n kube-system exec "etcd-$node_name" -- rm /tmp/etcd-backup
+  if [ "$?" != 0 ]; then
+    echo "Backup failed"
+    continue
+  fi 
+  if [ "$(cat etc-backup.snapshot.shasum)" == "$(sha256sum etc-backup.snapshot | cut -f 1 -d' ')" ]; then
+    rm etc-backup.snapshot.shasum
+    break
+  else
+    echo "Backup failed"
+  fi
 done
 ```
 
-В текущей директории будут создан файл `etc-backup.snapshot` со снимком базы etcd c одного из control-plane узла. 
-Из полученного снимка можно будет восстановить состояние кластера. 
+В текущей директории будут создан файл `etc-backup.snapshot` со снимком базы etcd c одного из control-plane узла.
+Из полученного снимка можно будет восстановить состояние кластера.
 О возможных вариантах восстановления состояния кластера из снимка вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
 
-Мы рекомендуем хранить резервные копии снимков состояния кластера в зашифрованном виде вне кластера Deckhouse. 
-Для этого вы можете использовать сторонние инструменты, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) или прочие инструменты для резервного копирования файлов. 
- 
+Мы рекомендуем хранить резервные копии снимков состояния кластера в зашифрованном виде вне кластера Deckhouse.
+Для этого вы можете использовать сторонние инструменты, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) или прочие инструменты для резервного копирования файлов.

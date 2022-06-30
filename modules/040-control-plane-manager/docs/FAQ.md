@@ -264,6 +264,8 @@ When deciding on the appropriate threshold values, consider resources consumed b
 Login into any control-plane node with `root` user and use next script:
 
 ```bash
+#!/usr/bin/env bash
+
 for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | jq -r '.items[].metadata.name'); do
   kubectl -n kube-system exec "etcd-$node_name" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/etcd-backup' && \
   kubectl -n kube-system exec "etcd-$node_name" -- sha256sum /tmp/etcd-backup | cut -f 1 -d" " | xargs echo -n > etc-backup.snapshot.shasum && \
@@ -274,16 +276,18 @@ for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | j
     continue
   fi 
   if [ "$(cat etc-backup.snapshot.shasum)" == "$(sha256sum etc-backup.snapshot | cut -f 1 -d' ')" ]; then
+    rm etc-backup.snapshot.shasum
     break
   else
     echo "Backup failed"
   fi
 done
 ```
+
 In the current directory etcd snapshot file `etc-backup.snapshot` will be created from one of control-plane node.
 From this file you can restore previous cluster state in the future.
 
 You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
 
 We recommend encrypt etcd snapshot backups and save them outside the Deckhouse cluster.
-You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc 
+You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc.
