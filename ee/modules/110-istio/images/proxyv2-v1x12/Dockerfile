@@ -13,7 +13,7 @@ ARG SIDECAR=envoy
 RUN apt-get update && \
    apt-get install --no-install-recommends -y \
    ca-certificates curl iptables iproute2 iputils-ping \
-   knot-dnsutils netcat tcpdump conntrack bsdmainutils net-tools lsof sudo && \
+   knot-dnsutils netcat-traditional tcpdump conntrack bsdmainutils net-tools lsof sudo && \
    update-ca-certificates && \
    apt-get upgrade -y && \
    apt-get clean && \
