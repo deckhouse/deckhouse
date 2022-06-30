@@ -1,0 +1,9 @@
+chrony:
+  fixes:
+    - summary: Refactored alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1903
+istio:
+  fixes:
+    - summary: Data-plane metrics scrape fix for fresh istio versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1907
+
