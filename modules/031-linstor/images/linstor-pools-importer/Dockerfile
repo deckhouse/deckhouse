@@ -1,4 +1,4 @@
-ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_DEBIAN
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -15,7 +15,7 @@ RUN git clone https://github.com/LINBIT/linstor-wait-until /usr/local/go/linstor
  && go build \
  && mv ./linstor-wait-until /
 
-FROM $BASE_DEBIAN_BULLSEYE
+FROM $BASE_DEBIAN
 COPY --from=builder /linstor-pools-importer /linstor-wait-until /
 
 # needs a newer lvm, debian bug #932433
