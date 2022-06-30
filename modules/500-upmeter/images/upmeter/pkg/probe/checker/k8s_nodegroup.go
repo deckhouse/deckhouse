@@ -121,25 +121,33 @@ type nodegroupProps struct {
 }
 
 func (f *nodeGroupFetcher) GetNodeGroup(name string) (nodegroupProps, error) {
-	nodegroup, err := f.access.Kubernetes().Dynamic().Resource(schema.GroupVersionResource{
+	var props nodegroupProps
+
+	rawNG, err := f.access.Kubernetes().Dynamic().Resource(schema.GroupVersionResource{
 		Group:    "deckhouse.io",
 		Version:  "v1",
 		Resource: "nodegroups",
 	}).Get(name, metav1.GetOptions{})
 	if err != nil {
-		return nodegroupProps{}, err
+		return props, err
 	}
 
 	var ng ngv1.NodeGroup
-	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(nodegroup.UnstructuredContent(), &ng); err != nil {
-		return nodegroupProps{}, err
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawNG.UnstructuredContent(), &ng); err != nil {
+		return props, err
 	}
 
-	props := nodegroupProps{
-		minPerZone:            *ng.Spec.CloudInstances.MinPerZone,
-		maxUnavailablePerZone: *ng.Spec.CloudInstances.MaxUnavailablePerZone,
-		zones:                 ng.Spec.CloudInstances.Zones,
+	if ng.Spec.CloudInstances.MinPerZone == nil {
+		return props, fmt.Errorf("minPerZone is not specified")
 	}
+	props.minPerZone = *ng.Spec.CloudInstances.MinPerZone
+
+	if ng.Spec.CloudInstances.MaxUnavailablePerZone == nil {
+		return props, fmt.Errorf("maxUnavailablePerZone is not specified")
+	}
+	props.maxUnavailablePerZone = *ng.Spec.CloudInstances.MaxUnavailablePerZone
+
+	props.zones = ng.Spec.CloudInstances.Zones
 	return props, nil
 }
 
