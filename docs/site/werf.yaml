@@ -1,3 +1,4 @@
+---
 project: deckhouse-web
 configVersion: 1
 cleanup:
@@ -14,10 +15,18 @@ cleanup:
       last: 10
 gitWorktree:
   forceShallowClone: true
-
+---
+# Base Images
+{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+  {{- range $k, $v := .Images }}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.Images $k $baseImagePath }}
+    {{- end }}
+  {{- end }}
 ---
 artifact: web-static
-from: {{ env "BASE_JEKYLL" }}
+from: {{ .Images.BASE_JEKYLL }}
 fromCacheVersion: 20210702
 ansible:
   install:
@@ -57,7 +66,7 @@ git:
     beforeSetup: '**/*'
 ---
 artifact: web-backend-srv
-from: {{ env "BASE_GOLANG_16_ALPINE" }}
+from: {{ .Images.BASE_GOLANG_16_ALPINE }}
 fromCacheVersion: 20210701
 ansible:
   install:
@@ -86,7 +95,7 @@ git:
 image: web-backend
 docker:
   WORKDIR: /app
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 ansible:
   install:
     - shell: apk add curl jq

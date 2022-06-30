@@ -1,21 +1,25 @@
 ---
 project: deckhouse
 configVersion: 1
-cleanup:
-  keepPolicies:
-  - references:
-      branch: /.*/
-      limit:
-        in: 720h
-  - references:
-      tag: /.*/
-      limit:
-        in: 720h
 gitWorktree:
   forceShallowClone: true
 ---
+# Base Images
+{{ $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
+  {{- range $k, $v := .Images }}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.Images $k $baseImagePath }}
+    {{- end }}
+  {{- end }}
+---
+# Version Map
+{{ $_ := set . "CandiVersionMap" (.Files.Get "candi/version_map.yml" | fromYaml) }}
+---
+# Terraform Versions
+{{ $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
+---
 {{- define "base components" }}
-{{- $CandiVersionMap := .Files.Get "candi/version_map.yml" | fromYaml }}
   - name: "Install jo"
     apk:
       name:
@@ -39,7 +43,7 @@ gitWorktree:
   - name: "Install kubectl"
     shell: |
 {{- range $k8sVersion := tuple "1.20" "1.23" }}
-      curl -L https://dl.k8s.io/release/v{{ $k8sVersion }}.{{ index $CandiVersionMap "k8s" $k8sVersion "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl-{{ $k8sVersion }}
+      curl -L https://dl.k8s.io/release/v{{ $k8sVersion }}.{{ index $.CandiVersionMap "k8s" $k8sVersion "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl-{{ $k8sVersion }}
       chmod +x /usr/local/bin/kubectl-{{ $k8sVersion }}
 {{- end }}
   - name: "Install kubectl wrapper"
@@ -103,7 +107,7 @@ gitWorktree:
 {{- end }}
 
 image: common-base
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 ansible:
   beforeInstall:
   - apk: update_cache=yes
@@ -132,7 +136,7 @@ ansible:
 
 ---
 image: base-for-go
-from: {{ env "BASE_GOLANG_16_ALPINE" }}
+from: {{ .Images.BASE_GOLANG_16_ALPINE }}
 ansible:
   beforeInstall:
   - name: "Install dependencies"
@@ -234,13 +238,13 @@ ansible:
   - name: "Add version info"
     copy:
       content: |
-        {{- env "CI_COMMIT_TAG" | default "dev" | nindent 8}}
+        {{- env "CI_COMMIT_TAG" | default "dev" | nindent 8 }}
       dest: /deckhouse/version
 
   - name: "Add edition info"
     copy:
       content: |
-        {{- env "WERF_ENV" | default "unknown" | nindent 8}}
+        {{- .Env | default "unknown" | nindent 8 }}
       dest: /deckhouse/edition
 
   # Because of https://github.com/flant/werf/issues/1741 just make symlink for the entry point
@@ -477,7 +481,7 @@ ansible:
       chdir: /deckhouse/dhctl
 ---
 artifact: jq
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 fromCacheVersion: "20210527"
 git:
 - url: https://github.com/stedolan/jq
@@ -512,7 +516,7 @@ ansible:
 
 ---
 artifact: libjq
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 fromCacheVersion: "20210527"
 git:
 - url: https://github.com/flant/libjq-go
@@ -532,7 +536,7 @@ ansible:
   - shell: /src/scripts/build-libjq-static.sh /src /libjq
 ---
 image: dev/install
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 git:
 - add: /
   to: /deckhouse
@@ -554,28 +558,28 @@ import:
   before: setup
 - artifact: terraform-provider-aws # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
   add: /terraform-provider-aws
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64
   before: setup
 - artifact: terraform-provider-azure # from modules/040-terraform-manager/images/terraform-manager-azure/werf.inc.yaml
   add: /terraform-provider-azure
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AZURE_NAMESPACE" }}/{{ env "TF_AZURE_TYPE" }}/{{ env "TF_AZURE_VERSION" }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64
   before: setup
 - artifact: terraform-provider-gcp # from modules/040-terraform-manager/images/terraform-manager-gcp/werf.inc.yaml
   add: /terraform-provider-gcp/terraform-provider-gcp
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   after: setup
 - artifact: terraform-provider-yandex # from modules/040-terraform-manager/images/terraform-manager-yandex/werf.inc.yaml
   add: /terraform-provider-yandex
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64
   before: setup
 {{- if ne .Env "CE" }}
 - artifact: terraform-provider-openstack # from ee/modules/040-terraform-manager/images/terraform-manager-openstack/werf.inc.yaml
   add: /terraform-provider-openstack
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64
   before: setup
 - artifact: terraform-provider-vsphere # from modules/040-terraform-manager/images/terraform-manager-vsphere/werf.inc.yaml
   add: /terraform-provider-vsphere/terraform-provider-vsphere
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_VSPHERE_NAMESPACE" }}/{{ env "TF_VSPHERE_TYPE" }}/{{ env "TF_VSPHERE_VERSION" }}/linux_amd64/terraform-provider-vsphere
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
   after: setup
 {{- end }}
 - image: images-tags
@@ -633,37 +637,36 @@ shell:
 
 # modules_images
 {{- define "module_image_template" }}
-{{- if  eq .ImageInstructionType "Dockerfile" }}
+{{- if eq .ImageInstructionType "Dockerfile" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
 dockerfile: Dockerfile
 args:
-  BASE_ALPINE: {{ env "BASE_ALPINE" }}
-  BASE_ALPINE_3_15: {{ env "BASE_ALPINE_3_15" }}
-  BASE_DEBIAN: {{ env "BASE_DEBIAN" }}
-  BASE_RUST: {{ env "BASE_RUST" }}
-  BASE_DEBIAN_BULLSEYE: {{ env "BASE_DEBIAN_BULLSEYE" }}
-  BASE_GOLANG_ALPINE: {{ env "BASE_GOLANG_ALPINE" }}
-  BASE_GOLANG_16_ALPINE: {{ env "BASE_GOLANG_16_ALPINE" }}
-  BASE_GOLANG_17_ALPINE: {{ env "BASE_GOLANG_17_ALPINE" }}
-  BASE_GOLANG_BUSTER: {{ env "BASE_GOLANG_BUSTER" }}
-  BASE_GOLANG_16_BUSTER: {{ env "BASE_GOLANG_16_BUSTER" }}
-  BASE_GOLANG_17_BUSTER: {{ env "BASE_GOLANG_17_BUSTER" }}
-  BASE_GOLANG_18_BULLSEYE: {{ env "BASE_GOLANG_18_BULLSEYE" }}
-  BASE_NGINX_ALPINE:  {{ env "BASE_NGINX_ALPINE" }}
-  BASE_NODE_16_ALPINE: {{ env "BASE_NODE_16_ALPINE" }}
-  BASE_PYTHON_ALPINE:  {{ env "BASE_PYTHON_ALPINE" }}
-  BASE_SHELL_OPERATOR: {{ env "BASE_SHELL_OPERATOR" }}
-  BASE_UBUNTU: {{ env "BASE_UBUNTU" }}
-  BASE_JEKYLL: {{ env "BASE_JEKYLL" }}
+  BASE_ALPINE: {{ .Images.BASE_ALPINE }}
+  BASE_ALPINE_3_15: {{ .Images.BASE_ALPINE_3_15 }}
+  BASE_DEBIAN: {{ .Images.BASE_DEBIAN }}
+  BASE_RUST: {{ .Images.BASE_RUST }}
+  BASE_DEBIAN_BULLSEYE: {{ .Images.BASE_DEBIAN_BULLSEYE }}
+  BASE_GOLANG_ALPINE: {{ .Images.BASE_GOLANG_ALPINE }}
+  BASE_GOLANG_16_ALPINE: {{ .Images.BASE_GOLANG_16_ALPINE }}
+  BASE_GOLANG_17_ALPINE: {{ .Images.BASE_GOLANG_17_ALPINE }}
+  BASE_GOLANG_BUSTER: {{ .Images.BASE_GOLANG_BUSTER }}
+  BASE_GOLANG_16_BUSTER: {{ .Images.BASE_GOLANG_16_BUSTER }}
+  BASE_GOLANG_17_BUSTER: {{ .Images.BASE_GOLANG_17_BUSTER }}
+  BASE_GOLANG_18_BULLSEYE: {{ .Images.BASE_GOLANG_18_BULLSEYE }}
+  BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
+  BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
+  BASE_PYTHON_ALPINE:  {{ .Images.BASE_PYTHON_ALPINE }}
+  BASE_SHELL_OPERATOR: {{ .Images.BASE_SHELL_OPERATOR }}
+  BASE_UBUNTU: {{ .Images.BASE_UBUNTU }}
+  BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
 {{- else }}
 {{ tpl .ImageBuildData . }}
 {{- end }}
 {{- end }}
 
 {{- $Root := . }}
-{{- $CandiVersionMap := .Files.Get "candi/version_map.yml" | fromYaml }}
 {{- $ModulesImagesIDList := list }}
 
 # Collect EE and FE images if desired
@@ -684,7 +687,7 @@ args:
   {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
   {{- end }}
   {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
-  {{- $_ := set $ctx "CandiVersionMap" $CandiVersionMap }}
+  {{- $_ := set $ctx "CandiVersionMap" $.CandiVersionMap }}
   {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
   {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
   {{- $_ := set $ctx "ModuleName" $ImageData._2 }}
@@ -692,6 +695,11 @@ args:
   {{- $_ := set $ctx "ImageBuildData" $content }}
   {{- $_ := set $ctx "Files" $Root.Files }}
   {{- $_ := set $ctx "Env" $Root.Env }}
+
+  {{- $_ := set $ctx "Images" $Root.Images }}
+  {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
+  {{- $_ := set $ctx "TF" $Root.TF }}
+
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
@@ -703,7 +711,7 @@ args:
 {{- end }}
 ---
 image: images-tags
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 dependencies:
 {{- range $ImageID := $ModulesImagesIDList }}
   {{- $ModuleNameCamel := $ImageID | splitList "/" | first | camelcase | untitle }}

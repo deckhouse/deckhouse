@@ -7,13 +7,13 @@ git:
 import:
 - artifact: terraform-provider-gcp
   add: /terraform-provider-gcp/terraform-provider-gcp
-  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   before: setup
 ansible:
   install:
   - name: "Create a directory for terraform provider gcp"
     file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64
       state: directory
   - apk:
       name: ca-certificates
@@ -21,12 +21,12 @@ ansible:
   - command: rm -rf /var/cache/apk/*
 ---
 artifact: terraform-provider-gcp
-from: {{ env "BASE_GOLANG_ALPINE" }}
+from: {{ .Images.BASE_GOLANG_ALPINE }}
 git:
 - url: https://github.com/flant/terraform-provider-google
   add: /
   to: /terraform-provider-gcp
-  tag: v{{ env "TF_GCP_VERSION" }}-flant.1
+  tag: v{{ .TF.gcp.version }}-flant.1
   stageDependencies:
     install:
     - "**/*"

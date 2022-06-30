@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 docker:
   ENV:
     WORKDIR: /
@@ -11,7 +11,7 @@ import:
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/build
-from: {{ env "BASE_GOLANG_ALPINE" }}
+from: {{ .Images.BASE_GOLANG_ALPINE }}
 fromCacheVersion: "20210607"
 git:
 - url: https://github.com/deckhouse/mcm.git

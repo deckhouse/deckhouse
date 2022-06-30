@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 import:
   - image: common/pause
     add: /pause
@@ -22,4 +22,4 @@ docker:
   ENTRYPOINT: ["/usr/bin/etcd"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ env "BASE_ETCD" }}
+from: "gcr.io/etcd-development/etcd:v3.5.3@sha256:9b47062ce7956efc15cd5ce48f22b0219585bed802f36fb739408b6825cb7813"

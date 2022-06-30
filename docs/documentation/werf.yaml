@@ -1,13 +1,21 @@
 {{- if ne $.Env "development" -}}
 {{- $_ := set . "Env" "FE" }}
 {{- end }}
-
+---
 project: deckhouse-web
 configVersion: 1
-
+---
+# Base Images
+{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+  {{- range $k, $v := .Images }}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.Images $k $baseImagePath }}
+    {{- end }}
+  {{- end }}
 ---
 image: web
-from: {{ env "BASE_NGINX_ALPINE" }}
+from: {{ .Images.BASE_NGINX_ALPINE }}
 ansible:
   setup:
   - name: "Setup /etc/nginx/nginx.conf"
@@ -22,7 +30,7 @@ import:
   before: setup
 ---
 image: static-pages
-from: {{ env "BASE_JEKYLL" }}
+from: {{ .Images.BASE_JEKYLL }}
 fromCacheVersion: 20210713
 ansible:
   install:

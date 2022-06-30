@@ -1,7 +1,7 @@
 {{ $_ := set . "Env" (.Env | default "FE") }}
 
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ env "BASE_NGINX_ALPINE" }}
+from: {{ .Images.BASE_NGINX_ALPINE }}
 ansible:
   setup:
   - name: "Copy nginx.conf"
@@ -16,7 +16,7 @@ import:
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
-from: {{ env "BASE_JEKYLL" }}
+from: {{ .Images.BASE_JEKYLL }}
 mount:
   - from: build_dir
     to: /usr/local/bundle

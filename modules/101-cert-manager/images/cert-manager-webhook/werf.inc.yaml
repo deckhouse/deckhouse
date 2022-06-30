@@ -1,6 +1,6 @@
 {{- $version := "1.7.1" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
   add: /build/cert-manager/bazel-bin/cmd/webhook/webhook_/webhook

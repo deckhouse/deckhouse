@@ -1,7 +1,7 @@
 ---
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 docker:
   ENTRYPOINT: ["dhctl"]
 import:
@@ -35,13 +35,13 @@ shell:
 artifact: terraform
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ env "BASE_UBUNTU" }}
+from: {{ .Images.BASE_UBUNTU }}
 shell:
   beforeInstall:
     - apt-get update && apt install -y wget unzip
     - |
       mkdir /terraform
-      wget https://releases.hashicorp.com/terraform/{{ env "TF_VERSION" }}/terraform_{{ env "TF_VERSION" }}_linux_amd64.zip -O /terraform.zip
+      wget https://releases.hashicorp.com/terraform/{{ .TF.version }}/terraform_{{ .TF.version }}_linux_amd64.zip -O /terraform.zip
       unzip -d /terraform /terraform.zip
       chmod 755 /terraform/terraform
       cat << EOD > /root/.terraformrc

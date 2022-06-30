@@ -1,6 +1,6 @@
 ---
 artifact: apiserver
-from: {{ env "BASE_GOLANG_16_ALPINE" }}
+from: {{ $.Images.BASE_GOLANG_16_ALPINE }}
 git:
 - add: /modules/040-node-manager/images/bashible-apiserver
   to: /src
@@ -39,7 +39,7 @@ ansible:
       CGO_ENABLED: "0"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ .Images.BASE_ALPINE }}
 docker:
   ENTRYPOINT: ["/bashible-apiserver"]
 import:

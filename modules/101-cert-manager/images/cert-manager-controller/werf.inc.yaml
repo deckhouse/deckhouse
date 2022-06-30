@@ -1,6 +1,6 @@
 {{- $version := "1.7.1" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ env "BASE_ALPINE" }}
+from: {{ $.Images.BASE_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /build/cert-manager/bazel-bin/cmd/controller/controller_/controller
@@ -13,7 +13,7 @@ docker:
   ENTRYPOINT: ["/bin/cert-manager-controller"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ env "BASE_GOLANG_17_BUSTER" }}
+from: {{ $.Images.BASE_GOLANG_17_BUSTER }}
 git:
 - add: /modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
