@@ -143,24 +143,24 @@ On first recovered node do the following:
   kubectl -n d8-system rollout restart deployment deckhouse
   ```
 
-  If Deckhouse Pod stuck in Terminating state, force delete Pod
+  if Deckhouse Pod stuck in Terminating state, force delete Pod:
 
   ```shell
   kubectl -n d8-system delete po -l app=deckhouse --force
   ```
 
-  If you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes;
+  if you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes
+
+- and wait for control plane Pod rolling over and becoming `Ready`.
+
+  ```shell
+  watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+  ```
 
 - check node etcd member has peer and client host as internal node ip
 
   ```shell
   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-  ```
-
-and wait for control plane Pod rolling over and becoming `Ready`.
-
-  ```shell
-  watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
   ```
 
 For each another master nodes:
@@ -189,6 +189,7 @@ Perform the following steps to restore the quorum in the etcd cluster:
 - add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node;
 - wait for etcd to start;
 - remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
+- set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica);
 - remove master role label from nodes objects expect selected (recover in current time)
 
   ```shell
@@ -230,6 +231,24 @@ To turn them into cluster members, do the following on those nodes:
   rm -f /etc/kubernetes/admin.conf /root/.kube/config
   rm -rf /etc/kubernetes/deckhouse
   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+  ```
+
+- restart and wait readiness Deckhouse
+
+  ```shell
+  kubectl -n d8-system rollout restart deployment deckhouse
+  ```
+
+- and wait for control plane Pod rolling over and becoming `Ready`.
+
+  ```shell
+  watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+  ```
+
+- check node etcd member has peer and client host as internal node ip
+
+  ```shell
+  kubectl -n kube-system exec -ti ETCD_POD -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table'
   ```
 
 For each lost nodes:
@@ -574,24 +593,24 @@ On first recovered node do the following:
   kubectl -n d8-system rollout restart deployment deckhouse
   ```
 
-  If Deckhouse Pod stuck in Terminating state, force delete Pod
+  if Deckhouse Pod stuck in Terminating state, force delete Pod:
 
   ```shell
   kubectl -n d8-system delete po -l app=deckhouse --force
   ```
 
-  If you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes;
+  if you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes;
+
+- wait for control plane Pod rolling over and becoming `Ready`.
+
+  ```shell
+  watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+  ```
 
 - check node etcd member has peer and client host as internal node ip
 
   ```shell
   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-  ```
-
-and wait for control plane Pod rolling over and becoming `Ready`.
-
-  ```shell
-  watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
   ```
 
 For each another master nodes:
