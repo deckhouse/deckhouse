@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -176,7 +178,15 @@ func (h *Hook) AfterAction() error {
 
 	title := fmt.Sprintf("Delete label '%s' from converged node", manifests.ConvergeLabel)
 	return retry.NewLoop(title, 10, 3*time.Second).Run(func() error {
-		return h.convergeLabelToNode(false)
+		err := h.convergeLabelToNode(false)
+		if err != nil && errors.IsNotFound(err) {
+			// node object was removed while converge
+			// we do not need to remove label, because label added to removed object
+			// and new object will create without label
+			return nil
+		}
+
+		return err
 	})
 }
 
