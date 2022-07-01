@@ -185,7 +185,7 @@ CAA record does not match issuer
 Если вы не хотите хранить учетные данные в ConfigMap `deckhouse` (например, по соображениям безопасности), вы можете создать
 свой собственный ClusterIssuer / Issuer.
 Например, вы можете создать свой ClusterIssuer для сервиса [route53](https://aws.amazon.com/route53/) следующим образом:
-1. Создайте секрет с учетными данными:
+- Создайте секрет с учетными данными:
 
   ```shell
   kubectl apply -f - <<EOF
@@ -200,7 +200,7 @@ CAA record does not match issuer
   EOF
   ```
 
-2. Создайте простой ClusterIssuer со ссылкой на этот секрет:
+- Создайте простой ClusterIssuer со ссылкой на этот секрет:
 
   ```shell
   kubectl apply -f - <<EOF
@@ -225,7 +225,7 @@ CAA record does not match issuer
   EOF
   ```
 
-3. Закажите сертификаты как обычно, используя созданный ClusterIssuer:
+- Закажите сертификаты как обычно, используя созданный ClusterIssuer:
 
   ```shell
   kubectl apply -f - <<EOF
