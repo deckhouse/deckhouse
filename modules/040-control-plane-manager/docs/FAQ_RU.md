@@ -287,7 +287,7 @@ for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | j
 done
 ```
 
-В текущей директории будут создан файл `etc-backup.snapshot` со снимком базы etcd c одного из control-plane узла.
+В текущей директории будет создан файл `etc-backup.snapshot` со снимком базы etcd одного из членов etcd-кластера.
 Из полученного снимка можно будет восстановить состояние кластера etcd.
 О возможных вариантах восстановления состояния кластера etcd из снимка вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
 
