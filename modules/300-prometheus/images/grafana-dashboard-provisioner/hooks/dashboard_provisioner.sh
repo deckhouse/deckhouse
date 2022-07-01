@@ -36,10 +36,10 @@ EOF
 
 function __main__() {
   mkdir -p /tmp/dashboards/
-  rm -rf /tmp/dashboards/*
+  rm -rf /tmp/dashboards/* || true
 
   if ! context::has snapshots.dashboard_resources.0 ; then
-    rm -rf /etc/grafana/dashboards/*
+    rm -rf /etc/grafana/dashboards/* || true
     return 0
   fi
 
@@ -60,7 +60,7 @@ function __main__() {
     jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${file}"
   done
 
-  rm -rf /etc/grafana/dashboards/*
+  rm -rf /etc/grafana/dashboards/* || true
   cp -TR /tmp/dashboards/ /etc/grafana/dashboards/
 
   echo -n "ok" > /tmp/ready
