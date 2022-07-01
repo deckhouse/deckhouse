@@ -197,7 +197,7 @@ For example, you can create your own ClusterIssuer for a [route53](https://aws.a
     EOF
     ```
 
-2. Create simple ClusterIssuer with reference to that secret:
+2. Create a simple ClusterIssuer with reference to that secret:
 
     ```shell
     kubectl apply -f - <<EOF
