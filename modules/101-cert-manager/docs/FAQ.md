@@ -177,7 +177,7 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
   EOF
   ```
 
-## How to secure cert-manager credentials
+## How to secure cert-manager credentials?
 
 If you don't want to store credentials in the Deckhouse configmap (security reasons for example), feel free to create
 your own ClusterIssuer / Issuer.
