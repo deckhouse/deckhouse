@@ -32,7 +32,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -213,7 +213,7 @@ func chaosFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func chaosFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ng v1.NodeGroup
+	var ng ngv1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
@@ -221,7 +221,7 @@ func chaosFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}
 
 	isReadyForChaos := false
-	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
+	if ng.Spec.NodeType == ngv1.NodeTypeCloudEphemeral {
 		if ng.Status.Desired > 1 && ng.Status.Desired == ng.Status.Ready {
 			isReadyForChaos = true
 		}
