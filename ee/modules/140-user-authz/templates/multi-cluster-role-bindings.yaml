@@ -13,7 +13,7 @@ roleRef:
   name: d8:user-authz:role:ns:editor:{{ $crd.name }}
 subjects:
 {{ $crd.spec.subjects | toYaml }}
-    {{- end }} # end len if
+    {{- end }} # end if gt len
   {{- end }} # end if limitNamespaces
 
 {{- if hasKey $crd.spec "accessLevel" }}
