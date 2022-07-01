@@ -284,10 +284,10 @@ for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | j
 done
 ```
 
-In the current directory etcd snapshot file `etc-backup.snapshot` will be created from one of control-plane node.
-From this file you can restore previous cluster state in the future.
+In the current directory etcd snapshot file `etc-backup.snapshot` will be created from one of an etcd cluster members.
+From this file, you can restore the previous etcd cluster state in the future.
 
 You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
 
-We recommend encrypt etcd snapshot backups and save them outside the Deckhouse cluster.
+We recommend encrypting etcd snapshot backups and saving them outside the Deckhouse cluster.
 You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc.

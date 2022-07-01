@@ -288,8 +288,8 @@ done
 ```
 
 В текущей директории будут создан файл `etc-backup.snapshot` со снимком базы etcd c одного из control-plane узла.
-Из полученного снимка можно будет восстановить состояние кластера.
-О возможных вариантах восстановления состояния кластера из снимка вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+Из полученного снимка можно будет восстановить состояние кластера etcd.
+О возможных вариантах восстановления состояния кластера etcd из снимка вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
 
-Мы рекомендуем хранить резервные копии снимков состояния кластера в зашифрованном виде вне кластера Deckhouse.
-Для этого вы можете использовать сторонние инструменты, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) или прочие инструменты для резервного копирования файлов.
+Мы рекомендуем хранить резервные копии снимков состояния кластера etcd в зашифрованном виде вне кластера Deckhouse.
+Для этого вы можете использовать сторонние инструменты, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) или другие инструменты резервного копирования файлов.

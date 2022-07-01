@@ -137,7 +137,7 @@ On another nodes, start kubelet:
   ```
 
 On first recovered node do the following:
-- restart and wait readiness Deckhouse
+- restart and wait for Deckhouse to be ready
 
   ```shell
   kubectl -n d8-system rollout restart deployment deckhouse
@@ -149,7 +149,7 @@ On first recovered node do the following:
   kubectl -n d8-system delete po -l app=deckhouse --force
   ```
 
-  if you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes
+  If you got the error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, forcibly remove control plane Pods for other nodes.
 
 - and wait for control plane Pod rolling over and becoming `Ready`.
 
