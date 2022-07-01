@@ -62,7 +62,7 @@ spec:
       action: labeldrop
     # Drop a bunch of metrics which are disabled but still sent, see https://github.com/google/cadvisor/issues/1925
     - sourceLabels: [__name__],
-      regex: 'container_(network_tcp_usage_total|network_udp_usage_total|tasks_state|cpu_load_average_10s)',
+      regex: 'container_(network_tcp_usage_total|network_udp_usage_total|tasks_state|cpu_load_average_10s)'
       action: drop,
     # Drop cAdvisor metrics with no (pod, namespace) labels while preserving ability to monitor system services resource usage (cardinality estimation)
     # 'container_spec_.*',  // everything related to cgroup specification and thus static data (nodes*services*5)
