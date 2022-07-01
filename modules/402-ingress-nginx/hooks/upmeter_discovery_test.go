@@ -38,7 +38,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: upmeter_discovery ::", fu
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", true)
 
 	DescribeTable("Objects discovery for Upmeter dynamic probes",
-		func(objectsYAMLs []string, want []string) {
+		func(objectsYAMLs, want []string) {
 			yamlState := strings.Join(objectsYAMLs, "\n---\n")
 			f.BindingContexts.Set(f.KubeStateSet(yamlState))
 

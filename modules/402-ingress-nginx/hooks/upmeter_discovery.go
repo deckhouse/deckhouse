@@ -44,7 +44,6 @@ type upmeterDiscovery struct {
 
 // collectDynamicProbeConfig sets names of objects to internal values
 func collectDynamicProbeConfig(input *go_hook.HookInput) error {
-
 	// Input
 	key := "ingressNginx.internal.upmeterDiscovery"
 	discovery := upmeterDiscovery{

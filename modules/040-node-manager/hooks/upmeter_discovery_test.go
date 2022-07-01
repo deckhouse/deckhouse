@@ -38,7 +38,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: upmeter_discovery ::", fun
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	DescribeTable("Objects discovery for Upmeter dynamic probes",
-		func(objectsYAMLs []string, want []string) {
+		func(objectsYAMLs, want []string) {
 			yamlState := strings.Join(objectsYAMLs, "\n---\n")
 			f.BindingContexts.Set(f.KubeStateSet(yamlState))
 
@@ -126,7 +126,7 @@ spec:
 	return fmt.Sprintf(tpl, name, minPerZone, zstr)
 }
 
-func cloudEphemeralNodeGroupWithMaxUnavailableYAML(name string, minPerZone int64, maxUnavailablePerZone int64, zones ...string) string {
+func cloudEphemeralNodeGroupWithMaxUnavailableYAML(name string, minPerZone, maxUnavailablePerZone int64, zones ...string) string {
 	tpl := `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
