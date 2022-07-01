@@ -1,6 +1,6 @@
-ARG BASE_DEBIAN
+ARG BASE_DEBIAN_BULLSEYE
 
-FROM $BASE_DEBIAN as utils-builder
+FROM $BASE_DEBIAN_BULLSEYE as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
 ARG UTILS_VERSION=9.21.1
@@ -31,7 +31,7 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN as reactor-builder
+FROM $BASE_DEBIAN_BULLSEYE as reactor-builder
 
 ARG REACTOR_GITREPO=https://github.com/LINBIT/drbd-reactor
 ARG REACTOR_VERSION=0.7.0
@@ -54,7 +54,7 @@ RUN dpkg-buildpackage -us -uc
 
 # ------------------------------------------------------------------------------
 
-FROM $BASE_DEBIAN
+FROM $BASE_DEBIAN_BULLSEYE
 
 COPY --from=utils-builder /python-linstor_*.deb /drbd-utils_*.deb /thin-send-recv_*.deb /packages/
 COPY --from=reactor-builder /drbd-reactor_*.deb /packages/

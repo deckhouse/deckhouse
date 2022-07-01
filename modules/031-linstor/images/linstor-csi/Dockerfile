@@ -1,4 +1,4 @@
-ARG BASE_DEBIAN
+ARG BASE_DEBIAN_BULLSEYE
 ARG BASE_GOLANG_18_BULLSEYE
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
@@ -20,7 +20,7 @@ RUN git clone ${LINSTOR_WAIT_UNTIL_GITREPO} /usr/local/go/linstor-wait-until \
  && go build \
  && mv ./linstor-wait-until /
 
-FROM $BASE_DEBIAN
+FROM $BASE_DEBIAN_BULLSEYE
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       xfsprogs \
