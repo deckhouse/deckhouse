@@ -180,7 +180,7 @@ CAA record does not match issuer
   EOF
   ```
 
-## Как защитить учетные данные cert-manager
+## Как защитить учетные данные cert-manager?
 
 Если вы не хотите хранить учетные данные в ConfigMap `deckhouse` (например, по соображениям безопасности), вы можете создать
 свой собственный ClusterIssuer / Issuer.
