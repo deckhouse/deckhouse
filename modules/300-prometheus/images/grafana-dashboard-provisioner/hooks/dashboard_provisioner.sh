@@ -34,12 +34,20 @@ function __config__() {
 EOF
 }
 
+function clear_tmp() {
+  find /tmp/dashboards/ -mindepth 1 -exec rm -rf {} \;
+}
+
+function clear_data() {
+  find /etc/grafana/dashboards/ -mindepth 1 -exec rm -rf {} \;
+}
+
 function __main__() {
   mkdir -p /tmp/dashboards/
-  rm -rf /tmp/dashboards/* || true
+  clear_tmp
 
   if ! context::has snapshots.dashboard_resources.0 ; then
-    rm -rf /etc/grafana/dashboards/* || true
+    clear_data
     return 0
   fi
 
@@ -60,7 +68,7 @@ function __main__() {
     jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${file}"
   done
 
-  rm -rf /etc/grafana/dashboards/* || true
+  clear_data
   cp -TR /tmp/dashboards/ /etc/grafana/dashboards/
 
   echo -n "ok" > /tmp/ready
