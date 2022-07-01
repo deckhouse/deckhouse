@@ -21,6 +21,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
