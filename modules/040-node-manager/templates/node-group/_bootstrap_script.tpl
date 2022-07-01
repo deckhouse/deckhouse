@@ -1,8 +1,9 @@
 {{- define "node_group_bashible_bootstrap_script" -}}
-  bootstrap_job_log_pid=""
   {{- $context := . -}}
 
   {{- include "node_group_bashible_bootstrap_script_base_bootstrap" $context }}
+
+bootstrap_job_log_pid=""
 
   {{- if eq .nodeGroup.nodeType "CloudEphemeral" }}
 # Put bootstrap log information to Machine resource status
