@@ -179,9 +179,9 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/140-
 
 ## How to secure cert-manager credentials?
 
-If you don't want to store credentials in the Deckhouse configmap (security reasons for example), feel free to create
+If you don't want to store credentials in the `deckhouse` ConfigMap (security reasons, for example), feel free to create
 your own ClusterIssuer / Issuer.
-For example, you can create your own ClusterIssuer for route53 in this way:
+For example, you can create your own ClusterIssuer for a [route53](https://aws.amazon.com/route53/) service in this way:
 1. Create secret with credentials:
 
     ```shell
