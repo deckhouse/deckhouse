@@ -23,33 +23,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const (
-	stateCARs = `
----
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
-metadata:
-  name: car0
-spec:
-  accessLevel: ClusterEditor
-  subjects:
-  - kind: Group
-    name: NotEveryone
----
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
-metadata:
-  name: car1
-spec:
-  accessLevel: ClusterAdmin
-  subjects:
-  - kind: Group
-    name: Everyone
-`
-)
-
 var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", func() {
-	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {}, "userAuthz": {"enableMultiTenancy": true, "internal": {"multitenancyCRDs": []}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "ClusterAuthorizationRule", false)
 
 	Context("Empty cluster", func() {
@@ -75,4 +50,83 @@ var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", fu
 			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor", "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin", "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
 		})
 	})
+
+	Context("Cluster with multitenancy rule", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(defaultNS + multitenancyRule))
+			f.RunHook()
+		})
+
+		It("CAR must be stored in values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("userAuthz.internal.multitenancyCRDs").String()).To(MatchJSON(`[{"name":"admin","spec":{"accessLevel":"SuperAdmin","allowAccessToSystemNamespaces":true,"limitNamespaces":["review-1","default"],"subjects":[{"kind":"User","name":"user@flant.com"}]}}]`))
+		})
+	})
+
+	Context("Cluster with multitenancy rule and simple rules", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(defaultNS + multitenancyRule + stateCARs))
+			f.RunHook()
+		})
+
+		It("CAR must be stored in values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("userAuthz.internal.multitenancyCRDs").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("userAuthz.internal.crds").Array()).To(HaveLen(2))
+		})
+	})
 })
+
+const (
+	stateCARs = `
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: car0
+spec:
+  accessLevel: ClusterEditor
+  subjects:
+  - kind: Group
+    name: NotEveryone
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: car1
+spec:
+  accessLevel: ClusterAdmin
+  subjects:
+  - kind: Group
+    name: Everyone
+`
+
+	defaultNS = `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: review-1
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+`
+
+	multitenancyRule = `
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  subjects:
+  - kind: User
+    name: user@flant.com
+  accessLevel: SuperAdmin
+  allowAccessToSystemNamespaces: true
+  limitNamespaces:
+    - review-.*
+`
+)

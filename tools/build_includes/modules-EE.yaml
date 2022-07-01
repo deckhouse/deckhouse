@@ -9,22 +9,8 @@
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
 - add: /ee/modules/110-istio
   to: /deckhouse/modules/110-istio
-- add: /ee/modules/140-user-authz/templates/multi-cluster-role-bindings.yaml
-  to: /deckhouse/modules/140-user-authz/templates/multi-cluster-role-bindings.yaml
-- add: /ee/modules/140-user-authz/templates/multi-cluster-roles.yaml
-  to: /deckhouse/modules/140-user-authz/templates/multi-cluster-roles.yaml
-- add: /ee/modules/140-user-authz/templates/multi-role-bindings.yaml
-  to: /deckhouse/modules/140-user-authz/templates/multi-role-bindings.yaml
-- add: /ee/modules/140-user-authz/templates/multitenancy.yaml
-  to: /deckhouse/modules/140-user-authz/templates/multitenancy.yaml
-- add: /ee/modules/140-user-authz/hooks/common_test.go
-  to: /deckhouse/modules/140-user-authz/hooks/common_test.go
-- add: /ee/modules/140-user-authz/hooks/multi_handle_rules.go
-  to: /deckhouse/modules/140-user-authz/hooks/multi_handle_rules.go
-- add: /ee/modules/140-user-authz/hooks/multi_handle_rules_test.go
-  to: /deckhouse/modules/140-user-authz/hooks/multi_handle_rules_test.go
-- add: /ee/modules/140-user-authz/hooks/internal/cluster_auth_rule.go
-  to: /deckhouse/modules/140-user-authz/hooks/internal/cluster_auth_rule.go
+- add: /ee/modules/140-user-authz/templates/multitenancy
+  to: /deckhouse/modules/140-user-authz/templates/multitenancy
 - add: /ee/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
 - add: /ee/modules/380-metallb

@@ -23,21 +23,45 @@ type ClusterAuthorizationRule struct {
 }
 
 type ClusterAuthorizationRuleSpec struct {
-	AccessLevel string `json:"accessLevel"`
+	AccessLevel string `json:"accessLevel,omitempty"`
 
-	PortForwarding bool `json:"portForwarding"`
+	PortForwarding bool `json:"portForwarding,omitempty"`
 
-	AllowScale bool `json:"allowScale"`
+	AllowScale bool `json:"allowScale,omitempty"`
 
-	AllowAccessToSystemNamespaces bool `json:"allowAccessToSystemNamespaces"`
+	AllowAccessToSystemNamespaces bool `json:"allowAccessToSystemNamespaces,omitempty"`
 
 	LimitNamespaces []string `json:"limitNamespaces,omitempty"`
 
 	Subjects []rbacv1.Subject `json:"subjects,omitempty"`
 
-	// TODO: additionalRoles
 	AdditionalRoles interface{} `json:"additionalRoles,omitempty"`
 }
 
 type ClusterAuthorizationRuleStatus struct {
+}
+
+func (car ClusterAuthorizationRule) IsMultitenancy() bool {
+	if len(car.Spec.LimitNamespaces) > 0 {
+		return true
+	}
+
+	if car.Spec.AllowAccessToSystemNamespaces {
+		return true
+	}
+
+	return false
+}
+
+// ValuesClusterAuthorizationRule is a cutted version of ClusterAuthorizationRule, special for values openapi schema
+type ValuesClusterAuthorizationRule struct {
+	Name string                       `json:"name"`
+	Spec ClusterAuthorizationRuleSpec `json:"spec"`
+}
+
+func (car ClusterAuthorizationRule) ToValues() ValuesClusterAuthorizationRule {
+	return ValuesClusterAuthorizationRule{
+		Name: car.Name,
+		Spec: car.Spec,
+	}
 }
