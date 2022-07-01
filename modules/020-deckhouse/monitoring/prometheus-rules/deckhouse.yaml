@@ -344,7 +344,7 @@
   - alert: DeckhouseUpdating
     expr: max (d8_is_updating) == 1
     labels:
-      severity_level: "5"
+      severity_level: "4"
       tier: cluster
       d8_module: deckhouse
       d8_component: deckhouse
