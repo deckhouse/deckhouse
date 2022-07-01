@@ -191,6 +191,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
@@ -242,6 +243,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
@@ -316,6 +318,7 @@ podAntiAffinity:
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure
@@ -367,6 +370,7 @@ podAntiAffinity:
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
 - key: node.kubernetes.io/memory-pressure

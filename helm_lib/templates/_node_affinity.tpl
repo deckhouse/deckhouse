@@ -76,6 +76,7 @@ nodeSelector:
   operator: "Exists"
 - key: dedicated
   operator: "Exists"
+- key: ToBeDeletedByClusterAutoscaler
 {{ include "helm_lib_internal_node_problems_tolerations" . }}
   {{- if .Values.global.modules.placement.customTolerationKeys }}
     {{- range $key := .Values.global.modules.placement.customTolerationKeys }}
