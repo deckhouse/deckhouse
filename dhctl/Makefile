@@ -32,7 +32,7 @@ ifndef OS
 	endif
 endif
 
-export PATH := $(abspath bin/protoc/bin/):$(abspath bin/):${PATH}
+export PATH := $(abspath bin/):${PATH}
 
 INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/install:main
 
@@ -63,19 +63,19 @@ test:
 deps: bin/golangci-lint bin/gofumpt
 	go mod tidy
 
-lint: bin/golangci-lint
+lint:
 	golangci-lint run ./... -c .golangci.yaml
 
-fix: bin/golangci-lint
+fix:
 	golangci-lint run ./... -c .golangci.yaml --fix
 
-fmt: bin/golangci-lint bin/gofumpt
+fmt:
 	@# - gofumpt is not included in the .golangci.yaml because it conflicts with imports https://github.com/golangci/golangci-lint/issues/1490#issuecomment-778782810
 	@# - goimports is not turned on since it is used mostly by gofumpt internally
 	gofumpt -l -w -extra .
 	golangci-lint run ./... -c .golangci.yaml --fix
 
-ci: deps lint
+ci:
 	./hack/coverage.sh
 
 devenv:

@@ -453,33 +453,6 @@ ansible:
       args:
         chdir: /dhctl
 ---
-image: dhctl-tests
-fromCacheVersion: "20220615"
-fromImage: base-for-go
-git:
-- add: /
-  to: /deckhouse
-  includePaths:
-  - dhctl
-  - candi
-  excludePaths:
-  - candi/cloud-providers/*/layouts
-  - candi/cloud-providers/*/terraform-modules
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-ansible:
-  beforeInstall:
-    - apk:
-        name: git,ca-certificates,curl,bash,make
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
-
-  install:
-  - shell: make deps
-    args:
-      chdir: /deckhouse/dhctl
----
 artifact: jq
 from: {{ .Images.BASE_ALPINE }}
 fromCacheVersion: "20210527"
