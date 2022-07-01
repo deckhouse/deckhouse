@@ -87,7 +87,7 @@ On another (two) nodes do the following:
    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
    ```
 
-1. Clear node.
+1. Clear a node.
 
    ```shell
    rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
@@ -221,7 +221,7 @@ To turn them into cluster members, do the following on those nodes:
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Clear the node.
+1. Clear a node.
 
    ```shell
    rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
@@ -440,7 +440,7 @@ Do the following:
 
 On the affected node:
 
-1. Clear node.
+1. Clear the node.
 
    ```shell
    rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
