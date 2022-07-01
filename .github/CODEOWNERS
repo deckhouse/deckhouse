@@ -8,6 +8,7 @@
 040-control-plane-manager/  @yalosev
 040-node-manager/           @yalosev
 040-terraform-manager/      @name212
+101-cert-manager/           @yalosev
 110-istio/                  @apolovov
 140-user-authz/             @nabokihms @apolovov
 150-user-authn/             @nabokihms
