@@ -184,59 +184,59 @@ your own ClusterIssuer / Issuer.
 For example, you can create your own ClusterIssuer for a [route53](https://aws.amazon.com/route53/) service in this way:
 1. Create a Secret with credentials:
 
-    ```shell
-    kubectl apply -f - <<EOF
-    apiVersion: v1
-    kind: Secret
-    type: Opaque
-    metadata:
-      name: route53
-      namespace: default
-    data:
-      secret-access-key: {{ "MY-AWS-ACCESS-KEY-TOKEN" | b64enc | quote }}
-    EOF
-    ```
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: v1
+  kind: Secret
+  type: Opaque
+  metadata:
+    name: route53
+    namespace: default
+  data:
+    secret-access-key: {{ "MY-AWS-ACCESS-KEY-TOKEN" | b64enc | quote }}
+  EOF
+  ```
 
 2. Create a simple ClusterIssuer with reference to that secret:
 
-    ```shell
-    kubectl apply -f - <<EOF
-    apiVersion: cert-manager.io/v1
-    kind: ClusterIssuer
-    metadata:
-      name: route53
-      namespace: default
-    spec:
-      acme:
-        server: https://acme-v02.api.letsencrypt.org/directory
-        privateKeySecretRef:
-          name: route53-tls-key
-        solvers:
-        - dns01:
-            route53:
-              region: us-east-1
-              accessKeyID: {{ "MY-AWS-ACCESS-KEY-ID" }}
-              secretAccessKeySecretRef:
-                name: route53
-                key: secret-access-key
-    EOF
-    ```
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: cert-manager.io/v1
+  kind: ClusterIssuer
+  metadata:
+    name: route53
+    namespace: default
+  spec:
+    acme:
+      server: https://acme-v02.api.letsencrypt.org/directory
+      privateKeySecretRef:
+        name: route53-tls-key
+      solvers:
+      - dns01:
+          route53:
+            region: us-east-1
+            accessKeyID: {{ "MY-AWS-ACCESS-KEY-ID" }}
+            secretAccessKeySecretRef:
+              name: route53
+              key: secret-access-key
+  EOF
+  ```
 
 3. Order certificates as usual, using created ClusterIssuer:
 
-    ```shell
-    kubectl apply -f - <<EOF
-    apiVersion: cert-manager.io/v1
-    kind: Certificate
-    metadata:
-      name: example-com
-      namespace: default
-    spec:
-      secretName: example-com-tls
-      issuerRef:
-        name: route53
-      commonName: www.example.com 
-      dnsNames:
-      - www.example.com
-    EOF
-    ```
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: cert-manager.io/v1
+  kind: Certificate
+  metadata:
+    name: example-com
+    namespace: default
+  spec:
+    secretName: example-com-tls
+    issuerRef:
+      name: route53
+    commonName: www.example.com 
+    dnsNames:
+    - www.example.com
+  EOF
+  ```
