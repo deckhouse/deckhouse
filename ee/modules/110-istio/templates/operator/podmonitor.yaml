@@ -19,9 +19,8 @@ spec:
   - port: http-metrics
     scheme: http
     #scheme: https # TODO https://github.com/deckhouse/deckhouse/issues/1487
-    #bearerTokenSecret:
-    #  name: "prometheus-token"
-    #  key: "token"
+    #authorization:
+    #  credentialsKey: metricsToken
     #tlsConfig:
     #  insecureSkipVerify: true
     relabelings:

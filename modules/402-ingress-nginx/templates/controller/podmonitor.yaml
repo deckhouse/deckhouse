@@ -11,9 +11,8 @@ spec:
   - port: https-metrics
     scheme: https
     path: /controller/metrics
-    bearerTokenSecret:
-      name: "prometheus-token"
-      key: "token"
+    authorization:
+      credentialsKey: metricsToken
     tlsConfig:
       insecureSkipVerify: true
     relabelings:
@@ -39,9 +38,8 @@ spec:
   - port: https-metrics
     scheme: https
     path: /protobuf/metrics
-    bearerTokenSecret:
-      name: "prometheus-token"
-      key: "token"
+    authorization:
+      credentialsKey: metricsToken
     tlsConfig:
       insecureSkipVerify: true
     relabelings:

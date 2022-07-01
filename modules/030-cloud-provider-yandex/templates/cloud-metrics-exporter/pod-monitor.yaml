@@ -11,9 +11,8 @@ spec:
     - port: https-metrics
       path: /metrics/compute
       scheme: https
-      bearerTokenSecret:
-        name: "prometheus-token"
-        key: "token"
+      authorization:
+        credentialsKey: metricsToken
       tlsConfig:
         insecureSkipVerify: true
       honorLabels: true

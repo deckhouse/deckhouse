@@ -36,6 +36,9 @@ spec:
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true
+  credentials:
+  - key: metricsToken
+    file: /var/run/secrets/kubernetes.io/serviceaccount/token
   containers:
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
@@ -203,7 +206,8 @@ spec:
       name: {{ .name }}
       port: https
       scheme: https
-      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      authorization:
+        credentialsKey: metricsToken
       tlsConfig:
         insecureSkipVerify: true
     {{- end }}

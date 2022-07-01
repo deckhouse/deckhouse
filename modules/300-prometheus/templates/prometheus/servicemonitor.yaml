@@ -12,7 +12,8 @@ spec:
   endpoints:
   - port: https
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    authorization:
+      credentialsKey: metricsToken
     tlsConfig:
       insecureSkipVerify: true
     honorLabels: true

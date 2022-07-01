@@ -61,9 +61,8 @@
 {{- end }}
 
 {{- define "tls_config" }}
-bearerTokenSecret:
-  name: "prometheus-token"
-  key: "token"
+authorization:
+  credentialsKey: metricsToken
 tlsConfig:
   insecureSkipVerify: true
 {{- end }}

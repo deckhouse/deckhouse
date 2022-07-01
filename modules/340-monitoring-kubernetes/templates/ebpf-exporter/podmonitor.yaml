@@ -17,9 +17,8 @@ spec:
   - port: https-metrics
     scheme: https
     scrapeTimeout: 20s
-    bearerTokenSecret:
-      name: "prometheus-token"
-      key: "token"
+    authorization:
+      credentialsKey: metricsToken
     tlsConfig:
       insecureSkipVerify: true
     relabelings:

@@ -11,7 +11,8 @@ spec:
   # API metrics
   - port: https-metrics
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    authorization:
+      credentialsKey: metricsToken
     tlsConfig:
       insecureSkipVerify: true
     honorLabels: true
@@ -27,7 +28,8 @@ spec:
   # CRI metrics
   - port: https-metrics
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    authorization:
+      credentialsKey: metricsToken
     tlsConfig:
       insecureSkipVerify: true
     path: /metrics/cadvisor
@@ -63,7 +65,8 @@ spec:
   # Probes metrics
   - port: https-metrics
     scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    authorization:
+      credentialsKey: metricsToken
     tlsConfig:
       insecureSkipVerify: true
     path: /metrics/probes

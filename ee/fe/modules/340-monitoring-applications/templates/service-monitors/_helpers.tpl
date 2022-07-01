@@ -76,7 +76,8 @@ spec:
     {{- include "basic_relabeling_for_schema" (list "http" $name) | nindent 4 }}
 
   - scheme: https
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    authorization:
+      credentialsKey: metricsToken
     tlsConfig:
       insecureSkipVerify: true
     relabelings:
