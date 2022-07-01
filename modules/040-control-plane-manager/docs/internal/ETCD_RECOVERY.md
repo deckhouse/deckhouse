@@ -143,7 +143,7 @@ On first recovered node do the following:
   kubectl -n d8-system rollout restart deployment deckhouse
   ```
 
-  if Deckhouse Pod stuck in Terminating state, force delete Pod:
+  If Deckhouse Pod is stuck in a Terminating state, forcibly delete the Pod:
 
   ```shell
   kubectl -n d8-system delete po -l app=deckhouse --force
@@ -151,19 +151,19 @@ On first recovered node do the following:
 
   If you got the error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, forcibly remove control plane Pods for other nodes.
 
-- and wait for control plane Pod rolling over and becoming `Ready`.
+- And wait for the control plane Pod to roll over and become `Ready`.
 
   ```shell
   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
   ```
 
-- check node etcd member has peer and client host as internal node ip
+- Check that node etcd member has peer and client host as internal node IP:
 
   ```shell
   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
   ```
 
-For each another master nodes:
+For each other master nodes:
 - add master role
 
   ```shell
@@ -233,19 +233,19 @@ To turn them into cluster members, do the following on those nodes:
   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
   ```
 
-- restart and wait readiness Deckhouse
+- Restart and wait for Deckhouse to be ready:
 
   ```shell
   kubectl -n d8-system rollout restart deployment deckhouse
   ```
 
-- and wait for control plane Pod rolling over and becoming `Ready`.
+- Wait for control plane Pods to roll over and become `Ready`.
 
   ```shell
   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
   ```
 
-- check node etcd member has peer and client host as internal node ip
+- Check that node etcd member has peer and client host as internal node IP:
 
   ```shell
   kubectl -n kube-system exec -ti ETCD_POD -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table'
@@ -258,7 +258,7 @@ For each lost nodes:
   kubectl label no LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
   ```
 
-Wait for all control plane Pods rolling over and becoming `Ready`.
+Wait for all control plane Pods to roll over and become `Ready`.
 
   ```shell
   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
