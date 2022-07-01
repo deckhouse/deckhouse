@@ -1,6 +1,4 @@
 {{- range $crd := .Values.userAuthz.internal.multitenancyCRDs }}
-{{- if $crd.spec.limitNamespaces }}
-{{- if gt (len $crd.spec.limitNamespaces) 0 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -22,8 +20,6 @@ rules:
     {{- range $crd.spec.limitNamespaces }}
       - {{ . }}
     {{- end }}
-{{- end }} # end len if
-{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

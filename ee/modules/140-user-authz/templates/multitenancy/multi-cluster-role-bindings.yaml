@@ -1,6 +1,4 @@
 {{- range $crd := .Values.userAuthz.internal.multitenancyCRDs }}
-  {{- if $crd.spec.limitNamespaces }}
-    {{- if gt (len $crd.spec.limitNamespaces) 0 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -13,8 +11,6 @@ roleRef:
   name: d8:user-authz:role:ns:editor:{{ $crd.name }}
 subjects:
 {{ $crd.spec.subjects | toYaml }}
-    {{- end }} # end if gt len
-  {{- end }} # end if limitNamespaces
 
 {{- if hasKey $crd.spec "accessLevel" }}
   {{- if (list "Editor" "Admin" "ClusterEditor" "ClusterAdmin" "SuperAdmin" | has $crd.spec.accessLevel) }}
