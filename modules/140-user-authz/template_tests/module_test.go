@@ -184,29 +184,4 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "multitenancy-is-enabled").Exists()).To(BeTrue())
 		})
 	})
-
-	Context("With custom resources (incl. limitNamespaces) and not enabledMultiTenancy", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.crds", testCRDsWithLimitNamespaces)
-			f.HelmRender()
-		})
-
-		It("Helm should fail", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources."))
-		})
-	})
-
-	Context("With custom resources (incl. limitNamespaces) and not enabledMultiTenancy", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.crds", testCRDsWithAllowAccessToSystemNamespaces)
-			f.HelmRender()
-		})
-
-		It("Helm should fail", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources."))
-		})
-	})
-
 })
