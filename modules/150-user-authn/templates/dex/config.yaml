@@ -9,6 +9,8 @@
     https: 0.0.0.0:5556
     tlsKey: /etc/dex/certs/tls.key
     tlsCert: /etc/dex/certs/tls.crt
+  telemetry:
+    http: 127.0.0.1:5558
   frontend:
     issuer: "Kubernetes Dex"
     logoUrl: "https://kubernetes.io/images/favicon.png"
