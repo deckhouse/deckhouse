@@ -67,26 +67,6 @@ const testCRDsWithAllowAccessToSystemNamespaces = `---
       name: cluster-write-all
 `
 
-const testCRDsWithCRDsKey = `---
-crds:
-  - name: testenev
-    spec:
-      accessLevel: Admin
-      allowScale: true
-      limitNamespaces:
-      - default
-      - .*
-      subjects:
-      - kind: User
-        name: Efrem Testenev
-      additionalRoles:
-      - apiGroup: rbac.authorization.k8s.io
-        kind: ClusterRole
-        name: cluster-write-all
-`
-
-var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCRDsWithCRDsKey))
-
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
