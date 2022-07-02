@@ -52,21 +52,6 @@ const testCRDsWithLimitNamespaces = `---
       name: cluster-write-all
 `
 
-const testCRDsWithAllowAccessToSystemNamespaces = `---
-- name: testenev
-  spec:
-    accessLevel: Admin
-    allowScale: true
-    allowAccessToSystemNamespaces: true
-    subjects:
-    - kind: User
-      name: Efrem Testenev
-    additionalRoles:
-    - apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: cluster-write-all
-`
-
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
