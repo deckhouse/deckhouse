@@ -179,6 +179,7 @@ func (h *Hook) AfterAction() error {
 	return retry.NewLoop(title, 10, 3*time.Second).Run(func() error {
 		err := h.convergeLabelToNode(false)
 		if err != nil && errors.IsNotFound(err) {
+			log.InfoLn("Converged node was not found. Skip remove label.")
 			// node object was removed while converge
 			// we do not need to remove label, because label added to removed object
 			// and new object will create without label
