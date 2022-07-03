@@ -350,6 +350,12 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 		hec.hookConfig = string(result)
 	}
 
+	AfterEach(func() {
+		if hec.BindingContextController != nil {
+			hec.BindingContextController.Stop()
+		}
+	})
+
 	return hec
 }
 

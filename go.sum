@@ -261,8 +261,9 @@ github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWD
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/logboek v0.3.4 h1://0FHwS7hoLHTz7H+JlLheKlu298edC+qV61ca9OJBQ=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.0.11-0.20220620115555-adbf8b30f752 h1:Tj7SYHkxTYvAukutKieNO41C8MsFZDnr3Ix8fdU5wbA=
 github.com/flant/shell-operator v1.0.11-0.20220620115555-adbf8b30f752/go.mod h1:PKefoDxr05PFZjwegIl6v4s1NZjzKZNRbZOe7SyMFuk=
+github.com/flant/shell-operator v1.0.11-0.20220703215602-cb1b38204e1d h1:UghwcH7cQxrKCE57FImTKFVfxQrEOHfrNd0bGVJ6aV8=
+github.com/flant/shell-operator v1.0.11-0.20220703215602-cb1b38204e1d/go.mod h1:PKefoDxr05PFZjwegIl6v4s1NZjzKZNRbZOe7SyMFuk=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
 github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8/go.mod h1:ZhphrRTfi2rbfLwlschooIH4+wKKDR4Pdxhh+TRoA20=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
