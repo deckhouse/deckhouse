@@ -1,4 +1,4 @@
-{{- $version := "1.7.1" }}
+{{- $version := "1.8.2" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALPINE }}
 import:
@@ -32,7 +32,7 @@ shell:
   - cd /build
   - git clone -b "v{{ $version }}" --single-branch https://github.com/jetstack/cert-manager.git
   - cd /build/cert-manager
-  - curl -sSfL https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
+  - curl -sSfL https://github.com/bazelbuild/bazelisk/releases/download/v1.12.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
   - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
   - export APP_VERSION="v{{ $version }}-flant"
