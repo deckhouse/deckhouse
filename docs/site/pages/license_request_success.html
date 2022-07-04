@@ -6,6 +6,26 @@ layout: page-nosidebar
 toc: false
 ---
 
-<p>The license to access Deckhouse Kubernetes Platform EE has arrived.</p>
-<p style="font-size: 21px; font-weight: 600; letter-spacing: -0.4px; color: #0066FF;"><b>The license key has been sent to your email!</b></p>
-<p>It will expire in 1 month, and you’ll need to contact our team (<a href="mailto:sales@deckhouse.io">sales@deckhouse.io</a>) to keep using it afterward</p>
+<p>Thank you for your interest in the Deckhouse Kubernetes platform!</p>
+<p>Below is your token for accessing the EE edition of the platform (we also sent it to your email):</p>
+<p id="license-token" style="font-size: 21px; font-weight: 600; letter-spacing: -0.4px; color: #0066FF;"></p>
+<p>Note that the license is valid for one month. Please, contact the Deckhouse team (<a href="mailto:sales@deckhouse.io">sales@deckhouse.io</a>) to renew it.</p>
+<p>The Deckhouse Getting Started guide is available here: <a href="https://deckhouse.io/en/gs">https://deckhouse.io/en/gs</a>.</p>
+<p>Please feel free to contact us on <a href="https://t.me/deckhouse_ru">Telegram</a>!</p>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const licenseTokenContent = document.getElementById('license-token');
+    const licenseToken = getCookie('license-token');
+    const demoToken = getCookie('demotoken');
+
+    licenseTokenContent.innerText = licenseToken ? licenseToken : demoToken;
+  })
+
+  function getCookie(name) {
+    let matches = document.cookie.match(new RegExp(
+      "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+    ));
+    return matches ? decodeURIComponent(matches[1]) : undefined;
+  }
+</script>
