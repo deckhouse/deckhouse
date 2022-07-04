@@ -282,7 +282,8 @@ module Jekyll
             end
 
             if attributes['x-doc-deprecated']
-                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored deprecated" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
+                name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored deprecated" data-tippy-content="%s">%s</span><span data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, name,
+                  get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
             else
                 name_text = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored" data-tippy-content="%s">%s</span>), linkAnchor, linkAnchor, pathString, name)
             end
