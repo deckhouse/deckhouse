@@ -27,7 +27,7 @@ RUN apt-get update \
   && luarocks install lua-iconv 7-3
 
 # IngressNginxController docker image
-FROM registry.k8s.io/ingress-nginx/controller:v0.49.3@sha256:c6e53ab03242ccab2c716ea1ed51be49d5d7e678c4bed0cf42e0457838b9c990 as controller_0_49_3
+FROM registry.k8s.io/ingress-nginx/controller:v0.49.3@sha256:35fe394c82164efa8f47f3ed0be981b3f23da77175bbb8268a9ae438851c8324 as controller_0_49_3
 
 # Final image
 FROM $BASE_ALPINE
