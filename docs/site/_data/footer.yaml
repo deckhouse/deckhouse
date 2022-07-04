@@ -1,7 +1,7 @@
 columns:
   en:
   - items:
-      - title: Getting Started
+      - title: Getting started
         url: '/gs/'
       - title: Documentation
         url: '/documentation/v1/'
