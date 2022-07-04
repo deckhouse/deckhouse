@@ -80,7 +80,7 @@ spec:
                 diskSizeGB:
                   description: |
                     Yandex Compute Instance disk size in gigabytes.
-                  example: 50
+                  example: 20
                   x-doc-default: 50
                   type: integer
                 assignPublicIPAddress:
@@ -196,7 +196,7 @@ spec:
                 diskSizeGB:
                   description: |
                     Yandex Compute Instance disk size in gigabytes.
-                  example: 50
+                  example: 20
                   x-doc-default: 50
                   type: integer
                 assignPublicIPAddress:
