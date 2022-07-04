@@ -63,6 +63,60 @@ clusterType: Cloud
 	assert.NoError(t, err)
 }
 
+func TestSchemaPattern(t *testing.T) {
+	newStore := newSchemaStore([]string{"/tmp"})
+
+	schema := []byte(`
+kind: ClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [kind, apiVersion, jsonObject]
+    properties:
+      kind:
+        type: string
+      apiVersion:
+        type: string
+      jsonObject:
+        type: string
+        pattern: '^[ \t]*\{.*\}[ \t]*$'
+`)
+
+	err := newStore.upload(schema)
+	require.NoError(t, err)
+
+	errorDoc := []byte(`
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+jsonObject: "error"
+`)
+	_, err = newStore.Validate(&errorDoc)
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), `Document validation failed:
+---
+
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+jsonObject: "error"
+
+
+1 error occurred:
+	* jsonObject should match '^[ \t]*\{.*\}[ \t]*$'
+
+`)
+
+	okDoc := []byte(`
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+jsonObject: " {}"
+`)
+
+	_, err = newStore.Validate(&okDoc)
+	assert.NoError(t, err)
+}
+
 func TestSchemaStore(t *testing.T) {
 	newStore := newSchemaStore([]string{"/tmp"})
 

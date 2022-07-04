@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -Eeuo pipefail
+shopt -s failglob
+
 for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
   source $f
 done
@@ -31,12 +34,20 @@ function __config__() {
 EOF
 }
 
+function clear_tmp() {
+  find /tmp/dashboards/ -mindepth 1 -exec rm -rf {} \;
+}
+
+function clear_data() {
+  find /etc/grafana/dashboards/ -mindepth 1 -exec rm -rf {} \;
+}
+
 function __main__() {
   mkdir -p /tmp/dashboards/
-  rm -rf /tmp/dashboards/*
+  clear_tmp
 
   if ! context::has snapshots.dashboard_resources.0 ; then
-    rm -rf /etc/grafana/dashboards/*
+    clear_data
     return 0
   fi
 
@@ -45,20 +56,22 @@ function __main__() {
     title=$(jq -rc '.definition | fromjson | .title' <<< ${dashboard} | slugify)
     folder=$(jq -rc '.folder' <<< ${dashboard})
 
+    file="${folder}/${title}.json"
+
     # General folder can't be provisioned, see the link for more details
     # https://github.com/grafana/grafana/blob/3dde8585ff951d5e9a46cfd64d296fdab5acd9a2/docs/sources/http_api/folder.md#a-note-about-the-general-folder
     if [[ "$folder" == "General" ]]; then
-      # FIXME: Change folder to "" after updating grafana to version >= 7.1
-      #  In grafana >= 7.1 to store dashboard in General folder you must put it into the root of the provisioned folder
-      folder="General Folder"
+      file="${title}.json"
     fi
 
     mkdir -p "/tmp/dashboards/${folder}"
-    jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${folder}/${title}.json"
+    jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${file}"
   done
 
-  rm -rf /etc/grafana/dashboards/*
+  clear_data
   cp -TR /tmp/dashboards/ /etc/grafana/dashboards/
+
+  echo -n "ok" > /tmp/ready
 }
 
 hook::run "$@"
