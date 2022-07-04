@@ -10,8 +10,8 @@ provisioner: disk.csi.azure.com
 parameters:
   skuName: {{ $storageClass.type | quote }}
   kind: managed
-  {{- if eq $storageClass.type "UltraSSD_LRS" }}
-  cachingmode: None
+  {{- if hasKey $storageClass "cachingMode" }}
+  cachingMode: {{ $storageClass.cachingMode | quote }}
   {{- end }}
   {{- if hasKey $storageClass "diskIOPSReadWrite" }}
   diskIopsReadWrite: {{ $storageClass.diskIOPSReadWrite | quote }}

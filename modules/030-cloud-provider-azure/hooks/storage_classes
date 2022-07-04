@@ -28,7 +28,8 @@ function __main__() {
   storage_classes='[
     {
       "name": "managed-standard-ssd",
-      "type": "StandardSSD_LRS"
+      "type": "StandardSSD_LRS",
+      "cachingMode": "None"
     },
     {
       "name": "managed-standard",
@@ -37,6 +38,21 @@ function __main__() {
     {
       "name": "managed-premium",
       "type": "Premium_LRS"
+    },
+    {
+      "name": "managed-standard-ssd-huge",
+      "type": "StandardSSD_LRS",
+      "cachingMode": "None"
+    },
+    {
+      "name": "managed-standard-huge",
+      "type": "Standard_LRS",
+      "cachingMode": "None"
+    },
+    {
+      "name": "managed-premium-huge",
+      "type": "Premium_LRS",
+      "cachingMode": "None"
     }
   ]'
 
@@ -48,7 +64,7 @@ function __main__() {
 
   if values::has cloudProviderAzure.storageClass.provision; then
     storage_classes="$(jq --argjson provision "$(values::get cloudProviderAzure.storageClass.provision)" '
-      . + [$provision[] | .type="UltraSSD_LRS"]
+      . + [$provision[]| .type |= (. // "UltraSSD_LRS")]
       ' <<< "$storage_classes")"
   fi
 
