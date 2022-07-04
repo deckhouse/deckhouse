@@ -24,7 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 	"d8.io/upmeter/pkg/server/api"
 )
 
@@ -137,7 +137,7 @@ func (s *Sender) export() error {
 
 func (s *Sender) send(episodes []check.Episode) error {
 	data := api.EpisodesPayload{
-		Origin:   util.AgentUniqueId(),
+		Origin:   run.ID(),
 		Episodes: episodes,
 	}
 

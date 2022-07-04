@@ -24,7 +24,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	k8s "d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
 // NamespaceLifecycle is a checker constructor and configurator
@@ -134,7 +134,7 @@ func (c *namespaceDeletionChecker) Check() check.Error {
 }
 
 func createNamespaceObject() *v1.Namespace {
-	name := util.AgentIdentifier("upmeter-control-plane-namespace")
+	name := run.StaticIdentifier("upmeter-control-plane-namespace")
 
 	return &v1.Namespace{
 		TypeMeta: metav1.TypeMeta{
@@ -145,7 +145,7 @@ func createNamespaceObject() *v1.Namespace {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"upmeter-agent": util.AgentUniqueId(),
+				"upmeter-agent": run.ID(),
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "namespace",
 			},

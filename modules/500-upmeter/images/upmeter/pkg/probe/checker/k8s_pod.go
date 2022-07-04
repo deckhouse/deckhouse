@@ -24,7 +24,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
 // PodLifecycle is a checker constructor and configurator
@@ -67,15 +67,12 @@ type podLifecycleChecker struct {
 
 	garbageCollectionTimeout  time.Duration
 	controlPlaneAccessTimeout time.Duration
-
-	// inner state
-	checker check.Checker
 }
 
 func (c *podLifecycleChecker) Check() check.Error {
 	pod := createPodObject(c.node, c.access.SchedulerProbeImage())
-	c.checker = c.new(pod)
-	return c.checker.Check()
+	checker := c.new(pod)
+	return checker.Check()
 }
 
 /*
@@ -205,7 +202,7 @@ func (c *podDeletionChecker) Check() check.Error {
 func createPodObject(nodeName string, image *kubernetes.ProbeImage) *v1.Pod {
 	nodeAffinity := createNodeAffinityObject(nodeName)
 
-	podName := util.RandomIdentifier("upmeter-control-plane-scheduler")
+	podName := run.StaticIdentifier("upmeter-control-plane-scheduler")
 
 	return &v1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -216,7 +213,7 @@ func createPodObject(nodeName string, image *kubernetes.ProbeImage) *v1.Pod {
 			Name: podName,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"upmeter-agent": util.AgentUniqueId(),
+				"upmeter-agent": run.ID(),
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "scheduler",
 			},

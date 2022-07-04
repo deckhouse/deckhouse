@@ -24,7 +24,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
 // ConfigMapLifecycle is a checker constructor and configurator
@@ -71,16 +71,10 @@ func (c *configMapLifecycleChecker) Check() check.Error {
 func (c *configMapLifecycleChecker) new(configMap *v1.ConfigMap) check.Checker {
 	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
 
-	createAndDeleteConfigMap := withTimeout(
-		sequence(
-			// create
-			&configMapCreationChecker{access: c.access, configMap: configMap, namespace: c.namespace},
-			// delete
-			&configMapDeletionChecker{access: c.access, configMap: configMap, namespace: c.namespace},
-		),
-		// common timeout
-		c.timeout,
-	)
+	createCM := &configMapCreationChecker{access: c.access, configMap: configMap, namespace: c.namespace}
+	deleteCM := &configMapDeletionChecker{access: c.access, configMap: configMap, namespace: c.namespace}
+
+	createAndDeleteConfigMap := withTimeout(sequence(createCM, deleteCM), c.timeout)
 
 	verifyNotListed := withRetryEachSeconds(
 		&objectIsNotListedChecker{
@@ -133,7 +127,7 @@ func (c *configMapDeletionChecker) Check() check.Error {
 }
 
 func createConfigMapObject() *v1.ConfigMap {
-	name := util.RandomIdentifier("upmeter-basic")
+	name := run.StaticIdentifier("upmeter-basic")
 
 	return &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -144,7 +138,7 @@ func createConfigMapObject() *v1.ConfigMap {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"upmeter-agent": util.AgentUniqueId(),
+				"upmeter-agent": run.ID(),
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "basic",
 			},

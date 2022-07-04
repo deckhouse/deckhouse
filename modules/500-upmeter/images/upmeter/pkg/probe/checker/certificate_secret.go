@@ -29,7 +29,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
 // CertificateSecretLifecycle is a checker constructor and configurator
@@ -74,7 +74,7 @@ func (c *CertificateSecretLifecycleChecker) Check() check.Error {
 
 func (c *CertificateSecretLifecycleChecker) name() string {
 	// should be new for each run in order not to get stuck with created object
-	return util.RandomIdentifier("upmeter-cm-probe")
+	return run.StaticIdentifier("upmeter-cm-probe")
 }
 
 func (c *CertificateSecretLifecycleChecker) new(name string) check.Checker {

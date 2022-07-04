@@ -26,7 +26,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	k8s "d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
 const agentLabelKey = "upmeter-agent"
@@ -45,7 +45,7 @@ type DeploymentLifecycle struct {
 
 func (c DeploymentLifecycle) Checker() check.Checker {
 	return &deploymentLifecycleChecker{
-		agentId:                   util.AgentUniqueId(),
+		agentId:                   run.ID(),
 		access:                    c.Access,
 		namespace:                 c.Namespace,
 		deploymentCreationTimeout: c.DeploymentCreationTimeout,
@@ -79,10 +79,10 @@ func (c *deploymentLifecycleChecker) Check() check.Error {
 /*
  1. check control plane availability
  2. collect the garbage of the deployment/rs/pods from previous runs
- 3. create the deployment in api        (deploymentCreationTimeout)
- 4. wait for pending pod to appear      (podAppearTimeout, retry each 1 sec)
- 5. delete the deployment in api        (deploymentDeletionTimeout)
- 6. wait for the pod to disappear       (podDisappearTimeout, retry each 1 sec)
+ 3. create the deployment in api
+ 4. wait for pending pod to appear
+ 5. delete the deployment in api
+ 6. wait for the pod to disappear
 */
 func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Checker {
 	name := deployment.GetName()
@@ -96,7 +96,7 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 
 	createDeploymentOrUnknown := doOrUnknown(
 		c.deploymentCreationTimeout,
-		&deploymentCreationChecker{
+		&deploymentCreator{
 			access:     c.access,
 			namespace:  c.namespace,
 			deployment: deployment,
@@ -142,13 +142,13 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 	)
 }
 
-type deploymentCreationChecker struct {
+type deploymentCreator struct {
 	access     k8s.Access
 	namespace  string
 	deployment *appsv1.Deployment
 }
 
-func (c *deploymentCreationChecker) Do(_ context.Context) error {
+func (c *deploymentCreator) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
 	_, err := client.AppsV1().Deployments(c.namespace).Create(c.deployment)
 	return err
@@ -167,7 +167,7 @@ func (c *deploymentDeleter) Do(_ context.Context) error {
 }
 
 func createDeploymentObject(agentId string) *appsv1.Deployment {
-	name := util.RandomIdentifier("upmeter-controller-manager")
+	name := run.StaticIdentifier("upmeter-controller-manager")
 	replicas := int32(1)
 
 	return &appsv1.Deployment{
