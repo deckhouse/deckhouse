@@ -155,18 +155,6 @@ func withTimer(interval time.Duration, jobCb, onTimerCb func()) {
 	}
 }
 
-// doOrFail is a handy wrapper. It wraps timeout checker and doer interface,
-// if time is out or doer returns error, the checker returns check.ErrFail
-func doOrFail(timeout time.Duration, doer doer) check.Checker {
-	return withTimeout(&failCheckWrapper{doer}, timeout)
-}
-
-// doOrUnknown is a handy wrapper. It wraps timeout checker and doer interface,
-// if time is out or doer returns error, the checker returns check.ErrUnknown
-func doOrUnknown(timeout time.Duration, doer doer) check.Checker {
-	return withTimeout(&unknownCheckWrapper{doer}, timeout)
-}
-
 // doer is more abstract interface for stopping the propagation of check.ErrSomething too deep.
 type doer interface {
 	Do(context.Context) error
@@ -192,6 +180,41 @@ type failCheckWrapper struct {
 func (c *failCheckWrapper) Check() check.Error {
 	if err := c.doer.Do(context.TODO()); err != nil {
 		return check.ErrFail(err.Error())
+	}
+	return nil
+}
+
+// doOrFail is a handy wrapper. It wraps timeout checker and doer interface,
+// if time is out or doer returns error, the checker returns check.ErrFail
+func doOrFail(timeout time.Duration, doer doer) check.Checker {
+	return withTimeout(&failCheckWrapper{doer}, timeout)
+}
+
+// doOrUnknown is a handy wrapper. It wraps timeout checker and doer interface,
+// if time is out or doer returns error, the checker returns check.ErrUnknown
+func doOrUnknown(timeout time.Duration, doer doer) check.Checker {
+	return withTimeout(&unknownCheckWrapper{doer}, timeout)
+}
+
+// withFinalizer applies doer to whatever check result and passes the check error further if is it not nil
+func withFinalizer(c check.Checker, f doer) check.Checker {
+	return &finalizer{c: c, fin: f}
+}
+
+type finalizer struct {
+	c   check.Checker
+	fin doer
+}
+
+func (f *finalizer) Check() check.Error {
+	checkErr := f.c.Check()
+	finErr := f.fin.Do(context.TODO())
+
+	if checkErr != nil {
+		return checkErr
+	}
+	if finErr != nil {
+		return check.ErrUnknown("finalizing: %w", finErr)
 	}
 	return nil
 }

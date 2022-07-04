@@ -78,28 +78,24 @@ func (c *CertificateSecretLifecycleChecker) name() string {
 }
 
 func (c *CertificateSecretLifecycleChecker) new(name string) check.Checker {
-	pingControlPlane := newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout)
+	pingControlPlaneOrUnknown := newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout)
 
-	createCert := doOrUnknown(
-		c.CreationTimeout,
-		&certificateCreator{
-			access:    c.Access,
-			name:      name,
-			agentID:   c.AgentID,
-			namespace: c.Namespace,
-		},
-	)
+	createCert := &certificateCreator{
+		access:    c.Access,
+		name:      name,
+		agentID:   c.AgentID,
+		namespace: c.Namespace,
+	}
 
-	deleteCert := doOrUnknown(
-		c.CreationTimeout,
-		&certificateDeleter{
-			access:    c.Access,
-			name:      name,
-			namespace: c.Namespace,
-		},
-	)
+	deleteCert := &certificateDeleter{
+		access:    c.Access,
+		name:      name,
+		namespace: c.Namespace,
+	}
 
-	checkSecretExists := withTimeout(
+	createCertOrUnknown := doOrUnknown(c.CreationTimeout, createCert)
+
+	getSecretOrFail := withTimeout(
 		&secretExistenceChecker{
 			access:    c.Access,
 			name:      name,
@@ -108,7 +104,7 @@ func (c *CertificateSecretLifecycleChecker) new(name string) check.Checker {
 		c.ControlPlaneAccessTimeout,
 	)
 
-	checkSecretDoesNotExists := withTimeout(
+	getNoSecretOrFail := withTimeout(
 		&secretNonexistenceChecker{
 			access:    c.Access,
 			name:      name,
@@ -118,11 +114,13 @@ func (c *CertificateSecretLifecycleChecker) new(name string) check.Checker {
 	)
 
 	return sequence(
-		pingControlPlane,
-		createCert,
-		checkSecretExists,
-		deleteCert,
-		checkSecretDoesNotExists,
+		pingControlPlaneOrUnknown,
+		createCertOrUnknown,
+		withFinalizer(
+			getSecretOrFail,
+			deleteCert,
+		),
+		getNoSecretOrFail,
 	)
 }
 
