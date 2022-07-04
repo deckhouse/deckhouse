@@ -22,6 +22,9 @@ data:
       istio:
         component_status:
           enabled: false
+        root_namespace: d8-{{ $.Chart.Name }}
+        url_service_version: http://istiod.d8-istio:15014/version
+        config_map_name: istio-{{ .Values.istio.internal.globalRevision }}
       prometheus:
         url: https://trickster.d8-monitoring/trickster/main
         auth:
