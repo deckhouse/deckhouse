@@ -41,7 +41,6 @@ func (c ConfigMapLifecycle) Checker() check.Checker {
 		access:                    c.Access,
 		timeout:                   c.Timeout,
 		namespace:                 c.Namespace,
-		garbageCollectorTimeout:   c.GarbageCollectionTimeout,
 		controlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
 	}
 }
@@ -51,7 +50,6 @@ type configMapLifecycleChecker struct {
 	namespace string
 	timeout   time.Duration
 
-	garbageCollectorTimeout   time.Duration
 	controlPlaneAccessTimeout time.Duration
 
 	// inner state
@@ -73,13 +71,6 @@ func (c *configMapLifecycleChecker) Check() check.Error {
 func (c *configMapLifecycleChecker) new(configMap *v1.ConfigMap) check.Checker {
 	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
 
-	collectGarbage := newGarbageCollectorCheckerByName(
-		c.access,
-		configMap.Kind,
-		c.namespace,
-		configMap.GetName(),
-		c.garbageCollectorTimeout)
-
 	createAndDeleteConfigMap := withTimeout(
 		sequence(
 			// create
@@ -98,11 +89,10 @@ func (c *configMapLifecycleChecker) new(configMap *v1.ConfigMap) check.Checker {
 			kind:      configMap.Kind,
 			listOpts:  listOptsByName(configMap.Name),
 		},
-		c.garbageCollectorTimeout)
+		c.controlPlaneAccessTimeout)
 
 	return sequence(
 		pingControlPlane,
-		collectGarbage,
 		createAndDeleteConfigMap,
 		verifyNotListed,
 	)
@@ -119,7 +109,7 @@ func (c *configMapCreationChecker) Check() check.Error {
 
 	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(c.configMap)
 	if err != nil {
-		return check.ErrUnknown("creating configMap %s/%s: %v", c.namespace, c.configMap.Name, err)
+		return check.ErrFail("creating configMap %s/%s: %v", c.namespace, c.configMap.Name, err)
 	}
 
 	return nil

@@ -172,7 +172,7 @@ func (c *pendingPodChecker) Check() check.Error {
 
 	podList, err := client.CoreV1().Pods(c.namespace).List(*c.listOpts)
 	if err != nil {
-		return check.ErrFail("cannot get pod list %s/%s: %v", c.namespace, c.listOpts, err)
+		return check.ErrUnknown("listing pods %s/%s: %v", c.namespace, c.listOpts, err)
 	}
 
 	for _, pod := range podList.Items {

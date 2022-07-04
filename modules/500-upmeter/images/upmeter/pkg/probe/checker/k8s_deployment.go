@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -67,15 +68,12 @@ type deploymentLifecycleChecker struct {
 
 	garbageCollectionTimeout  time.Duration
 	controlPlaneAccessTimeout time.Duration
-
-	// inner state
-	checker check.Checker
 }
 
 func (c *deploymentLifecycleChecker) Check() check.Error {
 	deployment := createDeploymentObject(c.agentId)
-	c.checker = c.new(deployment)
-	return c.checker.Check()
+	checker := c.new(deployment)
+	return checker.Check()
 }
 
 /*
@@ -96,23 +94,20 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 	labels := map[string]string{agentLabelKey: c.agentId}
 	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, deployment.Kind, c.namespace, labels, c.garbageCollectionTimeout)
 
-	createDeployment := withTimeout(
+	createDeploymentOrUnknown := doOrUnknown(
+		c.deploymentCreationTimeout,
 		&deploymentCreationChecker{
 			access:     c.access,
 			namespace:  c.namespace,
 			deployment: deployment,
 		},
-		c.deploymentCreationTimeout,
 	)
 
-	deleteDeployment := withTimeout(
-		&deploymentDeletionChecker{
-			access:    c.access,
-			namespace: c.namespace,
-			name:      name,
-		},
-		c.deploymentDeletionTimeout,
-	)
+	deleteDeployment := &deploymentDeleter{
+		access:    c.access,
+		namespace: c.namespace,
+		name:      name,
+	}
 
 	// Track pods only created by current deployment since the deployment name consists of agent
 	// ID and random tail.
@@ -138,9 +133,11 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 	return sequence(
 		pingControlPlane,
 		collectGarbage,
-		createDeployment,
-		verifyPodExists,
-		deleteDeployment,
+		createDeploymentOrUnknown,
+		withFinalizer(
+			verifyPodExists,
+			deleteDeployment,
+		),
 		verifyNoPod,
 	)
 }
@@ -151,32 +148,22 @@ type deploymentCreationChecker struct {
 	deployment *appsv1.Deployment
 }
 
-func (c *deploymentCreationChecker) Check() check.Error {
+func (c *deploymentCreationChecker) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
-
 	_, err := client.AppsV1().Deployments(c.namespace).Create(c.deployment)
-	if err != nil {
-		return check.ErrUnknown("creating deployment/%s: %v", c.deployment.Name, err)
-	}
-
-	return nil
+	return err
 }
 
-type deploymentDeletionChecker struct {
+type deploymentDeleter struct {
 	access    k8s.Access
 	namespace string
 	name      string
 }
 
-func (c *deploymentDeletionChecker) Check() check.Error {
+func (c *deploymentDeleter) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
-
 	err := client.AppsV1().Deployments(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
-	if err != nil {
-		return check.ErrFail("failed to delete deployment/%s: %v", c.name, err)
-	}
-
-	return nil
+	return err
 }
 
 func createDeploymentObject(agentId string) *appsv1.Deployment {

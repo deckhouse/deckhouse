@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,9 +33,6 @@ type garbageCollectorChecker struct {
 	kind      string
 	listOpts  *metav1.ListOptions
 	timeout   time.Duration
-
-	// inner state
-	firstRun bool
 }
 
 func newGarbageCollectorCheckerByName(access k8s.Access, kind, namespace, name string, timeout time.Duration) check.Checker {
@@ -44,9 +42,6 @@ func newGarbageCollectorCheckerByName(access k8s.Access, kind, namespace, name s
 		kind:      kind,
 		listOpts:  listOptsByName(name),
 		timeout:   timeout,
-
-		// inner state
-		firstRun: true,
 	}
 }
 
@@ -57,17 +52,17 @@ func newGarbageCollectorCheckerByLabels(access k8s.Access, kind, namespace strin
 		kind:      kind,
 		listOpts:  listOptsByLabels(labels),
 		timeout:   timeout,
-
-		// inner state
-		firstRun: true,
 	}
 }
 
 func (c *garbageCollectorChecker) Check() check.Error {
-	defer func() {
-		c.firstRun = false
-	}()
+	if err := c.collect(); err != nil {
+		return check.ErrUnknown(err.Error())
+	}
+	return nil
+}
 
+func (c *garbageCollectorChecker) collect() error {
 	var err error
 	var list []string
 
@@ -75,7 +70,7 @@ func (c *garbageCollectorChecker) Check() check.Error {
 
 	list, err = listObjects(client, c.kind, c.namespace, *c.listOpts)
 	if err != nil {
-		return check.ErrUnknown("listing %s/%s: %v", c.namespace, c.kind, err)
+		return fmt.Errorf("listing %s/%s: %v", c.namespace, c.kind, err)
 	}
 	if len(list) == 0 {
 		return nil
@@ -83,12 +78,7 @@ func (c *garbageCollectorChecker) Check() check.Error {
 
 	err = deleteObjects(client, c.kind, c.namespace, list)
 	if err != nil {
-		return check.ErrUnknown("cannot clean garbage %s/%s: %v", c.namespace, c.kind, err)
-	}
-
-	if c.firstRun {
-		// Garbage was found on first run. Immediate Unknown result. But... why?
-		return check.ErrUnknown("garbage found for %s/%s", c.namespace, c.kind)
+		return fmt.Errorf("cannot clean garbage %s/%s: %v", c.namespace, c.kind, err)
 	}
 
 	// Take some time to ensure objects are deleted
@@ -103,7 +93,7 @@ func (c *garbageCollectorChecker) Check() check.Error {
 	}
 
 	if err != nil {
-		return check.ErrUnknown("garbage still present in %ss (names=%s): %v", c.kind, dumpNames(list), err)
+		return fmt.Errorf("garbage still present in %ss (names=%s): %v", c.kind, dumpNames(list), err)
 	}
-	return check.ErrUnknown("garbage still present in %ss (names=%s)", c.kind, dumpNames(list))
+	return fmt.Errorf("garbage still present in %ss (names=%s)", c.kind, dumpNames(list))
 }
