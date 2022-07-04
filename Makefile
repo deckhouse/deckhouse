@@ -36,7 +36,7 @@ TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy ## Install dev dependencies.
 
 ##@ Tests
 
@@ -97,12 +97,16 @@ generate: ## Run all generate-* jobs in bulk.
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
 
-##@ Reports
+##@ Security
+
+bin/regcopy: ## App to copy docker images to the Deckhouse registry
+	mkdir -p bin
+	cd tools/regcopy; go build -o $(PWD)/bin/regcopy
 
 bin/trivy:
 	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin v${TRIVY_VERSION}
 
-.PHONY: cve-report
+.PHONY: cve-report cve-base-images
 cve-report: ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
 	./tools/cve/release.sh

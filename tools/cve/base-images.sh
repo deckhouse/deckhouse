@@ -41,6 +41,7 @@ function base_images_tags {
   base_images=$(grep -v "BASE_GOLANG" <<< "$base_images") # golang images are used for multistage builds
   base_images=$(grep -v "BASE_RUST" <<< "$base_images") # rust images are used for multistage builds
   base_images=$(grep -v "BASE_JEKYLL" <<< "$base_images") # images to build docs
+  base_images=$(grep -v "BASE_NODE" <<< "$base_images") # js bundles compilation
 
   base_images=$(awk '{ print $2 }' <<< "$base_images") # pick an actual images address
   base_images=$(jq -sr --arg reg "$reg_path" 'map(. | "\($reg)\(.)") | .[]' <<< "$base_images") # "string" -> registry.deckhouse.io/base_images/string

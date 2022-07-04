@@ -47,6 +47,8 @@ function __main__() {
   docker pull "$REPO:$TAG"
   tags=$(docker run --rm "$REPO:$TAG" cat /deckhouse/modules/images_tags.json)
 
+  trivy image --timeout 10m --severity=$SEVERITY "$REPO:$TAG"
+
   for module in $(jq -rc 'to_entries[]' <<< "$tags"); do
     echo "=============================================="
     echo "🛰 Module: $(jq -rc '.key' <<< "$module")"
