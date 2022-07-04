@@ -10,7 +10,7 @@ COPY patches/pod-ip.patch /
 COPY patches/deny-invalid-auth-locations.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
-    git clone --branch controller-v0.49.1 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
+    git clone --branch controller-v0.49.3 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /pod-ip.patch && \
@@ -27,12 +27,12 @@ RUN apt-get update \
   && luarocks install lua-iconv 7-3
 
 # IngressNginxController docker image
-FROM registry.k8s.io/ingress-nginx/controller:v0.49.1@sha256:4080849490fd4f61416ad7bdba6fdd0ee58164f2e13df1128b407ce82d5f3986 as controller_0_49_1
+FROM registry.k8s.io/ingress-nginx/controller:v0.49.3@sha256:c6e53ab03242ccab2c716ea1ed51be49d5d7e678c4bed0cf42e0457838b9c990 as controller_0_49_3
 
 # Final image
 FROM $BASE_ALPINE
-# Based on https://github.com/kubernetes/ingress-nginx/blob/controller-v0.49.1/images/nginx/rootfs/Dockerfile
-# Based on https://github.com/kubernetes/ingress-nginx/blob/controller-v0.49.1/rootfs/Dockerfile
+# Based on https://github.com/kubernetes/ingress-nginx/blob/controller-v0.49.3/images/nginx/rootfs/Dockerfile
+# Based on https://github.com/kubernetes/ingress-nginx/blob/controller-v0.49.3/rootfs/Dockerfile
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
 
 ENV LUA_PATH="/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
@@ -45,12 +45,12 @@ ENV LUA_CPATH=$LUA_CPATH;/usr/local/openresty/site/lualib/?.so;/usr/local/openre
 RUN adduser -S -D -H -u 101 -h /usr/local/nginx \
     -s /sbin/nologin -G www-data -g www-data www-data
 
-COPY --from=controller_0_49_1 /usr/local /usr/local
-COPY --from=controller_0_49_1 /opt /opt
-COPY --from=controller_0_49_1 --chown=www-data:www-data /etc /etc
-COPY --from=controller_0_49_1 --chown=www-data:www-data /dbg /dbg
-COPY --from=controller_0_49_1 --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
-COPY --from=controller_0_49_1 --chown=www-data:www-data /wait-shutdown /wait-shutdown
+COPY --from=controller_0_49_3 /usr/local /usr/local
+COPY --from=controller_0_49_3 /opt /opt
+COPY --from=controller_0_49_3 --chown=www-data:www-data /etc /etc
+COPY --from=controller_0_49_3 --chown=www-data:www-data /dbg /dbg
+COPY --from=controller_0_49_3 --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
+COPY --from=controller_0_49_3 --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
 # We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
