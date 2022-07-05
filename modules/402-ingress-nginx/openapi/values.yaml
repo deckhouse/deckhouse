@@ -12,19 +12,19 @@ properties:
         type: object
         default: {}
         x-required-for-helm:
-        - ca
-        - key
-        - cert
+          - ca
+          - key
+          - cert
         properties:
           ca:
             type: string
-            x-examples: ["testca"]
+            x-examples: [ "testca" ]
           key:
             type: string
-            x-examples: ["testkey"]
+            x-examples: [ "testkey" ]
           cert:
             type: string
-            x-examples: ["testcrt"]
+            x-examples: [ "testcrt" ]
       nginxAuthTLS:
         type: ['null', array]
         default: []
@@ -63,8 +63,8 @@ properties:
               type: object
               default: {}
               x-required-for-helm:
-              - ingressClass
-              - inlet
+                - ingressClass
+                - inlet
               properties:
                 ingressClass:
                   type: string
@@ -84,33 +84,33 @@ properties:
                 validationEnabled:
                   type: boolean
                 nodeSelector:
-                  type: object
-                  additionalProperties:
-                    type: string
-                  description: |
-                    The same as the `spec.nodeSelector` pod parameter in Kubernetes.
-
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
-                tolerations:
-                  type: array
-                  description: |
-                    The same as `spec.tolerations` for the Kubernetes pod.
-
-                    Use [automatic](https://deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
-                  items:
                     type: object
-                    properties:
-                      effect:
-                        type: string
-                      key:
-                        type: string
-                      operator:
-                        type: string
-                      tolerationSeconds:
-                        type: integer
-                        format: int64
-                      value:
-                        type: string
+                    additionalProperties:
+                      type: string
+                    description: |
+                      The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+
+                      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+                tolerations:
+                    type: array
+                    description: |
+                      The same as `spec.tolerations` for the Kubernetes pod.
+
+                      Use [automatic](https://deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                    items:
+                      type: object
+                      properties:
+                        effect:
+                          type: string
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        tolerationSeconds:
+                          type: integer
+                          format: int64
+                        value:
+                          type: string
                 loadBalancer:
                   type: object
                   default: {}
@@ -274,7 +274,7 @@ properties:
         type: string
         default: ""
         description: Minimal version of the existing Ingress Controllers
-        x-examples: ["0.33", "0.46"]
+        x-examples: [ "0.33", "0.46" ]
       hasIncompatibleIngressClass:
         type: boolean
         default: false
