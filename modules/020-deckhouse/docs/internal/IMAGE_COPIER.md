@@ -62,7 +62,7 @@ Execute commands another commands from `generate-copier-secret.sh` output:
 * Wait for Deckhouse pod ready (restart pod if it is in ImagePullBackoff state).
 * Check bashible on master node restart correctly.
 * If you use the istio module, it is recommended to restart all the application pods with istio sidecar.
-* Check if there are pods with irrelevant registry:
+* Check if there are pods with original registry:
 
 ```
 kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) | .metadata.namespace + "\t" + .metadata.name' -r

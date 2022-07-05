@@ -132,6 +132,6 @@ kubectl -n d8-system rollout restart deployment deckhouse
 # The bashible log on the master node (journalctl -u bashible) should contain the message Configuration is in sync, nothing to do.
 # If you use the istio module, it is recommended to restart all the application pods with istio sidecar.
 
-# Check if there are pods with irrelevant registry:
+# Check if there are pods with original registry:
 kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains(\"deckhouse.io\")))) | .metadata.namespace + \"\\\\t\" + .metadata.name' -r
 "

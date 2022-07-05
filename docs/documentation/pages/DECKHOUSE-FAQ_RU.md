@@ -212,6 +212,10 @@ chmod 700 d8-push.sh
 * Дождаться перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
 * Дождаться применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
 * Только если обновление Deckhouse через сторонний registry не планируется, то следует удалить `releaseChannel` из ConfigMap `d8-system/deckhouse`.
+* Проверить, не осталось ли в кластере подов с оригинальным реджистри:
+```
+kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io")))) | .metadata.namespace + "\t" + .metadata.name' -r
+```
 
 ## Как изменить конфигурацию кластера
 
