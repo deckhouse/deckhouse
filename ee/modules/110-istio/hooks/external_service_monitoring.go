@@ -12,12 +12,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue("revisions-discovery-monitoring"),
+	Queue: "/modules/istio/revisions-discovery-monitoring",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "services",
