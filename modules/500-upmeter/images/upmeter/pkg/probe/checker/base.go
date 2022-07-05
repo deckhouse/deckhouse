@@ -218,3 +218,26 @@ func (f *finalizer) Check() check.Error {
 	}
 	return nil
 }
+
+// withFinalizerChecker runs f checker to whatever check result and passes the check error further if is it not nil
+func withFinalizerChecker(c, f check.Checker) check.Checker {
+	return &finalizerChecker{c: c, fin: f}
+}
+
+type finalizerChecker struct {
+	c   check.Checker
+	fin check.Checker
+}
+
+func (f *finalizerChecker) Check() check.Error {
+	checkErr := f.c.Check()
+	finErr := f.fin.Check()
+
+	if checkErr != nil {
+		return checkErr
+	}
+	if finErr != nil {
+		return finErr
+	}
+	return nil
+}

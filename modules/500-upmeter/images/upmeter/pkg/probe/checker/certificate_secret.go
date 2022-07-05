@@ -124,6 +124,81 @@ func (c *CertificateSecretLifecycleChecker) new(name string) check.Checker {
 	)
 }
 
+type CertificateSecretLifecycleChecker2 struct {
+	controlPlanePreflight   check.Checker
+	garbagePreflight        check.Checker
+	createCertOrUnknown     check.Checker
+	getSecretPresenceOrFail check.Checker
+	deleteCertFinalizer     check.Checker
+	getSecretAbsenceOrFail  check.Checker
+}
+
+func (c *CertificateSecretLifecycleChecker2) Check() check.Error {
+	return sequence(
+		c.controlPlanePreflight,
+		c.garbagePreflight,
+		c.createCertOrUnknown,
+		withFinalizerChecker(
+			c.getSecretPresenceOrFail,
+			c.deleteCertFinalizer,
+		),
+		c.getSecretAbsenceOrFail,
+	).Check()
+}
+
+type CertificateSecretLifecycleChecker3 struct {
+	pingControlPlane doer
+	checkGarbage     doer
+
+	createCert doer
+	deleteCert doer
+
+	getSecretPresence doer
+	getSecretAbsence  doer
+
+	preflightTimeout time.Duration
+	creationTimeout  time.Duration
+	deletionTimeout  time.Duration
+}
+
+// assert is a handy wrapper. It wraps timeout checker and doer interface,
+// if time is out or doer returns error, the checker returns check.ErrFail
+func assert(timeout time.Duration, doer doer) check.Checker {
+	return withTimeout(&failCheckWrapper{doer}, timeout)
+}
+
+// ensure is a handy wrapper. It wraps timeout checker and doer interface,
+// if time is out or doer returns error, the checker returns check.ErrUnknown
+func ensure(timeout time.Duration, doer doer) check.Checker {
+	return withTimeout(&unknownCheckWrapper{doer}, timeout)
+}
+
+func (c *CertificateSecretLifecycleChecker3) Check() check.Error {
+	return sequence(
+		ensure(c.preflightTimeout, c.pingControlPlane),
+		ensure(c.preflightTimeout, c.checkGarbage),
+
+		ensure(c.creationTimeout, c.createCert),
+		withFinalizerChecker(
+			assert(c.creationTimeout, c.createCert),
+			ensure(c.deletionTimeout, c.deleteCert),
+		),
+		assert(c.deletionTimeout, c.getSecretAbsence),
+	).Check()
+
+	//return sequence(
+	//	doOrUnknown(c.preflightTimeout, c.pingControlPlane),
+	//	doOrUnknown(c.preflightTimeout, c.checkGarbage),
+	//
+	//	doOrUnknown(c.creationTimeout, c.createCert),
+	//	withFinalizerChecker(
+	//		doOrFail(c.creationTimeout, c.createCert),
+	//		doOrUnknown(c.deletionTimeout, c.deleteCert),
+	//	),
+	//	doOrFail(c.deletionTimeout, c.getSecretAbsence),
+	//).Check()
+}
+
 type certificateCreator struct {
 	access  kubernetes.Access
 	agentID string
