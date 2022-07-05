@@ -18,7 +18,7 @@ type:
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
-     name: enable_ntp_on_node.sh
+     name: enable-ntp-on-node.sh
    spec:
      weight: 100
      nodeGroups: ["*"]
