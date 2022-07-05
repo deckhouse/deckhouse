@@ -6,15 +6,15 @@ properties:
     type: object
     default: {}
     x-required-for-helm:
-      - ingressControllers
+    - ingressControllers
     properties:
       admissionCertificate:
         type: object
         default: {}
         x-required-for-helm:
-          - ca
-          - key
-          - cert
+        - ca
+        - key
+        - cert
         properties:
           ca:
             type: string
@@ -63,8 +63,8 @@ properties:
               type: object
               default: {}
               x-required-for-helm:
-                - ingressClass
-                - inlet
+              - ingressClass
+              - inlet
               properties:
                 ingressClass:
                   type: string
@@ -282,7 +282,7 @@ properties:
       upmeterDiscovery:
         type: object
         required:
-          - controllerNames
+        - controllerNames
         properties:
           controllerNames:
             type: array

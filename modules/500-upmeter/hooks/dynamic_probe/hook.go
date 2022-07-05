@@ -27,12 +27,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-// This hook populates internal values with object names that are used for dynamic probes in upmeter,
-// and are rendered in its Helm templates.
+// This hook populates internal values with object names that are used for
+// dynamic probes. The names are for nginx ingress controllers and ephemeral
+// nodes with available cloud zones.
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
-		OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-		Queue:        "/modules/upmeter/dynamic_probes",
+		Queue: "/modules/upmeter/dynamic_probes",
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
 				Name:       "upmeter_discovery_ingress_controllers",
@@ -93,8 +93,9 @@ func collectDynamicNames(input *go_hook.HookInput) error {
 
 	// Populate values
 	data := emptyNames().WithIngressControllers(ingressNames...)
+
+	// We cannot track any ephemeral node group if no zones present in cloud provider secret.
 	if len(cloudZones) > 0 {
-		// No zones, no scaling
 		data = data.
 			WithZones(cloudZones...).
 			WithNodeGroups(nodeGroupNames...)
