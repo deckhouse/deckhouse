@@ -67,7 +67,7 @@ spec:
 The application only accepts localhost (127.0.0.1) requests. That means that an unsecured connection can only be established to it from within the Pod.
 At the same time, the proxy listens on 0.0.0.0 and intercepts all external traffic to the Pod.
 
-## How do I provide minimum rights to the Service Account?
+### How do I provide minimum rights to the Service Account?
 
 The proxy needs permissions to create `TokenReview` and `SubjectAccessReview` to authenticate and authorize users using the kube-apiserver.
 
