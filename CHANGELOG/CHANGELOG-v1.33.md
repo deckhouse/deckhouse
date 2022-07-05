@@ -93,6 +93,7 @@
     IngressNginx controllers 0.25 and 0.26 are removed. Ingress controller version 1.1 will restart.
  - **[ingress-nginx]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     Ingress controllers version 0.33+ will be restarted.
+ - **[istio]** Update kiali to 1.49. [#1942](https://github.com/deckhouse/deckhouse/pull/1942)
  - **[istio]** Data-plane metrics scrape fix for fresh istio versions. [#1907](https://github.com/deckhouse/deckhouse/pull/1907)
  - **[istio]** Istio `globalVersion` detection fix. [#1769](https://github.com/deckhouse/deckhouse/pull/1769)
  - **[kube-dns]** Updated CoreDNS to v1.9.1 [#1537](https://github.com/deckhouse/deckhouse/pull/1537)
@@ -206,6 +207,7 @@
     The `operator-prometheus` module will be restarted.
  - **[pod-reloader]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     The `pod-reloader` module will be restarted.
+ - **[prometheus]** Added hack for fix lens Cluster and Nodes metrics showing. [#1797](https://github.com/deckhouse/deckhouse/pull/1797)
  - **[prometheus-metrics-adapter]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
     The `prometheus-metrics-adapter` module will be restarted.
  - **[prometheus-pushgateway]** The Alpine Linux version in the base image has been bumped from 3.12.1 to 3.12.12. [#1374](https://github.com/deckhouse/deckhouse/pull/1374)
