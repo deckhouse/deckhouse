@@ -232,7 +232,7 @@ index c6ab1b1..893a163 100644
 +	})
 +}
 diff --git a/templates/kubeconfig.html b/templates/kubeconfig.html
-index 35763de..e942d27 100644
+index 35763de..fe5bbb4 100644
 --- a/templates/kubeconfig.html
 +++ b/templates/kubeconfig.html
 @@ -26,7 +26,7 @@
@@ -257,11 +257,12 @@ index 35763de..e942d27 100644
            <button class="tablinks" onclick="openTab(event, 'IDToken')">ID Token</button>
          </div>
 
-+        <div id="Kubelogin" class="tabcontent">
+-        <div id="Linux" class="tabcontent" style="display: block">
++        <div id="Kubelogin" class="tabcontent" style="display: block">
 +          {{ template "kubelogin-tab-content" . }}
 +        </div>
 +
-         <div id="Linux" class="tabcontent" style="display: block">
++        <div id="Linux" class="tabcontent">
            {{ template "linux-tab-content" . }}
          </div>
 -
@@ -463,6 +464,3 @@ index 0000000..59433de
 +    </div>
 +  </body>
 +</html>
---
-2.23.0
-
