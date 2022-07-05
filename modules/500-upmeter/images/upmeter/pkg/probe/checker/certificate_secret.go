@@ -224,13 +224,21 @@ spec:
   issuerRef:
     kind: ClusterIssuer
     name: selfsigned
-  secretName: %q`
+  secretName: %q
+  secretTemplate:
+    labels:
+      heritage: upmeter
+	  upmeter-agent: %q
+	  upmeter-group: control-plane
+	  upmeter-probe: cert-manager
+`
 
 	return fmt.Sprintf(tpl,
-		agentID,   // label
+		agentID,   // certificate label
 		name,      // certificate name
-		namespace, // namespace
-		agentID,   // domain part
+		namespace, // certificate namespace
+		agentID,   // dnsName part
 		name,      // secret name
+		agentID,   // secret label
 	)
 }
