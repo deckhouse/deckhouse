@@ -17,10 +17,11 @@ limitations under the License.
 package checker
 
 import (
-	"d8.io/upmeter/pkg/check"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"d8.io/upmeter/pkg/check"
 )
 
 func Test_certificateManifest(t *testing.T) {
@@ -74,6 +75,7 @@ var checkUp = &dummyChecker{nil}
 func checkDown(msg string) check.Checker {
 	return &dummyChecker{check.ErrFail(msg)}
 }
+
 func checkUnknown(msg string) check.Checker {
 	return &dummyChecker{check.ErrUnknown(msg)}
 }

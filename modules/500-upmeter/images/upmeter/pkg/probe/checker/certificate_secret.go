@@ -161,9 +161,9 @@ type CertificateSecretLifecycleChecker3 struct {
 	deletionTimeout  time.Duration
 }
 
-// assert is a handy wrapper. It wraps timeout checker and doer interface,
+// require is a handy wrapper. It wraps timeout checker and doer interface,
 // if time is out or doer returns error, the checker returns check.ErrFail
-func assert(timeout time.Duration, doer doer) check.Checker {
+func require(timeout time.Duration, doer doer) check.Checker {
 	return withTimeout(&failCheckWrapper{doer}, timeout)
 }
 
@@ -180,13 +180,13 @@ func (c *CertificateSecretLifecycleChecker3) Check() check.Error {
 
 		ensure(c.creationTimeout, c.createCert),
 		withFinalizerChecker(
-			assert(c.creationTimeout, c.createCert),
+			require(c.creationTimeout, c.createCert),
 			ensure(c.deletionTimeout, c.deleteCert),
 		),
-		assert(c.deletionTimeout, c.getSecretAbsence),
+		require(c.deletionTimeout, c.getSecretAbsence),
 	).Check()
 
-	//return sequence(
+	// return sequence(
 	//	doOrUnknown(c.preflightTimeout, c.pingControlPlane),
 	//	doOrUnknown(c.preflightTimeout, c.checkGarbage),
 	//
@@ -196,7 +196,7 @@ func (c *CertificateSecretLifecycleChecker3) Check() check.Error {
 	//		doOrUnknown(c.deletionTimeout, c.deleteCert),
 	//	),
 	//	doOrFail(c.deletionTimeout, c.getSecretAbsence),
-	//).Check()
+	// ).Check()
 }
 
 type certificateCreator struct {
