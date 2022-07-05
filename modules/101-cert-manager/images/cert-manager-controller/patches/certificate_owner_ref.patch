@@ -1,12 +1,8 @@
-Index: deploy/crds/crd-certificates.yaml
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/deploy/crds/crd-certificates.yaml b/deploy/crds/crd-certificates.yaml
---- a/deploy/crds/crd-certificates.yaml	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/deploy/crds/crd-certificates.yaml	(date 1653420801180)
-@@ -82,6 +82,9 @@
+index b27bef803..b1bf2f53c 100644
+--- a/deploy/crds/crd-certificates.yaml
++++ b/deploy/crds/crd-certificates.yaml
+@@ -80,6 +80,9 @@ spec:
                          enum:
                            - DER
                            - CombinedPEM
@@ -16,15 +12,11 @@ diff --git a/deploy/crds/crd-certificates.yaml b/deploy/crds/crd-certificates.ya
                  commonName:
                    description: 'CommonName is a common name to be used on the Certificate. The CommonName should have a length of 64 characters or fewer to avoid generating invalid CSRs. This value is ignored by TLS clients when any subject alt name is set. This is x509 behaviour: https://tools.ietf.org/html/rfc6125#section-6.4.4'
                    type: string
-Index: internal/apis/certmanager/types_certificate.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/certmanager/types_certificate.go
---- a/internal/apis/certmanager/types_certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/types_certificate.go	(date 1653420801180)
-@@ -172,6 +172,11 @@
+index 8b13b09b5..44442481f 100644
+--- a/internal/apis/certmanager/types_certificate.go
++++ b/internal/apis/certmanager/types_certificate.go
+@@ -172,6 +172,11 @@ type CertificateSpec struct {
  	// `--feature-gates=AdditionalCertificateOutputFormats=true` option on both
  	// the controller and webhook components.
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat
@@ -34,142 +26,238 @@ diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/cert
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
  }
-
+ 
  // CertificatePrivateKey contains configuration options for private keys
-Index: internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
---- a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go	(date 1653420801180)
-@@ -834,6 +834,7 @@
+diff --git a/internal/apis/certmanager/v1/zz_generated.conversion.go b/internal/apis/certmanager/v1/zz_generated.conversion.go
+index 733ae713e..66adb7d33 100644
+--- a/internal/apis/certmanager/v1/zz_generated.conversion.go
++++ b/internal/apis/certmanager/v1/zz_generated.conversion.go
+@@ -834,6 +834,7 @@ func autoConvert_v1_CertificateSpec_To_certmanager_CertificateSpec(in *v1.Certif
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
-@@ -882,6 +883,7 @@
+ 
+@@ -866,6 +867,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1_CertificateSpec(in *certmanag
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]v1.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	return nil
+ }
+ 
+diff --git a/internal/apis/certmanager/v1alpha2/types_certificate.go b/internal/apis/certmanager/v1alpha2/types_certificate.go
+index 6fb736ebf..53b8e629d 100644
+--- a/internal/apis/certmanager/v1alpha2/types_certificate.go
++++ b/internal/apis/certmanager/v1alpha2/types_certificate.go
+@@ -217,6 +217,11 @@ type CertificateSpec struct {
+ 	// the controller and webhook components.
+ 	// +optional
+ 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
++
++	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
++	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
++	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
++	CertificateOwnerRef *bool
+ }
+ 
+ // CertificatePrivateKey contains configuration options for private keys
+diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
+index b06143355..f0888a038 100644
+--- a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
++++ b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
+@@ -834,6 +834,7 @@ func autoConvert_v1alpha2_CertificateSpec_To_certmanager_CertificateSpec(in *Cer
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	return nil
+ }
+ 
+@@ -882,6 +883,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1alpha2_CertificateSpec(in *cer
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
-Index: pkg/controller/certificates/internal/secretsmanager/secret_test.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/controller/certificates/internal/secretsmanager/secret_test.go b/pkg/controller/certificates/internal/secretsmanager/secret_test.go
---- a/pkg/controller/certificates/internal/secretsmanager/secret_test.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/pkg/controller/certificates/internal/secretsmanager/secret_test.go	(date 1653420801184)
-@@ -24,9 +24,6 @@
- 	"testing"
- 	"time"
-
--	"github.com/jetstack/cert-manager/internal/controller/feature"
--	testpkg "github.com/jetstack/cert-manager/pkg/controller/test"
--	utilfeature "github.com/jetstack/cert-manager/pkg/util/feature"
- 	"github.com/stretchr/testify/assert"
- 	corev1 "k8s.io/api/core/v1"
- 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-@@ -39,6 +36,10 @@
- 	fakeclock "k8s.io/utils/clock/testing"
- 	"k8s.io/utils/pointer"
-
-+	"github.com/jetstack/cert-manager/internal/controller/feature"
-+	testpkg "github.com/jetstack/cert-manager/pkg/controller/test"
-+	utilfeature "github.com/jetstack/cert-manager/pkg/util/feature"
+ 
+diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go b/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
+index e8a6f74ee..653324ee0 100644
+--- a/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
++++ b/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
+@@ -472,6 +472,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
+ 		copy(*out, *in)
+ 	}
++	if in.CertificateOwnerRef != nil {
++		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
++		*out = new(bool)
++		**out = **in
++	}
+ 	return
+ }
+ 
+diff --git a/internal/apis/certmanager/v1alpha3/types_certificate.go b/internal/apis/certmanager/v1alpha3/types_certificate.go
+index 4de139b2a..1817fbb07 100644
+--- a/internal/apis/certmanager/v1alpha3/types_certificate.go
++++ b/internal/apis/certmanager/v1alpha3/types_certificate.go
+@@ -215,6 +215,11 @@ type CertificateSpec struct {
+ 	// the controller and webhook components.
+ 	// +optional
+ 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
 +
- 	cmapi "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
- 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
- 	controllerpkg "github.com/jetstack/cert-manager/pkg/controller"
-@@ -73,6 +74,30 @@
- 		gen.SetCertificateDNSNames("example.com"),
- 	), fixedClock)
-
-+	baseCertWithCertificateOwnerRefEnabled := gen.Certificate("test",
-+		gen.SetCertificateIssuer(cmmeta.ObjectReference{Name: "ca-issuer", Kind: "Issuer", Group: "foo.io"}),
-+		gen.SetCertificateSecretName("output"),
-+		gen.SetCertificateRenewBefore(time.Hour*36),
-+		gen.SetCertificateDNSNames("example.com"),
-+		gen.SetCertificateUID(apitypes.UID("test-uid")),
-+		gen.SetCertificateOwnerRef(true),
-+	)
-+	baseCertBundleWithCertificateOwnerRefEnabled := internaltest.MustCreateCryptoBundle(t, gen.CertificateFrom(baseCertWithCertificateOwnerRefEnabled,
-+		gen.SetCertificateDNSNames("example.com"),
-+	), fixedClock)
++	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
++	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
++	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
++	CertificateOwnerRef *bool
+ }
+ 
+ // CertificatePrivateKey contains configuration options for private keys
+diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
+index 4196fd32d..67a2806a0 100644
+--- a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
++++ b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
+@@ -833,6 +833,7 @@ func autoConvert_v1alpha3_CertificateSpec_To_certmanager_CertificateSpec(in *Cer
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	return nil
+ }
+ 
+@@ -881,6 +882,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1alpha3_CertificateSpec(in *cer
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	return nil
+ }
+ 
+diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go b/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
+index c85c797c5..ce31d9c95 100644
+--- a/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
++++ b/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
+@@ -467,6 +467,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
+ 		copy(*out, *in)
+ 	}
++	if in.CertificateOwnerRef != nil {
++		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
++		*out = new(bool)
++		**out = **in
++	}
+ 	return
+ }
+ 
+diff --git a/internal/apis/certmanager/v1beta1/types_certificate.go b/internal/apis/certmanager/v1beta1/types_certificate.go
+index e89bc0b25..ed575a76a 100644
+--- a/internal/apis/certmanager/v1beta1/types_certificate.go
++++ b/internal/apis/certmanager/v1beta1/types_certificate.go
+@@ -192,6 +192,11 @@ type CertificateSpec struct {
+ 	// the controller and webhook components.
+ 	// +optional
+ 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
 +
-+	baseCertWithCertificateOwnerRefDisabled := gen.Certificate("test",
-+		gen.SetCertificateIssuer(cmmeta.ObjectReference{Name: "ca-issuer", Kind: "Issuer", Group: "foo.io"}),
-+		gen.SetCertificateSecretName("output"),
-+		gen.SetCertificateRenewBefore(time.Hour*36),
-+		gen.SetCertificateDNSNames("example.com"),
-+		gen.SetCertificateUID(apitypes.UID("test-uid")),
-+		gen.SetCertificateOwnerRef(false),
-+	)
-+	baseCertBundleWithCertificateOwnerRefDisabled := internaltest.MustCreateCryptoBundle(t, gen.CertificateFrom(baseCertWithCertificateOwnerRefDisabled,
-+		gen.SetCertificateDNSNames("example.com"),
-+	), fixedClock)
++	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
++	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
++	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
++	CertificateOwnerRef *bool
+ }
+ 
+ // CertificatePrivateKey contains configuration options for private keys
+diff --git a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
+index 24caa2838..07c71dadc 100644
+--- a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
++++ b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
+@@ -832,6 +832,7 @@ func autoConvert_v1beta1_CertificateSpec_To_certmanager_CertificateSpec(in *Cert
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	return nil
+ }
+ 
+@@ -869,6 +870,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1beta1_CertificateSpec(in *cert
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	return nil
+ }
+ 
+diff --git a/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go b/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
+index 67a66f922..889886348 100644
+--- a/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
++++ b/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
+@@ -467,6 +467,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
+ 		copy(*out, *in)
+ 	}
++	if in.CertificateOwnerRef != nil {
++		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
++		*out = new(bool)
++		**out = **in
++	}
+ 	return
+ }
+ 
+diff --git a/internal/apis/certmanager/zz_generated.deepcopy.go b/internal/apis/certmanager/zz_generated.deepcopy.go
+index c5780a2b0..654173431 100644
+--- a/internal/apis/certmanager/zz_generated.deepcopy.go
++++ b/internal/apis/certmanager/zz_generated.deepcopy.go
+@@ -467,6 +467,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
+ 		copy(*out, *in)
+ 	}
++	if in.CertificateOwnerRef != nil {
++		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
++		*out = new(bool)
++		**out = **in
++	}
+ 	return
+ }
+ 
+diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
+index dcf967bd7..1edeb8736 100644
+--- a/pkg/apis/certmanager/v1/types_certificate.go
++++ b/pkg/apis/certmanager/v1/types_certificate.go
+@@ -196,6 +196,12 @@ type CertificateSpec struct {
+ 	// the controller and webhook components.
+ 	// +optional
+ 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
 +
- 	baseCertWithSecretTemplate := gen.CertificateFrom(baseCertBundle.Certificate,
- 		gen.SetCertificateSecretTemplate(map[string]string{
- 			"template":  "annotation",
-@@ -156,6 +181,48 @@
- 			expectedErr: false,
- 		},
-
-+		"if secret does not exist, but certificateOwnerRef is set to true, create new Secret, with owner disabled": {
-+			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: false},
-+			certificate:        baseCertBundleWithCertificateOwnerRefEnabled.Certificate,
-+			existingSecret:     nil,
-+			secretData:         SecretData{Certificate: baseCertBundle.CertBytes, CA: []byte("test-ca"), PrivateKey: []byte("test-key")},
-+			applyFn: func(t *testing.T) testcoreclients.ApplyFn {
-+				return func(_ context.Context, gotCnf *applycorev1.SecretApplyConfiguration, gotOpts metav1.ApplyOptions) (*corev1.Secret, error) {
-+					expUID := apitypes.UID("test-uid")
-+					expCnf := applycorev1.Secret("output", gen.DefaultTestNamespace).
-+						WithAnnotations(
-+							map[string]string{
-+								cmapi.CertificateNameKey: "test", cmapi.IssuerGroupAnnotationKey: "foo.io",
-+								cmapi.IssuerKindAnnotationKey: "Issuer", cmapi.IssuerNameAnnotationKey: "ca-issuer",
-+
-+								cmapi.CommonNameAnnotationKey: baseCertBundle.Cert.Subject.CommonName, cmapi.AltNamesAnnotationKey: strings.Join(baseCertBundle.Cert.DNSNames, ","),
-+								cmapi.IPSANAnnotationKey:  strings.Join(utilpki.IPAddressesToString(baseCertBundle.Cert.IPAddresses), ","),
-+								cmapi.URISANAnnotationKey: strings.Join(utilpki.URLsToString(baseCertBundle.Cert.URIs), ","),
-+							}).
-+						WithLabels(make(map[string]string)).
-+						WithData(map[string][]byte{
-+							corev1.TLSCertKey:       baseCertBundle.CertBytes,
-+							corev1.TLSPrivateKeyKey: []byte("test-key"),
-+							cmmeta.TLSCAKey:         []byte("test-ca"),
-+						}).
-+						WithType(corev1.SecretTypeTLS).
-+						WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
-+							APIVersion: pointer.String("cert-manager.io/v1"), Kind: pointer.String("Certificate"),
-+							Name: pointer.String("test"), UID: &expUID,
-+							Controller: pointer.Bool(true), BlockOwnerDeletion: pointer.Bool(true),
-+						})
-+
-+					assert.Equal(t, expCnf, gotCnf)
-+
-+					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
-+					assert.Equal(t, expOpts, gotOpts)
-+
-+					return nil, nil
-+				}
-+			},
-+			expectedErr: false,
-+		},
-+
- 		"if secret does not exist, create new Secret, with owner enabled": {
- 			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
- 			certificate:        baseCertBundle.Certificate,
-@@ -164,7 +231,6 @@
++	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
++	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
++	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
++	// +optional
++	CertificateOwnerRef *bool `json:"certificateOwnerRef,omitempty"`
+ }
+ 
+ // CertificatePrivateKey contains configuration options for private keys
+diff --git a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
+index 287750339..32d320413 100644
+--- a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
++++ b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
+@@ -467,6 +467,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
+ 		copy(*out, *in)
+ 	}
++	if in.CertificateOwnerRef != nil {
++		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
++		*out = new(bool)
++		**out = **in
++	}
+ 	return
+ }
+ 
+diff --git a/pkg/controller/certificates/issuing/internal/secret_test.go b/pkg/controller/certificates/issuing/internal/secret_test.go
+index 56caf0def..818c647ac 100644
+--- a/pkg/controller/certificates/issuing/internal/secret_test.go
++++ b/pkg/controller/certificates/issuing/internal/secret_test.go
+@@ -163,7 +163,6 @@ func Test_SecretsManager(t *testing.T) {
  			applyFn: func(t *testing.T) testcoreclients.ApplyFn {
  				return func(_ context.Context, gotCnf *applycorev1.SecretApplyConfiguration, gotOpts metav1.ApplyOptions) (*corev1.Secret, error) {
  					expUID := apitypes.UID("test-uid")
@@ -177,43 +265,7 @@ diff --git a/pkg/controller/certificates/internal/secretsmanager/secret_test.go 
  					expCnf := applycorev1.Secret("output", gen.DefaultTestNamespace).
  						WithAnnotations(
  							map[string]string{
-@@ -182,6 +248,35 @@
- 							Controller: pointer.Bool(true), BlockOwnerDeletion: pointer.Bool(true),
- 						})
- 					assert.Equal(t, expCnf, gotCnf)
-+
-+					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
-+					assert.Equal(t, expOpts, gotOpts)
-+
-+					return nil, nil
-+				}
-+			},
-+			expectedErr: false,
-+		},
-+
-+		"if secret does not exist, but certificateOwnerRef is set to false, create new Secret, with owner enabled": {
-+			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
-+			certificate:        baseCertBundleWithCertificateOwnerRefDisabled.Certificate,
-+			existingSecret:     nil,
-+			secretData:         SecretData{Certificate: baseCertBundle.CertBytes, CA: []byte("test-ca"), PrivateKey: []byte("test-key")},
-+			applyFn: func(t *testing.T) testcoreclients.ApplyFn {
-+				return func(_ context.Context, gotCnf *applycorev1.SecretApplyConfiguration, gotOpts metav1.ApplyOptions) (*corev1.Secret, error) {
-+					expCnf := applycorev1.Secret("output", gen.DefaultTestNamespace).
-+						WithAnnotations(
-+							map[string]string{
-+								cmapi.CertificateNameKey: "test", cmapi.IssuerGroupAnnotationKey: "foo.io", cmapi.IssuerKindAnnotationKey: "Issuer",
-+								cmapi.IssuerNameAnnotationKey: "ca-issuer", cmapi.CommonNameAnnotationKey: baseCertBundle.Cert.Subject.CommonName,
-+								cmapi.AltNamesAnnotationKey: strings.Join(baseCertBundle.Cert.DNSNames, ","), cmapi.IPSANAnnotationKey: strings.Join(utilpki.IPAddressesToString(baseCertBundle.Cert.IPAddresses), ","),
-+								cmapi.URISANAnnotationKey: strings.Join(utilpki.URLsToString(baseCertBundle.Cert.URIs), ","),
-+							}).
-+						WithLabels(make(map[string]string)).
-+						WithData(map[string][]byte{corev1.TLSCertKey: baseCertBundle.CertBytes, corev1.TLSPrivateKeyKey: []byte("test-key"), cmmeta.TLSCAKey: []byte("test-ca")}).
-+						WithType(corev1.SecretTypeTLS)
-+					assert.Equal(t, expCnf, gotCnf)
-
- 					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
- 					assert.Equal(t, expOpts, gotOpts)
-@@ -236,6 +331,59 @@
+@@ -235,6 +234,59 @@ func Test_SecretsManager(t *testing.T) {
  			},
  			expectedErr: false,
  		},
@@ -273,11 +325,46 @@ diff --git a/pkg/controller/certificates/internal/secretsmanager/secret_test.go 
  		"if secret does exist, update existing Secret and leave custom annotations, with owner enabled": {
  			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
  			certificate:        baseCertBundle.Certificate,
-@@ -277,6 +425,51 @@
- 							Controller: pointer.Bool(true), BlockOwnerDeletion: pointer.Bool(true),
+@@ -277,6 +329,35 @@ func Test_SecretsManager(t *testing.T) {
  						})
  					assert.Equal(t, expCnf, gotCnf)
+ 
++					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
++					assert.Equal(t, expOpts, gotOpts)
 +
++					return nil, nil
++				}
++			},
++			expectedErr: false,
++		},
++
++		"if secret does not exist, but certificateOwnerRef is set to false, create new Secret, with owner enabled": {
++			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
++			certificate:        baseCertBundleWithCertificateOwnerRefDisabled.Certificate,
++			existingSecret:     nil,
++			secretData:         SecretData{Certificate: baseCertBundle.CertBytes, CA: []byte("test-ca"), PrivateKey: []byte("test-key")},
++			applyFn: func(t *testing.T) testcoreclients.ApplyFn {
++				return func(_ context.Context, gotCnf *applycorev1.SecretApplyConfiguration, gotOpts metav1.ApplyOptions) (*corev1.Secret, error) {
++					expCnf := applycorev1.Secret("output", gen.DefaultTestNamespace).
++						WithAnnotations(
++							map[string]string{
++								cmapi.CertificateNameKey: "test", cmapi.IssuerGroupAnnotationKey: "foo.io", cmapi.IssuerKindAnnotationKey: "Issuer",
++								cmapi.IssuerNameAnnotationKey: "ca-issuer", cmapi.CommonNameAnnotationKey: baseCertBundle.Cert.Subject.CommonName,
++								cmapi.AltNamesAnnotationKey: strings.Join(baseCertBundle.Cert.DNSNames, ","), cmapi.IPSANAnnotationKey: strings.Join(utilpki.IPAddressesToString(baseCertBundle.Cert.IPAddresses), ","),
++								cmapi.URISANAnnotationKey: strings.Join(utilpki.URLsToString(baseCertBundle.Cert.URIs), ","),
++							}).
++						WithLabels(make(map[string]string)).
++						WithData(map[string][]byte{corev1.TLSCertKey: baseCertBundle.CertBytes, corev1.TLSPrivateKeyKey: []byte("test-key"), cmmeta.TLSCAKey: []byte("test-ca")}).
++						WithType(corev1.SecretTypeTLS)
++					assert.Equal(t, expCnf, gotCnf)
++
+ 					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test", Force: true}
+ 					assert.Equal(t, expOpts, gotOpts)
+ 
+@@ -368,6 +449,51 @@ func Test_SecretsManager(t *testing.T) {
+ 						})
+ 					assert.Equal(t, expCnf, gotCnf)
+ 
 +					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
 +					assert.Equal(t, expOpts, gotOpts)
 +
@@ -322,84 +409,15 @@ diff --git a/pkg/controller/certificates/internal/secretsmanager/secret_test.go 
 +						}).
 +						WithType(corev1.SecretTypeTLS)
 +					assert.Equal(t, expCnf, gotCnf)
-
- 					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
- 					assert.Equal(t, expOpts, gotOpts)
-Index: pkg/controller/certificates/internal/secretsmanager/secret.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/controller/certificates/internal/secretsmanager/secret.go b/pkg/controller/certificates/internal/secretsmanager/secret.go
---- a/pkg/controller/certificates/internal/secretsmanager/secret.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/pkg/controller/certificates/internal/secretsmanager/secret.go	(date 1653420828288)
-@@ -107,10 +107,16 @@
- 		WithAnnotations(secret.Annotations).WithLabels(secret.Labels).
- 		WithData(secret.Data).WithType(secret.Type)
-
-+	certificateOwnerRef := s.enableSecretOwnerReferences
-+	// Check the CertificateOwnerRef field of the certificate, and if it is not nil, override enableSecretOwnerReferences with the CertificateOwnerRef value.
-+	if crt.Spec.CertificateOwnerRef != nil {
-+		certificateOwnerRef = *crt.Spec.CertificateOwnerRef
-+	}
 +
- 	// If Secret owner reference is enabled, set it on the Secret. This results
- 	// in a no-op if the Secret already exists and has the owner reference set,
- 	// and visa-versa.
--	if s.enableSecretOwnerReferences {
-+	if certificateOwnerRef {
- 		ref := *metav1.NewControllerRef(crt, certificateGvk)
- 		applyCnf = applyCnf.WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
- 			APIVersion: &ref.APIVersion, Kind: &ref.Kind,
-Index: pkg/apis/certmanager/v1/zz_generated.deepcopy.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
---- a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go	(date 1653420801184)
-@@ -467,6 +467,11 @@
- 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
- 		copy(*out, *in)
- 	}
-+	if in.CertificateOwnerRef != nil {
-+		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
-+		*out = new(bool)
-+		**out = **in
-+	}
- 	return
- }
-
-Index: internal/apis/certmanager/zz_generated.deepcopy.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/zz_generated.deepcopy.go b/internal/apis/certmanager/zz_generated.deepcopy.go
---- a/internal/apis/certmanager/zz_generated.deepcopy.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/zz_generated.deepcopy.go	(date 1653420801184)
-@@ -467,6 +467,11 @@
- 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
- 		copy(*out, *in)
- 	}
-+	if in.CertificateOwnerRef != nil {
-+		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
-+		*out = new(bool)
-+		**out = **in
-+	}
- 	return
- }
-
-Index: test/unit/gen/certificate.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
+ 					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test", Force: true}
+ 					assert.Equal(t, expOpts, gotOpts)
+ 
 diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
---- a/test/unit/gen/certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/test/unit/gen/certificate.go	(date 1653420801184)
-@@ -267,3 +267,9 @@
+index 39ed79593..2356b7b99 100644
+--- a/test/unit/gen/certificate.go
++++ b/test/unit/gen/certificate.go
+@@ -278,3 +278,9 @@ func SetCertificateAdditionalOutputFormats(additionalOutputFormats ...v1.Certifi
  		crt.Spec.AdditionalOutputFormats = additionalOutputFormats
  	}
  }
@@ -409,216 +427,3 @@ diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
 +		crt.Spec.CertificateOwnerRef = &ownerRef
 +	}
 +}
-Index: internal/apis/certmanager/v1/zz_generated.conversion.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1/zz_generated.conversion.go b/internal/apis/certmanager/v1/zz_generated.conversion.go
---- a/internal/apis/certmanager/v1/zz_generated.conversion.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1/zz_generated.conversion.go	(date 1653420801180)
-@@ -834,6 +834,7 @@
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
- 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
- 	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
-+	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
- 	return nil
- }
-
-@@ -866,6 +867,7 @@
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
- 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
- 	out.AdditionalOutputFormats = *(*[]v1.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
-+	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
- 	return nil
- }
-
-Index: internal/apis/certmanager/v1alpha2/types_certificate.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1alpha2/types_certificate.go b/internal/apis/certmanager/v1alpha2/types_certificate.go
---- a/internal/apis/certmanager/v1alpha2/types_certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1alpha2/types_certificate.go	(date 1653420801180)
-@@ -217,6 +217,11 @@
- 	// the controller and webhook components.
- 	// +optional
- 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
-+
-+	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
-+	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
-+	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
-+	CertificateOwnerRef *bool
- }
-
- // CertificatePrivateKey contains configuration options for private keys
-Index: pkg/apis/certmanager/v1/types_certificate.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
---- a/pkg/apis/certmanager/v1/types_certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/pkg/apis/certmanager/v1/types_certificate.go	(date 1653420801184)
-@@ -196,6 +196,12 @@
- 	// the controller and webhook components.
- 	// +optional
- 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
-+
-+	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
-+	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
-+	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
-+	// +optional
-+	CertificateOwnerRef *bool `json:"certificateOwnerRef,omitempty"`
- }
-
- // CertificatePrivateKey contains configuration options for private keys
-Index: internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go b/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
---- a/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go	(date 1653420801180)
-@@ -472,6 +472,11 @@
- 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
- 		copy(*out, *in)
- 	}
-+	if in.CertificateOwnerRef != nil {
-+		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
-+		*out = new(bool)
-+		**out = **in
-+	}
- 	return
- }
-
-Index: internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go b/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
---- a/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go	(date 1653420801184)
-@@ -467,6 +467,11 @@
- 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
- 		copy(*out, *in)
- 	}
-+	if in.CertificateOwnerRef != nil {
-+		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
-+		*out = new(bool)
-+		**out = **in
-+	}
- 	return
- }
-
-Index: internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
---- a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go	(date 1653420801184)
-@@ -833,6 +833,7 @@
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
- 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
- 	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
-+	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
- 	return nil
- }
-
-@@ -881,6 +882,7 @@
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
- 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
- 	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
-+	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
- 	return nil
- }
-
-Index: internal/apis/certmanager/v1beta1/types_certificate.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1beta1/types_certificate.go b/internal/apis/certmanager/v1beta1/types_certificate.go
---- a/internal/apis/certmanager/v1beta1/types_certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1beta1/types_certificate.go	(date 1653420801184)
-@@ -192,6 +192,11 @@
- 	// the controller and webhook components.
- 	// +optional
- 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
-+
-+	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
-+	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
-+	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
-+	CertificateOwnerRef *bool
- }
-
- // CertificatePrivateKey contains configuration options for private keys
-Index: internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go b/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
---- a/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go	(date 1653420801184)
-@@ -467,6 +467,11 @@
- 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
- 		copy(*out, *in)
- 	}
-+	if in.CertificateOwnerRef != nil {
-+		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
-+		*out = new(bool)
-+		**out = **in
-+	}
- 	return
- }
-
-Index: internal/apis/certmanager/v1beta1/zz_generated.conversion.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
---- a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go	(date 1653420801184)
-@@ -832,6 +832,7 @@
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
- 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
- 	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
-+	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
- 	return nil
- }
-
-@@ -869,6 +870,7 @@
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
- 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
- 	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
-+	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
- 	return nil
- }
-
-Index: internal/apis/certmanager/v1alpha3/types_certificate.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/apis/certmanager/v1alpha3/types_certificate.go b/internal/apis/certmanager/v1alpha3/types_certificate.go
---- a/internal/apis/certmanager/v1alpha3/types_certificate.go	(revision 527537d0354f731ed0fa9ae91c82d1088ee00f7c)
-+++ b/internal/apis/certmanager/v1alpha3/types_certificate.go	(date 1653420801180)
-@@ -215,6 +215,11 @@
- 	// the controller and webhook components.
- 	// +optional
- 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
-+
-+	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
-+	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
-+	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
-+	CertificateOwnerRef *bool
- }
-
- // CertificatePrivateKey contains configuration options for private keys
