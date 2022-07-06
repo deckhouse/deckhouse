@@ -9,6 +9,9 @@ configVersion: 1
 {{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
     {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if or (eq $.Env "development") (eq $.Env "local") }}
+      {{ $baseImagePath = trimSuffix "/" $v }}
+    {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}
       {{- $_ := set $.Images $k $baseImagePath }}
     {{- end }}
@@ -155,9 +158,9 @@ git:
   excludePaths:
     - '**/werf*.yaml'
     - '**/docker-compose.yml'
+    - '**/Makefile'
     - '**/.werf'
     - '**/.helm'
-    - Makefile
     - documentation/pages/internal
     - documentation/config
   stageDependencies:

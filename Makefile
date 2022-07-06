@@ -9,6 +9,13 @@ FOCUS=""
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
 
+# Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
+# besides linux/amd64 (e.g. relevant for mac m1).
+PLATFORM_NAME := $(shell uname -p)
+ifneq ($(filter arm%,$(PLATFORM_NAME)),)
+	export WERF_PLATFORM=linux/amd64
+endif
+
 help:
 	@printf -- "${FORMATTING_BEGIN_BLUE}%s${FORMATTING_END}\n" \
 	"" \
@@ -114,3 +121,23 @@ cve-report: ## Generate CVE report for a Deckhouse release.
 cve-base-images: ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
 	./tools/cve/base-images.sh
+
+##@ Documentation
+
+.PHONY: docs
+docs: ## Run containers with the documentation (werf is required to build the containers).
+	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local
+	echo "Open http://localhost to access the documentation..."
+
+.PHONY: docs-dev
+docs-dev: ## Run containers with the documentation in the dev mode (allow uncommited files).
+	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development
+	echo "Open http://localhost to access the documentation..."
+
+.PHONY: docs-down
+docs-down: ## Stop all the documentation containers.
+	docker rm -f site_site_1 site_front_1 documentation; docker network rm deckhouse
