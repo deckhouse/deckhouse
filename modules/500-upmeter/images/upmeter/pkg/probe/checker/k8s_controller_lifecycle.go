@@ -101,22 +101,22 @@ func (c *KubeControllerObjectLifecycle) cleanGarbage(ctx context.Context, getter
 func (c *KubeControllerObjectLifecycle) childGetterUntilPresent() doer {
 	return &pollingDoer{
 		doer:     c.childGetter,
-		catch:    func(err error) bool { return err == nil },
+		catch:    isNil,
 		timeout:  c.childPollingTimeout,
 		interval: c.childPollingInterval,
 	}
-
 }
 
 func (c *KubeControllerObjectLifecycle) childGetterUntilAbsent() doer {
 	return &pollingDoer{
 		doer:     c.childGetter,
-		catch:    func(err error) bool { return apierrors.IsNotFound(err) },
+		catch:    apierrors.IsNotFound,
 		timeout:  c.childPollingTimeout,
 		interval: c.childPollingInterval,
 	}
-
 }
+
+func isNil(err error) bool { return err == nil }
 
 type pollingDoer struct {
 	doer     doer
@@ -142,5 +142,4 @@ func (p *pollingDoer) Do(ctx context.Context) (err error) {
 			return err
 		}
 	}
-
 }
