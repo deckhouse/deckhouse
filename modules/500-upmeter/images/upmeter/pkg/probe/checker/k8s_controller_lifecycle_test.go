@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -18,9 +19,8 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 		parentCreator doer
 		parentDeleter doer
 
-		childPresenceGetter doer
-		childAbsenceGetter  doer
-		childDeleter        doer
+		childGetter  doer
+		childDeleter doer
 	}
 	tests := []struct {
 		name   string
@@ -37,12 +37,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404, // absence, no garbage
 					nil,    // presence
+					err404, // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Up,
 			parentDeletions: 1,
@@ -55,12 +55,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  &successDoer{},
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404, // absence, no garbage
 					nil,    // presence
+					err404, // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 1,
@@ -73,12 +73,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
-					nil, // present garbage
-					nil, // presence
+				childGetter: newSequenceDoer(
+					nil,    // present garbage
+					nil,    // presence
+					err404, // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 0,
@@ -91,12 +91,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404, // absence, no garbage
 					nil,    // presence
+					err404, // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 0,
@@ -109,12 +109,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doerErr("getting parent"),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404, // absence, no garbage
 					nil,    // presence
+					err404, // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 0,
@@ -127,12 +127,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404,                      // absence, no garbage
 					fmt.Errorf("getting child"), // arbitrary error
+					err404,                      // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 1,
@@ -145,12 +145,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					fmt.Errorf("getting child"), // arbitrary error
 					nil,                         // presence
+					err404,                      // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 0,
@@ -163,12 +163,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404,                      // absence, no garbage
 					fmt.Errorf("getting child"), // arbitrary error
+					err404,                      // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 1,
@@ -181,12 +181,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
-					err404, // absence, no garbage
-					nil,    // presence
+				childGetter: newSequenceDoer(
+					err404,                        // absence, no garbage
+					nil,                           // presence
+					fmt.Errorf("something wrong"), // absence
 				),
-				childAbsenceGetter: doerErr("getting child absence"),
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 1,
@@ -199,12 +199,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: doerErr("creating"),
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404, // absence, no garbage
 					nil,    // presence
+					err404, // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 0,
@@ -217,12 +217,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(fmt.Errorf("creating")),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404, // absence, no garbage
 					nil,    // presence
+					err404, // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(nil),
+				childDeleter: newSequenceDoer(nil),
 			},
 			want:            check.Unknown,
 			parentDeletions: 1,
@@ -235,12 +235,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404, // absence, no garbage
 					nil,    // presence
+					err404, // absence
 				),
-				childAbsenceGetter: &successDoer{},
-				childDeleter:       newSequenceDoer(fmt.Errorf("deleting child")),
+				childDeleter: newSequenceDoer(fmt.Errorf("deleting child")),
 			},
 			want:            check.Up,
 			parentDeletions: 1,
@@ -253,12 +253,12 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentGetter:  doer404(),
 				parentCreator: &successDoer{},
 				parentDeleter: newSequenceDoer(nil),
-				childPresenceGetter: newSequenceDoer(
+				childGetter: newSequenceDoer(
 					err404, // absence, no garbage
 					nil,    // presence
+					nil,    // still presence, should lead to fail
 				),
-				childAbsenceGetter: doer404(),
-				childDeleter:       newSequenceDoer(fmt.Errorf("deleting child")),
+				childDeleter: newSequenceDoer(fmt.Errorf("deleting child")),
 			},
 			want:            check.Down,
 			parentDeletions: 1,
@@ -268,13 +268,15 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &KubeControllerObjectLifecycle{
-				preflight:           tt.fields.preflight,
-				parentGetter:        tt.fields.parentGetter,
-				parentCreator:       tt.fields.parentCreator,
-				parentDeleter:       tt.fields.parentDeleter,
-				childPresenceGetter: tt.fields.childPresenceGetter,
-				childAbsenceGetter:  tt.fields.childAbsenceGetter,
-				childDeleter:        tt.fields.childDeleter,
+				preflight:     tt.fields.preflight,
+				parentGetter:  tt.fields.parentGetter,
+				parentCreator: tt.fields.parentCreator,
+				parentDeleter: tt.fields.parentDeleter,
+				childGetter:   tt.fields.childGetter,
+				childDeleter:  tt.fields.childDeleter,
+
+				childPollingTimeout:  time.Millisecond,
+				childPollingInterval: 2 * time.Millisecond,
 			}
 
 			err := c.Check()

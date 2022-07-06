@@ -19,6 +19,7 @@ package checker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -35,9 +36,10 @@ type KubeControllerObjectLifecycle struct {
 	parentCreator doer
 	parentDeleter doer
 
-	childPresenceGetter doer
-	childAbsenceGetter  doer
-	childDeleter        doer
+	childGetter          doer
+	childDeleter         doer
+	childPollingTimeout  time.Duration
+	childPollingInterval time.Duration
 }
 
 func (c *KubeControllerObjectLifecycle) Check() check.Error {
@@ -49,7 +51,7 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 	if err := c.cleanGarbage(ctx, c.parentGetter, c.parentDeleter); err != nil {
 		return check.ErrUnknown(err.Error())
 	}
-	if err := c.cleanGarbage(ctx, c.childPresenceGetter, c.childDeleter); err != nil {
+	if err := c.cleanGarbage(ctx, c.childGetter, c.childDeleter); err != nil {
 		return check.ErrUnknown(err.Error())
 	}
 
@@ -59,7 +61,7 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 	}
 
 	// 2. expect child
-	if getErr := c.childPresenceGetter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
+	if getErr := c.childGetterUntilPresent().Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
 		_ = c.parentDeleter.Do(ctx) // Cleanup
 		return check.ErrUnknown("getting child: %v", getErr)
 	} else if apierrors.IsNotFound(getErr) {
@@ -72,8 +74,8 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 		return check.ErrUnknown("deleting parent: %v", delErr)
 	}
 
-	// 4. expect no child: "absence not found" means presence
-	if getErr := c.childAbsenceGetter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
+	// 4. expect no child
+	if getErr := c.childGetterUntilAbsent().Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
 		return check.ErrUnknown("getting child: %v", getErr)
 	} else if getErr == nil {
 		_ = c.childDeleter.Do(ctx) // Cleanup
@@ -94,4 +96,51 @@ func (c *KubeControllerObjectLifecycle) cleanGarbage(ctx context.Context, getter
 		return fmt.Errorf("cleaned garbage")
 	}
 	return nil
+}
+
+func (c *KubeControllerObjectLifecycle) childGetterUntilPresent() doer {
+	return &pollingDoer{
+		doer:     c.childGetter,
+		catch:    func(err error) bool { return err == nil },
+		timeout:  c.childPollingTimeout,
+		interval: c.childPollingInterval,
+	}
+
+}
+
+func (c *KubeControllerObjectLifecycle) childGetterUntilAbsent() doer {
+	return &pollingDoer{
+		doer:     c.childGetter,
+		catch:    func(err error) bool { return apierrors.IsNotFound(err) },
+		timeout:  c.childPollingTimeout,
+		interval: c.childPollingInterval,
+	}
+
+}
+
+type pollingDoer struct {
+	doer     doer
+	catch    func(error) bool
+	timeout  time.Duration
+	interval time.Duration
+}
+
+func (p *pollingDoer) Do(ctx context.Context) (err error) {
+	deadline := time.NewTimer(p.timeout)
+	ticker := time.NewTicker(p.interval)
+	defer deadline.Stop()
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err = p.doer.Do(ctx)
+			if p.catch(err) {
+				return err // desired state
+			}
+		case <-deadline.C:
+			return err
+		}
+	}
+
 }
