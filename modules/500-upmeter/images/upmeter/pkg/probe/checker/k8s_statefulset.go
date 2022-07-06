@@ -19,6 +19,7 @@ package checker
 import (
 	"context"
 	"fmt"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -63,7 +64,20 @@ func (c StatefulSetPodLifecycle) Checker() check.Checker {
 		fmt.Errorf("deletion timeout reached"),
 	)
 
-	stsPodGetter := &podGetter{access: c.Access, namespace: c.Namespace, name: podName}
+	stsPodPresenceGetter := &pollingDoer{
+		doer:     &podGetter{access: c.Access, namespace: c.Namespace, name: podName},
+		catch:    func(err error) bool { return err == nil },
+		timeout:  c.PodTransitionTimeout,
+		interval: c.PodTransitionTimeout / 10,
+	}
+
+	stsPodAbsenceGetter := &pollingDoer{
+		doer:     &podGetter{access: c.Access, namespace: c.Namespace, name: podName},
+		catch:    func(err error) bool { return apierrors.IsNotFound(err) },
+		timeout:  c.PodTransitionTimeout,
+		interval: c.PodTransitionTimeout / 10,
+	}
+
 	stsPodDeleter := &podDeleter{access: c.Access, namespace: c.Namespace, name: podName}
 
 	checker := &KubeControllerObjectLifecycle{
@@ -73,8 +87,9 @@ func (c StatefulSetPodLifecycle) Checker() check.Checker {
 		parentCreator: stsCreator,
 		parentDeleter: stsDeleter,
 
-		childGetter:  stsPodGetter,
-		childDeleter: stsPodDeleter,
+		childPresenceGetter: stsPodPresenceGetter,
+		childAbsenceGetter:  stsPodAbsenceGetter,
+		childDeleter:        stsPodDeleter,
 	}
 
 	return checker
@@ -114,6 +129,34 @@ func (s statefulSetDeleter) Do(ctx context.Context) error {
 	client := s.access.Kubernetes()
 	err := client.AppsV1().StatefulSets(s.namespace).Delete(s.name, &metav1.DeleteOptions{})
 	return err
+}
+
+type pollingDoer struct {
+	doer     doer
+	catch    func(error) bool
+	timeout  time.Duration
+	interval time.Duration
+}
+
+func (p *pollingDoer) Do(ctx context.Context) error {
+	ticker := time.NewTicker(p.interval)
+	deadline := time.NewTimer(p.timeout)
+
+	defer ticker.Stop()
+	defer deadline.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := p.doer.Do(ctx); err != nil && !apierrors.IsNotFound(err) {
+				return err // arbitrary error
+			} else if p.catch(err) {
+				return err // desired state
+			}
+		case <-deadline.C:
+			return fmt.Errorf("polling timeout reached")
+		}
+	}
 }
 
 func createStatefulSetObject(name, agentID string) *appsv1.StatefulSet {

@@ -35,8 +35,9 @@ type KubeControllerObjectLifecycle struct {
 	parentCreator doer
 	parentDeleter doer
 
-	childGetter  doer
-	childDeleter doer
+	childPresenceGetter doer
+	childAbsenceGetter  doer
+	childDeleter        doer
 }
 
 func (c *KubeControllerObjectLifecycle) Check() check.Error {
@@ -48,7 +49,7 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 	if err := c.cleanGarbage(ctx, c.parentGetter, c.parentDeleter); err != nil {
 		return check.ErrUnknown(err.Error())
 	}
-	if err := c.cleanGarbage(ctx, c.childGetter, c.childDeleter); err != nil {
+	if err := c.cleanGarbage(ctx, c.childPresenceGetter, c.childDeleter); err != nil {
 		return check.ErrUnknown(err.Error())
 	}
 
@@ -58,7 +59,7 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 	}
 
 	// 2. expect child
-	if getErr := c.childGetter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
+	if getErr := c.childPresenceGetter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
 		_ = c.parentDeleter.Do(ctx) // Cleanup
 		return check.ErrUnknown("getting child: %v", getErr)
 	} else if apierrors.IsNotFound(getErr) {
@@ -71,8 +72,8 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 		return check.ErrUnknown("deleting parent: %v", delErr)
 	}
 
-	// 4. expect no child
-	if getErr := c.childGetter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
+	// 4. expect no child: "absence not found" means presence
+	if getErr := c.childAbsenceGetter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
 		return check.ErrUnknown("getting child: %v", getErr)
 	} else if getErr == nil {
 		_ = c.childDeleter.Do(ctx) // Cleanup
