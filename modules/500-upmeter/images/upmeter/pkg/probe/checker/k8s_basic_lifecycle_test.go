@@ -27,10 +27,11 @@ func doerErr(msg string) *failDoer {
 	return &failDoer{err: fmt.Errorf(msg)}
 }
 
+var err404 = apierrors.NewNotFound(schema.GroupResource{}, "")
+
 // doer404 creates doer that results in kubernetes NotFound error
 func doer404() *failDoer {
-	err := apierrors.NewNotFound(schema.GroupResource{}, "")
-	return &failDoer{err: err}
+	return &failDoer{err: err404}
 }
 
 func assertCheckStatus(t *testing.T, want check.Status, err check.Error) {
