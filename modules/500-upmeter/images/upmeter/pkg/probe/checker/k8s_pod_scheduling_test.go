@@ -20,24 +20,10 @@ import (
 	"context"
 	"d8.io/upmeter/pkg/check"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
-
-type successfulPodNodeFetcher struct {
-	node string
-}
-
-func (f *successfulPodNodeFetcher) Node(_ context.Context) (string, error) {
-	return f.node, nil
-}
-
-type failingPodNodeFetcher struct {
-	err error
-}
-
-func (f *failingPodNodeFetcher) Node(_ context.Context) (string, error) {
-	return "", f.err
-}
 
 func TestPodPhaseChecker_Check(t *testing.T) {
 	type fields struct {
@@ -177,4 +163,146 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 			assertCheckStatus(t, tt.want, err)
 		})
 	}
+}
+
+func Test_pollingPodNodeFetcher_Node(t *testing.T) {
+	type fields struct {
+		fetcher  podNodeFetcher
+		timeout  time.Duration
+		interval time.Duration
+	}
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		name     string
+		fields   fields
+		wantNode string
+		wantErr  assert.ErrorAssertionFunc
+		calls    int
+	}{
+		{
+			name: "returns node from single run",
+			fields: fields{
+				fetcher:  newSequentialPodNodeFetcher([]nodeFetchResult{{node: "a"}}),
+				timeout:  time.Millisecond,
+				interval: time.Millisecond,
+			},
+			wantNode: "a",
+			wantErr:  assert.NoError,
+			calls:    1,
+		},
+		{
+			name: "returns error from single run",
+			fields: fields{
+				fetcher:  newSequentialPodNodeFetcher([]nodeFetchResult{{err: fmt.Errorf("cannot do")}}),
+				timeout:  time.Millisecond,
+				interval: time.Millisecond,
+			},
+			wantNode: "",
+			wantErr:  assert.Error,
+			calls:    1,
+		},
+		{
+			name: "returns node after empty results",
+			fields: fields{
+				fetcher: newSequentialPodNodeFetcher([]nodeFetchResult{
+					{node: "", err: nil},
+					{node: "", err: nil},
+					{node: "a", err: nil},
+				}),
+				timeout:  5 * time.Millisecond,
+				interval: time.Millisecond,
+			},
+			wantNode: "a",
+			wantErr:  assert.NoError,
+			calls:    3,
+		},
+		{
+			name: "aborts on error after empty results",
+			fields: fields{
+				fetcher: newSequentialPodNodeFetcher([]nodeFetchResult{
+					{node: "", err: nil},
+					{node: "", err: nil},
+					{node: "", err: fmt.Errorf("cannot get")},
+				}),
+				timeout:  5 * time.Millisecond,
+				interval: time.Millisecond,
+			},
+			wantNode: "",
+			wantErr:  assert.Error,
+			calls:    3,
+		},
+		{
+			name: "aborts on timeout after empty results",
+			fields: fields{
+				fetcher: newSequentialPodNodeFetcher([]nodeFetchResult{
+					{node: "", err: nil},
+					{node: "", err: nil},
+					{node: "", err: nil},
+					{node: "", err: nil},
+					{node: "", err: nil},
+					{node: "", err: nil},
+				}),
+				timeout:  5 * time.Millisecond,
+				interval: time.Millisecond,
+			},
+			wantNode: "",
+			wantErr:  assert.Error,
+			calls:    5,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &pollingPodNodeFetcher{
+				fetcher:  tt.fields.fetcher,
+				timeout:  tt.fields.timeout,
+				interval: tt.fields.interval,
+			}
+			gotNode, err := f.Node(context.TODO())
+			if !tt.wantErr(t, err, "Node(ctx)") {
+				return
+			}
+			assert.Equal(t, tt.wantNode, gotNode)
+			assert.Equal(t, tt.calls, tt.fields.fetcher.(*sequentialPodNodeFetcher).i,
+				"unexpected number of fetch calls")
+
+		})
+	}
+}
+
+type successfulPodNodeFetcher struct {
+	node string
+}
+
+func (f *successfulPodNodeFetcher) Node(_ context.Context) (string, error) {
+	return f.node, nil
+}
+
+type failingPodNodeFetcher struct {
+	err error
+}
+
+func (f *failingPodNodeFetcher) Node(_ context.Context) (string, error) {
+	return "", f.err
+}
+
+type nodeFetchResult struct {
+	node string
+	err  error
+}
+
+type sequentialPodNodeFetcher struct {
+	responses []nodeFetchResult
+	i         int
+}
+
+func newSequentialPodNodeFetcher(responses []nodeFetchResult) *sequentialPodNodeFetcher {
+	return &sequentialPodNodeFetcher{responses: responses}
+}
+
+func (f *sequentialPodNodeFetcher) Node(_ context.Context) (string, error) {
+	res := f.responses[f.i] // let it panic
+	f.i++
+	return res.node, res.err
 }

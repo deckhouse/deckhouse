@@ -195,7 +195,10 @@ type pollingPodNodeFetcher struct {
 
 func (f *pollingPodNodeFetcher) Node(ctx context.Context) (node string, err error) {
 	ticker := time.NewTicker(f.interval)
+	deadline := time.NewTimer(f.timeout)
+
 	defer ticker.Stop()
+	defer deadline.Stop()
 
 	for {
 		select {
@@ -209,7 +212,7 @@ func (f *pollingPodNodeFetcher) Node(ctx context.Context) (node string, err erro
 				// scheduling success
 				return node, nil
 			}
-		case <-time.After(f.timeout):
+		case <-deadline.C:
 			return "", fmt.Errorf("node polling timeout reached")
 		}
 	}
