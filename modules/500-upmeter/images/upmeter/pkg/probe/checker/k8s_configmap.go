@@ -17,15 +17,58 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/run"
 )
+
+// KubeObjectBasicLifecycle checks the creation and deletion of an object in
+// kube-apiserver. Hence, all errors in kube-apiserver calls result in probe fails.
+type KubeObjectBasicLifecycle struct {
+	preflight doer
+	creator   doer
+	getter    doer
+	deleter   doer
+}
+
+func (c *KubeObjectBasicLifecycle) Check() check.Error {
+	ctx := context.TODO()
+	if err := c.preflight.Do(ctx); err != nil {
+		return check.ErrUnknown("preflight: %v", err)
+	}
+
+	// Check garbage
+	getErr := c.getter.Do(ctx)
+	if getErr != nil && !apierrors.IsNotFound(getErr) {
+		// Apiserver is malfunctioning
+		return check.ErrFail("getting garbage: %v", getErr)
+	} else if getErr == nil {
+		// Garbage object exists, cleaning it and skipping this run.
+		if delErr := c.deleter.Do(ctx); delErr != nil {
+			return check.ErrFail("deleting garbage: %v", delErr)
+		}
+		return check.ErrUnknown("cleaned garbage")
+	}
+
+	// The actual check
+	if createErr := c.creator.Do(ctx); createErr != nil {
+		// Apiserver is malfunctioning
+		return check.ErrFail("creating: %v", createErr)
+	}
+	if delErr := c.deleter.Do(ctx); delErr != nil {
+		// Apiserver is malfunctioning
+		return check.ErrFail("deleting: %v", delErr)
+	}
+
+	return nil
+}
 
 // ConfigMapLifecycle is a checker constructor and configurator
 type ConfigMapLifecycle struct {

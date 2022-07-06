@@ -155,7 +155,7 @@ func withTimer(interval time.Duration, jobCb, onTimerCb func()) {
 	}
 }
 
-// doer is more abstract interface for stopping the propagation of check.ErrSomething too deep.
+// doer is for wrapping k8s api calls and easier mocking them in tests
 type doer interface {
 	Do(context.Context) error
 }

@@ -134,7 +134,7 @@ func (c *namespaceDeletionChecker) Check() check.Error {
 }
 
 func createNamespaceObject() *v1.Namespace {
-	name := run.StaticIdentifier("upmeter-control-plane-namespace")
+	name := run.StaticIdentifier("upmeter-control-plane-namespace") // TODO check alerts
 
 	return &v1.Namespace{
 		TypeMeta: metav1.TypeMeta{
