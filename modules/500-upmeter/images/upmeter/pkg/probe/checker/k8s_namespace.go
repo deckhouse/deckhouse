@@ -27,6 +27,31 @@ import (
 	"d8.io/upmeter/pkg/probe/run"
 )
 
+// ConfigMapLifecycle is a checker constructor and configurator
+type NamespaceLifecycle2 struct {
+	Access    kubernetes.Access
+	Timeout   time.Duration
+	Namespace string
+}
+
+func (c NamespaceLifecycle2) Checker() check.Checker {
+	preflight := newK8sVersionGetter(c.Access)
+
+	name := run.StaticIdentifier("upmeter-probe-basic")
+	creator := &configmapCreator{access: c.Access, namespace: c.Namespace, name: name}
+	getter := &configmapGetter{access: c.Access, namespace: c.Namespace, name: name}
+	deleter := &configmapDeleter{access: c.Access, namespace: c.Namespace, name: name}
+
+	checker := &KubeObjectBasicLifecycle{
+		preflight: preflight,
+		creator:   creator,
+		getter:    getter,
+		deleter:   deleter,
+	}
+
+	return withTimeout(checker, c.Timeout)
+}
+
 // NamespaceLifecycle is a checker constructor and configurator
 type NamespaceLifecycle struct {
 	Access                    k8s.Access

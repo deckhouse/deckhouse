@@ -47,7 +47,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			probe:  "basic-functionality",
 			check:  "_",
 			period: 5 * time.Second,
-			config: checker.ConfigMapLifecycle4{
+			config: checker.ConfigMapLifecycle{
 				Access:    access,
 				Timeout:   5 * time.Second,
 				Namespace: namespace,

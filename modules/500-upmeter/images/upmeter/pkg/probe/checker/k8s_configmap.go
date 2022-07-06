@@ -21,7 +21,6 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"d8.io/upmeter/pkg/check"
@@ -29,54 +28,14 @@ import (
 	"d8.io/upmeter/pkg/probe/run"
 )
 
-// KubeObjectBasicLifecycle checks the creation and deletion of an object in
-// kube-apiserver. Hence, all errors in kube-apiserver calls result in probe fails.
-type KubeObjectBasicLifecycle struct {
-	preflight doer
-	creator   doer
-	getter    doer
-	deleter   doer
-}
-
-func (c *KubeObjectBasicLifecycle) Check() check.Error {
-	ctx := context.TODO()
-	if err := c.preflight.Do(ctx); err != nil {
-		return check.ErrUnknown("preflight: %v", err)
-	}
-
-	// Check garbage
-	if getErr := c.getter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
-		// Unexpected error
-		return check.ErrFail("getting garbage: %v", getErr)
-	} else if getErr == nil {
-		// Garbage object exists, cleaning it and skipping this run.
-		if delErr := c.deleter.Do(ctx); delErr != nil {
-			return check.ErrFail("deleting garbage: %v", delErr)
-		}
-		return check.ErrUnknown("cleaned garbage")
-	}
-
-	// The actual check
-	if createErr := c.creator.Do(ctx); createErr != nil {
-		// Unexpected error
-		return check.ErrFail("creating: %v", createErr)
-	}
-	if delErr := c.deleter.Do(ctx); delErr != nil {
-		// Unexpected error
-		return check.ErrFail("deleting: %v", delErr)
-	}
-
-	return nil
-}
-
-// ConfigMapLifecycle4 is a checker constructor and configurator
-type ConfigMapLifecycle4 struct {
+// ConfigMapLifecycle is a checker constructor and configurator
+type ConfigMapLifecycle struct {
 	Access    kubernetes.Access
 	Timeout   time.Duration
 	Namespace string
 }
 
-func (c ConfigMapLifecycle4) Checker() check.Checker {
+func (c ConfigMapLifecycle) Checker() check.Checker {
 	preflight := newK8sVersionGetter(c.Access)
 
 	name := run.StaticIdentifier("upmeter-probe-basic")
