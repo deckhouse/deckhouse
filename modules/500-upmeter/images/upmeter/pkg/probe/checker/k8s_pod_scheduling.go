@@ -69,7 +69,7 @@ func (c PodScheduling) Checker() check.Checker {
 		interval: c.ScheduleTimeout / 10,
 	}
 
-	checker := &podPhaseChecker{
+	checker := &podSchedulingChecker{
 		preflight:   preflight,
 		creator:     creator,
 		getter:      getter,
@@ -81,8 +81,8 @@ func (c PodScheduling) Checker() check.Checker {
 	return checker
 }
 
-// podPhaseChecker checks pod node. All apiserver related errors result in undetermined status.
-type podPhaseChecker struct {
+// podSchedulingChecker checks pod node. All apiserver related errors result in undetermined status.
+type podSchedulingChecker struct {
 	preflight doer
 	getter    doer
 	creator   doer
@@ -92,7 +92,7 @@ type podPhaseChecker struct {
 	node        string
 }
 
-func (c *podPhaseChecker) Check() check.Error {
+func (c *podSchedulingChecker) Check() check.Error {
 	ctx := context.TODO()
 	if err := c.preflight.Do(ctx); err != nil {
 		return check.ErrUnknown("preflight: %v", err)
