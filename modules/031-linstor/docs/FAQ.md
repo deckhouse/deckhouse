@@ -126,6 +126,16 @@ The most likely reasons why it cannot load the kernel module:
   Since the DRBD module we provide is compiled dynamically for your kernel (similar to dkms), it has no digital sign.
   We do not currently support running the DRBD module with a Secure Boot configuration.
 
+## How to evict resources from a node?
+
+To do this, just run the command:
+
+```bash
+linstor node evacuate <node_name>
+```
+
+It will move resources to other free nodes and replicate them.
+
 ## Pod cannot start with the `FailedMount` error
 
 ### Pod is stuck in the `ContainerCreating` phase
