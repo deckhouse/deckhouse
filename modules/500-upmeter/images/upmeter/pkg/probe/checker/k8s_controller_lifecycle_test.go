@@ -274,9 +274,9 @@ func TestKubeControllerObjectLifecycle_Check(t *testing.T) {
 				parentDeleter: tt.fields.parentDeleter,
 				childGetter:   tt.fields.childGetter,
 				childDeleter:  tt.fields.childDeleter,
-
+				// ensure ticker runs earlier than timeout
+				childPollingInterval: time.Millisecond / 2,
 				childPollingTimeout:  time.Millisecond,
-				childPollingInterval: 2 * time.Millisecond,
 			}
 
 			err := c.Check()
@@ -301,6 +301,11 @@ func newSequenceDoer(errors ...error) *sequenceDoer {
 }
 
 func (d *sequenceDoer) Do(_ context.Context) error {
+	if d.i >= len(d.errors) {
+		// stick to last error
+		return d.errors[d.i-1]
+	}
+
 	err := d.errors[d.i]
 	d.i++
 	return err

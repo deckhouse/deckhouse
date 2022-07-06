@@ -75,8 +75,8 @@ func (c StatefulSetPodLifecycle) Checker() check.Checker {
 
 		childGetter:          stsPodGetter,
 		childDeleter:         stsPodDeleter,
-		childPollingTimeout:  c.PodTransitionTimeout,
 		childPollingInterval: c.PodTransitionTimeout / 10,
+		childPollingTimeout:  c.PodTransitionTimeout,
 	}
 
 	return checker

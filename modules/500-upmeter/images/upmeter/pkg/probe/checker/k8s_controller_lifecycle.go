@@ -38,8 +38,8 @@ type KubeControllerObjectLifecycle struct {
 
 	childGetter          doer
 	childDeleter         doer
-	childPollingTimeout  time.Duration
 	childPollingInterval time.Duration
+	childPollingTimeout  time.Duration
 }
 
 func (c *KubeControllerObjectLifecycle) Check() check.Error {
@@ -136,7 +136,7 @@ func (p *pollingDoer) Do(ctx context.Context) (err error) {
 		case <-ticker.C:
 			err = p.doer.Do(ctx)
 			if p.catch(err) {
-				return err // desired state
+				return err
 			}
 		case <-deadline.C:
 			return err
