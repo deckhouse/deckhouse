@@ -60,7 +60,6 @@ cloudProviderAzure:
 			Expect(f.ValuesGet("cloudProviderAzure.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
-    "cachingMode": "None",
     "name": "managed-standard-ssd",
     "type": "StandardSSD_LRS"
   },
