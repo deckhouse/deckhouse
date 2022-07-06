@@ -9,6 +9,8 @@ FOCUS=""
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
 
+# Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
+# besides linux/amd64 (e.g. relevant for mac m1).
 PLATFORM_NAME := $(shell uname -p)
 ifneq ($(filter arm%,$(PLATFORM_NAME)),)
 	export WERF_PLATFORM=linux/amd64
