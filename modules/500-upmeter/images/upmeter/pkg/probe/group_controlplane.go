@@ -47,12 +47,10 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			probe:  "basic-functionality",
 			check:  "_",
 			period: 5 * time.Second,
-			config: checker.ConfigMapLifecycle{
-				Access:                    access,
-				Timeout:                   5 * time.Second,
-				Namespace:                 namespace,
-				GarbageCollectionTimeout:  gcTimeout,
-				ControlPlaneAccessTimeout: cpTimeout,
+			config: checker.ConfigMapLifecycle4{
+				Access:    access,
+				Timeout:   5 * time.Second,
+				Namespace: namespace,
 			},
 		}, {
 			group:  groupControlPlane,

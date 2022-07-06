@@ -36,12 +36,16 @@ func (c ControlPlaneAvailable) Checker() check.Checker {
 
 // newControlPlaneChecker returns common preflight checker
 func newControlPlaneChecker(access kubernetes.Access, timeout time.Duration) check.Checker {
-	return doOrUnknown(timeout, &k8sVersionGetter{access: access})
+	return doOrUnknown(timeout, newK8sVersionGetter(access))
 }
 
 // k8sVersionGetter returns non-nil err of API server version request fails
 type k8sVersionGetter struct {
 	access kubernetes.Access
+}
+
+func newK8sVersionGetter(access kubernetes.Access) *k8sVersionGetter {
+	return &k8sVersionGetter{access: access}
 }
 
 func (c *k8sVersionGetter) Do(_ context.Context) error {
