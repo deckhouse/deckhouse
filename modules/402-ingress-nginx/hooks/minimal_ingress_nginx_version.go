@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// this hook figure out minimal ingress controller version at the beginning and on IngressNginxController creation
+// this version is used on requirements check on Deckhouse update
+// Deckhouse would not update minor version before pod is ready, so this hook will execute at least once (on sync)
+
 package hooks
 
 import (
@@ -19,16 +23,19 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "ingressControllers",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "IngressNginxController",
-			FilterFunc: applySpecControllerFilter,
+			Name:                         "ingressControllers",
+			ApiVersion:                   "deckhouse.io/v1",
+			Kind:                         "IngressNginxController",
+			WaitForSynchronization:       pointer.BoolPtr(true),
+			ExecuteHookOnEvents:          pointer.BoolPtr(true),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(true),
+			FilterFunc:                   applySpecControllerFilter,
 		},
 	},
 }, discoverMinimalNginxVersion)
