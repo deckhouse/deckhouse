@@ -437,7 +437,7 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 }
 
 func buildSuspendAnnotation(suspend bool) map[string]interface{} {
-	var annotationValue interface{} = nil
+	var annotationValue interface{}
 
 	if suspend {
 		annotationValue = "true"
