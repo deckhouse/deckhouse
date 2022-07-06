@@ -45,14 +45,28 @@ type Agent struct {
 }
 
 type Config struct {
+	Period       time.Duration
+	ClientConfig *sender.ClientConfig
+	DatabasePath string
+	UserAgent    string
+
 	DisabledProbes []string
-	Period         time.Duration
-	ClientConfig   *sender.ClientConfig
-	DatabasePath   string
-	UserAgent      string
+	DynamicProbes  *DynamicProbesConfig
 }
 
-// Return agent with magic configuration
+type DynamicProbesConfig struct {
+	IngressControllers []string
+	NodeGroups         []string
+	Zones              []string
+}
+
+func NewConfig() *Config {
+	return &Config{
+		ClientConfig:  &sender.ClientConfig{},
+		DynamicProbes: &DynamicProbesConfig{},
+	}
+}
+
 func New(config *Config, kubeConfig *kubernetes.Config, logger *log.Logger) *Agent {
 	return &Agent{
 		config:     config,
@@ -71,7 +85,12 @@ func (a *Agent) Start(ctx context.Context) error {
 
 	// Probe registry
 	ftr := probe.NewProbeFilter(a.config.DisabledProbes)
-	runnerLoader := probe.NewLoader(ftr, kubeAccess, a.logger)
+	dynamicConfig := probe.DynamicConfig{
+		IngressNginxControllers: a.config.DynamicProbes.IngressControllers,
+		NodeGroups:              a.config.DynamicProbes.NodeGroups,
+		Zones:                   a.config.DynamicProbes.Zones,
+	}
+	runnerLoader := probe.NewLoader(ftr, kubeAccess, dynamicConfig, a.logger)
 	calcLoader := calculated.NewLoader(ftr, a.logger)
 	registry := registry.New(runnerLoader, calcLoader)
 

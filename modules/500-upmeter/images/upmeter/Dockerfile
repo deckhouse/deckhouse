@@ -4,7 +4,7 @@ ARG BASE_GOLANG_16_ALPINE
 FROM $BASE_GOLANG_16_ALPINE as artifact
 RUN apk add --update gcc musl-dev jq-dev oniguruma-dev curl
 RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-  | sh -s -- -b $(go env GOPATH)/bin v1.39.0
+  | sh -s -- -b $(go env GOPATH)/bin v1.46.2
 # install dependencies
 ADD /go.mod /app/go.mod
 WORKDIR /app

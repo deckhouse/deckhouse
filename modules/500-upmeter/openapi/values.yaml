@@ -8,7 +8,7 @@ x-required-for-helm:
 properties:
   internal:
     type: object
-    default: { }
+    default: {}
     required:
       - disabledProbes
       - upmeter
@@ -16,22 +16,22 @@ properties:
     properties:
       deployStatusDexAuthenticator:
         type: boolean
-        x-examples: [ true ]
+        x-examples: [true]
       deployDexAuthenticator:
         type: boolean
-        x-examples: [ true ]
+        x-examples: [true]
       effectiveStorageClass:
         $ref: "#/definitions/storageClass"
       disabledProbes:
         type: array
-        default: [ ]
+        default: []
         x-examples:
-          - [ "synthetic/dns" ]
+          - ["synthetic/dns"]
         items:
           type: string
       upmeter:
         type: object
-        default: { }
+        default: {}
         properties:
           key:
             type: string
@@ -41,14 +41,14 @@ properties:
             type: boolean
       smokeMini:
         type: object
-        default: { }
+        default: {}
         required:
           - sts
         properties:
           sts:
             type: object
-            default: { }
-            required: [ 'a', 'b', 'c', 'd', 'e' ]
+            default: {}
+            required: ["a", "b", "c", "d", "e"]
             properties:
               a:
                 $ref: "#/definitions/stsEntry"
@@ -69,10 +69,29 @@ properties:
             type: string
           ca.crt:
             type: string
+      dynamicProbes:
+        type: object
+        default: {}
+        properties:
+          ingressControllerNames:
+            type: array
+            default: []
+            items:
+              type: string
+          cloudEphemeralNodeGroupNames:
+            type: array
+            default: []
+            items:
+              type: string
+          zones:
+            type: array
+            default: []
+            items:
+              type: string
 definitions:
   stsEntry:
     type: object
-    default: { }
+    default: {}
     properties:
       node:
         type: string
@@ -86,5 +105,5 @@ definitions:
     oneOf:
       - type: string
       - type: boolean
-        enum: [ false ]
-    x-examples: [ "default" ]
+        enum: [false]
+    x-examples: ["default"]

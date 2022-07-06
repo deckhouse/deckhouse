@@ -6,8 +6,8 @@ properties:
     oneOf:
       - type: string
       - type: boolean
-        enum: [ false ]
-    x-examples: [ false, "default" ]
+        enum: [false]
+    x-examples: [false, "default"]
     description: |
       The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
@@ -16,7 +16,7 @@ properties:
       Setting it to `false` forces the use of an emptyDir volume.
   auth:
     type: object
-    default: { }
+    default: {}
     description: |
       Configuration of authentication for Upmeter frontends.
     required:
@@ -27,7 +27,7 @@ properties:
         type: object
         description: |
           Authentication configuration.
-        default: { }
+        default: {}
         properties:
           externalAuthentication:
             type: object
@@ -63,13 +63,13 @@ properties:
             items:
               type: string
             x-examples:
-              - [ "1.1.1.1/32" ]
+              - ["1.1.1.1/32"]
             description: An array if CIDRs that are allowed to authenticate.
       webui:
         type: object
         description: |
           Authentication configuration.
-        default: { }
+        default: {}
         properties:
           externalAuthentication:
             type: object
@@ -105,13 +105,13 @@ properties:
             items:
               type: string
             x-examples:
-              - [ "1.1.1.1/32" ]
+              - ["1.1.1.1/32"]
             description: An array if CIDRs that are allowed to authenticate.
   smokeMini:
     type: object
     description: |
       Configuration of authentication for smoke-mini.
-    default: { }
+    default: {}
     required:
       - auth
     properties:
@@ -119,7 +119,7 @@ properties:
         type: object
         description: |
           Authentication configuration.
-        default: { }
+        default: {}
         properties:
           externalAuthentication:
             type: object
@@ -155,15 +155,15 @@ properties:
             items:
               type: string
             x-examples:
-              - [ "1.1.1.1/32" ]
+              - ["1.1.1.1/32"]
             description: An array if CIDRs that are allowed to authenticate.
       storageClass:
         default: false
         oneOf:
           - type: string
           - type: boolean
-            enum: [ false ]
-        x-examples: [ false, "default" ]
+            enum: [false]
+        x-examples: [false, "default"]
         description: |
           A storageClass to use when checking the health of disks.
 
@@ -216,7 +216,7 @@ properties:
                   Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
           customCertificate:
             type: object
-            default: { }
+            default: {}
             properties:
               secretName:
                 type: string
@@ -227,7 +227,7 @@ properties:
                 default: "false"
   disabledProbes:
     type: array
-    default: [ ]
+    default: []
     items:
       type: string
     description: |
@@ -293,7 +293,7 @@ properties:
               Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
       customCertificate:
         type: object
-        default: { }
+        default: {}
         properties:
           secretName:
             type: string

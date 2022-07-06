@@ -264,3 +264,12 @@ properties:
                 minPerZone: 1
                 zones:
                   - zonea
+      upmeterDiscovery:
+        type: object
+        required:
+          - ephemeralNodeGroupNames
+        properties:
+          ephemeralNodeGroupNames:
+            type: array
+            items:
+              type: string

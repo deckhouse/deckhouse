@@ -31,9 +31,8 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/crd"
-	v1 "d8.io/upmeter/pkg/crd/v1"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/hookprobe"
 )
 
 type D8ClusterConfiguration struct {
@@ -42,7 +41,7 @@ type D8ClusterConfiguration struct {
 	DeckhouseReadinessTimeout time.Duration
 
 	CustomResourceName string
-	Monitor            *crd.HookProbeMonitor
+	Monitor            *hookprobe.Monitor
 
 	Access kubernetes.Access
 	Logger *logrus.Entry
@@ -116,23 +115,23 @@ type HookProbeHandler struct {
 	logger *logrus.Entry
 
 	// Inner state
-	obj *v1.HookProbe
+	obj *hookprobe.HookProbe
 	mu  sync.RWMutex
 }
 
-func (h *HookProbeHandler) Get() *v1.HookProbe {
+func (h *HookProbeHandler) Get() *hookprobe.HookProbe {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	return h.obj
 }
 
-func (h *HookProbeHandler) OnAdd(obj *v1.HookProbe) {
+func (h *HookProbeHandler) OnAdd(obj *hookprobe.HookProbe) {
 	h.logger.Debug("object added")
 	h.OnModify(obj)
 }
 
-func (h *HookProbeHandler) OnModify(obj *v1.HookProbe) {
+func (h *HookProbeHandler) OnModify(obj *hookprobe.HookProbe) {
 	if obj.GetName() != h.name {
 		return
 	}
@@ -144,7 +143,7 @@ func (h *HookProbeHandler) OnModify(obj *v1.HookProbe) {
 	h.obj = obj
 }
 
-func (h *HookProbeHandler) OnDelete(obj *v1.HookProbe) {
+func (h *HookProbeHandler) OnDelete(obj *hookprobe.HookProbe) {
 	if obj.GetName() != h.name {
 		return
 	}
@@ -238,7 +237,7 @@ func (c *setInitedValueChecker) create(value string) check.Error {
 }
 
 type hookProbeObjectGetter interface {
-	Get() *v1.HookProbe
+	Get() *hookprobe.HookProbe
 }
 
 type checkMirrorValueChecker struct {

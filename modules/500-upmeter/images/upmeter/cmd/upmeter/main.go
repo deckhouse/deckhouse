@@ -26,7 +26,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"d8.io/upmeter/pkg/agent"
-	"d8.io/upmeter/pkg/agent/sender"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/util"
 	"d8.io/upmeter/pkg/server"
@@ -37,9 +36,9 @@ func main() {
 		loggerConfig = &loggerConfig{}
 
 		agentKubeConfig = &kubernetes.Config{}
-		agentConfig     = &agent.Config{ClientConfig: &sender.ClientConfig{}}
+		agentConfig     = agent.NewConfig()
 
-		serverConfig = &server.Config{}
+		serverConfig = server.NewConfig()
 	)
 
 	app := kingpin.New("upmeter", "upmeter")

@@ -28,18 +28,20 @@ import (
 	"d8.io/upmeter/pkg/set"
 )
 
-func NewLoader(filter Filter, access kubernetes.Access, logger *logrus.Logger) *Loader {
+func NewLoader(filter Filter, access kubernetes.Access, dynamic DynamicConfig, logger *logrus.Logger) *Loader {
 	return &Loader{
-		filter: filter,
-		access: access,
-		logger: logger,
+		filter:  filter,
+		access:  access,
+		logger:  logger,
+		dynamic: dynamic,
 	}
 }
 
 type Loader struct {
-	filter Filter
-	access kubernetes.Access
-	logger *logrus.Logger
+	filter  Filter
+	access  kubernetes.Access
+	logger  *logrus.Logger
+	dynamic DynamicConfig
 
 	groups []string
 	probes []check.ProbeRef
@@ -47,21 +49,10 @@ type Loader struct {
 	configs []runnerConfig
 }
 
-func (l *Loader) collectConfigs() []runnerConfig {
-	if l.configs != nil {
-		// Already inited
-		return l.configs
-	}
-
-	l.configs = make([]runnerConfig, 0)
-	l.configs = append(l.configs, initSynthetic(l.access, l.logger)...)
-	l.configs = append(l.configs, initControlPlane(l.access)...)
-	l.configs = append(l.configs, initMonitoringAndAutoscaling(l.access)...)
-	l.configs = append(l.configs, initExtensions(l.access)...)
-	l.configs = append(l.configs, initLoadBalancing(l.access)...)
-	l.configs = append(l.configs, initDeckhouse(l.access, l.logger)...)
-
-	return l.configs
+type DynamicConfig struct {
+	IngressNginxControllers []string
+	NodeGroups              []string
+	Zones                   []string
 }
 
 func (l *Loader) Load() []*check.Runner {
@@ -125,6 +116,25 @@ func (l *Loader) Probes() []check.ProbeRef {
 	}
 	sort.Sort(check.ByProbeRef(l.probes))
 	return l.probes
+}
+
+func (l *Loader) collectConfigs() []runnerConfig {
+	if l.configs != nil {
+		// Already inited
+		return l.configs
+	}
+
+	l.configs = make([]runnerConfig, 0)
+	l.configs = append(l.configs, initSynthetic(l.access, l.logger)...)
+	l.configs = append(l.configs, initControlPlane(l.access)...)
+	l.configs = append(l.configs, initMonitoringAndAutoscaling(l.access)...)
+	l.configs = append(l.configs, initExtensions(l.access)...)
+	l.configs = append(l.configs, initLoadBalancing(l.access)...)
+	l.configs = append(l.configs, initDeckhouse(l.access, l.logger)...)
+	l.configs = append(l.configs, initNginx(l.access, l.dynamic.IngressNginxControllers)...)
+	l.configs = append(l.configs, initNodegroups(l.access, l.dynamic.NodeGroups, l.dynamic.Zones)...)
+
+	return l.configs
 }
 
 type runnerConfig struct {

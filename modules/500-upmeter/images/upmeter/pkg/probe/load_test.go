@@ -114,11 +114,15 @@ func TestLoader_Probes(t *testing.T) {
 
 	assert.Equal(t, allProbesSorted, unfiltered.Probes())
 
-	filtered := &Loader{
-		filter: NewProbeFilter([]string{"deckhouse", "extensions/", "load-balancing/metallb"}),
-		access: &kubernetes.Accessor{},
-		logger: newDummyLogger().Logger,
-	}
+	filtered := NewLoader(
+		NewProbeFilter([]string{"deckhouse", "extensions/", "load-balancing/metallb", "nodegroups/spot"}),
+		&kubernetes.Accessor{},
+		DynamicConfig{
+			IngressNginxControllers: []string{"main", "main-w-pp"},
+			NodeGroups:              []string{"system", "frontend", "worker", "spot"},
+		},
+		newDummyLogger().Logger,
+	)
 
 	filteredProbesSorted := []check.ProbeRef{
 		{Group: "control-plane", Probe: "apiserver"},
@@ -137,6 +141,11 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "monitoring-and-autoscaling", Probe: "prometheus-metrics-adapter"},
 		{Group: "monitoring-and-autoscaling", Probe: "trickster"},
 		{Group: "monitoring-and-autoscaling", Probe: "vertical-pod-autoscaler"},
+		{Group: "nginx", Probe: "main"},
+		{Group: "nginx", Probe: "main-w-pp"},
+		{Group: "nodegroups", Probe: "frontend"},
+		{Group: "nodegroups", Probe: "system"},
+		{Group: "nodegroups", Probe: "worker"},
 		{Group: "synthetic", Probe: "access"},
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},

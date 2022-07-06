@@ -25,9 +25,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/crd"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/monitor/downtime"
 	"d8.io/upmeter/pkg/registry"
 	"d8.io/upmeter/pkg/server/entity"
 	"d8.io/upmeter/pkg/server/ranges"
@@ -53,7 +53,7 @@ const (
 
 type PublicStatusHandler struct {
 	DbCtx           *dbcontext.DbContext
-	DowntimeMonitor *crd.DowntimeMonitor
+	DowntimeMonitor *downtime.Monitor
 	ProbeLister     registry.ProbeLister
 }
 

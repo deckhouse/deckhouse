@@ -24,8 +24,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/crd"
 	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/monitor/downtime"
 	"d8.io/upmeter/pkg/server/entity"
 	"d8.io/upmeter/pkg/server/ranges"
 )
@@ -41,7 +41,7 @@ type StatusResponse struct {
 
 type StatusRangeHandler struct {
 	DbCtx           *dbcontext.DbContext
-	DowntimeMonitor *crd.DowntimeMonitor
+	DowntimeMonitor *downtime.Monitor
 }
 
 func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +120,7 @@ func parseFilter(r *http.Request) (*statusFilter, error) {
 	return parsed, nil
 }
 
-func getStatus(dbctx *dbcontext.DbContext, monitor *crd.DowntimeMonitor, filter *statusFilter) (*StatusResponse, error) {
+func getStatus(dbctx *dbcontext.DbContext, monitor *downtime.Monitor, filter *statusFilter) (*StatusResponse, error) {
 	// Adjust range to step slots.
 	rng := ranges.NewStepRange(filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step)
 	log.Infof("[from to step] input [%d %d %d] adjusted to [%d, %d, %d]",

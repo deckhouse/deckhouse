@@ -21,8 +21,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/crd"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/hookprobe"
 	"d8.io/upmeter/pkg/probe/checker"
 	"d8.io/upmeter/pkg/probe/util"
 )
@@ -34,7 +34,7 @@ func initDeckhouse(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 	)
 
 	logEntry := logrus.NewEntry(logger).WithField("group", groupDeckhouse)
-	monitor := crd.NewHookProbeMonitor(access.Kubernetes(), logEntry)
+	monitor := hookprobe.NewMonitor(access.Kubernetes(), logEntry)
 
 	return []runnerConfig{
 		{

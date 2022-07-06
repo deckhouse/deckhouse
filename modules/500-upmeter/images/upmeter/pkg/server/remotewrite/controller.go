@@ -25,9 +25,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/crd"
-	v1 "d8.io/upmeter/pkg/crd/v1"
 	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/monitor/remotewrite"
 )
 
 type Exporter interface {
@@ -57,7 +56,7 @@ func (cc *ControllerConfig) Controller() *Controller {
 		controllerLogger = cc.Logger.WithField("who", "controller")
 	)
 
-	kubeMonitor := crd.NewRemoteWriteMonitor(cc.Kubernetes, kubeMonLogger)
+	kubeMonitor := remotewrite.NewMonitor(cc.Kubernetes, kubeMonLogger)
 	storage := newStorage(cc.DbCtx, cc.OriginsCount)
 	syncers := newSyncers(storage, cc.Period, syncLogger)
 
@@ -73,7 +72,7 @@ func (cc *ControllerConfig) Controller() *Controller {
 
 // Controller links metrics syncers with configs from CR monitor
 type Controller struct {
-	kubeMonitor *crd.RemoteWriteMonitor
+	kubeMonitor *remotewrite.Monitor
 	userAgent   string
 	syncers     *syncers
 	logger      *log.Entry
@@ -140,7 +139,7 @@ type updateHandler struct {
 	headers map[string]string
 }
 
-func (s *updateHandler) OnAdd(rw *v1.RemoteWrite) {
+func (s *updateHandler) OnAdd(rw *remotewrite.RemoteWrite) {
 	err := s.syncers.Add(context.Background(), newExportConfig(rw, s.headers))
 	if err != nil {
 		s.logger.Errorf("cannot add remote_write exporter %q: %v", rw.Name, err)
@@ -148,7 +147,7 @@ func (s *updateHandler) OnAdd(rw *v1.RemoteWrite) {
 	s.logger.Infof("added remote_write exporter %q", rw.Name)
 }
 
-func (s *updateHandler) OnModify(rw *v1.RemoteWrite) {
+func (s *updateHandler) OnModify(rw *remotewrite.RemoteWrite) {
 	err := s.syncers.Add(context.Background(), newExportConfig(rw, s.headers))
 	if err != nil {
 		s.logger.Errorf("cannot update remote_write exporter %q: %v", rw.Name, err)
@@ -156,7 +155,7 @@ func (s *updateHandler) OnModify(rw *v1.RemoteWrite) {
 	s.logger.Infof("updated remote_write exporter %q", rw.Name)
 }
 
-func (s *updateHandler) OnDelete(rw *v1.RemoteWrite) {
+func (s *updateHandler) OnDelete(rw *remotewrite.RemoteWrite) {
 	config := newExportConfig(rw, s.headers)
 	s.syncers.Delete(config) // TODO: ctx? final exporter requests can take some time
 	s.logger.Infof("deleted remote_write exporter %q", rw.Name)

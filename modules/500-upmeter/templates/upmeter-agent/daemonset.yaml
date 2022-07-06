@@ -66,10 +66,21 @@ spec:
           command:
             - /upmeter
             - agent
+            - --user-agent=UpmeterAgent/1.0 (Deckhouse {{ $.Values.global.deckhouseEdition }} {{ $.Values.global.deckhouseVersion }})
             {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
             - --disable-probe={{ $probeRef }}
             {{- end }}
-            - --user-agent=UpmeterAgent/1.0 (Deckhouse {{ $.Values.global.deckhouseEdition }} {{ $.Values.global.deckhouseVersion }})
+            {{- if .Values.upmeter.internal.dynamicProbes }}
+              {{- range $name := .Values.upmeter.internal.dynamicProbes.ingressControllerNames }}
+            - --dynamic-probe-nginx-controller={{ $name }}
+              {{- end }}
+              {{- range $name := .Values.upmeter.internal.dynamicProbes.cloudEphemeralNodeGroupNames }}
+            - --dynamic-probe-nodegroup={{ $name }}
+              {{- end }}
+              {{- range $zone := .Values.upmeter.internal.dynamicProbes.zones }}
+            - --dynamic-probe-known-zone={{ $zone }}
+              {{- end }}
+            {{- end }}
           volumeMounts:
           - mountPath: /db
             name: data

@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 
 	"d8.io/upmeter/pkg/check"
-	v1 "d8.io/upmeter/pkg/crd/v1"
 	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/monitor/remotewrite"
 )
 
 // syncer links puller and exporter via channel in exporter
@@ -214,7 +214,7 @@ type exportingConfig struct {
 	slotSize       time.Duration
 }
 
-func newExportConfig(rw *v1.RemoteWrite, headers map[string]string) exportingConfig {
+func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exportingConfig {
 	var labels []*prompb.Label
 	for k, v := range rw.Spec.AdditionalLabels {
 		labels = append(labels, &prompb.Label{

@@ -98,10 +98,18 @@ spec:
           - /upmeter
           - start
           - --origins={{ index .Values.global.discovery "clusterMasterCount" }}
+          - --user-agent=Upmeter/1.0 (Deckhouse {{ $.Values.global.deckhouseEdition }} {{ $.Values.global.deckhouseVersion }})
           {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
           - --disable-probe={{ $probeRef }}
           {{- end }}
-          - --user-agent=Upmeter/1.0 (Deckhouse {{ $.Values.global.deckhouseEdition }} {{ $.Values.global.deckhouseVersion }})
+          {{- if .Values.upmeter.internal.dynamicProbes }}
+            {{- range $name := .Values.upmeter.internal.dynamicProbes.ingressControllerNames }}
+          - --dynamic-probe-nginx-controller={{ $name }}
+            {{- end }}
+            {{- range $name := .Values.upmeter.internal.dynamicProbes.cloudEphemeralNodeGroupNames }}
+          - --dynamic-probe-nodegroup={{ $name }}
+            {{- end }}
+          {{- end }}
         env:
           - name: UPMETER_DB_PATH
             value: "/db/downtime.db.sqlite"

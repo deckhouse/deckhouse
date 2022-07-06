@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package crd
+package remotewrite
 
 import (
 	"context"
@@ -26,26 +26,24 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	v1 "d8.io/upmeter/pkg/crd/v1"
 )
 
-type HookProbeMonitor struct {
+type Monitor struct {
 	monitor kube_events_manager.Monitor
 	logger  *log.Entry
 }
 
-func NewHookProbeMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *HookProbeMonitor {
+func NewMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
 
-	return &HookProbeMonitor{
+	return &Monitor{
 		monitor: monitor,
 		logger:  logger,
 	}
 }
 
-func (m *HookProbeMonitor) Start(ctx context.Context) error {
+func (m *Monitor) Start(ctx context.Context) error {
 	config := &kube_events_manager.MonitorConfig{
 		Metadata: struct {
 			MonitorId    string
@@ -53,8 +51,8 @@ func (m *HookProbeMonitor) Start(ctx context.Context) error {
 			LogLabels    map[string]string
 			MetricLabels map[string]string
 		}{
-			"upmeterhookprobe-crd",
-			"upmeterhookprobe-crd",
+			"upmeterremotewrite-monitor",
+			"upmeterremotewrite-monitor",
 			map[string]string{},
 			map[string]string{},
 		},
@@ -64,8 +62,8 @@ func (m *HookProbeMonitor) Start(ctx context.Context) error {
 			types.WatchEventDeleted,
 		},
 		ApiVersion:              "deckhouse.io/v1",
-		Kind:                    "UpmeterHookProbe",
-		LogEntry:                m.logger.WithField("component", "upmeterhookprobe-monitor"),
+		Kind:                    "UpmeterRemoteWrite",
+		LogEntry:                m.logger.WithField("component", "upmeterremotewrite-monitor"),
 		KeepFullObjectsInMemory: true,
 	}
 
@@ -82,23 +80,23 @@ func (m *HookProbeMonitor) Start(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (m *HookProbeMonitor) Stop() {
+func (m *Monitor) Stop() {
 	m.monitor.Stop()
 }
 
-func (m *HookProbeMonitor) getLogger() *log.Entry {
+func (m *Monitor) getLogger() *log.Entry {
 	return m.monitor.GetConfig().LogEntry
 }
 
-func (m *HookProbeMonitor) Subscribe(handler HookProbeChangeHandler) {
+func (m *Monitor) Subscribe(handler RemoteWriteChangeHandler) {
 	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
 		// One event and one object per change, we always have single item in these lists.
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
 
-		obj, err := convertHookProbe(raw)
+		obj, err := convertRemoteWrite(raw)
 		if err != nil {
-			m.getLogger().Errorf("cannot convert UpmeterHookProbe object: %v", err)
+			m.getLogger().Errorf("cannot convert UpmeterRemoteWrite object: %v", err)
 			return
 		}
 
@@ -113,10 +111,10 @@ func (m *HookProbeMonitor) Subscribe(handler HookProbeChangeHandler) {
 	})
 }
 
-func (m *HookProbeMonitor) List() ([]*v1.HookProbe, error) {
-	res := make([]*v1.HookProbe, 0)
+func (m *Monitor) List() ([]*RemoteWrite, error) {
+	res := make([]*RemoteWrite, 0)
 	for _, obj := range m.monitor.GetExistedObjects() {
-		rw, err := convertHookProbe(obj.Object)
+		rw, err := convertRemoteWrite(obj.Object)
 		if err != nil {
 			return nil, err
 		}
@@ -125,17 +123,17 @@ func (m *HookProbeMonitor) List() ([]*v1.HookProbe, error) {
 	return res, nil
 }
 
-func convertHookProbe(o *unstructured.Unstructured) (*v1.HookProbe, error) {
-	var rw v1.HookProbe
+func convertRemoteWrite(o *unstructured.Unstructured) (*RemoteWrite, error) {
+	var rw RemoteWrite
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &rw)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to v1.HookProbe: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to v1.RemoteWrite: %v", err)
 	}
 	return &rw, nil
 }
 
-type HookProbeChangeHandler interface {
-	OnAdd(*v1.HookProbe)
-	OnModify(*v1.HookProbe)
-	OnDelete(*v1.HookProbe)
+type RemoteWriteChangeHandler interface {
+	OnAdd(*RemoteWrite)
+	OnModify(*RemoteWrite)
+	OnDelete(*RemoteWrite)
 }

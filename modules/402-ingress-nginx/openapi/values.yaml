@@ -279,3 +279,12 @@ properties:
         type: boolean
         default: false
         description: Has 2+ controllers with different versions but same ingress class
+      upmeterDiscovery:
+        type: object
+        required:
+        - controllerNames
+        properties:
+          controllerNames:
+            type: array
+            items:
+              type: string

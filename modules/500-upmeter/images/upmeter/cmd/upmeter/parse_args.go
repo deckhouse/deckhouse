@@ -56,6 +56,14 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 	cmd.Flag("disable-probe", "Group or probe to omit by default.").
 		StringsVar(&config.DisabledProbes)
 
+	// IngressNginxController name for dynamic probes
+	cmd.Flag("dynamic-probe-nginx-controller", "Ingress Controller name tracked by probes").
+		StringsVar(&config.DynamicProbes.IngressControllers)
+
+	// NodeGroup name for dynamic probes
+	cmd.Flag("dynamic-probe-nodegroup", "Node Group name tracked by probes").
+		StringsVar(&config.DynamicProbes.NodeGroups)
+
 	// User-Agent
 	// TODO generate from CI?
 	cmd.Flag("user-agent", "User Agent for HTTP client").
@@ -101,6 +109,18 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 	// command-line argument.
 	cmd.Flag("disable-probe", "Group or probe to disable.").
 		StringsVar(&config.DisabledProbes)
+
+	// IngressNginxController name for dynamic probes
+	cmd.Flag("dynamic-probe-nginx-controller", "Ingress Controller name to track by probes").
+		StringsVar(&config.DynamicProbes.IngressControllers)
+
+	// NodeGroup name for dynamic probes
+	cmd.Flag("dynamic-probe-nodegroup", "Node Group name to track by probes").
+		StringsVar(&config.DynamicProbes.NodeGroups)
+
+	// Known availability zones
+	cmd.Flag("dynamic-probe-known-zone", "A known zone for node group").
+		StringsVar(&config.DynamicProbes.Zones)
 
 	// User-Agent
 	// TODO generate from CI?
