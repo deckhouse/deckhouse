@@ -60,6 +60,7 @@ cloudProviderAzure:
 			Expect(f.ValuesGet("cloudProviderAzure.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
+    "cachingMode": "None",
     "name": "managed-standard-ssd",
     "type": "StandardSSD_LRS"
   },
@@ -69,6 +70,21 @@ cloudProviderAzure:
   },
   {
     "name": "managed-premium",
+    "type": "Premium_LRS"
+  },
+  {
+    "cachingMode": "None",
+    "name": "managed-standard-ssd-large",
+    "type": "StandardSSD_LRS"
+  },
+  {
+    "cachingMode": "None",
+    "name": "managed-standard-large",
+    "type": "Standard_LRS"
+  },
+  {
+    "cachingMode": "None",
+    "name": "managed-premium-large",
     "type": "Premium_LRS"
   },
   {
