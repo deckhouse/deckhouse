@@ -95,12 +95,12 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			check:  "_",
 			period: time.Minute,
 			config: checker.CertificateSecretLifecycle{
-				Access:                    access,
-				Namespace:                 namespace,
-				AgentID:                   run.ID(),
-				CreationTimeout:           5 * time.Second,
-				DeletionTimeout:           20 * time.Second,
-				ControlPlaneAccessTimeout: cpTimeout,
+				Access:                  access,
+				Namespace:               namespace,
+				AgentID:                 run.ID(),
+				CreationTimeout:         5 * time.Second,
+				DeletionTimeout:         5 * time.Second,
+				SecretTransitionTimeout: 5 * time.Second,
 			},
 		},
 	}

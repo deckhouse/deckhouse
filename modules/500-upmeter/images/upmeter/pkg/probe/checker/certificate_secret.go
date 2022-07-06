@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,169 +33,42 @@ import (
 
 // CertificateSecretLifecycle is a checker constructor and configurator
 type CertificateSecretLifecycle struct {
-	Access    kubernetes.Access
+	Access kubernetes.Access
+
 	Namespace string
 	AgentID   string
 
-	CreationTimeout time.Duration
-	DeletionTimeout time.Duration
-
-	ControlPlaneAccessTimeout time.Duration
+	CreationTimeout         time.Duration
+	DeletionTimeout         time.Duration
+	SecretTransitionTimeout time.Duration
 }
 
 func (c CertificateSecretLifecycle) Checker() check.Checker {
-	return &CertificateSecretLifecycleChecker{
-		Access:    c.Access,
-		Namespace: c.Namespace,
-		AgentID:   c.AgentID,
+	preflight := newK8sVersionGetter(c.Access)
 
-		CreationTimeout: c.CreationTimeout,
-		DeletionTimeout: c.DeletionTimeout,
+	name := run.StaticIdentifier("upmeter-probe-cert-manager")
 
-		ControlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
-	}
-}
+	certGetter := &certificateGetter{access: c.Access, namespace: c.Namespace, name: name}
+	certCreator := &certificateCreator{access: c.Access, namespace: c.Namespace, name: name, agentID: c.AgentID}
+	certDeleter := &certificateDeleter{access: c.Access, namespace: c.Namespace, name: name}
 
-type CertificateSecretLifecycleChecker struct {
-	Access    kubernetes.Access
-	Namespace string
-	AgentID   string
+	certSecretGetter := &secretGetter{access: c.Access, namespace: c.Namespace, name: name}
+	certSecretDeleter := &secretDeleter{access: c.Access, namespace: c.Namespace, name: name}
 
-	CreationTimeout time.Duration
-	DeletionTimeout time.Duration
+	checker := &KubeControllerObjectLifecycle{
+		preflight: preflight,
 
-	ControlPlaneAccessTimeout time.Duration
-}
+		parentGetter:  certGetter,
+		parentCreator: certCreator,
+		parentDeleter: certDeleter,
 
-func (c *CertificateSecretLifecycleChecker) Check() check.Error {
-	return c.new(c.name()).Check()
-}
-
-func (c *CertificateSecretLifecycleChecker) name() string {
-	// should be new for each run in order not to get stuck with created object
-	return run.StaticIdentifier("upmeter-cm-probe")
-}
-
-func (c *CertificateSecretLifecycleChecker) new(name string) check.Checker {
-	pingControlPlaneOrUnknown := newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout)
-
-	createCert := &certificateCreator{
-		access:    c.Access,
-		name:      name,
-		agentID:   c.AgentID,
-		namespace: c.Namespace,
+		childGetter:          certSecretGetter,
+		childDeleter:         certSecretDeleter,
+		childPollingInterval: c.SecretTransitionTimeout / 10,
+		childPollingTimeout:  c.SecretTransitionTimeout,
 	}
 
-	deleteCert := &certificateDeleter{
-		access:    c.Access,
-		name:      name,
-		namespace: c.Namespace,
-	}
-
-	createCertOrUnknown := doOrUnknown(c.CreationTimeout, createCert)
-
-	getSecretOrFail := withTimeout(
-		&secretExistenceChecker{
-			access:    c.Access,
-			name:      name,
-			namespace: c.Namespace,
-		},
-		c.ControlPlaneAccessTimeout,
-	)
-
-	getNoSecretOrFail := withTimeout(
-		&secretNonexistenceChecker{
-			access:    c.Access,
-			name:      name,
-			namespace: c.Namespace,
-		},
-		c.ControlPlaneAccessTimeout,
-	)
-
-	return sequence(
-		pingControlPlaneOrUnknown,
-		createCertOrUnknown,
-		withFinalizer(
-			getSecretOrFail,
-			deleteCert,
-		),
-		getNoSecretOrFail,
-	)
-}
-
-type CertificateSecretLifecycleChecker2 struct {
-	controlPlanePreflight   check.Checker
-	garbagePreflight        check.Checker
-	createCertOrUnknown     check.Checker
-	getSecretPresenceOrFail check.Checker
-	deleteCertFinalizer     check.Checker
-	getSecretAbsenceOrFail  check.Checker
-}
-
-func (c *CertificateSecretLifecycleChecker2) Check() check.Error {
-	return sequence(
-		c.controlPlanePreflight,
-		c.garbagePreflight,
-		c.createCertOrUnknown,
-		withFinalizerChecker(
-			c.getSecretPresenceOrFail,
-			c.deleteCertFinalizer,
-		),
-		c.getSecretAbsenceOrFail,
-	).Check()
-}
-
-type CertificateSecretLifecycleChecker3 struct {
-	pingControlPlane doer
-	checkGarbage     doer
-
-	createCert doer
-	deleteCert doer
-
-	getSecretPresence doer
-	getSecretAbsence  doer
-
-	preflightTimeout time.Duration
-	creationTimeout  time.Duration
-	deletionTimeout  time.Duration
-}
-
-// require is a handy wrapper. It wraps timeout checker and doer interface,
-// if time is out or doer returns error, the checker returns check.ErrFail
-func require(timeout time.Duration, doer doer) check.Checker {
-	return withTimeout(&failCheckWrapper{doer}, timeout)
-}
-
-// ensure is a handy wrapper. It wraps timeout checker and doer interface,
-// if time is out or doer returns error, the checker returns check.ErrUnknown
-func ensure(timeout time.Duration, doer doer) check.Checker {
-	return withTimeout(&unknownCheckWrapper{doer}, timeout)
-}
-
-func (c *CertificateSecretLifecycleChecker3) Check() check.Error {
-	return sequence(
-		ensure(c.preflightTimeout, c.pingControlPlane),
-		ensure(c.preflightTimeout, c.checkGarbage),
-
-		ensure(c.creationTimeout, c.createCert),
-		withFinalizerChecker(
-			require(c.creationTimeout, c.createCert),
-			ensure(c.deletionTimeout, c.deleteCert),
-		),
-		require(c.deletionTimeout, c.getSecretAbsence),
-	).Check()
-
-	// return sequence(
-	//	doOrUnknown(c.preflightTimeout, c.pingControlPlane),
-	//	doOrUnknown(c.preflightTimeout, c.checkGarbage),
-	//
-	//	doOrUnknown(c.creationTimeout, c.createCert),
-	//	withFinalizerChecker(
-	//		doOrFail(c.creationTimeout, c.createCert),
-	//		doOrUnknown(c.deletionTimeout, c.deleteCert),
-	//	),
-	//	doOrFail(c.deletionTimeout, c.getSecretAbsence),
-	// ).Check()
+	return checker
 }
 
 type certificateCreator struct {
@@ -238,40 +110,40 @@ func (c *certificateDeleter) Do(ctx context.Context) error {
 		Delete(c.name, &metav1.DeleteOptions{})
 }
 
-type secretExistenceChecker struct {
+type certificateGetter struct {
 	access    kubernetes.Access
 	name      string
 	namespace string
 }
 
-func (c *secretExistenceChecker) Check() check.Error {
-	_, err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Get(c.name, metav1.GetOptions{})
-	if err == nil {
-		return nil
-	}
-
-	if apierrors.IsNotFound(err) {
-		return check.ErrFail("secret %s/%s is not there: %w", c.namespace, c.name, err)
-	}
-
-	return check.ErrUnknown("getting %s/%s: %w", c.namespace, c.name, err)
+func (c *certificateGetter) Do(ctx context.Context) error {
+	_, err := c.access.Kubernetes().Dynamic().
+		Resource(certificateGVR).
+		Namespace(c.namespace).
+		Get(c.name, metav1.GetOptions{})
+	return err
 }
 
-type secretNonexistenceChecker struct {
+type secretGetter struct {
 	access    kubernetes.Access
 	name      string
 	namespace string
 }
 
-func (c *secretNonexistenceChecker) Check() check.Error {
+func (c *secretGetter) Do(_ context.Context) error {
 	_, err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Get(c.name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return check.ErrUnknown("getting %s/%s: %w", c.namespace, c.name, err)
-	}
-	return check.ErrFail("secret %s/%s is still there", c.namespace, c.name)
+	return err
+}
+
+type secretDeleter struct {
+	access    kubernetes.Access
+	name      string
+	namespace string
+}
+
+func (c *secretDeleter) Do(_ context.Context) error {
+	err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
+	return err
 }
 
 var certificateGVR = schema.GroupVersionResource{
