@@ -17,4 +17,4 @@
         .spec.ports[] do not make any sense for services with a type `ExternalName` but
         istio renders for External Services with ports listener "0.0.0.0:port" which catch all the traffic to the port. It is a problem for services out of istio registry.
 
-        It is recommended to get rid of ports section (.spec.ports). It is safe.
+        It is recommended to get rid of ports section (`.spec.ports`). It is safe.
