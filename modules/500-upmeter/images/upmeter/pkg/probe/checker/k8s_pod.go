@@ -199,6 +199,46 @@ func (c *podDeletionChecker) Check() check.Error {
 	return nil
 }
 
+func createPodObjectWithName(podName, nodeName string, image *kubernetes.ProbeImage) *v1.Pod {
+	nodeAffinity := createNodeAffinityObject(nodeName)
+
+	return &v1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: podName,
+			Labels: map[string]string{
+				"heritage":      "upmeter",
+				"upmeter-agent": run.ID(),
+				"upmeter-group": "control-plane",
+				"upmeter-probe": "scheduler",
+			},
+		},
+		Spec: v1.PodSpec{
+			ImagePullSecrets: image.PullSecrets(),
+			Containers: []v1.Container{
+				{
+					Name:            "pause",
+					Image:           image.Name(),
+					ImagePullPolicy: v1.PullIfNotPresent,
+					Command: []string{
+						"true",
+					},
+				},
+			},
+			RestartPolicy: v1.RestartPolicyNever,
+			Tolerations: []v1.Toleration{
+				{Operator: v1.TolerationOpExists},
+			},
+			Affinity: &v1.Affinity{
+				NodeAffinity: nodeAffinity,
+			},
+		},
+	}
+}
+
 func createPodObject(nodeName string, image *kubernetes.ProbeImage) *v1.Pod {
 	nodeAffinity := createNodeAffinityObject(nodeName)
 
