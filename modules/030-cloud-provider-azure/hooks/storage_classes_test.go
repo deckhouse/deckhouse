@@ -74,17 +74,17 @@ cloudProviderAzure:
   },
   {
     "cachingMode": "None",
-    "name": "managed-standard-ssd-huge",
+    "name": "managed-standard-ssd-large",
     "type": "StandardSSD_LRS"
   },
   {
     "cachingMode": "None",
-    "name": "managed-standard-huge",
+    "name": "managed-standard-large",
     "type": "Standard_LRS"
   },
   {
     "cachingMode": "None",
-    "name": "managed-premium-huge",
+    "name": "managed-premium-large",
     "type": "Premium_LRS"
   },
   {
