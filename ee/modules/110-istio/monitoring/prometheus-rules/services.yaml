@@ -14,6 +14,7 @@
       summary: Found external service with irrelevant ports spec
       description: |
         There is service in the namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant ports spec.
-        .spec.ports[] do not make any sense for services with a type `ExternalName` but Istio captures all traffic on a specified port/ports and generates overload.
+        .spec.ports[] do not make any sense for services with a type `ExternalName` but
+        istio renders for External Services with ports listener "0.0.0.0:port" which catch all the traffic to the port. It is a problem for services out of istio registry.
 
-        Please remove `.spec.ports` from service configuration.
+        It is recommended to get rid of ports section (.spec.ports). It is safe.

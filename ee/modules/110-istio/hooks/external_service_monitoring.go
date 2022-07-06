@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// istio hijack all traffic on a services with type: ExternalName and specified .spec.ports[]
-// while those ports do not make any sense for external service. Figure out the irrelavant services and make an alert about them
+// There is an issue in [istio](https://github.com/istio/istio/issues/20703) with [staled solution](https://github.com/istio/istio/issues/37331)
+// istio renders for External Services with ports listener "0.0.0.0:port" which catch all the traffic to the port. It is a problem for services out of istio registry.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/istio/external-service-monitoring",
