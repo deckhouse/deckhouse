@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"sigs.k8s.io/yaml"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,13 +51,15 @@ spec:
   secretTemplate:
     labels:
       heritage: upmeter
-	  upmeter-agent: "xyz"
-	  upmeter-group: control-plane
-	  upmeter-probe: cert-manager
+      upmeter-agent: "xyz"
+      upmeter-group: control-plane
+      upmeter-probe: cert-manager
 `
 	assert.Equal(t, expected, manifest)
 
-	// TODO test the YAML for validity
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(manifest), obj)
+	assert.NoError(t, err, "YAML is expected to be valid")
 }
 
 // dummyChecker is for mocking checkers

@@ -303,9 +303,9 @@ spec:
   secretTemplate:
     labels:
       heritage: upmeter
-	  upmeter-agent: %q
-	  upmeter-group: control-plane
-	  upmeter-probe: cert-manager
+      upmeter-agent: %q
+      upmeter-group: control-plane
+      upmeter-probe: cert-manager
 `
 
 	return fmt.Sprintf(tpl,
