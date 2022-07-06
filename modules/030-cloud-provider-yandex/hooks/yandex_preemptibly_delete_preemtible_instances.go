@@ -101,11 +101,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                   "machines",
-			ExecuteHookOnEvents:    go_hook.Bool(false),
-			WaitForSynchronization: go_hook.Bool(false),
-			ApiVersion:             "machine.sapcloud.io/v1alpha1",
-			Kind:                   "Machine",
+			Name:                         "machines",
+			ExecuteHookOnEvents:          go_hook.Bool(false),
+			WaitForSynchronization:       go_hook.Bool(false),
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			ApiVersion:                   "machine.sapcloud.io/v1alpha1",
+			Kind:                         "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-cloud-instance-manager"},
@@ -114,12 +115,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyMachineFilter,
 		},
 		{
-			Name:                   "ics",
-			ExecuteHookOnEvents:    go_hook.Bool(false),
-			WaitForSynchronization: go_hook.Bool(false),
-			ApiVersion:             "deckhouse.io/v1",
-			Kind:                   "YandexInstanceClass",
-			FilterFunc:             isPreemptibleFilter,
+			Name:                         "ics",
+			ExecuteHookOnEvents:          go_hook.Bool(false),
+			WaitForSynchronization:       go_hook.Bool(false),
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			ApiVersion:                   "deckhouse.io/v1",
+			Kind:                         "YandexInstanceClass",
+			FilterFunc:                   isPreemptibleFilter,
 		},
 	},
 }, deleteMachines)
