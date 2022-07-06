@@ -1,0 +1,22 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: audit-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
+  destinationRefs:
+  - audit-logs
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: audit-logs
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki-test:3100
+  extraLabels:
+    log_shipper_source: audit-logs
