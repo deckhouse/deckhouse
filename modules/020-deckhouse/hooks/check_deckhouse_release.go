@@ -149,7 +149,6 @@ releaseLoop:
 					patch := buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend)
 					input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name)
 				}
-
 			}
 
 			return nil
