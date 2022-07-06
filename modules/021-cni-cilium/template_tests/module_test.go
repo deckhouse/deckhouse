@@ -58,10 +58,10 @@ modulesImages:
   registryScheme: https
   tags:
     common:
-      kubeRbacProxy: hash
+      kubeRbacProxy: imagehash
     cniCilium:
-      cilium: hash
-      operator: hash
+      cilium: imagehash
+      operator: imagehash
 modules:
   https:
     mode: CustomCertificate

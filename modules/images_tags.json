@@ -1,0 +1,420 @@
+{
+  "linstor": {
+    "piraeusOperator": "imagehash",
+    "linstorCsi": "imagehash",
+    "drbdReactor": "imagehash",
+    "linstorSchedulerExtender": "imagehash",
+    "piraeusHaController": "imagehash",
+    "linstorServer": "imagehash",
+    "drbdDriverLoader": "imagehash",
+    "linstorPoolsImporter": "imagehash"
+  },
+  "cloudProviderYandex": {
+    "yandexCsiPlugin": "imagehash",
+    "cloudControllerManager120": "imagehash",
+    "cloudControllerManager121": "imagehash",
+    "cloudControllerManager122": "imagehash",
+    "cloudControllerManager123": "imagehash",
+    "cloudControllerManager119": "imagehash",
+    "cloudMetricsExporter": "imagehash"
+  },
+  "userAuthz": {
+    "webhook": "imagehash"
+  },
+  "deckhouseWeb": {
+    "web": "imagehash"
+  },
+  "registrypackages": {
+    "containerdDebian1431Stretch": "imagehash",
+    "kubeletCentos1238": "imagehash",
+    "kubeadmCentos12114": "imagehash",
+    "kubernetesCniDebian087": "imagehash",
+    "dockerDebian519031530DebianStretch": "imagehash",
+    "containerdFe1511": "imagehash",
+    "kubeletCentos11916": "imagehash",
+    "containerdUbuntu1461Focal": "imagehash",
+    "kubeletCentos12211": "imagehash",
+    "kubectlDebian12015": "imagehash",
+    "kubeadmDebian12015": "imagehash",
+    "kubeletDebian1238": "imagehash",
+    "kubectlCentos1238": "imagehash",
+    "kubeletCentos12114": "imagehash",
+    "kubeletDebian12211": "imagehash",
+    "virtWhatDebian1151Deb9u1": "imagehash",
+    "kubectlUbuntu12015": "imagehash",
+    "containerdDebian1461Bullseye": "imagehash",
+    "dockerUbuntu51809730UbuntuXenial": "imagehash",
+    "inotifyToolsCentos73149": "imagehash",
+    "kubeletUbuntu1238": "imagehash",
+    "conntrackDebian1462": "imagehash",
+    "kubernetesCniUbuntu087": "imagehash",
+    "kubeadmCentos1238": "imagehash",
+    "kubeadmUbuntu11916": "imagehash",
+    "dockerUbuntu520101430UbuntuJammy": "imagehash",
+    "dockerUbuntu519031330UbuntuFocal": "imagehash",
+    "containerdDebian1461Buster": "imagehash",
+    "kubernetesCniCentos087": "imagehash",
+    "kubeletUbuntu11916": "imagehash",
+    "containerdDebian15111Bullseye": "imagehash",
+    "containerdCentos151131El8X8664": "imagehash",
+    "kubeadmCentos12211": "imagehash",
+    "kubeletUbuntu12015": "imagehash",
+    "containerdCentos14631El7X8664": "imagehash",
+    "kubectlDebian11916": "imagehash",
+    "crictl119": "imagehash",
+    "containerdUbuntu15111Focal": "imagehash",
+    "kubeletCentos12015": "imagehash",
+    "dockerCentos180993El7X86647": "imagehash",
+    "containerdUbuntu15111Bionic": "imagehash",
+    "kubectlCentos11916": "imagehash",
+    "kubeadmUbuntu12015": "imagehash",
+    "kubeletDebian11916": "imagehash",
+    "containerdCentos14631El8X8664": "imagehash",
+    "containerdCentos151131El7X8664": "imagehash",
+    "kubeletDebian12015": "imagehash",
+    "kubectlCentos12015": "imagehash",
+    "containerdUbuntu15111Jammy": "imagehash",
+    "d8Curl7800": "imagehash",
+    "kubectlDebian12114": "imagehash",
+    "kubeadmCentos12015": "imagehash",
+    "kubeadmUbuntu12211": "imagehash",
+    "kubectlUbuntu1238": "imagehash",
+    "kubectlUbuntu12114": "imagehash",
+    "kubeadmUbuntu1238": "imagehash",
+    "kubectlCentos12211": "imagehash",
+    "dockerDebian520101230DebianBullseye": "imagehash",
+    "kubeletUbuntu12114": "imagehash",
+    "crictl122": "imagehash",
+    "kubeadmUbuntu12114": "imagehash",
+    "crictl123": "imagehash",
+    "dockerDebian520101230DebianBuster": "imagehash",
+    "kubectlDebian1238": "imagehash",
+    "kubeadmDebian1238": "imagehash",
+    "crictl120": "imagehash",
+    "containerdDebian15111Buster": "imagehash",
+    "containerdUbuntu1461Bionic": "imagehash",
+    "kubectlCentos12114": "imagehash",
+    "crictl121": "imagehash",
+    "kubeadmDebian11916": "imagehash",
+    "kubectlDebian12211": "imagehash",
+    "kubeadmDebian12211": "imagehash",
+    "kubeadmCentos11916": "imagehash",
+    "kubectlUbuntu12211": "imagehash",
+    "jq16": "imagehash",
+    "containerdUbuntu1461Xenial": "imagehash",
+    "dockerUbuntu519031330UbuntuBionic": "imagehash",
+    "kubeletDebian12114": "imagehash",
+    "kubeadmDebian12114": "imagehash",
+    "kubectlUbuntu11916": "imagehash",
+    "dockerCentos1903153El8X86648": "imagehash",
+    "inotifyToolsCentos831419": "imagehash",
+    "kubeletUbuntu12211": "imagehash"
+  },
+  "openvpn": {
+    "ovpnAdmin": "imagehash",
+    "easyrsaMigrator": "imagehash",
+    "openvpn": "imagehash"
+  },
+  "certManager": {
+    "certManagerAcmeSolver": "imagehash",
+    "certManagerCainjector": "imagehash",
+    "legacyCertManagerAcmeSolver": "imagehash",
+    "certManagerController": "imagehash",
+    "annotationsConverter": "imagehash",
+    "legacyCertManagerController": "imagehash",
+    "legacyCertManagerWebhook": "imagehash",
+    "certManagerWebhook": "imagehash",
+    "legacyCertManagerCainjector": "imagehash"
+  },
+  "common": {
+    "csiLivenessprobe119": "imagehash",
+    "pause": "imagehash",
+    "csiExternalSnapshotter119": "imagehash",
+    "csiExternalResizer122": "imagehash",
+    "csiExternalResizer123": "imagehash",
+    "csiExternalResizer120": "imagehash",
+    "csiExternalResizer121": "imagehash",
+    "csiExternalResizer119": "imagehash",
+    "alpine": "imagehash",
+    "kubeRbacProxy": "imagehash",
+    "csiExternalSnapshotter123": "imagehash",
+    "csiExternalSnapshotter122": "imagehash",
+    "csiExternalSnapshotter121": "imagehash",
+    "csiExternalSnapshotter120": "imagehash",
+    "csiNodeDriverRegistrar119": "imagehash",
+    "csiNodeDriverRegistrar120": "imagehash",
+    "csiNodeDriverRegistrar121": "imagehash",
+    "csiNodeDriverRegistrar122": "imagehash",
+    "csiNodeDriverRegistrar123": "imagehash",
+    "csiExternalProvisioner120": "imagehash",
+    "csiExternalProvisioner121": "imagehash",
+    "csiExternalProvisioner122": "imagehash",
+    "csiExternalProvisioner123": "imagehash",
+    "csiExternalProvisioner119": "imagehash",
+    "csiLivenessprobe120": "imagehash",
+    "csiLivenessprobe121": "imagehash",
+    "csiLivenessprobe122": "imagehash",
+    "csiLivenessprobe123": "imagehash",
+    "csiExternalAttacher119": "imagehash",
+    "csiExternalAttacher120": "imagehash",
+    "csiExternalAttacher121": "imagehash",
+    "csiExternalAttacher122": "imagehash",
+    "csiExternalAttacher123": "imagehash"
+  },
+  "istio": {
+    "operatorV1x12": "imagehash",
+    "operatorV1x13": "imagehash",
+    "metadataDiscovery": "imagehash",
+    "operatorV1x10x1": "imagehash",
+    "apiProxy": "imagehash",
+    "pilotV1x12": "imagehash",
+    "pilotV1x13": "imagehash",
+    "kiali": "imagehash",
+    "metadataExporter": "imagehash",
+    "pilotV1x10x1": "imagehash",
+    "proxyv2V1x12": "imagehash",
+    "proxyv2V1x13": "imagehash",
+    "proxyv2V1x10x1": "imagehash"
+  },
+  "ciliumHubble": {
+    "uiFrontend": "imagehash",
+    "uiProxy": "imagehash",
+    "uiBackend": "imagehash",
+    "relay": "imagehash"
+  },
+  "snapshotController": {
+    "snapshotValidationWebhook": "imagehash",
+    "snapshotController": "imagehash"
+  },
+  "prometheus": {
+    "grafana": "imagehash",
+    "alertmanager": "imagehash",
+    "prometheus": "imagehash",
+    "trickster": "imagehash",
+    "grafanaDashboardProvisioner": "imagehash"
+  },
+  "kubeProxy": {
+    "initContainer": "imagehash",
+    "kubeProxy119": "imagehash",
+    "kubeProxy123": "imagehash",
+    "kubeProxy122": "imagehash",
+    "kubeProxy121": "imagehash",
+    "kubeProxy120": "imagehash"
+  },
+  "nodeManager": {
+    "clusterAutoscaler": "imagehash",
+    "machineControllerManager": "imagehash",
+    "bashibleApiserver": "imagehash"
+  },
+  "terraformManager": {
+    "terraformManagerAws": "imagehash",
+    "terraformManagerGcp": "imagehash",
+    "terraformManagerVsphere": "imagehash",
+    "terraformManagerAzure": "imagehash",
+    "terraformManagerOpenstack": "imagehash",
+    "baseTerraformManager": "imagehash",
+    "terraformManagerYandex": "imagehash"
+  },
+  "cephCsi": {
+    "cephcsi": "imagehash"
+  },
+  "upmeter": {
+    "smokeMini": "imagehash",
+    "webui": "imagehash",
+    "status": "imagehash",
+    "upmeter": "imagehash"
+  },
+  "cloudProviderAws": {
+    "ebsCsiPlugin": "imagehash",
+    "cloudControllerManager122": "imagehash",
+    "cloudControllerManager123": "imagehash",
+    "cloudControllerManager120": "imagehash",
+    "cloudControllerManager121": "imagehash",
+    "cloudControllerManager119": "imagehash",
+    "nodeTerminationHandler": "imagehash"
+  },
+  "monitoringKubernetes": {
+    "kubeletEvictionThresholdsExporter": "imagehash",
+    "kubeStateMetrics": "imagehash",
+    "nodeExporter": "imagehash",
+    "kubernetesOomkillExporter": "imagehash",
+    "ebpfExporter": "imagehash"
+  },
+  "networkGateway": {
+    "snat": "imagehash",
+    "dnsmasq": "imagehash"
+  },
+  "metallb": {
+    "speaker": "imagehash",
+    "controller": "imagehash"
+  },
+  "extendedMonitoring": {
+    "certExporter": "imagehash",
+    "eventsExporter": "imagehash",
+    "imageAvailabilityExporter": "imagehash",
+    "extendedMonitoringExporter": "imagehash"
+  },
+  "controlPlaneManager": {
+    "kubeScheduler119": "imagehash",
+    "controlPlaneManager119": "imagehash",
+    "controlPlaneManager123": "imagehash",
+    "controlPlaneManager122": "imagehash",
+    "controlPlaneManager121": "imagehash",
+    "kubeApiserverHealthcheck": "imagehash",
+    "controlPlaneManager120": "imagehash",
+    "kubeScheduler121": "imagehash",
+    "kubeScheduler120": "imagehash",
+    "kubeScheduler123": "imagehash",
+    "kubeScheduler122": "imagehash",
+    "kubeApiserver119": "imagehash",
+    "kubernetesApiProxy": "imagehash",
+    "kubeApiserver123": "imagehash",
+    "kubeApiserver122": "imagehash",
+    "kubeApiserver121": "imagehash",
+    "kubeControllerManager119": "imagehash",
+    "kubeApiserver120": "imagehash",
+    "kubeControllerManager123": "imagehash",
+    "kubeControllerManager122": "imagehash",
+    "kubeControllerManager121": "imagehash",
+    "kubeControllerManager120": "imagehash",
+    "etcd": "imagehash"
+  },
+  "cniCilium": {
+    "operator": "imagehash",
+    "cilium": "imagehash"
+  },
+  "localPathProvisioner": {
+    "helper": "imagehash",
+    "localPathProvisioner": "imagehash"
+  },
+  "monitoringPing": {
+    "monitoringPing": "imagehash"
+  },
+  "userAuthn": {
+    "kubeconfigGenerator": "imagehash",
+    "dexAuthenticatorRedis": "imagehash",
+    "dex": "imagehash",
+    "cfssl": "imagehash",
+    "crowdBasicAuthProxy": "imagehash",
+    "dexAuthenticator": "imagehash"
+  },
+  "deckhouse": {
+    "imagesCopier": "imagehash",
+    "webhookHandler": "imagehash"
+  },
+  "ingressNginx": {
+    "controller11": "imagehash",
+    "controller026": "imagehash",
+    "controller025": "imagehash",
+    "nginxExporter": "imagehash",
+    "proxyFailoverIptables": "imagehash",
+    "proxyFailover": "imagehash",
+    "controller046": "imagehash",
+    "controller033": "imagehash",
+    "protobufExporter": "imagehash",
+    "controller049": "imagehash",
+    "controller048": "imagehash"
+  },
+  "monitoringKubernetesControlPlane": {
+    "proxy": "imagehash"
+  },
+  "podReloader": {
+    "podReloader": "imagehash"
+  },
+  "flantIntegration": {
+    "flantPricing": "imagehash",
+    "madisonProxy": "imagehash",
+    "grafanaAgent": "imagehash"
+  },
+  "verticalPodAutoscaler": {
+    "admissionController": "imagehash",
+    "updater": "imagehash",
+    "recommender": "imagehash"
+  },
+  "cniSimpleBridge": {
+    "simpleBridge": "imagehash"
+  },
+  "nodeLocalDns": {
+    "iptablesLoop": "imagehash",
+    "coredns": "imagehash"
+  },
+  "cloudProviderOpenstack": {
+    "cinderCsiPlugin120": "imagehash",
+    "cinderCsiPlugin119": "imagehash",
+    "cinderCsiPlugin121": "imagehash",
+    "cinderCsiPlugin122": "imagehash",
+    "cinderCsiPlugin123": "imagehash",
+    "cloudControllerManager121": "imagehash",
+    "cloudControllerManager119": "imagehash",
+    "cloudControllerManager120": "imagehash",
+    "cloudControllerManager123": "imagehash",
+    "cloudControllerManager122": "imagehash"
+  },
+  "cloudProviderVsphere": {
+    "vsphereCsiPlugin": "imagehash",
+    "cloudControllerManager119": "imagehash",
+    "cloudControllerManager120": "imagehash",
+    "cloudControllerManager121": "imagehash",
+    "cloudControllerManager122": "imagehash",
+    "cloudControllerManager123": "imagehash",
+    "vsphereCsiPluginLegacy": "imagehash"
+  },
+  "cloudProviderGcp": {
+    "cloudControllerManager119": "imagehash",
+    "cloudControllerManager123": "imagehash",
+    "cloudControllerManager122": "imagehash",
+    "cloudControllerManager121": "imagehash",
+    "cloudControllerManager120": "imagehash",
+    "pdCsiPlugin": "imagehash"
+  },
+  "logShipper": {
+    "vector": "imagehash"
+  },
+  "kubeDns": {
+    "coredns": "imagehash",
+    "stsPodsHostsAppenderWebhook": "imagehash",
+    "stsPodsHostsAppenderInitContainer": "imagehash",
+    "resolvWatcher": "imagehash"
+  },
+  "cniFlannel": {
+    "flanneld": "imagehash"
+  },
+  "operatorPrometheus": {
+    "prometheusOperator": "imagehash",
+    "prometheusConfigReloader": "imagehash"
+  },
+  "dashboard": {
+    "metricsScraper": "imagehash",
+    "dashboard": "imagehash"
+  },
+  "prometheusMetricsAdapter": {
+    "prometheusReverseProxy": "imagehash",
+    "k8sPrometheusAdapter": "imagehash"
+  },
+  "chrony": {
+    "chrony": "imagehash"
+  },
+  "descheduler": {
+    "descheduler": "imagehash"
+  },
+  "basicAuth": {
+    "nginx": "imagehash"
+  },
+  "prometheusPushgateway": {
+    "pushgateway": "imagehash"
+  },
+  "cloudProviderAzure": {
+    "azurediskCsi": "imagehash",
+    "cloudControllerManager120": "imagehash",
+    "cloudControllerManager119": "imagehash",
+    "cloudControllerManager121": "imagehash",
+    "cloudControllerManager122": "imagehash",
+    "cloudControllerManager123": "imagehash"
+  },
+  "networkPolicyEngine": {
+    "kubeRouter": "imagehash"
+  },
+  "keepalived": {
+    "keepalived": "imagehash"
+  }
+}
