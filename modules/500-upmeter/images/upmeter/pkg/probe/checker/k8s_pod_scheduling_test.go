@@ -20,23 +20,22 @@ import (
 	"context"
 	"d8.io/upmeter/pkg/check"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
 	"testing"
 )
 
-type successfulPodPhaseFetcher struct {
-	phase v1.PodPhase
+type successfulPodNodeFetcher struct {
+	node string
 }
 
-func (f *successfulPodPhaseFetcher) Fetch(_ context.Context) (v1.PodPhase, error) {
-	return f.phase, nil
+func (f *successfulPodNodeFetcher) Node(_ context.Context) (string, error) {
+	return f.node, nil
 }
 
-type failingPodPhaseFetcher struct {
+type failingPodNodeFetcher struct {
 	err error
 }
 
-func (f *failingPodPhaseFetcher) Fetch(_ context.Context) (v1.PodPhase, error) {
+func (f *failingPodNodeFetcher) Node(_ context.Context) (string, error) {
 	return "", f.err
 }
 
@@ -46,8 +45,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 		getter       doer
 		creator      doer
 		deleter      doer
-		phaseFetcher podPhaseFetcher
-		phase        v1.PodPhase
+		phaseFetcher podNodeFetcher
+		node         string
 	}
 	tests := []struct {
 		name   string
@@ -61,8 +60,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       doer404(),
 				creator:      &successDoer{},
 				deleter:      &successDoer{},
-				phaseFetcher: &successfulPodPhaseFetcher{phase: v1.PodPending},
-				phase:        v1.PodPending,
+				phaseFetcher: &successfulPodNodeFetcher{node: "a"},
+				node:         "a",
 			},
 			want: check.Up,
 		},
@@ -73,8 +72,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       &successDoer{}, // no error means the object is found
 				creator:      &successDoer{},
 				deleter:      &successDoer{},
-				phaseFetcher: &successfulPodPhaseFetcher{phase: v1.PodPending},
-				phase:        v1.PodPending,
+				phaseFetcher: &successfulPodNodeFetcher{node: "a"},
+				node:         "a",
 			},
 			want: check.Unknown,
 		},
@@ -85,8 +84,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       doer404(),
 				creator:      &successDoer{},
 				deleter:      &successDoer{},
-				phaseFetcher: &successfulPodPhaseFetcher{phase: v1.PodPending},
-				phase:        v1.PodPending,
+				phaseFetcher: &successfulPodNodeFetcher{node: "a"},
+				node:         "a",
 			},
 			want: check.Unknown,
 		},
@@ -97,8 +96,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       doerErr("nope"),
 				creator:      &successDoer{},
 				deleter:      &successDoer{},
-				phaseFetcher: &successfulPodPhaseFetcher{phase: v1.PodPending},
-				phase:        v1.PodPending,
+				phaseFetcher: &successfulPodNodeFetcher{node: "a"},
+				node:         "a",
 			},
 			want: check.Unknown,
 		},
@@ -109,8 +108,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       doer404(),
 				creator:      doerErr("nope"),
 				deleter:      &successDoer{},
-				phaseFetcher: &successfulPodPhaseFetcher{phase: v1.PodPending},
-				phase:        v1.PodPending,
+				phaseFetcher: &successfulPodNodeFetcher{node: "a"},
+				node:         "a",
 			},
 			want: check.Unknown,
 		},
@@ -121,8 +120,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       doer404(),
 				creator:      &successDoer{},
 				deleter:      doerErr("nope"),
-				phaseFetcher: &successfulPodPhaseFetcher{phase: v1.PodPending},
-				phase:        v1.PodPending,
+				phaseFetcher: &successfulPodNodeFetcher{node: "a"},
+				node:         "a",
 			},
 			want: check.Unknown,
 		},
@@ -133,8 +132,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       doer404(),
 				creator:      &successDoer{},
 				deleter:      &successDoer{},
-				phaseFetcher: &failingPodPhaseFetcher{err: fmt.Errorf("cannot fetch")},
-				phase:        v1.PodPending,
+				phaseFetcher: &failingPodNodeFetcher{err: fmt.Errorf("cannot fetch")},
+				node:         "a",
 			},
 			want: check.Unknown,
 		},
@@ -145,8 +144,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       doer404(),
 				creator:      &successDoer{},
 				deleter:      &successDoer{},
-				phaseFetcher: &successfulPodPhaseFetcher{phase: v1.PodUnknown}, // enexpected phase
-				phase:        v1.PodPending,
+				phaseFetcher: &successfulPodNodeFetcher{node: "y"}, // unexpected node
+				node:         "a",
 			},
 			want: check.Down,
 		},
@@ -157,8 +156,8 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 				getter:       doer404(),
 				creator:      &successDoer{},
 				deleter:      doerErr("nope"),
-				phaseFetcher: &successfulPodPhaseFetcher{phase: v1.PodUnknown}, // enexpected phase
-				phase:        v1.PodPending,
+				phaseFetcher: &successfulPodNodeFetcher{node: "y"}, // unexpected node
+				node:         "a",
 			},
 			want: check.Down,
 		},
@@ -166,12 +165,12 @@ func TestPodPhaseChecker_Check(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &podPhaseChecker{
-				preflight:    tt.fields.preflight,
-				creator:      tt.fields.creator,
-				getter:       tt.fields.getter,
-				deleter:      tt.fields.deleter,
-				phaseFetcher: tt.fields.phaseFetcher,
-				phase:        tt.fields.phase,
+				preflight:   tt.fields.preflight,
+				creator:     tt.fields.creator,
+				getter:      tt.fields.getter,
+				deleter:     tt.fields.deleter,
+				nodeFetcher: tt.fields.phaseFetcher,
+				node:        tt.fields.node,
 			}
 
 			err := c.Check()

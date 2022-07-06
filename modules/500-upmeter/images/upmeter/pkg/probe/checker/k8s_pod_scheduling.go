@@ -18,6 +18,7 @@ package checker
 
 import (
 	"context"
+	"fmt"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
@@ -31,11 +32,12 @@ import (
 
 // PodScheduling is a checker constructor and configurator
 type PodScheduling struct {
-	Access    kubernetes.Access
-	Timeout   time.Duration
-	Namespace string
-	Node      string
-	Image     *kubernetes.ProbeImage
+	Access          kubernetes.Access
+	Timeout         time.Duration
+	Namespace       string
+	Node            string
+	Image           *kubernetes.ProbeImage
+	CreationTimeout time.Duration
 }
 
 func (c PodScheduling) Checker() check.Checker {
@@ -44,18 +46,23 @@ func (c PodScheduling) Checker() check.Checker {
 	name := run.StaticIdentifier("upmeter-probe-basic")
 	pod := createPodObjectWithName(name, c.Node, c.Image)
 
-	creator := &podCreator{access: c.Access, namespace: c.Namespace, pod: pod}
+	creator := doWithTimeout(
+		&podCreator{access: c.Access, namespace: c.Namespace, pod: pod},
+		c.CreationTimeout,
+		fmt.Errorf("cration timeout reached"),
+	)
+
 	getter := &podGetter{access: c.Access, namespace: c.Namespace, name: name}
 	deleter := &podDeleter{access: c.Access, namespace: c.Namespace, name: name}
 	fetcher := &podPhaseFetcherImpl{access: c.Access, namespace: c.Namespace, name: name}
 
 	checker := &podPhaseChecker{
-		preflight:    preflight,
-		creator:      creator,
-		getter:       getter,
-		deleter:      deleter,
-		phaseFetcher: fetcher,
-		phase:        v1.PodPending,
+		preflight:   preflight,
+		creator:     creator,
+		getter:      getter,
+		deleter:     deleter,
+		nodeFetcher: fetcher,
+		node:        c.Node,
 	}
 
 	return withTimeout(checker, c.Timeout)
@@ -97,8 +104,8 @@ func (c *podDeleter) Do(_ context.Context) error {
 	return err
 }
 
-type podPhaseFetcher interface {
-	Fetch(_ context.Context) (v1.PodPhase, error)
+type podNodeFetcher interface {
+	Node(_ context.Context) (string, error)
 }
 
 type podPhaseFetcherImpl struct {
@@ -107,24 +114,24 @@ type podPhaseFetcherImpl struct {
 	name      string
 }
 
-func (c *podPhaseFetcherImpl) Fetch(_ context.Context) (v1.PodPhase, error) {
+func (c *podPhaseFetcherImpl) Node(_ context.Context) (string, error) {
 	client := c.access.Kubernetes()
 	pod, err := client.CoreV1().Pods(c.namespace).Get(c.name, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
-	return pod.Status.Phase, nil
+	return pod.Spec.NodeName, nil
 }
 
 // podPhaseChecker checks a condition within an object lifecycle.
 // Hence, all errors in kube-apiserver calls result in undetermined check status.
 type podPhaseChecker struct {
-	preflight    doer
-	getter       doer
-	creator      doer
-	deleter      doer
-	phaseFetcher podPhaseFetcher
-	phase        v1.PodPhase
+	preflight   doer
+	getter      doer
+	creator     doer
+	deleter     doer
+	nodeFetcher podNodeFetcher
+	node        string
 }
 
 func (c *podPhaseChecker) Check() check.Error {
@@ -150,13 +157,13 @@ func (c *podPhaseChecker) Check() check.Error {
 		// Unexpected error
 		return check.ErrUnknown("creating: %v", createErr)
 	}
-	if phase, fetchErr := c.phaseFetcher.Fetch(ctx); fetchErr != nil {
+	if node, fetchErr := c.nodeFetcher.Node(ctx); fetchErr != nil {
 		_ = c.deleter.Do(ctx) // Cleanup
 		return check.ErrUnknown("getting: %v", fetchErr)
 	} else {
-		if phase != c.phase {
+		if node != c.node {
 			_ = c.deleter.Do(ctx) // Cleanup
-			return check.ErrFail("verification: got phase %s, expected %s", phase, c.phase)
+			return check.ErrFail("verification: got node %s, expected %s", node, c.node)
 		}
 	}
 	if delErr := c.deleter.Do(ctx); delErr != nil {
