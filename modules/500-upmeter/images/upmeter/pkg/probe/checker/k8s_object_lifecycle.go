@@ -25,11 +25,12 @@ import (
 )
 
 // KubeObjectBasicLifecycle checks the creation and deletion of an object in
-// kube-apiserver. Hence, all errors in kube-apiserver calls result in probe fails.
+// kube-apiserver. Hence, all errors in kube-apiserver calls result in probe
+// fails.
 type KubeObjectBasicLifecycle struct {
 	preflight doer
-	creator   doer
 	getter    doer
+	creator   doer
 	deleter   doer
 }
 
@@ -59,6 +60,51 @@ func (c *KubeObjectBasicLifecycle) Check() check.Error {
 	if delErr := c.deleter.Do(ctx); delErr != nil {
 		// Unexpected error
 		return check.ErrFail("deleting: %v", delErr)
+	}
+
+	return nil
+}
+
+// KubeObjectConditionedLifecycle checks a condition within an object lifecycle.
+// Hence, all errors in kube-apiserver calls result in undetermined check status.
+type KubeObjectConditionedLifecycle struct {
+	preflight doer
+	getter    doer
+	creator   doer
+	deleter   doer
+	verifier  doer
+}
+
+func (c *KubeObjectConditionedLifecycle) Check() check.Error {
+	ctx := context.TODO()
+	if err := c.preflight.Do(ctx); err != nil {
+		return check.ErrUnknown("preflight: %v", err)
+	}
+
+	// Check garbage
+	if getErr := c.getter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
+		// Unexpected apiserver error
+		return check.ErrUnknown("getting garbage: %v", getErr)
+	} else if getErr == nil {
+		// Garbage object exists, cleaning it and skipping this run.
+		if delErr := c.deleter.Do(ctx); delErr != nil {
+			return check.ErrUnknown("deleting garbage: %v", delErr)
+		}
+		return check.ErrUnknown("cleaned garbage")
+	}
+
+	// The actual check
+	if createErr := c.creator.Do(ctx); createErr != nil {
+		// Unexpected error
+		return check.ErrUnknown("creating: %v", createErr)
+	}
+	if verifyErr := c.verifier.Do(ctx); verifyErr != nil {
+		_ = c.deleter.Do(ctx) // Cleanup
+		return check.ErrFail("verifying: %v", verifyErr)
+	}
+	if delErr := c.deleter.Do(ctx); delErr != nil {
+		// Unexpected error
+		return check.ErrUnknown("deleting: %v", delErr)
 	}
 
 	return nil

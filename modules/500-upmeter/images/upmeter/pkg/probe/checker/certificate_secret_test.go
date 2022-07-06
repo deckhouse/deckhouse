@@ -17,10 +17,10 @@ limitations under the License.
 package checker
 
 import (
-	"sigs.k8s.io/yaml"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/yaml"
 
 	"d8.io/upmeter/pkg/check"
 )
