@@ -42,8 +42,7 @@ type Machine struct {
 }
 
 type YandexInstanceClass struct {
-	Name        string
-	Preemptible bool
+	Name string
 }
 
 func applyMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -83,17 +82,17 @@ func isPreemptibleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		return nil, fmt.Errorf("can't access field \"preemptible\" of YandexInstanceClass %q: %s", obj.GetName(), err)
 	}
 
-	preemptible = ok && preemptible
+	if ok && preemptible {
+		return &YandexInstanceClass{
+			Name: obj.GetName(),
+		}, nil
+	}
 
-	return &YandexInstanceClass{
-		Name:        obj.GetName(),
-		Preemptible: preemptible,
-	}, nil
+	return nil, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
+	Queue: "/modules/cloud-provider-yandex/preemtibly-delete-preemtible-instances",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "every-15",
@@ -136,14 +135,16 @@ func deleteMachines(input *go_hook.HookInput) error {
 	)
 
 	for _, icRaw := range icsSnapshot {
+		if icRaw == nil {
+			continue
+		}
+
 		ic, ok := icRaw.(*YandexInstanceClass)
 		if !ok {
 			return fmt.Errorf("failed to assert to *YandexInstanceClass")
 		}
 
-		if ic.Preemptible {
-			preemptibleInstanceClassesSet[ic.Name] = struct{}{}
-		}
+		preemptibleInstanceClassesSet[ic.Name] = struct{}{}
 	}
 
 	for _, machineRaw := range machineSnapshot {
@@ -160,6 +161,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
+		// MachineClass name is InstanceClass name plus "dash gibberish"
 		splittedMachineClassName := strings.Split(machine.MachineClassName, "-")
 		instanceClassName := strings.Join(splittedMachineClassName[:len(splittedMachineClassName)-1], "")
 
@@ -203,8 +205,7 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 	}
 
 	var (
-		cursor       int
-		machineCount = len(machines)
+		cursor int
 	)
 
 	// short-circuit if there are Machines older than 23 hours
@@ -218,10 +219,10 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 		return machinesToDelete
 	}
 
-	for t := 0; t < 12; t++ {
+	for t := 0; t < durationIterations; t++ {
 		currentSlidingDuration -= slidingStep
 
-		for cursor < machineCount {
+		for cursor < len(machines) {
 			if len(machinesToDelete) >= batch {
 				break
 			}
@@ -239,6 +240,5 @@ func getMachinesToDelete(timeNow time.Time, machines []*Machine) (machinesToDele
 }
 
 func expires(now, timestamp time.Time, expirationDuration time.Duration) bool {
-	expirationTs := timestamp.Add(expirationDuration)
-	return now.After(expirationTs)
+	return timestamp.Add(expirationDuration).Before(now)
 }
