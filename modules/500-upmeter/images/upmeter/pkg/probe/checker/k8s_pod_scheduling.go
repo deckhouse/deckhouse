@@ -32,12 +32,15 @@ import (
 
 // PodScheduling is a checker constructor and configurator
 type PodScheduling struct {
-	Access          kubernetes.Access
-	Timeout         time.Duration
-	Namespace       string
-	Node            string
-	Image           *kubernetes.ProbeImage
+	Access kubernetes.Access
+
+	Namespace string
+	Node      string
+	Image     *kubernetes.ProbeImage
+
 	CreationTimeout time.Duration
+	DeletionTimeout time.Duration
+	ScheduleTimeout time.Duration
 }
 
 func (c PodScheduling) Checker() check.Checker {
@@ -46,15 +49,25 @@ func (c PodScheduling) Checker() check.Checker {
 	name := run.StaticIdentifier("upmeter-probe-basic")
 	pod := createPodObjectWithName(name, c.Node, c.Image)
 
+	getter := &podGetter{access: c.Access, namespace: c.Namespace, name: name}
+
 	creator := doWithTimeout(
 		&podCreator{access: c.Access, namespace: c.Namespace, pod: pod},
 		c.CreationTimeout,
 		fmt.Errorf("cration timeout reached"),
 	)
 
-	getter := &podGetter{access: c.Access, namespace: c.Namespace, name: name}
-	deleter := &podDeleter{access: c.Access, namespace: c.Namespace, name: name}
-	fetcher := &podPhaseFetcherImpl{access: c.Access, namespace: c.Namespace, name: name}
+	deleter := doWithTimeout(
+		&podDeleter{access: c.Access, namespace: c.Namespace, name: name},
+		c.DeletionTimeout,
+		fmt.Errorf("cration timeout reached"),
+	)
+
+	fetcher := &pollingPodNodeFetcher{
+		fetcher:  &podNodeFetcherImpl{access: c.Access, namespace: c.Namespace, name: name},
+		timeout:  c.ScheduleTimeout,
+		interval: c.ScheduleTimeout / 10,
+	}
 
 	checker := &podPhaseChecker{
 		preflight:   preflight,
@@ -65,71 +78,16 @@ func (c PodScheduling) Checker() check.Checker {
 		node:        c.Node,
 	}
 
-	return withTimeout(checker, c.Timeout)
+	return checker
 }
 
-type podCreator struct {
-	access    kubernetes.Access
-	namespace string
-	pod       *v1.Pod
-}
-
-func (c *podCreator) Do(_ context.Context) error {
-	client := c.access.Kubernetes()
-	_, err := client.CoreV1().Pods(c.namespace).Create(c.pod)
-	return err
-}
-
-type podGetter struct {
-	access    kubernetes.Access
-	namespace string
-	name      string
-}
-
-func (c *podGetter) Do(_ context.Context) error {
-	client := c.access.Kubernetes()
-	_, err := client.CoreV1().Pods(c.namespace).Get(c.name, metav1.GetOptions{})
-	return err
-}
-
-type podDeleter struct {
-	access    kubernetes.Access
-	namespace string
-	name      string
-}
-
-func (c *podDeleter) Do(_ context.Context) error {
-	client := c.access.Kubernetes()
-	err := client.CoreV1().Pods(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
-	return err
-}
-
-type podNodeFetcher interface {
-	Node(_ context.Context) (string, error)
-}
-
-type podPhaseFetcherImpl struct {
-	access    kubernetes.Access
-	namespace string
-	name      string
-}
-
-func (c *podPhaseFetcherImpl) Node(_ context.Context) (string, error) {
-	client := c.access.Kubernetes()
-	pod, err := client.CoreV1().Pods(c.namespace).Get(c.name, metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-	return pod.Spec.NodeName, nil
-}
-
-// podPhaseChecker checks a condition within an object lifecycle.
-// Hence, all errors in kube-apiserver calls result in undetermined check status.
+// podPhaseChecker checks pod node. All apiserver related errors result in undetermined status.
 type podPhaseChecker struct {
-	preflight   doer
-	getter      doer
-	creator     doer
-	deleter     doer
+	preflight doer
+	getter    doer
+	creator   doer
+	deleter   doer
+
 	nodeFetcher podNodeFetcher
 	node        string
 }
@@ -172,4 +130,87 @@ func (c *podPhaseChecker) Check() check.Error {
 	}
 
 	return nil
+}
+
+type podCreator struct {
+	access    kubernetes.Access
+	namespace string
+	pod       *v1.Pod
+}
+
+func (c *podCreator) Do(_ context.Context) error {
+	client := c.access.Kubernetes()
+	_, err := client.CoreV1().Pods(c.namespace).Create(c.pod)
+	return err
+}
+
+type podGetter struct {
+	access    kubernetes.Access
+	namespace string
+	name      string
+}
+
+func (c *podGetter) Do(_ context.Context) error {
+	client := c.access.Kubernetes()
+	_, err := client.CoreV1().Pods(c.namespace).Get(c.name, metav1.GetOptions{})
+	return err
+}
+
+type podDeleter struct {
+	access    kubernetes.Access
+	namespace string
+	name      string
+}
+
+func (c *podDeleter) Do(_ context.Context) error {
+	client := c.access.Kubernetes()
+	err := client.CoreV1().Pods(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
+	return err
+}
+
+type podNodeFetcher interface {
+	Node(context.Context) (string, error)
+}
+
+type podNodeFetcherImpl struct {
+	access    kubernetes.Access
+	namespace string
+	name      string
+}
+
+func (c *podNodeFetcherImpl) Node(_ context.Context) (string, error) {
+	client := c.access.Kubernetes()
+	pod, err := client.CoreV1().Pods(c.namespace).Get(c.name, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	return pod.Spec.NodeName, nil
+}
+
+type pollingPodNodeFetcher struct {
+	fetcher  podNodeFetcher
+	timeout  time.Duration
+	interval time.Duration
+}
+
+func (f *pollingPodNodeFetcher) Node(ctx context.Context) (node string, err error) {
+	ticker := time.NewTicker(f.interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			node, err = f.fetcher.Node(ctx)
+			if err != nil {
+				// apiserver fail
+				return "", err
+			}
+			if node != "" {
+				// scheduling success
+				return node, nil
+			}
+		case <-time.After(f.timeout):
+			return "", fmt.Errorf("node polling timeout reached")
+		}
+	}
 }
