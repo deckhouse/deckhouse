@@ -18,11 +18,13 @@ package checker
 
 import (
 	"context"
-	"d8.io/upmeter/pkg/check"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"d8.io/upmeter/pkg/check"
 )
 
 func TestPodPhaseChecker_Check(t *testing.T) {
@@ -266,7 +268,6 @@ func Test_pollingPodNodeFetcher_Node(t *testing.T) {
 			assert.Equal(t, tt.wantNode, gotNode)
 			assert.Equal(t, tt.calls, tt.fields.fetcher.(*sequentialPodNodeFetcher).i,
 				"unexpected number of fetch calls")
-
 		})
 	}
 }

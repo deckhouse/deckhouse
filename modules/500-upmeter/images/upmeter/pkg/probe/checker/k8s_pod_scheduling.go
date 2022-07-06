@@ -19,10 +19,10 @@ package checker
 import (
 	"context"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"d8.io/upmeter/pkg/check"
@@ -118,11 +118,9 @@ func (c *podPhaseChecker) Check() check.Error {
 	if node, fetchErr := c.nodeFetcher.Node(ctx); fetchErr != nil {
 		_ = c.deleter.Do(ctx) // Cleanup
 		return check.ErrUnknown("getting: %v", fetchErr)
-	} else {
-		if node != c.node {
-			_ = c.deleter.Do(ctx) // Cleanup
-			return check.ErrFail("verification: got node %s, expected %s", node, c.node)
-		}
+	} else if node != c.node {
+		_ = c.deleter.Do(ctx) // Cleanup
+		return check.ErrFail("verification: got node %s, expected %s", node, c.node)
 	}
 	if delErr := c.deleter.Do(ctx); delErr != nil {
 		// Unexpected error

@@ -82,15 +82,14 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			probe:  "scheduler",
 			check:  "_",
 			period: time.Minute,
-			config: checker.PodLifecycle{
-				Access:                    access,
-				Namespace:                 namespace,
-				Node:                      access.SchedulerProbeNode(),
-				CreationTimeout:           5 * time.Second,
-				SchedulingTimeout:         20 * time.Second,
-				DeletionTimeout:           20 * time.Second,
-				GarbageCollectionTimeout:  gcTimeout,
-				ControlPlaneAccessTimeout: cpTimeout,
+			config: checker.PodScheduling{
+				Access:          access,
+				Namespace:       namespace,
+				Node:            access.SchedulerProbeNode(),
+				Image:           access.SchedulerProbeImage(),
+				CreationTimeout: 5 * time.Second,
+				DeletionTimeout: 5 * time.Second,
+				ScheduleTimeout: 20 * time.Second,
 			},
 		}, {
 			group:  groupControlPlane,
