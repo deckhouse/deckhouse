@@ -37,9 +37,10 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 		node        string
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   check.Status
+		name      string
+		fields    fields
+		want      check.Status
+		deletions int // count garbage collection calls
 	}{
 		{
 			name: "Clean run without garbage",
@@ -47,11 +48,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   &successDoer{},
 				getter:      doer404(),
 				creator:     &successDoer{},
-				deleter:     &successDoer{},
+				deleter:     newSequenceDoer(nil),
 				nodeFetcher: &successfulPodNodeFetcher{node: "a"},
 				node:        "a",
 			},
-			want: check.Up,
+			want:      check.Up,
+			deletions: 1,
 		},
 		{
 			name: "Found garbage results in Unknown",
@@ -59,11 +61,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   &successDoer{},
 				getter:      &successDoer{}, // no error means the object is found
 				creator:     &successDoer{},
-				deleter:     &successDoer{},
+				deleter:     newSequenceDoer(nil),
 				nodeFetcher: &successfulPodNodeFetcher{node: "a"},
 				node:        "a",
 			},
-			want: check.Unknown,
+			want:      check.Unknown,
+			deletions: 1,
 		},
 		{
 			name: "Failing preflight results in Unknown",
@@ -71,11 +74,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   doerErr("no version"),
 				getter:      doer404(),
 				creator:     &successDoer{},
-				deleter:     &successDoer{},
+				deleter:     newSequenceDoer(nil),
 				nodeFetcher: &successfulPodNodeFetcher{node: "a"},
 				node:        "a",
 			},
-			want: check.Unknown,
+			want:      check.Unknown,
+			deletions: 0,
 		},
 		{
 			name: "Arbitrary getting error results in Unknown",
@@ -83,11 +87,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   &successDoer{},
 				getter:      doerErr("nope"),
 				creator:     &successDoer{},
-				deleter:     &successDoer{},
+				deleter:     newSequenceDoer(nil),
 				nodeFetcher: &successfulPodNodeFetcher{node: "a"},
 				node:        "a",
 			},
-			want: check.Unknown,
+			want:      check.Unknown,
+			deletions: 0,
 		},
 		{
 			name: "Arbitrary creation error results in Unknown",
@@ -95,11 +100,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   &successDoer{},
 				getter:      doer404(),
 				creator:     doerErr("nope"),
-				deleter:     &successDoer{},
+				deleter:     newSequenceDoer(nil),
 				nodeFetcher: &successfulPodNodeFetcher{node: "a"},
 				node:        "a",
 			},
-			want: check.Unknown,
+			want:      check.Unknown,
+			deletions: 0,
 		},
 		{
 			name: "Arbitrary deletion error results in Unknown",
@@ -107,11 +113,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   &successDoer{},
 				getter:      doer404(),
 				creator:     &successDoer{},
-				deleter:     doerErr("nope"),
+				deleter:     newSequenceDoer(fmt.Errorf("cannot delete")),
 				nodeFetcher: &successfulPodNodeFetcher{node: "a"},
 				node:        "a",
 			},
-			want: check.Unknown,
+			want:      check.Unknown,
+			deletions: 1,
 		},
 		{
 			name: "Arbitrary fetcher error results in Unknown",
@@ -119,11 +126,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   &successDoer{},
 				getter:      doer404(),
 				creator:     &successDoer{},
-				deleter:     &successDoer{},
+				deleter:     newSequenceDoer(nil),
 				nodeFetcher: &failingPodNodeFetcher{err: fmt.Errorf("cannot fetch")},
 				node:        "a",
 			},
-			want: check.Unknown,
+			want:      check.Unknown,
+			deletions: 1,
 		},
 		{
 			name: "Verification error results in fail",
@@ -131,11 +139,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   &successDoer{},
 				getter:      doer404(),
 				creator:     &successDoer{},
-				deleter:     &successDoer{},
+				deleter:     newSequenceDoer(nil),
 				nodeFetcher: &successfulPodNodeFetcher{node: "y"}, // unexpected node
 				node:        "a",
 			},
-			want: check.Down,
+			want:      check.Down,
+			deletions: 1,
 		},
 		{
 			name: "Arbitrary verification and deletion errors results in fail (verifier prioritized)",
@@ -143,11 +152,12 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 				preflight:   &successDoer{},
 				getter:      doer404(),
 				creator:     &successDoer{},
-				deleter:     doerErr("nope"),
+				deleter:     newSequenceDoer(fmt.Errorf("cannot delete")),
 				nodeFetcher: &successfulPodNodeFetcher{node: "y"}, // unexpected node
 				node:        "a",
 			},
-			want: check.Down,
+			want:      check.Down,
+			deletions: 1,
 		},
 	}
 	for _, tt := range tests {
@@ -163,6 +173,8 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 
 			err := c.Check()
 			assertCheckStatus(t, tt.want, err)
+			assert.Equal(t, tt.deletions, tt.fields.deleter.(*sequenceDoer).i,
+				"Unexpected number of GC calls")
 		})
 	}
 }
@@ -267,7 +279,7 @@ func Test_pollingPodNodeFetcher_Node(t *testing.T) {
 			}
 			assert.Equal(t, tt.wantNode, gotNode)
 			assert.Equal(t, tt.calls, tt.fields.fetcher.(*sequentialPodNodeFetcher).i,
-				"unexpected number of fetch calls")
+				"Unexpected number of fetch calls")
 		})
 	}
 }

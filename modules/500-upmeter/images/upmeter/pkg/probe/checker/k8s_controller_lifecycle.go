@@ -59,6 +59,7 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 
 	// 2. expect child
 	if getErr := c.childGetter.Do(ctx); getErr != nil && !apierrors.IsNotFound(getErr) {
+		_ = c.parentDeleter.Do(ctx) // Cleanup
 		return check.ErrUnknown("getting child: %v", getErr)
 	} else if apierrors.IsNotFound(getErr) {
 		_ = c.parentDeleter.Do(ctx) // Cleanup
