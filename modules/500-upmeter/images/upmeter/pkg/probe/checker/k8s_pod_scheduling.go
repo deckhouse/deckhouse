@@ -64,7 +64,7 @@ func (c PodScheduling) Checker() check.Checker {
 	)
 
 	fetcher := &pollingPodNodeFetcher{
-		fetcher:  &podNodeFetcherImpl{access: c.Access, namespace: c.Namespace, name: name},
+		fetcher:  &podNodeNameFetcher{access: c.Access, namespace: c.Namespace, name: name},
 		timeout:  c.ScheduleTimeout,
 		interval: c.ScheduleTimeout / 10,
 	}
@@ -88,7 +88,7 @@ type podSchedulingChecker struct {
 	creator   doer
 	deleter   doer
 
-	nodeFetcher podNodeFetcher
+	nodeFetcher nodeNameFetcher
 	node        string
 }
 
@@ -166,17 +166,17 @@ func (c *podDeleter) Do(_ context.Context) error {
 	return err
 }
 
-type podNodeFetcher interface {
+type nodeNameFetcher interface {
 	Node(context.Context) (string, error)
 }
 
-type podNodeFetcherImpl struct {
+type podNodeNameFetcher struct {
 	access    kubernetes.Access
 	namespace string
 	name      string
 }
 
-func (c *podNodeFetcherImpl) Node(_ context.Context) (string, error) {
+func (c *podNodeNameFetcher) Node(_ context.Context) (string, error) {
 	client := c.access.Kubernetes()
 	pod, err := client.CoreV1().Pods(c.namespace).Get(c.name, metav1.GetOptions{})
 	if err != nil {
@@ -186,7 +186,7 @@ func (c *podNodeFetcherImpl) Node(_ context.Context) (string, error) {
 }
 
 type pollingPodNodeFetcher struct {
-	fetcher  podNodeFetcher
+	fetcher  nodeNameFetcher
 	timeout  time.Duration
 	interval time.Duration
 }

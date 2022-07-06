@@ -33,7 +33,7 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 		getter      doer
 		creator     doer
 		deleter     doer
-		nodeFetcher podNodeFetcher
+		nodeFetcher nodeNameFetcher
 		node        string
 	}
 	tests := []struct {
@@ -169,7 +169,7 @@ func TestPodSchedulingChecker_Check(t *testing.T) {
 
 func Test_pollingPodNodeFetcher_Node(t *testing.T) {
 	type fields struct {
-		fetcher  podNodeFetcher
+		fetcher  nodeNameFetcher
 		timeout  time.Duration
 		interval time.Duration
 	}
