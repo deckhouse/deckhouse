@@ -10,7 +10,7 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__istio_irrelevant_external_services: IstioIrrelevantExternalServices,tier=~tier
-      plk_grouped_by__istio_irrelevant_external_services:: IstioIrrelevantExternalServices,tier=~tier
+      plk_grouped_by__istio_irrelevant_external_services: IstioIrrelevantExternalServices,tier=~tier
       summary: Found external service with irrelevant ports spec
       description: |
         There is service in namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant ports spec.
