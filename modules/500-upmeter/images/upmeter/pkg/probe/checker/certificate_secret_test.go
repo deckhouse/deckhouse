@@ -33,7 +33,6 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   labels:
-    app: upmeter
     heritage: upmeter
     upmeter-agent: "xyz"
     upmeter-group: control-plane
