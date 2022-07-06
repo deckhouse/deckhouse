@@ -14,6 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+// istio hijack all traffic on a services with type: ExternalName and specified .spec.ports[]
+// while those ports do not make any sense for external service. Figure out the irrelavant services and make an alert about them
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/istio/revisions-discovery-monitoring",
 	Kubernetes: []go_hook.KubernetesConfig{

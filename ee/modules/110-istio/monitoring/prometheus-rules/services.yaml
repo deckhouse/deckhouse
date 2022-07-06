@@ -13,7 +13,7 @@
       plk_grouped_by__istio_irrelevant_external_services: IstioIrrelevantExternalServices,tier=~tier
       summary: Found external service with irrelevant ports spec
       description: |
-        There is service in namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant ports spec.
-        Ports[] do not make any sense for services with a type `ExternalName` but Istio captures all traffic on a specified port/ports and generates overload.
+        There is service in the namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant ports spec.
+        .spec.ports[] do not make any sense for services with a type `ExternalName` but Istio captures all traffic on a specified port/ports and generates overload.
 
         Please remove `.spec.ports` from service configuration.
