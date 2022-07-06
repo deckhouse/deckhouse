@@ -23,11 +23,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"d8.io/upmeter/pkg/check"
-	k8s "d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/run"
 )
 
-// ConfigMapLifecycle is a checker constructor and configurator
+// NamespaceLifecycle2 is a checker constructor and configurator
 type NamespaceLifecycle2 struct {
 	Access    kubernetes.Access
 	Timeout   time.Duration
@@ -54,7 +54,7 @@ func (c NamespaceLifecycle2) Checker() check.Checker {
 
 // NamespaceLifecycle is a checker constructor and configurator
 type NamespaceLifecycle struct {
-	Access                    k8s.Access
+	Access                    kubernetes.Access
 	CreationTimeout           time.Duration
 	DeletionTimeout           time.Duration
 	GarbageCollectionTimeout  time.Duration
@@ -72,7 +72,7 @@ func (c NamespaceLifecycle) Checker() check.Checker {
 }
 
 type namespaceLifeCycleChecker struct {
-	access          k8s.Access
+	access          kubernetes.Access
 	creationTimeout time.Duration
 	deletionTimeout time.Duration
 
@@ -130,7 +130,7 @@ func (c *namespaceLifeCycleChecker) new(namespace *v1.Namespace) check.Checker {
 
 // namespaceCreationChecker creates namespace
 type namespaceCreationChecker struct {
-	access    k8s.Access
+	access    kubernetes.Access
 	namespace *v1.Namespace
 }
 
@@ -145,7 +145,7 @@ func (c *namespaceCreationChecker) Check() check.Error {
 
 // namespaceDeletionChecker deletes namespace
 type namespaceDeletionChecker struct {
-	access    k8s.Access
+	access    kubernetes.Access
 	namespace *v1.Namespace
 }
 
