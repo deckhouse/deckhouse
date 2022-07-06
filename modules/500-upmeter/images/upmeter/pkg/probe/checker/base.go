@@ -198,20 +198,20 @@ func doOrUnknown(timeout time.Duration, doer doer) check.Checker {
 
 // doWithTimeout wraps doer with timeout and error that is returned when the timeout is reached
 func doWithTimeout(d doer, timeout time.Duration, err error) doer {
-	return &deadlineDoer{
+	return &timeoutDoer{
 		doer:    d,
 		err:     err,
 		timeout: timeout,
 	}
 }
 
-type deadlineDoer struct {
+type timeoutDoer struct {
 	doer    doer
 	err     error
 	timeout time.Duration
 }
 
-func (d *deadlineDoer) Do(ctx context.Context) error {
+func (d *timeoutDoer) Do(ctx context.Context) error {
 	var err error
 	withTimer(
 		d.timeout,
