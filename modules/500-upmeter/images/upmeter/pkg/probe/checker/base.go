@@ -196,52 +196,6 @@ func doOrUnknown(timeout time.Duration, doer doer) check.Checker {
 	return withTimeout(&unknownCheckWrapper{doer}, timeout)
 }
 
-// withFinalizer applies doer to whatever check result and passes the check error further if is it not nil
-func withFinalizer(c check.Checker, f doer) check.Checker {
-	return &finalizer{c: c, fin: f}
-}
-
-type finalizer struct {
-	c   check.Checker
-	fin doer
-}
-
-func (f *finalizer) Check() check.Error {
-	checkErr := f.c.Check()
-	finErr := f.fin.Do(context.TODO())
-
-	if checkErr != nil {
-		return checkErr
-	}
-	if finErr != nil {
-		return check.ErrUnknown("finalizing: %w", finErr)
-	}
-	return nil
-}
-
-// withFinalizerChecker runs f checker to whatever check result and passes the check error further if is it not nil
-func withFinalizerChecker(c, f check.Checker) check.Checker {
-	return &finalizerChecker{c: c, fin: f}
-}
-
-type finalizerChecker struct {
-	c   check.Checker
-	fin check.Checker
-}
-
-func (f *finalizerChecker) Check() check.Error {
-	checkErr := f.c.Check()
-	finErr := f.fin.Check()
-
-	if checkErr != nil {
-		return checkErr
-	}
-	if finErr != nil {
-		return finErr
-	}
-	return nil
-}
-
 // doWithTimeout wraps doer with timeout and error that is returned when the timeout is reached
 func doWithTimeout(d doer, timeout time.Duration, err error) doer {
 	return &deadlineDoer{

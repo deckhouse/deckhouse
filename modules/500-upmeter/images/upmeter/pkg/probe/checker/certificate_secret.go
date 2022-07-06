@@ -49,8 +49,18 @@ func (c CertificateSecretLifecycle) Checker() check.Checker {
 	name := run.StaticIdentifier("upmeter-probe-cert-manager")
 
 	certGetter := &certificateGetter{access: c.Access, namespace: c.Namespace, name: name}
-	certCreator := &certificateCreator{access: c.Access, namespace: c.Namespace, name: name, agentID: c.AgentID}
-	certDeleter := &certificateDeleter{access: c.Access, namespace: c.Namespace, name: name}
+
+	certCreator := doWithTimeout(
+		&certificateCreator{access: c.Access, namespace: c.Namespace, name: name, agentID: c.AgentID},
+		c.CreationTimeout,
+		fmt.Errorf("creation timeout reached"),
+	)
+
+	certDeleter := doWithTimeout(
+		&certificateDeleter{access: c.Access, namespace: c.Namespace, name: name},
+		c.DeletionTimeout,
+		fmt.Errorf("deletion timeout reached"),
+	)
 
 	certSecretGetter := &secretGetter{access: c.Access, namespace: c.Namespace, name: name}
 	certSecretDeleter := &secretDeleter{access: c.Access, namespace: c.Namespace, name: name}
