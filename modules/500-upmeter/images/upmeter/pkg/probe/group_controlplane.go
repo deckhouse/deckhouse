@@ -100,7 +100,7 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 				AgentID:                 run.ID(),
 				CreationTimeout:         5 * time.Second,
 				DeletionTimeout:         5 * time.Second,
-				SecretTransitionTimeout: 10 * time.Second,
+				SecretTransitionTimeout: time.Minute,
 			},
 		},
 	}
