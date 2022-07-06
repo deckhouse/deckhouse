@@ -57,12 +57,10 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			probe:  "namespace",
 			check:  "_",
 			period: time.Minute,
-			config: checker.NamespaceLifecycle{
-				Access:                    access,
-				CreationTimeout:           5 * time.Second,
-				DeletionTimeout:           time.Minute,
-				GarbageCollectionTimeout:  gcTimeout,
-				ControlPlaneAccessTimeout: cpTimeout,
+			config: checker.NamespaceLifecycle2{
+				Access:          access,
+				CreationTimeout: 5 * time.Second,
+				DeletionTimeout: time.Minute,
 			},
 		}, {
 			group:  groupControlPlane,

@@ -241,3 +241,27 @@ func (f *finalizerChecker) Check() check.Error {
 	}
 	return nil
 }
+
+// doWithTimeout wraps doer with timeout and error that is returned when the timeout is reached
+func doWithTimeout(d doer, timeout time.Duration, err error) doer {
+	return &deadlineDoer{
+		doer:    d,
+		err:     err,
+		timeout: timeout,
+	}
+}
+
+type deadlineDoer struct {
+	doer    doer
+	err     error
+	timeout time.Duration
+}
+
+func (d *deadlineDoer) Do(ctx context.Context) error {
+	var err error
+	withTimer(
+		d.timeout,
+		func() { err = d.doer.Do(ctx) },
+		func() { err = d.err })
+	return err
+}

@@ -55,6 +55,8 @@ spec:
 	  upmeter-probe: cert-manager
 `
 	assert.Equal(t, expected, manifest)
+
+	// TODO test the YAML for validity
 }
 
 // dummyChecker is for mocking checkers

@@ -17,6 +17,8 @@ limitations under the License.
 package checker
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -29,18 +31,29 @@ import (
 
 // NamespaceLifecycle2 is a checker constructor and configurator
 type NamespaceLifecycle2 struct {
-	Access    kubernetes.Access
-	Timeout   time.Duration
-	Namespace string
+	Access          kubernetes.Access
+	CreationTimeout time.Duration
+	DeletionTimeout time.Duration
 }
 
 func (c NamespaceLifecycle2) Checker() check.Checker {
 	preflight := newK8sVersionGetter(c.Access)
 
 	name := run.StaticIdentifier("upmeter-probe-basic")
-	creator := &configmapCreator{access: c.Access, namespace: c.Namespace, name: name}
-	getter := &configmapGetter{access: c.Access, namespace: c.Namespace, name: name}
-	deleter := &configmapDeleter{access: c.Access, namespace: c.Namespace, name: name}
+
+	getter := &namespaceGetter{access: c.Access, name: name}
+
+	creator := doWithTimeout(
+		&namespaceCreator{access: c.Access, name: name},
+		c.CreationTimeout,
+		fmt.Errorf("creation timeout reached"),
+	)
+
+	deleter := doWithTimeout(
+		&namespaceDeleter{access: c.Access, name: name, timeout: c.DeletionTimeout},
+		c.DeletionTimeout,
+		fmt.Errorf("deletion timeout reached"),
+	)
 
 	checker := &KubeObjectBasicLifecycle{
 		preflight: preflight,
@@ -49,118 +62,46 @@ func (c NamespaceLifecycle2) Checker() check.Checker {
 		deleter:   deleter,
 	}
 
-	return withTimeout(checker, c.Timeout)
+	return checker
 }
 
-// NamespaceLifecycle is a checker constructor and configurator
-type NamespaceLifecycle struct {
-	Access                    kubernetes.Access
-	CreationTimeout           time.Duration
-	DeletionTimeout           time.Duration
-	GarbageCollectionTimeout  time.Duration
-	ControlPlaneAccessTimeout time.Duration
+type namespaceCreator struct {
+	access  kubernetes.Access
+	name    string
+	timeout time.Duration
 }
 
-func (c NamespaceLifecycle) Checker() check.Checker {
-	return &namespaceLifeCycleChecker{
-		access:                    c.Access,
-		creationTimeout:           c.CreationTimeout,
-		deletionTimeout:           c.DeletionTimeout,
-		garbageCollectorTimeout:   c.GarbageCollectionTimeout,
-		controlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
-	}
-}
-
-type namespaceLifeCycleChecker struct {
-	access          kubernetes.Access
-	creationTimeout time.Duration
-	deletionTimeout time.Duration
-
-	garbageCollectorTimeout   time.Duration
-	controlPlaneAccessTimeout time.Duration
-
-	// inner state
-	checker check.Checker
-}
-
-func (c *namespaceLifeCycleChecker) Check() check.Error {
-	namespace := createNamespaceObject()
-	c.checker = c.new(namespace)
-	return c.checker.Check()
-}
-
-/*
-1. check control plane availability
-2. collect the garbage of the namespace from previous runs
-3. create and delete the namespace in api
-4. ensure it does not exist (with retries)
-*/
-func (c *namespaceLifeCycleChecker) new(namespace *v1.Namespace) check.Checker {
-	kind := namespace.GetObjectKind().GroupVersionKind().Kind
-	name := namespace.GetName()
-
-	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
-	collectGarbage := newGarbageCollectorCheckerByName(c.access, kind, "", name, c.garbageCollectorTimeout)
-
-	createNamespace := withTimeout(
-		&namespaceCreationChecker{access: c.access, namespace: namespace},
-		c.creationTimeout)
-
-	deleteNamespace := withTimeout(
-		&namespaceDeletionChecker{access: c.access, namespace: namespace},
-		c.deletionTimeout)
-
-	verifyDeletion := withRetryEachSeconds(
-		&objectIsNotListedChecker{
-			access:   c.access,
-			kind:     kind,
-			listOpts: listOptsByName(name),
-		},
-		c.garbageCollectorTimeout,
-	)
-
-	return sequence(
-		pingControlPlane,
-		collectGarbage,
-		createNamespace,
-		deleteNamespace,
-		verifyDeletion,
-	)
-}
-
-// namespaceCreationChecker creates namespace
-type namespaceCreationChecker struct {
-	access    kubernetes.Access
-	namespace *v1.Namespace
-}
-
-func (c *namespaceCreationChecker) Check() check.Error {
+func (c *namespaceCreator) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
-	_, err := client.CoreV1().Namespaces().Create(c.namespace)
-	if err != nil {
-		return check.ErrUnknown("cannot create namespace %q: %v", c.namespace.GetName(), err)
-	}
-	return nil
+	ns := createNamespaceObject(c.name)
+	_, err := client.CoreV1().Namespaces().Create(ns)
+	return err
 }
 
-// namespaceDeletionChecker deletes namespace
-type namespaceDeletionChecker struct {
-	access    kubernetes.Access
-	namespace *v1.Namespace
+type namespaceGetter struct {
+	access kubernetes.Access
+	name   string
 }
 
-func (c *namespaceDeletionChecker) Check() check.Error {
+func (c *namespaceGetter) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
-	err := client.CoreV1().Namespaces().Delete(c.namespace.GetName(), &metav1.DeleteOptions{})
-	if err != nil {
-		return check.ErrFail("cannot delete namespace %q: %v", c.namespace.GetName(), err)
-	}
-	return nil
+	_, err := client.CoreV1().Namespaces().Get(c.name, metav1.GetOptions{})
+	return err
 }
 
-func createNamespaceObject() *v1.Namespace {
-	name := run.StaticIdentifier("upmeter-control-plane-namespace") // TODO check alerts
+type namespaceDeleter struct {
+	access  kubernetes.Access
+	name    string
+	timeout time.Duration
+}
 
+func (c *namespaceDeleter) Do(_ context.Context) error {
+	client := c.access.Kubernetes()
+	err := client.CoreV1().Namespaces().Delete(c.name, &metav1.DeleteOptions{})
+	return err
+}
+
+func createNamespaceObject(name string) *v1.Namespace {
 	return &v1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "namespace",
