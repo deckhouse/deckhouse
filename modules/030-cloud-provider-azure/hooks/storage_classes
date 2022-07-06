@@ -28,8 +28,7 @@ function __main__() {
   storage_classes='[
     {
       "name": "managed-standard-ssd",
-      "type": "StandardSSD_LRS",
-      "cachingMode": "None"
+      "type": "StandardSSD_LRS"
     },
     {
       "name": "managed-standard",
