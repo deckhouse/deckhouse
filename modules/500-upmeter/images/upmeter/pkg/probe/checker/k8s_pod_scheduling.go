@@ -47,7 +47,7 @@ func (c PodScheduling) Checker() check.Checker {
 	preflight := newK8sVersionGetter(c.Access)
 
 	name := run.StaticIdentifier("upmeter-probe-basic")
-	pod := createPodObjectWithName(name, c.Node, c.Image)
+	pod := createPodObject(name, c.Node, c.Image)
 
 	getter := &podGetter{access: c.Access, namespace: c.Namespace, name: name}
 
