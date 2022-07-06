@@ -194,7 +194,7 @@ func createPodObject(podName, nodeName string, image *kubernetes.ProbeImage) *v1
 			Name: podName,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"upmeter-agent": run.ID(),
+				agentLabelKey:   run.ID(),
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "scheduler",
 			},

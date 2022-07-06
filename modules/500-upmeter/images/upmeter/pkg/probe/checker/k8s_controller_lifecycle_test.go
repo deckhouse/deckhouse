@@ -3,8 +3,9 @@ package checker
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"d8.io/upmeter/pkg/check"
 )

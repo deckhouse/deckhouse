@@ -67,15 +67,13 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			probe:  "controller-manager",
 			check:  "_",
 			period: time.Minute,
-			config: checker.DeploymentLifecycle{
-				Access:                    access,
-				Namespace:                 namespace,
-				DeploymentCreationTimeout: 5 * time.Second,
-				DeploymentDeletionTimeout: 5 * time.Second,
-				PodAppearTimeout:          10 * time.Second,
-				PodDisappearTimeout:       10 * time.Second,
-				GarbageCollectionTimeout:  gcTimeout,
-				ControlPlaneAccessTimeout: cpTimeout,
+			config: checker.StatefulSetPodLifecycle{
+				Access:               access,
+				Namespace:            namespace,
+				AgentID:              run.ID(),
+				CreationTimeout:      5 * time.Second,
+				DeletionTimeout:      5 * time.Second,
+				PodTransitionTimeout: 10 * time.Second,
 			},
 		}, {
 			group:  groupControlPlane,

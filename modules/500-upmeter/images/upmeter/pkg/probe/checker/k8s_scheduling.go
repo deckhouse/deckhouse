@@ -54,13 +54,13 @@ func (c PodScheduling) Checker() check.Checker {
 	creator := doWithTimeout(
 		&podCreator{access: c.Access, namespace: c.Namespace, pod: pod},
 		c.CreationTimeout,
-		fmt.Errorf("cration timeout reached"),
+		fmt.Errorf("creation timeout reached"),
 	)
 
 	deleter := doWithTimeout(
 		&podDeleter{access: c.Access, namespace: c.Namespace, name: name},
 		c.DeletionTimeout,
-		fmt.Errorf("cration timeout reached"),
+		fmt.Errorf("creation timeout reached"),
 	)
 
 	fetcher := &pollingPodNodeFetcher{

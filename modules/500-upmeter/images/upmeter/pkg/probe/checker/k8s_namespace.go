@@ -111,7 +111,7 @@ func createNamespaceObject(name string) *v1.Namespace {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"upmeter-agent": run.ID(),
+				agentLabelKey:   run.ID(),
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "namespace",
 			},

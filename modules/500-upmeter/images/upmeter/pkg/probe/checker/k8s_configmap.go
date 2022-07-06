@@ -90,6 +90,8 @@ func (c *configmapDeleter) Do(_ context.Context) error {
 	return err
 }
 
+const agentLabelKey = "upmeter-agent"
+
 func createConfigMapObject(name string) *v1.ConfigMap {
 	return &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -100,7 +102,7 @@ func createConfigMapObject(name string) *v1.ConfigMap {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"upmeter-agent": run.ID(),
+				agentLabelKey:   run.ID(),
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "basic",
 			},
