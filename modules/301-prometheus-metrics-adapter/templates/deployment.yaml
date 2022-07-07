@@ -55,7 +55,7 @@ spec:
         - --tls-private-key-file=/var/run/adapter-cert/tls.key
         - --logtostderr=true
         - --prometheus-url=http://127.0.0.1:8000/trickster/main/
-        - --metrics-relist-interval={{ mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}
+        - --metrics-relist-interval={{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
         - --config=/etc/adapter/config.yaml
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
         ports:
