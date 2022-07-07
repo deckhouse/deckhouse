@@ -27,7 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
+var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "YandexMachineClass", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
@@ -53,7 +53,7 @@ var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_dele
 			f.RunHook()
 		})
 
-		FIt("All machines after 23h mark should be deleted", func() {
+		It("All machines after 23h mark should be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-0").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-1").Exists()).To(BeFalse())
