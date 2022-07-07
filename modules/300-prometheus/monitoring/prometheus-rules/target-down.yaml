@@ -1,8 +1,8 @@
 - name: d8.prometheus.target_down
   rules:
   - alert: TargetDown
-    for: __SCRAPE_INTERVAL_X_2__
     expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
+    for: 10m
     labels:
       severity_level: "7"
     annotations:

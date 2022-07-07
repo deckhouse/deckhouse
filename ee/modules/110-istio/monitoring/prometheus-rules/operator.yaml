@@ -11,7 +11,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "10m"
       plk_grouped_by__main: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "revision"
       summary: istio-operator is unable to reconcile istio control-plane setup.
