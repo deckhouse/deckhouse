@@ -29,7 +29,7 @@ import (
 
 var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+	f.RegisterCRD("deckhouse.io", "v1", "YandexMachineClass", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
 	Context("With no proper Machines", func() {
@@ -113,14 +113,14 @@ func generateNGsAndICs(durationStrings ...string) string {
 	var builder strings.Builder
 	builder.WriteString(`---
 apiVersion: deckhouse.io/v1
-kind: YandexInstanceClass
+kind: YandexMachineClass
 metadata:
   name: test
 spec:
   preemptible: true
 ---
 apiVersion: deckhouse.io/v1
-kind: YandexInstanceClass
+kind: YandexMachineClass
 metadata:
   name: not-preemptible
 spec:

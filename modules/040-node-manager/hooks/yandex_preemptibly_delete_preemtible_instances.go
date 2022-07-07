@@ -19,7 +19,6 @@ package hooks
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -41,7 +40,7 @@ type Machine struct {
 	MachineClassName  string
 }
 
-type YandexInstanceClass struct {
+type YandexMachineClass struct {
 	Name string
 }
 
@@ -77,13 +76,13 @@ func applyMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func isPreemptibleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	preemptible, ok, err := unstructured.NestedBool(obj.UnstructuredContent(), "spec", "preemptible")
+	preemptible, ok, err := unstructured.NestedBool(obj.UnstructuredContent(), "spec", "schedulingPolicy", "preemptible")
 	if err != nil {
-		return nil, fmt.Errorf("can't access field \"preemptible\" of YandexInstanceClass %q: %s", obj.GetName(), err)
+		return nil, fmt.Errorf("can't access field \"spec.schedulingPolicy.preemptible\" of YandexMachineClass %q: %s", obj.GetName(), err)
 	}
 
 	if ok && preemptible {
-		return &YandexInstanceClass{
+		return &YandexMachineClass{
 			Name: obj.GetName(),
 		}, nil
 	}
@@ -101,27 +100,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "machines",
-			ExecuteHookOnEvents:          go_hook.Bool(false),
-			WaitForSynchronization:       go_hook.Bool(false),
-			ExecuteHookOnSynchronization: go_hook.Bool(false),
-			ApiVersion:                   "machine.sapcloud.io/v1alpha1",
-			Kind:                         "Machine",
+			Name:                "mcs",
+			ExecuteHookOnEvents: go_hook.Bool(false),
+			ApiVersion:          "machine.sapcloud.io/v1alpha1",
+			Kind:                "YandexMachineClass",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			FilterFunc: isPreemptibleFilter,
+		},
+		{
+			Name:                "machines",
+			ExecuteHookOnEvents: go_hook.Bool(false),
+			ApiVersion:          "machine.sapcloud.io/v1alpha1",
+			Kind:                "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-cloud-instance-manager"},
 				},
 			},
 			FilterFunc: applyMachineFilter,
-		},
-		{
-			Name:                         "ics",
-			ExecuteHookOnEvents:          go_hook.Bool(false),
-			WaitForSynchronization:       go_hook.Bool(false),
-			ExecuteHookOnSynchronization: go_hook.Bool(false),
-			ApiVersion:                   "deckhouse.io/v1",
-			Kind:                         "YandexInstanceClass",
-			FilterFunc:                   isPreemptibleFilter,
 		},
 	},
 }, deleteMachines)
@@ -130,23 +130,23 @@ func deleteMachines(input *go_hook.HookInput) error {
 	timeNow := time.Now().UTC()
 
 	var (
-		icsSnapshot                   = input.Snapshots["ics"]
-		machineSnapshot               = input.Snapshots["machines"]
-		preemptibleInstanceClassesSet = make(map[string]struct{})
-		machines                      []*Machine
+		mcsSnapshot                  = input.Snapshots["mcs"]
+		machineSnapshot              = input.Snapshots["machines"]
+		preemptibleMachineClassesSet = make(map[string]struct{})
+		machines                     []*Machine
 	)
 
-	for _, icRaw := range icsSnapshot {
-		if icRaw == nil {
+	for _, mcRaw := range mcsSnapshot {
+		if mcRaw == nil {
 			continue
 		}
 
-		ic, ok := icRaw.(*YandexInstanceClass)
+		ic, ok := mcRaw.(*YandexMachineClass)
 		if !ok {
-			return fmt.Errorf("failed to assert to *YandexInstanceClass")
+			return fmt.Errorf("failed to assert to *YandexMachineClass")
 		}
 
-		preemptibleInstanceClassesSet[ic.Name] = struct{}{}
+		preemptibleMachineClassesSet[ic.Name] = struct{}{}
 	}
 
 	for _, machineRaw := range machineSnapshot {
@@ -163,11 +163,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		// MachineClass name is InstanceClass name plus "dash gibberish"
-		splittedMachineClassName := strings.Split(machine.MachineClassName, "-")
-		instanceClassName := strings.Join(splittedMachineClassName[:len(splittedMachineClassName)-1], "")
-
-		if _, ok := preemptibleInstanceClassesSet[instanceClassName]; !ok {
+		if _, ok := preemptibleMachineClassesSet[machine.MachineClassName]; !ok {
 			continue
 		}
 
