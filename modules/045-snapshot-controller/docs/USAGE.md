@@ -1,5 +1,5 @@
 ---
-title: "The snapshot-controller moule: configuration examples"
+title: "The snapshot-controller module: configuration examples"
 ---
 
 ### Using snapshots
