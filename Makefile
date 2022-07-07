@@ -12,6 +12,8 @@ MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
 PLATFORM_NAME := $(shell uname -p)
+OS_NAME := $(shell uname)
+LBITS := $(shell getconf LONG_BIT)
 ifneq ($(filter arm%,$(PLATFORM_NAME)),)
 	export WERF_PLATFORM=linux/amd64
 endif
@@ -43,7 +45,7 @@ TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane ## Install dev dependencies.
 
 ##@ Tests
 
@@ -144,20 +146,18 @@ docs-down: ## Stop all the documentation containers.
 
 ##@ Update kubernetes control-plane patchversions
 
-.PHONY: update-k8s-patch-versions-deps
-update-k8s-patch-versions-deps: ## Install jq,yq,crane deps for update-patchversion script.
-	make install-jq && make install-yq && make install-crane
+bin/jq: ## Install jq deps for update-patchversion script.
+  ifeq ($(OS_NAME), Linux)
+		JQ_PLATFORM = linux
+  else ifeq ($(OS_NAME), Darwin)
+		JQ_PLATFORM = osx-amd
+  endif
+	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM)$(LBITS) -o $(PWD)/bin/jq
 
-.PHONY: install-jq
-install-jq: ## Install jq deps for update-patchversion script.
-	cd candi/tools; bash update_kubernetes_patchversions.sh install-jq
-
-.PHONY: install-yq
-install-yq: ## Install yq deps for update-patchversion script.
+bin/yq: ## Install yq deps for update-patchversion script.
 	cd candi/tools; bash update_kubernetes_patchversions.sh install-yq
 
-.PHONY: install-crane
-install-crane: ## Install crane deps for update-patchversion script.
+bin/crane: ## Install crane deps for update-patchversion script.
 	cd candi/tools; bash update_kubernetes_patchversions.sh install-crane
 
 .PHONY: update-k8s-patch-versions

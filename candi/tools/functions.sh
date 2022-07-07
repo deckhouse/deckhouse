@@ -23,16 +23,6 @@ function check_jq() {
     fi
 }
 
-function install_jq() {
-    # Mac OS
-    if brew --version >/dev/null; then
-      brew install jq
-    # Linux
-    else
-      curl curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -o /usr/local/bin/jq && chmod +x /usr/local/bin/jq
-    fi
-}
-
 function check_crane() {
     if ! crane version &>/dev/null; then
       >&2 echo "ERROR: crane is not installed. Please install it from https://github.com/google/go-containerregistry/tree/main/cmd/crane"
