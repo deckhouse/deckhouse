@@ -106,20 +106,17 @@ func wrapLoggerTransport(base http.RoundTripper) http.RoundTripper {
 
 func (t *logTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	id := uuid.New()
+	startTime := time.Now()
+
+	t.logger.Printf("%s -- Start request: %s [%s] %s %s\n",
+		id, r.RemoteAddr, r.UserAgent(), r.Method, r.URL.String(),
+	)
 
 	resp, err := t.base.RoundTrip(r)
 	if err != nil {
 		return resp, err
 	}
 
-	t.logger.Printf(
-		"%s -- %s %d [%s] %s %s\n",
-		id,
-		r.RemoteAddr,
-		resp.StatusCode,
-		r.UserAgent(),
-		r.Method,
-		r.URL.String(),
-	)
+	t.logger.Printf("%s -- Response: %d, %s\n", id, resp.StatusCode, time.Now().Sub(startTime).String())
 	return resp, nil
 }
