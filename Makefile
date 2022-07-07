@@ -13,16 +13,15 @@ MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0
 # besides linux/amd64 (e.g. relevant for mac m1).
 PLATFORM_NAME := $(shell uname -p)
 OS_NAME := $(shell uname)
-LBITS := $(shell getconf LONG_BIT)
 ifneq ($(filter arm%,$(PLATFORM_NAME)),)
 	export WERF_PLATFORM=linux/amd64
 endif
 
 # Set platform for jq
 ifeq ($(OS_NAME), Linux)
-	JQ_PLATFORM = linux
+	JQ_PLATFORM = linux64
 else ifeq ($(OS_NAME), Darwin)
-	JQ_PLATFORM = osx-amd
+	JQ_PLATFORM = osx-amd64
 endif
 
 # Set platform for yq
@@ -174,10 +173,10 @@ docs-down: ## Stop all the documentation containers.
 ##@ Update kubernetes control-plane patchversions
 
 bin/jq: ## Install jq deps for update-patchversion script.
-	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM)$(LBITS) -o $(PWD)/bin/jq && chmod +x $(PWD)/bin/jq
+	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq && chmod +x $(PWD)/bin/jq
 
 bin/yq: ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o $(PWD)/bin/yq
+	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o $(PWD)/bin/yq && chmod +x $(PWD)/bin/yq
 
 bin/crane: ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane $(PWD)/bin/crane && chmod +x $(PWD)/bin/crane
