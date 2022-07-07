@@ -26,6 +26,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
@@ -127,16 +129,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, deleteMachines)
 
 func deleteMachines(input *go_hook.HookInput) error {
-	timeNow := time.Now().UTC()
-
 	var (
-		mcsSnapshot                  = input.Snapshots["mcs"]
-		machineSnapshot              = input.Snapshots["machines"]
-		preemptibleMachineClassesSet = make(map[string]struct{})
+		timeNow                      = time.Now().UTC()
+		preemptibleMachineClassesSet = set.Set{}
 		machines                     []*Machine
 	)
 
-	for _, mcRaw := range mcsSnapshot {
+	for _, mcRaw := range input.Snapshots["mcs"] {
 		if mcRaw == nil {
 			continue
 		}
@@ -146,14 +145,14 @@ func deleteMachines(input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to assert to *YandexMachineClass")
 		}
 
-		preemptibleMachineClassesSet[ic.Name] = struct{}{}
+		preemptibleMachineClassesSet.Add(ic.Name)
 	}
 
-	if len(preemptibleMachineClassesSet) == 0 {
+	if preemptibleMachineClassesSet.Size() == 0 {
 		return nil
 	}
 
-	for _, machineRaw := range machineSnapshot {
+	for _, machineRaw := range input.Snapshots["machines"] {
 		machine, ok := machineRaw.(*Machine)
 		if !ok {
 			return fmt.Errorf("failed to assert to *Machine")
@@ -167,7 +166,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		if _, ok := preemptibleMachineClassesSet[machine.MachineClassName]; !ok {
+		if !preemptibleMachineClassesSet.Has(machine.MachineClassName) {
 			continue
 		}
 

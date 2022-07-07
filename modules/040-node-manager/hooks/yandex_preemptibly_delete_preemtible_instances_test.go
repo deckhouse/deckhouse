@@ -53,7 +53,7 @@ var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_dele
 			f.RunHook()
 		})
 
-		It("All machines after 23h mark should be deleted", func() {
+		FIt("All machines after 23h mark should be deleted", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-0").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "test-1").Exists()).To(BeFalse())
