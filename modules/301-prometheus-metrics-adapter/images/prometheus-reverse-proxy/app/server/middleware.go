@@ -115,7 +115,7 @@ func (t *logTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	t.logger.Printf(
 		"%s (%s) -- [%s] %s %s | %s\n",
 		r.RemoteAddr,
-		r.Response.StatusCode,
+		resp.StatusCode,
 		r.UserAgent(),
 		r.Method,
 		r.URL.String(),
