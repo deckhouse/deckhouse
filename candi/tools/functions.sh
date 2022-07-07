@@ -30,16 +30,6 @@ function check_crane() {
     fi
 }
 
-function install_crane() {
-    # Mac OS
-    if brew --version >/dev/null; then
-      brew install crane
-    # Linux
-    else
-      curl curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - crane && mv crane /usr/local/bin && chmod +x /usr/local/bin/crane
-    fi
-}
-
 function check_yq() {
     if ! yq --version &>/dev/null; then
       >&2 echo "ERROR: yq is not installed. Please install it from https://github.com/mikefarah/yq/releases"
@@ -49,16 +39,6 @@ function check_yq() {
     if ! yq --version | grep -q ".*4\.[0-9]*.*"; then
       >&2 echo "ERROR: yq version should be equal 4"
       return 1
-    fi
-}
-
-function install_yq() {
-    # Mac OS
-    if brew --version >/dev/null; then
-      brew install yq
-    # Linux
-    else
-      curl curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_linux_amd64 -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
     fi
 }
 

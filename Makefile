@@ -18,6 +18,33 @@ ifneq ($(filter arm%,$(PLATFORM_NAME)),)
 	export WERF_PLATFORM=linux/amd64
 endif
 
+# Set platform for jq
+ifeq ($(OS_NAME), Linux)
+	JQ_PLATFORM = linux
+else ifeq ($(OS_NAME), Darwin)
+	JQ_PLATFORM = osx-amd
+endif
+
+# Set platform for yq
+ifeq ($(OS_NAME), Linux)
+	YQ_PLATFORM = linux
+else ifeq ($(OS_NAME), Darwin)
+	YQ_PLATFORM = darwin
+endif
+# Set arch for yq
+ifeq ($(PLATFORM_NAME), x86_64)
+	YQ_ARCH = amd64
+else ifeq ($(PLATFORM_NAME), arm)
+	YQ_ARCH = arm64
+endif
+
+# Set arch for crane
+ifeq ($(PLATFORM_NAME), x86_64)
+	CRANE_ARCH = x86_64
+else ifeq ($(PLATFORM_NAME), arm)
+	CRANE_ARCH = arm64
+endif
+
 help:
 	@printf -- "${FORMATTING_BEGIN_BLUE}%s${FORMATTING_END}\n" \
 	"" \
@@ -147,18 +174,13 @@ docs-down: ## Stop all the documentation containers.
 ##@ Update kubernetes control-plane patchversions
 
 bin/jq: ## Install jq deps for update-patchversion script.
-  ifeq ($(OS_NAME), Linux)
-		JQ_PLATFORM = linux
-  else ifeq ($(OS_NAME), Darwin)
-		JQ_PLATFORM = osx-amd
-  endif
-	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM)$(LBITS) -o $(PWD)/bin/jq
+	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM)$(LBITS) -o $(PWD)/bin/jq && chmod +x $(PWD)/bin/jq
 
 bin/yq: ## Install yq deps for update-patchversion script.
-	cd candi/tools; bash update_kubernetes_patchversions.sh install-yq
+	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o $(PWD)/bin/yq
 
 bin/crane: ## Install crane deps for update-patchversion script.
-	cd candi/tools; bash update_kubernetes_patchversions.sh install-crane
+	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane $(PWD)/bin/crane && chmod +x $(PWD)/bin/crane
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
