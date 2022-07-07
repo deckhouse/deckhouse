@@ -149,6 +149,10 @@ func deleteMachines(input *go_hook.HookInput) error {
 		preemptibleMachineClassesSet[ic.Name] = struct{}{}
 	}
 
+	if len(preemptibleMachineClassesSet) == 0 {
+		return nil
+	}
+
 	for _, machineRaw := range machineSnapshot {
 		machine, ok := machineRaw.(*Machine)
 		if !ok {

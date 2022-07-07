@@ -27,14 +27,14 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
+var _ = FDescribe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delete_preemtible_instances ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1", "YandexMachineClass", false)
+	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "YandexMachineClass", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
 	Context("With no proper Machines", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndICs()))
+			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndMCs()))
 			f.RunHook()
 		})
 
@@ -47,7 +47,7 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delet
 
 	Context("With proper machines", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndICs(
+			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndMCs(
 				"23h10m", "23h30m", "23h40m", "22h",
 			)))
 			f.RunHook()
@@ -64,7 +64,7 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delet
 
 	Context("With proper machines", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndICs(
+			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndMCs(
 				"23h10m", "23h30m", "23h40m", "22h",
 			)))
 			f.RunHook()
@@ -81,7 +81,7 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delet
 
 	Context("With proper machines", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndICs(
+			f.BindingContexts.Set(f.KubeStateSet(generateNGsAndMCs(
 				"22h10m", "22h5m", "22h2m", "21h",
 			)))
 			f.RunHook()
@@ -97,7 +97,7 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: preemptibly_delet
 	})
 })
 
-func generateNGsAndICs(durationStrings ...string) string {
+func generateNGsAndMCs(durationStrings ...string) string {
 	timeNow := time.Now().UTC()
 
 	var offsets []time.Duration
@@ -112,19 +112,23 @@ func generateNGsAndICs(durationStrings ...string) string {
 
 	var builder strings.Builder
 	builder.WriteString(`---
-apiVersion: deckhouse.io/v1
+apiVersion: machine.sapcloud.io/v1alpha1
 kind: YandexMachineClass
 metadata:
   name: test
+  namespace: d8-cloud-instance-manager
 spec:
-  preemptible: true
+  schedulingPolicy:
+    preemptible: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: machine.sapcloud.io/v1alpha1
 kind: YandexMachineClass
 metadata:
   name: not-preemptible
+  namespace: d8-cloud-instance-manager
 spec:
-  preemptible: false
+  schedulingPolicy:
+    preemptible: false
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -134,7 +138,7 @@ metadata:
 spec:
   class:
     kind: AWSMachineClass
-    name: test-cx35
+    name: test
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -145,7 +149,7 @@ metadata:
 spec:
   class:
     kind: YandexMachineClass
-    name: test-cx25
+    name: test
 `)
 
 	for i, offset := range offsets {
@@ -164,7 +168,7 @@ metadata:
 spec:
   class:
     kind: YandexMachineClass
-    name: test-cx5
+    name: test
 `, i, string(ts)))
 	}
 
