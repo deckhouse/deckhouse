@@ -35,24 +35,24 @@ jobs:
     name: Get pull request reference
     runs-on: ubuntu-latest
     outputs:
-      ref: ${{ steps.check_pr.outputs.ref }}
-      ref_slug: ${{ steps.check_pr.outputs.ref_slug }}
-      edition: ${{ steps.check_pr.outputs.edition }}
-      pr_title: ${{ steps.check_pr.outputs.pr_title }}
-      pr_description: ${{ steps.check_pr.outputs.pr_description }}
-      diff_url: ${{ steps.check_pr.outputs.diff_url }}
-      labels: ${{ steps.check_pr.outputs.labels }}
+      ref: ${{ steps.pr_props.outputs.ref }}
+      ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
+      edition: ${{ steps.pr_props.outputs.edition }}
+      pr_title: ${{ steps.pr_props.outputs.pr_title }}
+      pr_description: ${{ steps.pr_props.outputs.pr_description }}
+      diff_url: ${{ steps.pr_props.outputs.diff_url }}
+      labels: ${{ steps.pr_props.outputs.labels }}
 
     # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
     if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
     steps:
       - name: Get PR info for push trigger
-        id: check_push
+        id: push_info
         if: ${{ github.event_name == 'push' }}
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            // Support for 'push' trigger: find PR by commit SHA and pass response to check_pr step.
+            // Support for 'push' trigger: find PR by commit SHA and pass response to pr_props step.
             const { GITHUB_REF_NAME } = process.env
             core.startGroup(`Fetching PR info for commit ${context.sha} in ${context.repo.name}:${GITHUB_REF_NAME} ...`)
             try {
@@ -86,7 +86,7 @@ jobs:
             }
 
       - name: Get PR info for pull_request trigger
-        id: check_pull_request
+        id: pr_info
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         uses: actions/github-script@v5.0.0
         with:
@@ -124,11 +124,11 @@ jobs:
               core.endGroup()
             }
 
-      - name: Check pull request
-        id: check_pr
+      - name: Check PR properties
+        id: pr_props
         uses: actions/github-script@v5.0.0
         env:
-          PR_INFO: ${{ steps.check_push.outputs.pr_info || steps.check_pull_request.outputs.pr_info }}
+          PR_INFO: ${{ steps.push_info.outputs.pr_info || steps.pr_info.outputs.pr_info }}
         with:
           script: |
             if (process.env.PR_INFO == '') {
@@ -207,15 +207,15 @@ jobs:
 
       # Checkhout the head commit of the PR branch.
       - name: Checkout PR head commit
-        if: steps.check_pr.outputs.should_check == 'true'
+        if: steps.pr_props.outputs.should_check == 'true'
         uses: actions/checkout@v2.4.0
         with:
-          ref: ${{ steps.check_pr.outputs.ref }}
+          ref: ${{ steps.pr_props.outputs.ref }}
 
       # Detect dangerous changes in external PR.
       - name: Check for dangerous changes
         uses: dorny/paths-filter@v2
-        if: steps.check_pr.outputs.should_check == 'true'
+        if: steps.pr_props.outputs.should_check == 'true'
         id: changes
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}

@@ -843,7 +843,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
   // Note: no more auto rerun for validation.yml.
 
   let command = {
-    reRunWorkflow: false,
+    rerunWorkflow: false,
     triggerWorkflowDispatch: false,
     workflows: []
   };
@@ -863,7 +863,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
     }
     if (labelType === 'ok-to-test') {
       command.workflows = ['build-and-test_dev.yml', 'validation.yml'];
-      command.reRunWorkflow = true;
+      command.rerunWorkflow = true;
     }
     // Rerun build workflow if edition label is added or all edition labels are removed.
     if (labelType === 'edition') {
@@ -887,7 +887,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       // Re-run workflow if labeled with edition label or no edition labels left on PR.
       if (event.action === 'labeled' || (event.action === 'unlabeled' && removeEditions.length === 0)) {
         command.workflows = ['build-and-test_dev.yml'];
-        command.reRunWorkflow = true;
+        command.rerunWorkflow = true;
       }
     }
   } finally {
@@ -898,7 +898,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
     return core.notice(`Ignore '${event.action}' event for label '${label}': no workflow to rerun.`);
   }
 
-  if (command.reRunWorkflow) {
+  if (command.rerunWorkflow) {
     core.notice(`Retry workflows '${JSON.stringify(command.workflows)}' for label '${label}'`);
     for (const workflow_id of command.workflows) {
       await findAndRerunWorkflow({ github, context, core, workflow_id });
