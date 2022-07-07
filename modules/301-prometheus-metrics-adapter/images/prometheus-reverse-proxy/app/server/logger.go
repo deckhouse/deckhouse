@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	infLog = log.New(os.Stdout, "I ", log.LstdFlags)
-	reqLog = log.New(os.Stdout, "R ", log.LstdFlags)
-	errLog = log.New(os.Stderr, "E ", log.LstdFlags)
+	infLog = log.New(os.Stdout, "I", log.LstdFlags)
+	reqLog = log.New(os.Stdout, "R", log.LstdFlags)
+	errLog = log.New(os.Stderr, "E", log.LstdFlags)
 )
