@@ -11,7 +11,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "1m"
       plk_create_group_if_not_exists__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
       plk_grouped_by__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_ignore_labels: "job"
@@ -32,7 +31,6 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_ignore_labels: "job"
-      plk_pending_until_firing_for: "15m"
       plk_create_group_if_not_exists__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
       plk_grouped_by__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
       description: |
@@ -51,7 +49,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "30m"
       plk_labels_as_annotations: "pod"
       plk_create_group_if_not_exists__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
       plk_grouped_by__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
@@ -97,7 +94,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "20m
       plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
       plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
