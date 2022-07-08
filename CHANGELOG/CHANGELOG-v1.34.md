@@ -62,6 +62,7 @@
 
 
  - **[candi]** Fixed the applying of disk size for CloudPermanent nodes in `YandexClusterConfiguration`. [#1900](https://github.com/deckhouse/deckhouse/pull/1900)
+ - **[cert-manager]** Fix patch for cert-manager certificate owner ref field [#1985](https://github.com/deckhouse/deckhouse/pull/1985)
  - **[cert-manager]** Respect the global IngressClass in the `letsencrypt` ClusterIssuer. [#1750](https://github.com/deckhouse/deckhouse/pull/1750)
  - **[deckhouse]** Change DeckhouseUpdating Prometheus rule severity_level to avoid alert deferring [#1929](https://github.com/deckhouse/deckhouse/pull/1929)
  - **[dhctl]** Do not try to remove the `dhctl.deckhouse.io/node-for-converge` label if the node object was deleted during converge. [#1930](https://github.com/deckhouse/deckhouse/pull/1930)
