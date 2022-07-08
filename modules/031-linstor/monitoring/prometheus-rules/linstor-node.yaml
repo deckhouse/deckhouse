@@ -8,7 +8,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_linstor_node_health: "D8LinstorNodeHealth,tier=cluster,d8_module=linstor,d8_component=linstor-node"
+        plk_create_group_if_not_exists__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse"
         summary: LINSTOR node is not ONLINE
         description: |
@@ -27,7 +27,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_linstor_node_health: "D8LinstorNodeHealth,tier=cluster,d8_module=linstor,d8_component=linstor-node"
+        plk_create_group_if_not_exists__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse"
         summary: LINSTOR satellite has errors
         description: |
@@ -47,7 +47,7 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_labels_as_annotations: "pod"
-        plk_create_group_if_not_exists__d8_linstor_node_health: "D8LinstorNodeHealth,tier=cluster,d8_module=linstor,d8_component=linstor-node"
+        plk_create_group_if_not_exists__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-node Pod is NOT Ready.
         description: |
@@ -64,7 +64,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_linstor_node_health: "D8LinstorNodeHealth,tier=cluster,d8_module=linstor,d8_component=linstor-node"
+        plk_create_group_if_not_exists__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_node_health: "D8LinstorNodeHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-node Pod is NOT Running.
         description: |

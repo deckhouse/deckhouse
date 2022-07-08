@@ -9,7 +9,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_piraeus_operator_health: ",D8PiraeusOperatorHealthtier=cluster,d8_module=linstor,d8_component=linstor-piraeus-operator"
+        plk_create_group_if_not_exists__d8_piraeus_operator_health: ",D8PiraeusOperatorHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=~tier,prometheus=deckhouse"
         plk_ignore_labels: "job"
         summary: Prometheus cannot scrape the piraeus-operator metrics.
@@ -28,7 +28,7 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_ignore_labels: "job"
-        plk_create_group_if_not_exists__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=cluster,d8_module=linstor,d8_component=linstor-piraeus-operator"
+        plk_create_group_if_not_exists__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=~tier,prometheus=deckhouse"
         summary: There is no `piraeus-operator` target in Prometheus.
         description: |
@@ -46,7 +46,7 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_labels_as_annotations: "pod"
-        plk_create_group_if_not_exists__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=cluster,d8_module=linstor,d8_component=linstor-piraeus-operator"
+        plk_create_group_if_not_exists__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=~tier,prometheus=deckhouse"
         summary: The piraeus-operator Pod is NOT Ready.
         description: |
@@ -63,7 +63,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=cluster,d8_module=linstor,d8_component=linstor-piraeus-operator"
+        plk_create_group_if_not_exists__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_piraeus_operator_health: "D8PiraeusOperatorHealth,tier=~tier,prometheus=deckhouse"
         summary: The piraeus-operator Pod is NOT Running.
         description: |

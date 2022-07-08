@@ -13,7 +13,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,prometheus=deckhouse,d8_module=node-local-dns,d8_component=node-local-dns"
+      plk_create_group_if_not_exists__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,prometheus=deckhouse"
       plk_group_for__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,prometheus=deckhouse"
       summary: node-local-dns Pod cannot schedule on Node {{ $labels.node }}
       description: |
