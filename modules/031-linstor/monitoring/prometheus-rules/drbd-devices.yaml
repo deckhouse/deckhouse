@@ -9,7 +9,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: LINSTOR volume is not healthy
         description: |
@@ -34,7 +34,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: DRBD device has no quorum
         description: |
@@ -64,7 +64,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: DRBD device is unintentional diskless
         description: |
@@ -96,7 +96,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: DRBD device has out-of-sync data
         description: |
@@ -128,7 +128,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=cluster,d8_module=linstor,d8_component=linstor-drbd-devices"
+        plk_create_group_if_not_exists__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_drbd_device_health: "D8DrbdDeviceHealth,tier=~tier,prometheus=deckhouse"
         summary: DRBD device is not connected
         description: |

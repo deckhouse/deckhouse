@@ -10,7 +10,7 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_labels_as_annotations: "pod"
-        plk_create_group_if_not_exists__d8_linstor_csi_controller_health: "D8LinstorCsiControllerHealth,tier=cluster,d8_module=linstor,d8_component=linstor-csi-controller"
+        plk_create_group_if_not_exists__d8_linstor_csi_controller_health: "D8LinstorCsiControllerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_csi_controller_health: "D8LinstorCsiControllerHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-csi-controller Pod is NOT Ready.
         description: |
@@ -27,7 +27,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_linstor_csi_controller_health: "D8LinstorCsiControllerHealth,tier=cluster,d8_module=linstor,d8_component=linstor-csi-controller"
+        plk_create_group_if_not_exists__d8_linstor_csi_controller_health: "D8LinstorCsiControllerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_csi_controller_health: "D8LinstorCsiControllerHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-csi-controller Pod is NOT Running.
         description: |

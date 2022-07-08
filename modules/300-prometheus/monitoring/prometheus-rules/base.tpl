@@ -12,7 +12,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_longterm_prometheus_malfunctioning: "D8LongtermPrometheusMalfunctioning,tier=cluster,d8_module=prometheus,d8_component=prometheus-longterm"
+        plk_create_group_if_not_exists__d8_longterm_prometheus_malfunctioning: "D8LongtermPrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_longterm_prometheus_malfunctioning: "D8LongtermPrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         description: |-
           This Prometheus component is only used to display historical data and is not crucial. However, if its unavailability will last long enough, you will not be able to view the statistics.
@@ -38,7 +38,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,d8_module=prometheus,d8_component=trickster"
+        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         description: |-
           The following modules use this component:
@@ -64,7 +64,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,d8_module=prometheus,d8_component=trickster"
+        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
         description: |-
           The following modules use this component:

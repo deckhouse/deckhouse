@@ -15,7 +15,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=server"
+        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "pod"
         summary: Upmeter server is not Ready
@@ -35,7 +35,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=agent"
+        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "pod"
         summary: Upmeter agent is not Ready
@@ -61,7 +61,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=server"
+        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "phase"
         summary: One or more Upmeter server pods is NOT Running
@@ -93,7 +93,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=agent"
+        plk_create_group_if_not_exists__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "phase"
         summary: One or more Upmeter agent pods is NOT Running
@@ -124,7 +124,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=server"
+        plk_create_group_if_not_exists__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse"
         plk_labels_as_annotations: "pod"
         summary: Upmeter server is restarting too often.
@@ -155,7 +155,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_smoke_mini_unavailable: "D8SmokeMiniUnavailable,prometheus=deckhouse,tier=cluster,d8_module=upmeter,d8_component=smoke-mini"
+        plk_create_group_if_not_exists__d8_smoke_mini_unavailable: "D8SmokeMiniUnavailable,tier=cluster,prometheus=deckhouse"
         plk_grouped_by__d8_smoke_mini_unavailable: "D8SmokeMiniUnavailable,tier=cluster,prometheus=deckhouse"
         summary: Smoke-mini has unbound or lost persistent volume claims.
         description: |
