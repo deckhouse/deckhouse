@@ -9,7 +9,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=cluster,d8_module=linstor,d8_component=linstor-storage-pools"
+        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
         summary: LINSTOR storage pool has errors
         description: |
@@ -28,7 +28,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=cluster,d8_module=linstor,d8_component=linstor-storage-pools"
+        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
         summary: Storage pool running out of free space
         description: |

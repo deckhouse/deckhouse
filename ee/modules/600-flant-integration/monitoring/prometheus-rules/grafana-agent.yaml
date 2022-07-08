@@ -13,7 +13,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=flant-integration,d8_component=pricing"
+      plk_create_group_if_not_exists__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         There are no succeeded samples metric from the Grafana Agent.
@@ -36,7 +36,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=flant-integration,d8_component=pricing"
+      plk_create_group_if_not_exists__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_flant_pricing_malfunctioning: "FlantPricingMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         Succeeded samples metric of the Grafana Agent is not increasing.

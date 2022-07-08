@@ -10,7 +10,7 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_labels_as_annotations: "pod"
-        plk_create_group_if_not_exists__d8_linstor_scheduler_health: "D8LinstorSchedulerHealth,tier=cluster,d8_module=linstor,d8_component=linstor-scheduler"
+        plk_create_group_if_not_exists__d8_linstor_scheduler_health: "D8LinstorSchedulerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_scheduler_health: "D8LinstorSchedulerHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-scheduler Pod is NOT Ready.
         description: |
@@ -27,7 +27,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_linstor_scheduler_health: "D8LinstorSchedulerHealth,tier=cluster,d8_module=linstor,d8_component=linstor-scheduler"
+        plk_create_group_if_not_exists__d8_linstor_scheduler_health: "D8LinstorSchedulerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_linstor_scheduler_health: "D8LinstorSchedulerHealth,tier=~tier,prometheus=deckhouse"
         summary: The linstor-scheduler Pod is NOT Running.
         description: |
