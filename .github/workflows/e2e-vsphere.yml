@@ -280,9 +280,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -648,9 +649,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -1016,9 +1018,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -1384,9 +1387,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -1752,9 +1756,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -2120,9 +2125,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -2488,9 +2494,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -2856,9 +2863,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -3224,9 +3232,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
@@ -3592,9 +3601,10 @@ jobs:
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
           # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
           # CRI value is trimmed to reduce prefix length.
-          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
           TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
