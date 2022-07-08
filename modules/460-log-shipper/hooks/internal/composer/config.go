@@ -14,30 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package composer
 
 import (
 	"bytes"
 
 	"github.com/clarketm/json"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transform"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
+
+// Pipeline is a representation of a single logical tube.
+//   Example: ClusterLoggingConfig +(destinationRef) ClusterLogsDestination = Single Pipeline.
+type Pipeline struct {
+	Source       apis.LogSource
+	Transforms   []apis.LogTransform
+	Destinations []PipelineDestination
+}
+
+type PipelineDestination struct {
+	Destination apis.LogDestination
+	Transforms  []apis.LogTransform
+}
 
 // VectorFile is a vector config file corresponding golang structure.
 type VectorFile struct {
-	Sources    map[string]impl.LogSource      `json:"sources,omitempty"`
-	Transforms map[string]impl.LogTransform   `json:"transforms,omitempty"`
-	Sinks      map[string]impl.LogDestination `json:"sinks,omitempty"`
+	Sources    map[string]apis.LogSource      `json:"sources,omitempty"`
+	Transforms map[string]apis.LogTransform   `json:"transforms,omitempty"`
+	Sinks      map[string]apis.LogDestination `json:"sinks,omitempty"`
 }
 
 // NewVectorFile inits a VectorFile instance.
 func NewVectorFile() *VectorFile {
 	return &VectorFile{
-		Sources:    make(map[string]impl.LogSource),
-		Transforms: make(map[string]impl.LogTransform),
-		Sinks:      make(map[string]impl.LogDestination),
+		Sources:    make(map[string]apis.LogSource),
+		Transforms: make(map[string]apis.LogTransform),
+		Sinks:      make(map[string]apis.LogDestination),
 	}
 }
 
@@ -63,14 +75,16 @@ func (v *VectorFile) ConvertToJSON() ([]byte, error) {
 
 // LogConfigGenerator accumulates pipelines and converts them to the vector config file.
 type LogConfigGenerator struct {
-	sources         []impl.LogSource
-	transformations []impl.LogTransform
-	destinations    []impl.LogDestination
+	sources         []apis.LogSource
+	transformations []apis.LogTransform
+	destinations    map[string]apis.LogDestination
 }
 
 // NewLogConfigGenerator return a new instance of a LogConfigGenerator.
 func NewLogConfigGenerator() *LogConfigGenerator {
-	return &LogConfigGenerator{}
+	return &LogConfigGenerator{
+		destinations: make(map[string]apis.LogDestination),
+	}
 }
 
 // AppendLogPipeline adds the pipeline to the accumulated ones.
@@ -84,6 +98,7 @@ func (g *LogConfigGenerator) AppendLogPipeline(pipeline *Pipeline) {
 	}
 
 	destinationInputs := make([]string, 0)
+
 	if len(pipeline.Transforms) > 0 {
 		pipeline.Transforms[0].SetInputs(sourcesNames)
 		destinationInputs = append(destinationInputs, pipeline.Transforms[len(pipeline.Transforms)-1].GetName())
@@ -91,34 +106,18 @@ func (g *LogConfigGenerator) AppendLogPipeline(pipeline *Pipeline) {
 		destinationInputs = sourcesNames
 	}
 
-	currentDest := g.destMap()
+	for _, pipelineDest := range pipeline.Destinations {
+		dest := pipelineDest.Destination
 
-	for _, dest := range pipeline.Destinations {
-		if cDest, ok := currentDest[dest.GetName()]; ok {
-			cDest.AppendInputs(destinationInputs)
-			continue
+		if _, ok := g.destinations[dest.GetName()]; !ok {
+			g.destinations[dest.GetName()] = dest
 		}
 
-		dest.AppendInputs(destinationInputs)
-		g.destinations = append(g.destinations, dest)
+		g.destinations[dest.GetName()].AppendInputs(destinationInputs)
 	}
 
 	g.sources = append(g.sources, sources...)
 	g.transformations = append(g.transformations, pipeline.Transforms...)
-}
-
-// BuildTransforms returns a formatted ordered list off transform rules that should be applied to the pipelines.
-func (g *LogConfigGenerator) BuildTransforms(name string, trans []impl.LogTransform) ([]impl.LogTransform, error) {
-	return transform.BuildFromMapSlice(name, trans)
-}
-
-func (g *LogConfigGenerator) destMap() map[string]impl.LogDestination {
-	m := make(map[string]impl.LogDestination, len(g.destinations))
-	for _, d := range g.destinations {
-		m[d.GetName()] = d
-	}
-
-	return m
 }
 
 // GenerateConfig returns collected pipelines as a JSON formatted document.

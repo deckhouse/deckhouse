@@ -17,10 +17,9 @@ limitations under the License.
 package transform
 
 import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/model"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/vrl"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
 // DeDotTransform is the only Lua transform rule.
@@ -30,6 +29,7 @@ func DeDotTransform() *DynamicTransform {
 	const deDotSnippet = `
 function process(event, emit)
 	if event.log.pod_labels == nil then
+		emit(event)
 		return
 	end
 	dedot(event.log.pod_labels)
@@ -96,10 +96,10 @@ func CleanUpParsedDataTransform() *DynamicTransform {
 	}
 }
 
-func CreateDefaultCleanUpTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
-	transforms := make([]impl.LogTransform, 0)
+func CreateDefaultCleanUpTransforms(dest v1alpha1.ClusterLogDestination) []apis.LogTransform {
+	transforms := make([]apis.LogTransform, 0)
 	switch dest.Spec.Type {
-	case model.DestElasticsearch, model.DestLogstash, model.DestVector:
+	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash, v1alpha1.DestVector:
 		transforms = append(transforms, CleanUpParsedDataTransform())
 	}
 	return transforms

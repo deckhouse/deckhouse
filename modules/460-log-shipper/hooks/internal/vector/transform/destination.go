@@ -17,10 +17,9 @@ limitations under the License.
 package transform
 
 import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/model"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/vrl"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
 func CleanUpAfterSourceTransform() *DynamicTransform {
@@ -49,24 +48,19 @@ func JSONParseTransform() *DynamicTransform {
 	}
 }
 
-func CreateDefaultTransforms(sourceType string, dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
-	transforms := []impl.LogTransform{
-		CleanUpAfterSourceTransform(),
-		JSONParseTransform(),
-	}
+func CreateLogDestinationTransforms(dest v1alpha1.ClusterLogDestination) []apis.LogTransform {
+	transforms := make([]apis.LogTransform, 0)
 
 	switch dest.Spec.Type {
-	case model.DestElasticsearch, model.DestLogstash:
-		if sourceType == model.SourceKubernetesPods {
-			transforms = append(transforms, DeDotTransform())
-		}
+	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash:
+		transforms = append(transforms, DeDotTransform())
 
 		if len(dest.Spec.ExtraLabels) > 0 {
 			transforms = append(transforms, ExtraFieldTransform(dest.Spec.ExtraLabels))
 		}
 	}
 
-	if dest.Spec.Type == model.DestElasticsearch && dest.Spec.Elasticsearch.DataStreamEnabled {
+	if dest.Spec.Type == v1alpha1.DestElasticsearch && dest.Spec.Elasticsearch.DataStreamEnabled {
 		transforms = append(transforms, DataStreamTransform())
 	}
 

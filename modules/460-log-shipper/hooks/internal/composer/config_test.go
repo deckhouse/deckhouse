@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package composer
 
 import (
 	"os"
@@ -25,8 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/source"
 )
@@ -61,7 +61,7 @@ func TestConfig_1(t *testing.T) {
 	dest := destination.NewLoki("testoutput", spec)
 
 	gen := NewLogConfigGenerator()
-	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []impl.LogDestination{dest}})
+	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []PipelineDestination{{Destination: apis.LogDestination(dest)}}})
 
 	conf, err := gen.GenerateConfig()
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestConfig_2(t *testing.T) {
 	dest := destination.NewLogstash("testoutput", spec)
 
 	gen := NewLogConfigGenerator()
-	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []impl.LogDestination{dest}})
+	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []PipelineDestination{{Destination: apis.LogDestination(dest)}}})
 
 	conf, err := gen.GenerateConfig()
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestConfig_3(t *testing.T) {
 	dest := destination.NewElasticsearch("testoutput", spec)
 
 	gen := NewLogConfigGenerator()
-	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []impl.LogDestination{dest}})
+	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []PipelineDestination{{Destination: apis.LogDestination(dest)}}})
 
 	conf, err := gen.GenerateConfig()
 	require.NoError(t, err)
@@ -142,7 +142,7 @@ func TestConfig_4(t *testing.T) {
 	dest := destination.NewVector("testoutput", spec)
 
 	gen := NewLogConfigGenerator()
-	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []impl.LogDestination{dest}})
+	gen.AppendLogPipeline(&Pipeline{Source: src, Destinations: []PipelineDestination{{Destination: apis.LogDestination(dest)}}})
 
 	conf, err := gen.GenerateConfig()
 	require.NoError(t, err)

@@ -22,8 +22,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 var validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
@@ -59,7 +58,7 @@ type LokiAuth struct {
 	User     string `json:"user,omitempty"`
 }
 
-func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
+func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 	spec := cspec.Loki
 
 	// Disable buffer. It is buggy. Vector developers know about problems with buffer.

@@ -17,8 +17,8 @@ limitations under the License.
 package source
 
 import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 // File represents `file` vector source
@@ -31,8 +31,8 @@ type File struct {
 	Delimiter string   `json:"line_delimiter,omitempty"`
 }
 
-func NewFile(name string, spec v1alpha1.FileSpec) impl.LogSource {
-	return File{
+func NewFile(name string, spec v1alpha1.FileSpec) *File {
+	return &File{
 		commonSource: commonSource{
 			Name: name,
 			Type: "file",
@@ -43,6 +43,6 @@ func NewFile(name string, spec v1alpha1.FileSpec) impl.LogSource {
 	}
 }
 
-func (f File) BuildSources() []impl.LogSource {
-	return []impl.LogSource{f}
+func (f *File) BuildSources() []apis.LogSource {
+	return []apis.LogSource{f}
 }

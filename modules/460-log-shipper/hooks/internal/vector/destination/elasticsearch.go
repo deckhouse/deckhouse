@@ -19,8 +19,7 @@ package destination
 import (
 	"strings"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 type Elasticsearch struct {
@@ -78,7 +77,7 @@ type ElasticsearchBulk struct {
 	Index  string `json:"index,omitempty"`
 }
 
-func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
+func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Elasticsearch {
 	spec := cspec.Elasticsearch
 
 	// Disable buffer. It is buggy. Vector developers know about problems with buffer.

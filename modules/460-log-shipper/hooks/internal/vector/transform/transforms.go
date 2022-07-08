@@ -22,10 +22,10 @@ import (
 
 	"github.com/clarketm/json"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
 
-func BuildFromMapSlice(inputName string, trans []impl.LogTransform) ([]impl.LogTransform, error) {
+func BuildFromMapSlice(inputName string, trans []apis.LogTransform) ([]apis.LogTransform, error) {
 	prevInput := inputName
 
 	for i, trm := range trans {

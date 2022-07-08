@@ -22,12 +22,11 @@ import (
 	"testing"
 
 	"github.com/clarketm/json"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/model"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
 
 func compareMock(t *testing.T, data []byte, parts ...string) {
@@ -44,37 +43,8 @@ func compareMock(t *testing.T, data []byte, parts ...string) {
 }
 
 func TestTransformSnippet(t *testing.T) {
-	t.Run("Marshal Transform", func(t *testing.T) {
-		transforms := make([]impl.LogTransform, 0)
-		dest := v1alpha1.ClusterLogDestination{
-			Spec: v1alpha1.ClusterLogDestinationSpec{
-				Type: model.DestElasticsearch,
-				ExtraLabels: map[string]string{
-					"foo": "bar",
-					"app": "{{ app }}",
-				},
-			},
-		}
-
-		defaultTransforms := CreateDefaultTransforms(model.SourceKubernetesPods, dest)
-
-		transforms = append(transforms, defaultTransforms...)
-		transforms = append(transforms, CreateDefaultCleanUpTransforms(dest)...)
-
-		tr, err := BuildFromMapSlice("testit", transforms)
-		require.NoError(t, err)
-
-		assert.Len(t, tr, 5)
-		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
-
-		data, err := json.MarshalIndent(tr, "", "\t")
-		require.NoError(t, err)
-
-		compareMock(t, data, "transform-snippet.json")
-	})
-
 	t.Run("Test filters", func(t *testing.T) {
-		transforms := make([]impl.LogTransform, 0)
+		transforms := make([]apis.LogTransform, 0)
 
 		filters := make([]v1alpha1.Filter, 0)
 		filters = append(filters, v1alpha1.Filter{
@@ -127,7 +97,7 @@ func TestTransformSnippet(t *testing.T) {
 	})
 
 	t.Run("Test extra labels", func(t *testing.T) {
-		transforms := make([]impl.LogTransform, 0)
+		transforms := make([]apis.LogTransform, 0)
 		extraLabels := map[string]string{
 			"aba": "bbb",
 			"aaa": `{{ pay-load[0].a }}`,
@@ -153,7 +123,7 @@ func TestTransformSnippet(t *testing.T) {
 
 	t.Run("Test multiline None", func(t *testing.T) {
 		multilineTransforms := CreateMultiLineTransforms(v1alpha1.MultiLineParserNone)
-		transforms := make([]impl.LogTransform, 0)
+		transforms := make([]apis.LogTransform, 0)
 		transforms = append(transforms, multilineTransforms...)
 
 		tr, err := BuildFromMapSlice("testit", transforms)
@@ -168,7 +138,7 @@ func TestTransformSnippet(t *testing.T) {
 	})
 
 	t.Run("Test multiline General", func(t *testing.T) {
-		transforms := make([]impl.LogTransform, 0)
+		transforms := make([]apis.LogTransform, 0)
 
 		multilineTransforms := CreateMultiLineTransforms(v1alpha1.MultiLineParserGeneral)
 

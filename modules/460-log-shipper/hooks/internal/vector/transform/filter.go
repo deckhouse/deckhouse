@@ -19,14 +19,14 @@ package transform
 import (
 	"strings"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/vrl"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
 type mutateFilter func(*v1alpha1.Filter)
 
-func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]impl.LogTransform, error) {
+func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {
 	return createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter) {
 		// parsed_data is a key for parsed json data from a message, we use it to quickly filter inputs
 		// "filter_field" -> "parsed_data.filter_field", "" -> "parsed_data"
@@ -34,12 +34,12 @@ func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]impl.LogTransform, 
 	})
 }
 
-func CreateLabelFilterTransforms(filters []v1alpha1.Filter) ([]impl.LogTransform, error) {
+func CreateLabelFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {
 	return createFilterTransform("label_filter", filters, nil)
 }
 
-func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutateFilter) ([]impl.LogTransform, error) {
-	transforms := make([]impl.LogTransform, 0)
+func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutateFilter) ([]apis.LogTransform, error) {
+	transforms := make([]apis.LogTransform, 0)
 
 	for _, filter := range filters {
 		rule := getRuleOutOfFilter(&filter)

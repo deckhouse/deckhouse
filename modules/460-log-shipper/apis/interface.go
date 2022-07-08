@@ -14,25 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package transform
+package apis
 
-import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-)
+type LogSource interface {
+	GetName() string
+	// BuildSources in some cases you need to split source, for example: to match few namespaces
+	// For the single log source - just return the input
+	BuildSources() []LogSource
+}
 
-// ThrottleTransform adds throttling to event's flow.
-func ThrottleTransform(rl v1alpha1.RateLimitSpec) *DynamicTransform {
-	throttleTransform := DynamicTransform{
-		CommonTransform: CommonTransform{
-			Name: "ratelimit",
-			Type: "throttle",
-		},
-		DynamicArgsMap: map[string]interface{}{
-			"exclude":     "null",
-			"threshold":   *rl.LinesPerMinute,
-			"window_secs": 60,
-		},
-	}
+type LogTransform interface {
+	GetName() string
+	SetName(string)
+	SetInputs([]string)
+	GetInputs() []string
+}
 
-	return &throttleTransform
+type LogDestination interface {
+	GetName() string
+	AppendInputs([]string)
 }

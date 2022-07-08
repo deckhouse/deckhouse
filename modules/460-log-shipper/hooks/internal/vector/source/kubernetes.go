@@ -21,11 +21,11 @@ import (
 	"strings"
 
 	"github.com/clarketm/json"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
 
 // Kubernetes represents `kubernetes_logs` vector source
@@ -56,7 +56,7 @@ type KubernetesAnnotationFields struct {
 	PodOwner       string `json:"pod_owner,omitempty"`
 }
 
-func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced bool) impl.LogSource {
+func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced bool) *Kubernetes {
 	labelsSelector, err := metav1.LabelSelectorAsSelector(&spec.LabelSelector)
 	if err != nil {
 		// LabelSelector validated by OpenApi. Error in this place is very strange. We should panic.
@@ -74,7 +74,7 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 		PodOwner:       "pod_owner",
 	}
 
-	return Kubernetes{
+	return &Kubernetes{
 		commonSource: commonSource{
 			Name: name,
 			Type: "kubernetes_logs",
@@ -95,21 +95,21 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 // 1. Namespaced - d8_namespaced_<ns>_<source_name>
 // 2. Cluster - d8_cluster_<ns>_<source_name>
 // 3. Cluster with NamespaceSelector - d8_clusterns_<ns>_<source_name>
-func (k Kubernetes) BuildSources() []impl.LogSource {
+func (k *Kubernetes) BuildSources() []apis.LogSource {
 	if k.namespaced {
 		k.Name = fmt.Sprintf("d8_namespaced_source_%s_%s", k.namespaces[0], k.Name)
-		return []impl.LogSource{k}
+		return []apis.LogSource{k}
 	}
 
 	if len(k.namespaces) <= 1 {
 		k.Name = "d8_cluster_source_" + k.Name
-		return []impl.LogSource{k}
+		return []apis.LogSource{k}
 	}
 
-	res := make([]impl.LogSource, 0, len(k.namespaces))
+	res := make([]apis.LogSource, 0, len(k.namespaces))
 
 	for _, ns := range k.namespaces {
-		k := Kubernetes{
+		k := &Kubernetes{
 			commonSource:     commonSource{Name: fmt.Sprintf("d8_clusterns_source_%s_%s", ns, k.Name), Type: k.Type},
 			namespaces:       []string{ns},
 			labels:           k.labels,
@@ -122,7 +122,7 @@ func (k Kubernetes) BuildSources() []impl.LogSource {
 	return res
 }
 
-func (k Kubernetes) MarshalJSON() ([]byte, error) {
+func (k *Kubernetes) MarshalJSON() ([]byte, error) {
 	// Exclude pod logs to avoid fooling in case of problems and debugging.
 	k.fields = append(k.fields, "metadata.name!=$VECTOR_SELF_POD_NAME")
 

@@ -19,6 +19,7 @@ package hooks
 import (
 	"time"
 
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/composer"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -27,34 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/handler"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
-
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/log-shipper/generate_config",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "cluster_log_source",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "ClusterLoggingConfig",
-			FilterFunc: filterClusterLoggingConfig,
-		},
-		{
-			Name:       "namespaced_log_source",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "PodLoggingConfig",
-			FilterFunc: filterPodLoggingConfig,
-		},
-		{
-			Name:       "cluster_log_destination",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "ClusterLogDestination",
-			FilterFunc: filterClusterLogDestination,
-		},
-	},
-}, generateConfig)
 
 func filterPodLoggingConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var src v1alpha1.PodLoggingConfig
@@ -63,7 +38,6 @@ func filterPodLoggingConfig(obj *unstructured.Unstructured) (go_hook.FilterResul
 	if err != nil {
 		return nil, err
 	}
-
 	return src, nil
 }
 
@@ -74,7 +48,6 @@ func filterClusterLoggingConfig(obj *unstructured.Unstructured) (go_hook.FilterR
 	if err != nil {
 		return nil, err
 	}
-
 	return src, nil
 }
 
@@ -85,14 +58,36 @@ func filterClusterLogDestination(obj *unstructured.Unstructured) (go_hook.Filter
 	if err != nil {
 		return nil, err
 	}
-
 	return dst, nil
 }
 
-func generateConfig(input *go_hook.HookInput) error {
-	generator := handler.FromInput(input)
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue:        "/modules/log-shipper/generate_config",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "namespaced_log_source",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "PodLoggingConfig",
+			FilterFunc: filterPodLoggingConfig,
+		},
+		{
+			Name:       "cluster_log_source",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ClusterLoggingConfig",
+			FilterFunc: filterClusterLoggingConfig,
+		},
+		{
+			Name:       "cluster_log_destination",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ClusterLogDestination",
+			FilterFunc: filterClusterLogDestination,
+		},
+	},
+}, generateConfig)
 
-	configContent, err := generator.Do(input)
+func generateConfig(input *go_hook.HookInput) error {
+	configContent, err := composer.FromInput(input).Do()
 	if err != nil {
 		return err
 	}
@@ -123,7 +118,6 @@ func generateConfig(input *go_hook.HookInput) error {
 		},
 		Data: map[string][]byte{"vector.json": configContent},
 	}
-
 	input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
 
 	event := &eventsv1.Event{
@@ -149,7 +143,7 @@ func generateConfig(input *go_hook.HookInput) error {
 		ReportingInstance:   "deckhouse",
 		ReportingController: "deckhouse",
 	}
-
 	input.PatchCollector.Create(event)
+
 	return nil
 }

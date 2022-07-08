@@ -17,8 +17,7 @@ limitations under the License.
 package destination
 
 import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 type Logstash struct {
@@ -52,7 +51,7 @@ type LogstashKeepalive struct {
 	TimeSecs int `json:"time_secs"`
 }
 
-func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
+func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
 	spec := cspec.Logstash
 
 	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
