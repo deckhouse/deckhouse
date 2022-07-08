@@ -17,15 +17,15 @@ spec:
                 url:
                   description: Datasource URL.
                 user:
-                  description: Database username.
+                  description: Имя пользователя БД.
                 database:
-                  description: Database name, если используется.
+                  description: Имя БД, если используется.
                 withCredentials:
-                  description: Enable/disable with credentials headers
+                  description: Включение/отключение с помощью заголовков учетных данных.
                 basicAuth:
                   description: Включить/выключить basic auth.
                 basicAuthUser:
-                  description: Basic auth username.
+                  description: Имя пользователя базовой авторизации.
                 jsonData:
                   description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
                 secureJsonData:
@@ -47,15 +47,15 @@ spec:
                 url:
                   description: Datasource URL.
                 user:
-                  description: Database username.
+                  description: Имя пользователя БД.
                 database:
-                  description: Database name, если используется.
+                  description: Наименование БД, если используется.
                 withCredentials:
-                  description: Enable/disable with credentials headers
+                  description: Включение/отключение с помощью заголовков учетных данных.
                 basicAuth:
                   description: Включить/выключить basic auth.
                 basicAuthUser:
-                  description: Basic auth username.
+                  description: Имя пользователя базовой авторизации.
                 jsonData:
                   description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
                 secureJsonData:
