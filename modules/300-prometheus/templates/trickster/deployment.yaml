@@ -53,7 +53,7 @@ spec:
           readOnly: true
         livenessProbe:
           httpGet:
-            path: /trickster/trickster/health/main
+            path: /trickster/trickster/ping
             port: 8443
             scheme: HTTPS
         readinessProbe:
