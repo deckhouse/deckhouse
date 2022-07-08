@@ -42,7 +42,7 @@ EOF
 )"
 
 if bb-is-ubuntu-version? 22.04 || bb-is-centos-version? 8 || bb-is-debian-version? 11; then
-  daemon_json_cgroupfs="$(jq '. + {"exec-opts": ["native.cgroupdriver=cgroupfs"]}' <<< "${daemon_json}")"
+  daemon_json="$(jq '. + {"exec-opts": ["native.cgroupdriver=cgroupfs"]}' <<< "${daemon_json}")"
   daemon_json="${daemon_json_cgroupfs}"
 fi
 
