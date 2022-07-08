@@ -224,6 +224,8 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("status.phase").String()).To(Equal("Pending"))
 		})
 	})
 

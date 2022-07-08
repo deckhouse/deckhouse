@@ -450,5 +450,12 @@ func buildSuspendAnnotation(suspend bool) map[string]interface{} {
 		},
 	}
 
+	if !suspend {
+		p["status"] = map[string]interface{}{
+			"phase":   "Pending",
+			"message": "",
+		}
+	}
+
 	return p
 }
