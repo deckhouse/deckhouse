@@ -30,10 +30,9 @@ import (
 const configPath = "/etc/prometheus-reverse-proxy/reverse-proxy.json"
 
 var (
-	appliedConfigMtime int64 = 0
-
-	mu     sync.RWMutex
-	config map[string]map[string]CustomMetricConfig
+	mu              sync.RWMutex
+	config          map[string]map[string]CustomMetricConfig
+	lastAppliedStat os.FileInfo
 )
 
 // Find namespaced patterns in request URIs
@@ -101,17 +100,32 @@ func (m *MetricHandler) Init() error {
 }
 
 func updateConfig() {
-	fStat, _ := os.Stat(configPath)
-	if mtime := fStat.ModTime().Unix(); mtime != appliedConfigMtime {
-		f, _ := os.Open(configPath)
-		defer f.Close()
-
-		mu.Lock()
-		defer mu.Unlock()
-
-		json.NewDecoder(f).Decode(&config)
-		appliedConfigMtime = mtime
+	fStat, err := os.Stat(configPath)
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		errLog.Fatalf("config file %s does not exist", configPath)
 	}
+
+	mu.RLock()
+	last := lastAppliedStat
+	mu.RUnlock()
+
+	if os.SameFile(last, fStat) {
+		return
+	}
+
+	f, _ := os.Open(configPath)
+	defer f.Close()
+
+	var newConfig map[string]map[string]CustomMetricConfig
+	json.NewDecoder(f).Decode(&newConfig)
+
+	defer infLog.Printf("config file %s was reloaded successfully\n", configPath)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	config = newConfig
+	lastAppliedStat = fStat
 }
 
 func StartConfigUpdater() {

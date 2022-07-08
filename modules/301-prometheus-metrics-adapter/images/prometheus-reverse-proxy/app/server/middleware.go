@@ -17,6 +17,7 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -100,13 +101,16 @@ type logTransport struct {
 }
 
 func wrapLoggerTransport(base http.RoundTripper) http.RoundTripper {
-	t := &logTransport{base: base, logger: reqLog}
+	t := &logTransport{base: base, logger: infLog}
 	return t
 }
 
 func (t *logTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	id := uuid.New()
 	startTime := time.Now()
+
+	ctx := context.WithValue(r.Context(), "id", id.String())
+	r.WithContext(ctx)
 
 	t.logger.Printf("%s -- Start request: %s [%s] %s %s\n",
 		id, r.RemoteAddr, r.UserAgent(), r.Method, r.URL.String(),

@@ -27,6 +27,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func initHttpTransport() http.RoundTripper {
@@ -111,13 +113,15 @@ func (s *Server) router(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlerCustomMetric(w http.ResponseWriter, r *http.Request) {
+	reqID := r.Context().Value("id").(uuid.UUID)
+
 	const queryArgsNumber = 4
 
 	// query=custom_query::<ObjectType>::<MetricName>::<Selector>::<GroupBy>
 	args := strings.Split(r.URL.Query().Get("query"), "::")
 	if len(args) != queryArgsNumber {
 		err := fmt.Errorf("query must container %d args, got %d", queryArgsNumber, len(args))
-		errLog.Println(err)
+		errLog.Printf("%s -- %s\n", reqID, err)
 		http.Error(w, "Internal error. "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -131,7 +135,7 @@ func (s *Server) handlerCustomMetric(w http.ResponseWriter, r *http.Request) {
 
 	err := metricHandler.Init()
 	if err != nil {
-		errLog.Println(err)
+		errLog.Printf("%s -- %s\n", reqID, err)
 		http.Error(w, "Internal error. "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -149,7 +153,7 @@ func (s *Server) handlerCustomMetric(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 
 	if err != nil {
-		errLog.Println(err)
+		errLog.Printf("%s -- %s\n", reqID, err)
 		http.Error(w, "Internal error. "+err.Error(), http.StatusInternalServerError)
 	}
 
