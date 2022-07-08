@@ -40,11 +40,11 @@ spec:
                 disableResolveMessage:
                   type: boolean
                   default: false
-                  description: Отключает отправку алерта о разрешении [OK] когда состояние алерт возвращается в неактивное состояние.
+                  description: Отключение отправки алерта о разрешении [OK] когда состояние алерт возвращается в неактивное состояние.
                 isDefault:
                   type: boolean
                   default: false
-                  description: Использовать этот канал для всех алертов.
+                  description: Использование этого канала для всех алертов.
                 alertManager:
                   type: object
                   description: Настройка канала внешнего Prometheus Alert Manager.
@@ -70,7 +70,7 @@ spec:
                           - password
                           properties:
                             username:
-                              description: Пользователь.
+                              description: Имя пользователя.
                               type: string
                             password:
                               description: Пароль.
