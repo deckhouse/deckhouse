@@ -66,6 +66,12 @@ func (c StatefulSetPodLifecycle) Checker() check.Checker {
 	stsPodGetter := &podGetter{access: c.Access, namespace: c.Namespace, name: podName}
 	stsPodDeleter := &podDeleter{access: c.Access, namespace: c.Namespace, name: podName}
 
+	// Not to rarely
+	pollInterval := c.PodTransitionTimeout / 10
+	if pollInterval > 5*time.Second {
+		pollInterval = 5 * time.Second
+	}
+
 	checker := &KubeControllerObjectLifecycle{
 		preflight: preflight,
 
@@ -75,7 +81,7 @@ func (c StatefulSetPodLifecycle) Checker() check.Checker {
 
 		childGetter:          stsPodGetter,
 		childDeleter:         stsPodDeleter,
-		childPollingInterval: c.PodTransitionTimeout / 10,
+		childPollingInterval: pollInterval,
 		childPollingTimeout:  c.PodTransitionTimeout,
 	}
 

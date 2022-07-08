@@ -65,6 +65,12 @@ func (c CertificateSecretLifecycle) Checker() check.Checker {
 	certSecretGetter := &secretGetter{access: c.Access, namespace: c.Namespace, name: name}
 	certSecretDeleter := &secretDeleter{access: c.Access, namespace: c.Namespace, name: name}
 
+	// Not to rarely
+	pollInterval := c.SecretTransitionTimeout / 10
+	if pollInterval > 5*time.Second {
+		pollInterval = 5 * time.Second
+	}
+
 	checker := &KubeControllerObjectLifecycle{
 		preflight: preflight,
 
@@ -74,7 +80,7 @@ func (c CertificateSecretLifecycle) Checker() check.Checker {
 
 		childGetter:          certSecretGetter,
 		childDeleter:         certSecretDeleter,
-		childPollingInterval: c.SecretTransitionTimeout / 10,
+		childPollingInterval: pollInterval,
 		childPollingTimeout:  c.SecretTransitionTimeout,
 	}
 
