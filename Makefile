@@ -12,8 +12,36 @@ MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
 PLATFORM_NAME := $(shell uname -p)
+OS_NAME := $(shell uname)
 ifneq ($(filter arm%,$(PLATFORM_NAME)),)
 	export WERF_PLATFORM=linux/amd64
+endif
+
+# Set platform for jq
+ifeq ($(OS_NAME), Linux)
+	JQ_PLATFORM = linux64
+else ifeq ($(OS_NAME), Darwin)
+	JQ_PLATFORM = osx-amd64
+endif
+
+# Set platform for yq
+ifeq ($(OS_NAME), Linux)
+	YQ_PLATFORM = linux
+else ifeq ($(OS_NAME), Darwin)
+	YQ_PLATFORM = darwin
+endif
+# Set arch for yq
+ifeq ($(PLATFORM_NAME), x86_64)
+	YQ_ARCH = amd64
+else ifeq ($(PLATFORM_NAME), arm)
+	YQ_ARCH = arm64
+endif
+
+# Set arch for crane
+ifeq ($(PLATFORM_NAME), x86_64)
+	CRANE_ARCH = x86_64
+else ifeq ($(PLATFORM_NAME), arm)
+	CRANE_ARCH = arm64
 endif
 
 help:
@@ -43,7 +71,7 @@ TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane ## Install dev dependencies.
 
 ##@ Tests
 
@@ -141,3 +169,18 @@ docs-dev: ## Run containers with the documentation in the dev mode (allow uncomm
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers.
 	docker rm -f site_site_1 site_front_1 documentation; docker network rm deckhouse
+
+##@ Update kubernetes control-plane patchversions
+
+bin/jq: ## Install jq deps for update-patchversion script.
+	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq && chmod +x $(PWD)/bin/jq
+
+bin/yq: ## Install yq deps for update-patchversion script.
+	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o $(PWD)/bin/yq && chmod +x $(PWD)/bin/yq
+
+bin/crane: ## Install crane deps for update-patchversion script.
+	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane $(PWD)/bin/crane && chmod +x $(PWD)/bin/crane
+
+.PHONY: update-k8s-patch-versions
+update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
+	cd candi/tools; bash update_kubernetes_patchversions.sh
