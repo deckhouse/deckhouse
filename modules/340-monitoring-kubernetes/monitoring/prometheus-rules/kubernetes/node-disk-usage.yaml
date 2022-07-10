@@ -13,8 +13,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Soft eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
 
@@ -36,8 +36,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
 
@@ -59,8 +59,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
 
@@ -83,8 +83,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         summary: No more free inodes on nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
 
     - alert: KubeletImageFSInodesUsage
@@ -100,8 +100,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Soft eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
 
@@ -123,8 +123,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Close to hard eviction threshold of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
 
@@ -145,8 +145,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Hard eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
 
@@ -169,8 +169,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         summary: No more free inodes on imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
 
 - name: kubernetes.node.disk_bytes_usage
@@ -188,8 +188,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Soft eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
 
@@ -211,8 +211,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
 
@@ -233,8 +233,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
 
@@ -257,8 +257,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         summary: No more free space on nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
 
     - alert: KubeletImageFSBytesUsage
@@ -274,8 +274,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Soft eviction of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
 
@@ -297,8 +297,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Close to hard eviction threshold of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
 
@@ -319,8 +319,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           Hard eviction of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
 
@@ -343,8 +343,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster"
-        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+        plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+        plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
         description: |
           No more free bytes on imagefs (filesystem that the container runtime uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
         summary: No more free bytes on imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.

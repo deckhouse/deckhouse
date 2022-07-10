@@ -9,7 +9,7 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,d8_module=snapshot-controller,d8_component=snapshot-controller"
+        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse"
         plk_ignore_labels: "job"
         summary: Prometheus cannot scrape the snapshot-controller metrics.
@@ -28,7 +28,7 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_ignore_labels: "job"
-        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,d8_module=snapshot-controller,d8_component=snapshot-controller"
+        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse"
         summary: There is no `snapshot-controller` target in Prometheus.
         description: |
@@ -46,7 +46,7 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_labels_as_annotations: "pod"
-        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,d8_module=snapshot-controller,d8_component=snapshot-controller"
+        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse"
         summary: The snapshot-controller Pod is NOT Ready.
         description: |
@@ -63,7 +63,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,d8_module=snapshot-controller,d8_component=snapshot-controller"
+        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse"
         summary: The snapshot-controller Pod is NOT Running.
         description: |

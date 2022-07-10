@@ -6,12 +6,13 @@
     for: 1m
     labels:
       severity_level: "8"
+      tier: "cluster"
       d8_module: extended-monitoring
       d8_component: cert-exporter
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_ignore_labels: "job"
       description: |
@@ -25,13 +26,14 @@
     for: 15m
     labels:
       severity_level: "8"
+      tier: "cluster"
       d8_module: extended-monitoring
       d8_component: cert-exporter
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_ignore_labels: "job"
-      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       description: |
         Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
@@ -44,13 +46,14 @@
     for: 30m
     labels:
       severity_level: "8"
+      tier: "cluster"
       d8_module: extended-monitoring
       d8_component: cert-exporter
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "pod"
-      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       summary: The cert-exporter Pod is NOT Ready.
       description: |
@@ -63,12 +66,13 @@
     for: 30m
     labels:
       severity_level: "8"
+      tier: "cluster"
       d8_module: extended-monitoring
       d8_component: cert-exporter
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
       summary: The cert-exporter Pod is NOT Running.
       description: |
@@ -85,12 +89,13 @@
     for: 20m
     labels:
       severity_level: "8"
+      tier: "cluster"
       d8_module: extended-monitoring
       d8_component: cert-exporter
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         The `cert-exporter` failed to perform any checks for the certificates expiration for over 20 minutes.

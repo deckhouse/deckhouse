@@ -16,7 +16,7 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       You should check whether the `{{`{{ $labels.image }}`}}` image is available:
@@ -40,7 +40,7 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       You should check whether the `{{`{{ $labels.image }}`}}` image name is spelled correctly:
@@ -64,7 +64,7 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       The container registry is not available for the `{{`{{ $labels.image }}`}}` image:
@@ -88,7 +88,7 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       Unable to login to the container registry using `imagePullSecrets` for the `{{`{{ $labels.image }}`}}` image
@@ -112,7 +112,7 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: >
       Insufficient privileges to pull the `{{`{{ $labels.image }}`}}` image using the `imagePullSecrets` specified
@@ -136,7 +136,7 @@
   annotations:
     plk_protocol_version: "1"
     plk_markup_format: "markdown"
-    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
+    plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,tier=cluster,prometheus=deckhouse"
     description: |
       An unknown error occurred for the  `{{`{{ $labels.image }}`}}` image

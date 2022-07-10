@@ -19,8 +19,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=extended-monitoring"
-      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
@@ -44,8 +44,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=extended-monitoring"
-      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
@@ -69,8 +69,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=extended-monitoring"
-      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%
@@ -94,8 +94,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=extended-monitoring"
-      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},mountpoint={{ $labels.mountpoint }}"
+      plk_create_group_if_not_exists__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__node_partition_disk_usage: "NodePartitionDiskUsage,tier=cluster,prometheus=deckhouse"
       summary: |-
         Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
         Currently at: {{ .Value }}%

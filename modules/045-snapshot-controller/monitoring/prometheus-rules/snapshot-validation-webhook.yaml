@@ -10,7 +10,7 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_labels_as_annotations: "pod"
-        plk_create_group_if_not_exists__d8_snapshot_validation_webhook_health: "D8SnapshotValidationWebhookHealth,tier=~tier,d8_module=snapshot-controller,d8_component=snapshot-controller"
+        plk_create_group_if_not_exists__d8_snapshot_validation_webhook_health: "D8SnapshotValidationWebhookHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_snapshot_validation_webhook_health: "D8SnapshotValidationWebhookHealth,tier=~tier,prometheus=deckhouse"
         summary: The snapshot-validation-webhook Pod is NOT Ready.
         description: |
@@ -27,7 +27,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_snapshot_validation_webhook_health: "D8SnapshotValidationWebhookHealth,tier=~tier,d8_module=snapshot-controller,d8_component=snapshot-controller"
+        plk_create_group_if_not_exists__d8_snapshot_validation_webhook_health: "D8SnapshotValidationWebhookHealth,tier=~tier,prometheus=deckhouse"
         plk_grouped_by__d8_snapshot_validation_webhook_health: "D8SnapshotValidationWebhookHealth,tier=~tier,prometheus=deckhouse"
         summary: The snapshot-validation-webhook Pod is NOT Running.
         description: |

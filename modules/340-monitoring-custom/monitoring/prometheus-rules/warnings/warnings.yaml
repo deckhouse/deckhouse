@@ -5,10 +5,12 @@
       max(d8_monitoring_custom_unknown_service_monitor_total{job="deckhouse"} > 0)
     labels:
       severity_level: "9"
+      tier: "cluster"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse"
       description: |-
         There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
 
@@ -24,10 +26,12 @@
       max(d8_monitoring_custom_unknown_pod_monitor_total{job="deckhouse"} > 0)
     labels:
       severity_level: "9"
+      tier: "cluster"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse"
       description: |-
         There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
 
@@ -43,10 +47,12 @@
       max(d8_monitoring_custom_unknown_prometheus_rules_total{job="deckhouse"} > 0)
     labels:
       severity_level: "9"
+      tier: "cluster"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse"
       description: |-
         There are PrometheusRules in the cluster that were not created by Deckhouse.
 
@@ -62,10 +68,12 @@
       max(d8_monitoring_custom_old_prometheus_custom_targets_total{job="deckhouse"} > 0)
     labels:
       severity_level: "9"
+      tier: "cluster"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,tier=cluster,prometheus=deckhouse"
       description: |-
         Services with the `prometheus-custom-target` label are used to collect metrics in the cluster.
 
@@ -75,12 +83,3 @@
 
         For more information, refer to the [documentation](https://deckhouse.io/en/documentation/v1/modules/300-prometheus/faq.html).
       summary: Services with the `prometheus-custom-target` label are used to collect metrics in the cluster.
-
-  - alert: D8DeprecatedPrometheusFunctionalityIsUsed
-    expr: count(ALERTS{alertname=~"D8CustomServiceMonitorFoundInCluster|D8CustomPodMonitorFoundInCluster|D8CustomPrometheusRuleFoundInCluster|D8OldPrometheusCustomTargetFormat|D8OldPrometheusTargetFormat", alertstate="firing"}) > 0
-    annotations:
-      plk_protocol_version: "1"
-      plk_alert_type: "group"
-      summary: The deprecated Deckhouse functionality is detected.
-      description: |
-        The deprecated Deckhouse functionality is detected. Refer to the relevant alerts to find out what deprecated functionality is used and how to replace it with the updated one.

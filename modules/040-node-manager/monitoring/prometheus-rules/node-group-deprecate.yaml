@@ -10,7 +10,7 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,d8_module=node-manager,d8_component=node-group"
+      plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse"
       summary: NodeGroup {{ $labels.name }} has deprecated filed spec.static.internalNetworkCIDRs
       description: |

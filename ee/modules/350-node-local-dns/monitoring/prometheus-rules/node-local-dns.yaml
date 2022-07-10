@@ -10,11 +10,12 @@
       severity_level: "7"
       d8_module: node-local-dns
       d8_component: node-local-dns
+      tier: "cluster"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,prometheus=deckhouse"
-      plk_group_for__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,tier=cluster,prometheus=deckhouse"
+      plk_group_for__d8_node_local_dns_not_scheduled_on_node: "D8NodeLocalDnsNotScheduledOnNode,tier=cluster,prometheus=deckhouse"
       summary: node-local-dns Pod cannot schedule on Node {{ $labels.node }}
       description: |
         node-local-dns Pod cannot schedule on Node {{ $labels.node }}.
