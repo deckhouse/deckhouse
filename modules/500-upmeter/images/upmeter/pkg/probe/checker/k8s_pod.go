@@ -24,7 +24,6 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/run"
 )
 
 // Checks that at least one Pod is in "Pending" state.
@@ -182,7 +181,7 @@ func isPodWorking(pod *v1.Pod, readinessTimeout time.Duration) check.Error {
 	return check.ErrUnknown("pod is running, but not ready")
 }
 
-func createPodObject(podName, nodeName string, image *kubernetes.ProbeImage) *v1.Pod {
+func createPodObject(podName, nodeName, agentID string, image *kubernetes.ProbeImage) *v1.Pod {
 	nodeAffinity := createNodeAffinityObject(nodeName)
 
 	return &v1.Pod{
@@ -194,7 +193,7 @@ func createPodObject(podName, nodeName string, image *kubernetes.ProbeImage) *v1
 			Name: podName,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				agentLabelKey:   run.ID(),
+				agentLabelKey:   agentID,
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "scheduler",
 			},

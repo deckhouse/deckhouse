@@ -25,23 +25,26 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/run"
 )
 
 // ConfigMapLifecycle is a checker constructor and configurator
 type ConfigMapLifecycle struct {
 	Access    kubernetes.Access
-	Timeout   time.Duration
 	Namespace string
+
+	AgentID string
+	Name    string
+
+	Timeout time.Duration
 }
 
 func (c ConfigMapLifecycle) Checker() check.Checker {
 	preflight := newK8sVersionGetter(c.Access)
 
-	name := run.StaticIdentifier("upmeter-probe-basic")
-	creator := &configmapCreator{access: c.Access, namespace: c.Namespace, name: name}
-	getter := &configmapGetter{access: c.Access, namespace: c.Namespace, name: name}
-	deleter := &configmapDeleter{access: c.Access, namespace: c.Namespace, name: name}
+	cm := createConfigMapObject(c.Name, c.AgentID)
+	creator := &configmapCreator{access: c.Access, namespace: c.Namespace, cm: cm}
+	getter := &configmapGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
+	deleter := &configmapDeleter{access: c.Access, namespace: c.Namespace, name: c.Name}
 
 	checker := &KubeObjectBasicLifecycle{
 		preflight: preflight,
@@ -56,13 +59,12 @@ func (c ConfigMapLifecycle) Checker() check.Checker {
 type configmapCreator struct {
 	access    kubernetes.Access
 	namespace string
-	name      string
+	cm        *v1.ConfigMap
 }
 
 func (c *configmapCreator) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
-	cm := createConfigMapObject(c.name)
-	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(cm)
+	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(c.cm)
 	return err
 }
 
@@ -92,7 +94,7 @@ func (c *configmapDeleter) Do(_ context.Context) error {
 
 const agentLabelKey = "upmeter-agent"
 
-func createConfigMapObject(name string) *v1.ConfigMap {
+func createConfigMapObject(name, agentID string) *v1.ConfigMap {
 	return &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
@@ -102,7 +104,7 @@ func createConfigMapObject(name string) *v1.ConfigMap {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				agentLabelKey:   run.ID(),
+				agentLabelKey:   agentID,
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "basic",
 			},

@@ -26,31 +26,33 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/run"
 )
 
-// NamespaceLifecycle2 is a checker constructor and configurator
-type NamespaceLifecycle2 struct {
-	Access          kubernetes.Access
+// NamespaceLifecycle is a checker constructor and configurator
+type NamespaceLifecycle struct {
+	Access kubernetes.Access
+
+	AgentID string
+	Name    string
+
 	CreationTimeout time.Duration
 	DeletionTimeout time.Duration
 }
 
-func (c NamespaceLifecycle2) Checker() check.Checker {
+func (c NamespaceLifecycle) Checker() check.Checker {
 	preflight := newK8sVersionGetter(c.Access)
 
-	name := run.StaticIdentifier("upmeter-probe-basic")
+	getter := &namespaceGetter{access: c.Access, name: c.Name}
 
-	getter := &namespaceGetter{access: c.Access, name: name}
-
+	ns := createNamespaceObject(c.Name, c.AgentID)
 	creator := doWithTimeout(
-		&namespaceCreator{access: c.Access, name: name},
+		&namespaceCreator{access: c.Access, ns: ns},
 		c.CreationTimeout,
 		fmt.Errorf("creation timeout reached"),
 	)
 
 	deleter := doWithTimeout(
-		&namespaceDeleter{access: c.Access, name: name, timeout: c.DeletionTimeout},
+		&namespaceDeleter{access: c.Access, name: c.Name, timeout: c.DeletionTimeout},
 		c.DeletionTimeout,
 		fmt.Errorf("deletion timeout reached"),
 	)
@@ -67,14 +69,13 @@ func (c NamespaceLifecycle2) Checker() check.Checker {
 
 type namespaceCreator struct {
 	access  kubernetes.Access
-	name    string
+	ns      *v1.Namespace
 	timeout time.Duration
 }
 
 func (c *namespaceCreator) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
-	ns := createNamespaceObject(c.name)
-	_, err := client.CoreV1().Namespaces().Create(ns)
+	_, err := client.CoreV1().Namespaces().Create(c.ns)
 	return err
 }
 
@@ -101,7 +102,7 @@ func (c *namespaceDeleter) Do(_ context.Context) error {
 	return err
 }
 
-func createNamespaceObject(name string) *v1.Namespace {
+func createNamespaceObject(name, agentID string) *v1.Namespace {
 	return &v1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "namespace",
@@ -111,7 +112,7 @@ func createNamespaceObject(name string) *v1.Namespace {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				agentLabelKey:   run.ID(),
+				agentLabelKey:   agentID,
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "namespace",
 			},

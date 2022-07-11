@@ -37,7 +37,7 @@ func Test_GettingWithDefaultImage(t *testing.T) {
 	)
 
 	image := createTestProbeImage(initialImageName, nil)
-	pod := createPodObject(podName, nodeName, image)
+	pod := createPodObject(podName, nodeName, "123", image)
 
 	if len(pod.Spec.ImagePullSecrets) != 0 {
 		t.Errorf("expected empty pull secrets, got %v", pod.Spec.ImagePullSecrets)
@@ -79,7 +79,7 @@ func Test_GettingWithPassedImage(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		pod := createPodObject(podName, nodeName, c.image)
+		pod := createPodObject(podName, nodeName, "123", c.image)
 
 		image := pod.Spec.Containers[0].Image
 		if image != expectedImage {

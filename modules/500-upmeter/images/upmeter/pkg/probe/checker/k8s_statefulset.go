@@ -27,15 +27,15 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/run"
 )
 
 // StatefulSetPodLifecycle is a checker constructor and configurator
 type StatefulSetPodLifecycle struct {
-	Access kubernetes.Access
-
+	Access    kubernetes.Access
 	Namespace string
-	AgentID   string
+
+	AgentID string
+	Name    string
 
 	CreationTimeout      time.Duration
 	DeletionTimeout      time.Duration
@@ -45,8 +45,7 @@ type StatefulSetPodLifecycle struct {
 func (c StatefulSetPodLifecycle) Checker() check.Checker {
 	preflight := newK8sVersionGetter(c.Access)
 
-	stsName := run.StaticIdentifier("upmeter-probe-controller-manager")
-	podName := stsName + "-0"
+	stsName, podName := c.Name, c.Name+"-0"
 	sts := createStatefulSetObject(stsName, c.AgentID)
 
 	stsGetter := &statefulSetGetter{access: c.Access, namespace: c.Namespace, name: stsName}

@@ -28,7 +28,6 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/run"
 )
 
 // CertificateSecretLifecycle is a checker constructor and configurator
@@ -37,6 +36,7 @@ type CertificateSecretLifecycle struct {
 
 	Namespace string
 	AgentID   string
+	Name      string
 
 	CreationTimeout         time.Duration
 	DeletionTimeout         time.Duration
@@ -46,24 +46,22 @@ type CertificateSecretLifecycle struct {
 func (c CertificateSecretLifecycle) Checker() check.Checker {
 	preflight := newK8sVersionGetter(c.Access)
 
-	name := run.StaticIdentifier("upmeter-probe-cert-manager")
-
-	certGetter := &certificateGetter{access: c.Access, namespace: c.Namespace, name: name}
+	certGetter := &certificateGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
 
 	certCreator := doWithTimeout(
-		&certificateCreator{access: c.Access, namespace: c.Namespace, name: name, agentID: c.AgentID},
+		&certificateCreator{access: c.Access, namespace: c.Namespace, name: c.Name, agentID: c.AgentID},
 		c.CreationTimeout,
 		fmt.Errorf("creation timeout reached"),
 	)
 
 	certDeleter := doWithTimeout(
-		&certificateDeleter{access: c.Access, namespace: c.Namespace, name: name},
+		&certificateDeleter{access: c.Access, namespace: c.Namespace, name: c.Name},
 		c.DeletionTimeout,
 		fmt.Errorf("deletion timeout reached"),
 	)
 
-	certSecretGetter := &secretGetter{access: c.Access, namespace: c.Namespace, name: name}
-	certSecretDeleter := &secretDeleter{access: c.Access, namespace: c.Namespace, name: name}
+	certSecretGetter := &secretGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
+	certSecretDeleter := &secretDeleter{access: c.Access, namespace: c.Namespace, name: c.Name}
 
 	// Not to rarely
 	pollInterval := c.SecretTransitionTimeout / 10

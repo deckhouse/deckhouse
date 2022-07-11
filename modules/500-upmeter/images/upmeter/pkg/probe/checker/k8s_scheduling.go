@@ -27,16 +27,18 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/run"
 )
 
 // PodScheduling is a checker constructor and configurator
 type PodScheduling struct {
-	Access kubernetes.Access
-
+	Access    kubernetes.Access
 	Namespace string
-	Node      string
-	Image     *kubernetes.ProbeImage
+
+	Node  string
+	Image *kubernetes.ProbeImage
+
+	AgentID string
+	Name    string
 
 	CreationTimeout time.Duration
 	DeletionTimeout time.Duration
@@ -46,10 +48,9 @@ type PodScheduling struct {
 func (c PodScheduling) Checker() check.Checker {
 	preflight := newK8sVersionGetter(c.Access)
 
-	name := run.StaticIdentifier("upmeter-probe-scheduler")
-	pod := createPodObject(name, c.Node, c.Image)
+	pod := createPodObject(c.Name, c.Node, c.AgentID, c.Image)
 
-	getter := &podGetter{access: c.Access, namespace: c.Namespace, name: name}
+	getter := &podGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
 
 	creator := doWithTimeout(
 		&podCreator{access: c.Access, namespace: c.Namespace, pod: pod},
@@ -58,13 +59,13 @@ func (c PodScheduling) Checker() check.Checker {
 	)
 
 	deleter := doWithTimeout(
-		&podDeleter{access: c.Access, namespace: c.Namespace, name: name},
+		&podDeleter{access: c.Access, namespace: c.Namespace, name: c.Name},
 		c.DeletionTimeout,
 		fmt.Errorf("creation timeout reached"),
 	)
 
 	fetcher := &pollingPodNodeFetcher{
-		fetcher:  &podNodeNameFetcher{access: c.Access, namespace: c.Namespace, name: name},
+		fetcher:  &podNodeNameFetcher{access: c.Access, namespace: c.Namespace, name: c.Name},
 		timeout:  c.ScheduleTimeout,
 		interval: c.ScheduleTimeout / 10,
 	}

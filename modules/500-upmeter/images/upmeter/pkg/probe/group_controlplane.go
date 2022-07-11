@@ -49,16 +49,24 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			period: 5 * time.Second,
 			config: checker.ConfigMapLifecycle{
 				Access:    access,
-				Timeout:   5 * time.Second,
 				Namespace: namespace,
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-basic"),
+
+				Timeout: 5 * time.Second,
 			},
 		}, {
 			group:  groupControlPlane,
 			probe:  "namespace",
 			check:  "_",
 			period: time.Minute,
-			config: checker.NamespaceLifecycle2{
-				Access:          access,
+			config: checker.NamespaceLifecycle{
+				Access: access,
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-namespace"),
+
 				CreationTimeout: 5 * time.Second,
 				DeletionTimeout: time.Minute,
 			},
@@ -68,9 +76,12 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			check:  "_",
 			period: time.Minute,
 			config: checker.StatefulSetPodLifecycle{
-				Access:               access,
-				Namespace:            namespace,
-				AgentID:              run.ID(),
+				Access:    access,
+				Namespace: namespace,
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-controller-manager"),
+
 				CreationTimeout:      5 * time.Second,
 				DeletionTimeout:      5 * time.Second,
 				PodTransitionTimeout: 10 * time.Second,
@@ -81,10 +92,15 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			check:  "_",
 			period: time.Minute,
 			config: checker.PodScheduling{
-				Access:          access,
-				Namespace:       namespace,
-				Node:            access.SchedulerProbeNode(),
-				Image:           access.SchedulerProbeImage(),
+				Access:    access,
+				Namespace: namespace,
+
+				Node:  access.SchedulerProbeNode(),
+				Image: access.SchedulerProbeImage(),
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-scheduler"),
+
 				CreationTimeout: 5 * time.Second,
 				DeletionTimeout: 5 * time.Second,
 				ScheduleTimeout: 20 * time.Second,
@@ -95,9 +111,12 @@ func initControlPlane(access kubernetes.Access) []runnerConfig {
 			check:  "_",
 			period: time.Minute,
 			config: checker.CertificateSecretLifecycle{
-				Access:                  access,
-				Namespace:               namespace,
-				AgentID:                 run.ID(),
+				Access:    access,
+				Namespace: namespace,
+
+				AgentID: run.ID(),
+				Name:    run.StaticIdentifier("upmeter-probe-cert-manager"),
+
 				CreationTimeout:         5 * time.Second,
 				DeletionTimeout:         5 * time.Second,
 				SecretTransitionTimeout: time.Minute,
