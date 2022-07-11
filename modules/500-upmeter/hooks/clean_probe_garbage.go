@@ -17,13 +17,13 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -92,10 +92,6 @@ type objectRepository interface {
 
 	// Delete works with objects by name on individual basis
 	Delete(context.Context, string) error
-}
-
-func isOldEnough(creationTimestamp time.Time) bool {
-	return creationTimestamp.Before(time.Now().Add(-5 * time.Minute))
 }
 
 var certificateGVR = schema.GroupVersionResource{
