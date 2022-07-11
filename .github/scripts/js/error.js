@@ -1,8 +1,8 @@
 module.exports.dumpError = (error) => {
   let result = '';
   try {
-    // Max 10 recursive calls
-    result = JSON.stringify(simplifyObj({error, depth: 7}))
+    // Use simplifyObj to prevent huge dump of circular structures.
+    result = JSON.stringify(simplifyObj({obj: error, depth: 7}))
   } catch (e) {
     result = `${error.name||'UnknownError'}: ${error.message||'no message'}`
   }
@@ -19,7 +19,7 @@ const simplifyObj = ({obj, depth}) => {
     return '[Function]';
   }
   // Object or Array.
-  if (typeof(obj) == 'object') {
+  if (obj !== null && typeof(obj) == 'object') {
     let simpleObj = {}
     for (let prop in obj ){
       if (obj.hasOwnProperty(prop)){

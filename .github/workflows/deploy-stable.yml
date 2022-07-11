@@ -33,8 +33,6 @@ env:
   # </template: werf_envs>
   DEPLOY_CHANNEL: stable
 
-# Note: no concurrency section for deploy workflows.
-
 jobs:
 
   # <template: git_info_job>

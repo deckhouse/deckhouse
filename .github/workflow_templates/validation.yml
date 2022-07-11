@@ -18,11 +18,9 @@ on:
       - opened
       - synchronize
 
-# Analog of Gitlab's "interruptible: true" behaviour.
-# Note: Concurrency is currently in beta and subject to change.
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
-  group: ${{ github.event.number }}-validation
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -64,31 +62,33 @@ jobs:
       - pull_request_info
     runs-on: ubuntu-latest
     outputs:
-      run_no_cyrillic: ${{ steps.on_push.outputs.run_no_cyrillic }}
-      label_no_cyrillic: ${{ steps.on_push.outputs.label_no_cyrillic }}
-      run_doc_changes: ${{ steps.on_push.outputs.run_doc_changes }}
-      label_doc_changes: ${{ steps.on_push.outputs.label_doc_changes }}
-      run_copyright: ${{ steps.on_push.outputs.run_copyright }}
-      label_copyright: ${{ steps.on_push.outputs.label_copyright }}
-      run_markdown: ${{ steps.on_push.outputs.run_markdown }}
-      pr_title: ${{ steps.on_push.outputs.pr_title }}
-      pr_description: ${{ steps.on_push.outputs.pr_description }}
-      diff_url: ${{ steps.on_push.outputs.diff_url }}
-
+      run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
+      label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
+      run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
+      label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
+      run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
+      label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
+      run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
+      label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
-      - id: on_push
+      - id: check_labels
         name: Check labels on push
         uses: {!{ index (ds "actions") "actions/github-script" }!}
+        env:
+          PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const labels = JSON.parse(process.env.PR_LABELS)
+
             const ci = require('./.github/scripts/js/ci');
-            return await ci.checkValidationLabels({ github, context, core });
+            return ci.checkValidationLabels({ core, labels });
 
       - name: Download diff for pull request
         env:
-          DIFF_URL: ${{ steps.on_push.outputs.diff_url }}
+          DIFF_URL: ${{ needs.pull_request_info.outputs.diff_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./.github/scripts/validation_run.sh --download-only ./pr.diff
 
@@ -102,8 +102,8 @@ jobs:
   no_cyrillic_validation:
     name: No Cyrillic Validation
     env:
-      VALIDATE_TITLE: ${{ needs.discover.outputs.pr_title }}
-      VALIDATE_DESCRIPTION: ${{ needs.discover.outputs.pr_description }}
+      VALIDATE_TITLE: ${{ needs.pull_request_info.outputs.pr_title }}
+      VALIDATE_DESCRIPTION: ${{ needs.pull_request_info.outputs.pr_description }}
 {!{ tmpl.Exec "validation_template" (slice $ctx "no_cyrillic") | strings.Indent 4 }!}
 
   doc_validation:

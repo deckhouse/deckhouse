@@ -41,11 +41,9 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # </template: werf_envs>
 
-  # Analog of Gitlab's "interruptible: true" behaviour.
-  # Note: Concurrency is currently in beta and subject to change.
-  # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Cancel in-progress jobs for the same tag/branch.
 concurrency:
-  group: ${{ github.ref }}-deploy-web-stage
+  group: ${{ github.workflow }}-${{ github.ref }}-stage
   cancel-in-progress: true
 
 jobs:
