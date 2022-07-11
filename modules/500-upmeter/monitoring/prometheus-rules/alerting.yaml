@@ -201,7 +201,7 @@
 
           1. Check upmeter-agent logs
 
-          `kubectl -n d8-upmeter logs ds/upmeter-agent | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'`
+          `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'`
 
           2. Check that control plane is functional.
 
@@ -242,7 +242,7 @@
 
           1. Check upmeter-agent logs
 
-          `kubectl -n d8-upmeter logs ds/upmeter-agent | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'`
+          `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'`
 
           2. Check that control plane is functional, kube-controller-manager in particular.
 
@@ -284,7 +284,7 @@
 
           1. Check upmeter-agent logs
 
-          `kubectl -n d8-upmeter logs ds/upmeter-agent | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'`
+          `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'`
 
           2. Check that control plane is functional, kube-controller-manager in particular.
 
@@ -325,7 +325,7 @@
 
           1. Check upmeter-agent logs
 
-          `kubectl -n d8-upmeter logs ds/upmeter-agent | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "scheduler") | [.time, .level, .msg] | @tsv'`
+          `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "scheduler") | [.time, .level, .msg] | @tsv'`
 
           2. Check that control plane is functional.
 
@@ -365,7 +365,7 @@
 
           1. Check upmeter-agent logs
 
-          `kubectl -n d8-upmeter logs ds/upmeter-agent | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "namespace") | [.time, .level, .msg] | @tsv'`
+          `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "namespace") | [.time, .level, .msg] | @tsv'`
 
           2. Check that control plane is functional.
 
@@ -465,7 +465,7 @@
 
           1. Check upmeter-agent logs
 
-          `kubectl -n d8-upmeter logs ds/upmeter-agent | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'`
+          `kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'`
 
           2. Check that control plane and cert-manager are functional.
 
