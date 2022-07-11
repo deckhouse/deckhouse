@@ -269,20 +269,13 @@ controlPlaneManager: |
 ```bash
 #!/usr/bin/env bash
 
-for node_name in $(kubectl get no -l node-role.kubernetes.io/master= -o json | jq -r '.items[].metadata.name'); do
-  kubectl -n kube-system exec "etcd-$node_name" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/etcd-backup' && \
-  kubectl -n kube-system exec "etcd-$node_name" -- sha256sum /tmp/etcd-backup | cut -f 1 -d" " | xargs echo -n > etc-backup.snapshot.shasum && \
-  kubectl -n kube-system exec "etcd-$node_name" -- cat /tmp/etcd-backup > etc-backup.snapshot && \
-  kubectl -n kube-system exec "etcd-$node_name" -- rm /tmp/etcd-backup
-  if [ "$?" != 0 ]; then
-    echo "Backup failed"
-    continue
-  fi 
-  if [ "$(cat etc-backup.snapshot.shasum)" == "$(sha256sum etc-backup.snapshot | cut -f 1 -d' ')" ]; then
-    rm etc-backup.snapshot.shasum
+for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
+  if kubectl -n kube-system exec "$pod" -- sh -c "ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/${pod##*/}.snapshot" && \
+  kubectl -n kube-system exec "$pod" -- gzip -c /tmp/${pod##*/}.snapshot | zcat > "${pod##*/}.snapshot" && \
+  kubectl -n kube-system exec "$pod" -- sh -c "cd /tmp && sha256sum ${pod##*/}.snapshot" | sha256sum -c && \
+  kubectl -n kube-system exec "$pod" -- rm "/tmp/${pod##*/}.snapshot"; then
+    mv "${pod##*/}.snapshot" etcd-backup.snapshot
     break
-  else
-    echo "Backup failed"
   fi
 done
 ```
