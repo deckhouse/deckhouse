@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -46,6 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		repos := []objectRepository{
 			&configMapRepo{k},
 			&certRepo{k},
+			&certSecretRepo{k},
 			&deployRepo{k},
 			&podRepo{k},
 			&namespaceRepo{k},
@@ -147,6 +149,35 @@ func (r *certRepo) Delete(ctx context.Context, name string) error {
 	return r.k.Dynamic().
 		Resource(certificateGVR).
 		Namespace("d8-upmeter").
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type certSecretRepo struct {
+	k k8s.Client
+}
+
+func (r *certSecretRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	// Cert secrets don't have the 'heritage=upmeter' label, we have to filter them by name mask
+	list, err := r.k.CoreV1().
+		Secrets("d8-upmeter").
+		List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	objects := make([]metav1.Object, 0, len(list.Items))
+	for i := range list.Items {
+		secret := list.Items[i]
+		if !strings.HasPrefix(secret.GetName(), "upmeter-cm-probe") {
+			continue
+		}
+		objects = append(objects, secret.GetObjectMeta())
+	}
+	return objects, nil
+}
+
+func (r *certSecretRepo) Delete(ctx context.Context, name string) error {
+	return r.k.CoreV1().
+		Secrets("d8-upmeter").
 		Delete(ctx, name, metav1.DeleteOptions{})
 }
 
