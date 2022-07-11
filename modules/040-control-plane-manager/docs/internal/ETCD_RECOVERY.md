@@ -83,7 +83,7 @@ On another (two) nodes do the following:
 1. Remove all containers.
 
    ```shell
-   systemctl list-units --full --all | grep -q docker.service && systemctl restart docker
+   systemctl is-active -q docker && systemctl restart docker
    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
    ```
 
