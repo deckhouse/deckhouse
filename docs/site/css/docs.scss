@@ -974,14 +974,7 @@
 }
 
 ul .deprecated {
-  &__label {
-    font-family: monospace, monospace;
-    font-size: 90%;
-    font-weight: normal;
-    line-height: 1.2rem;
-    margin-left: 10px;
-    background: #f9a3bb;
-    padding: 2px 4px;
-    border-radius: 4px;
-  }
+    background-color: red;
+    color: aqua;
+    font-weight:bold;
 }

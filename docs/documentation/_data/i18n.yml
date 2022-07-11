@@ -53,12 +53,6 @@ common:
   deprecated:
     en: deprecated
     ru: устарел
-  deprecated_parameter:
-    en: Deprecated
-    ru: Параметр устарел
-  deprecated_parameter_hint:
-    en: Support for the parameter might be removed in a later release.
-    ru: Поддержка параметра может быть исключена в следующих версиях.
   example:
     en: example
     ru: пример
