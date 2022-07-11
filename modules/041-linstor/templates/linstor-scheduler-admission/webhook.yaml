@@ -30,13 +30,13 @@ webhooks:
       - d8-cloud-provider-azure
       - d8-cloud-provider-gcp
       - d8-cloud-provider-yandex
+      - d8-ceph-csi
       - d8-local-path-provisioner
       - d8-cni-flannel
       - d8-cni-simple-bridge
       - d8-cloud-instance-manager
       - d8-linstor
       - d8-snapshot-controller
-      - d8-ceph-csi
       - d8-cert-manager
       - d8-user-authz
       - d8-user-authn

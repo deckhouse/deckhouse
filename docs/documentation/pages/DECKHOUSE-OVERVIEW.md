@@ -20,7 +20,7 @@ Here are some tips on how to find what you need:
   - Monitoring — [Prometheus/Grafana](modules/300-prometheus/), [custom monitoring capabilities](modules/340-monitoring-custom/), and [logs collecting](modules/460-log-shipper/).
   - Autoscaling & Managing resources — all things related to Pod management and scaling.
   - Security — [authentication](modules/150-user-authn/), [authorization](modules/140-user-authz/) and [certificate management](modules/101-cert-manager/).
-  - Storage — [integration with Ceph](modules/099-ceph-csi/), working [with a local storage](modules/031-local-path-provisioner/) on nodes, organizing [Linstor based storage](modules/041-linstor/).
+  - Storage — [integration with Ceph](modules/031-ceph-csi/), working [with a local storage](modules/031-local-path-provisioner/) on nodes, organizing [Linstor based storage](modules/041-linstor/).
   - Little things — [time synchronization](modules/470-chrony/), automatic [copying of secrets](modules/600-secret-copier/) by namespaces, and other amenities.
   - Bare Metal Support — modules for comfortable work with a cluster on bare metal servers.
   </div>

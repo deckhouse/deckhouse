@@ -21,7 +21,7 @@ lang: ru
   - Мониторинг — [Prometheus/Grafana](modules/300-prometheus/), [мониторинг ваших приложений](modules/340-monitoring-custom/), а также [сбор логов](modules/460-log-shipper/).
   - Масштабирование и управление ресурсами — всё что касается управления Pod’ами и масштабирования.
   - Безопасность — [аутентификация](modules/150-user-authn/), [авторизация](modules/140-user-authz/) и [управление сертификатами](modules/101-cert-manager/).
-  - Хранилище — [интеграция с Ceph](modules/099-ceph-csi/), работа [с локальным хранилищем](modules/031-local-path-provisioner/) на узлах, а также организация [хранилища на базе Linstor](modules/041-linstor/).
+  - Хранилище — [интеграция с Ceph](modules/031-ceph-csi/), работа [с локальным хранилищем](modules/031-local-path-provisioner/) на узлах, а также организация [хранилища на базе Linstor](modules/041-linstor/).
   - Приятные мелочи — [синхронизация времени](modules/470-chrony/) на узлах, автоматическое [копирование секретов](modules/600-secret-copier/) по пространствам имен и другие удобства.
   - Поддержка Bare metal — модули для комфортной работы c кластером на железе.
   </div>

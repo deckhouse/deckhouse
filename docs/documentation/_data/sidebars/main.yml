@@ -941,11 +941,11 @@ entries:
             - title:
                 ru: Описание
                 en: Description
-              url: /modules/099-ceph-csi/
+              url: /modules/031-ceph-csi/
             - title:
                 ru: Примеры
                 en: Examples
-              url: /modules/099-ceph-csi/examples.html
+              url: /modules/031-ceph-csi/examples.html
             - title:
                 ru: Справка
                 en: Reference
@@ -953,9 +953,9 @@ entries:
                 - title:
                     ru: Настройки
                     en: Configuration
-                  url: /modules/099-ceph-csi/configuration.html
+                  url: /modules/031-ceph-csi/configuration.html
                 - title: Custom Resources
-                  url: /modules/099-ceph-csi/cr.html
+                  url: /modules/031-ceph-csi/cr.html
         - title: linstor
           featureStatus: experimental
           folders:

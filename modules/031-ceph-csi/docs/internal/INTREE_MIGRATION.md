@@ -1,6 +1,6 @@
 # Switching from the in-tree RBD driver to CSI (Ceph CSI)
 
-The [rbd-in-tree-to-ceph-csi-migration-helper.sh](https://github.com/deckhouse/deckhouse/blob/main/modules/099-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh) script was created to simplify the migration process.
+The [rbd-in-tree-to-ceph-csi-migration-helper.sh](https://github.com/deckhouse/deckhouse/blob/main/modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh) script was created to simplify the migration process.
 Before running it, delete the Pod (scale the StatefulSet/Deployment down to zero) which uses the PVC. You will have to manually run a command in the Ceph cluster to rename the RBD image (since Ceph CSI uses a different name format) during the migration.
 
 The script will back up the manifests if the PVCs and PVs to be migrated, delete the old manifests and create the new ones. Note that deleting the PV will not cause the RBD image in the Ceph cluster to be deleted, since the script will rename it beforehand.
