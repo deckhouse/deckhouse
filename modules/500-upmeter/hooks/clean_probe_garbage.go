@@ -87,7 +87,7 @@ func cleanGarbage(ctx context.Context, repo objectRepository) error {
 }
 
 type objectRepository interface {
-	// List returns abstract object as a container of name and cration timestamp
+	// List returns abstract object as a container of the name and the creation timestamp
 	List(context.Context) ([]metav1.Object, error)
 
 	// Delete works with objects by name on individual basis
@@ -111,7 +111,7 @@ func (r *configMapRepo) List(ctx context.Context) ([]metav1.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	objects := make([]metav1.Object, len(list.Items))
+	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
 		objects = append(objects, list.Items[i].GetObjectMeta())
 	}
@@ -134,7 +134,7 @@ func (r *certRepo) List(ctx context.Context) ([]metav1.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	objects := make([]metav1.Object, len(list.Items))
+	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
 		objects = append(objects, &list.Items[i])
 	}
@@ -188,7 +188,7 @@ func (r *namespaceRepo) List(ctx context.Context) ([]metav1.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	objects := make([]metav1.Object, len(list.Items))
+	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
 		objects = append(objects, list.Items[i].GetObjectMeta())
 	}
@@ -210,7 +210,7 @@ func (r *podRepo) List(ctx context.Context) ([]metav1.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	objects := make([]metav1.Object, len(list.Items))
+	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
 		objects = append(objects, list.Items[i].GetObjectMeta())
 	}
@@ -232,7 +232,7 @@ func (r *deployRepo) List(ctx context.Context) ([]metav1.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	objects := make([]metav1.Object, len(list.Items))
+	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
 		objects = append(objects, list.Items[i].GetObjectMeta())
 	}
