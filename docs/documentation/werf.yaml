@@ -10,7 +10,7 @@ configVersion: 1
   {{- range $k, $v := .Images }}
     {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
     {{- if or (eq $.Env "development") (eq $.Env "local") }}
-      {{ $baseImagePath = trimSuffix "/" $v }}
+      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
     {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}
       {{- $_ := set $.Images $k $baseImagePath }}
