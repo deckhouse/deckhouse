@@ -43,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		k := dc.MustGetK8sClient()
 		ctx := context.TODO()
 
-		repos := []nameRepo{
+		repos := []objectRepository{
 			&configMapRepo{k},
 			&certRepo{k},
 			&deployRepo{k},
@@ -61,16 +61,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 ))
 
-func cleanGarbage(ctx context.Context, repo nameRepo) error {
-	names, err := repo.List(ctx)
+func cleanGarbage(ctx context.Context, repo objectRepository) error {
+	objects, err := repo.List(ctx)
 	if err != nil {
 		return fmt.Errorf("listing: %v", err)
 	}
 
 	limit := 10 // being gentle
-	for _, name := range names {
-		if err := repo.Delete(ctx, name); err != nil {
-			return fmt.Errorf("deleting %q: %v", name, err)
+	fiveMinAgo := time.Now().Add(-5 * time.Minute)
+	for _, obj := range objects {
+		// An object should be older than probe run interval, 5 min is safe
+		isOldEnough := obj.GetCreationTimestamp().Time.Before(fiveMinAgo)
+		if !isOldEnough {
+			continue
+		}
+		if err := repo.Delete(ctx, obj.GetName()); err != nil {
+			return fmt.Errorf("deleting %s: %v", obj.GetName(), err)
 		}
 		limit--
 	}
@@ -78,8 +84,11 @@ func cleanGarbage(ctx context.Context, repo nameRepo) error {
 	return nil
 }
 
-type nameRepo interface {
-	List(context.Context) ([]string, error)
+type objectRepository interface {
+	// List returns abstract object as a container of name and cration timestamp
+	List(context.Context) ([]metav1.Object, error)
+
+	// Delete works with objects by name on individual basis
 	Delete(context.Context, string) error
 }
 
@@ -97,20 +106,18 @@ type configMapRepo struct {
 	k k8s.Client
 }
 
-func (r *configMapRepo) List(ctx context.Context) ([]string, error) {
-	list, err := r.k.CoreV1().ConfigMaps("d8-upmeter").List(ctx, metav1.ListOptions{
-		LabelSelector: "heritage=upmeter",
-	})
+func (r *configMapRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.CoreV1().
+		ConfigMaps("d8-upmeter").
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
 		return nil, err
 	}
-	names := make([]string, 0, len(list.Items))
-	for _, x := range list.Items {
-		if isOldEnough(x.GetCreationTimestamp().Time) {
-			names = append(names, x.GetName())
-		}
+	objects := make([]metav1.Object, len(list.Items))
+	for i := range list.Items {
+		objects = append(objects, list.Items[i].GetObjectMeta())
 	}
-	return names, nil
+	return objects, nil
 }
 
 func (r *configMapRepo) Delete(ctx context.Context, name string) error {
@@ -121,41 +128,44 @@ type certRepo struct {
 	k k8s.Client
 }
 
-func (r *certRepo) List(ctx context.Context) ([]string, error) {
-	list, err := r.k.Dynamic().Resource(certificateGVR).Namespace("d8-upmeter").
+func (r *certRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(certificateGVR).
+		Namespace("d8-upmeter").
 		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
 		return nil, err
 	}
-	names := make([]string, 0, len(list.Items))
-	for _, x := range list.Items {
-		if isOldEnough(x.GetCreationTimestamp().Time) {
-			names = append(names, x.GetName())
-		}
+	objects := make([]metav1.Object, len(list.Items))
+	for i := range list.Items {
+		objects = append(objects, &list.Items[i])
 	}
-	return names, nil
+	return objects, nil
 }
 
 func (r *certRepo) Delete(ctx context.Context, name string) error {
-	return r.k.Dynamic().Resource(certificateGVR).Namespace("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+	return r.k.Dynamic().
+		Resource(certificateGVR).
+		Namespace("d8-upmeter").
+		Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 type namespaceRepo struct {
 	k k8s.Client
 }
 
-func (r *namespaceRepo) List(ctx context.Context) ([]string, error) {
-	list, err := r.k.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+func (r *namespaceRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.CoreV1().
+		Namespaces().
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
 		return nil, err
 	}
-	names := make([]string, 0, len(list.Items))
-	for _, x := range list.Items {
-		if isOldEnough(x.GetCreationTimestamp().Time) {
-			names = append(names, x.GetName())
-		}
+	objects := make([]metav1.Object, len(list.Items))
+	for i := range list.Items {
+		objects = append(objects, list.Items[i].GetObjectMeta())
 	}
-	return names, nil
+	return objects, nil
 }
 
 func (r *namespaceRepo) Delete(ctx context.Context, name string) error {
@@ -166,20 +176,18 @@ type podRepo struct {
 	k k8s.Client
 }
 
-func (r *podRepo) List(ctx context.Context) ([]string, error) {
-	list, err := r.k.CoreV1().Pods("d8-upmeter").List(ctx, metav1.ListOptions{
-		LabelSelector: "heritage=upmeter",
-	})
+func (r *podRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.CoreV1().
+		Pods("d8-upmeter").
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
 		return nil, err
 	}
-	names := make([]string, 0, len(list.Items))
-	for _, x := range list.Items {
-		if isOldEnough(x.GetCreationTimestamp().Time) {
-			names = append(names, x.GetName())
-		}
+	objects := make([]metav1.Object, len(list.Items))
+	for i := range list.Items {
+		objects = append(objects, list.Items[i].GetObjectMeta())
 	}
-	return names, nil
+	return objects, nil
 }
 
 func (r *podRepo) Delete(ctx context.Context, name string) error {
@@ -190,20 +198,18 @@ type deployRepo struct {
 	k k8s.Client
 }
 
-func (r *deployRepo) List(ctx context.Context) ([]string, error) {
-	list, err := r.k.AppsV1().Deployments("d8-upmeter").List(ctx, metav1.ListOptions{
-		LabelSelector: "heritage=upmeter",
-	})
+func (r *deployRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.AppsV1().
+		Deployments("d8-upmeter").
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
 		return nil, err
 	}
-	names := make([]string, 0, len(list.Items))
-	for _, x := range list.Items {
-		if isOldEnough(x.GetCreationTimestamp().Time) {
-			names = append(names, x.GetName())
-		}
+	objects := make([]metav1.Object, len(list.Items))
+	for i := range list.Items {
+		objects = append(objects, list.Items[i].GetObjectMeta())
 	}
-	return names, nil
+	return objects, nil
 }
 
 func (r *deployRepo) Delete(ctx context.Context, name string) error {
