@@ -974,11 +974,9 @@
 }
 
 ul .resources__prop_name.deprecated {
-  // Костыль ToDo
   display: flex;
   align-items: center;
 
-  // Костыль ToDo
   & .anchorjs-link {
     order: 5;
   }
@@ -988,7 +986,7 @@ ul .resources__prop_name.deprecated {
     font-family: monospace, monospace;
     font-size: 90%;
     font-weight: normal;
-    line-height: 1rem; // Костыль
+    line-height: 1rem;
     margin-left: 10px;
     background: #f9a3bb;
     padding: 2px 4px;
