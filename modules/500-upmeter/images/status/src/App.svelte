@@ -6,7 +6,7 @@
 	import { getGroupData } from "./en";
 
 	async function fetchStatusJSON() {
-		const r = await fetch("/public/api/status", { headers: { "accept": "application/json" } });
+		const r = await fetch("/public/api/status", { headers: { accept: "application/json" } });
 		return await r.json();
 	}
 
@@ -15,7 +15,6 @@
 	let error = null;
 	let pendingUpdateText = "";
 	let now = new Date();
-
 
 	async function update() {
 		now = new Date();
@@ -44,7 +43,8 @@
 		</Col>
 		<Col class="text-right">
 			<p>
-				<span class="text-muted"> as of</span> {now.toLocaleTimeString()}
+				<span class="text-muted"> as of</span>
+				{now.toLocaleTimeString()}
 			</p>
 		</Col>
 	</Row>
@@ -52,36 +52,24 @@
 	<hr class="mt-0" />
 
 	{#if data == null && error == null}
-
 		<Row class="mb-5 mt-5">
 			<Col>
 				<h2 class="text-muted font-weight-light">Wait a second...</h2>
 			</Col>
 		</Row>
+	{:else if data != null}
+		<h2 class="mb-5 mt-5 font-weight-normal">
+			<StatusText
+				status={data.status}
+				text={"Cluster " + data.status + pendingUpdateText}
+				mute={error != null}
+			/>
+		</h2>
 
-	{:else}
-
-		{#if data != null }
-			<h2 class="mb-5 mt-5 font-weight-normal">
-				<StatusText
-					status="{data.status}"
-					text={"Cluster " + data.status + pendingUpdateText}
-					mute={error != null}
-				/>
-			</h2>
-
-			{#each data.rows as row}
-				<Row class="mb-3">
-					<Group
-						{ ...getGroupData(row.group) }
-						status="{row.status}"
-						mute={error != null}
-					/>
-				</Row>
-			{/each}
-
-		{/if}
+		{#each data.rows as row}
+			<Row class="mb-3">
+				<Group {...getGroupData(row.group)} status={row.status} mute={error != null} />
+			</Row>
+		{/each}
 	{/if}
-
 </Container>
-

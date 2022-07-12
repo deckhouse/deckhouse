@@ -3,7 +3,6 @@
 	export let status: string = "";
 	export let mute: boolean = false;
 
-
 	function mutedOrStatusTextClassName(mute, status) {
 		if (mute) {
 			return "text-muted";
@@ -25,4 +24,4 @@
 	}
 </script>
 
-<p class="{mutedOrStatusTextClassName(mute, status)}">{text}</p>
+<p class={mutedOrStatusTextClassName(mute, status)}>{text}</p>
