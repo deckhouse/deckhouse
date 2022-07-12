@@ -6,7 +6,6 @@
 	export let description: string = "Waiting to be filled...";
 	export let status: string = "Operational";
 	export let mute: boolean = false;
-
 </script>
 
 <Col class="col-9">
@@ -15,6 +14,6 @@
 </Col>
 <Col class="col-3 text-right">
 	<h4 class="font-weight-light">
-		<StatusText status="{status}" text="{status}" mute={mute} />
+		<StatusText {status} text={status} {mute} />
 	</h4>
 </Col>
