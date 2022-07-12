@@ -103,7 +103,7 @@ title: "Управление control plane: FAQ"
    rm -f /etc/kubernetes/admin.conf /root/.kube/config
    rm -rf /etc/kubernetes/deckhouse
    rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
-   rm -rf /var/lib/etcd
+   rm -rf /var/lib/etcd/member/
    ```
 
 ## Как посмотреть список member'ов в etcd?
@@ -261,3 +261,29 @@ controlPlaneManager: |
 Оба описанных параметра оказывают непосредственное влияние на потребляемые control-plane'ом  ресурсы процессора и памяти. Уменьшая таймауты, мы заставляем системные компоненты чаще производить отправку статусов и сверки состояний ресурсов.
 
 В процессе подбора подходящих вам значений обращайте внимание на графики потребления ресурсов управляющих узлов. Будьте готовы к тому, что чем меньшие значения параметров вы выбираете, тем больше ресурсов может потребоваться выделить на эти узлы.
+
+## Как сделать бекап etcd?
+
+Войдите на любой control-plane узел под пользователем `root` и используйте следующий bash-скрипт:
+
+```bash
+#!/usr/bin/env bash
+
+for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
+  if kubectl -n kube-system exec "$pod" -- sh -c "ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /tmp/${pod##*/}.snapshot" && \
+  kubectl -n kube-system exec "$pod" -- gzip -c /tmp/${pod##*/}.snapshot | zcat > "${pod##*/}.snapshot" && \
+  kubectl -n kube-system exec "$pod" -- sh -c "cd /tmp && sha256sum ${pod##*/}.snapshot" | sha256sum -c && \
+  kubectl -n kube-system exec "$pod" -- rm "/tmp/${pod##*/}.snapshot"; then
+    mv "${pod##*/}.snapshot" etcd-backup.snapshot
+    break
+  fi
+done
+```
+
+В текущей директории будет создан файл `etc-backup.snapshot` со снимком базы etcd одного из членов etcd-кластера.
+Из полученного снимка можно будет восстановить состояние кластера etcd.
+
+О возможных вариантах восстановления состояния кластера etcd из снимка вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+
+Мы рекомендуем хранить резервные копии снимков состояния кластера etcd в зашифрованном виде вне кластера Deckhouse.
+Для этого вы можете использовать сторонние инструменты, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) или другие инструменты резервного копирования файлов.

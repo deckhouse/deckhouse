@@ -5,7 +5,271 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 
 ## Single-master
 
-### "Failed to find database snapshot file (snap: snapshot file doesn't exist)"
+### Restoring from a backup
+
+Follow these steps to restore from a backup:
+1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
+
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
+
+1. Stop etcd.
+
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
+
+1. Back up your files.
+
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
+
+1. Delete the data directory.
+
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
+
+1. Copy backup file to `~/etc-backup.snapshot`.
+
+1. Restore the etcd database.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etc-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   ```
+
+1. Start etcd.
+
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
+
+## Multi-master
+
+### Complete data loss or recovery to previous state from a backup
+
+If there is a complete loss of data, perform the following steps on all nodes of the etcd cluster:
+1. Stop etcd.
+
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
+
+1. Back up your files.
+
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
+
+1. Delete the data directory.
+
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
+
+Select any node as first recovered.
+
+On another (two) nodes do the following:
+1. Stop kubelet.
+
+   ```shell
+   systemctl stop kubelet.service
+   ```
+
+1. Remove all containers.
+
+   ```shell
+   systemctl is-active -q docker && systemctl restart docker
+   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   ```
+
+1. Clear a node.
+
+   ```shell
+   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
+   rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
+   rm -f /etc/kubernetes/authorization-webhook-config.yaml
+   rm -f /etc/kubernetes/admin.conf /root/.kube/config
+   rm -rf /etc/kubernetes/deckhouse
+   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+   ```
+
+On the selected node do the following:
+1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
+
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
+
+1. Copy backup file to `~/etc-backup.snapshot`.
+1. Restore the etcd database.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etc-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   ```
+
+1. Add the `--force-new-cluster` flag to the `~/etcd.yaml` manifest.
+1. Try to run etcd.
+
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
+
+1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest after successful up etcd.
+1. Set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Remove master role label from nodes objects expect selected (recover in current time).
+
+   ```shell
+   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   ```
+
+Start kubelet on another nodes:
+
+```shell
+systemctl start kubelet.service
+```
+
+On the first recovered node do the following steps:
+1. Restart and wait for Deckhouse to be ready.
+
+   ```shell
+   kubectl -n d8-system rollout restart deployment deckhouse
+   ```
+
+   If Deckhouse Pod is stuck in a Terminating state, forcibly delete the Pod:
+
+   ```shell
+   kubectl -n d8-system delete po -l app=deckhouse --force
+   ```
+
+   If you got the error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, forcibly remove control plane Pods for other nodes.
+
+1. Wait for the control plane Pod to roll over and become `Ready`.
+
+   ```shell
+   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+   ```
+
+1. Check that node etcd member has peer and client host as internal node IP.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
+
+Add master role for each other master nodes:
+
+```shell
+kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+```
+
+Wait for all control plane Pods rolling over and becoming `Ready`:
+
+```shell
+watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+```
+
+Make sure that all etcd instances are now cluster members:
+
+```shell
+ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+```
+
+### etcd quorum loss
+
+Perform the following steps to restore the quorum in the etcd cluster:
+1. Add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node.
+1. Wait for etcd to start.
+1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
+1. Set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Remove master role label from nodes objects expect selected (recover in current time).
+
+   ```shell
+   kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   kubectl label no LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   ```
+
+If nodes have been lost permanently, add new ones using the `dhctl converge` command (or manually if the cluster is static).
+Don't forget to delete objects of lost nodes.
+
+If the nodes have been lost temporarily, they are no longer members of the cluster.
+
+To turn them into cluster members, do the following on those nodes:
+
+1. Stop etcd.
+
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
+
+1. Back up your files.
+
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
+
+1. Delete the data directory.
+
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
+
+1. Clear a node.
+
+   ```shell
+   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
+   rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
+   rm -f /etc/kubernetes/authorization-webhook-config.yaml
+   rm -f /etc/kubernetes/admin.conf /root/.kube/config
+   rm -rf /etc/kubernetes/deckhouse
+   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+   ```
+
+1. Restart and wait for Deckhouse to be ready.
+
+   ```shell
+   kubectl -n d8-system rollout restart deployment deckhouse
+   ```
+
+1. Wait for control plane Pods to roll over and become `Ready`.
+
+   ```shell
+   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+   ```
+
+1. Check that node etcd member has peer and client host as internal node IP.
+
+   ```shell
+   kubectl -n kube-system exec -ti ETCD_POD -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table'
+   ```
+
+Ddd a master role for each lost nodes:
+
+```shell
+kubectl label no LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+```
+
+Wait for all control plane Pods to roll over and become `Ready`:
+
+```shell
+watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+```
+
+Make sure that all etcd instances are now cluster members:
+
+```shell
+ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+```
+
+## "Failed to find database snapshot file (snap: snapshot file doesn't exist)"
 
 This error may occur after restarting etcd if etcd has reached the `quota-backend-bytes` limit.
 
@@ -37,191 +301,168 @@ main.main()
 
 This [issue](https://github.com/etcd-io/etcd/issues/11949) suggests that such an error can also occur after etcd has been terminated incorrectly.
 
-#### Solving the problem - First method
+### Solving the problem - First method
 
-The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/11949#issuecomment-1029906679) and involves the following steps:
+First method works on the single and multi-master environments both.
 
-- stop etcd:
-  
-  ```shell
-  mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-  ```
+The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/11949#issuecomment-1029906679) and involves the following steps on affected nodes:
 
-- back up your files:
+1. Stop etcd.
 
-  ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
-  ```
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
 
-- increase the `quota-backend-bytes` parameter in the `~/etcd.yaml` manifest, if necessary;
-- delete the .snap files:
+1. Back up your files.
 
-  ```shell
-  rm /var/lib/etcd/member/snap/*.snap
-  ```
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
 
-- try to run etcd:
+1. Increase the `quota-backend-bytes` parameter in the `~/etcd.yaml` manifest, if necessary.
+1. Delete the .snap files.
 
-  ```shell
-  mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-  ```
+   ```shell
+   rm /var/lib/etcd/member/snap/*.snap
+   ```
 
-- if no error message appears, check the status:
+1. Try to run etcd.
 
-  ```shell
-  kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ 
-    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table'
-  ```
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
 
-- if there is an `alarm:NOSPACE`, run the following command:
+1. If no error message appears, check the status:
 
-  ```shell
-  kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ alarm disarm'
-  ```
+   ```shell
+   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ 
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table'
+   ```
 
-- defragment etcd (if necessary):
+1. If there is an `alarm:NOSPACE`, run the following command:
 
-  ```shell
-  kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s'
-  ```
+   ```shell
+   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ alarm disarm'
+   ```
 
-#### Second method
+1. Defragment etcd (if necessary):
+
+   ```shell
+   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s'
+   ```
+
+### Second method
+
+#### Single-master
 
 This method can be used if the first one has failed.
 
 Do the following:
 
-- upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server);
-- stop etcd:
+1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
 
-  ```shell
-  mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-  ```
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
 
-- increase the `quota-backend-bytes` parameter in the `~/etcd.yaml` manifest, if necessary;
-- back up your files:
+1. Stop etcd.
 
-  ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
-  ```
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
 
-- delete the data directory:
+1. Increase the `quota-backend-bytes` parameter in the `~/etcd.yaml` manifest, if necessary.
+1. Back up your files.
 
-  ```shell
-  rm -rf /var/lib/etcd/
-  ```
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
 
-- restore the etcd database:
+1. Delete the data directory.
 
-  ```shell
-  ETCDCTL_API=3 etcdctl snapshot restore /var/lib/etcd-backup/member/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-    --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check
-  ```
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
 
-- try to run etcd:
+1. Restore the etcd database.
 
-  ```shell
-  mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-  ```
+   ```shell
+   ETCDCTL_API=3 etcdctl snapshot restore /var/lib/deckhouse-etcd-backup/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check
+   ```
 
-- if no error message appears, check the status:
+1. Try to run etcd.
 
-  ```shell
-  ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-    --endpoints https://127.0.0.1:2379/ endpoint status -w table
-  ```
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
 
-- if there is an `alarm:NOSPACE` error, run the following:
+1. If no error message appears, check the status:
 
-  ```shell
-  ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-    --endpoints https://127.0.0.1:2379/ alarm disarm
-  ```
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ endpoint status -w table
+   ```
 
-- defragment etcd (if necessary):
+1. If there is an `alarm:NOSPACE` error, run the following command:
 
-  ```shell
-  ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-    --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s
-  ```
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ alarm disarm
+   ```
 
-### Restoring from a backup
+1. Defragment etcd (if necessary).
 
-Follow these steps to restore from a backup:
-- upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server);
-- stop etcd:
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s
+   ```
+  
+#### Multi-master
 
-  ```shell
-  mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-  ```
+##### If this error affect one node
 
-- back up your files:
+1. Defragment etcd on another (two) nodes (if necessary).
 
-  ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
-  ```
+   ```shell
+   kubectl -n kube-system exec -ti ETCD_POD_NOT_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s'
+   ```
 
-- delete the data directory:
+1. Remove master role label from affected node.
 
-  ```shell
-  rm -rf /var/lib/etcd/
-  ```
+   ```shell
+   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   ```
 
-- restore the etcd database:
+On the affected node:
 
-  ```shell
-  ETCDCTL_API=3 etcdctl snapshot restore BACKUP_FILE --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-    --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check
-  ```
+1. Clear the node.
 
-- start etcd:
+   ```shell
+   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
+   rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
+   rm -f /etc/kubernetes/authorization-webhook-config.yaml
+   rm -f /etc/kubernetes/admin.conf /root/.kube/config
+   rm -rf /etc/kubernetes/deckhouse
+   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+   rm -rf /var/lib/etcd/member/
+   ```
 
-  ```shell
-  mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-  ```
+1. Add master role to affected node.
 
-## Multi-master
+   ```shell
+   kubectl label no AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+   ```
 
-### etcd quorum loss
-
-Perform the following steps to restore the quorum in the etcd cluster:
-- add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node;
-- wait for etcd to start;
-- remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
-
-If nodes have been lost permanently, add new ones using the `dhctl converge` command (or manually if the cluster is static).
-
-If the nodes have been lost temporarily, they are no longer members of the cluster.
-
-To turn them into cluster members, do the following on those nodes:
-
-- stop etcd:
-
-  ```shell
-  mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-  ```
-
-- back up your files:
-
-  ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
-  ```
-
-- delete the data directory:
-
-  ```shell
-  rm -rf /var/lib/etcd/
-  ```
-
-Switch to the running cluster and restart the `d8-control-plane-manager` DaemonSet:
+Wait for all control plane Pods rolling over and becoming `Ready`:
 
 ```shell
-kubectl -n kube-system rollout restart daemonset d8-control-plane-manager
+watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
 ```
-
-Wait for all control plane Pods rolling over and becoming `Ready`.
 
 Make sure that all etcd instances are now cluster members:
 
@@ -230,46 +471,160 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-### Complete data loss and recovery from a backup
+##### If this error affect > 1 nodes
 
-If there is a complete loss of data, perform the following steps on all nodes of the etcd cluster:
-- stop etcd:
+1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
 
-  ```shell
-  mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-  ```
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
 
-- back up your files:
+1. Stop etcd.
 
-  ```shell
-  cp -r /var/lib/etcd/ /var/lib/deckhouse-etcd-backup
-  ```
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
 
-- delete the data directory:
+1. Back up your files.
 
-  ```shell
-  rm -rf /var/lib/etcd/
-  ```
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
 
-Select any node and do the following:
-- upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server);
-- restore the etcd database: `ETCDCTL_API=3 etcdctl snapshot restore BACKUP_FILE --cacert /etc/kubernetes/pki/etcd/ca.crt \
-  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check`
-- add the `--force-new-cluster` flag to the `~/etcd.yaml` manifest;
-- try to run etcd:
+1. Delete the data directory.
 
-  ```shell
-  mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-  ```
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
 
-- remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest;
-- restart the `d8-control-plane-manager` DaemonSet:
+Select any node as first recovered.
 
-  ```shell
-  kubectl -n kube-system rollout restart daemonset d8-control-plane-manager
-  ```
+On another (two) nodes do the following:
+1. Stop kubelet.
+
+   ```shell
+   systemctl stop kubelet.service
+   ```
+
+1. Remove all containers.
+
+   ```shell
+   systemctl list-units --full --all | grep -q docker.service && systemctl restart docker
+   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+   ```
+
+1. Clear the node:
+
+   ```shell
+   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
+   rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
+   rm -f /etc/kubernetes/authorization-webhook-config.yaml
+   rm -f /etc/kubernetes/admin.conf /root/.kube/config
+   rm -rf /etc/kubernetes/deckhouse
+   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
+   ```
+
+On the selected node do the following:
+
+1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
+
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
+
+1. Restore the etcd database.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl snapshot restore /var/lib/deckhouse-etcd-backup/snap/db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --skip-hash-check
+   ```
+
+1. Add the `--force-new-cluster` flag to the `~/etcd.yaml` manifest.
+1. Increase the `quota-backend-bytes` parameter in the `~/etcd.yaml` manifest, if necessary.
+1. Try to run etcd:
+
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
+
+1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest after successful up etcd.
+1. If no error message appears, check the status:
+
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ endpoint status -w table
+   ```
+
+1. If there is an `alarm:NOSPACE` error, run the following command:
+
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ alarm disarm
+   ```
+
+1. Defragment etcd (if necessary).
+
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s
+   ```
+
+1. Set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Remove master role label from nodes objects expect selected (recover in current time).
+
+   ```shell
+   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   ```
+
+On another nodes, start kubelet:
+
+```shell
+systemctl start kubelet.service
+```
+
+On the first recovered node do the following:
+1. Restart and wait readiness Deckhouse.
+
+   ```shell
+   kubectl -n d8-system rollout restart deployment deckhouse
+   ```
+
+   If Deckhouse Pod stuck in Terminating state, force delete Pod:
+
+   ```shell
+   kubectl -n d8-system delete po -l app=deckhouse --force
+   ```
+
+   If you got error `lock the main queue: waiting for all control-plane-manager Pods to become Ready`, force remove control plane Pods for another nodes.
+
+1. Wait for control plane Pod rolling over and becoming `Ready`.
+
+   ```shell
+   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+   ```
+
+1. Check node etcd member has peer and client host as internal node IP.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
+
+For each another master nodes:
+
+1. Add master role.
+
+   ```shell
+   kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+   ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`.
+
+```shell
+watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+```
 
 Make sure that all etcd instances are now cluster members:
 
