@@ -25,7 +25,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,d8_module=control-plane-manager,d8_component=control-plane-manager"
+      plk_create_group_if_not_exists__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Controller Pod not running on Node {{ $labels.node }}
       description: |-

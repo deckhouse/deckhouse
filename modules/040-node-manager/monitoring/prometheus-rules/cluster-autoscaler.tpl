@@ -12,7 +12,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
       summary: The {{`{{$labels.pod}}`}} Pod is NOT Ready.
@@ -28,7 +28,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "phase"
       summary: The cluster-autoscaler Pod is NOT Running.
@@ -48,7 +48,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       plk_ignore_labels: "job"
@@ -65,7 +65,7 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       summary: There is no cluster-autoscaler target in Prometheus.
       description: |-
@@ -90,7 +90,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
       summary: Too many cluster-autoscaler restarts have been detected.
@@ -112,7 +112,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,d8_module=node-manager,d8_component=cluster-autoscaler"
+      plk_create_group_if_not_exists__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance"
       summary: Cluster-autoscaler issues too many errors.
