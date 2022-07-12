@@ -12,7 +12,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_ignore_labels: "job"
       description: >
@@ -34,7 +34,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_ignore_labels: "job"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
       description: >
         To get more details:
@@ -59,7 +59,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "pod"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Pod terraform-state-exporter is not Ready
       description: |
@@ -85,7 +85,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_unavailable: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
       summary: Pod terraform-state-exporter is not Running
       description: |
@@ -110,7 +110,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
         Errors occurred while terraform-state-exporter working.
@@ -130,7 +130,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
         Real Kubernetes cluster state is `{{ $labels.status }}` comparing to Terraform state.
@@ -151,7 +151,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
         Real Node "{{ $labels.node_group }}/{{ $labels.name }}" state is `{{ $labels.status }}` comparing to Terraform state.
@@ -172,7 +172,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
         Terraform-state-exporter can't check difference between Kubernetes cluster state and Terraform state.
@@ -193,7 +193,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
         Terraform-state-exporter can't check difference between Node "{{ $labels.node_group }}/{{ $labels.name }}" state and Terraform state.
@@ -214,7 +214,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,d8_module=terraform-manager,d8_component=terraform-state-exporter"
+      plk_create_group_if_not_exists__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_terraform_state_exporter_checks_failed: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
         Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup {{ $labels.name }}.
