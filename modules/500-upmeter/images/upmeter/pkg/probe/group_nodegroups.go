@@ -26,7 +26,7 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initNodeGroups(access kubernetes.Access, nodeGroupNames, knownZones []string, nodeLister node.Lister) []runnerConfig {
+func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, nodeGroupNames, knownZones []string) []runnerConfig {
 	const (
 		groupNodeGroups = "nodegroups"
 		cpTimeout       = 5 * time.Second

@@ -34,14 +34,6 @@ type Monitor struct {
 	logger  *log.Entry
 }
 
-/*func NewMonitor(ctx context.Context) *Monitor {
-	m := &Monitor{}
-	m.ctx, m.cancel = context.WithCancel(ctx)
-	m.monitor = kube_events_manager.NewMonitor()
-	m.monitor.WithContext(m.ctx)
-	return m
-}*/
-
 func NewMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *Monitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)

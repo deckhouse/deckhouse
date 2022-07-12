@@ -81,7 +81,7 @@ type Controller struct {
 func (c *Controller) Start(ctx context.Context) error {
 	headers := map[string]string{"User-Agent": c.userAgent}
 
-	// monitor tracks the exporter configuration in kubernetes. It is important to subscribe (add event callback)
+	// Monitor tracks the exporter configuration in kubernetes. It is important to subscribe (add event callback)
 	// before monitor starts because informers are created during monitor.Start(ctx) call.
 	c.logger.Debugln("subscribing to k8s events")
 	c.kubeMonitor.Subscribe(&updateHandler{

@@ -137,7 +137,7 @@ func (l *Loader) collectConfigs() []runnerConfig {
 	l.configs = append(l.configs, initLoadBalancing(l.access)...)
 	l.configs = append(l.configs, initDeckhouse(l.access, l.logger)...)
 	l.configs = append(l.configs, initNginx(l.access, l.dynamic.IngressNginxControllers)...)
-	l.configs = append(l.configs, initNodeGroups(l.access, l.dynamic.NodeGroups, l.dynamic.Zones, l.nodeLister)...)
+	l.configs = append(l.configs, initNodeGroups(l.access, l.nodeLister, l.dynamic.NodeGroups, l.dynamic.Zones)...)
 
 	return l.configs
 }

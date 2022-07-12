@@ -93,6 +93,10 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	nodeMon := node.NewMonitor(kubeAccess.Kubernetes(), log.NewEntry(a.logger))
+	if err := nodeMon.Start(ctx); err != nil {
+		return fmt.Errorf("starting node monitor: %v", err)
+	}
+
 	runnerLoader := probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, a.logger)
 	calcLoader := calculated.NewLoader(ftr, a.logger)
 	registry := registry.New(runnerLoader, calcLoader)
