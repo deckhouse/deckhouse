@@ -15,12 +15,12 @@ spec:
                       description: 'URL внешнего сервиса Alertmanager.'
                     service:
                       description: 'Сервис Alertmanager внутри кластера Kubernetes.'
-                    properties:
+                      properties:
                         namespace:
                           description: 'Пространство имён сервиса Alertmanager.'
-                          name:
+                        name:
                           description: 'Имя сервиса Alertmanager.'
-                          path:
+                        path:
                           description: 'Префикс URL-адреса в сервисе для отправки оповещений.'
                     auth:
                       description: 'Настройки авторизации.'
@@ -559,58 +559,40 @@ spec:
                                 responders:
                                   description: Список отвечающих, ответственных за уведомления.
                                   items:
-                                      description: OpsGenie Config Responder определяет отвечающего
-                                        на инцидент. Должен быть определено одно из `id`, `name` или `username`.
+                                    description: |
+                                      OpsGenie Config Responder определяет отвечающего на инцидент. Должен быть определено одно из `id`, `name` или `username`.
                                     properties:
                                       id:
                                         description: ID отвечающего.
-                                        type: string
                                       name:
                                         description: Имя отвечающего.
-                                        type: string
                                       type:
                                         description: Тип отвечающего.
-                                        minLength: 1
-                                        type: string
                                       username:
                                         description: Имя пользователя отвечающего.
-                                        type: string
-                                    required:
-                                    - type
-                                    type: object
                                   type: array
                                 sendResolved:
                                   description: Необходимость уведомления о разрешенных оповещениях.
-                                  type: boolean
                                 source:
                                   description: Обратная ссылка на отправителя уведомления.
-                                  type: string
                                 tags:
                                   description: Разделенный запятыми список тегов, прикрепленных к уведомлениям.
-                                  type: string
-                              type: object
-                            type: array
                           pagerdutyConfigs:
                             description: Список конфигураций PagerDuty.
                             items:
-                              description: PagerDutyConfig настраивает уведомления по
-                                PagerDuty. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
+                              description: |
+                                PagerDutyConfig настраивает уведомления по PagerDuty. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
                               properties:
                                 class:
                                   description: Класс/тип события.
-                                  type: string
                                 client:
                                   description: Идентификатор клиента.
-                                  type: string
                                 clientURL:
                                   description: Обратная ссылка на отправителя уведомления.
-                                  type: string
                                 component:
                                   description: Часть или компонент системы, который сломан.
-                                  type: string
                                 description:
                                   description: Описание инцидента.
-                                  type: string
                                 details:
                                   description: Произвольные пары ключ/значение, которые
                                     предоставляют более подробную информацию об инциденте.
@@ -619,19 +601,10 @@ spec:
                                     properties:
                                       key:
                                         description: Ключ.
-                                        minLength: 1
-                                        type: string
                                       value:
                                         description: Значение.
-                                        type: string
-                                    required:
-                                    - key
-                                    - value
-                                    type: object
-                                  type: array
                                 group:
                                   description: Кластер или группа источников.
-                                  type: string
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
@@ -644,106 +617,73 @@ spec:
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
+                                              description: |
+                                                Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+
+                                                TODO: Add other useful fields. apiVersion, kind, uid?
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
+                                              description: |
+                                                Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+
+                                                TODO: Add other useful fields. apiVersion, kind, uid?
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
                                     bearerTokenSecret:
-                                      description: Ключ Secret'а, содержащий bearer-токен,
-                                        который будет использоваться клиентом для аутентификации.
-                                        Secret должен находиться в том же пространстве имен, что и
-                                        объект AlertmanagerConfig, и быть доступным
-                                        оператору Prometheus.
+                                      description: |
+                                        Ключ Secret'а, содержащий bearer-токен, который будет использоваться клиентом для аутентификации.
+
+                                        Secret должен находиться в том же пространстве имен, что и объект AlertmanagerConfig, и быть доступным оператору Prometheus.
                                       properties:
                                         key:
                                           description: Ключ. Должен быть валидным.
-                                          type: string
                                         name:
-                                          description: 'Имя референта. [Подробнее...]
-                                            (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                          type: string
+                                          description: |
+                                            Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+
+                                            TODO: Add other useful fields. apiVersion, kind, uid?
                                         optional:
                                           description: Необходимость определения Secret'а или его ключа.
-                                          type: boolean
-                                      required:
-                                      - key
-                                      type: object
                                     proxyURL:
-                                      description: URL-адрес прокси-сервера (опционально).
-                                      type: string
+                                      description: URL прокси-сервера (опционально).
                                     tlsConfig:
                                       description: TLS-конфигурация клиента.
                                       properties:
                                         ca:
-                                          description: Struct, содержащая CA-сертификаты, используемые для
-                                            целевых объектов.
+                                          description: Struct, содержащая CA-сертификаты, используемые для целевых объектов.
                                           properties:
                                             configMap:
                                               description: ConfigMap, содержащая данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
-                                                  description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                    TODO: Add other useful fields. apiVersion,
-                                                    kind, uid?'
-                                                  type: string
+                                                  description: |
+                                                    Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+
+                                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
-                                                  description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                    TODO: Add other useful fields. apiVersion,
-                                                    kind, uid?'
-                                                  type: string
+                                                  description: |
+                                                    Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+
+                                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         cert:
                                           description: Struct содержащая файлы сертификатов, используемые для
                                             целевых объектов.
@@ -753,7 +693,6 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
@@ -761,78 +700,49 @@ spec:
                                                   type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         insecureSkipVerify:
                                           description: Отключение проверки сертификатов целевых объектов.
-                                          type: boolean
                                         keySecret:
                                           description: Secret, содержащий файл клиентского ключа для целевых объектов.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         serverName:
                                           description: Имя сервера. Используется для верификации hostname'а целевых объектов.
-                                          type: string
-                                      type: object
-                                  type: object
                                 routingKey:
-                                  description: Ключ Secret'а, содержащий ключ интеграции PagerDuty
-                                    (при использовании Events API v2).
-                                    Необходимо определить либо это поле, либо `serviceKey`.
-                                    Secret должен находиться в том же пространстве имен, что и
-                                    AlertmanagerConfig, и быть доступным оператору Prometheus.
+                                  description: |
+                                    Ключ Secret'а, содержащий ключ интеграции PagerDuty (при использовании Events API v2).
+
+                                    Необходимо определить либо это поле, либо `serviceKey`. Secret должен находиться в том же пространстве имен, что и AlertmanagerConfig, и быть доступным оператору Prometheus.
                                   properties:
                                     key:
                                       description: Ключ. Должен быть валидным.
-                                      type: string
                                     name:
                                       description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                         TODO: Add other useful fields. apiVersion, kind,
                                         uid?'
-                                      type: string
                                     optional:
                                       description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
                                 sendResolved:
                                   description: Необходимость уведомления о разрешенных оповещениях.
-                                  type: boolean
                                 serviceKey:
                                   description:  Ключ Secret'а, содержащий служебный ключ PagerDuty
                                     (при использовании типа интеграции "Prometheus").
@@ -842,26 +752,16 @@ spec:
                                   properties:
                                     key:
                                       description: Ключ. Должен быть валидным.
-                                      type: string
                                     name:
                                       description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                         TODO: Add other useful fields. apiVersion, kind,
                                         uid?'
-                                      type: string
                                     optional:
                                       description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
                                 severity:
                                   description: Серьезность инцидента.
-                                  type: string
                                 url:
                                   description: URL для отправки запроса.
-                                  type: string
-                              type: object
-                            type: array
                           pushoverConfigs:
                             description: Список конфигураций Pushover.
                             items:
@@ -871,10 +771,8 @@ spec:
                                 expire:
                                   description: Как долго ваше уведомление будет повторяться,
                                     если пользователь не подтвердит получение уведомления.
-                                  type: string
                                 html:
-                                  description: Тип сообщения — HTML или простой текст.
-                                  type: boolean
+                                  description: Тип сообщения — HTML или простой текст.
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
@@ -887,39 +785,26 @@ spec:
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
                                     bearerTokenSecret:
                                       description: Ключ  Secret'а, содержащий bearer-токен,
                                         который будет использоваться клиентом для аутентификации.
@@ -929,22 +814,15 @@ spec:
                                       properties:
                                         key:
                                           description: Ключ. Должен быть валидным.
-                                          type: string
                                         name:
                                           description: 'Имя референта. [Подробнее...]
                                             (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                             TODO: Add other useful fields. apiVersion, kind,
                                             uid?'
-                                          type: string
                                         optional:
                                           description: Необходимость определения Secret'а или его ключа.
-                                          type: boolean
-                                      required:
-                                      - key
-                                      type: object
                                     proxyURL:
-                                      description: URL-адрес прокси-сервера (опционально).
-                                      type: string
+                                      description: URL прокси-сервера (опционально).
                                     tlsConfig:
                                       description: TLS-конфигурация клиента.
                                       properties:
@@ -956,36 +834,23 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых оъектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         cert:
                                           description: Struct, содержащая файл сертификат клиента для целевых объектов.
                                           properties:
@@ -994,84 +859,55 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых оъектах.
                                               properties:
                                                 key:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: string
                                                 name:
                                                   description: 'Ключ. Должен быть валидным.(https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         insecureSkipVerify:
                                           description: Отключение валидации сертификатов целевых объектов.
-                                          type: boolean
                                         keySecret:
                                           description: Secret содержащий файл ключа клиента для использования в целевых оъектах..
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         serverName:
                                           description: Имя сервера. Используется для проверки имени хоста для целевых объектов.
-                                          type: string
-                                      type: object
-                                  type: object
                                 message:
                                   description: Сообщение уведомления.
-                                  type: string
                                 priority:
                                   description: Пиоритет. [Подробнее…](https://pushover.net/api#priority)
-                                  type: string
                                 retry:
                                   description: Как часто серверы Pushover будут отправлять
                                     одно и то же уведомление пользователю.
                                     Должно быть не менее 30 секунд.
-                                  type: string
                                 sendResolved:
                                   description: Необходимость уведомления о разрешенных предупреждениях.
-                                  type: boolean
                                 sound:
                                   description: Название одного из звуков, поддерживаемых клиентами
                                     устройств, для переопределения звука, выбранного пользователем
                                     по умолчанию.
-                                  type: string
                                 title:
                                   description: Заголовок уведомления.
-                                  type: string
                                 token:
                                   description: Ключ Secret'а, содержащий маркер API зарегистрированного
                                     приложения, см. https://pushover.net/apps . Secret должен находиться
@@ -1080,25 +916,17 @@ spec:
                                   properties:
                                     key:
                                       description: Ключ. Должен быть валидным.
-                                      type: string
                                     name:
                                       description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                         TODO: Add other useful fields. apiVersion, kind,
                                         uid?'
-                                      type: string
                                     optional:
                                       description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
                                 url:
                                   description: Дополнительный URL-адрес, отображаемый рядом с сообщением.
-                                  type: string
                                 urlTitle:
                                   description: Заголовок для дополнительного URL-адреса,
                                     при его отсутствии отображается только URL-адрес.
-                                  type: string
                                 userKey:
                                   description: Ключ Secret'а, содержащий пользовательский
                                     ключ пользователя-получателя. Секрет должен находиться
@@ -1107,25 +935,17 @@ spec:
                                   properties:
                                     key:
                                       description: Ключ. Должен быть валидным.
-                                      type: string
                                     name:
                                       description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                         TODO: Add other useful fields. apiVersion, kind,
                                         uid?'
-                                      type: string
                                     optional:
                                       description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
-                              type: object
-                            type: array
                           slackConfigs:
                             description: Список конфигураций Slack.
                             items:
-                              description: SlackConfig настраивает уведомления через Slack.
-                                [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#slack_config)
+                              description: |
+                                SlackConfig настраивает уведомления через Slack. [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#slack_config)
                               properties:
                                 actions:
                                   description: Список действий Slack, которые отправляются с каждым уведомлением.
@@ -1139,7 +959,7 @@ spec:
                                         description: SlackConfirmationField защищает пользователей от
                                           деструктивных действий или особо выдающихся решений,
                                           попросив их подтвердить нажатие кнопки еще раз.
-                                          [Подробнее…](https://api.slack.com/docs/interactive-message-field-guide#confirmation_fields)ы
+                                          [Подробнее...](https://api.slack.com/docs/interactive-message-field-guide#confirmation_fields)
                                         properties:
                                           dismissText:
                                             type: string
@@ -1150,9 +970,6 @@ spec:
                                             type: string
                                           title:
                                             type: string
-                                        required:
-                                        - text
-                                        type: object
                                       name:
                                         type: string
                                       style:
@@ -1167,11 +984,6 @@ spec:
                                         type: string
                                       value:
                                         type: string
-                                    required:
-                                    - text
-                                    - type
-                                    type: object
-                                  type: array
                                 apiURL:
                                   description: Ключ Secret'а, содержащий URL-адрес
                                     Slack webhook. Secret должен находиться в том же
@@ -1180,18 +992,12 @@ spec:
                                   properties:
                                     key:
                                       description: Ключ. Должен быть валидным.
-                                      type: string
                                     name:
                                       description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                         TODO: Add other useful fields. apiVersion, kind,
                                         uid?'
-                                      type: string
                                     optional:
                                       description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
                                 callbackId:
                                   type: string
                                 channel:
@@ -1214,16 +1020,9 @@ spec:
                                       short:
                                         type: boolean
                                       title:
-                                        minLength: 1
                                         type: string
                                       value:
-                                        minLength: 1
                                         type: string
-                                    required:
-                                    - title
-                                    - value
-                                    type: object
-                                  type: array
                                 footer:
                                   type: string
                                 httpConfig:
@@ -1238,39 +1037,26 @@ spec:
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
                                           properties:
                                             key:
                                               description:  Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
                                     bearerTokenSecret:
                                       description: Секретный ключ, содержащий bearer-токен,
                                         который будет использоваться клиентом для аутентификации.
@@ -1286,16 +1072,10 @@ spec:
                                             (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                             TODO: Add other useful fields. apiVersion, kind,
                                             uid?'
-                                          type: string
                                         optional:
                                           description: Необходимость определения Secret'а или его ключа.
-                                          type: boolean
-                                      required:
-                                      - key
-                                      type: object
                                     proxyURL:
                                       description: URL прокси-сервера (опционально).
-                                      type: string
                                     tlsConfig:
                                       description: TLS-конфигурация клиента.
                                       properties:
@@ -1307,36 +1087,23 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](ttps://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         cert:
                                           description: Struct, содержащая сертификат клиента для использования в целевых объектах.
                                           properties:
@@ -1345,62 +1112,39 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         insecureSkipVerify:
                                           description: Отключение валидации сертификатов целевых объектов.
-                                          type: boolean
                                         keySecret:
                                           description: Secret содержащий файл клиентского ключа для целевых объектов.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         serverName:
                                           description: Имя хоста. Используется для верификации hostname  целевых объектов.
-                                          type: string
-                                      type: object
-                                  type: object
                                 iconEmoji:
                                   type: string
                                 iconURL:
@@ -1417,7 +1161,6 @@ spec:
                                   type: string
                                 sendResolved:
                                   description: Необходимость уведомления о разрешенных предупреждениях.
-                                  type: boolean
                                 shortFields:
                                   type: boolean
                                 text:
@@ -1446,21 +1189,14 @@ spec:
                                   properties:
                                     key:
                                       description: Ключ. Должен быть валидным.
-                                      type: string
                                     name:
                                       description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                         TODO: Add other useful fields. apiVersion, kind,
                                         uid?'
-                                      type: string
                                     optional:
                                       description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
                                 apiUrl:
                                   description: URL-адрес VictorOps API.
-                                  type: string
                                 customFields:
                                   description: Дополнительные настраиваемые поля для уведомлений.
                                   items:
@@ -1468,19 +1204,10 @@ spec:
                                     properties:
                                       key:
                                         description: Ключ.
-                                        minLength: 1
-                                        type: string
                                       value:
                                         description: Значение.
-                                        type: string
-                                    required:
-                                    - key
-                                    - value
-                                    type: object
-                                  type: array
                                 entityDisplayName:
                                   description: Содержит краткое описание проблемы.
-                                  type: string
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
@@ -1493,39 +1220,26 @@ spec:
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
                                     bearerTokenSecret:
                                       description: Ключ Secret'а, содержащий bearer-токен,
                                         который будет использоваться клиентом для аутентификации.
@@ -1535,22 +1249,15 @@ spec:
                                       properties:
                                         key:
                                           description: Ключ. Должен быть валидным.
-                                          type: string
                                         name:
                                           description: 'Имя референта. [Подробнее...]
                                             (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                             TODO: Add other useful fields. apiVersion, kind,
                                             uid?'
-                                          type: string
                                         optional:
                                           description: Необходимость определения Secret'а или его ключа.
-                                          type: boolean
-                                      required:
-                                      - key
-                                      type: object
                                     proxyURL:
                                       description: URL прокси-сервера (опционально).
-                                      type: string
                                     tlsConfig:
                                       description: TLS-конфигурация клиента.
                                       properties:
@@ -1562,35 +1269,23 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                           type: object
                                         cert:
                                           description: Struct, содержащая файл сертификата клиента для целевых объектов.
@@ -1600,81 +1295,50 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         insecureSkipVerify:
                                           description: Отключение валидации сертификатов целевых объектов.
-                                          type: boolean
                                         keySecret:
                                           description: Secret, содержащий файл клиентского ключа для целевых объектов.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         serverName:
                                           description: Имя сервера. Используется для верификации hostname'а целевого объекта.
-                                          type: string
-                                      type: object
-                                  type: object
                                 messageType:
-                                  description: Тип предупреждения (CRITICAL,
-                                    WARNING, INFO).
-                                  type: string
+                                  description: Тип предупреждения (CRITICAL, WARNING, INFO).
                                 monitoringTool:
                                   description: Инструмент мониторинга, с которого
                                     поступает сообщение о состоянии.
-                                  type: string
                                 routingKey:
                                   description: Ключ, используемый для сопоставления оповещения с командой.
-                                  type: string
                                 sendResolved:
                                   description: Необходимость уведомления о разрешенных предупреждениях.
-                                  type: boolean
                                 stateMessage:
                                   description: Полное описание проблемы.
-                                  type: string
-                              type: object
-                            type: array
                           webhookConfigs:
                             description: Список конфигураций webhook.
                             items:
@@ -1694,19 +1358,13 @@ spec:
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         username:
                                           description: The secret in the service monitor
                                             namespace that contains the username for authentication.
@@ -1714,20 +1372,13 @@ spec:
                                             key:
                                               description: Secret в пространстве имен `service monitor`,
                                                 который содержит имя пользователя для проверки подлинности.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
                                     bearerTokenSecret:
                                       description: Ключ Secret'а, содержащий bearer-токен,
                                         который будет использоваться клиентом для аутентификации.
@@ -1737,22 +1388,15 @@ spec:
                                       properties:
                                         key:
                                           description: Ключ. Должен быть валидным.
-                                          type: string
                                         name:
                                           description: 'Имя референта. [Подробнее...]
                                             (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                             TODO: Add other useful fields. apiVersion, kind,
                                             uid?'
-                                          type: string
                                         optional:
                                           description: Необходимость определения Secret'а или его ключа.
-                                          type: boolean
-                                      required:
-                                      - key
-                                      type: object
                                     proxyURL:
-                                      description: URL-адрес прокси-сервера (опционально).
-                                      type: string
+                                      description: URL прокси-сервера (опционально).
                                     tlsConfig:
                                       description: TLS-конфигурация клиента.
                                       properties:
@@ -1766,38 +1410,25 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...]
                                                     (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для
                                                 использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         cert:
                                           description: Struct, содержащая файл сертификата клиента для целевых объектов.
                                           properties:
@@ -1807,77 +1438,49 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         insecureSkipVerify:
                                           description: Отключение валидации сертификатов целевых объектов.
-                                          type: boolean
                                         keySecret:
                                           description: Secret, содержащий файл ключа клиента для целевых объектов.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         serverName:
                                           description: Имя хоста. Используется для верификации hostname  целевых объектов.
-                                          type: string
-                                      type: object
-                                  type: object
                                 maxAlerts:
                                   description: Максимальное количество оповещений,
                                     отправляемых на одно сообщение webhook.
                                     При значении 0 включаются все оповещения.
-                                  format: int32
-                                  minimum: 0
-                                  type: integer
                                 sendResolved:
                                   description: Необходимость уведомления о разрешенных предупреждениях.
-                                  type: boolean
                                 url:
                                   description: URL-адрес для отправки HTTP POST-запросов.
                                     `urlSecret` имеет приоритет над `url`. Должен быть определен
                                     один из `urlSecret` и `url`.
-                                  type: string
                                 urlSecret:
                                   description: Ключ Secret'а, содержащий
                                     URL-адрес webhook для отправки HTTP-запросов.
@@ -1888,20 +1491,12 @@ spec:
                                   properties:
                                     key:
                                       description: Ключ. Должен быть валидным.
-                                      type: string
                                     name:
                                       description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                         TODO: Add other useful fields. apiVersion, kind,
                                         uid?'
-                                      type: string
                                     optional:
                                       description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
-                              type: object
-                            type: array
                           wechatConfigs:
                             description: Список конфигураций WeChat.
                             items:
@@ -1918,24 +1513,16 @@ spec:
                                   properties:
                                     key:
                                       description: Ключ. Должен быть валидным.
-                                      type: string
                                     name:
                                       description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                         TODO: Add other useful fields. apiVersion, kind,
                                         uid?'
-                                      type: string
                                     optional:
                                       description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
                                 apiURL:
                                   description: URL-адрес WeChat API.
-                                  type: string
                                 corpID:
                                   description: Идентификатор корпорации для аутентификации.
-                                  type: string
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
@@ -1948,39 +1535,26 @@ spec:
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
                                     bearerTokenSecret:
                                       description: Ключ Secret'а, содержащий bearer-токен,
                                         который будет использоваться клиентом для аутентификации.
@@ -1989,64 +1563,43 @@ spec:
                                       properties:
                                         key:
                                           description: Ключ. Должен быть валидным.
-                                          type: string
                                         name:
                                           description: 'Имя референта. [Подробнее...]
                                             (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                             TODO: Add other useful fields. apiVersion, kind,
                                             uid?'
-                                          type: string
                                         optional:
                                           description: Необходимость определения Secret'а или его ключа.
-                                          type: boolean
-                                      required:
-                                      - key
-                                      type: object
                                     proxyURL:
-                                      description: URL-адрес прокси-сервера (опционально).
-                                      type: string
+                                      description: URL прокси-сервера (опционально).
                                     tlsConfig:
                                       description: TLS-конфигурация клиента.
                                       properties:
                                         ca:
-                                          description: Struct, содержащая сертификат CA для
-                                        использования на целевых объектах.
+                                          description: Struct, содержащая сертификат CA для использования на целевых объектах.
                                           properties:
                                             configMap:
                                               description: ConfigMap, содержащая данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         cert:
                                           description: Struct, cодержащая файл сертификата клиента для целевых объектов.
                                           properties:
@@ -2055,83 +1608,52 @@ spec:
                                               properties:
                                                 key:
                                                   description: Ключ.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения ConfigMap'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
                                             secret:
                                               description: Secret, содержащий данные для использования в целевых объектах.
                                               properties:
                                                 key:
                                                   description: Ключ. Должен быть валидным.
-                                                  type: string
                                                 name:
                                                   description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                     TODO: Add other useful fields. apiVersion,
                                                     kind, uid?'
-                                                  type: string
                                                 optional:
                                                   description: Необходимость определения Secret'а или его ключа.
-                                                  type: boolean
-                                              required:
-                                              - key
-                                              type: object
-                                          type: object
                                         insecureSkipVerify:
                                           description: Отключение проверки сертификатов целевых объектов.
-                                          type: boolean
                                         keySecret:
                                           description: Secret, cодержащий файл сертификата клиента для целевых объектов.
                                           properties:
                                             key:
                                               description: Ключ. Должен быть валидным.
-                                              type: string
                                             name:
                                               description: 'Имя референта. [Подробнее...]
                                                 (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                                 TODO: Add other useful fields. apiVersion,
                                                 kind, uid?'
-                                              type: string
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
                                         serverName:
                                           description: Имя сервера. Используется для верификации hostname'а целевого объекта.
-                                          type: string
-                                      type: object
-                                  type: object
                                 message:
                                   description: API-запрос данных, определенных WeChat.
                                     API.
-                                  type: string
                                 messageType:
                                   type: string
                                 sendResolved:
                                   description: Неободимость уведомления о разрешенных предупреждениях.
-                                  type: boolean
                                 toParty:
                                   type: string
                                 toTag:
                                   type: string
                                 toUser:
                                   type: string
-                              type: object
-                            type: array
-                        required:
-                        - name
-                        type: object
-                      type: array
                     route:
                       description: Определение маршрута Alertmanager'а
                         для оповещений, соответствующих пространству имен ресурса.
@@ -2143,24 +1665,18 @@ spec:
                             оповещение продолжать сопоставлять последующие
                             родственные узлы. Оператор Prometheus всегда будет
                             переопределять значение на true для маршрута первого уровня.
-                          type: boolean
                         groupBy:
                           description: Список меток для группировки.
-                          items:
-                            type: string
-                          type: array
                         groupInterval:
                           description: Время ожидания, прежде чем отправлять
                             обновленное уведомление. Должно соответствовать
                             регулярному выражению `[0-9]+(ms|s|m|h)`
                             (миллисекунды, секунды, минуты, часы).
-                          type: string
                         groupWait:
                           description: Время ожидания, прежде чем отправлять
                             первоначальное уведомление. Должно соответствовать
                             регулярному выражению `[0-9]+(ms|s|m|h)`
                             (миллисекунды, секунды, минуты, часы).
-                          type: string
                         matchers:
                           description: 'Список совпадений, которым должны
                             соответствовать метки оповещения. Для маршрута
@@ -2169,36 +1685,21 @@ spec:
                             `namespace` и добавляет совпадения
                             `namespace: <object namespace>`.'
                           items:
-                            description: Определение,
-                              как сопоставлять метки оповещений.
+                            description: Определение, как сопоставлять метки оповещений.
                             properties:
                               name:
                                 description: Лейбл совпадения.
-                                minLength: 1
-                                type: string
                               regex:
                                 description: Тип совпадения — по равенству
                                   (false) или по регулярному выражению (true).
-                                type: boolean
                               value:
                                 description: Значение лейбла для совпадения.
-                                type: string
-                            required:
-                            - name
-                            type: object
-                          type: array
                         receiver:
                           description: Имя получателя для этого маршрута.
                             Если он не пустой, он должен быть указан в поле `receivers`.
-                          type: string
                         repeatInterval:
                           description: Время ожидания, прежде чем повторять последнее
                             уведомление. Должно соответствовать регулярному
                             выражению `[0-9]+(ms|s|m|h)` (миллисекунды, секунды, минуты, часы).
-                          type: string
                         routes:
                           description: Дочерние маршруты.
-                          items:
-                            x-kubernetes-preserve-unknown-fields: true
-                          type: array
-                      type: object
