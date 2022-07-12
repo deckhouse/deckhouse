@@ -1,3 +1,19 @@
+{!{/* Get layout for cloud provider. */}!}
+{!{- define "e2e_get_layout" -}!}
+{!{- $ctx := . -}!}
+{!{- $layout := "WithoutNAT" -}!}
+{!{- if eq $ctx.provider "azure"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
+{!{- if eq $ctx.provider "vsphere"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
+{!{- if eq $ctx.provider "static"  -}!}
+{!{-   $layout = "Static" -}!}
+{!{- end -}!}
+{!{ $layout }!}
+{!{ end -}!}
+
 {!{ define "e2e_run_template" }!}
 # <template: e2e_run_template>
 {!{- $provider := index . 0 -}!}
@@ -111,22 +127,6 @@ check_e2e_labels:
           return await ci.checkE2ELabels({github, context, core, provider});
 # </template: check_e2e_labels_job>
 {!{- end -}!}
-
-{!{/* One e2e job. */}!}
-{!{- define "e2e_get_layout" -}!}
-{!{- $ctx := . -}!}
-{!{- $layout := "WithoutNAT" -}!}
-{!{- if eq $ctx.provider "azure"  -}!}
-{!{-   $layout = "Standard" -}!}
-{!{- end -}!}
-{!{- if eq $ctx.provider "vsphere"  -}!}
-{!{-   $layout = "Standard" -}!}
-{!{- end -}!}
-{!{- if eq $ctx.provider "static"  -}!}
-{!{-   $layout = "Static" -}!}
-{!{- end -}!}
-{!{ $layout }!}
-{!{ end -}!}
 
 {!{/* One e2e job. */}!}
 {!{- define "e2e_run_job_template" -}!}

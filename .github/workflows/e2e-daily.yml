@@ -1,0 +1,2690 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+name: 'Daily running e2e tests'
+on:
+  schedule:
+  - cron:  '5 21 * * *'
+  workflow_dispatch:
+
+env:
+  WERF_DRY_RUN: "false"
+
+  # <template: werf_envs>
+  WERF_CHANNEL: "ea"
+  WERF_ENV: "FE"
+  TEST_TIMEOUT: "15m"
+  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
+  DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # Registry for additional repositories used for testing Github Actions workflows.
+  GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # </template: werf_envs>
+
+# Always run a single job at a time.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: e2e-daily
+
+jobs:
+# Note: git_info is needed for werf.yaml
+
+  # <template: git_info_job>
+
+  git_info:
+    name: Get git info
+    runs-on: ubuntu-latest
+    outputs:
+      ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
+      ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
+      ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
+      ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
+      ref_full: ${{ steps.git_info.outputs.ref_full }}
+      github_sha: ${{ steps.git_info.outputs.github_sha }}
+    # Skip the CI for automation PRs, e.g. changelog
+    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    steps:
+      - id: git_info
+        name: Get tag name and SHA
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
+
+            let refSlug = ''
+            let refName = ''
+            let refFull = ''
+            let githubBranch = ''
+            let githubTag = ''
+            let githubSHA = ''
+            if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
+              // Trigger: workflow_dispatch with pull_request_ref.
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+
+              refSlug       = `pr${prNum}`
+              refName       = context.payload.inputs.ci_commit_ref_name
+              refFull       = context.payload.inputs.pull_request_ref
+              githubBranch  = refName
+              githubSHA     = context.payload.inputs.pull_request_sha
+              core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+            } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
+              // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
+              const targetRepo = context.payload.repository.full_name;
+              const prRepo = context.payload.pull_request.head.repo.full_name
+              const prRef = context.payload.pull_request.head.ref
+
+              refSlug = `pr${context.issue.number}`;
+              refName = (prRepo === targetRepo) ? prRef : refSlug;
+              refFull = `refs/pull/${context.issue.number}/head`
+              githubBranch = refName
+              githubSHA = context.payload.pull_request.head.sha
+              core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+            } else {
+              // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = GITHUB_REF_NAME
+              refName       = GITHUB_REF_NAME
+              refFull       = GITHUB_REF
+              githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+              githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+              githubSHA     = context.sha
+              core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
+            }
+
+            core.setCommandEcho(true)
+            core.setOutput('ci_commit_ref_slug', refSlug)
+            core.setOutput('ci_commit_ref_name', refName)
+            core.setOutput(`ci_commit_tag`, githubTag)
+            core.setOutput(`ci_commit_branch`, githubBranch)
+            core.setOutput(`ref_full`, refFull)
+            core.setOutput('github_sha', githubSHA)
+            core.setCommandEcho(false)
+
+  # </template: git_info_job>
+
+
+
+  # <template: e2e_run_job_template>
+  run_containerd_1_21:
+    name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    env:
+      PROVIDER: AWS
+      CRI: Containerd
+      LAYOUT: WithoutNAT
+      KUBERNETES_VERSION: "1.21"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+          # Create tmppath for test script.
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
+
+      - name: "Run e2e test: AWS/Containerd/1.21"
+        env:
+          PROVIDER: AWS
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+            -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Cleanup bootstrapped cluster
+        if: always()
+        env:
+          PROVIDER: AWS
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+            -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output_aws_containerd_1_21
+          path: |
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+      - name: Check alerting credentials
+        id: check_alerting
+        if: always()
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
+      - name: Alert on fail in default branch
+        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: AWS
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
+  run_containerd_1_21:
+    name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    env:
+      PROVIDER: Azure
+      CRI: Containerd
+      LAYOUT: Standard
+      KUBERNETES_VERSION: "1.21"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+          # Create tmppath for test script.
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
+
+      - name: "Run e2e test: Azure/Containerd/1.21"
+        env:
+          PROVIDER: Azure
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+          LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
+          LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
+          LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+        run: |
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
+            -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Cleanup bootstrapped cluster
+        if: always()
+        env:
+          PROVIDER: Azure
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+          LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
+          LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
+          LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
+            -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
+            -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output_azure_containerd_1_21
+          path: |
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+      - name: Check alerting credentials
+        id: check_alerting
+        if: always()
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
+      - name: Alert on fail in default branch
+        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: Azure
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.21"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
+  run_containerd_1_21:
+    name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    env:
+      PROVIDER: GCP
+      CRI: Containerd
+      LAYOUT: WithoutNAT
+      KUBERNETES_VERSION: "1.21"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+          # Create tmppath for test script.
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
+
+      - name: "Run e2e test: GCP/Containerd/1.21"
+        env:
+          PROVIDER: GCP
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
+        run: |
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Cleanup bootstrapped cluster
+        if: always()
+        env:
+          PROVIDER: GCP
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output_gcp_containerd_1_21
+          path: |
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+      - name: Check alerting credentials
+        id: check_alerting
+        if: always()
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
+      - name: Alert on fail in default branch
+        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: GCP
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
+  run_containerd_1_21:
+    name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    env:
+      PROVIDER: Yandex.Cloud
+      CRI: Containerd
+      LAYOUT: WithoutNAT
+      KUBERNETES_VERSION: "1.21"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+          # Create tmppath for test script.
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
+
+      - name: "Run e2e test: Yandex.Cloud/Containerd/1.21"
+        env:
+          PROVIDER: Yandex.Cloud
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+        run: |
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
+            -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
+            -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Cleanup bootstrapped cluster
+        if: always()
+        env:
+          PROVIDER: Yandex.Cloud
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
+            -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
+            -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output_yandex-cloud_containerd_1_21
+          path: |
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+      - name: Check alerting credentials
+        id: check_alerting
+        if: always()
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
+      - name: Alert on fail in default branch
+        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: Yandex.Cloud
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
+  run_containerd_1_21:
+    name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    env:
+      PROVIDER: OpenStack
+      CRI: Containerd
+      LAYOUT: WithoutNAT
+      KUBERNETES_VERSION: "1.21"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+          # Create tmppath for test script.
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
+
+      - name: "Run e2e test: OpenStack/Containerd/1.21"
+        env:
+          PROVIDER: OpenStack
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+        run: |
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Cleanup bootstrapped cluster
+        if: always()
+        env:
+          PROVIDER: OpenStack
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output_openstack_containerd_1_21
+          path: |
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+      - name: Check alerting credentials
+        id: check_alerting
+        if: always()
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
+      - name: Alert on fail in default branch
+        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: OpenStack
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "1.21"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
+  run_containerd_1_21:
+    name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    env:
+      PROVIDER: vSphere
+      CRI: Containerd
+      LAYOUT: Standard
+      KUBERNETES_VERSION: "1.21"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-vsphere]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+          # Create tmppath for test script.
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
+
+      - name: "Run e2e test: vSphere/Containerd/1.21"
+        env:
+          PROVIDER: vSphere
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
+          LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
+        run: |
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
+            -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Cleanup bootstrapped cluster
+        if: always()
+        env:
+          PROVIDER: vSphere
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
+          LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
+            -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output_vsphere_containerd_1_21
+          path: |
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+      - name: Check alerting credentials
+        id: check_alerting
+        if: always()
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
+      - name: Alert on fail in default branch
+        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: vSphere
+          CRI: Containerd
+          LAYOUT: Standard
+          KUBERNETES_VERSION: "1.21"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
+  run_containerd_1_21:
+    name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
+    needs:
+      - check_e2e_labels
+      - git_info
+    if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    env:
+      PROVIDER: Static
+      CRI: Containerd
+      LAYOUT: Static
+      KUBERNETES_VERSION: "1.21"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, e2e-common]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "::set-output name=started_at::${unixTimestamp}"
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then echo "::set-output name=has_credentials::true"; fi
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1.10.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI value is trimmed to reduce prefix length.
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+          # Create tmppath for test script.
+          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          if [[ -d "${TMP_DIR_PATH}" ]] ; then
+            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+            ls -la ${TMP_DIR_PATH}
+            exit 1
+          else
+            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+            mkdir -p "${TMP_DIR_PATH}"
+          fi
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+          docker pull "${INSTALL_IMAGE_NAME}"
+
+          echo '::echo::on'
+          echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+          echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+          echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+          echo '::echo::off'
+
+      - name: "Run e2e test: Static/Containerd/1.21"
+        env:
+          PROVIDER: Static
+          CRI: Containerd
+          LAYOUT: Static
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+        run: |
+          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Cleanup bootstrapped cluster
+        if: always()
+        env:
+          PROVIDER: Static
+          CRI: Containerd
+          LAYOUT: Static
+          KUBERNETES_VERSION: "1.21"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+        run: |
+          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            PREFIX=${PREFIX}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            DEV_BRANCH=${DEV_BRANCH}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+          "
+
+          docker run --rm \
+            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            -e PREFIX=${PREFIX} \
+            -e DEV_BRANCH=${DEV_BRANCH} \
+            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+            -e CRI=${CRI} \
+            -e PROVIDER=${PROVIDER:-not_provided} \
+            -e LAYOUT=${LAYOUT:-not_provided} \
+            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+            -v $(pwd)/testing:/deckhouse/testing \
+            -v ${TMP_DIR_PATH}:/tmp \
+            --user $(id -u):$(id -u) \
+            -v /etc/group:/etc/group:ro \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/shadow:/etc/shadow:ro \
+            -w /deckhouse \
+          ${INSTALL_IMAGE_NAME} \
+          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_output_static_containerd_1_21
+          path: |
+            testing/cloud_layouts/
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const statusConfig = 'job,separate';
+            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+      - name: Check alerting credentials
+        id: check_alerting
+        if: always()
+        env:
+          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+        run: |
+          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
+      - name: Alert on fail in default branch
+        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+        env:
+          PROVIDER: Static
+          CRI: Containerd
+          LAYOUT: Static
+          KUBERNETES_VERSION: "1.21"
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          echo $WORKFLOW_URL
+
+          alertData=$(cat <<EOF
+          {
+            "labels": {
+              "severity_level": 7,
+              "trigger": "CloudLayoutTestFailed",
+              "provider": "${PROVIDER}",
+              "layout": "${LAYOUT}",
+              "cri": "${CRI}",
+              "kubernetes_version": "${KUBERNETES_VERSION}"
+            },
+            "annotations": {
+              "summary": "Cloud Layout Test failed",
+              "description": "Check Github workflow log for more information",
+              "plk_protocol_version": "1",
+              "plk_link_url/job": "${WORKFLOW_URL}",
+              "plk_link_title_en/job": "Github job run",
+              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+            }
+          }
+          EOF
+          )
+
+          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "${alertData}"
+  # </template: e2e_run_job_template>
