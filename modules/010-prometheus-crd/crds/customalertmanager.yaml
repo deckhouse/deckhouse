@@ -119,7 +119,7 @@ spec:
                               the alert matches the resource’s namespace.
                             items:
                               description: Matcher defines how to match on alert's labels.
-                              properties:
+                              properties: &match-properties
                                 name:
                                   description: Label to match.
                                   minLength: 1
@@ -141,18 +141,7 @@ spec:
                               the resource’s namespace.
                             items:
                               description: Matcher defines how to match on alert's labels.
-                              properties:
-                                name:
-                                  description: Label to match.
-                                  minLength: 1
-                                  type: string
-                                regex:
-                                  description: Whether to match on equality (false) or regular-expression
-                                    (true).
-                                  type: boolean
-                                value:
-                                  description: Label value to match.
-                                  type: string
+                              properties: *match-properties
                               required:
                               - name
                               type: object
@@ -2447,24 +2436,15 @@ spec:
                             seconds minutes hours).
                           type: string
                         matchers:
-                          description: 'List of matchers that the alert’s labels should
-                            match. For the first level route, the operator removes any existing
+                          description: |
+                            List of matchers that the alert’s labels should match.
+
+                            For the first level route, the operator removes any existing
                             equality and regexp matcher on the `namespace` label and adds
-                            a `namespace: <object namespace>` matcher.'
+                            a `namespace: <object namespace>` matcher.
                           items:
                             description: Matcher defines how to match on alert's labels.
-                            properties:
-                              name:
-                                description: Label to match.
-                                minLength: 1
-                                type: string
-                              regex:
-                                description: Whether to match on equality (false) or regular-expression
-                                  (true).
-                                type: boolean
-                              value:
-                                description: Label value to match.
-                                type: string
+                            properties: *match-properties
                             required:
                             - name
                             type: object

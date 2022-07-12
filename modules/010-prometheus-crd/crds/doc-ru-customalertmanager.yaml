@@ -67,7 +67,7 @@ spec:
                               Оператор обеспечивает соответствие оповещения пространству имен ресурса.
                             items:
                               description: Средство сопоставления выражений определяет, как сопоставлять метки оповещений.
-                              properties:
+                              properties: &match-properties
                                 name:
                                   description: Лейбл выражения.
                                   minLength: 1
@@ -89,18 +89,7 @@ spec:
                               пространству имен ресурса.
                             items:
                               description: Средство сравнения определяет, как сопоставлять лейблы оповещений.
-                              properties:
-                                name:
-                                  description: Лейбл для сравнения.
-                                  minLength: 1
-                                  type: string
-                                regex:
-                                  description: Тип сравнения — по равенству (false) или по регулярному выражению
-                                    (true).
-                                  type: boolean
-                                value:
-                                  description: Значение лейбла для сравнения.
-                                  type: string
+                              properties: *match-properties
                               required:
                               - name
                               type: object
@@ -1678,22 +1667,15 @@ spec:
                             регулярному выражению `[0-9]+(ms|s|m|h)`
                             (миллисекунды, секунды, минуты, часы).
                         matchers:
-                          description: 'Список совпадений, которым должны
-                            соответствовать метки оповещения. Для маршрута
-                            первого уровня оператор удаляет все существующие
+                          description: |
+                            Список совпадений, которым должны соответствовать метки оповещения.
+
+                            Для маршрута первого уровня оператор удаляет все существующие
                             совпадения равенства и регулярных выражений на метке
-                            `namespace` и добавляет совпадения
-                            `namespace: <object namespace>`.'
+                            `namespace` и добавляет совпадения `namespace: <object namespace>`.
                           items:
                             description: Определение, как сопоставлять метки оповещений.
-                            properties:
-                              name:
-                                description: Лейбл совпадения.
-                              regex:
-                                description: Тип совпадения — по равенству
-                                  (false) или по регулярному выражению (true).
-                              value:
-                                description: Значение лейбла для совпадения.
+                            properties: *match-properties
                         receiver:
                           description: Имя получателя для этого маршрута.
                             Если он не пустой, он должен быть указан в поле `receivers`.
