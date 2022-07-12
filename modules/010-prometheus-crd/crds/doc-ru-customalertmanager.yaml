@@ -407,7 +407,7 @@ spec:
                                           - key
                                           type: object
                                       type: object
-                                    bearerTokenSecret:
+                                    bearerTokenSecret: &bearer-token-secret
                                       description: Ключ Secret'а, содержащий bearer-токен,
                                         который будет использоваться клиентом для аутентификации.
                                         Секрет должен находиться в том же пространстве имен, что и объект
@@ -626,21 +626,7 @@ spec:
                                                 TODO: Add other useful fields. apiVersion, kind, uid?
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                    bearerTokenSecret:
-                                      description: |
-                                        Ключ Secret'а, содержащий bearer-токен, который будет использоваться клиентом для аутентификации.
-
-                                        Secret должен находиться в том же пространстве имен, что и объект AlertmanagerConfig, и быть доступным оператору Prometheus.
-                                      properties:
-                                        key:
-                                          description: Ключ. Должен быть валидным.
-                                        name:
-                                          description: |
-                                            Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-
-                                            TODO: Add other useful fields. apiVersion, kind, uid?
-                                        optional:
-                                          description: Необходимость определения Secret'а или его ключа.
+                                    bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
                                       description: URL прокси-сервера (опционально).
                                     tlsConfig:
@@ -794,22 +780,7 @@ spec:
                                                 kind, uid?'
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                    bearerTokenSecret:
-                                      description: Ключ  Secret'а, содержащий bearer-токен,
-                                        который будет использоваться клиентом для аутентификации.
-                                        Secret должен находиться в том же пространстве имен,
-                                        что и объект AlertmanagerConfig,
-                                        и быть доступным оператору Prometheus.
-                                      properties:
-                                        key:
-                                          description: Ключ. Должен быть валидным.
-                                        name:
-                                          description: 'Имя референта. [Подробнее...]
-                                            (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                        optional:
-                                          description: Необходимость определения Secret'а или его ключа.
+                                    bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
                                       description: URL прокси-сервера (опционально).
                                     tlsConfig:
@@ -1046,23 +1017,7 @@ spec:
                                                 kind, uid?'
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                    bearerTokenSecret:
-                                      description: Секретный ключ, содержащий bearer-токен,
-                                        который будет использоваться клиентом для аутентификации.
-                                        Secret должен находиться в том же пространстве имен,
-                                        что и AlertmanagerConfig, и быть доступным
-                                        оператору Prometheus.
-                                      properties:
-                                        key:
-                                          description: Ключ. Должен быть валидным.
-                                          type: string
-                                        name:
-                                          description: 'Имя референта. [Подробнее...]
-                                            (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                        optional:
-                                          description: Необходимость определения Secret'а или его ключа.
+                                    bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
                                       description: URL прокси-сервера (опционально).
                                     tlsConfig:
@@ -1229,22 +1184,7 @@ spec:
                                                 kind, uid?'
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                    bearerTokenSecret:
-                                      description: Ключ Secret'а, содержащий bearer-токен,
-                                        который будет использоваться клиентом для аутентификации.
-                                        Secret должен находиться в том же пространстве имен,
-                                        что и AlertmanagerConfig,
-                                        и быть доступным оператору Prometheus.
-                                      properties:
-                                        key:
-                                          description: Ключ. Должен быть валидным.
-                                        name:
-                                          description: 'Имя референта. [Подробнее...]
-                                            (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                        optional:
-                                          description: Необходимость определения Secret'а или его ключа.
+                                    bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
                                       description: URL прокси-сервера (опционально).
                                     tlsConfig:
@@ -1368,22 +1308,7 @@ spec:
                                                 kind, uid?'
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                    bearerTokenSecret:
-                                      description: Ключ Secret'а, содержащий bearer-токен,
-                                        который будет использоваться клиентом для аутентификации.
-                                        Secret должен находиться в том же пространстве имен,
-                                        что и AlertmanagerConfig,
-                                        и быть доступным оператору Prometheus.
-                                      properties:
-                                        key:
-                                          description: Ключ. Должен быть валидным.
-                                        name:
-                                          description: 'Имя референта. [Подробнее...]
-                                            (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                        optional:
-                                          description: Необходимость определения Secret'а или его ключа.
+                                    bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
                                       description: URL прокси-сервера (опционально).
                                     tlsConfig:
@@ -1544,21 +1469,7 @@ spec:
                                                 kind, uid?'
                                             optional:
                                               description: Необходимость определения Secret'а или его ключа.
-                                    bearerTokenSecret:
-                                      description: Ключ Secret'а, содержащий bearer-токен,
-                                        который будет использоваться клиентом для аутентификации.
-                                        Секрет должен находиться в том же пространстве имен, что и объект
-                                        конфигурации диспетчера оповещений, и быть доступным оператору Prometheus.
-                                      properties:
-                                        key:
-                                          description: Ключ. Должен быть валидным.
-                                        name:
-                                          description: 'Имя референта. [Подробнее...]
-                                            (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                        optional:
-                                          description: Необходимость определения Secret'а или его ключа.
+                                    bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
                                       description: URL прокси-сервера (опционально).
                                     tlsConfig:
