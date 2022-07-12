@@ -42,7 +42,7 @@ EOF
 )"
 
 # for docker version >=20 we should set native cgroupdriver to cgroupfs in config
-docker_major_version="$(docker version -f "{{ .Client.Version }}" 2> /dev/null | cut -d "." -f1)"
+docker_major_version="$(docker version -f "{{`{{ .Client.Version }}`}}" 2> /dev/null | cut -d "." -f1)"
 if [ ${docker_major_version} -ge 20 ]; then
   daemon_json="$(jq '. + {"exec-opts": ["native.cgroupdriver=cgroupfs"]}' <<< "${daemon_json}")"
 fi
