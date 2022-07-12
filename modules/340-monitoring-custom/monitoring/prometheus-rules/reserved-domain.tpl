@@ -1,20 +1,3 @@
-- name: d8.monitoring-custom.reserved-domain-group
-  rules:
-  - alert: D8ReservedNodeLabelOrTaintFoundInCluster
-    expr: |
-      count(ALERTS{alertname=~"D8ReservedNodeLabelOrTaintFound", alertstate="firing"}) > 0
-    labels:
-      tier: cluster
-      d8_component: monitoring-custom
-      d8_module: monitoring-custom
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      summary: Resources requiring fixing up has been found in cluster.
-      description: |
-        What exactly needs fixing up can be found in linked alerts.
-
 - name: d8.monitoring-custom.reserved-domain
   rules:
   - alert: D8ReservedNodeLabelOrTaintFound
@@ -27,6 +10,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_monitoring_custom_reserved_domain_group: "D8ReservedNodeLabelOrTaintFoundInCluster,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_monitoring_custom_reserved_domain_group: "D8ReservedNodeLabelOrTaintFoundInCluster,tier=cluster,prometheus=deckhouse"
       summary: "Node {{`{{ $labels.name }}`}} needs fixing up"
       description: |-

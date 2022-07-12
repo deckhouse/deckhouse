@@ -10,7 +10,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
       plk_ignore_labels: "job"
       description: >
@@ -28,7 +28,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_ignore_labels: "job"
-      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
       description: >
         Check the status of the etcd Pods: `kubectl -n kube-system get pod -l component=etcd`
@@ -44,7 +44,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
       description: >
         Check the status of the etcd Pods: `kubectl -n kube-system get pod -l component=etcd | grep {{ $labels.node }}`.
@@ -62,7 +62,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_caused_by__ping: "NodePingPacketLoss,tier=cluster,prometheus=deckhouse,destination_node={{ $labels.node }}"
-      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         There were {{ $value }} leader re-elections for the etcd cluster member running on the {{ $labels.node }} Node in the last 10 minutes.
@@ -82,7 +82,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: >
         Check the status of the etcd pods: `kubectl -n kube-system get pod -l component=etcd`.
@@ -97,7 +97,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
       description: |
         In the last 15 minutes, the 99th percentile of the fsync duration for WAL files is longer than 0.5 seconds: {{ $value }}.

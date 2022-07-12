@@ -29,7 +29,7 @@
       tier: "cluster"
     annotations:
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__target_down: "TargetDown,tier=cluster"
+      plk_create_group_if_not_exists__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
       plk_group_for__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
       description: Prometheus failed to scrape {{ `{{ $value }}` }}% of kubelets.
       summary: A few kubelets cannot be scraped
@@ -41,7 +41,7 @@
       tier: "cluster"
     annotations:
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__target_down: "TargetDown,tier=cluster"
+      plk_create_group_if_not_exists__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
       plk_group_for__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
       description: Prometheus failed to scrape {{ `{{ $value }}` }}% of kubelets.
       summary: Many kubelets cannot be scraped
