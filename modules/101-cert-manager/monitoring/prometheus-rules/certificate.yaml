@@ -34,8 +34,8 @@
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_cert_manager_malfunctioning: D8CertmanagerMalfunctioning,prometheus=deckhouse
-      plk_grouped_by__d8_cert_manager_malfunctioning: D8CertmanagerMalfunctioning,prometheus=deckhouse
+      plk_create_group_if_not_exists__d8_cert_manager_malfunctioning: D8CertmanagerMalfunctioning,tier=~tier,prometheus=deckhouse
+      plk_grouped_by__d8_cert_manager_malfunctioning: D8CertmanagerMalfunctioning,tier=~tier,prometheus=deckhouse
       summary: Certmanager cannot order a certificate.
       description: |
         Cermanager receives responses with the code `{{ $labels.status }}` on requesting {{ $labels.scheme }}://{{ $labels.host }}{{ $labels.path }}.

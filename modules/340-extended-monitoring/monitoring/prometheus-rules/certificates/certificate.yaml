@@ -11,7 +11,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
       plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
       summary: Certificate will expire soon.
       description: |
@@ -33,7 +33,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
+      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
       plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
       summary: Certificate expired
       description: |
