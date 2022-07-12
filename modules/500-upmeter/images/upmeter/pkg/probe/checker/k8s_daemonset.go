@@ -21,14 +21,15 @@ import (
 	"strings"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/monitor/node"
 	"d8.io/upmeter/pkg/set"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 // DaemonSetPodsReady is a checker constructor and configurator
@@ -59,12 +60,8 @@ func (c DaemonSetPodsReady) Checker() check.Checker {
 	}
 
 	dsChecker := &dsPodsReadinessChecker{
-		daemonSetRepo: dsRepo,
-		nodeLister:    c.NodeLister,
-
-		namespace: c.Namespace,
-		name:      c.Name,
-
+		dsRepo:          dsRepo,
+		nodeLister:      c.NodeLister,
 		creationTimeout: c.PodCreationTimeout,
 		deletionTimeout: c.PodDeletionTimeout,
 	}
@@ -77,12 +74,8 @@ func (c DaemonSetPodsReady) Checker() check.Checker {
 
 // dsPodsReadinessChecker checks that all DaemonSet pods are ready
 type dsPodsReadinessChecker struct {
-	daemonSetRepo daemonSetRepository
-	nodeLister    node.Lister
-
-	namespace string
-	name      string
-
+	dsRepo          daemonSetRepository
+	nodeLister      node.Lister
 	creationTimeout time.Duration
 	deletionTimeout time.Duration
 }
@@ -91,17 +84,20 @@ func (c *dsPodsReadinessChecker) Check() check.Error {
 	// Get nodes
 	nodes, err := c.nodeLister.List()
 	if err != nil {
-		return check.ErrUnknown("cannot get nodes in API: %v", err)
+		return check.ErrUnknown("getting nodes: %v", err)
 	}
 
 	// Get DaemonSet
-	ds, err := c.daemonSetRepo.Get()
+	ds, err := c.dsRepo.Get()
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return check.ErrFail(err.Error())
+		}
 		return check.ErrUnknown("getting DaemonSet: %v", err)
 	}
 
 	// Get DaemonSet pods
-	pods, err := c.daemonSetRepo.Pods(ds)
+	pods, err := c.dsRepo.Pods()
 	if err != nil {
 		return check.ErrUnknown("getting DaemonSet pods: %v", err)
 	}
@@ -115,29 +111,17 @@ func (c *dsPodsReadinessChecker) Check() check.Error {
 }
 
 func (c *dsPodsReadinessChecker) verifyPods(pods []v1.Pod, nodeNameList []string) error {
-	var (
-		now = time.Now()
-
-		creationThreshold = now.Add(-c.creationTimeout)
-		deletionThreshold = now.Add(-c.deletionTimeout)
-
-		nodeNames = set.New(nodeNameList...)
-	)
+	nodeNames := set.New(nodeNameList...)
 
 	for _, pod := range pods {
 		if !nodeNames.Has(pod.Spec.NodeName) {
 			// pod is not from a node of interest
 			continue
 		}
-
 		// The node is ok, so the pod should be ok too
-		if !isPodReady(&pod) {
-			err := isPodFineEnough(&pod, creationThreshold, deletionThreshold)
-			if err != nil {
-				return err
-			}
+		if err := c.verifyPodStatus(&pod); err != nil {
+			return err
 		}
-
 		// Exclude seen nodes to track unseen ones.
 		nodeNames.Delete(pod.Spec.NodeName)
 	}
@@ -150,33 +134,37 @@ func (c *dsPodsReadinessChecker) verifyPods(pods []v1.Pod, nodeNameList []string
 	return nil
 }
 
-// isPodFineEnough deduces the state when a pod is pending or running (but not ready), or
+// verifyPodStatus deduces the state when a pod is pending or running (but not ready), or
 // terminating for reasonable time period. For that period pod is not considered down. It is useful
 // for updates handling, while checking strictly for `Ready` condition is too strict.
 //
 // In arguments, this function accepts deadlines that divide time scale in two parts: pods are
-// allowed to not be ready or to terminate before corrseponding threshold, while afterwards the pod
+// allowed to not be ready or to terminate before corresponding threshold, while afterwards the pod
 // is considered down.
-func isPodFineEnough(pod *v1.Pod, creationDeadline, deletionDeadline time.Time) check.Error {
+func (c *dsPodsReadinessChecker) verifyPodStatus(pod *v1.Pod) error {
+	if isPodReady(pod) {
+		return nil
+	}
+
 	if isPodTerminating(pod) {
 		// The pod could be updating, giving it some time
-		deletionDeadline := metav1.NewTime(deletionDeadline)
-		if !pod.DeletionTimestamp.Before(&deletionDeadline) {
+		acceptableDeletionTime := metav1.NewTime(time.Now().Add(-c.deletionTimeout))
+		if !pod.DeletionTimestamp.Before(&acceptableDeletionTime) {
 			return nil
 		}
-		return check.ErrFail("pod is terminating for too long")
+		return fmt.Errorf("terminating for too long")
 	}
 
 	if isPodPending(pod) || isPodRunning(pod) {
 		// Not ready, but started. Checking, how fresh it is.
-		creationDeadline := metav1.NewTime(creationDeadline)
+		creationDeadline := metav1.NewTime(time.Now().Add(-c.creationTimeout))
 		if !pod.CreationTimestamp.Before(&creationDeadline) {
 			return nil
 		}
-		return check.ErrFail("pod not ready for too long")
+		return fmt.Errorf("not ready for too long")
 	}
 
-	return check.ErrFail("cannot deduce pod state")
+	return fmt.Errorf("cannot deduce pod state")
 }
 
 func findDaemonSetNodeNames(nodes []*v1.Node, ds *appsv1.DaemonSet) []string {
@@ -253,7 +241,7 @@ func tolerationsTolerateTaint(tolerations []v1.Toleration, taint *v1.Taint) bool
 
 type daemonSetRepository interface {
 	Get() (*appsv1.DaemonSet, error)
-	Pods(*appsv1.DaemonSet) ([]v1.Pod, error)
+	Pods() ([]v1.Pod, error)
 }
 
 type daemonsetRepo struct {
@@ -268,12 +256,11 @@ func (r *daemonsetRepo) Get() (*appsv1.DaemonSet, error) {
 	return r.access.Kubernetes().AppsV1().DaemonSets(r.namespace).Get(r.name, metav1.GetOptions{})
 }
 
-func (r *daemonsetRepo) Pods(ds *appsv1.DaemonSet) ([]v1.Pod, error) {
+func (r *daemonsetRepo) Pods() ([]v1.Pod, error) {
 	timeout := int64(r.timeout.Seconds())
 
-	labelSelector := labels.FormatLabels(ds.Spec.Selector.MatchLabels)
-	podList, err := r.access.Kubernetes().CoreV1().Pods(ds.GetNamespace()).List(metav1.ListOptions{
-		LabelSelector:  labelSelector,
+	podList, err := r.access.Kubernetes().CoreV1().Pods(r.namespace).List(metav1.ListOptions{
+		LabelSelector:  "app=" + r.name,
 		TimeoutSeconds: &timeout,
 	})
 	if err != nil {
