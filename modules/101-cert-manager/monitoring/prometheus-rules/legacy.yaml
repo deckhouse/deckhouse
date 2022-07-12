@@ -58,7 +58,7 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,prometheus=deckhouse
+      plk_create_group_if_not_exists__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier,prometheus=deckhouse
       plk_grouped_by__d8_cert_manager_deprecated_resources: D8CertManagerDeprecatedResources,tier=~tier,prometheus=deckhouse
       summary: Deprecated Ingress annotations found.
       description: |
