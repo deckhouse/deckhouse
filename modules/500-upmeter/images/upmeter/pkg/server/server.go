@@ -103,7 +103,7 @@ func (s *server) Start(ctx context.Context) error {
 	}
 
 	// Downtime CR monitor
-	s.downtimeMonitor, err = initDowntimeMonitor(ctx, kubeClient)
+	s.downtimeMonitor, err = initDowntimeMonitor(ctx, kubeClient, s.logger)
 	if err != nil {
 		return fmt.Errorf("cannot start downtimes.deckhouse.io monitor: %v", err)
 	}
@@ -211,10 +211,9 @@ func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, 
 	return controller, controller.Start(ctx)
 }
 
-func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient) (*downtime.Monitor, error) {
-	m := downtime.NewMonitor(ctx)
-	m.Monitor.WithKubeClient(kubeClient)
-	return m, m.Start()
+func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient, logger *log.Logger) (*downtime.Monitor, error) {
+	m := downtime.NewMonitor(kubeClient, log.NewEntry(logger))
+	return m, m.Start(ctx)
 }
 
 func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.RegistryProbeLister {

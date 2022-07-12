@@ -71,14 +71,13 @@ func (m *Monitor) Start(ctx context.Context) error {
 	m.monitor.WithContext(ctx)
 	m.monitor.WithConfig(config)
 
-	// Load initial CRD list
 	err := m.monitor.CreateInformers()
 	if err != nil {
 		return fmt.Errorf("creating informer: %v", err)
 	}
 
 	m.monitor.Start(ctx)
-	return ctx.Err()
+	return nil
 }
 
 func (m *Monitor) Stop() {
@@ -95,7 +94,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
 
-		obj, err := convertNode(raw)
+		obj, err := convert(raw)
 		if err != nil {
 			m.getLogger().Errorf("cannot convert Node object: %v", err)
 			return
@@ -115,7 +114,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 func (m *Monitor) List() ([]*v1.Node, error) {
 	list := make([]*v1.Node, 0)
 	for _, obj := range m.monitor.GetExistedObjects() {
-		node, err := convertNode(obj.Object)
+		node, err := convert(obj.Object)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +123,7 @@ func (m *Monitor) List() ([]*v1.Node, error) {
 	return list, nil
 }
 
-func convertNode(o *unstructured.Unstructured) (*v1.Node, error) {
+func convert(o *unstructured.Unstructured) (*v1.Node, error) {
 	var node v1.Node
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &node)
 	if err != nil {

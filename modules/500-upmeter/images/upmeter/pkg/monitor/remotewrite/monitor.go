@@ -70,14 +70,13 @@ func (m *Monitor) Start(ctx context.Context) error {
 	m.monitor.WithContext(ctx)
 	m.monitor.WithConfig(config)
 
-	// Load initial CRD list
 	err := m.monitor.CreateInformers()
 	if err != nil {
 		return fmt.Errorf("creating informer: %v", err)
 	}
 
 	m.monitor.Start(ctx)
-	return ctx.Err()
+	return nil
 }
 
 func (m *Monitor) Stop() {
