@@ -28,6 +28,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
+
+	k8saccess "d8.io/upmeter/pkg/kubernetes"
 )
 
 func Test_smokeMiniAvailable(t *testing.T) {
@@ -183,4 +185,40 @@ func respondSlowlyWith(timeout time.Duration, status int) *httptest.Server {
 		time.Sleep(timeout)
 		rw.WriteHeader(status)
 	}))
+}
+
+func NewFake(client kube.KubernetesClient) *FakeAccess {
+	return &FakeAccess{client: client}
+}
+
+type FakeAccess struct {
+	client kube.KubernetesClient
+}
+
+func (a *FakeAccess) Kubernetes() kube.KubernetesClient {
+	return a.client
+}
+
+func (a *FakeAccess) ServiceAccountToken() string {
+	return "pewpew"
+}
+
+func (a *FakeAccess) UserAgent() string {
+	return "UpmeterTestClient/1.0"
+}
+
+func (a *FakeAccess) SchedulerProbeImage() *k8saccess.ProbeImage {
+	return createTestProbeImage("test-image:latest", nil)
+}
+
+func (a *FakeAccess) SchedulerProbeNode() string {
+	return ""
+}
+
+func (a *FakeAccess) CloudControllerManagerNamespace() string {
+	return ""
+}
+
+func (a *FakeAccess) ClusterDomain() string {
+	return ""
 }

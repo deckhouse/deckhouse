@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -30,44 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"d8.io/upmeter/pkg/check"
-	k8saccess "d8.io/upmeter/pkg/kubernetes"
 )
-
-func NewFake(client kube.KubernetesClient) *FakeAccess {
-	return &FakeAccess{client: client}
-}
-
-type FakeAccess struct {
-	client kube.KubernetesClient
-}
-
-func (a *FakeAccess) Kubernetes() kube.KubernetesClient {
-	return a.client
-}
-
-func (a *FakeAccess) ServiceAccountToken() string {
-	return "pewpew"
-}
-
-func (a *FakeAccess) UserAgent() string {
-	return "UpmeterTestClient/1.0"
-}
-
-func (a *FakeAccess) SchedulerProbeImage() *k8saccess.ProbeImage {
-	return createTestProbeImage("test-image:latest", nil)
-}
-
-func (a *FakeAccess) SchedulerProbeNode() string {
-	return ""
-}
-
-func (a *FakeAccess) CloudControllerManagerNamespace() string {
-	return ""
-}
-
-func (a *FakeAccess) ClusterDomain() string {
-	return ""
-}
 
 func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 	const (
@@ -124,7 +86,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Up,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), scheduledPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), heatlhyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -132,7 +94,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Down,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a") /*    no pod "b"   */, scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), heatlhyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -140,7 +102,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Up,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a") /*     no pod "b"   */, scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), taintedNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), taintedNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -148,7 +110,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Up,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), scheduledPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a") /*    no node "b"   */, heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a") /*    no node "b"   */, healthyNode("c")},
 			},
 		},
 		{
@@ -156,7 +118,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Up,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), scheduledPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), notReadyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), notReadyNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -164,7 +126,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Down,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), notReadyPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), heatlhyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -172,7 +134,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Down,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), pendingPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), heatlhyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -180,7 +142,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Up,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), notReadyPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), freshNode("b", creationTimeout/2), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), freshNode("b", creationTimeout/2), healthyNode("c")},
 			},
 		},
 		{
@@ -188,7 +150,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Up,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), agedPod(creationTimeout/2, pendingPod("b")), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), heatlhyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -196,7 +158,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Down,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), agedPod(creationTimeout*2, notReadyPod("b")), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), heatlhyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -204,7 +166,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Up,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), terminatingPod("b", deletionTimeout/2), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), heatlhyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 		{
@@ -212,7 +174,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Down,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), terminatingPod("b", deletionTimeout*2), scheduledPod("c")},
-				nodes: []*v1.Node{heatlhyNode("a"), heatlhyNode("b"), heatlhyNode("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 	}
@@ -349,7 +311,7 @@ func scheduledPod(name string) v1.Pod {
 }
 
 func taintedNode(name string) *v1.Node {
-	node := heatlhyNode(name)
+	node := healthyNode(name)
 	node.Spec.Taints = []v1.Taint{{
 		Key:    "key1",
 		Value:  "value1",
@@ -359,7 +321,7 @@ func taintedNode(name string) *v1.Node {
 }
 
 func notReadyNode(name string) *v1.Node {
-	node := heatlhyNode(name)
+	node := healthyNode(name)
 	node.Status.Conditions[0].Status = v1.ConditionFalse
 	return node
 }
@@ -367,14 +329,14 @@ func notReadyNode(name string) *v1.Node {
 func freshNode(name string, age time.Duration) *v1.Node {
 	when := metav1.NewTime(time.Now().Add(-age))
 
-	node := heatlhyNode(name)
+	node := healthyNode(name)
 	node.Status.Conditions[0].LastTransitionTime = when
 	node.ObjectMeta.CreationTimestamp = when
 
 	return node
 }
 
-func heatlhyNode(name string) *v1.Node {
+func healthyNode(name string) *v1.Node {
 	hourAgo := metav1.NewTime(time.Now().Add(-time.Hour))
 
 	return &v1.Node{
