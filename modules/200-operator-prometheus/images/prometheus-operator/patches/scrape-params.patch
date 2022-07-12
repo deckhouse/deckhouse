@@ -1,8 +1,3 @@
-Index: pkg/prometheus/promcfg.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
 --- a/pkg/prometheus/promcfg.go	(revision 8eda80dcc5d2a977b493dcaa122f0f2841e48c7b)
 +++ b/pkg/prometheus/promcfg.go	(date 1651146264253)
@@ -11,7 +6,7 @@ diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
  	"sort"
  	"strings"
 +	"time"
- 
+
 -	"github.com/blang/semver/v4"
 +	"github.com/blang/semver"
  	"github.com/go-kit/log"
@@ -50,9 +45,9 @@ diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
  	cfg := yaml.MapSlice{
  		{
 @@ -706,11 +711,25 @@
- 
+
  	cfg = append(cfg, cg.generateK8SSDConfig(m.Spec.NamespaceSelector, m.Namespace, apiserverConfig, store, kubernetesSDRolePod))
- 
+
 +	globalScrapeIntervalDuration, _ := time.ParseDuration(globalScrapeInterval)
 +
  	if ep.Interval != "" {
@@ -82,12 +77,12 @@ diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
  	shards int32,
 +	globalScrapeInterval string,
  ) yaml.MapSlice {
- 
+
  	jobName := fmt.Sprintf("probe/%s/%s", m.Namespace, m.Name)
 @@ -929,11 +949,24 @@
  	}
  	cfg = append(cfg, yaml.MapItem{Key: "metrics_path", Value: path})
- 
+
 +	globalScrapeIntervalDuration, _ := time.ParseDuration(globalScrapeInterval)
 +
  	if m.Spec.Interval != "" {
@@ -119,9 +114,9 @@ diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
  	cfg := yaml.MapSlice{
  		{
 @@ -1169,11 +1203,24 @@
- 
+
  	cfg = append(cfg, cg.generateK8SSDConfig(m.Spec.NamespaceSelector, m.Namespace, apiserverConfig, store, role))
- 
+
 +	globalScrapeIntervalDuration, _ := time.ParseDuration(globalScrapeInterval)
 +
  	if ep.Interval != "" {
