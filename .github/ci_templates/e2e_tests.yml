@@ -139,9 +139,13 @@ check_e2e_labels:
 {!{ $ctx.jobID }!}:
   name: "{!{ $ctx.jobName }!}"
   needs:
+{!{- if coll.Has $ctx "checkLabels" }!}
     - check_e2e_labels
+{!{- end }!}
     - git_info
+{!{- if coll.Has $ctx "checkLabels" }!}
   if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
+{!{- end }!}
   env:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
