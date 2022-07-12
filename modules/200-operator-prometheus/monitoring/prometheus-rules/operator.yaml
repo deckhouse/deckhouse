@@ -13,7 +13,7 @@
       plk_protocol_version: "1"
       plk_labels_as_annotations: "instance,pod"
       plk_ignore_labels: "job"
-      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,d8_module=operator-prometheus,d8_component=prometheus-operator"
+      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
       description: |-
         The `prometheus-operator` Pod is not available.
@@ -37,7 +37,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,d8_module=operator-prometheus,d8_component=prometheus-operator"
+      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
       summary: There is no `prometheus-operator` target in Prometheus.
       description: |
@@ -58,7 +58,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "pod"
-      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,d8_module=operator-prometheus,d8_component=prometheus-operator"
+      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
       summary: The `prometheus-operator` Pod is NOT Ready.
       description: |
@@ -80,7 +80,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,d8_module=operator-prometheus,d8_component=prometheus-operator"
+      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
       plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
       summary: The `prometheus-operator` Pod is NOT Running.
       description: |
