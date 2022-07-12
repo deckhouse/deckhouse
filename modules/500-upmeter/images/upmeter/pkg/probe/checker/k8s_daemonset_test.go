@@ -93,15 +93,15 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			name: "missing pod is not fine",
 			want: check.Down,
 			state: state{
-				pods:  []v1.Pod{scheduledPod("a") /*    no pod "b"   */, scheduledPod("c")},
+				pods:  []v1.Pod{scheduledPod("a") /*  no pod "b"  */, scheduledPod("c")},
 				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
 			},
 		},
 		{
-			name: "missing po on a tainted node is fine",
+			name: "missing pod on a tainted node is fine",
 			want: check.Up,
 			state: state{
-				pods:  []v1.Pod{scheduledPod("a") /*     no pod "b"   */, scheduledPod("c")},
+				pods:  []v1.Pod{scheduledPod("a") /*  no pod "b"  */, scheduledPod("c")},
 				nodes: []*v1.Node{healthyNode("a"), taintedNode("b"), healthyNode("c")},
 			},
 		},
@@ -110,7 +110,7 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			want: check.Up,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), scheduledPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{healthyNode("a") /*    no node "b"   */, healthyNode("c")},
+				nodes: []*v1.Node{healthyNode("a") /*  no node "b" */, healthyNode("c")},
 			},
 		},
 		{
@@ -122,27 +122,11 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			},
 		},
 		{
-			name: "not-ready pod is not fine",
-			want: check.Down,
-			state: state{
-				pods:  []v1.Pod{scheduledPod("a"), notReadyPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
-			},
-		},
-		{
-			name: "not-running pod is not fine",
+			name: "not-ready pending pod is not fine",
 			want: check.Down,
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), pendingPod("b"), scheduledPod("c")},
 				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
-			},
-		},
-		{
-			name: "unhealthy pod on very fresh node is fine",
-			want: check.Up,
-			state: state{
-				pods:  []v1.Pod{scheduledPod("a"), notReadyPod("b"), scheduledPod("c")},
-				nodes: []*v1.Node{healthyNode("a"), freshNode("b", creationTimeout/2), healthyNode("c")},
 			},
 		},
 		{
@@ -151,6 +135,22 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), agedPod(creationTimeout/2, pendingPod("b")), scheduledPod("c")},
 				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
+			},
+		},
+		{
+			name: "not-ready running pod is not fine",
+			want: check.Down,
+			state: state{
+				pods:  []v1.Pod{scheduledPod("a"), notReadyPod("b"), scheduledPod("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
+			},
+		},
+		{
+			name: "not-ready running pod on very fresh node is fine",
+			want: check.Up,
+			state: state{
+				pods:  []v1.Pod{scheduledPod("a"), notReadyPod("b"), scheduledPod("c")},
+				nodes: []*v1.Node{healthyNode("a"), freshNode("b", creationTimeout/2), healthyNode("c")},
 			},
 		},
 		{
@@ -175,6 +175,14 @@ func Test_checker_dsPodsReadinessChecker(t *testing.T) {
 			state: state{
 				pods:  []v1.Pod{scheduledPod("a"), terminatingPod("b", deletionTimeout*2), scheduledPod("c")},
 				nodes: []*v1.Node{healthyNode("a"), healthyNode("b"), healthyNode("c")},
+			},
+		},
+		{
+			name: "pod-node mismatch is not fine (=missing pod on a node)",
+			want: check.Down,
+			state: state{
+				pods:  []v1.Pod{scheduledPod("a"), scheduledPod("y"), scheduledPod("c")},
+				nodes: []*v1.Node{healthyNode("a"), healthyNode("x"), healthyNode("c")},
 			},
 		},
 	}

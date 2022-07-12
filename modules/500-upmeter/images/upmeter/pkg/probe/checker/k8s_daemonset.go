@@ -157,8 +157,8 @@ func (c *dsPodsReadinessChecker) verifyPodStatus(pod *v1.Pod) error {
 
 	if isPodPending(pod) || isPodRunning(pod) {
 		// Not ready, but started. Checking, how fresh it is.
-		creationDeadline := metav1.NewTime(time.Now().Add(-c.creationTimeout))
-		if !pod.CreationTimestamp.Before(&creationDeadline) {
+		acceptableCreationTime := metav1.NewTime(time.Now().Add(-c.creationTimeout))
+		if !pod.CreationTimestamp.Before(&acceptableCreationTime) {
 			return nil
 		}
 		return fmt.Errorf("not ready for too long")
