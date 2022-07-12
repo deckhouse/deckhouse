@@ -17,27 +17,28 @@ limitations under the License.
 package checker
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
+	"d8.io/upmeter/pkg/set"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	kubeclient "k8s.io/client-go/kubernetes"
-
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/set"
 )
 
 // DaemonSetPodsReady is a checker constructor and configurator
 type DaemonSetPodsReady struct {
-	Access kubernetes.Access
+	Access     kubernetes.Access
+	NodeLister node.Lister
 
-	// Namespace of daemonset
+	// Namespace of the DaemonSet
 	Namespace string
-	// Name of daemonset
+	// Name of the DaemonSet
 	Name string
 
 	// RequestTimeout is common for api operations
@@ -50,11 +51,20 @@ type DaemonSetPodsReady struct {
 }
 
 func (c DaemonSetPodsReady) Checker() check.Checker {
+	dsRepo := &daemonsetRepo{
+		access:    c.Access,
+		timeout:   c.RequestTimeout,
+		name:      c.Name,
+		namespace: c.Namespace,
+	}
+
 	dsChecker := &dsPodsReadinessChecker{
-		access:          c.Access,
-		namespace:       c.Namespace,
-		name:            c.Name,
-		requestTimeout:  c.RequestTimeout,
+		daemonSetRepo: dsRepo,
+		nodeLister:    c.NodeLister,
+
+		namespace: c.Namespace,
+		name:      c.Name,
+
 		creationTimeout: c.PodCreationTimeout,
 		deletionTimeout: c.PodDeletionTimeout,
 	}
@@ -65,67 +75,56 @@ func (c DaemonSetPodsReady) Checker() check.Checker {
 	)
 }
 
-// dsPodsReadinessChecker checks that all daemonset pods are ready
+// dsPodsReadinessChecker checks that all DaemonSet pods are ready
 type dsPodsReadinessChecker struct {
-	access kubernetes.Access
+	daemonSetRepo daemonSetRepository
+	nodeLister    node.Lister
 
 	namespace string
 	name      string
 
-	requestTimeout  time.Duration
 	creationTimeout time.Duration
 	deletionTimeout time.Duration
 }
 
 func (c *dsPodsReadinessChecker) Check() check.Error {
-	reqTimeout := int64(c.requestTimeout.Seconds())
-
 	// Get nodes
-	nodes, err := listNodes(c.access.Kubernetes(), reqTimeout)
+	nodes, err := c.nodeLister.List()
 	if err != nil {
 		return check.ErrUnknown("cannot get nodes in API: %v", err)
 	}
 
-	// Get daemonset
-	ds, err := c.access.Kubernetes().AppsV1().DaemonSets(c.namespace).Get(c.name, metav1.GetOptions{})
+	// Get DaemonSet
+	ds, err := c.daemonSetRepo.Get()
 	if err != nil {
-		return check.ErrUnknown("cannot get daemonset in API %s/%s: %v", c.namespace, c.name, err)
+		return check.ErrUnknown("getting DaemonSet: %v", err)
 	}
 
-	// Get daemonset pods
-	pods, err := listDaemonSetPods(c.access.Kubernetes(), ds, reqTimeout)
+	// Get DaemonSet pods
+	pods, err := c.daemonSetRepo.Pods(ds)
 	if err != nil {
-		return check.ErrUnknown("cannot get pods of daemonset %s/%s: %v", c.namespace, c.name, err)
+		return check.ErrUnknown("getting DaemonSet pods: %v", err)
 	}
 
 	// Filter node names of interest
 	nodeNames := findDaemonSetNodeNames(nodes, ds)
-
-	now := time.Now()
-	checker := &dsPodStateChecker{
-		pods:              pods,
-		nodeNames:         nodeNames,
-		creationThreshold: now.Add(-c.creationTimeout),
-		deletionThreshold: now.Add(-c.deletionTimeout),
-	}
-	if err = checker.Check(); err != nil {
-		return check.ErrFail("daemonset %s/%s: %v", c.namespace, c.name, err)
+	if err = c.verifyPods(pods, nodeNames); err != nil {
+		return check.ErrFail(err.Error())
 	}
 	return nil
 }
 
-type dsPodStateChecker struct {
-	pods              []v1.Pod
-	nodeNames         []string
-	creationThreshold time.Time
-	deletionThreshold time.Time
-}
+func (c *dsPodsReadinessChecker) verifyPods(pods []v1.Pod, nodeNameList []string) error {
+	var (
+		now = time.Now()
 
-// deduceDaemonSetPodsStatus checks that all pods from desired nodes are ok
-func (c *dsPodStateChecker) Check() check.Error {
-	nodeNames := set.New(c.nodeNames...)
+		creationThreshold = now.Add(-c.creationTimeout)
+		deletionThreshold = now.Add(-c.deletionTimeout)
 
-	for _, pod := range c.pods {
+		nodeNames = set.New(nodeNameList...)
+	)
+
+	for _, pod := range pods {
 		if !nodeNames.Has(pod.Spec.NodeName) {
 			// pod is not from a node of interest
 			continue
@@ -133,7 +132,7 @@ func (c *dsPodStateChecker) Check() check.Error {
 
 		// The node is ok, so the pod should be ok too
 		if !isPodReady(&pod) {
-			err := isPodFineEnough(&pod, c.creationThreshold, c.deletionThreshold)
+			err := isPodFineEnough(&pod, creationThreshold, deletionThreshold)
 			if err != nil {
 				return err
 			}
@@ -145,8 +144,8 @@ func (c *dsPodStateChecker) Check() check.Error {
 
 	// Check that there are no ready nodes without a pod
 	if nodeNames.Size() > 0 {
-		namesStr := strings.Join(nodeNames.Slice(), ", ")
-		return check.ErrFail("not all pods are running on desired nodes (%s)", namesStr)
+		nodeNamesStr := strings.Join(nodeNames.Slice(), ", ")
+		return fmt.Errorf("not all pods are running on desired nodes (%s)", nodeNamesStr)
 	}
 	return nil
 }
@@ -180,10 +179,10 @@ func isPodFineEnough(pod *v1.Pod, creationDeadline, deletionDeadline time.Time) 
 	return check.ErrFail("cannot deduce pod state")
 }
 
-func findDaemonSetNodeNames(nodes []v1.Node, ds *appsv1.DaemonSet) []string {
+func findDaemonSetNodeNames(nodes []*v1.Node, ds *appsv1.DaemonSet) []string {
 	names := make([]string, 0)
 	for _, node := range nodes {
-		if !isNodeReady(&node) {
+		if !isNodeReady(node) {
 			// Filter by status
 			continue
 		}
@@ -252,24 +251,33 @@ func tolerationsTolerateTaint(tolerations []v1.Toleration, taint *v1.Taint) bool
 	return false
 }
 
-func listNodes(kubernetes kubeclient.Interface, timeoutSeconds int64) ([]v1.Node, error) {
-	nodeList, err := kubernetes.CoreV1().Nodes().List(metav1.ListOptions{TimeoutSeconds: &timeoutSeconds})
-	if err != nil {
-		return nil, err
-	}
-
-	return nodeList.Items, nil
+type daemonSetRepository interface {
+	Get() (*appsv1.DaemonSet, error)
+	Pods(*appsv1.DaemonSet) ([]v1.Pod, error)
 }
 
-func listDaemonSetPods(kubernetes kubeclient.Interface, ds *appsv1.DaemonSet, timeoutSeconds int64) ([]v1.Pod, error) {
+type daemonsetRepo struct {
+	access  kubernetes.Access
+	timeout time.Duration
+
+	name      string
+	namespace string
+}
+
+func (r *daemonsetRepo) Get() (*appsv1.DaemonSet, error) {
+	return r.access.Kubernetes().AppsV1().DaemonSets(r.namespace).Get(r.name, metav1.GetOptions{})
+}
+
+func (r *daemonsetRepo) Pods(ds *appsv1.DaemonSet) ([]v1.Pod, error) {
+	timeout := int64(r.timeout.Seconds())
+
 	labelSelector := labels.FormatLabels(ds.Spec.Selector.MatchLabels)
-	podList, err := kubernetes.CoreV1().Pods(ds.GetNamespace()).List(metav1.ListOptions{
+	podList, err := r.access.Kubernetes().CoreV1().Pods(ds.GetNamespace()).List(metav1.ListOptions{
 		LabelSelector:  labelSelector,
-		TimeoutSeconds: &timeoutSeconds,
+		TimeoutSeconds: &timeout,
 	})
 	if err != nil {
 		return nil, err
 	}
-
 	return podList.Items, nil
 }

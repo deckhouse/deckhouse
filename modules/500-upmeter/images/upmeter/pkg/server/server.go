@@ -117,7 +117,7 @@ func (s *server) Start(ctx context.Context) error {
 
 	go cleanOld30sEpisodes(ctx, dbctx)
 
-	// Probe probeLister that can only list groups and probes
+	// Probe lister that can only list groups and probes
 	probeLister := newProbeLister(s.config.DisabledProbes, s.config.DynamicProbes)
 
 	// Start http server. It blocks, that's why it is the last here.
@@ -224,7 +224,7 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 		IngressNginxControllers: dynamic.IngressControllers,
 		NodeGroups:              dynamic.NodeGroups,
 	}
-	runLoader := probe.NewLoader(noFilter, noAccess, dynamicConfig, noLogger)
+	runLoader := probe.NewLoader(noFilter, noAccess, nil, dynamicConfig, noLogger)
 	calcLoader := calculated.NewLoader(noFilter, noLogger)
 
 	return registry.NewProbeLister(runLoader, calcLoader)

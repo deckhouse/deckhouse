@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package remotewrite
+package node
 
 import (
 	"context"
@@ -136,4 +136,8 @@ type Handler interface {
 	OnAdd(*v1.Node)
 	OnModify(*v1.Node)
 	OnDelete(*v1.Node)
+}
+
+type Lister interface {
+	List() ([]*v1.Node, error)
 }

@@ -19,13 +19,16 @@ package probe
 import (
 	"time"
 
+	v1 "k8s.io/api/core/v1"
+
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initNodegroups(access kubernetes.Access, nodeGroupNames, knownZones []string) []runnerConfig {
+func initNodeGroups(access kubernetes.Access, nodeGroupNames, knownZones []string, nodeLister node.Lister) []runnerConfig {
 	const (
-		groupNodegroups = "nodegroups"
+		groupNodeGroups = "nodegroups"
 		cpTimeout       = 5 * time.Second
 	)
 
@@ -33,21 +36,28 @@ func initNodegroups(access kubernetes.Access, nodeGroupNames, knownZones []strin
 
 	for _, ngName := range nodeGroupNames {
 		configs = append(configs,
-			nodeGroupChecker(access, groupNodegroups, cpTimeout, ngName, knownZones),
+			nodeGroupChecker(access, nodeLister, groupNodeGroups, cpTimeout, ngName, knownZones),
 		)
 	}
 	return configs
 }
 
-func nodeGroupChecker(access kubernetes.Access, groupNodegroups string, cpTimeout time.Duration, nodeGroupName string, zones []string) runnerConfig {
+func nodeGroupChecker(access kubernetes.Access, nodeLister node.Lister, group string, cpTimeout time.Duration, ngName string, zones []string) runnerConfig {
+	ngLister := &nodeGroupLister{
+		name:     ngName,
+		allNodes: nodeLister,
+	}
+
 	return runnerConfig{
-		group:  groupNodegroups,
-		probe:  nodeGroupName,
+		group:  group,
+		probe:  ngName,
 		check:  "nodes",
 		period: 10 * time.Second,
 		config: checker.NodegroupHasDesiredAmountOfNodes{
 			Access:     access,
-			Name:       nodeGroupName,
+			NodeLister: ngLister,
+
+			Name:       ngName,
 			KnownZones: zones,
 
 			RequestTimeout: cpTimeout,
@@ -55,4 +65,28 @@ func nodeGroupChecker(access kubernetes.Access, groupNodegroups string, cpTimeou
 			ControlPlaneAccessTimeout: cpTimeout,
 		},
 	}
+}
+
+type nodeGroupLister struct {
+	name     string
+	allNodes node.Lister
+}
+
+func (ng *nodeGroupLister) List() ([]*v1.Node, error) {
+	nodes, err := ng.allNodes.List()
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]*v1.Node, 0)
+	for _, theNode := range nodes {
+		ngName, ok := theNode.GetLabels()["node.deckhouse.io/group"]
+		if !ok {
+			continue
+		}
+		if ngName != ng.name {
+			continue
+		}
+		ret = append(ret, theNode)
+	}
+	return ret, nil
 }
