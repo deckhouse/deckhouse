@@ -17,14 +17,18 @@ concurrency:
   group: e2e-daily
 
 jobs:
-{!{ if not $enableWorkflowOnTestRepos }!}
- skip_tests_repo_for_daily_e2e:
-   name: Skip tests repos
-   if: github.repository == 'deckhouse/deckhouse'
+ skip_tests_repos:
+{!{ if $enableWorkflowOnTestRepos }!}
+   environment:
+     ENABLE_DAILY_E2E_FOR_TEST_REPOS: yes
 {!{- end }!}
+   name: Skip tests repos
+   if: env.ENABLE_DAILY_E2E_FOR_TEST_REPOS == "yes" || github.repository == 'deckhouse/deckhouse'
+
 
 # Note: git_info is needed for werf.yaml
-{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+{!{- $gitInfoJobCtx := coll.Merge . (dict "dependJobs" (slice "skip_tests_repos")) -}!}
+{!{ tmpl.Exec "git_info_job" $gitInfoJobCtx | strings.Indent 2 }!}
 
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}

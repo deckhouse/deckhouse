@@ -17,7 +17,7 @@ git_info:
   name: Get git info
   runs-on: ubuntu-latest
 {!{- if coll.Has $ctx "dependJobs" -}!}
-{!{- if gt (len $ctx.dependJobs) 0 -}!}
+{!{- if gt (len $ctx.dependJobs) 0 }!}
   needs:
 {!{-   range $dep := $ctx.dependJobs }!}
 {!{      printf "- %s" $dep | strings.Indent 2 }!}
