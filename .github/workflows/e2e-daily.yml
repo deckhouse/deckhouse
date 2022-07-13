@@ -28,10 +28,9 @@ concurrency:
   group: e2e-daily
 
 jobs:
- skip_tests_repos:
-
-   name: Skip tests repos
-   if: env.ENABLE_DAILY_E2E_FOR_TEST_REPOS == "yes" || github.repository == 'deckhouse/deckhouse'
+  skip_tests_repos:
+    name: Skip tests repos
+    if: env.ENABLE_DAILY_E2E_FOR_TEST_REPOS == "yes" || github.repository == 'deckhouse/deckhouse'
 
 
 # Note: git_info is needed for werf.yaml
