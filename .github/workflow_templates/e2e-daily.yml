@@ -1,4 +1,5 @@
-{!{- $workflowName := printf "Daily e2e tests" -}!}
+{!{- $enableWorkflowOnTestRepos := false -}!}
+{!{- $workflowName := "Daily e2e tests" -}!}
 name: '{!{ $workflowName }!}'
 on:
   schedule:
@@ -16,6 +17,12 @@ concurrency:
   group: e2e-daily
 
 jobs:
+{!{ if not $enableWorkflowOnTestRepos }!}
+ skip_tests_repo_for_daily_e2e:
+   name: Skip tests repos
+   if: github.repository == 'deckhouse/deckhouse'
+{!{- end }!}
+
 # Note: git_info is needed for werf.yaml
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 
