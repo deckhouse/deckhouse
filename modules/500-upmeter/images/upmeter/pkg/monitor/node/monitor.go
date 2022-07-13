@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hookprobe
+package node
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -51,8 +52,8 @@ func (m *Monitor) Start(ctx context.Context) error {
 			LogLabels    map[string]string
 			MetricLabels map[string]string
 		}{
-			"upmeterhookprobe-monitor",
-			"upmeterhookprobe-monitor",
+			"node-monitor",
+			"node-monitor",
 			map[string]string{},
 			map[string]string{},
 		},
@@ -61,9 +62,9 @@ func (m *Monitor) Start(ctx context.Context) error {
 			types.WatchEventModified,
 			types.WatchEventDeleted,
 		},
-		ApiVersion:              "deckhouse.io/v1",
-		Kind:                    "UpmeterHookProbe",
-		LogEntry:                m.logger.WithField("component", "upmeterhookprobe-monitor"),
+		ApiVersion:              "v1",
+		Kind:                    "Node",
+		LogEntry:                m.logger.WithField("component", "node-monitor"),
 		KeepFullObjectsInMemory: true,
 	}
 
@@ -95,7 +96,7 @@ func (m *Monitor) Subscribe(handler Handler) {
 
 		obj, err := convert(raw)
 		if err != nil {
-			m.getLogger().Errorf("cannot convert UpmeterHookProbe object: %v", err)
+			m.getLogger().Errorf("cannot convert Node object: %v", err)
 			return
 		}
 
@@ -110,29 +111,33 @@ func (m *Monitor) Subscribe(handler Handler) {
 	})
 }
 
-func (m *Monitor) List() ([]*HookProbe, error) {
-	res := make([]*HookProbe, 0)
+func (m *Monitor) List() ([]*v1.Node, error) {
+	list := make([]*v1.Node, 0)
 	for _, obj := range m.monitor.GetExistedObjects() {
-		hp, err := convert(obj.Object)
+		node, err := convert(obj.Object)
 		if err != nil {
 			return nil, err
 		}
-		res = append(res, hp)
+		list = append(list, node)
 	}
-	return res, nil
+	return list, nil
 }
 
-func convert(o *unstructured.Unstructured) (*HookProbe, error) {
-	var hp HookProbe
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &hp)
+func convert(o *unstructured.Unstructured) (*v1.Node, error) {
+	var node v1.Node
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &node)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to v1.HookProbe: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to v1.Node: %v", err)
 	}
-	return &hp, nil
+	return &node, nil
 }
 
 type Handler interface {
-	OnAdd(*HookProbe)
-	OnModify(*HookProbe)
-	OnDelete(*HookProbe)
+	OnAdd(*v1.Node)
+	OnModify(*v1.Node)
+	OnDelete(*v1.Node)
+}
+
+type Lister interface {
+	List() ([]*v1.Node, error)
 }

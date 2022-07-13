@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,31 +28,37 @@ import (
 	ngv1 "d8.io/upmeter/internal/nodegroups/v1"
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
 )
 
 // NodegroupHasDesiredAmountOfNodes is a checker constructor and configurator
 type NodegroupHasDesiredAmountOfNodes struct {
-	Access kubernetes.Access
+	Access     kubernetes.Access
+	NodeLister node.Lister
 
 	// Name of nodegroup
 	Name string
-
 	// Known availability zones in the cloud
 	KnownZones []string
 
 	// RequestTimeout is common for api operations
 	RequestTimeout time.Duration
-
 	// ControlPlaneAccessTimeout is the timeout to verify apiserver availability
 	ControlPlaneAccessTimeout time.Duration
 }
 
 func (c NodegroupHasDesiredAmountOfNodes) Checker() check.Checker {
+	ngFetcher := &nodeGroupFetcher{
+		access:  c.Access,
+		timeout: c.RequestTimeout,
+	}
+
 	ngChecker := &nodesByNodegroupCountChecker{
-		access:         c.Access,
-		name:           c.Name,
-		requestTimeout: c.RequestTimeout,
-		zones:          c.KnownZones,
+		nodeGroupGetter: ngFetcher,
+		nodeLister:      c.NodeLister,
+		name:            c.Name,
+		requestTimeout:  c.RequestTimeout,
+		zones:           c.KnownZones,
 	}
 
 	return sequence(
@@ -62,30 +69,34 @@ func (c NodegroupHasDesiredAmountOfNodes) Checker() check.Checker {
 
 // nodesByNodegroupCountChecker checks that nodes number satisfies nodegroup spec
 type nodesByNodegroupCountChecker struct {
-	access         kubernetes.Access
-	name           string
+	nodeGroupGetter *nodeGroupFetcher
+	nodeLister      node.Lister
+
+	name  string
+	zones []string
+
 	requestTimeout time.Duration
-	zones          []string
 }
 
 func (c *nodesByNodegroupCountChecker) Check() check.Error {
-	fetcher := &nodeGroupFetcher{
-		access:  c.access,
-		timeout: c.requestTimeout,
-	}
-
-	ng, err := fetcher.GetNodeGroup(c.name)
+	ng, err := c.nodeGroupGetter.Get(c.name)
 	if err != nil {
 		return check.ErrUnknown("getting nodegroup: %v", err)
 	}
+
 	minReadyExpected := ng.minPerZone - ng.maxUnavailablePerZone
 	if minReadyExpected <= 0 {
 		return check.ErrUnknown("nodegroup is allowed to be unavailable")
 	}
 
-	healthyByZone, err := fetcher.CountHealthyNodesByZone(c.name)
+	nodes, err := c.nodeLister.List()
 	if err != nil {
-		return check.ErrUnknown("getting nodes: %v", err)
+		return check.ErrUnknown("listing nodes: %v", err)
+	}
+
+	healthyByZone, err := countHealthyNodesByZone(nodes)
+	if err != nil {
+		return check.ErrUnknown("counting nodes by zone: %v", err)
 	}
 
 	zones := ng.zones
@@ -114,20 +125,22 @@ type nodeGroupFetcher struct {
 	timeout time.Duration
 }
 
-type nodegroupProps struct {
+type nodeGroupProps struct {
 	minPerZone            int32
 	maxUnavailablePerZone int32
 	zones                 []string
 }
 
-func (f *nodeGroupFetcher) GetNodeGroup(name string) (nodegroupProps, error) {
-	var props nodegroupProps
+var nodeGroupGVR = schema.GroupVersionResource{
+	Group:    "deckhouse.io",
+	Version:  "v1",
+	Resource: "nodegroups",
+}
 
-	rawNG, err := f.access.Kubernetes().Dynamic().Resource(schema.GroupVersionResource{
-		Group:    "deckhouse.io",
-		Version:  "v1",
-		Resource: "nodegroups",
-	}).Get(name, metav1.GetOptions{})
+func (f *nodeGroupFetcher) Get(name string) (nodeGroupProps, error) {
+	var props nodeGroupProps
+
+	rawNG, err := f.access.Kubernetes().Dynamic().Resource(nodeGroupGVR).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return props, err
 	}
@@ -147,25 +160,16 @@ func (f *nodeGroupFetcher) GetNodeGroup(name string) (nodegroupProps, error) {
 	return props, nil
 }
 
-func (f *nodeGroupFetcher) CountHealthyNodesByZone(nodeGroup string) (map[string]int32, error) {
-	timeoutSeconds := int64(f.timeout.Seconds())
-	nodeList, err := f.access.Kubernetes().CoreV1().Nodes().List(metav1.ListOptions{
-		LabelSelector:  "node.deckhouse.io/group=" + nodeGroup,
-		TimeoutSeconds: &timeoutSeconds,
-	})
-	if err != nil {
-		return nil, err
-	}
-
+func countHealthyNodesByZone(nodes []*v1.Node) (map[string]int32, error) {
 	byZone := map[string]int32{}
 
-	for _, node := range nodeList.Items {
+	for _, node := range nodes {
 		zone, ok := node.GetLabels()["topology.kubernetes.io/zone"]
 		if !ok || zone == "" {
 			return nil, fmt.Errorf("node %q without zone", node.GetName())
 		}
 
-		if isNodeReady(&node) {
+		if isNodeReady(node) {
 			byZone[zone]++
 		}
 	}

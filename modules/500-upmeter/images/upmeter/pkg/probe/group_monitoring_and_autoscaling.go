@@ -20,10 +20,11 @@ import (
 	"time"
 
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initMonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
+func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.Lister) []runnerConfig {
 	const (
 		groupMonitoringAndAutoscaling = "monitoring-and-autoscaling"
 		cpTimeout                     = 5 * time.Second
@@ -139,6 +140,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			period: 10 * time.Second,
 			config: checker.DaemonSetPodsReady{
 				Access:                    access,
+				NodeLister:                nodeLister,
 				Namespace:                 "d8-monitoring",
 				Name:                      "node-exporter",
 				RequestTimeout:            5 * time.Second,
