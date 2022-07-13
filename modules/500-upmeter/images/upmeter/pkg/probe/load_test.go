@@ -117,6 +117,7 @@ func TestLoader_Probes(t *testing.T) {
 	filtered := NewLoader(
 		NewProbeFilter([]string{"deckhouse", "extensions/", "load-balancing/metallb", "nodegroups/spot"}),
 		&kubernetes.Accessor{},
+		nil, // nodeLister
 		DynamicConfig{
 			IngressNginxControllers: []string{"main", "main-w-pp"},
 			NodeGroups:              []string{"system", "frontend", "worker", "spot"},

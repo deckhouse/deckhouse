@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -29,29 +30,30 @@ import (
 )
 
 type Monitor struct {
-	ctx     context.Context
-	cancel  context.CancelFunc
-	Monitor kube_events_manager.Monitor
+	monitor kube_events_manager.Monitor
+	logger  *log.Entry
 }
 
-func NewMonitor(ctx context.Context) *Monitor {
-	m := &Monitor{}
-	m.ctx, m.cancel = context.WithCancel(ctx)
-	m.Monitor = kube_events_manager.NewMonitor()
-	m.Monitor.WithContext(m.ctx)
-	return m
+func NewMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *Monitor {
+	monitor := kube_events_manager.NewMonitor()
+	monitor.WithKubeClient(kubeClient)
+
+	return &Monitor{
+		monitor: monitor,
+		logger:  logger,
+	}
 }
 
-func (m *Monitor) Start() error {
-	m.Monitor.WithConfig(&kube_events_manager.MonitorConfig{
+func (m *Monitor) Start(ctx context.Context) error {
+	config := &kube_events_manager.MonitorConfig{
 		Metadata: struct {
 			MonitorId    string
 			DebugName    string
 			LogLabels    map[string]string
 			MetricLabels map[string]string
 		}{
-			"downtime-crds",
-			"downtime-crds",
+			"downtime-monitor",
+			"downtime-monitor",
 			map[string]string{},
 			map[string]string{},
 		},
@@ -61,25 +63,28 @@ func (m *Monitor) Start() error {
 		NamespaceSelector:       nil,
 		LogEntry:                log.WithField("component", "downtime-monitor"),
 		KeepFullObjectsInMemory: true,
-	})
-	// Load initial CRD list
-	err := m.Monitor.CreateInformers()
-	if err != nil {
-		return fmt.Errorf("create informers: %v", err)
 	}
 
-	m.Monitor.Start(m.ctx)
-	return m.ctx.Err()
+	m.monitor.WithContext(ctx)
+	m.monitor.WithConfig(config)
+
+	err := m.monitor.CreateInformers()
+	if err != nil {
+		return fmt.Errorf("creating informer: %v", err)
+	}
+
+	m.monitor.Start(ctx)
+	return nil
 }
 
 func (m *Monitor) Stop() {
-	m.Monitor.Stop()
+	m.monitor.Stop()
 }
 
-func (m *Monitor) GetDowntimeIncidents() ([]check.DowntimeIncident, error) {
+func (m *Monitor) List() ([]check.DowntimeIncident, error) {
 	res := make([]check.DowntimeIncident, 0)
-	for _, obj := range m.Monitor.GetExistedObjects() {
-		incs, err := convDowntimeIncident(obj.Object)
+	for _, obj := range m.monitor.GetExistedObjects() {
+		incs, err := convert(obj.Object)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +93,7 @@ func (m *Monitor) GetDowntimeIncidents() ([]check.DowntimeIncident, error) {
 	return res, nil
 }
 
-func convDowntimeIncident(obj *unstructured.Unstructured) ([]check.DowntimeIncident, error) {
+func convert(obj *unstructured.Unstructured) ([]check.DowntimeIncident, error) {
 	var incidentObj Downtime
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &incidentObj)
 	if err != nil {

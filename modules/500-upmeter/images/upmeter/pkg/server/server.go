@@ -103,7 +103,7 @@ func (s *server) Start(ctx context.Context) error {
 	}
 
 	// Downtime CR monitor
-	s.downtimeMonitor, err = initDowntimeMonitor(ctx, kubeClient)
+	s.downtimeMonitor, err = initDowntimeMonitor(ctx, kubeClient, s.logger)
 	if err != nil {
 		return fmt.Errorf("cannot start downtimes.deckhouse.io monitor: %v", err)
 	}
@@ -117,7 +117,7 @@ func (s *server) Start(ctx context.Context) error {
 
 	go cleanOld30sEpisodes(ctx, dbctx)
 
-	// Probe probeLister that can only list groups and probes
+	// Probe lister that can only list groups and probes
 	probeLister := newProbeLister(s.config.DisabledProbes, s.config.DynamicProbes)
 
 	// Start http server. It blocks, that's why it is the last here.
@@ -211,10 +211,9 @@ func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, 
 	return controller, controller.Start(ctx)
 }
 
-func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient) (*downtime.Monitor, error) {
-	m := downtime.NewMonitor(ctx)
-	m.Monitor.WithKubeClient(kubeClient)
-	return m, m.Start()
+func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient, logger *log.Logger) (*downtime.Monitor, error) {
+	m := downtime.NewMonitor(kubeClient, log.NewEntry(logger))
+	return m, m.Start(ctx)
 }
 
 func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.RegistryProbeLister {
@@ -225,7 +224,7 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 		IngressNginxControllers: dynamic.IngressControllers,
 		NodeGroups:              dynamic.NodeGroups,
 	}
-	runLoader := probe.NewLoader(noFilter, noAccess, dynamicConfig, noLogger)
+	runLoader := probe.NewLoader(noFilter, noAccess, nil, dynamicConfig, noLogger)
 	calcLoader := calculated.NewLoader(noFilter, noLogger)
 
 	return registry.NewProbeLister(runLoader, calcLoader)

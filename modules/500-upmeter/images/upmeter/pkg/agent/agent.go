@@ -29,6 +29,7 @@ import (
 	"d8.io/upmeter/pkg/db"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
 	"d8.io/upmeter/pkg/probe"
 	"d8.io/upmeter/pkg/probe/calculated"
 	"d8.io/upmeter/pkg/registry"
@@ -90,7 +91,13 @@ func (a *Agent) Start(ctx context.Context) error {
 		NodeGroups:              a.config.DynamicProbes.NodeGroups,
 		Zones:                   a.config.DynamicProbes.Zones,
 	}
-	runnerLoader := probe.NewLoader(ftr, kubeAccess, dynamicConfig, a.logger)
+
+	nodeMon := node.NewMonitor(kubeAccess.Kubernetes(), log.NewEntry(a.logger))
+	if err := nodeMon.Start(ctx); err != nil {
+		return fmt.Errorf("starting node monitor: %v", err)
+	}
+
+	runnerLoader := probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, a.logger)
 	calcLoader := calculated.NewLoader(ftr, a.logger)
 	registry := registry.New(runnerLoader, calcLoader)
 

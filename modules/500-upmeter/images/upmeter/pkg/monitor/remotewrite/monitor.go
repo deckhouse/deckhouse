@@ -70,14 +70,13 @@ func (m *Monitor) Start(ctx context.Context) error {
 	m.monitor.WithContext(ctx)
 	m.monitor.WithConfig(config)
 
-	// Load initial CRD list
 	err := m.monitor.CreateInformers()
 	if err != nil {
-		return fmt.Errorf("create informers: %v", err)
+		return fmt.Errorf("creating informer: %v", err)
 	}
 
 	m.monitor.Start(ctx)
-	return ctx.Err()
+	return nil
 }
 
 func (m *Monitor) Stop() {
@@ -88,13 +87,13 @@ func (m *Monitor) getLogger() *log.Entry {
 	return m.monitor.GetConfig().LogEntry
 }
 
-func (m *Monitor) Subscribe(handler RemoteWriteChangeHandler) {
+func (m *Monitor) Subscribe(handler Handler) {
 	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
 		// One event and one object per change, we always have single item in these lists.
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
 
-		obj, err := convertRemoteWrite(raw)
+		obj, err := convert(raw)
 		if err != nil {
 			m.getLogger().Errorf("cannot convert UpmeterRemoteWrite object: %v", err)
 			return
@@ -114,7 +113,7 @@ func (m *Monitor) Subscribe(handler RemoteWriteChangeHandler) {
 func (m *Monitor) List() ([]*RemoteWrite, error) {
 	res := make([]*RemoteWrite, 0)
 	for _, obj := range m.monitor.GetExistedObjects() {
-		rw, err := convertRemoteWrite(obj.Object)
+		rw, err := convert(obj.Object)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +122,7 @@ func (m *Monitor) List() ([]*RemoteWrite, error) {
 	return res, nil
 }
 
-func convertRemoteWrite(o *unstructured.Unstructured) (*RemoteWrite, error) {
+func convert(o *unstructured.Unstructured) (*RemoteWrite, error) {
 	var rw RemoteWrite
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &rw)
 	if err != nil {
@@ -132,7 +131,7 @@ func convertRemoteWrite(o *unstructured.Unstructured) (*RemoteWrite, error) {
 	return &rw, nil
 }
 
-type RemoteWriteChangeHandler interface {
+type Handler interface {
 	OnAdd(*RemoteWrite)
 	OnModify(*RemoteWrite)
 	OnDelete(*RemoteWrite)
