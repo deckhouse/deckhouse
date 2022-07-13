@@ -1,4 +1,4 @@
-{!{- $workflowName := printf "Daily running e2e tests" -}!}
+{!{- $workflowName := printf "Daily e2e tests" -}!}
 name: '{!{ $workflowName }!}'
 on:
   schedule:
@@ -32,7 +32,7 @@ jobs:
 {!{-   $layout := (tmpl.Exec "e2e_get_layout" (dict "provider" $provider) | strings.TrimSpace ) -}!}
 {!{-   $providerForJobId := $providerName | replaceAll "." "_" | toLower -}!}
 {!{-   $jobID := printf "run_%s_%s_%s" $providerForJobId $cri $kubernetesVersionSlug -}!}
-{!{-   $jobName := printf "%s, %s, Kubernetes %s" $workflowName $criName $kubernetesVersion -}!}
+{!{-   $jobName := printf "%s, %s, %s, Kubernetes %s" $workflowName $providerName $criName $kubernetesVersion -}!}
 {!{-   $jobCtx := (dict "provider" $provider "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "providerName" $providerName "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}

@@ -386,7 +386,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       - name: Check alerting credentials
         id: check_alerting
         if: always()
@@ -710,7 +709,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       - name: Check alerting credentials
         id: check_alerting
         if: always()

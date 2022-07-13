@@ -294,6 +294,7 @@ check_e2e_labels:
 {!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
 {!{- end }!}
 
+{!{- if not (coll.Has $ctx "manualRun") }!}
     - name: Check alerting credentials
       id: check_alerting
       if: always()
@@ -339,5 +340,7 @@ check_e2e_labels:
         curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
           -H 'Content-Type: application/json' \
           -d "${alertData}"
+
+{!{- end }!}
 # </template: e2e_run_job_template>
 {!{ end -}!}
