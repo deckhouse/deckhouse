@@ -17,10 +17,10 @@ concurrency:
   group: e2e-daily
 
 jobs:
- skip_tests_repos:
+  skip_tests_repos:
 {!{ if $enableWorkflowOnTestRepos }!}
-   environment:
-     ENABLE_DAILY_E2E_FOR_TEST_REPOS: yes
+    environment:
+      ENABLE_DAILY_E2E_FOR_TEST_REPOS: yes
 {!{- end }!}
    name: Skip tests repos
    if: env.ENABLE_DAILY_E2E_FOR_TEST_REPOS == "yes" || github.repository == 'deckhouse/deckhouse'
