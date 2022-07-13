@@ -25,7 +25,7 @@
 
 ## Checklist
 - [ ] The code is covered by unit tests.
-- [ ] e2e tests are passed.
+- [ ] e2e tests passed.
 - [ ] Documentation updated according to the changes.
 - [ ] Changes were tested in the Kubernetes cluster manually.
 
