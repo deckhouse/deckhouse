@@ -411,6 +411,7 @@ jobs:
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
+          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
           WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
           echo $WORKFLOW_URL
@@ -734,6 +735,7 @@ jobs:
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.21"
+          CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
         run: |
           WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
           echo $WORKFLOW_URL
