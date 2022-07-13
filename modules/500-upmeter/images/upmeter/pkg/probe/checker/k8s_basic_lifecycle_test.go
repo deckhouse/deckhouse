@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -32,20 +31,6 @@ var err404 = apierrors.NewNotFound(schema.GroupResource{}, "")
 // doer404 creates doer that results in kubernetes NotFound error
 func doer404() *failDoer {
 	return &failDoer{err: err404}
-}
-
-func assertCheckStatus(t *testing.T, want check.Status, err check.Error) {
-	if want == check.Up {
-		assert.NoError(t, err, "Expected no err")
-	} else {
-		var got check.Status
-		if err == nil {
-			got = check.Up
-		} else {
-			got = err.Status()
-		}
-		assert.Equal(t, want.String(), got.String())
-	}
 }
 
 func TestKubeObjectBasicLifecycle_Check(t *testing.T) {
