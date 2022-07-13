@@ -310,6 +310,7 @@ check_e2e_labels:
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
         echo $WORKFLOW_URL
