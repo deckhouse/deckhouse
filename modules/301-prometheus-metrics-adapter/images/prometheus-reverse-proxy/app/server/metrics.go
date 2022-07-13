@@ -135,10 +135,10 @@ func StartConfigUpdater() {
 
 	updateConfig()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
 	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
 		for _ = range ticker.C {
 			updateConfig()
 		}

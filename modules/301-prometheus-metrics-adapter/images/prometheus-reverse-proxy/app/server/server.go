@@ -51,6 +51,8 @@ func initHttpTransport() http.RoundTripper {
 }
 
 type Server struct {
+	listenAddr string
+
 	PrometheusURL *url.URL
 	Transport     http.RoundTripper
 
@@ -59,6 +61,11 @@ type Server struct {
 }
 
 func NewServer() *Server {
+	listenAddr := os.Getenv("PROXY_LISTEN_ADDRESS")
+	if listenAddr == "" {
+		listenAddr = "0.0.0.0:8000"
+	}
+
 	promURL, _ := url.Parse(os.Getenv("PROMETHEUS_URL"))
 	transport := initHttpTransport()
 
@@ -68,6 +75,7 @@ func NewServer() *Server {
 	httpClient := &http.Client{Transport: transport, Timeout: time.Minute}
 
 	return &Server{
+		listenAddr:    listenAddr,
 		PrometheusURL: promURL,
 		Transport:     transport,
 		Client:        httpClient,
@@ -76,12 +84,10 @@ func NewServer() *Server {
 }
 
 func (s *Server) Listen() {
-	listenAddr := "0.0.0.0:8000"
-
 	initHttpTransport()
 
 	infLog.Println("PROMETHEUS_URL=", s.PrometheusURL.String(), "...")
-	infLog.Println("server is starting to listen on ", listenAddr, "...")
+	infLog.Println("server is starting to listen on ", s.listenAddr, "...")
 
 	router := http.NewServeMux()
 	router.Handle("/", http.HandlerFunc(s.router))
@@ -91,7 +97,7 @@ func (s *Server) Listen() {
 	})
 
 	server := &http.Server{
-		Addr:         listenAddr,
+		Addr:         s.listenAddr,
 		Handler:      router,
 		ErrorLog:     errLog,
 		ReadTimeout:  5 * time.Second,
@@ -100,7 +106,7 @@ func (s *Server) Listen() {
 	}
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		errLog.Fatalf("could not listen on %s: %v\n", listenAddr, err)
+		errLog.Fatalf("could not listen on %s: %v\n", s.listenAddr, err)
 	}
 }
 
