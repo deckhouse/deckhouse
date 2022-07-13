@@ -23,6 +23,7 @@ jobs:
       ENABLE_DAILY_E2E_FOR_TEST_REPOS: yes
 {!{- end }!}
     name: Skip tests repos
+    runs-on: ubuntu-latest
     if: env.ENABLE_DAILY_E2E_FOR_TEST_REPOS == "yes" || github.repository == 'deckhouse/deckhouse'
     steps:
     - name: Do nothing
