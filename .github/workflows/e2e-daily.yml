@@ -107,7 +107,7 @@ jobs:
 
 
   # <template: e2e_run_job_template>
-  run_containerd_1_21:
+  run_yandex_cloud_containerd_1_21:
     name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
     needs:
       - git_info
@@ -135,19 +135,7 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
-      # <template: update_comment_on_start>
-      - name: Update comment on start
-        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
 
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
-
-      # </template: update_comment_on_start>
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -399,37 +387,6 @@ jobs:
             echo Not a directory.
           fi
 
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,separate';
-            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
-
       - name: Check alerting credentials
         id: check_alerting
         if: always()
@@ -478,7 +435,7 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_containerd_1_21:
+  run_aws_containerd_1_21:
     name: "Daily running e2e tests, Containerd, Kubernetes 1.21"
     needs:
       - git_info
@@ -506,19 +463,7 @@ jobs:
           ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
-      # <template: update_comment_on_start>
-      - name: Update comment on start
-        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
 
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnStart({github, context, core, name})
-
-      # </template: update_comment_on_start>
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -765,37 +710,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
-      # <template: update_comment_on_finish>
-      - name: Update comment on finish
-        id: update_comment_on_finish
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-        env:
-          NEEDS_CONTEXT: ${{ toJSON(needs) }}
-          JOB_CONTEXT: ${{ toJSON(job) }}
-          STEPS_CONTEXT: ${{ toJSON(steps) }}
-        uses: actions/github-script@v5.0.0
-        with:
-          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          script: |
-            const statusConfig = 'job,separate';
-            const name = 'Daily running e2e tests, Containerd, Kubernetes 1.21';
-            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
-            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
-            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
-            let jobNames = null
-            if (process.env.JOB_NAMES) {
-              jobNames = JSON.parse(process.env.JOB_NAMES);
-            }
-
-            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
-            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
-            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
-            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
-
-            const ci = require('./.github/scripts/js/ci');
-            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
-      # </template: update_comment_on_finish>
 
       - name: Check alerting credentials
         id: check_alerting

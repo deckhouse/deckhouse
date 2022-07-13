@@ -30,7 +30,8 @@ jobs:
 {!{-   $cri := $criName | toLower -}!}
 {!{-   $criEnv := $cri | toUpper -}!}
 {!{-   $layout := (tmpl.Exec "e2e_get_layout" (dict "provider" $provider) | strings.TrimSpace ) -}!}
-{!{-   $jobID := printf "run_%s_%s" $cri $kubernetesVersionSlug -}!}
+{!{-   $providerForJobId := $providerName | replaceAll "." "_" | toLower -}!}
+{!{-   $jobID := printf "run_%s_%s_%s" $providerForJobId $cri $kubernetesVersionSlug -}!}
 {!{-   $jobName := printf "%s, %s, Kubernetes %s" $workflowName $criName $kubernetesVersion -}!}
 {!{-   $jobCtx := (dict "provider" $provider "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}

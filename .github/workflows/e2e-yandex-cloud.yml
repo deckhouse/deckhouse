@@ -220,6 +220,7 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -469,7 +470,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -592,6 +592,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -842,7 +843,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -965,6 +965,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -1215,7 +1216,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -1338,6 +1338,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -1588,7 +1589,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -1711,6 +1711,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -1961,7 +1962,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -2084,6 +2084,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -2334,7 +2335,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -2457,6 +2457,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -2707,7 +2708,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -2830,6 +2830,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -3080,7 +3081,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -3203,6 +3203,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -3453,7 +3454,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -3576,6 +3576,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -3826,7 +3827,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish

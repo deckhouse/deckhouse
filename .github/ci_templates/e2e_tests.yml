@@ -139,11 +139,11 @@ check_e2e_labels:
 {!{ $ctx.jobID }!}:
   name: "{!{ $ctx.jobName }!}"
   needs:
-{!{- if coll.Has $ctx "checkLabels" }!}
+{!{- if coll.Has $ctx "manualRun" }!}
     - check_e2e_labels
 {!{- end }!}
     - git_info
-{!{- if coll.Has $ctx "checkLabels" }!}
+{!{- if coll.Has $ctx "manualRun" }!}
   if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
 {!{- end }!}
   env:
@@ -156,7 +156,11 @@ check_e2e_labels:
   steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
+
+{!{- if coll.Has $ctx "manualRun" }!}
+{!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
+{!{- end }!}
+
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
@@ -286,7 +290,9 @@ check_e2e_labels:
           echo Not a directory.
         fi
 
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
+{!{- if coll.Has $ctx "manualRun" }!}
+{!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
+{!{- end }!}
 
     - name: Check alerting credentials
       id: check_alerting
