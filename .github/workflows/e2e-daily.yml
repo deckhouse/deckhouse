@@ -31,6 +31,9 @@ jobs:
   skip_tests_repos:
     name: Skip tests repos
     if: env.ENABLE_DAILY_E2E_FOR_TEST_REPOS == "yes" || github.repository == 'deckhouse/deckhouse'
+    steps:
+    - name: Do nothing
+      run: echo "We use job's 'if' for checking repository. We do not need any action in this job, but Github enforce use 'steps' to us."
 
 
 # Note: git_info is needed for werf.yaml
