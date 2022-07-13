@@ -1,31 +1,66 @@
-Index: plugin/kubernetes/kubernetes.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/plugin/kubernetes/kubernetes.go b/plugin/kubernetes/kubernetes.go
---- a/plugin/kubernetes/kubernetes.go	(revision 45b0a11294c59bfd806a57807aaa2a185f761cd5)
-+++ b/plugin/kubernetes/kubernetes.go	(date 1657053155625)
-@@ -540,6 +540,10 @@
- 					continue
- 				}
+diff --git a/plugin/kubernetes/handler_test.go b/plugin/kubernetes/handler_test.go
+index d867f727a1..bc80704693 100644
+--- a/plugin/kubernetes/handler_test.go
++++ b/plugin/kubernetes/handler_test.go
+@@ -684,6 +684,7 @@ var epsIndex = map[string][]*object.Endpoints{
+ 		Name:      "kubedns",
+ 		Namespace: "kube-system",
+ 		Index:     object.EndpointsKey("kubedns", "kube-system"),
++		Ready:     true,
+ 	}},
+ 	"svc1.testns": {{
+ 		Subsets: []object.EndpointSubset{
+@@ -699,6 +700,7 @@ var epsIndex = map[string][]*object.Endpoints{
+ 		Name:      "svc1-slice1",
+ 		Namespace: "testns",
+ 		Index:     object.EndpointsKey("svc1", "testns"),
++		Ready:     true,
+ 	}},
+ 	"svcempty.testns": {{
+ 		Subsets: []object.EndpointSubset{
+@@ -712,6 +714,7 @@ var epsIndex = map[string][]*object.Endpoints{
+ 		Name:      "svcempty-slice1",
+ 		Namespace: "testns",
+ 		Index:     object.EndpointsKey("svcempty", "testns"),
++		Ready:     true,
+ 	}},
+ 	"hdls1.testns": {{
+ 		Subsets: []object.EndpointSubset{
+@@ -732,6 +735,7 @@ var epsIndex = map[string][]*object.Endpoints{
+ 		Name:      "hdls1-slice1",
+ 		Namespace: "testns",
+ 		Index:     object.EndpointsKey("hdls1", "testns"),
++		Ready:     true,
+ 	}},
+ 	"hdlsprtls.testns": {{
+ 		Subsets: []object.EndpointSubset{
+@@ -745,6 +749,7 @@ var epsIndex = map[string][]*object.Endpoints{
+ 		Name:      "hdlsprtls-slice1",
+ 		Namespace: "testns",
+ 		Index:     object.EndpointsKey("hdlsprtls", "testns"),
++		Ready:     true,
+ 	}},
+ }
 
-+				if !ep.Ready && !svc.HasAlphaPublishUnreadyAddressesAnnotation {
-+					continue
-+				}
-+
+diff --git a/plugin/kubernetes/kubernetes.go b/plugin/kubernetes/kubernetes.go
+index 3c80097e96..633e00f888 100644
+--- a/plugin/kubernetes/kubernetes.go
++++ b/plugin/kubernetes/kubernetes.go
+@@ -542,6 +542,9 @@ func (k *Kubernetes) findServices(r recordRequest, zone string) (services []msg.
+
  				for _, eps := range ep.Subsets {
  					for _, addr := range eps.Addresses {
++						if !addr.Ready && !svc.HasAlphaPublishUnreadyAddressesAnnotation {
++							continue
++						}
 
-Index: plugin/kubernetes/kubernetes_test.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
+ 						// See comments in parse.go parseRequest about the endpoint handling.
+ 						if r.endpoint != "" {
 diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes_test.go
---- a/plugin/kubernetes/kubernetes_test.go	(revision 45b0a11294c59bfd806a57807aaa2a185f761cd5)
-+++ b/plugin/kubernetes/kubernetes_test.go	(date 1657053548158)
-@@ -135,6 +135,7 @@
+index 9832fbd922..586abf67cd 100644
+--- a/plugin/kubernetes/kubernetes_test.go
++++ b/plugin/kubernetes/kubernetes_test.go
+@@ -135,6 +135,7 @@ func (APIConnServiceTest) EpIndex(string) []*object.Endpoints {
  			Name:      "svc1-slice1",
  			Namespace: "testns",
  			Index:     object.EndpointsKey("svc1", "testns"),
@@ -33,7 +68,7 @@ diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes
  		},
  		{
  			Subsets: []object.EndpointSubset{
-@@ -150,6 +151,7 @@
+@@ -150,6 +151,7 @@ func (APIConnServiceTest) EpIndex(string) []*object.Endpoints {
  			Name:      "hdls1-slice1",
  			Namespace: "testns",
  			Index:     object.EndpointsKey("hdls1", "testns"),
@@ -41,7 +76,7 @@ diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes
  		},
  		{
  			Subsets: []object.EndpointSubset{
-@@ -159,6 +161,7 @@
+@@ -159,6 +161,7 @@ func (APIConnServiceTest) EpIndex(string) []*object.Endpoints {
  					},
  				},
  			},
@@ -49,7 +84,7 @@ diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes
  		},
  	}
  	return eps
-@@ -180,6 +183,7 @@
+@@ -180,6 +183,7 @@ func (APIConnServiceTest) EndpointsList() []*object.Endpoints {
  			Name:      "svc1-slice1",
  			Namespace: "testns",
  			Index:     object.EndpointsKey("svc1", "testns"),
@@ -57,7 +92,7 @@ diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes
  		},
  		{
  			Subsets: []object.EndpointSubset{
-@@ -195,6 +199,7 @@
+@@ -195,6 +199,7 @@ func (APIConnServiceTest) EndpointsList() []*object.Endpoints {
  			Name:      "hdls1-slice1",
  			Namespace: "testns",
  			Index:     object.EndpointsKey("hdls1", "testns"),
@@ -65,7 +100,7 @@ diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes
  		},
  		{
  			Subsets: []object.EndpointSubset{
-@@ -210,6 +215,7 @@
+@@ -210,6 +215,7 @@ func (APIConnServiceTest) EndpointsList() []*object.Endpoints {
  			Name:      "hdls1-slice2",
  			Namespace: "testns",
  			Index:     object.EndpointsKey("hdls1", "testns"),
@@ -73,7 +108,7 @@ diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes
  		},
  		{
  			Subsets: []object.EndpointSubset{
-@@ -219,6 +225,7 @@
+@@ -219,6 +225,7 @@ func (APIConnServiceTest) EndpointsList() []*object.Endpoints {
  					},
  				},
  			},
@@ -81,15 +116,67 @@ diff --git a/plugin/kubernetes/kubernetes_test.go b/plugin/kubernetes/kubernetes
  		},
  	}
  	return eps
-Index: plugin/kubernetes/object/service.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
+diff --git a/plugin/kubernetes/object/endpoint.go b/plugin/kubernetes/object/endpoint.go
+index 4af64f3631..766125a602 100644
+--- a/plugin/kubernetes/object/endpoint.go
++++ b/plugin/kubernetes/object/endpoint.go
+@@ -36,6 +36,7 @@ type EndpointAddress struct {
+ 	Hostname      string
+ 	NodeName      string
+ 	TargetRefName string
++	Ready         bool
+ }
+
+ // EndpointPort is a tuple that describes a single port.
+@@ -73,7 +74,7 @@ func ToEndpoints(obj meta.Object) (meta.Object, error) {
+ 		}
+
+ 		for j, a := range eps.Addresses {
+-			ea := EndpointAddress{IP: a.IP, Hostname: a.Hostname}
++			ea := EndpointAddress{IP: a.IP, Hostname: a.Hostname, Ready: true}
+ 			if a.NodeName != nil {
+ 				ea.NodeName = *a.NodeName
+ 			}
+@@ -128,11 +129,9 @@ func EndpointSliceToEndpoints(obj meta.Object) (meta.Object, error) {
+ 	}
+
+ 	for _, end := range ends.Endpoints {
+-		if !endpointsliceReady(end.Conditions.Ready) {
+-			continue
+-		}
+ 		for _, a := range end.Addresses {
+ 			ea := EndpointAddress{IP: a}
++			ea.Ready = endpointsliceReady(end.Conditions.Ready)
+ 			if end.Hostname != nil {
+ 				ea.Hostname = *end.Hostname
+ 			}
+@@ -179,11 +178,9 @@ func EndpointSliceV1beta1ToEndpoints(obj meta.Object) (meta.Object, error) {
+ 	}
+
+ 	for _, end := range ends.Endpoints {
+-		if !endpointsliceReady(end.Conditions.Ready) {
+-			continue
+-		}
+ 		for _, a := range end.Addresses {
+ 			ea := EndpointAddress{IP: a}
++			ea.Ready = endpointsliceReady(end.Conditions.Ready)
+ 			if end.Hostname != nil {
+ 				ea.Hostname = *end.Hostname
+ 			}
+@@ -244,7 +241,7 @@ func (e *Endpoints) DeepCopyObject() runtime.Object {
+ 			Ports:     make([]EndpointPort, len(eps.Ports)),
+ 		}
+ 		for j, a := range eps.Addresses {
+-			ea := EndpointAddress{IP: a.IP, Hostname: a.Hostname, NodeName: a.NodeName, TargetRefName: a.TargetRefName}
++			ea := EndpointAddress{IP: a.IP, Hostname: a.Hostname, NodeName: a.NodeName, TargetRefName: a.TargetRefName, Ready: a.Ready}
+ 			sub.Addresses[j] = ea
+ 		}
+ 		for k, p := range eps.Ports {
 diff --git a/plugin/kubernetes/object/service.go b/plugin/kubernetes/object/service.go
---- a/plugin/kubernetes/object/service.go	(revision 45b0a11294c59bfd806a57807aaa2a185f761cd5)
-+++ b/plugin/kubernetes/object/service.go	(date 1657053244201)
-@@ -2,6 +2,7 @@
+index 812b272e26..ff2094c113 100644
+--- a/plugin/kubernetes/object/service.go
++++ b/plugin/kubernetes/object/service.go
+@@ -2,6 +2,7 @@ package object
 
  import (
  	"fmt"
@@ -97,7 +184,7 @@ diff --git a/plugin/kubernetes/object/service.go b/plugin/kubernetes/object/serv
 
  	api "k8s.io/api/core/v1"
  	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-@@ -20,6 +21,8 @@
+@@ -20,6 +21,8 @@ type Service struct {
  	ExternalName string
  	Ports        []api.ServicePort
 
@@ -106,7 +193,7 @@ diff --git a/plugin/kubernetes/object/service.go b/plugin/kubernetes/object/serv
  	// ExternalIPs we may want to export.
  	ExternalIPs []string
 
-@@ -46,6 +49,10 @@
+@@ -46,6 +49,10 @@ func ToService(obj meta.Object) (meta.Object, error) {
  		ExternalIPs: make([]string, len(svc.Status.LoadBalancer.Ingress)+len(svc.Spec.ExternalIPs)),
  	}
 
@@ -117,7 +204,7 @@ diff --git a/plugin/kubernetes/object/service.go b/plugin/kubernetes/object/serv
  	if len(svc.Spec.ClusterIPs) > 0 {
  		s.ClusterIPs = make([]string, len(svc.Spec.ClusterIPs))
  		copy(s.ClusterIPs, svc.Spec.ClusterIPs)
-@@ -94,7 +101,8 @@
+@@ -94,7 +101,8 @@ func (s *Service) DeepCopyObject() runtime.Object {
  		ExternalName: s.ExternalName,
  		ClusterIPs:   make([]string, len(s.ClusterIPs)),
  		Ports:        make([]api.ServicePort, len(s.Ports)),
@@ -127,89 +214,3 @@ diff --git a/plugin/kubernetes/object/service.go b/plugin/kubernetes/object/serv
  	}
  	copy(s1.ClusterIPs, s.ClusterIPs)
  	copy(s1.Ports, s.Ports)
-Index: plugin/kubernetes/object/endpoint.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/plugin/kubernetes/object/endpoint.go b/plugin/kubernetes/object/endpoint.go
---- a/plugin/kubernetes/object/endpoint.go	(revision 45b0a11294c59bfd806a57807aaa2a185f761cd5)
-+++ b/plugin/kubernetes/object/endpoint.go	(date 1657053075388)
-@@ -19,6 +19,7 @@
- 	Index     string
- 	IndexIP   []string
- 	Subsets   []EndpointSubset
-+	Ready     bool
-
- 	*Empty
- }
-@@ -128,9 +129,7 @@
- 	}
-
- 	for _, end := range ends.Endpoints {
--		if !endpointsliceReady(end.Conditions.Ready) {
--			continue
--		}
-+		e.Ready = endpointsliceReady(end.Conditions.Ready)
- 		for _, a := range end.Addresses {
- 			ea := EndpointAddress{IP: a}
- 			if end.Hostname != nil {
-@@ -179,9 +178,7 @@
- 	}
-
- 	for _, end := range ends.Endpoints {
--		if !endpointsliceReady(end.Conditions.Ready) {
--			continue
--		}
-+		e.Ready = endpointsliceReady(end.Conditions.Ready)
- 		for _, a := range end.Addresses {
- 			ea := EndpointAddress{IP: a}
- 			if end.Hostname != nil {
-Index: plugin/kubernetes/handler_test.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/plugin/kubernetes/handler_test.go b/plugin/kubernetes/handler_test.go
---- a/plugin/kubernetes/handler_test.go	(revision 45b0a11294c59bfd806a57807aaa2a185f761cd5)
-+++ b/plugin/kubernetes/handler_test.go	(date 1657053548142)
-@@ -684,6 +684,7 @@
- 		Name:      "kubedns",
- 		Namespace: "kube-system",
- 		Index:     object.EndpointsKey("kubedns", "kube-system"),
-+		Ready:     true,
- 	}},
- 	"svc1.testns": {{
- 		Subsets: []object.EndpointSubset{
-@@ -699,6 +700,7 @@
- 		Name:      "svc1-slice1",
- 		Namespace: "testns",
- 		Index:     object.EndpointsKey("svc1", "testns"),
-+		Ready:     true,
- 	}},
- 	"svcempty.testns": {{
- 		Subsets: []object.EndpointSubset{
-@@ -712,6 +714,7 @@
- 		Name:      "svcempty-slice1",
- 		Namespace: "testns",
- 		Index:     object.EndpointsKey("svcempty", "testns"),
-+		Ready:     true,
- 	}},
- 	"hdls1.testns": {{
- 		Subsets: []object.EndpointSubset{
-@@ -732,6 +735,7 @@
- 		Name:      "hdls1-slice1",
- 		Namespace: "testns",
- 		Index:     object.EndpointsKey("hdls1", "testns"),
-+		Ready:     true,
- 	}},
- 	"hdlsprtls.testns": {{
- 		Subsets: []object.EndpointSubset{
-@@ -745,6 +749,7 @@
- 		Name:      "hdlsprtls-slice1",
- 		Namespace: "testns",
- 		Index:     object.EndpointsKey("hdlsprtls", "testns"),
-+		Ready:     true,
- 	}},
- }
-
