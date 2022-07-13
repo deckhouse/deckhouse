@@ -1,27 +1,32 @@
-ARG BASE_GOLANG_BUSTER
+ARG BASE_GOLANG_18_BULLSEYE
+ARG BASE_NODE_16_ALPINE
 ARG BASE_ALPINE
-FROM $BASE_GOLANG_BUSTER as artifact
 
-ENV PROMETHEUS_VERSION=v2.28.0
+FROM $BASE_GOLANG_18_BULLSEYE as artifact
+ENV PROMETHEUS_VERSION=v2.36.2
 
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - &&  \
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
   apt install -y nodejs && \
   npm update -g npm && \
   npm install webpack -g && \
   npm config set registry http://registry.npmjs.org/ && \
   apt-key adv --fetch-keys http://dl.yarnpkg.com/debian/pubkey.gpg && \
   echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list && \
-  apt update && apt install -y yarn && \
-  apt install -y make bash git patch ca-certificates openssl openssh-client
+  apt update && apt install -y yarn
+
+RUN apt install -y make bash git ca-certificates openssl openssh-client bzip2
 
 RUN mkdir /prometheus && cd /prometheus \
   && git clone -b "${PROMETHEUS_VERSION}" --single-branch https://github.com/prometheus/prometheus
 WORKDIR /prometheus/prometheus
+
+RUN go mod download
+
 COPY sample_limit_annotation.patch ./
 COPY successfully_sent_metric.patch ./
 
-RUN patch -p1 < sample_limit_annotation.patch && \
-  patch -p1 < successfully_sent_metric.patch && \
+RUN git apply sample_limit_annotation.patch && \
+  git apply successfully_sent_metric.patch && \
   make build
 
 FROM $BASE_ALPINE

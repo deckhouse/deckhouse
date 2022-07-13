@@ -1,10 +1,8 @@
-:100644 100644 7af21c565 3d24759ab M	notifier/notifier.go
-
 diff --git a/notifier/notifier.go b/notifier/notifier.go
-index 7af21c565..3d24759ab 100644
+index 3d2ee5949..aa000dcf9 100644
 --- a/notifier/notifier.go
 +++ b/notifier/notifier.go
-@@ -137,6 +137,7 @@ type alertMetrics struct {
+@@ -135,6 +135,7 @@ type alertMetrics struct {
  	latency                 *prometheus.SummaryVec
  	errors                  *prometheus.CounterVec
  	sent                    *prometheus.CounterVec
@@ -12,7 +10,7 @@ index 7af21c565..3d24759ab 100644
  	dropped                 prometheus.Counter
  	queueLength             prometheus.GaugeFunc
  	queueCapacity           prometheus.Gauge
-@@ -170,6 +171,14 @@ func newAlertMetrics(r prometheus.Registerer, queueCap int, queueLen, alertmanag
+@@ -168,6 +169,12 @@ func newAlertMetrics(r prometheus.Registerer, queueCap int, queueLen, alertmanag
  		},
  			[]string{alertmanagerLabel},
  		),
@@ -21,13 +19,11 @@ index 7af21c565..3d24759ab 100644
 +			Subsystem: subsystem,
 +			Name:      "successfully_sent_total",
 +			Help:      "Total number of successfully sent alerts.",
-+		},
-+			[]string{alertmanagerLabel},
-+		),
++		}, []string{alertmanagerLabel}),
  		dropped: prometheus.NewCounter(prometheus.CounterOpts{
  			Namespace: namespace,
  			Subsystem: subsystem,
-@@ -201,6 +210,7 @@ func newAlertMetrics(r prometheus.Registerer, queueCap int, queueLen, alertmanag
+@@ -199,6 +206,7 @@ func newAlertMetrics(r prometheus.Registerer, queueCap int, queueLen, alertmanag
  			m.latency,
  			m.errors,
  			m.sent,
@@ -35,7 +31,7 @@ index 7af21c565..3d24759ab 100644
  			m.dropped,
  			m.queueLength,
  			m.queueCapacity,
-@@ -528,6 +538,7 @@ func (n *Manager) sendAll(alerts ...*Alert) bool {
+@@ -535,6 +543,7 @@ func (n *Manager) sendAll(alerts ...*Alert) bool {
  					n.metrics.errors.WithLabelValues(url).Inc()
  				} else {
  					numSuccess.Inc()
@@ -43,11 +39,11 @@ index 7af21c565..3d24759ab 100644
  				}
  				n.metrics.latency.WithLabelValues(url).Observe(time.Since(begin).Seconds())
  				n.metrics.sent.WithLabelValues(url).Add(float64(len(alerts)))
-@@ -680,6 +691,7 @@ func (s *alertmanagerSet) sync(tgs []*targetgroup.Group) {
+@@ -687,6 +696,7 @@ func (s *alertmanagerSet) sync(tgs []*targetgroup.Group) {
  		// This will initialize the Counters for the AM to 0.
  		s.metrics.sent.WithLabelValues(us)
  		s.metrics.errors.WithLabelValues(us)
 +		s.metrics.successfullySent.WithLabelValues(us)
- 
+
  		seen[us] = struct{}{}
  		s.ams = append(s.ams, am)
