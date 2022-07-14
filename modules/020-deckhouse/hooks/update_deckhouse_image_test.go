@@ -375,7 +375,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 	Context("Release with not met requirements", func() {
 		BeforeEach(func() {
-			requirements.Register("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 				v := getter.Get("global.discovery.kubernetesVersion").String()
 				if v != requirementValue {
 					return false, errors.New("min k8s version failed")
@@ -427,7 +427,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			var df requirements.DisruptionFunc = func() (bool, string) {
 				return true, "some test reason"
 			}
-			requirements.RegisterDisruptionFunc("disruption:testme", df)
+			requirements.RegisterDisruption("disruption:testme", df)
 
 			f.RunHook()
 
