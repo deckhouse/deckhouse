@@ -10,18 +10,19 @@ spec:
                 type:
                   description: Тип Alertmanager'а.
                 external:
+                  description: Параметры подключения внешнего Alertmanager.
                   properties:
                     address:
-                      description: 'URL внешнего сервиса Alertmanager.'
+                      description: 'URL-адрес внешнего сервиса Alertmanager.'
                     service:
-                      description: 'Сервис Alertmanager внутри кластера Kubernetes.'
+                      description: 'Service в Kubernetes ссылающийся на развернутый Alertmanager.'
                       properties:
                         namespace:
-                          description: 'Пространство имён сервиса Alertmanager.'
+                          description: Пространство имён Service'а Alertmanager.
                         name:
-                          description: 'Имя сервиса Alertmanager.'
+                          description: Имя Service'а Alertmanager.
                         path:
-                          description: 'Префикс URL-адреса в сервисе для отправки оповещений.'
+                          description: 'Префикс URL-адреса в Service для отправки алертов.'
                     auth:
                       description: 'Настройки авторизации.'
                       properties:
@@ -47,48 +48,52 @@ spec:
                           description: Отключение проверки сертификата.
                 internal:
                   type: object
+                  description: Параметры настройки внутренного Alertmanager.
                   properties:
                     inhibitRules:
-                      description: Список правил запрета. Правила будут применяться только к оповещениям,
-                        соответствующим пространству имен ресурса.
+                      description: |
+                        Список правил запрета.
+
+                        Правила будут применяться только к оповещениям, соответствующим пространству имен ресурса.
                       items:
-                        description: Правило запрета определяет правило, которое позволяет
-                          отключать оповещения, если другие оповещения уже срабатывают. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)
+                        description: |
+                          Правила запрета используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения ([подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
                         properties:
                           equal:
-                            description: Метки, которые должны иметь одинаковое значение в исходном
-                              и целевом оповещении, чтобы запрет вступил в силу.
+                            description: Лейблы, которые должны иметь одинаковое значение в исходном
+                              и целевом алерте, чтобы запрет вступил в силу.
                             items:
                               type: string
                             type: array
                           sourceMatch:
-                            description: Выражения, для которых должно существовать
-                              одно или несколько оповещений, чтобы запрет вступил в силу.
+                            description: |
+                              Список условий которым должно удовлетворять один или более алертов, чтобы запрет вступил в силу.
+
                               Оператор обеспечивает соответствие оповещения пространству имен ресурса.
                             items:
-                              description: Средство сопоставления выражений определяет, как сопоставлять метки оповещений.
+                              description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
                               properties: &match-properties
                                 name:
-                                  description: Лейбл выражения.
+                                  description: Название лейбла для удовлетворения условию.
                                   minLength: 1
                                   type: string
                                 regex:
-                                  description: Тип сравнения — по равенству (false) или по регулярному выражению
-                                    (true).
+                                  description: Тип сравнения — по равенству (false) или по регулярному выражению (true).
                                   type: boolean
                                 value:
-                                  description: Значение лейбла для сравнения.
+                                  description: Значение лейбла (regex-шаблон) для удовлетворения условию.
                                   type: string
                               required:
                               - name
                               type: object
                             type: array
                           targetMatch:
-                            description: Совпадения, которые должны быть проверены в оповещениях,
-                              которые будут отключены. Оператор обеспечивает соответствие предупреждения
-                              пространству имен ресурса.
+                            description: |
+                              Список условий проверяемых в алертах, при выполнении которых алерты будут отключены.
+
+                              Оператор обеспечивает соответствие алерта пространству имен ресурса.
                             items:
-                              description: Средство сравнения определяет, как сопоставлять лейблы оповещений.
+                              description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
                               properties: *match-properties
                               required:
                               - name
@@ -97,258 +102,139 @@ spec:
                         type: object
                       type: array
                     receivers:
-                      description: Список получателей.
+                      description: |
+                        Список получателей.
                       items:
-                        description: Получатель определяет одну или несколько интеграций оповещений.
+                        description: Получатель определяет одну или несколько интеграций для отправки оповещений.
                         properties:
                           emailConfigs:
-                            description: Список конфигураций адресов e-mail.
+                            description: Список конфигураций для отправки оповещений по электронной почте.
                             items:
-                              description: EmailConfig конфигурирует оповещения по электронной почте.
+                              description: Конфигурация определяет параметры отправки оповещений по электронной почте.
                               properties:
                                 authIdentity:
                                   description: Идентификатор, используемый для аутентификации.
-                                  type: string
                                 authPassword:
-                                  description: Секретный ключ, содержащий пароль для аутентификации.
-                                    Secret должен находиться в том же пространстве имен,
-                                    что и объект AlertmanagerConfig и быть доступным
-                                    оператору Prometheus.
-                                  properties:
+                                  description: |
+                                    Ключ Secret'а, содержащий пароль для аутентификации.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: &data-in-secret-properties
                                     key:
-                                      description: Ключ Secret'а. Должен быть валидным.
-                                      type: string
+                                      description: |
+                                        Ключ (имя ключа) Secret'а, из которого брать данные.
+
+                                        Указанный ключ Secret'a должен существовать.
                                     name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                      type: string
+                                      description: |
+                                        Ссылка на Secret.
+
+                                        [Подробнее о формате...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                     optional:
-                                      description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
+                                      description: |
+                                        Определяет, обязательно ли указание Secret'а или его ключа (`false`) или нет (`true`).
                                 authSecret:
-                                  description: Секретный ключ, содержащий CRAM-MD5.
-                                    Secret должен находиться в том же пространстве имен,
-                                    что и объект AlertmanagerConfig и быть доступным
-                                    оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ Secret'а. Должен быть валидным.
-                                      type: string
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                      type: string
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
+                                  description: |
+                                    Ключ Secret'а, содержащий CRAM-MD5-секрет для аутентификации.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                                 authUsername:
                                   description: Имя пользователя, используемое для аутентификации.
-                                  type: string
                                 from:
                                   description: Адрес отправителя.
-                                  type: string
                                 headers:
-                                  description: Дополнительные заголовки пары ключ/значение заголовка
-                                    электронной почты. Переопределяет все заголовки, ранее установленные
-                                    реализацией оповещения.
+                                  description: |
+                                    Список дополнительных заголовков электронной почты.
+
+                                    Переопределяет все заголовки, установленные ранее интеграцией для отправки оповещений.
                                   items:
-                                    description: KeyValue определяется последовательностью (key, value).
+                                    description: Определяется набором пар ключ/значение.
                                     properties:
                                       key:
                                         description: Ключ.
-                                        minLength: 1
-                                        type: string
                                       value:
                                         description: Значение.
-                                        type: string
-                                    required:
-                                    - key
-                                    - value
-                                    type: object
-                                  type: array
                                 hello:
                                   description: Имя хоста для идентификации на SMTP-сервере.
-                                  type: string
                                 html:
-                                  description: HTML-содержимое тела e-mail.
-                                  type: string
+                                  description: HTML-содержимое тела письма оповещения.
                                 requireTLS:
-                                  description: Требование SMTP TLS. Обратите внимание, что Go
-                                    не поддерживает незашифрованные подключения к удаленным
-                                    endpoint'ам SMTP.
-                                  type: boolean
+                                  description: |
+                                    Требование использования SMTP TLS.
+
+                                    Обратите внимание, что Go не поддерживает незашифрованные SMTP-подключения.
                                 sendResolved:
-                                  description: Необходимость уведомления о разрешенных оповещениях.
-                                  type: boolean
+                                  description: Уведомлять или нет о завершении алертов.
                                 smarthost:
                                   description: SMTP-хост, через который отправляются электронные письма.
-                                  type: string
                                 text:
-                                  description: Текстовое содержимое e-mail-оповещения.
-                                  type: string
+                                  description: Текстовое содержимое тела письма оповещения.
                                 tlsConfig: &tls-config
-                                  description: Конфигурация TLS
+                                  description: Конфигурация TLS.
                                   properties:
                                     ca:
-                                      description: Struct, содержащая сертификат CA для
-                                        использования на целевых объектах.
+                                      description: Структура, содержащая сертификат CA для
+                                        target'ов.
                                       properties:
                                         configMap:
-                                          description: ConfigMap, содержащая данные для использования в целевых объектах.
-                                          properties:
+                                          description: ConfigMap, содержащая данные для использования в target'е.
+                                          properties: &data-in-cm-properties
                                             key:
-                                              description: Ключ.
-                                              type: string
+                                              description: |
+                                                Ключ (имя ключа) ConfigMap, из которого брать данные.
                                             name:
-                                              description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
+                                              description: |
+                                                Ссылка на ConfigMap.
+
+                                                [Подробнее о формате...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                             optional:
-                                              description: Необходимость определения ConfigMap'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
+                                              description: |
+                                                Определяет, обязательно ли указание ConfigMap'а или его ключа (`false`) или нет (`true`).
                                         secret:
-                                          description: Secret, содержащий данные для использования в целевых объектах.
-                                          properties:
-                                            key:
-                                              description: Ключ Secret'а. Должен быть валидным.
-                                              type: string
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
+                                          description: Secret, содержащий данные для использования в target'е.
+                                          properties: *data-in-secret-properties
                                     cert:
                                       description: Структура, содержащая файл сертификата клиента
-                                        для целевых объектов.
+                                        для target'а.
                                       properties:
                                         configMap:
-                                          description: ConfigMap, содержащая данные для использования в целевых объектах.
-                                          properties:
-                                            key:
-                                              description: Ключ.
-                                              type: string
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Необходимость определения ConfigMap'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
+                                          description: ConfigMap, содержащая данные для использования в target'е.
+                                          properties: *data-in-cm-properties
                                         secret:
-                                          description: Secret, содержащий данные, используемые для целевых объектов.
-                                          properties:
-                                            key:
-                                              description: Ключ Secret'а. Должен быть валидным.
-                                              type: string
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
+                                          description: Secret, содержащий данные, используемые для target'а.
+                                          properties: *data-in-secret-properties
                                     insecureSkipVerify:
-                                      description: Отключение проверки сертификатов на целевом объекте.
-                                      type: boolean
+                                      description: Отключение проверки сертификатов target'а.
                                     keySecret:
-                                      description: Secret, содержащий файл ключа клиента для целевого объекта.
-                                      properties:
-                                        key:
-                                          description: Ключ Secret'а. Должен быть валидным.
-                                          type: string
-                                        name:
-                                          description: 'Имя референта. [Подробнее...]
-                                            (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                          type: string
-                                        optional:
-                                          description: Необходимость определения Secret'а или его ключа.
-                                          type: boolean
-                                      required:
-                                      - key
-                                      type: object
+                                      description: Secret, содержащий файл ключа клиента для target'а.
+                                      properties: *data-in-secret-properties
                                     serverName:
-                                      description: Имя сервера, используется для верификации hostname целевых объектов.
-                                      type: string
-                                  type: object
+                                      description: Имя сервера, используемое для проверки на target'е.
                                 to:
                                   description: Адрес e-mail, на который будут отправлены оповещения.
-                                  type: string
-                              type: object
-                            type: array
                           name:
-                            description: Имя получателя. Должно быть уникальным для всех элементов из списка.
-                            minLength: 1
-                            type: string
+                            description: Имя получателя. Должно быть уникальным для всего списка получателей.
                           opsgenieConfigs:
-                            description: Список конфигураций OpsGenie.
+                            description: Список конфигураций для отправки оповещений через OpsGenie.
                             items:
-                              description: OpsGenieConfig настраивает уведомления с помощью OpsGenie.
-                                [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#opsgenie_config)
+                              description: Конфигурация определяет параметры отправки оповещений с помощью OpsGenie. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#opsgenie_config)
                               properties:
                                 apiKey:
-                                  description: Секретный ключ, содержащий OpsGenie API key.
-                                    Secret должен находиться в том же пространстве имен,
-                                    что и объект AlertmanagerConfig и быть доступным
-                                    оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ Secret'а. Должен быть валидным.
-                                      type: string
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                      type: string
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
-                                      type: boolean
-                                  required:
-                                  - key
-                                  type: object
+                                  description: |
+                                    Ключ Secret'а, содержащий OpsGenie API key.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                                 apiURL:
-                                  description: URL-адрес для отправки запросов OpsGenie API.
+                                  description: URL-адрес OpsGenie API для отправки запросов.
                                   type: string
                                 description:
                                   description: Описание инцидента.
                                   type: string
                                 details:
-                                  description: Набор произвольных пар ключ/значение,
-                                    которые предоставляют более подробную информацию об инциденте.
+                                  description: Список произвольных пар ключ/значение, которые содержат более подробную информацию об инциденте.
                                   items:
-                                    description: Значение ключа определяет последовательность (ключ, значение).
                                     properties:
                                       key:
                                         description: Ключ.
@@ -366,108 +252,59 @@ spec:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
                                     basicAuth:
-                                      description: BasicAuth клиента.
+                                      description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
                                           description: Секрет в пространстве имен service monitor,
                                             который содержит пароль для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ Secret'а. Должен быть валидным.
-                                              type: string
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
+                                          properties: *data-in-secret-properties
                                         username:
                                           description: Секрет в пространстве имен service monitor,
                                             который содержит имя пользователя для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ Secret'а. Должен быть валидным.
-                                              type: string
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                      type: object
+                                          properties: *data-in-secret-properties
                                     bearerTokenSecret: &bearer-token-secret
-                                      description: Ключ Secret'а, содержащий bearer-токен,
-                                        который будет использоваться клиентом для аутентификации.
-                                        Секрет должен находиться в том же пространстве имен, что и объект
-                                        конфигурации диспетчера оповещений, и быть доступным оператору Prometheus.
-                                      properties:
-                                        key:
-                                          description: Ключ Secret'а. Должен быть валидным.
-                                          type: string
-                                        name:
-                                          description: 'Имя референта. [Подробнее...]
-                                            (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                            TODO: Add other useful fields. apiVersion, kind,
-                                            uid?'
-                                          type: string
-                                        optional:
-                                          description: Необходимость определения Secret'а или его ключа.
-                                          type: boolean
-                                      required:
-                                      - key
-                                      type: object
+                                      description: |
+                                        Ключ Secret'а, содержащий bearer-токен, который будет использоваться клиентом для аутентификации.
+
+                                        Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                      properties: *data-in-secret-properties
                                     proxyURL:
-                                      description: URL прокси-сервера (опционально).
-                                      type: string
+                                      description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
-                                  type: object
                                 message:
-                                  description: Текст оповещения. Максимум 130 символов.
+                                  description: Текст алерта. Максимум 130 символов.
                                   type: string
                                 note:
-                                  description: Дополнительный текст оповещения.
+                                  description: Дополнительный текст алерта.
                                   type: string
                                 priority:
-                                  description: Приоритет оповещения. Доступны варианты P1, P2, P3, P4, и P5.
+                                  description: Приоритет алерта. Доступны варианты P1, P2, P3, P4, и P5.
                                   type: string
                                 responders:
-                                  description: Список отвечающих, ответственных за уведомления.
+                                  description: Список responder'ов, ответственных за уведомления.
                                   items:
                                     description: |
-                                      OpsGenie Config Responder определяет отвечающего на инцидент. Должен быть определено одно из `id`, `name` или `username`.
+                                      При определении responder'а должно быть определено одно из полей — `id`, `name` или `username`.
                                     properties:
                                       id:
-                                        description: ID отвечающего.
+                                        description: ID responder'а.
                                       name:
-                                        description: Имя отвечающего.
+                                        description: Имя responder'а.
                                       type:
-                                        description: Тип отвечающего.
+                                        description: Тип responder'а.
                                       username:
-                                        description: Имя пользователя отвечающего.
-                                  type: array
+                                        description: Имя пользователя responder'а.
                                 sendResolved:
-                                  description: Необходимость уведомления о разрешенных оповещениях.
+                                  description: Уведомлять или нет о завершении алертов.
                                 source:
                                   description: Обратная ссылка на отправителя уведомления.
                                 tags:
-                                  description: Разделенный запятыми список тегов, прикрепленных к уведомлениям.
+                                  description: Разделенный запятыми список тегов, указываемый в уведомлениях.
                           pagerdutyConfigs:
-                            description: Список конфигураций PagerDuty.
+                            description: Список конфигураций для отправки оповещений через PagerDuty.
                             items:
                               description: |
-                                PagerDutyConfig настраивает уведомления по PagerDuty. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
+                                Конфигурация определяет параметры отправки оповещений с помощью PagerDuty. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
                               properties:
                                 class:
                                   description: Класс/тип события.
@@ -476,14 +313,13 @@ spec:
                                 clientURL:
                                   description: Обратная ссылка на отправителя уведомления.
                                 component:
-                                  description: Часть или компонент системы, который сломан.
+                                  description: Сломанная часть (компонент) затронутой системы.
                                 description:
                                   description: Описание инцидента.
                                 details:
-                                  description: Произвольные пары ключ/значение, которые
+                                  description: Список произвольных пар ключ/значение, которые
                                     предоставляют более подробную информацию об инциденте.
                                   items:
-                                    description: KeyValue определяет последовательность (ключ, значение).
                                     properties:
                                       key:
                                         description: Ключ.
@@ -495,78 +331,46 @@ spec:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
                                     basicAuth:
-                                      description: Базовая авторизация клиента.
+                                      description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
                                           description: Secret в пространстве имен service monitor,
                                             который содержит пароль для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: |
-                                                Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-
-                                                TODO: Add other useful fields. apiVersion, kind, uid?
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: |
-                                                Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-
-                                                TODO: Add other useful fields. apiVersion, kind, uid?
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
-                                      description: URL прокси-сервера (опционально).
+                                      description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
                                 routingKey:
                                   description: |
                                     Ключ Secret'а, содержащий ключ интеграции PagerDuty (при использовании Events API v2).
 
-                                    Необходимо определить либо это поле, либо `serviceKey`. Secret должен находиться в том же пространстве имен, что и AlertmanagerConfig, и быть доступным оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ. Должен быть валидным.
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
+                                    Необходимо определить либо это поле, либо `serviceKey`.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                                 sendResolved:
-                                  description: Необходимость уведомления о разрешенных оповещениях.
+                                  description: Уведомлять или нет о завершении алертов.
                                 serviceKey:
-                                  description:  Ключ Secret'а, содержащий служебный ключ PagerDuty
-                                    (при использовании типа интеграции "Prometheus").
+                                  description: |
+                                    Ключ Secret'а, содержащий служебный ключ PagerDuty (при использовании типа интеграции "Prometheus").
+
                                     Необходимо определить либо это поле, либо `routingKey`.
-                                    Secret должен находиться в том же пространстве имен, что и объект
-                                    AlertmanagerConfig, и быть доступным оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ. Должен быть валидным.
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                                 severity:
                                   description: Серьезность инцидента.
                                 url:
-                                  description: URL для отправки запроса.
+                                  description: URL-адрес для отправки запроса.
                           pushoverConfigs:
-                            description: Список конфигураций Pushover.
+                            description: Список конфигураций для отправки оповещений через Pushover.
                             items:
-                              description: PushoverConfig настраивает уведомления по Pushover.
-                                [Подробнее](https://prometheus.io/docs/alerting/latest/configuration/#pushover_config)
+                              description: Конфигурация определяет параметры отправки оповещений с помощью Pushover. [Подробнее](https://prometheus.io/docs/alerting/latest/configuration/#pushover_config)
                               properties:
                                 expire:
                                   description: Как долго ваше уведомление будет повторяться,
@@ -577,48 +381,28 @@ spec:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
                                     basicAuth:
-                                      description: Базовая авторизация для клиента.
+                                      description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит пароль для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
-                                      description: URL прокси-сервера (опционально).
+                                      description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
                                 message:
                                   description: Сообщение уведомления.
                                 priority:
                                   description: Пиоритет. [Подробнее…](https://pushover.net/api#priority)
                                 retry:
-                                  description: Как часто серверы Pushover будут отправлять
-                                    одно и то же уведомление пользователю.
-                                    Должно быть не менее 30 секунд.
+                                  description: Как часто серверы Pushover будут отправлять одно и то же уведомление пользователю. Должно быть не менее 30 секунд.
                                 sendResolved:
-                                  description: Необходимость уведомления о разрешенных предупреждениях.
+                                  description: Уведомлять или нет о завершении алертов.
                                 sound:
                                   description: Название одного из звуков, поддерживаемых клиентами
                                     устройств, для переопределения звука, выбранного пользователем
@@ -626,51 +410,34 @@ spec:
                                 title:
                                   description: Заголовок уведомления.
                                 token:
-                                  description: Ключ Secret'а, содержащий маркер API зарегистрированного
-                                    приложения, см. https://pushover.net/apps . Secret должен находиться
-                                    в том же пространстве имен, что и объект AlertmanagerConfig, и быть
-                                    доступным оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ. Должен быть валидным.
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
+                                  description: |
+                                    Ключ Secret'а, содержащий API-токен зарегистрированного приложения ([подробнее...](https://pushover.net/apps)).
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                                 url:
                                   description: Дополнительный URL-адрес, отображаемый рядом с сообщением.
                                 urlTitle:
                                   description: Заголовок для дополнительного URL-адреса,
                                     при его отсутствии отображается только URL-адрес.
                                 userKey:
-                                  description: Ключ Secret'а, содержащий пользовательский
-                                    ключ пользователя-получателя. Секрет должен находиться
-                                    в том же пространстве имен, что и AlertmanagerConfig,
-                                    и быть доступным оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ. Должен быть валидным.
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
+                                  description: |
+                                    Ключ Secret'а, содержащий пользовательский ключ пользователя-получателя.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                           slackConfigs:
-                            description: Список конфигураций Slack.
+                            description: Список конфигураций для отправки оповещений через Slack.
                             items:
                               description: |
-                                SlackConfig настраивает уведомления через Slack. [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#slack_config)
+                                Конфигурация определяет параметры отправки оповещений с помощью Slack. [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#slack_config)
                               properties:
                                 actions:
                                   description: Список действий Slack, которые отправляются с каждым уведомлением.
                                   items:
                                     description: SlackAction настраивает одно действие Slack,
                                       которое отправляется с каждым уведомлением. Больше информации
-                                      [здесь](https://api.slack.com/docs/message-attachments#action_fields)
-                                      и [здесь](https://api.slack.com/docs/message-buttons).
+                                      [здесь](https://api.slack.com/docs/message-attachments#action_fields) и [здесь](https://api.slack.com/docs/message-buttons).
                                     properties:
                                       confirm:
                                         description: SlackConfirmationField защищает пользователей от
@@ -702,19 +469,11 @@ spec:
                                       value:
                                         type: string
                                 apiURL:
-                                  description: Ключ Secret'а, содержащий URL-адрес
-                                    Slack webhook. Secret должен находиться в том же
-                                    пространстве имен, что и AlertmanagerConfig, и быть
-                                    доступным оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ. Должен быть валидным.
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
+                                  description: |
+                                    Ключ Secret'а, содержащий URL-адрес Slack webhook.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                                 callbackId:
                                   type: string
                                 channel:
@@ -728,55 +487,29 @@ spec:
                                 fields:
                                   description: Список полей Slack, которые отправляются с каждым уведомлением.
                                   items:
-                                    description: SlackField настраивает одно поле Slack, которое отправляется
-                                      с каждым уведомлением. Каждое поле должно содержать заголовок, значение
-                                      и, необязательно, логическое значение, указывающее, достаточно ли короткое
-                                      поле для отображения рядом с другими полями, обозначенными как короткие.
-                                      [Подробнее...](https://api.slack.com/docs/message-attachments#fields)
-                                    properties:
-                                      short:
-                                        type: boolean
-                                      title:
-                                        type: string
-                                      value:
-                                        type: string
+                                    description: |
+                                      SlackField настраивает одно поле Slack, которое отправляется с каждым уведомлением.
+
+                                      Каждое поле должно содержать заголовок (`title`), значение (`value`) и, необязательный параметр `short`, указывающий, достаточно ли короткое поле для отображения рядом с другими 'короткими' полями. [Подробнее...](https://api.slack.com/docs/message-attachments#fields)
                                 footer:
                                   type: string
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
                                     basicAuth:
-                                      description: Базовая аутентификация клиента.
+                                      description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит пароль для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description:  Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
-                                      description: URL прокси-сервера (опционально).
+                                      description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
                                 iconEmoji:
                                   type: string
@@ -793,7 +526,7 @@ spec:
                                 pretext:
                                   type: string
                                 sendResolved:
-                                  description: Необходимость уведомления о разрешенных предупреждениях.
+                                  description: Уведомлять или нет о завершении алертов.
                                 shortFields:
                                   type: boolean
                                 text:
@@ -809,177 +542,117 @@ spec:
                               type: object
                             type: array
                           victoropsConfigs:
-                            description: Список конфигураций VictorOps.
+                            description: Список конфигураций для отправки оповещений через VictorOps.
                             items:
-                              description: VictorOpsConfig настраивает уведомления через
-                                VictorOps. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#victorops_config)
+                              description: Конфигурация определяет параметры отправки оповещений с помощью VictorOps. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#victorops_config)
                               properties:
                                 apiKey:
-                                  description: Ключ Secret'а, содержащий ключ API для использования
-                                    при обращении к API VictorOps. Secret должен находиться в том
-                                    же пространстве имен, что и AlertmanagerConfig, и быть доступным
-                                    оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ. Должен быть валидным.
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
+                                  description: |
+                                    Ключ Secret'а, содержащий ключ API для использования при обращении к API VictorOps.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                                 apiUrl:
                                   description: URL-адрес VictorOps API.
                                 customFields:
-                                  description: Дополнительные настраиваемые поля для уведомлений.
+                                  description: Список дополнительных настраиваемых полей для уведомлений.
                                   items:
-                                    description: KeyValue определяет последовательность (key, value).
+                                    description: Определяется набором пар ключ/значение.
                                     properties:
                                       key:
                                         description: Ключ.
                                       value:
                                         description: Значение.
                                 entityDisplayName:
-                                  description: Содержит краткое описание проблемы.
+                                  description: Краткое описание проблемы.
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
                                     basicAuth:
-                                      description: Базовая аутентификация проекта.
+                                      description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит пароль для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
-                                      description: URL прокси-сервера (опционально).
+                                      description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
                                 messageType:
                                   description: Тип предупреждения (CRITICAL, WARNING, INFO).
                                 monitoringTool:
-                                  description: Инструмент мониторинга, с которого
-                                    поступает сообщение о состоянии.
+                                  description: Инструмент мониторинга, с которого поступает сообщение о состоянии.
                                 routingKey:
                                   description: Ключ, используемый для сопоставления оповещения с командой.
                                 sendResolved:
-                                  description: Необходимость уведомления о разрешенных предупреждениях.
+                                  description: Уведомлять или нет о завершении алертов.
                                 stateMessage:
                                   description: Полное описание проблемы.
                           webhookConfigs:
-                            description: Список конфигураций webhook.
+                            description: Список конфигураций для отправки оповещений через webhook.
                             items:
-                              description: WebhookConfig настраивает уведомления через универсальный приемник,
-                                поддерживающий webhook.
-                                [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#webhook_config)
+                              description: Конфигурация определяет параметры отправки оповещений с помощью webhook'а. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#webhook_config)
                               properties:
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
                                     basicAuth:
-                                      description: Базовая авторизация клиента.
+                                      description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит пароль для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                         username:
                                           description: The secret in the service monitor
                                             namespace that contains the username for authentication.
-                                          properties:
-                                            key:
-                                              description: Secret в пространстве имен `service monitor`,
-                                                который содержит имя пользователя для проверки подлинности.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
-                                      description: URL прокси-сервера (опционально).
+                                      description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
                                 maxAlerts:
-                                  description: Максимальное количество оповещений,
-                                    отправляемых на одно сообщение webhook.
-                                    При значении 0 включаются все оповещения.
+                                  description: |
+                                    Максимальное количество алертов, отправляемых на одно сообщение webhook.
+
+                                    Если 0 — в сообщение включаются все алерты.
                                 sendResolved:
-                                  description: Необходимость уведомления о разрешенных предупреждениях.
+                                  description: Уведомлять или нет о завершении алертов.
                                 url:
-                                  description: URL-адрес для отправки HTTP POST-запросов.
-                                    `urlSecret` имеет приоритет над `url`. Должен быть определен
-                                    один из `urlSecret` и `url`.
+                                  description: |
+                                    URL-адрес для отправки HTTP POST-запросов.
+
+                                    `urlSecret` имеет приоритет над `url`.
+
+                                    Должен быть определен либо `urlSecret`, либо `url`.
                                 urlSecret:
-                                  description: Ключ Secret'а, содержащий
-                                    URL-адрес webhook для отправки HTTP-запросов.
-                                    `urlSecret` имеет приоритет
-                                    наж `url`. Должен быть определен один из `urlSecret` и `url`.
-                                    Секрет должен находиться в том же пространстве
-                                    имен, что и AlertmanagerConfig, и быть доступным для Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ. Должен быть валидным.
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
+                                  description: |
+                                    Ключ Secret'а, содержащий URL-адрес webhook для отправки HTTP-запросов.
+
+                                    `urlSecret` имеет приоритет над `url`.
+
+                                    Должен быть определен либо `urlSecret`, либо `url`.
+
+                                    Секрет должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                           wechatConfigs:
-                            description: Список конфигураций WeChat.
+                            description: Список конфигураций для отправки оповещений через WeChat.
                             items:
-                              description: WeChatConfig configures notifications via WeChat.
-                                See https://prometheus.io/docs/alerting/latest/configuration/#wechat_config
+                              description: Конфигурация определяет параметры отправки оповещений с помощью WeChat. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#wechat_config)
                               properties:
                                 agentID:
                                   type: string
                                 apiSecret:
-                                  description: Ключ Secret'а, содержащий ключ API WeChat.
-                                    Secret должен находиться в том же пространстве имен,
-                                    что и AlertmanagerConfig,
-                                    и быть доступным оператору Prometheus.
-                                  properties:
-                                    key:
-                                      description: Ключ. Должен быть валидным.
-                                    name:
-                                      description: 'Имя референта. [Подробнее...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                        TODO: Add other useful fields. apiVersion, kind,
-                                        uid?'
-                                    optional:
-                                      description: Необходимость определения Secret'а или его ключа.
+                                  description: |
+                                    Ключ Secret'а, содержащий ключ API WeChat.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
                                 apiURL:
                                   description: URL-адрес WeChat API.
                                 corpID:
@@ -988,45 +661,27 @@ spec:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
                                     basicAuth:
-                                      description: Базовая авторизация клиента.
+                                      description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит пароль для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                         username:
                                           description: Secret в пространстве имен `service monitor`,
                                             который содержит имя пользователя для проверки подлинности.
-                                          properties:
-                                            key:
-                                              description: Ключ. Должен быть валидным.
-                                            name:
-                                              description: 'Имя референта. [Подробнее...]
-                                                (https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                            optional:
-                                              description: Необходимость определения Secret'а или его ключа.
+                                          properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
-                                      description: URL прокси-сервера (опционально).
+                                      description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
                                 message:
-                                  description: API-запрос данных, определенных WeChat.
+                                  description: Данные, для запроса через API WeChat.
                                     API.
                                 messageType:
                                   type: string
                                 sendResolved:
-                                  description: Неободимость уведомления о разрешенных предупреждениях.
+                                  description: Уведомлять или нет о завершении алертов.
                                 toParty:
                                   type: string
                                 toTag:
@@ -1034,44 +689,50 @@ spec:
                                 toUser:
                                   type: string
                     route:
-                      description: Определение маршрута Alertmanager'а
-                        для оповещений, соответствующих пространству имен ресурса.
+                      description: |
+                        Определение маршрута алертов, соответствующих пространству имен ресурса.
+
                         Если он присутствует, то он будет добавлен в сгенерированную
                         конфигурацию Alertmanager'а в качестве маршрута первого уровня.
                       properties:
                         continue:
-                          description: Логическое значение, указывающее, должно ли
-                            оповещение продолжать сопоставлять последующие
-                            родственные узлы. Оператор Prometheus всегда будет
-                            переопределять значение на true для маршрута первого уровня.
+                          description: |
+                            Продолжать ли проверять условие алерта к дочерним узлам.
+
+                            Оператор Prometheus всегда будет переопределять значение на true для маршрута первого уровня.
                         groupBy:
-                          description: Список меток для группировки.
+                          description: Список лейблов для группировки.
                         groupInterval:
-                          description: Время ожидания, прежде чем отправлять
-                            обновленное уведомление. Должно соответствовать
-                            регулярному выражению `[0-9]+(ms|s|m|h)`
+                          description: |
+                            Время ожидания, прежде чем отправлять обновленное уведомление.
+
+                            Должно соответствовать регулярному выражению `[0-9]+(ms|s|m|h)`
                             (миллисекунды, секунды, минуты, часы).
                         groupWait:
-                          description: Время ожидания, прежде чем отправлять
-                            первоначальное уведомление. Должно соответствовать
-                            регулярному выражению `[0-9]+(ms|s|m|h)`
+                          description: |
+                            Время ожидания, прежде чем отправлять первоначальное уведомление.
+
+                            Должно соответствовать регулярному выражению `[0-9]+(ms|s|m|h)`
                             (миллисекунды, секунды, минуты, часы).
                         matchers:
                           description: |
-                            Список совпадений, которым должны соответствовать метки оповещения.
+                            Список условий, которым должны соответствовать лейблы алертов.
 
                             Для маршрута первого уровня оператор удаляет все существующие
-                            совпадения равенства и регулярных выражений на метке
+                            совпадения равенства и регулярных выражений на лейбле
                             `namespace` и добавляет совпадения `namespace: <object namespace>`.
                           items:
-                            description: Определение, как сопоставлять метки оповещений.
+                            description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
                             properties: *match-properties
                         receiver:
-                          description: Имя получателя для этого маршрута.
+                          description: |
+                            Имя receiver'а для этого маршрута.
+
                             Если он не пустой, он должен быть указан в поле `receivers`.
                         repeatInterval:
-                          description: Время ожидания, прежде чем повторять последнее
-                            уведомление. Должно соответствовать регулярному
-                            выражению `[0-9]+(ms|s|m|h)` (миллисекунды, секунды, минуты, часы).
+                          description: |
+                            Время ожидания, прежде чем повторять последнее уведомление.
+
+                            Должно соответствовать регулярному выражению `[0-9]+(ms|s|m|h)` (миллисекунды, секунды, минуты, часы).
                         routes:
                           description: Дочерние маршруты.

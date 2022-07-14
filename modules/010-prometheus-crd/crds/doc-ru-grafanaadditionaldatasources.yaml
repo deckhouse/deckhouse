@@ -15,17 +15,17 @@ spec:
                 access:
                   description: Режим доступа.
                 url:
-                  description: Datasource URL.
+                  description: URL-адрес datasource.
                 user:
                   description: Имя пользователя БД.
                 database:
-                  description: Имя БД, если используется.
+                  description: Имя БД (если используется).
                 withCredentials:
                   description: Включение/отключение с помощью заголовков учетных данных.
                 basicAuth:
-                  description: Включить/выключить basic auth.
+                  description: Включить/выключить использование базовой авторизации.
                 basicAuthUser:
-                  description: Имя пользователя базовой авторизации.
+                  description: Имя пользователя для базовой авторизации.
                 jsonData:
                   description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
                 secureJsonData:
@@ -45,17 +45,17 @@ spec:
                 access:
                   description: Режим доступа.
                 url:
-                  description: Datasource URL.
+                  description: URL-адрес datasource.
                 user:
                   description: Имя пользователя БД.
                 database:
-                  description: Наименование БД, если используется.
+                  description: Имя БД (если используется).
                 withCredentials:
                   description: Включение/отключение с помощью заголовков учетных данных.
                 basicAuth:
-                  description: Включить/выключить basic auth.
+                  description: Включить/выключить использование базовой авторизации.
                 basicAuthUser:
-                  description: Имя пользователя базовой авторизации.
+                  description: Имя пользователя для базовой авторизации.
                 jsonData:
                   description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
                 secureJsonData:
