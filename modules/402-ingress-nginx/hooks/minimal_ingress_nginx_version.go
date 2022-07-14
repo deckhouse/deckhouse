@@ -71,6 +71,7 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 
 	var minVersion *semver.Version
 	classVersionMap := make(map[string]*semver.Version)
+	var isDisruptionUpdate = false
 
 	for _, s := range snap {
 		if s == nil {
@@ -81,7 +82,7 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 		if ctrl.Version == "" {
 			ctrl.Version = input.Values.Get("ingressNginx.defaultControllerVersion").String()
 			if ctrl.Version == "0.33" {
-				hasDisruptionVersionUpdate = true
+				isDisruptionUpdate = true
 			}
 		}
 		ctrlVersion, err := semver.NewVersion(ctrl.Version)
@@ -102,6 +103,7 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set(incompatibleVersionsKey, isIncompatible)
+	hasDisruptionVersionUpdate = isDisruptionUpdate
 
 	if minVersion == nil {
 		input.Values.Remove(minVersionValuesKey)
