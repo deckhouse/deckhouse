@@ -65,5 +65,5 @@ func init() {
 	}
 
 	requirements.Register("ingressNginx", checkRequirementFunc)
-	requirements.RegisterDisruptionFunc("disruption:ingressNginxController", disruptionCheckFunc)
+	requirements.RegisterDisruptionFunc("disruption:ingressNginx", disruptionCheckFunc)
 }

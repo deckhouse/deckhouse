@@ -29,6 +29,11 @@ var (
 	defaultRegistry requirementsResolver
 )
 
+const (
+	DisruptionPrefix = "disruption:"
+)
+
+// Register CheckFunc for some component
 func Register(key string, f CheckFunc) {
 	once.Do(
 		func() {
@@ -39,12 +44,17 @@ func Register(key string, f CheckFunc) {
 	defaultRegistry.Register(key, f)
 }
 
+// RegisterDisruptionFunc add DisruptionFunc for some component
 func RegisterDisruptionFunc(key string, f DisruptionFunc) {
 	once.Do(
 		func() {
 			defaultRegistry = newRegistry()
 		},
 	)
+
+	if !strings.HasPrefix(key, DisruptionPrefix) {
+		key = DisruptionPrefix + key
+	}
 
 	defaultRegistry.RegisterDisruption(key, f)
 }
@@ -55,7 +65,7 @@ func CheckRequirement(key, value string, getter ValueGetter) (bool, error) {
 		return true, nil
 	}
 
-	if strings.HasPrefix(key, "disruption:") {
+	if strings.HasPrefix(key, DisruptionPrefix) {
 		return true, nil
 	}
 
@@ -67,12 +77,13 @@ func CheckRequirement(key, value string, getter ValueGetter) (bool, error) {
 	return f(value, getter)
 }
 
+// HasDisruption run check function for `key` disruption. Returns true if disruption condition is met, false otherwise. Returns reason for true response.
 func HasDisruption(key, _ string, _ ValueGetter) (bool, string) {
 	if defaultRegistry == nil {
 		return false, ""
 	}
 
-	if !strings.HasPrefix(key, "disruption:") {
+	if !strings.HasPrefix(key, DisruptionPrefix) {
 		return false, ""
 	}
 
@@ -84,6 +95,7 @@ func HasDisruption(key, _ string, _ ValueGetter) (bool, string) {
 	return f()
 }
 
+// CheckFunc check come precondition, comparing desired value (requirementValue) with current value (getter)
 type CheckFunc func(requirementValue string, getter ValueGetter) (bool, error)
 type DisruptionFunc func() (bool, string)
 

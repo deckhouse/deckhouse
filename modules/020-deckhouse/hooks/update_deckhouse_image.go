@@ -174,7 +174,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	// predict next patch for Deploy
 	updater.PredictNextRelease()
 
-	// has already Deployed latest release
+	// has already Deployed the latest release
 	if updater.LastReleaseDeployed() {
 		return nil
 	}
@@ -501,7 +501,7 @@ func (du *deckhouseUpdater) checkReleaseDisruptions(input *go_hook.HookInput, rl
 	}
 
 	for key, value := range rl.Requirements {
-		if !strings.HasPrefix(key, "disruption:") {
+		if !strings.HasPrefix(key, requirements.DisruptionPrefix) {
 			continue
 		}
 
@@ -806,7 +806,7 @@ func (du *deckhouseUpdater) FetchAndPrepareReleases(input *go_hook.HookInput) {
 
 func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, rl *deckhouseRelease) bool {
 	for key, value := range rl.Requirements {
-		if strings.HasPrefix(key, "disruption:") {
+		if strings.HasPrefix(key, requirements.DisruptionPrefix) {
 			continue
 		}
 		passed, err := requirements.CheckRequirement(key, value, input.Values)
