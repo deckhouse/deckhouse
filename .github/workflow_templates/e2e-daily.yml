@@ -1,4 +1,4 @@
-{!{- $enableWorkflowOnTestRepos := true -}!}
+{!{- $enableWorkflowOnTestRepos := false -}!}
 {!{- $workflowName := "Daily e2e tests" -}!}
 name: '{!{ $workflowName }!}'
 on:
