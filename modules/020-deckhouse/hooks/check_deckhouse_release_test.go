@@ -195,6 +195,40 @@ status:
 		})
 	})
 
+	Context("Resume suspended release", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.0"}`}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+				},
+			}, nil)
+			f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-0
+  annotations:
+    release.deckhouse.io/suspended: "true"
+spec:
+  version: "v1.25.0"
+status:
+  phase: Suspended
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be marked with annotation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("metadata.annotations.release\\.deckhouse\\.io/suspended").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-0").Field("status.phase").String()).To(Equal("Pending"))
+		})
+	})
+
 	Context("Image hash not changed", func() {
 		BeforeEach(func() {
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
