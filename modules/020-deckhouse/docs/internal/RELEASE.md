@@ -15,8 +15,8 @@ To handle this release, you should add disruption check logic in a release `X-1`
 And then in a release `X` you should add record `"disruption:$functionName": "true"` to the [requirements.json](requirements.json) file.
 
 Example:
-In the release 1.35.0 set disruption check logic into ingressNginx
-In the release 1.36.0 set `"disruption:ingressNginx": "true"` to the requirements.json
+- In the release 1.35.0 set disruption check logic into the `ingressNginx` function;
+- In the release 1.36.0 set `"disruption:ingressNginx": "true"` to the `requirements.json` file.
 
 ## Release requirements
 
