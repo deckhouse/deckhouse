@@ -89,6 +89,7 @@ deckhouse: |
 ```
 
 In this mode, it will be necessary to confirm each minor disruptive update with an annotation:
+
 ```shell
 kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true
 ```

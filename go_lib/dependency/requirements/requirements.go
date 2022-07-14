@@ -33,19 +33,19 @@ const (
 	DisruptionPrefix = "disruption:"
 )
 
-// Register CheckFunc for some component
-func Register(key string, f CheckFunc) {
+// RegisterCheck set CheckFunc for some component
+func RegisterCheck(key string, f CheckFunc) {
 	once.Do(
 		func() {
 			defaultRegistry = newRegistry()
 		},
 	)
 
-	defaultRegistry.Register(key, f)
+	defaultRegistry.RegisterCheck(key, f)
 }
 
 // RegisterDisruptionFunc add DisruptionFunc for some component
-func RegisterDisruptionFunc(key string, f DisruptionFunc) {
+func RegisterDisruption(key string, f DisruptionFunc) {
 	once.Do(
 		func() {
 			defaultRegistry = newRegistry()
@@ -69,7 +69,7 @@ func CheckRequirement(key, value string, getter ValueGetter) (bool, error) {
 		return true, nil
 	}
 
-	f, err := defaultRegistry.GetByKey(key)
+	f, err := defaultRegistry.GetCheckByKey(key)
 	if err != nil {
 		panic(err)
 	}
@@ -104,9 +104,10 @@ type ValueGetter interface {
 }
 
 type requirementsResolver interface {
-	Register(key string, f CheckFunc)
+	RegisterCheck(key string, f CheckFunc)
+	GetCheckByKey(key string) (CheckFunc, error)
+
 	RegisterDisruption(key string, f DisruptionFunc)
-	GetByKey(key string) (CheckFunc, error)
 	GetDisruptionByKey(key string) (DisruptionFunc, error)
 }
 
@@ -122,7 +123,7 @@ func newRegistry() *requirementsRegistry {
 	}
 }
 
-func (r *requirementsRegistry) Register(key string, f CheckFunc) {
+func (r *requirementsRegistry) RegisterCheck(key string, f CheckFunc) {
 	r.checkers[key] = f
 }
 
@@ -130,7 +131,7 @@ func (r *requirementsRegistry) RegisterDisruption(key string, f DisruptionFunc) 
 	r.disruptions[key] = f
 }
 
-func (r *requirementsRegistry) GetByKey(key string) (CheckFunc, error) {
+func (r *requirementsRegistry) GetCheckByKey(key string) (CheckFunc, error) {
 	f, ok := r.checkers[key]
 	if !ok {
 		return nil, fmt.Errorf("check function for %q requirement is not registred", key)

@@ -77,6 +77,7 @@ kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 ```
 
 ### Ручное подтверждение потенциально опасных(disruptive) обновлений
+
 При необходимости возможно включить ручное подтверждение потенциально опасных(disruptive) обновлений (которые меняют значения по-умолчанию или поведение некоторых модулей). Сделать это можно следующим образом:
 
 ```yaml
@@ -88,6 +89,7 @@ deckhouse: |
 ```
 
 В этом режиме необходимо подтверждать каждое минорное потенциально опасное(disruptive) обновление Deckhouse (без учёта patch-версий) с помощью аннотации:
+
 ```shell
 kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true
 ```

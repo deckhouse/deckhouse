@@ -64,6 +64,6 @@ func init() {
 		return hasDisruptionVersionUpdate, reason
 	}
 
-	requirements.Register("ingressNginx", checkRequirementFunc)
-	requirements.RegisterDisruptionFunc("disruption:ingressNginx", disruptionCheckFunc)
+	requirements.RegisterCheck("ingressNginx", checkRequirementFunc)
+	requirements.RegisterDisruption("disruption:ingressNginx", disruptionCheckFunc)
 }
