@@ -5,15 +5,22 @@ module Jekyll
     # Return localised description
     # the source parameter is for object without i18n structure and for legacy support
     def get_i18n_description(primaryLanguage, fallbackLanguage, source=nil)
-        if primaryLanguage and primaryLanguage.has_key?("description") then
+        if get_hash_value(primaryLanguage, "description") then
             result = primaryLanguage["description"]
-        elsif fallbackLanguage and fallbackLanguage.has_key?("description") then
+        elsif get_hash_value(fallbackLanguage, "description") then
             result = fallbackLanguage["description"]
-        elsif source and source.has_key?("description") then
+        elsif get_hash_value(source, "description") then
             result = source["description"]
         else
-            result = nil
+            result = ''
         end
+
+        if get_hash_value(primaryLanguage, "items", "description") then
+            result += %Q(\n\n#{primaryLanguage["items"]["description"]})
+        elsif get_hash_value(fallbackLanguage, "items", "description") then
+            result += %Q(\n\n#{fallbackLanguage["items"]["description"]})
+        end
+
         result
     end
 
@@ -315,7 +322,7 @@ module Jekyll
                 end
                 result.push('</ul>')
             else
-                result.push(format_schema("", attributes['items'], attributes, get_hash_value(primaryLanguage,'items'), get_hash_value(fallbackLanguage,'items'), fullPath))
+                # result.push(format_schema("", attributes['items'], attributes, get_hash_value(primaryLanguage,'items'), get_hash_value(fallbackLanguage,'items'), fullPath))
             end
         else
             # result.push("no properties for #{name}")
