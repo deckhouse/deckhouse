@@ -102,4 +102,4 @@
         You can figure out more details by running `kubectl describe DeckhouseRelease {{ $labels.name }}`.
         If you are ready to deploy this release, run: `kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true`.
       summary: |
-        Deckhouse release requirements unmet.
+        Deckhouse release disruption approval required.
