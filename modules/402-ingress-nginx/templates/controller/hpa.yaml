@@ -93,7 +93,7 @@ spec:
         - name: deckhouse-registry
       containers:
         - name: hpa-scaler
-          image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.pause }}"
+          image: {{ include "helm_lib_module_common_image" (list $context "pause") }}
           resources:
             requests:
               cpu: "10m"

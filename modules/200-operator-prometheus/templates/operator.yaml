@@ -60,12 +60,12 @@ spec:
         - --config-reloader-memory-request=0
         - --config-reloader-memory-limit=0
 {{- end }}
-        - "--prometheus-config-reloader={{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.operatorPrometheus.prometheusConfigReloader }}"
+        - "--prometheus-config-reloader={{ include "helm_lib_module_image" (list . "prometheusConfigReloader") }}"
         - --alertmanager-instance-namespaces=d8-monitoring
         - --prometheus-instance-namespaces=d8-monitoring
         - --thanos-ruler-instance-namespaces=d8-monitoring
         - --web.listen-address=127.0.0.1:8080
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.operatorPrometheus.prometheusOperator }}"
+        image: {{ include "helm_lib_module_image" (list . "prometheusOperator") }}
         name: prometheus-operator
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         resources:
@@ -76,7 +76,7 @@ spec:
   {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"

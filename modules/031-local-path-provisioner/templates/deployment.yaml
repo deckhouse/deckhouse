@@ -76,7 +76,7 @@ spec:
       containers:
       - name: local-path-provisioner
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $context | nindent 8 }}
-        image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.localPathProvisioner }}"
+        image: {{ include "helm_lib_module_image" (list $context "localPathProvisioner") }}
         imagePullPolicy: IfNotPresent
         command:
         - local-path-provisioner
@@ -91,7 +91,7 @@ spec:
         - --provisioner-name
         - deckhouse.io/{{ $localPathProvisioner.name }}
         - --helper-image
-        - "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.helper }}"
+        - {{ include "helm_lib_module_image" (list $context "helper") }}
         volumeMounts:
         - name: config-volume
           mountPath: /etc/config/

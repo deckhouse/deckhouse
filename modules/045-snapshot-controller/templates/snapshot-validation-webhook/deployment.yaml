@@ -77,7 +77,7 @@ spec:
         - --tls-cert-file=/etc/snapshot-validation-webhook/certs/tls.crt
         - --tls-private-key-file=/etc/snapshot-validation-webhook/certs/tls.key
         - --port=4443
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.snapshotController.snapshotValidationWebhook }}"
+        image: {{ include "helm_lib_module_image" (list . "snapshotValidationWebhook") }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 4443

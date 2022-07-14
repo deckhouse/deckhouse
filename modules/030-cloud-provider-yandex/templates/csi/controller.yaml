@@ -22,7 +22,7 @@
 {{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
-{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderYandex.yandexCsiPlugin)}}
+{{- $csiControllerImage := include "helm_lib_module_image" (list . "yandexCsiPlugin") }}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

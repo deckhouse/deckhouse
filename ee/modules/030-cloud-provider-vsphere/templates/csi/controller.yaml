@@ -33,7 +33,7 @@
   readOnly: true
 {{- end }}
 
-{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderVsphere.vsphereCsiPlugin)}}
+{{- $csiControllerImage := include "helm_lib_module_image" (list . "vsphereCsiPlugin") }}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

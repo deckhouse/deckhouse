@@ -81,7 +81,10 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 
 tests-matrix: ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
+	rm -f ee/modules/030-cloud-provider-openstack/candi ee/modules/030-cloud-provider-vsphere/candi
 	go test ./testing/matrix/ -v
+	ln -s /deckhouse/candi/cloud-providers/openstack/ ee/modules/030-cloud-provider-openstack/candi
+	ln -s /deckhouse/candi/cloud-providers/vsphere/ ee/modules/030-cloud-provider-vsphere/candi
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/

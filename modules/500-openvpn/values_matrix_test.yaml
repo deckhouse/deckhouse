@@ -21,14 +21,11 @@ global:
           customCertificate:
             secretName: plainstring
   modulesImages:
-    registry: registry.deckhouse.io
+    registry: registry.deckhouse.io/deckhouse/fe
     registryDockercfg: Y2ZnCg==
     tags:
-      common:
-        kubeRbacProxy: hashstring
-      openvpn:
-        openvpn: hashstring
-        ovpnAdmin: hashstring
+      openvpn: {}
+      common: {}
   discovery:
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]

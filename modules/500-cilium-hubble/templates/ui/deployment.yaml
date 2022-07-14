@@ -79,7 +79,7 @@ spec:
       containers:
       - name: frontend
         {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiFrontend }}"
+        image: {{ include "helm_lib_module_image" (list . "uiFrontend") }}
         ports:
         - name: http
           containerPort: 8080
@@ -98,7 +98,7 @@ spec:
             name: run
       - name: backend
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiBackend }}"
+        image: {{ include "helm_lib_module_image" (list . "uiBackend") }}
         env:
         - name: EVENTS_SERVER_PORT
           value: "8090"
@@ -129,7 +129,7 @@ spec:
           readOnly: true
       - name: proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiProxy }}"
+        image: {{ include "helm_lib_module_image" (list . "uiProxy") }}
         command: [envoy]
         args:
         - -c

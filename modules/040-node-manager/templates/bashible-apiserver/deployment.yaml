@@ -70,7 +70,7 @@ spec:
       containers:
       - name: bashible-apiserver
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nodeManager.bashibleApiserver }}"
+        image: {{ include "helm_lib_module_image" (list . "bashibleApiserver") }}
         imagePullPolicy: IfNotPresent
         args:
           - "--bind-address=$(HOST_IP)"

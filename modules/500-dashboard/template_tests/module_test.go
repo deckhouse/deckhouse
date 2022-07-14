@@ -33,7 +33,7 @@ func Test(t *testing.T) {
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -55,7 +55,7 @@ discovery:
 const globalValuesHa = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -78,7 +78,7 @@ discovery:
 const globalValuesManaged = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -100,7 +100,7 @@ const globalValuesManagedHa = `
 highAvailability: true
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:

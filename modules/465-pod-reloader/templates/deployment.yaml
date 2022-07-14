@@ -67,7 +67,7 @@ spec:
       containers:
         - name: manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.podReloader.podReloader }}"
+          image: {{ include "helm_lib_module_image" (list . "podReloader") }}
           args:
             - --log-format=json
             - --auto-annotation=pod-reloader.deckhouse.io/auto
@@ -107,7 +107,7 @@ spec:
 {{- end }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+          image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
           args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9254"
           - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"

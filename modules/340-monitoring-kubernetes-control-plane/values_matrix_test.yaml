@@ -4,12 +4,11 @@ global:
     - ["vertical-pod-autoscaler-crd"]
     - ["vertical-pod-autoscaler-crd", "control-plane-manager", "priority-class"]
   modulesImages:
-    registry: registry.deckhouse.io
+    registry: registry.deckhouse.io/deckhouse/fe
     registryDockercfg: Y2ZnCg==
     tags:
-      monitoringKubernetesControlPlane:
-        proxy: tagstring
-        kubeSchedulerFaceSlapper: tagstring
+      monitoringKubernetesControlPlane: {}
+      common: {}
   discovery:
     kubernetesVersion:
       __ConstantChoices__:

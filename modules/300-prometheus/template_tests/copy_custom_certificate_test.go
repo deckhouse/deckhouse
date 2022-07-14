@@ -26,7 +26,7 @@ import (
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:

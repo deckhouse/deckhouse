@@ -42,7 +42,7 @@ const (
       worker: 3
       master: 3
   modulesImages:
-    registry: registry.deckhouse.io
+    registry: registry.deckhouse.io/deckhouse/fe
     registryDockercfg: Y2ZnCg==
     tags:
       common:

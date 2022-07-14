@@ -18,8 +18,11 @@ package rules
 
 import (
 	"fmt"
+	"os"
+	"regexp"
 	"strings"
 
+	"helm.sh/helm/v3/pkg/chart"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
+
+const defaultRegistry = "registry.deckhouse.io/deckhouse/fe"
 
 func skipObjectIfNeeded(o *storage.StoreObject) bool {
 	// Dynatrace module deprecated and will be removed
@@ -85,6 +90,7 @@ type ObjectLinter struct {
 	Module         utils.Module
 	Values         string
 	EnabledModules map[string]struct{}
+	HelmTemplates  []*chart.File
 }
 
 func (l *ObjectLinter) CheckModuleEnabled(name string) bool {
@@ -103,7 +109,7 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 
 	l.ErrorsList.Add(containerNameDuplicates(object, containers))
 	l.ErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
-	l.ErrorsList.Add(containerImageTagLatest(object, containers))
+	l.ErrorsList.Add(containerImageTagCheck(object, containers))
 	l.ErrorsList.Add(containersImagePullPolicy(object, containers))
 
 	if !skipObjectIfNeeded(&object) {
@@ -166,8 +172,19 @@ func containerEnvVariablesDuplicates(object storage.StoreObject, containers []v1
 	return errors.EmptyRuleError
 }
 
-func containerImageTagLatest(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+func shouldSkipModuleContainer(module string, container string) bool {
+	if module == "okmeter" && container == "okagent" {
+		return true
+	}
+	return false
+}
+
+func containerImageTagCheck(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
 	for _, c := range containers {
+		if shouldSkipModuleContainer(object.Unstructured.GetName(), c.Name) {
+			continue
+		}
+
 		imageParts := strings.Split(c.Image, ":")
 		if len(imageParts) != 2 {
 			return errors.NewLintRuleError(
@@ -177,12 +194,34 @@ func containerImageTagLatest(object storage.StoreObject, containers []v1.Contain
 				"Can't parse an image for container",
 			)
 		}
-		if imageParts[1] == "latest" {
+
+		if imageParts[0] != defaultRegistry {
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Image tag \"latest\" used",
+				"Image name should be "+defaultRegistry,
 			)
+		}
+
+		r := regexp.MustCompile("[A-Fa-f0-9]{64}")
+		switch os.Getenv("CI") {
+		case "true":
+			matched := r.MatchString(imageParts[1])
+			if !matched {
+				return errors.NewLintRuleError("CONTAINER003",
+					object.Identity()+"; container = "+c.Name,
+					nil,
+					"Image tag should be in form sha256 hash",
+				)
+			}
+		default:
+			if imageParts[1] != "imageHash" {
+				return errors.NewLintRuleError("CONTAINER003",
+					object.Identity()+"; container = "+c.Name,
+					nil,
+					"Image tag should be `imageHash`",
+				)
+			}
 		}
 	}
 	return errors.EmptyRuleError

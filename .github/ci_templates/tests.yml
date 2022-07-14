@@ -7,8 +7,8 @@ docker_options: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
 
 {!{ define "matrix_run_args" }!}
 # <template: matrix_run_args>
-args: 'go test -timeout=${{env.TEST_TIMEOUT}} ./testing/matrix/ -v'
-docker_options: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
+args: 'sh -c "rm -f ee/modules/030-cloud-provider-openstack/candi ee/modules/030-cloud-provider-vsphere/candi; go test -timeout=${{env.TEST_TIMEOUT}} ./testing/matrix/ -v ; ln -s /deckhouse/candi/cloud-providers/openstack/ ee/modules/030-cloud-provider-openstack/candi ; ln -s /deckhouse/candi/cloud-providers/vsphere/ ee/modules/030-cloud-provider-vsphere/candi"'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
 # </template: matrix_run_args>
 {!{- end -}!}
 
@@ -74,4 +74,30 @@ steps:
       echo "⚓️ 🏎 [$(date -u)] Run tests..."
       docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
 # </template: tests_template>
+{!{- end -}!}
+
+{!{ define "tests_before_build_template" }!}
+# <template: tests_before_build_template>
+{!{- $ctx       := index . 0 }!}
+{!{- $args_name := index . 1 }!}
+{!{- $args_tmpl := printf "%s_run_args" $args_name }!}
+{!{- $default   := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
+{!{- $run       := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
+  - name: Run tests
+    env:
+      TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
+    run: |
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+      docker pull ${TESTS_IMAGE_NAME}
+      echo "⚓️ 🏎 [$(date -u)] Run tests..."
+      docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
+# </template: tests_before_build_template>
 {!{- end -}!}

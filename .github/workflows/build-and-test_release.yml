@@ -1400,7 +1400,7 @@ jobs:
       - git_info
       - build_fe
 
-    # <template: tests_template>
+    # <template: tests_before_build_template>
     runs-on: [self-hosted, regular]
     steps:
 
@@ -1462,23 +1462,15 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
         run: |
-          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
-            echo "TESTS_IMAGE_NAME is empty"
-            exit 1
-          fi
-
-          # Decode image name from gzip+base64.
-          TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
-
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -timeout=${{env.TEST_TIMEOUT}} ./testing/matrix/ -v
-    # </template: tests_template>
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "rm -f ee/modules/030-cloud-provider-openstack/candi ee/modules/030-cloud-provider-vsphere/candi; go test -timeout=${{env.TEST_TIMEOUT}} ./testing/matrix/ -v ; ln -s /deckhouse/candi/cloud-providers/openstack/ ee/modules/030-cloud-provider-openstack/candi ; ln -s /deckhouse/candi/cloud-providers/vsphere/ ee/modules/030-cloud-provider-vsphere/candi"
+    # </template: tests_before_build_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish

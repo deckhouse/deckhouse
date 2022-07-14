@@ -46,7 +46,7 @@ clusterConfiguration:
   serviceSubnetCIDR: 10.222.0.0/16
 enabledModules: ["vertical-pod-autoscaler-crd", "upmeter"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
