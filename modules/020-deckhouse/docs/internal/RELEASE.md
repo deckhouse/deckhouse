@@ -20,5 +20,5 @@ Example:
 
 ## Release requirements
 
-For checking some precondition/requirement - register CheckFunc like [here](modules/402-ingress-nginx/hooks/requirements.go)
-and then add `"$functionName": "$version"` to the [requirements.json](requirements.json) file. (Example: `"ingressNginx": "0.33"`)
+For checking some precondition/requirement — register CheckFunc like [here](modules/402-ingress-nginx/hooks/requirements.go)
+and then add `"$functionName": "$version"` to the [requirements.json](requirements.json) file. (e.g., `"ingressNginx": "0.33"`)
