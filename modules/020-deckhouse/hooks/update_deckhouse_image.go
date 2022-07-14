@@ -805,7 +805,7 @@ func (du *deckhouseUpdater) FetchAndPrepareReleases(input *go_hook.HookInput) {
 
 func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, rl *deckhouseRelease) bool {
 	for key, value := range rl.Requirements {
-		if strings.HasPrefix(key, "disruption:") {
+		if strings.HasPrefix(key, requirements.DisruptionPrefix) {
 			continue
 		}
 		passed, err := requirements.CheckRequirement(key, value, input.Values)
