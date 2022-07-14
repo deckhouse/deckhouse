@@ -71,7 +71,7 @@
       summary: |
         Deckhouse release is waiting for manual approval.
   - alert: DeckhouseReleaseIsBlocked
-    expr: max by (name) (d8_release_blocked) >= 1
+    expr: max by (name) (d8_release_blocked{reason="requirements"}) >= 1
     labels:
       severity_level: "5"
       d8_module: deckhouse
@@ -84,5 +84,22 @@
         Deckhouse release requirements is not met.
 
         Please run `kubectl describe DeckhouseRelease {{ $labels.name }}` for details.
+      summary: |
+        Deckhouse release requirements unmet.
+  - alert: DeckhouseReleaseDisruptionApprovalRequired
+    expr: max by (name) (d8_release_blocked{reason="disruption"}) >= 1
+    labels:
+      severity_level: "4"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Deckhouse release contains disruption update.
+
+        You can figure out more details by running `kubectl describe DeckhouseRelease {{ $labels.name }}`.
+        If you are ready to deploy this release, run: `kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true`.
       summary: |
         Deckhouse release requirements unmet.

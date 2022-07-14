@@ -51,6 +51,16 @@ properties:
         enum:
           - 'Auto'
           - 'Manual'
+      disruptionMode:
+        type: string
+        default: 'Auto'
+        enum:
+          - 'Auto'
+          - 'Manual'
+        description: |
+          Deckhouse release update disruption mode:
+          - 'Auto' - approves release with disruptions(potentially dangerous changes) automatically.
+          - 'Manual' - requires manual release confirmation (set annotation `release.deckhouse.io/disruption-approved=true`)
       windows:
         type: array
         description: |

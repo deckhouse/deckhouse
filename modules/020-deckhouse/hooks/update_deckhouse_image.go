@@ -219,7 +219,7 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		return nil, err
 	}
 
-	var hasSuspendAnnotation, hasForceAnnotation bool
+	var hasSuspendAnnotation, hasForceAnnotation, hasDisruptionApprovedAnnotation bool
 
 	if v, ok := release.Annotations["release.deckhouse.io/suspended"]; ok {
 		if v == "true" {
@@ -233,16 +233,32 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		}
 	}
 
+	if v, ok := release.Annotations["release.deckhouse.io/disruption-approved"]; ok {
+		if v == "true" {
+			hasDisruptionApprovedAnnotation = true
+		}
+	}
+
+	var releaseApproved bool
+	if v, ok := release.Annotations["release.deckhouse.io/approved"]; ok {
+		if v == "true" {
+			releaseApproved = true
+		}
+	} else {
+		releaseApproved = release.Approved
+	}
+
 	return deckhouseRelease{
-		Name:                 release.Name,
-		Version:              semver.MustParse(release.Spec.Version),
-		ApplyAfter:           release.Spec.ApplyAfter,
-		Requirements:         release.Spec.Requirements,
-		Phase:                release.Status.Phase,
-		ManuallyApproved:     release.Approved,
-		StatusApproved:       release.Status.Approved,
-		HasSuspendAnnotation: hasSuspendAnnotation,
-		HasForceAnnotation:   hasForceAnnotation,
+		Name:                            release.Name,
+		Version:                         semver.MustParse(release.Spec.Version),
+		ApplyAfter:                      release.Spec.ApplyAfter,
+		Requirements:                    release.Spec.Requirements,
+		Phase:                           release.Status.Phase,
+		ManuallyApproved:                releaseApproved,
+		StatusApproved:                  release.Status.Approved,
+		HasSuspendAnnotation:            hasSuspendAnnotation,
+		HasForceAnnotation:              hasForceAnnotation,
+		HasDisruptionApprovedAnnotation: hasDisruptionApprovedAnnotation,
 	}, nil
 }
 
@@ -380,9 +396,10 @@ type deckhouseRelease struct {
 	Name    string
 	Version *semver.Version
 
-	ManuallyApproved     bool
-	HasSuspendAnnotation bool
-	HasForceAnnotation   bool
+	ManuallyApproved                bool
+	HasSuspendAnnotation            bool
+	HasForceAnnotation              bool
+	HasDisruptionApprovedAnnotation bool
 
 	Requirements map[string]string
 	ApplyAfter   *time.Time
@@ -460,13 +477,51 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	// check: release requirements
 	passed := du.checkReleaseRequirements(input, predictedRelease)
 	if !passed {
-		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
+		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name, "reason": "requirements"}, metrics.WithGroup(metricReleasesGroup))
 		input.LogEntry.Warningf("Release %s requirements are not met", predictedRelease.Name)
+		return
+	}
+
+	// check: release disruptions
+	passed = du.checkReleaseDisruptions(input, predictedRelease)
+	if !passed {
+		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name, "reason": "disruption"}, metrics.WithGroup(metricReleasesGroup))
+		input.LogEntry.Warningf("Release %s disruption approval required", predictedRelease.Name)
 		return
 	}
 
 	// all checks are passed, deploy release
 	du.runReleaseDeploy(input, predictedRelease, currentRelease)
+}
+
+func (du *deckhouseUpdater) checkReleaseDisruptions(input *go_hook.HookInput, rl *deckhouseRelease) bool {
+	dMode, ok := input.Values.GetOk("deckhouse.update.disruptionMode")
+	if !ok || dMode.String() == "Auto" {
+		return true
+	}
+
+	for key, value := range rl.Requirements {
+		if !strings.HasPrefix(key, "disruption:") {
+			continue
+		}
+
+		hasDisruptionUpdate, reason := requirements.HasDisruption(key, value, input.Values)
+		if hasDisruptionUpdate {
+			if !rl.HasDisruptionApprovedAnnotation {
+				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.Name, reason)
+				st := statusPatch{
+					Phase:          v1alpha1.PhasePending,
+					Message:        msg,
+					Approved:       false,
+					TransitionTime: du.now,
+				}
+				input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predictedRelease, currentRelease *deckhouseRelease) {
@@ -751,13 +806,16 @@ func (du *deckhouseUpdater) FetchAndPrepareReleases(input *go_hook.HookInput) {
 
 func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, rl *deckhouseRelease) bool {
 	for key, value := range rl.Requirements {
+		if strings.HasPrefix(key, "disruption:") {
+			continue
+		}
 		passed, err := requirements.CheckRequirement(key, value, input.Values)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for deckhouseRelease %q not met: %s", key, rl.Version, err)
 			st := statusPatch{
 				Phase:          v1alpha1.PhasePending,
 				Message:        msg,
-				Approved:       true,
+				Approved:       false,
 				TransitionTime: du.now,
 			}
 			input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))

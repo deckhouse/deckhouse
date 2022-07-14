@@ -80,6 +80,9 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 		ctrl := s.(ingressNginxController)
 		if ctrl.Version == "" {
 			ctrl.Version = input.Values.Get("ingressNginx.defaultControllerVersion").String()
+			if ctrl.Version == "0.33" {
+				hasDisruptionVersionUpdate = true
+			}
 		}
 		ctrlVersion, err := semver.NewVersion(ctrl.Version)
 		if err != nil {

@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -417,6 +418,46 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
+	Context("Disruption release", func() {
+		BeforeEach(func() {
+			f.ValuesSet("deckhouse.update.disruptionMode", "Manual")
+			f.KubeStateSet(deckhousePodYaml + disruptionRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			var df requirements.DisruptionFunc = func() (bool, string) {
+				return true, "some test reason"
+			}
+			requirements.RegisterDisruptionFunc("disruption:testme", df)
+
+			f.RunHook()
+
+		})
+
+		It("Should block the release", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
+			Expect(r136.Field("status.phase").String()).To(Equal("Pending"))
+			Expect(r136.Field("status.message").String()).To(Equal("Release requires disruption approval (`kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true`): some test reason"))
+		})
+
+		Context("Disruption release approved", func() {
+			BeforeEach(func() {
+				f.KubeStateSet(deckhousePodYaml + disruptionReleaseApproved)
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+				f.RunHook()
+			})
+
+			It("Should deploy the release", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
+				fmt.Println(r136)
+				Expect(r136.Field("status.phase").String()).To(Equal("Deployed"))
+				Expect(r136.Field("status.message").String()).To(Equal(""))
+			})
+		})
+	})
+
 })
 
 var (
@@ -741,5 +782,34 @@ spec:
   version: "v1.31.1"
 status:
   phase: Suspended
+`
+
+	disruptionRelease = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-36-0
+spec:
+  version: "v1.36.0"
+  requirements:
+    disruption:testme: "true"
+status:
+  phase: Pending
+`
+	disruptionReleaseApproved = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-36-0
+  annotations:
+    release.deckhouse.io/disruption-approved: "true"
+spec:
+  version: "v1.36.0"
+  requirements:
+    disruption:testme: "true"
+status:
+  phase: Pending
 `
 )
