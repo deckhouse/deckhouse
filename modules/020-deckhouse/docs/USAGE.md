@@ -76,6 +76,23 @@ Manual confirmation of the update to the version `v1.26.0`:
 kubectl patch DeckhouseRelease v1-26-0 --type=merge -p='{"approved": true}'
 ```
 
+### Manual disruption update confirmation
+
+If necessary, it is possible to enable manual confirmation of disruptive updates (updates that change the default values or behavior). This can be done as follows:
+
+```yaml
+deckhouse: |
+  ...
+  releaseChannel: Stable
+  update:
+    disruptionMode: Manual
+```
+
+In this mode, it will be necessary to confirm each minor disruptive update with an annotation:
+```shell
+kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true
+```
+
 ## Collect debug info
 
 We always appreciate helping users with debugging complex issues. Please follow these steps so that we can help you:
