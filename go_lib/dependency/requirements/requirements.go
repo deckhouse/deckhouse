@@ -33,7 +33,7 @@ const (
 	DisruptionPrefix = "disruption:"
 )
 
-// RegisterCheck set CheckFunc for some component
+// RegisterCheck add CheckFunc for some component
 func RegisterCheck(key string, f CheckFunc) {
 	once.Do(
 		func() {
@@ -44,7 +44,7 @@ func RegisterCheck(key string, f CheckFunc) {
 	defaultRegistry.RegisterCheck(key, f)
 }
 
-// RegisterDisruptionFunc add DisruptionFunc for some component
+// RegisterDisruption add DisruptionFunc for some component
 func RegisterDisruption(key string, f DisruptionFunc) {
 	once.Do(
 		func() {
@@ -97,6 +97,8 @@ func HasDisruption(key, _ string, _ ValueGetter) (bool, string) {
 
 // CheckFunc check come precondition, comparing desired value (requirementValue) with current value (getter)
 type CheckFunc func(requirementValue string, getter ValueGetter) (bool, error)
+
+// DisruptionFunc implements inner logic to warn users about potentially dangerous changes
 type DisruptionFunc func() (bool, string)
 
 type ValueGetter interface {
