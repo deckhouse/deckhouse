@@ -34,7 +34,7 @@ jobs:
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
 {!{- $kubernetesVersion := "1.21" -}!}
-{!{- $providerNames := slice "Yandex.Cloud" "AWS" -}!}
+{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" -}!}
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
 {!{-   $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower -}!}
