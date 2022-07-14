@@ -10,7 +10,7 @@ search: Разработка target'ов Prometheus, prometheus target
 * Наиболее частая операция — добавление target'а для нового application'а (Redis, RabbitMQ и др.). Скорей всего для этого будет достаточно просто скопировать один из существующих service monitor'ов в директории `applications` и поправить названия.
 * Но если вам нужно сделать что-то более сложное, или если простое копирование не дает ожидаемого результата — придется разбираться и читать документацию модуля [Prometheus Operator](../../modules/200-operator-prometheus/).
 * Все существующие target'ы лежат в директории `prometheus-targets`, они обычно состоят из service monitor'а, некоторого exporter'а для Prometheus и необходимой обвязки, которая их стыкует.
-* Все внутренние ServiceMonitor'ы и PodMonitor'ы deckhouse должны быть созданы в неймспейсе `d8-monitoring`.
+* Все внутренние ServiceMonitor'ы и PodMonitor'ы deckhouse должны быть созданы в пространстве имен `d8-monitoring`.
 
 ## Лучшие практики
 
@@ -137,7 +137,7 @@ data:
 ```
 
 Согласно конфигурации, у пользователя должны быть права на доступ к Deployment с именем `my-exporter`
-и его дополнительному ресурсу `prometheus-metrics` в неймспейсе `my-namespace`.
+и его дополнительному ресурсу `prometheus-metrics` в пространстве имен `my-namespace`.
 
 Выглядят такие права в виде RBAC так:
 
