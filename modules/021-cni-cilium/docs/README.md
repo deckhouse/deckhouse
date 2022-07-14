@@ -10,9 +10,9 @@ This module is responsible for providing a network between multiple nodes in a c
 2. Service types `NodePort` and `LoadBalancer` do not work with hostNetwork endpoints in the `DSR` LB mode.
 3. OS versions support. `cni-cilium` module will properly work only on Linux kernel >= 5.3
    * Ubuntu
-      * 18.04
-      * 20.04
-      * 22.04
+     * 18.04
+     * 20.04
+     * 22.04
    * Debian
      * 11
    * CentOS
