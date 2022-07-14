@@ -35,7 +35,7 @@ properties:
           x-examples:
           - ["prod-.*", "infra-.*"]
           description: |
-            Список паттернов для включения нейимпейсов.
+            Список шаблонов для включения пространств имен.
           default: []
         excludeNames:
           type: array
@@ -44,5 +44,5 @@ properties:
           x-examples:
           - ["infra-test"]
           description: |
-            Список паттернов для исключения нейимпейсов.
+            Список шаблонов для исключения пространств имен.
           default: []

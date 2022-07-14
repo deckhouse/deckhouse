@@ -321,8 +321,6 @@ module Jekyll
                     result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath))
                 end
                 result.push('</ul>')
-            else
-                # result.push(format_schema("", attributes['items'], attributes, get_hash_value(primaryLanguage,'items'), get_hash_value(fallbackLanguage,'items'), fullPath))
             end
         else
             # result.push("no properties for #{name}")
