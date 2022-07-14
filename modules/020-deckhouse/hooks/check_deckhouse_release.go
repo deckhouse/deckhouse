@@ -137,7 +137,7 @@ releaseLoop:
 
 		case release.Version.Equal(newSemver):
 			input.LogEntry.Debugf("Release with version %s already exists", release.Version)
-			switch release.Phase {
+			switch release.Status.Phase {
 			case v1alpha1.PhasePending, "":
 				if releaseChecker.releaseMetadata.Suspend {
 					patch := buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend)
