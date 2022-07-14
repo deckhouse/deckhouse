@@ -28,14 +28,6 @@ properties:
   update:
     type: object
     description: Settings of the Deckhouse update mode and windows.
-    oneOf:
-      - properties:
-          mode:
-            enum: [ "Auto" ]
-      - properties:
-          mode:
-            enum: [ "Manual" ]
-        additionalProperties: false
     properties:
       mode:
         type: string
