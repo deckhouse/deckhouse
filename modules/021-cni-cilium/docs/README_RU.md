@@ -16,8 +16,8 @@ title: "Модуль cni-cilium"
    * Debian
      * 11
    * CentOS
-     * 7 (необходимо новое ядро с репозитория http://elrepo.org)
-     * 8 (необходимо новое ядро с репозитория http://elrepo.org)
+     * 7 (необходимо новое ядро с [репозитория](http://elrepo.org))
+     * 8 (необходимо новое ядро с [репозитория](http://elrepo.org))
 
 ## Заметка о CiliumClusterwideNetworkPolicies
 

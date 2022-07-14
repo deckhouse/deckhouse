@@ -16,8 +16,8 @@ This module is responsible for providing a network between multiple nodes in a c
    * Debian
      * 11
    * CentOS
-     * 7 (requies kernel from http://elrepo.org)
-     * 8 (requies kernel from http://elrepo.org)
+     * 7 (requires kernel from external [repo](http://elrepo.org))
+     * 8 (requires kernel from external [repo](http://elrepo.org))
 
 ## A note about CiliumClusterwideNetworkPolicies
 
