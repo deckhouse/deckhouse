@@ -805,6 +805,9 @@ func (du *deckhouseUpdater) FetchAndPrepareReleases(input *go_hook.HookInput) {
 
 func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, rl *deckhouseRelease) bool {
 	for key, value := range rl.Requirements {
+		if strings.HasPrefix(key, "disruption:") {
+			continue
+		}
 		passed, err := requirements.CheckRequirement(key, value, input.Values)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for deckhouseRelease %q not met: %s", key, rl.Version, err)
