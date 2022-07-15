@@ -9,6 +9,7 @@
   <form class="form" id="request_access_form">
     <input id="h0n3y" class="form__h0n3y" autocomplete="off" type="text" name="comment" placeholder="Comment">
     {%- if page.lang == "ru" %}
+    <input type="hidden" id="language_ru" name="language" value="ru">
     <div class="form__row">
       <input
         class="textfield"
@@ -50,6 +51,7 @@
       </button>
     </div>
     {%- else %}
+    <input type="hidden" id="language_en" name="language" value="en">
     <div class="form__row">
       <input
         class="textfield"
