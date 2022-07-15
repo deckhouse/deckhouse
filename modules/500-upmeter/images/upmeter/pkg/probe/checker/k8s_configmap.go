@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -24,127 +25,76 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
 )
 
 // ConfigMapLifecycle is a checker constructor and configurator
 type ConfigMapLifecycle struct {
-	Access                    kubernetes.Access
-	Timeout                   time.Duration
-	Namespace                 string
-	GarbageCollectionTimeout  time.Duration
-	ControlPlaneAccessTimeout time.Duration
+	Access    kubernetes.Access
+	Namespace string
+
+	AgentID string
+	Name    string
+
+	Timeout time.Duration
 }
 
 func (c ConfigMapLifecycle) Checker() check.Checker {
-	return &configMapLifecycleChecker{
-		access:                    c.Access,
-		timeout:                   c.Timeout,
-		namespace:                 c.Namespace,
-		garbageCollectorTimeout:   c.GarbageCollectionTimeout,
-		controlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
+	preflight := newK8sVersionGetter(c.Access)
+
+	cm := createConfigMapObject(c.Name, c.AgentID)
+	creator := &configmapCreator{access: c.Access, namespace: c.Namespace, cm: cm}
+	getter := &configmapGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
+	deleter := &configmapDeleter{access: c.Access, namespace: c.Namespace, name: c.Name}
+
+	checker := &KubeObjectBasicLifecycle{
+		preflight: preflight,
+		creator:   creator,
+		getter:    getter,
+		deleter:   deleter,
 	}
+
+	return withTimeout(checker, c.Timeout)
 }
 
-type configMapLifecycleChecker struct {
+type configmapCreator struct {
 	access    kubernetes.Access
 	namespace string
-	timeout   time.Duration
-
-	garbageCollectorTimeout   time.Duration
-	controlPlaneAccessTimeout time.Duration
-
-	// inner state
-	checker check.Checker
+	cm        *v1.ConfigMap
 }
 
-func (c *configMapLifecycleChecker) Check() check.Error {
-	configMap := createConfigMapObject()
-	c.checker = c.new(configMap)
-	return c.checker.Check()
-}
-
-/*
- 1. check control plane availability
- 2. collect the garbage of the configmap from previous runs
- 3. create and delete the configmap in api
- 4. ensure it does not exist (with retries)
-*/
-func (c *configMapLifecycleChecker) new(configMap *v1.ConfigMap) check.Checker {
-	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
-
-	collectGarbage := newGarbageCollectorCheckerByName(
-		c.access,
-		configMap.Kind,
-		c.namespace,
-		configMap.GetName(),
-		c.garbageCollectorTimeout)
-
-	createAndDeleteConfigMap := withTimeout(
-		sequence(
-			// create
-			&configMapCreationChecker{access: c.access, configMap: configMap, namespace: c.namespace},
-			// delete
-			&configMapDeletionChecker{access: c.access, configMap: configMap, namespace: c.namespace},
-		),
-		// common timeout
-		c.timeout,
-	)
-
-	verifyNotListed := withRetryEachSeconds(
-		&objectIsNotListedChecker{
-			access:    c.access,
-			namespace: c.namespace,
-			kind:      configMap.Kind,
-			listOpts:  listOptsByName(configMap.Name),
-		},
-		c.garbageCollectorTimeout)
-
-	return sequence(
-		pingControlPlane,
-		collectGarbage,
-		createAndDeleteConfigMap,
-		verifyNotListed,
-	)
-}
-
-type configMapCreationChecker struct {
-	access    kubernetes.Access
-	namespace string
-	configMap *v1.ConfigMap
-}
-
-func (c *configMapCreationChecker) Check() check.Error {
+func (c *configmapCreator) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
-
-	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(c.configMap)
-	if err != nil {
-		return check.ErrUnknown("creating configMap %s/%s: %v", c.namespace, c.configMap.Name, err)
-	}
-
-	return nil
+	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(c.cm)
+	return err
 }
 
-type configMapDeletionChecker struct {
+type configmapGetter struct {
 	access    kubernetes.Access
-	configMap *v1.ConfigMap
 	namespace string
+	name      string
 }
 
-func (c *configMapDeletionChecker) Check() check.Error {
+func (c *configmapGetter) Do(_ context.Context) error {
 	client := c.access.Kubernetes()
-
-	err := client.CoreV1().ConfigMaps(c.namespace).Delete(c.configMap.Name, &metav1.DeleteOptions{})
-	if err != nil {
-		return check.ErrFail("deleting configMap %s/%s: %v", c.namespace, c.configMap.Name, err)
-	}
-
-	return nil
+	_, err := client.CoreV1().ConfigMaps(c.namespace).Get(c.name, metav1.GetOptions{})
+	return err
 }
 
-func createConfigMapObject() *v1.ConfigMap {
-	name := util.RandomIdentifier("upmeter-basic")
+type configmapDeleter struct {
+	access    kubernetes.Access
+	namespace string
+	name      string
+}
 
+func (c *configmapDeleter) Do(_ context.Context) error {
+	client := c.access.Kubernetes()
+	err := client.CoreV1().ConfigMaps(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
+	return err
+}
+
+const agentLabelKey = "upmeter-agent"
+
+func createConfigMapObject(name, agentID string) *v1.ConfigMap {
 	return &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
@@ -154,7 +104,7 @@ func createConfigMapObject() *v1.ConfigMap {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"upmeter-agent": util.AgentUniqueId(),
+				agentLabelKey:   agentID,
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "basic",
 			},

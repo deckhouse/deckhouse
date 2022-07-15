@@ -26,7 +26,6 @@ import (
 var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 	for _, app := range []string{"status", "webui"} {
 		Context(app, func() {
-
 			var (
 				authKey         = "upmeter.auth." + app
 				passwordKey     = "upmeter.auth." + app + ".password"
@@ -83,7 +82,6 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 				})
 			})
 		})
-
 	}
 
 	Context("both", func() {
@@ -120,7 +118,6 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 		})
 
 		Context("with existing password", func() {
-
 			BeforeEach(func() {
 				f.KubeStateSet("")
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -139,7 +136,6 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 		})
 
 		Context("with external auth", func() {
-
 			BeforeEach(func() {
 				f.KubeStateSet("")
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())

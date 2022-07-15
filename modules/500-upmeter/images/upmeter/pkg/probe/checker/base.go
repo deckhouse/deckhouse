@@ -155,19 +155,7 @@ func withTimer(interval time.Duration, jobCb, onTimerCb func()) {
 	}
 }
 
-// doOrFail is a handy wrapper. It wraps timeout checker and doer interface,
-// if time is out or doer returns error, the checker returns check.ErrFail
-func doOrFail(timeout time.Duration, doer doer) check.Checker {
-	return withTimeout(&failCheckWrapper{doer}, timeout)
-}
-
-// doOrUnknown is a handy wrapper. It wraps timeout checker and doer interface,
-// if time is out or doer returns error, the checker returns check.ErrUnknown
-func doOrUnknown(timeout time.Duration, doer doer) check.Checker {
-	return withTimeout(&unknownCheckWrapper{doer}, timeout)
-}
-
-// doer is more abstract interface for stopping the propagation of check.ErrSomething too deep.
+// doer is for wrapping k8s api calls and easier mocking them in tests
 type doer interface {
 	Do(context.Context) error
 }
@@ -194,4 +182,40 @@ func (c *failCheckWrapper) Check() check.Error {
 		return check.ErrFail(err.Error())
 	}
 	return nil
+}
+
+// doOrFail is a handy wrapper. It wraps timeout checker and doer interface,
+// if time is out or doer returns error, the checker returns check.ErrFail
+func doOrFail(timeout time.Duration, doer doer) check.Checker {
+	return withTimeout(&failCheckWrapper{doer}, timeout)
+}
+
+// doOrUnknown is a handy wrapper. It wraps timeout checker and doer interface,
+// if time is out or doer returns error, the checker returns check.ErrUnknown
+func doOrUnknown(timeout time.Duration, doer doer) check.Checker {
+	return withTimeout(&unknownCheckWrapper{doer}, timeout)
+}
+
+// doWithTimeout wraps doer with timeout and error that is returned when the timeout is reached
+func doWithTimeout(d doer, timeout time.Duration, err error) doer {
+	return &timeoutDoer{
+		doer:    d,
+		err:     err,
+		timeout: timeout,
+	}
+}
+
+type timeoutDoer struct {
+	doer    doer
+	err     error
+	timeout time.Duration
+}
+
+func (d *timeoutDoer) Do(ctx context.Context) error {
+	var err error
+	withTimer(
+		d.timeout,
+		func() { err = d.doer.Do(ctx) },
+		func() { err = d.err })
+	return err
 }

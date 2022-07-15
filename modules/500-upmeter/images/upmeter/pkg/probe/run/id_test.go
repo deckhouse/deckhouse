@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package run
 
 import (
 	"testing"
 )
 
 func Test_AgentUniqueId(t *testing.T) {
-	a, b := AgentUniqueId(), AgentUniqueId()
+	a, b := ID(), ID()
 	if a != b {
 		t.Errorf("expected %q == %q", a, b)
 	}

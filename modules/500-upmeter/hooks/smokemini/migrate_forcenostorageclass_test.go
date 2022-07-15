@@ -28,7 +28,6 @@ var _ = Describe("Modules :: upmeter :: smokemini :: migrate_forcenostorageclass
 	)
 
 	Context("No config", func() {
-
 		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 		BeforeEach(func() {

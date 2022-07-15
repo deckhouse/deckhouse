@@ -123,6 +123,7 @@ func disableControlPlaneProbes(enabledModules, disabledProbes set.Set) {
 		disabledProbes.Add("control-plane/cert-manager")
 	}
 }
+
 func disableSyntheticProbes(presence appPresence, disabledProbes set.Set) {
 	if !presence.smokeMini {
 		disabledProbes.Add("synthetic/")

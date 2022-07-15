@@ -24,7 +24,7 @@ import (
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/monitor/hookprobe"
 	"d8.io/upmeter/pkg/probe/checker"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
 func initDeckhouse(access kubernetes.Access, logger *logrus.Logger) []runnerConfig {
@@ -48,7 +48,7 @@ func initDeckhouse(access kubernetes.Access, logger *logrus.Logger) []runnerConf
 				DeckhouseLabelSelector: "app=deckhouse",
 
 				// CR
-				CustomResourceName: util.AgentUniqueId(),
+				CustomResourceName: run.ID(),
 				Monitor:            monitor,
 
 				Access: access,
