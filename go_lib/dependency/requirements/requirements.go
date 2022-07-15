@@ -18,19 +18,16 @@ package requirements
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 )
 
 var (
-	once            sync.Once
-	defaultRegistry requirementsResolver
-)
-
-const (
-	DisruptionPrefix = "disruption:"
+	once             sync.Once
+	defaultRegistry  requirementsResolver
+	ErrNotRegistered = errors.New("Not registered")
 )
 
 // RegisterCheck add CheckFunc for some component
@@ -52,10 +49,6 @@ func RegisterDisruption(key string, f DisruptionFunc) {
 		},
 	)
 
-	if !strings.HasPrefix(key, DisruptionPrefix) {
-		key = DisruptionPrefix + key
-	}
-
 	defaultRegistry.RegisterDisruption(key, f)
 }
 
@@ -65,25 +58,17 @@ func CheckRequirement(key, value string, getter ValueGetter) (bool, error) {
 		return true, nil
 	}
 
-	if strings.HasPrefix(key, DisruptionPrefix) {
-		return true, nil
-	}
-
 	f, err := defaultRegistry.GetCheckByKey(key)
 	if err != nil {
-		panic(err)
+		return false, err
 	}
 
 	return f(value, getter)
 }
 
 // HasDisruption run check function for `key` disruption. Returns true if disruption condition is met, false otherwise. Returns reason for true response.
-func HasDisruption(key, _ string, _ ValueGetter) (bool, string) {
+func HasDisruption(key string) (bool, string) {
 	if defaultRegistry == nil {
-		return false, ""
-	}
-
-	if !strings.HasPrefix(key, DisruptionPrefix) {
 		return false, ""
 	}
 
@@ -136,7 +121,7 @@ func (r *requirementsRegistry) RegisterDisruption(key string, f DisruptionFunc) 
 func (r *requirementsRegistry) GetCheckByKey(key string) (CheckFunc, error) {
 	f, ok := r.checkers[key]
 	if !ok {
-		return nil, fmt.Errorf("check function for %q requirement is not registred", key)
+		return nil, errors.Wrap(ErrNotRegistered, fmt.Sprintf("requirement with a key: %s", key))
 	}
 
 	return f, nil
@@ -145,7 +130,7 @@ func (r *requirementsRegistry) GetCheckByKey(key string) (CheckFunc, error) {
 func (r *requirementsRegistry) GetDisruptionByKey(key string) (DisruptionFunc, error) {
 	f, ok := r.disruptions[key]
 	if !ok {
-		return nil, fmt.Errorf("disruption function for %q is not registred", key)
+		return nil, errors.Wrap(ErrNotRegistered, fmt.Sprintf("disruption with a key: %s", key))
 	}
 
 	return f, nil

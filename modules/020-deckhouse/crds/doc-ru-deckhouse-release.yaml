@@ -19,6 +19,8 @@ spec:
                   description: Время, до которого отложено обновление, если релиз является частью canary-release.
                 requirements:
                   description: Требования для установки релиза.
+                disruptions:
+                  description: Потенциально опасные изменения в релизе.
                 changelog:
                   description: Изменения включенных модулей в данном релизе.
                 changelogLink:

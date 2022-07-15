@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -418,7 +417,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
-	Context("Disruption release", func() {
+	FContext("Disruption release", func() {
 		BeforeEach(func() {
 			f.ValuesSet("deckhouse.update.disruptionMode", "Manual")
 			f.KubeStateSet(deckhousePodYaml + disruptionRelease)
@@ -427,7 +426,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			var df requirements.DisruptionFunc = func() (bool, string) {
 				return true, "some test reason"
 			}
-			requirements.RegisterDisruption("disruption:testme", df)
+			requirements.RegisterDisruption("testme", df)
 
 			f.RunHook()
 
@@ -451,7 +450,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			It("Should deploy the release", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
-				fmt.Println(r136)
 				Expect(r136.Field("status.phase").String()).To(Equal("Deployed"))
 				Expect(r136.Field("status.message").String()).To(Equal(""))
 			})
@@ -792,8 +790,8 @@ metadata:
   name: v1-36-0
 spec:
   version: "v1.36.0"
-  requirements:
-    disruption:testme: "true"
+  disruptions:
+    - testme
 status:
   phase: Pending
 `
@@ -807,8 +805,8 @@ metadata:
     release.deckhouse.io/disruption-approved: "true"
 spec:
   version: "v1.36.0"
-  requirements:
-    disruption:testme: "true"
+  disruptions:
+    - testme
 status:
   phase: Pending
 `

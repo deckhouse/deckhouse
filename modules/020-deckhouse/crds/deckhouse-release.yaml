@@ -49,6 +49,11 @@ spec:
                   additionalProperties:
                     type: string
                   description: Deckhouse release requirements.
+                disruptions:
+                  type: array
+                  items:
+                    type: string
+                  description: Deckhouse disruption keys.
                 changelog:
                   type: object
                   description: Release's changelog for enabled modules.

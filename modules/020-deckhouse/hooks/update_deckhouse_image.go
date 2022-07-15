@@ -30,6 +30,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -253,6 +254,7 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		Version:                         semver.MustParse(release.Spec.Version),
 		ApplyAfter:                      release.Spec.ApplyAfter,
 		Requirements:                    release.Spec.Requirements,
+		Disruptions:                     release.Spec.Disruptions,
 		Phase:                           release.Status.Phase,
 		ManuallyApproved:                releaseApproved,
 		StatusApproved:                  release.Status.Approved,
@@ -402,6 +404,7 @@ type deckhouseRelease struct {
 	HasDisruptionApprovedAnnotation bool
 
 	Requirements map[string]string
+	Disruptions  []string
 	ApplyAfter   *time.Time
 
 	StatusApproved bool
@@ -500,12 +503,8 @@ func (du *deckhouseUpdater) checkReleaseDisruptions(input *go_hook.HookInput, rl
 		return true
 	}
 
-	for key, value := range rl.Requirements {
-		if !strings.HasPrefix(key, requirements.DisruptionPrefix) {
-			continue
-		}
-
-		hasDisruptionUpdate, reason := requirements.HasDisruption(key, value, input.Values)
+	for _, key := range rl.Disruptions {
+		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
 		if hasDisruptionUpdate {
 			if !rl.HasDisruptionApprovedAnnotation {
 				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.Name, reason)
@@ -806,12 +805,13 @@ func (du *deckhouseUpdater) FetchAndPrepareReleases(input *go_hook.HookInput) {
 
 func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, rl *deckhouseRelease) bool {
 	for key, value := range rl.Requirements {
-		if strings.HasPrefix(key, requirements.DisruptionPrefix) {
-			continue
-		}
 		passed, err := requirements.CheckRequirement(key, value, input.Values)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for deckhouseRelease %q not met: %s", key, rl.Version, err)
+			if errors.Is(err, requirements.ErrNotRegistered) {
+				input.LogEntry.Error(err)
+				msg = fmt.Sprintf("%q requirement not registered", key)
+			}
 			st := statusPatch{
 				Phase:          v1alpha1.PhasePending,
 				Message:        msg,
