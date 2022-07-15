@@ -9,8 +9,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
-        plk_grouped_by__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: LINSTOR storage pool has errors
         description: |
           LINSTOR storage pool {{ $labels.storage_pool }} on node {{ $labels.exported_node }} has errors
@@ -28,8 +28,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
-        plk_grouped_by__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_linstor_storage_pool_health: "D8LinstorStoragePoolHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Storage pool running out of free space
         description: |
           LINSTOR storage pool {{ $labels.storage_pool }} on node {{ $labels.exported_node }} has less than 10% space left. Current free space: {{ $value }}%

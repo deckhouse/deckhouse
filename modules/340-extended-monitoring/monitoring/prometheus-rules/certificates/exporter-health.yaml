@@ -11,8 +11,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
-      plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_ignore_labels: "job"
       description: |
         Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
@@ -31,8 +31,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_ignore_labels: "job"
-      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
-      plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
 
@@ -50,8 +50,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "pod"
-      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
-      plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The cert-exporter Pod is NOT Ready.
       description: |
         The recommended course of action:
@@ -68,8 +68,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
-      plk_grouped_by__d8_cert_exporter_unavailable: "D8CertExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The cert-exporter Pod is NOT Running.
       description: |
         The recommended course of action:
@@ -90,8 +90,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
-      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         The `cert-exporter` failed to perform any checks for the certificates expiration for over 20 minutes.
 

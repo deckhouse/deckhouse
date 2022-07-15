@@ -11,8 +11,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
-      plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
+      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Certificate will expire soon.
       description: |
         Certificate in secret {{$labels.namespace}}/{{$labels.name}} will expire in less than 2 weeks
@@ -33,8 +33,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=cert-exporter"
-      plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse"
+      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Certificate expired
       description: |
         Certificate in secret {{$labels.namespace}}/{{$labels.name}} expired.

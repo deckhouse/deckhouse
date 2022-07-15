@@ -9,8 +9,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
-        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: LINSTOR controller has errors
         description: |
           LINSTOR controller has continuously growing amount of error reports
@@ -28,8 +28,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
-        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_ignore_labels: "job"
         summary: Prometheus cannot scrape the linstor-controller metrics.
         description: |
@@ -47,8 +47,8 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_ignore_labels: "job"
-        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
-        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: There is no `linstor-controller` target in Prometheus.
         description: |
           The recommended course of action:
@@ -65,8 +65,8 @@
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         plk_labels_as_annotations: "pod"
-        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
-        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: The linstor-controller Pod is NOT Ready.
         description: |
           The recommended course of action:
@@ -82,8 +82,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
-        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse"
+        plk_create_group_if_not_exists__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_linstor_controller_health: "D8LinstorControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: The linstor-controller Pod is NOT Running.
         description: |
           The recommended course of action:
