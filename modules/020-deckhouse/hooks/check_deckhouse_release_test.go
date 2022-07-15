@@ -272,6 +272,51 @@ status:
 		})
 	})
 
+	Context("Release has canary", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2},"beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"version":"v1.31.0"}`}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
+				},
+			}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with requirements", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
+			Expect(rl.Field("spec.applyAfter").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Release has disruptions", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.32.0", "disruptions":{"1.32":["ingressNginx"]}}`}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66859")
+				},
+			}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with requirements", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-32-0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-32-0")
+			Expect(rl.Field("spec.disruptions").Array()).To(HaveLen(1))
+			Expect(rl.Field("spec.disruptions").Array()[0].String()).To(Equal("ingressNginx"))
+		})
+	})
+
 	Context("Release with changelog", func() {
 		BeforeEach(func() {
 			changelog := `
