@@ -8,6 +8,16 @@ This module is responsible for providing a network between multiple nodes in a c
 
 1. This module currently supports only direct-routing mode.
 2. Service types `NodePort` and `LoadBalancer` do not work with hostNetwork endpoints in the `DSR` LB mode.
+3. OS versions support. `cni-cilium` module will properly work only on Linux kernel >= 5.3
+   * Ubuntu
+     * 18.04
+     * 20.04
+     * 22.04
+   * Debian
+     * 11
+   * CentOS
+     * 7 (requires kernel from external [repo](http://elrepo.org))
+     * 8 (requires kernel from external [repo](http://elrepo.org))
 
 ## A note about CiliumClusterwideNetworkPolicies
 
