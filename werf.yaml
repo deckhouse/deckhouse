@@ -596,7 +596,7 @@ shell:
   - |
     version="{{ env "CI_COMMIT_REF_NAME" }}"
     releaseMetadata='{{ .Files.Get "release.yaml" | fromYaml | toJson }}'
-    echo "$releaseMetadata"
+    echo "AAAAAA: $releaseMetadata"
     json="{\"version\": \"${version}\", ${releaseMetadata}}"
     echo "$json" > /version.json
     # changelog exists only for tags, we have to skip it for branches
