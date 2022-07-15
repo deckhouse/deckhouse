@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"time"
 
 	"d8.io/upmeter/pkg/check"
@@ -30,24 +31,24 @@ type ControlPlaneAvailable struct {
 }
 
 func (c ControlPlaneAvailable) Checker() check.Checker {
-	return failOnError(newControlPlaneChecker(c.Access, c.Timeout))
+	return doOrFail(c.Timeout, &k8sVersionGetter{access: c.Access})
 }
 
-// controlPlaneChecker checks the availability of API server. It reports Unknown status if cannot access the
-// API server. It is widely used as first step in other checkers.
-type controlPlaneChecker struct {
+// newControlPlaneChecker returns common preflight checker
+func newControlPlaneChecker(access kubernetes.Access, timeout time.Duration) check.Checker {
+	return doOrUnknown(timeout, newK8sVersionGetter(access))
+}
+
+// k8sVersionGetter returns non-nil err of API server version request fails
+type k8sVersionGetter struct {
 	access kubernetes.Access
 }
 
-func (c *controlPlaneChecker) Check() check.Error {
-	_, err := c.access.Kubernetes().Discovery().ServerVersion()
-	if err != nil {
-		return check.ErrUnknown("control plane is unavailable: %v", err)
-	}
-	return nil
+func newK8sVersionGetter(access kubernetes.Access) *k8sVersionGetter {
+	return &k8sVersionGetter{access: access}
 }
 
-// newControlPlaneChecker returns the checker wrapped with timeout to be use it in other checkers as precondition
-func newControlPlaneChecker(access kubernetes.Access, timeout time.Duration) check.Checker {
-	return withTimeout(&controlPlaneChecker{access}, timeout)
+func (c *k8sVersionGetter) Do(_ context.Context) error {
+	_, err := c.access.Kubernetes().Discovery().ServerVersion()
+	return err
 }

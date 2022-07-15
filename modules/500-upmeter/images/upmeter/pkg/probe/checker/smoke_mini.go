@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -30,7 +31,6 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
 )
 
 // SmokeMiniAvailable is a checker constructor and configurator
@@ -249,7 +249,7 @@ func (l *nameLookuper) Lookup() ([]string, error) {
 // slice of IPs and nil error.
 func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, error) {
 	// lookup
-	ips, err := util.LookupIPs(name, resolveTimeout)
+	ips, err := lookupIPs(name, resolveTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("cannot resolve '%s': %v", name, err)
 	}
@@ -262,4 +262,34 @@ func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, e
 	rand.Shuffle(len(ips), func(i, j int) { ips[i], ips[j] = ips[j], ips[i] })
 
 	return ips, nil
+}
+
+func lookupIPs(domain string, timeout time.Duration) (ips []string, err error) {
+	// If hostname is ip return it as is
+	if isIP(domain) {
+		ips = []string{domain}
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	resolver := net.Resolver{}
+	addrs, err := resolver.LookupIPAddr(ctx, domain)
+	if err != nil {
+		return
+	}
+
+	for _, addr := range addrs {
+		ips = append(ips, addr.IP.String())
+	}
+	return ips, nil
+}
+
+func isIP(hostname string) bool {
+	input := net.ParseIP(hostname)
+	if input == nil || (input.To4() == nil && input.To16() == nil) {
+		return false
+	}
+	return true
 }

@@ -167,6 +167,7 @@
           If you have no disk provisioning system in the cluster,
           you can disable ordering volumes for the some-mini through the module settings.
 
+# TODO (shvgn) remove garbage objects tracking alerts in Deckhouse v1.35 since upmeter no longer pollutes cluster with uncontrolled amount of objects
 - name: d8.upmeter.resources
   rules:
     - alert: D8UpmeterProbeGarbageConfigmap

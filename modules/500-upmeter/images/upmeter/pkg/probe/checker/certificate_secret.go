@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,101 +28,61 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
 )
 
 // CertificateSecretLifecycle is a checker constructor and configurator
 type CertificateSecretLifecycle struct {
-	Access    kubernetes.Access
+	Access kubernetes.Access
+
 	Namespace string
 	AgentID   string
+	Name      string
 
-	CreationTimeout time.Duration
-	DeletionTimeout time.Duration
-
-	ControlPlaneAccessTimeout time.Duration
+	CreationTimeout         time.Duration
+	DeletionTimeout         time.Duration
+	SecretTransitionTimeout time.Duration
 }
 
 func (c CertificateSecretLifecycle) Checker() check.Checker {
-	return &CertificateSecretLifecycleChecker{
-		Access:    c.Access,
-		Namespace: c.Namespace,
-		AgentID:   c.AgentID,
+	preflight := newK8sVersionGetter(c.Access)
 
-		CreationTimeout: c.CreationTimeout,
-		DeletionTimeout: c.DeletionTimeout,
+	certGetter := &certificateGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
 
-		ControlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
+	certCreator := doWithTimeout(
+		&certificateCreator{access: c.Access, namespace: c.Namespace, name: c.Name, agentID: c.AgentID},
+		c.CreationTimeout,
+		fmt.Errorf("creation timeout reached"),
+	)
+
+	certDeleter := doWithTimeout(
+		&certificateDeleter{access: c.Access, namespace: c.Namespace, name: c.Name},
+		c.DeletionTimeout,
+		fmt.Errorf("deletion timeout reached"),
+	)
+
+	certSecretGetter := &secretGetter{access: c.Access, namespace: c.Namespace, name: c.Name}
+	certSecretDeleter := &secretDeleter{access: c.Access, namespace: c.Namespace, name: c.Name}
+
+	// Not to rarely
+	pollInterval := c.SecretTransitionTimeout / 10
+	if pollInterval > 5*time.Second {
+		pollInterval = 5 * time.Second
 	}
-}
 
-type CertificateSecretLifecycleChecker struct {
-	Access    kubernetes.Access
-	Namespace string
-	AgentID   string
+	checker := &KubeControllerObjectLifecycle{
+		preflight: preflight,
 
-	CreationTimeout time.Duration
-	DeletionTimeout time.Duration
+		parentGetter:  certGetter,
+		parentCreator: certCreator,
+		parentDeleter: certDeleter,
 
-	ControlPlaneAccessTimeout time.Duration
-}
+		childGetter:          certSecretGetter,
+		childDeleter:         certSecretDeleter,
+		childPollingInterval: pollInterval,
+		childPollingTimeout:  c.SecretTransitionTimeout,
+	}
 
-func (c *CertificateSecretLifecycleChecker) Check() check.Error {
-	return c.new(c.name()).Check()
-}
-
-func (c *CertificateSecretLifecycleChecker) name() string {
-	// should be new for each run in order not to get stuck with created object
-	return util.RandomIdentifier("upmeter-cm-probe")
-}
-
-func (c *CertificateSecretLifecycleChecker) new(name string) check.Checker {
-	pingControlPlane := newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout)
-
-	createCert := doOrUnknown(
-		c.CreationTimeout,
-		&certificateCreator{
-			access:    c.Access,
-			name:      name,
-			agentID:   c.AgentID,
-			namespace: c.Namespace,
-		},
-	)
-
-	deleteCert := doOrUnknown(
-		c.CreationTimeout,
-		&certificateDeleter{
-			access:    c.Access,
-			name:      name,
-			namespace: c.Namespace,
-		},
-	)
-
-	checkSecretExists := withTimeout(
-		&secretExistenceChecker{
-			access:    c.Access,
-			name:      name,
-			namespace: c.Namespace,
-		},
-		c.ControlPlaneAccessTimeout,
-	)
-
-	checkSecretDoesNotExists := withTimeout(
-		&secretNonexistenceChecker{
-			access:    c.Access,
-			name:      name,
-			namespace: c.Namespace,
-		},
-		c.ControlPlaneAccessTimeout,
-	)
-
-	return sequence(
-		pingControlPlane,
-		createCert,
-		checkSecretExists,
-		deleteCert,
-		checkSecretDoesNotExists,
-	)
+	return checker
 }
 
 type certificateCreator struct {
@@ -165,40 +124,40 @@ func (c *certificateDeleter) Do(ctx context.Context) error {
 		Delete(c.name, &metav1.DeleteOptions{})
 }
 
-type secretExistenceChecker struct {
+type certificateGetter struct {
 	access    kubernetes.Access
 	name      string
 	namespace string
 }
 
-func (c *secretExistenceChecker) Check() check.Error {
-	_, err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Get(c.name, metav1.GetOptions{})
-	if err == nil {
-		return nil
-	}
-
-	if apierrors.IsNotFound(err) {
-		return check.ErrFail("secret %s/%s is not there: %w", c.namespace, c.name, err)
-	}
-
-	return check.ErrUnknown("getting %s/%s: %w", c.namespace, c.name, err)
+func (c *certificateGetter) Do(ctx context.Context) error {
+	_, err := c.access.Kubernetes().Dynamic().
+		Resource(certificateGVR).
+		Namespace(c.namespace).
+		Get(c.name, metav1.GetOptions{})
+	return err
 }
 
-type secretNonexistenceChecker struct {
+type secretGetter struct {
 	access    kubernetes.Access
 	name      string
 	namespace string
 }
 
-func (c *secretNonexistenceChecker) Check() check.Error {
+func (c *secretGetter) Do(_ context.Context) error {
 	_, err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Get(c.name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return check.ErrUnknown("getting %s/%s: %w", c.namespace, c.name, err)
-	}
-	return check.ErrFail("secret %s/%s is still there", c.namespace, c.name)
+	return err
+}
+
+type secretDeleter struct {
+	access    kubernetes.Access
+	name      string
+	namespace string
+}
+
+func (c *secretDeleter) Do(_ context.Context) error {
+	err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
+	return err
 }
 
 var certificateGVR = schema.GroupVersionResource{
@@ -226,13 +185,21 @@ spec:
   issuerRef:
     kind: ClusterIssuer
     name: selfsigned
-  secretName: %q`
+  secretName: %q
+  secretTemplate:
+    labels:
+      heritage: upmeter
+      upmeter-agent: %q
+      upmeter-group: control-plane
+      upmeter-probe: cert-manager
+`
 
 	return fmt.Sprintf(tpl,
-		agentID,   // label
+		agentID,   // certificate label
 		name,      // certificate name
-		namespace, // namespace
-		agentID,   // domain part
+		namespace, // certificate namespace
+		agentID,   // dnsName part
 		name,      // secret name
+		agentID,   // secret label
 	)
 }

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package run
 
 import (
 	"math/rand"
@@ -25,34 +25,37 @@ import (
 	"github.com/spaolacci/murmur3"
 )
 
-var AgentUniqueIdentifier string
-
-func RandomIdentifier(prefix string) string {
-	return prefix + "-" + AgentUniqueId() + "-" + RndAlphaNum(5)
-}
-
-func AgentIdentifier(prefix string) string {
-	return prefix + "-" + AgentUniqueId()
-}
-
-var uniqIdSeed uint32 = 0xa5
-
-func AgentUniqueId() string {
-	if AgentUniqueIdentifier == "" {
-		nodeName := os.Getenv("NODE_NAME")
-		h32 := murmur3.New32WithSeed(uniqIdSeed)
-		_, _ = h32.Write([]byte(nodeName))
-		AgentUniqueIdentifier = strconv.FormatInt(int64(h32.Sum32()), 16)
-	}
-	return AgentUniqueIdentifier
-}
-
 const (
 	alphaNumSymbols = "abcdefghijklmnopqrstuvwxyz01234567890123456789"
 	alphaNumCount   = len(alphaNumSymbols)
+
+	seed uint32 = 0xa5
 )
 
-func RndAlphaNum(count int) string {
+func RandomIdentifier(prefix string) string {
+	return prefix + "-" + ID() + "-" + randomAlphaNum(5)
+}
+
+func StaticIdentifier(prefix string) string {
+	return prefix + "-" + ID()
+}
+
+var id string
+
+func ID() string {
+	if id == "" {
+		h32 := murmur3.New32WithSeed(seed)
+		_, _ = h32.Write([]byte(NodeName()))
+		id = strconv.FormatInt(int64(h32.Sum32()), 16)
+	}
+	return id
+}
+
+func NodeName() string {
+	return os.Getenv("NODE_NAME")
+}
+
+func randomAlphaNum(count int) string {
 	rand.Seed(time.Now().UnixNano())
 	res := make([]byte, count)
 

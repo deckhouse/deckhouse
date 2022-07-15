@@ -27,7 +27,7 @@ import (
 
 	"d8.io/upmeter/pkg/agent"
 	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/probe/run"
 	"d8.io/upmeter/pkg/server"
 )
 
@@ -91,7 +91,7 @@ func main() {
 	parseLoggerArgs(agentCommand, loggerConfig)
 	agentCommand.Action(func(c *kingpin.ParseContext) error {
 		setupLogger(logger, loggerConfig)
-		logger.Infof("Starting upmeter agent. ID=%s", util.AgentUniqueId())
+		logger.Infof("Starting upmeter agent. ID=%s", run.ID())
 		logger.Debugf("Logger config: %v", loggerConfig)
 		logger.Debugf("Agent config: %v", agentConfig)
 		logger.Debugf("Kubernetes config: %v", agentKubeConfig)
