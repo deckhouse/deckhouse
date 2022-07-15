@@ -601,16 +601,21 @@ shell:
       ls -la ./
       ls -la /
       version="{{ env "CI_COMMIT_REF_NAME" }}"
-      release=$(yq r /release.yaml -j)
+      release=$(yq r /deckhouse/release.yaml -j)
       json="{\"version\": \"${version}\", ${release}}"
       echo "$json" > /version.json
       # changelog exists only for tags, we have to skip it for branches
       {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
       {{ if $changelog }}
-      /.werf/stapel/embedded/bin/cat <<EOF > /changelog.yaml
+      cat <<EOF > /changelog.yaml
       {{ $changelog | nindent 4 }}
       EOF
       {{ end }}
+git:
+  - add: /
+    to: /deckhouse
+    includePaths:
+      - release.yaml
 ---
 image: release-channel-version
 from: spotify/scratch
