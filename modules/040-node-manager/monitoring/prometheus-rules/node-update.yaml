@@ -13,8 +13,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node does not update.
       description: |
         There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} group but it has not received the update nor trying to.
@@ -49,8 +49,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node cannot complete the update.
       description: |
         There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} group}; the Node has learned about the update, requested and received approval, but cannot complete the update.
@@ -73,8 +73,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_cause_of__node_unschedulable: "NodeUnschedulable,tier=cluster,prometheus=deckhouse,node={{ $labels.node }}"
       summary: The {{ $labels.node }} Node cannot complete the update.
       description: |
@@ -98,8 +98,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node cannot get disruption approval.
       description: |
         There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }} group; the Node has learned about the update, requested and received approval, started the update, and ran into a stage that causes possible downtime. For some reason, the Node cannot get that approval (it is issued fully automatically by the `update_approval` hook of the `node-manager`).
@@ -122,8 +122,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_problems_with_nodes_updates: "D8ClusterHasProblemsWithNodesUpdates,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node_group }} node group is not handling the update correctly.
       description: |
         There is a new update for Nodes of the {{ $labels.node_group }} group; Nodes have learned about the update. However, no Node can get approval to start updating.
@@ -142,8 +142,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__cluster_has_nodes_requiring_disruption_approval_for_update: "ClusterHasNodesRequiringDisruptionApprovalForUpdate,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__cluster_has_nodes_requiring_disruption_approval_for_update: "ClusterHasNodesRequiringDisruptionApprovalForUpdate,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__cluster_has_nodes_requiring_disruption_approval_for_update: "ClusterHasNodesRequiringDisruptionApprovalForUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_nodes_requiring_disruption_approval_for_update: "ClusterHasNodesRequiringDisruptionApprovalForUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node requires disruption approval to proceed with the update
       description: |
         There is a new update for Nodes and the {{ $labels.node }} Node of the {{ $labels.node_group }} group has learned about the update, requested and received approval, started the update, and ran into a step that causes possible downtime.
@@ -180,8 +180,8 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-        plk_create_group_if_not_exists__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse"
+        plk_create_group_if_not_exists__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node is stuck in draining.
       description: |
         There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }}group. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.

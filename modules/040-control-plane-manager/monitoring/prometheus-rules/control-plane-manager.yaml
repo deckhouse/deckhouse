@@ -25,9 +25,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_caused_by__d8_cpm_replicas_unavailable:  "KubernetesDaemonSetReplicasUnavailable,namespace=kube-system,prometheus=deckhouse,daemonset=d8-control-plane-manager"
+      plk_create_group_if_not_exists__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Controller Pod not running on Node {{ $labels.node }}
       description: |-
         Pod `d8-control-plane-manager` fails or not scheduled on Node {{ $labels.node }}
