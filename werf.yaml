@@ -595,8 +595,12 @@ shell:
   install:
   - |
     version="{{ env "CI_COMMIT_REF_NAME" }}"
-    releaseMetadata='{{ .Files.Get "release.yaml" | fromYaml | toJson }}'
-    echo "AAAAAA: $releaseMetadata"
+    aaaa='{{ .Files.Get "release.yaml" }}'
+    echo "ASAS: $aaaa"
+    bbbb='{{ .Files.Get "release.yaml" | fromYaml }}'
+    echo "BBBB: $bbbb"
+    cccc='{{ .Files.Get "release.yaml" | fromYaml | toJson }}'
+    echo "CCCC: $cccc"
     json="{\"version\": \"${version}\", ${releaseMetadata}}"
     echo "$json" > /version.json
     # changelog exists only for tags, we have to skip it for branches
