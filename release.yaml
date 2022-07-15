@@ -1,0 +1,31 @@
+# Channel canary settings
+canary:
+  alpha:
+    enabled: true
+    waves: 2
+    interval: "5m"
+  beta:
+    enabled: false
+    waves: 1
+    interval: "1m"
+  early-access:
+    enabled: true
+    waves: 6
+    interval: "30m"
+  stable:
+    enabled: true
+    waves: 6
+    interval: "30m"
+  rock-solid:
+    enabled: false
+    waves: 5
+    interval: "5m"
+
+# release requirements, don't forget to register check function in a file requirements.go
+requirements:
+  k8s: "1.19.0", # modules/040-control-plane-manager/hooks/requirements.go
+  ingressNginx: "0.33" # modules/402-ingress-nginx/hooks/requirements.go
+
+# map of disruptions, associated with a specific release. You have to register check functions before specified release
+disruptions:
+  "1.36": "ingressNginx" # modules/402-ingress-nginx/hooks/requirements.go
