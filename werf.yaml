@@ -598,8 +598,10 @@ shell:
     - chmod +x /usr/local/bin/yq
   install:
     - |
+      ls -la ./
+      ls -la /
       version="{{ env "CI_COMMIT_REF_NAME" }}"
-      release=$(yq r release.yaml -j)
+      release=$(yq r /release.yaml -j)
       json="{\"version\": \"${version}\", ${release}}"
       echo "$json" > /version.json
       # changelog exists only for tags, we have to skip it for branches
