@@ -66,7 +66,7 @@ func skipObjectContainerIfNeeded(o *storage.StoreObject, c *v1.Container) bool {
 		return true
 	}
 	// Coredns listens :53 port in hostNetwork
-	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-system" &&
+	if o.Unstructured.GetKind() == "DaemonSet" && (o.Unstructured.GetNamespace() == "d8-system") || (o.Unstructured.GetNamespace() == "kube-system") &&
 		o.Unstructured.GetName() == "node-local-dns" && c.Name == "coredns" {
 		return true
 	}

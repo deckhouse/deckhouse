@@ -19,5 +19,5 @@
       description: |
         node-local-dns Pod cannot schedule on Node {{ $labels.node }}.
 
-        Consider checking state of the d8-system/node-local-dns DaemonSet.
-        `kubectl -n d8-system get daemonset,pod --selector=app=node-local-dns`
+        Consider checking state of the kube-system/node-local-dns DaemonSet.
+        `kubectl -n kube-system get daemonset,pod --selector=app=node-local-dns`
