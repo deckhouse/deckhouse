@@ -80,6 +80,7 @@
  - **[node-local-dns]** Updated CoreDNS to v1.9.3. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
  - **[node-manager]** Fix unbound variable bootstrap_job_log_pid when bootstrap static-node [#1917](https://github.com/deckhouse/deckhouse/pull/1917)
  - **[node-manager]** Increased the `cluster-autoscaler` node cooldown after scaling-up to prevent flapping (10m instead of 2m) [#1746](https://github.com/deckhouse/deckhouse/pull/1746)
+ - **[upmeter]** Fixed garbage collection for control-plane probes [#1943](https://github.com/deckhouse/deckhouse/pull/1943)
  - **[user-authn]** Refactor Dex probes, and collect metrics from Dex. [#1935](https://github.com/deckhouse/deckhouse/pull/1935)
 
 ## Chore
@@ -102,6 +103,8 @@
     All control plane Pods will be restarted.
  - **[deckhouse]** image-copier one-liner to detect if there are Pods with irrelevant registry. [#1959](https://github.com/deckhouse/deckhouse/pull/1959)
  - **[dhctl]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
+ - **[ingress-nginx]** Mark Ingress controllers below 1.1 as deprecated. [#2004](https://github.com/deckhouse/deckhouse/pull/2004)
+    Fire alerts about deprecated ingress controllers.
  - **[ingress-nginx]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
     All Nginx Ingress Pods of controllers >=0.46 will be restarted.
  - **[istio]** Create an alert about irrelevant services with `type: ExternalName` and specified `.spec.ports field`. [#1954](https://github.com/deckhouse/deckhouse/pull/1954)
@@ -117,6 +120,8 @@
  - **[snapshot-controller]** fix typo in documentation [#1969](https://github.com/deckhouse/deckhouse/pull/1969)
     low
  - **[snapshot-controller]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
+ - **[upmeter]** Added descriptions for avaiability groups "nodegroups" and "nginx". [#2013](https://github.com/deckhouse/deckhouse/pull/2013)
+ - **[upmeter]** Tracking nodes switched to informer instead of direct listing requests. [#2007](https://github.com/deckhouse/deckhouse/pull/2007)
  - **[upmeter]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
  - **[upmeter]** Added alerts for garbage objects left by probes. [#1648](https://github.com/deckhouse/deckhouse/pull/1648)
  - **[vertical-pod-autoscaler]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
