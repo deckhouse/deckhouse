@@ -13,16 +13,21 @@ sitemap_include: false
 <p id="license-token" style="font-size: 21px; font-weight: 600; letter-spacing: -0.4px; color: #0066FF;"></p>
 <p>Note that the license is valid for one month. Please, contact the Deckhouse team (<a href="mailto:sales@deckhouse.io">sales@deckhouse.io</a>) to renew it.</p>
 <p>Dive into Deckhouse with our easy-to-follow <a href="https://deckhouse.io/en/gs/">Getting started guide</a>.</p>
-<p>Please feel free to contact us on <a href="https://t.me/deckhouse_ru">Telegram</a>!</p>
+<p>Please feel free to contact us on <a href="https://t.me/deckhouse">Telegram</a>!</p>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const licenseTokenContent = document.getElementById('license-token');
-    const licenseToken = getCookie('license-token');
-    const demoToken = getCookie('demotoken');
+    const token = window.location.search.split('=');
 
-    licenseTokenContent.innerText = licenseToken ? licenseToken : demoToken;
-  })
+    setCookie(token[0].substring(1), token[1]);
+
+    licenseTokenContent.innerText = getCookie(token[0].substring(1));
+  });
+
+  function setCookie(name, value) {
+    document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value);
+  }
 
   function getCookie(name) {
     let matches = document.cookie.match(new RegExp(
