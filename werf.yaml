@@ -589,26 +589,36 @@ shell:
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
 
 ---
+image: release-channel-version-artifact
+from: {{ .Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+    - apk add --no-cache curl
+    - curl -sfL https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64 --output /usr/local/bin/yq
+    - chmod +x /usr/local/bin/yq
+  install:
+    - |
+      version="{{ env "CI_COMMIT_REF_NAME" }}"
+      release=$(jq r release.yaml -j)
+      json="{\"version\": \"${version}\", ${release}}"
+      echo "$json" > /version.json
+      # changelog exists only for tags, we have to skip it for branches
+      {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
+      {{ if $changelog }}
+      /.werf/stapel/embedded/bin/cat <<EOF > /changelog.yaml
+      {{ $changelog | nindent 4 }}
+      EOF
+      {{ end }}
+---
 image: release-channel-version
 from: spotify/scratch
-shell:
-  install:
-  - |
-    version="{{ env "CI_COMMIT_REF_NAME" }}"
-    bbbb='{{ .Files.Get "release.yaml" | fromYaml }}'
-    echo "BBBB: $bbbb"
-    cccc='{{ .Files.Get "release.yaml" | fromYaml | mustToJson }}'
-    echo "CCCC: $cccc"
-    json="{\"version\": \"${version}\", ${cccc}}"
-    echo "$json" > /version.json
-    # changelog exists only for tags, we have to skip it for branches
-    {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
-    {{ if $changelog }}
-    /.werf/stapel/embedded/bin/cat <<EOF > /changelog.yaml
-    {{ $changelog | nindent 4 }}
-    EOF
-    {{ end }}
-
+import:
+  - artifact: release-channel-version-artifact
+    add: /
+    to: /
+    includePaths:
+      - version.json
+      - changelog.yaml
 
 # modules_images
 {{- define "module_image_template" }}
