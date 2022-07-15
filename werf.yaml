@@ -599,7 +599,6 @@ shell:
     echo "$releaseMetadata"
     json="{\"version\": \"${version}\", ${releaseMetadata}}"
     echo "$json" > /version.json
-    echo "$json"
     # changelog exists only for tags, we have to skip it for branches
     {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
     {{ if $changelog }}
