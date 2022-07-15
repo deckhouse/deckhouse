@@ -10,9 +10,9 @@ title: "Модуль cni-cilium"
 2. Сервисы с типом `NodePort` и `LoadBalancer` не работают с hostNetwork-эндпоинтами в LB режиме `DSR`.
 3. Поддержка версий ОС. `cni-cilium` работает только с Linux ядрами >= 5.3
    * Ubuntu
-      * 18.04
-      * 20.04
-      * 22.04
+     * 18.04
+     * 20.04
+     * 22.04
    * Debian
      * 11
    * CentOS
