@@ -75,7 +75,7 @@ SQLite для «WAL». Поэтому если `upmeter` недоступен, �
 
 #### Downtime
 
-**Функциональность не реализована до конца**
+Функциональность не реализована до конца.
 
 Если в кластере или в инфраструктуре проводились работы, повлекшие за собой простой, то это можно
 зафиксировать с помощью объекта CRD `downtime.deckhouse.io`. В этом объекте указывают ожидаемый тип
@@ -187,7 +187,7 @@ spec:
 - `Basic Functionality`, создается и удаляется ConfigMap
 - `Namespace`, создается и удаляется Namespace
 
-![](01-single-object-lifecycle.png)
+![Single object lifecycle](01-single-object-lifecycle.png)
 
 #### Жизненный цикл состояния объекта
 
@@ -199,7 +199,7 @@ spec:
 
 - `Scheduler`, Pod'у должен быть назначен узел
 
-![](02-controller-object-lifecycle.png)
+![Controller object lifecycle](02-controller-object-lifecycle.png)
 
 #### Жизненный цикл дочернего объекта
 
@@ -211,7 +211,7 @@ spec:
 - `Controller Manager`: StatefulSet → Pod,
 - `Cert Manager`: Certificate → Secret.
 
-![](03-parent-child-lifecycle.png)
+![Parent-child lifecycle](03-parent-child-lifecycle.png)
 
 ### Synthetic
 
