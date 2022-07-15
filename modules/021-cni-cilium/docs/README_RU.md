@@ -8,6 +8,16 @@ title: "Модуль cni-cilium"
 
 1. Модуль не поддерживает туннелирование.
 2. Сервисы с типом `NodePort` и `LoadBalancer` не работают с hostNetwork-эндпоинтами в LB режиме `DSR`.
+3. Поддержка версий ОС. `cni-cilium` работает только с Linux ядрами >= 5.3
+   * Ubuntu
+     * 18.04
+     * 20.04
+     * 22.04
+   * Debian
+     * 11
+   * CentOS
+     * 7 (необходимо новое ядро с [репозитория](http://elrepo.org))
+     * 8 (необходимо новое ядро с [репозитория](http://elrepo.org))
 
 ## Заметка о CiliumClusterwideNetworkPolicies
 
