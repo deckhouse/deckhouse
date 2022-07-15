@@ -262,7 +262,7 @@ k8s:
       # kubeProxy: sha256 digest isn't needed for this version of kubernetes because this component is compiled as a module image with a special patch
   '1.22':
     status: available
-    patch: 11
+    patch: 12
     cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -284,11 +284,11 @@ k8s:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:0d281ae79168aefcb11678431a1eb0cf8faeb424a73e35c20af36534c107d2f2
-      kubeProxy: sha256:d17e9639c3b4c483c4cd435457f35ec12b57bfea1a8d5c17dc52e27656aed1e3
+      kubeScheduler: sha256:2cb27f3d56980ef5f3c381d914cdcc23250c7f84ac3cd089e11f9f43f514fdfb
+      kubeProxy: sha256:7c8cdd9da595aad5056465075d9bf0ee834ff7a5340b962754fc6b81970b19a2
   '1.23':
     status: available
-    patch: 8
+    patch: 9
     cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -310,5 +310,5 @@ k8s:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:cf1842e377fa32a72dab549e203dbb51c20189f9321d2d2b5e7f96214f60ab05
-      kubeProxy: sha256:71e8db32908c9db3ecbf48cf22af3b366c8a07b66f86b2cb553874402f8f068c
+      kubeScheduler: sha256:73472cea77500bbbcc6307d59525868e21ea16bcb853a556cbf4bb7434d125f3
+      kubeProxy: sha256:ec165529c811ffe51da4f85fcc76e83ddd8a70716bed464c1aae6d85f9b4915a
