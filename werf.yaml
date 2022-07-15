@@ -597,7 +597,7 @@ shell:
     version="{{ env "CI_COMMIT_REF_NAME" }}"
     canary='{{ .Files.Get "canary.json" | fromJson | toJson }}'
     requirements='{{ .Files.Get "requirements.json" | fromJson | toJson }}'
-    requirements='{{ .Files.Get "requirements.json" | fromYaml | toYaml }}'
+    requirements2='{{ .Files.Get "requirements.json" | fromYaml | toJson }}'
     json="{\"version\": \"${version}\", \"canary\": ${canary}, \"requirements\": ${requirements}}"
     echo "$json" > /version.json
     # changelog exists only for tags, we have to skip it for branches
