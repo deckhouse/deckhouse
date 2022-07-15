@@ -22,8 +22,7 @@ _on_docker_config_changed() {
 {{- end }}
 }
 
-mkdir -p /etc/docker
-bb-sync-file /etc/docker/daemon.json - docker-config-changed << "EOF"
+daemon_json="$(cat << "EOF"
 {
 {{- $max_concurrent_downloads := 3 }}
 {{- if hasKey .nodeGroup.cri "docker" }}
@@ -40,6 +39,17 @@ bb-sync-file /etc/docker/daemon.json - docker-config-changed << "EOF"
 {{- end }}
 }
 EOF
+)"
+
+# for docker version >=20 we should set native cgroupdriver to cgroupfs in config
+docker_major_version="$(docker version -f "{{`{{ .Client.Version }}`}}" 2> /dev/null | cut -d "." -f1)"
+if [ ${docker_major_version} -ge 20 ]; then
+  daemon_json="$(jq '. + {"exec-opts": ["native.cgroupdriver=cgroupfs"]}' <<< "${daemon_json}")"
+fi
+
+mkdir -p /etc/docker
+bb-sync-file /etc/docker/daemon.json - docker-config-changed <<< ${daemon_json}
+
 {{- if .registry.ca }}
 mkdir -p /etc/docker/certs.d/{{ .registry.address }}
 bb-sync-file /etc/docker/certs.d/{{ .registry.address }}/ca.crt  - << "EOF"
