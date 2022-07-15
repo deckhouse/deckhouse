@@ -597,7 +597,7 @@ shell:
     version="{{ env "CI_COMMIT_REF_NAME" }}"
     bbbb='{{ .Files.Get "release.yaml" | fromYaml }}'
     echo "BBBB: $bbbb"
-    cccc='{{ .Files.Get "release.yaml" | fromYaml | toJson }}'
+    cccc='{{ (.Files.Get "release.yaml" | fromYaml) | toJson }}'
     echo "CCCC: $cccc"
     json="{\"version\": \"${version}\", ${cccc}}"
     echo "$json" > /version.json
