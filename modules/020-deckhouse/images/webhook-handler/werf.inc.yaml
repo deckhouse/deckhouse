@@ -12,7 +12,7 @@ ansible:
       unarchive:
         extra_opts:
           # The promtool version should match prometheus version from the 300-prometheus module.
-         {{- $promVersion := "2.36.2" }}
+         {{- $promVersion := "2.37.0" }}
           - prometheus-{{ $promVersion }}.linux-amd64/promtool
           - --strip-components=1
         src: https://github.com/prometheus/prometheus/releases/download/v{{ $promVersion }}/prometheus-{{ $promVersion }}.linux-amd64.tar.gz

@@ -3,7 +3,7 @@ ARG BASE_NODE_16_ALPINE
 ARG BASE_ALPINE
 
 FROM $BASE_GOLANG_18_BULLSEYE as artifact
-ENV PROMETHEUS_VERSION=v2.36.2
+ENV PROMETHEUS_VERSION=v2.37.0
 
 RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - &&  \
   apt install -y nodejs && \
