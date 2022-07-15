@@ -49,10 +49,6 @@ func RegisterDisruption(key string, f DisruptionFunc) {
 		},
 	)
 
-	if !strings.HasPrefix(key, DisruptionPrefix) {
-		key = DisruptionPrefix + key
-	}
-
 	defaultRegistry.RegisterDisruption(key, f)
 }
 
