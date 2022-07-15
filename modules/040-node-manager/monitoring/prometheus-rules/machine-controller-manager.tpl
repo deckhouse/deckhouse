@@ -12,13 +12,14 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,d8_module=node-manager,d8_component=machine-controller-manager"
-      plk_grouped_by__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "pod"
       summary: The {{`{{$labels.pod}}`}} Pod is NOT Ready.
 
   - alert: D8MachineControllerManagerPodIsNotRunning
     expr: max by (namespace, pod, phase) (kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase!="Running",pod=~"machine-controller-manager-.*"} > 0)
+    expr: absent(kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase="Running",pod=~"machine-controller-manager-.*"})
     for: 10m
     labels:
       severity_level: "8"
@@ -28,8 +29,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,d8_module=node-manager,d8_component=machine-controller-manager"
-      plk_grouped_by__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "phase"
       summary: The machine-controller-manager Pod is NOT Running.
       description: |-
@@ -48,8 +49,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,d8_module=node-manager,d8_component=machine-controller-manager"
-      plk_grouped_by__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "instance,pod"
       plk_ignore_labels: "job"
       summary: Prometheus is unable to scrape machine-controller-manager's metrics.
@@ -65,8 +66,8 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,d8_module=node-manager,d8_component=machine-controller-manager"
-      plk_grouped_by__d8_machine_controller_manager_unavailable: "D8MachineControllerManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: There is no machine-controller-manager target in Prometheus.
       description: |-
         Machine controller manager manages ephemeral Nodes in the cluster. Its unavailability will result in the inability to add/delete Nodes.
@@ -88,8 +89,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,d8_module=node-manager,d8_component=machine-controller-manager"
-      plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "pod"
       summary: The machine-controller-manager module restarts too often.
       description: |

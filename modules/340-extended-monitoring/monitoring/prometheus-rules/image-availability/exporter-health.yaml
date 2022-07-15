@@ -5,14 +5,15 @@
     expr: max by (job) (up{job="image-availability-exporter"} == 0)
     for: 30m
     labels:
+      tier: cluster
       severity_level: "8"
       d8_module: extended-monitoring
       d8_component: image-availability-exporter
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
-      plk_grouped_by__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_ignore_labels: "job"
       description: |
         Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
@@ -24,6 +25,7 @@
     expr: absent(up{job="image-availability-exporter"}) == 1
     for: 30m
     labels:
+      tier: cluster
       severity_level: "8"
       d8_module: extended-monitoring
       d8_component: image-availability-exporter
@@ -31,8 +33,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_ignore_labels: "job"
-      plk_create_group_if_not_exists__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
-      plk_grouped_by__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
 
@@ -43,6 +45,7 @@
     expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"image-availability-exporter-.*"}) != 1
     for: 30m
     labels:
+      tier: cluster
       severity_level: "8"
       d8_module: extended-monitoring
       d8_component: image-availability-exporter
@@ -50,8 +53,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "pod"
-      plk_create_group_if_not_exists__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
-      plk_grouped_by__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The image-availability-exporter Pod is NOT Ready.
       description: |
         The images listed in the `image` field are not checked for availability in the container registry.
@@ -64,14 +67,15 @@
     expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"image-availability-exporter-.*"})
     for: 30m
     labels:
+      tier: cluster
       severity_level: "8"
       d8_module: extended-monitoring
       d8_component: image-availability-exporter
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
-      plk_grouped_by__d8_image_availability_exporter_unavailable: "D8ImageAvailabilityExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The image-availability-exporter Pod is NOT Running.
       description: |
         The images listed in the `image` field are not checked for availability in the container registry.
@@ -88,14 +92,15 @@
       increase(k8s_image_availability_exporter_completed_rechecks_total[10m]) == 0
     for: 30m
     labels:
+      tier: cluster
       severity_level: "8"
       d8_module: extended-monitoring
       d8_component: image-availability-exporter
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,d8_module=extended-monitoring,d8_component=image-availability-exporter"
-      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         The `image-availability-exporter` failed to perform any checks for the availability of images in the registry for over 20 minutes.
 

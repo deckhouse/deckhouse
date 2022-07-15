@@ -9,8 +9,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioMulticlusterRemoteAPIHostFailed,tier=~tier,prometheus=deckhouse
-        plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioMulticlusterRemoteAPIHostFailed,tier=~tier,prometheus=deckhouse
+        plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioMulticlusterRemoteAPIHostFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioMulticlusterRemoteAPIHostFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         description: |
           Remote api host `{{$labels.api_host}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed healthcheck by d8 monitoring hook.
 
@@ -29,8 +29,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier,prometheus=deckhouse
-        plk_grouped_by__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier,prometheus=deckhouse
+        plk_create_group_if_not_exists__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         description: |
           Metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch by d8 hook.
           Reproducing request to public endpoint:
