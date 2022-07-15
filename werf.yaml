@@ -589,7 +589,7 @@ shell:
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
 
 ---
-image: release-channel-version-artifact
+artifact: release-channel-version-artifact
 from: {{ .Images.BASE_ALPINE }}
 shell:
   beforeInstall:
@@ -616,7 +616,7 @@ import:
   - artifact: release-channel-version-artifact
     add: /
     to: /
-    before: install
+    after: install
     includePaths:
       - version.json
       - changelog.yaml
