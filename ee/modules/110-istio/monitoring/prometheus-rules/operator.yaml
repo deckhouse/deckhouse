@@ -11,8 +11,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8istio_operator_malfunctioning: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8istio_operator_malfunctioning: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8istio_operator_malfunctioning: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8istio_operator_malfunctioning: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "revision"
       summary: istio-operator is unable to reconcile istio control-plane setup.
       description: |

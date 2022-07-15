@@ -13,8 +13,8 @@
       plk_protocol_version: "1"
       plk_labels_as_annotations: "instance,pod"
       plk_ignore_labels: "job"
-      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |-
         The `prometheus-operator` Pod is not available.
 
@@ -37,8 +37,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: There is no `prometheus-operator` target in Prometheus.
       description: |
         The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
@@ -58,8 +58,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "pod"
-      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The `prometheus-operator` Pod is NOT Ready.
       description: |
         The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.
@@ -80,8 +80,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_prometheus_operator_unavailable: "D8PrometheusOperatorUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The `prometheus-operator` Pod is NOT Running.
       description: |
         The new `Prometheus`, `PrometheusRules`, `ServiceMonitor` settings cannot be applied in the cluster; however, all existing and configured components continue to operate correctly.

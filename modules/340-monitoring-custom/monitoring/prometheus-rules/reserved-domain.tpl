@@ -10,8 +10,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_monitoring_custom_reserved_domain_group: "D8ReservedNodeLabelOrTaintFoundInCluster,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__d8_monitoring_custom_reserved_domain_group: "D8ReservedNodeLabelOrTaintFoundInCluster,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__d8_monitoring_custom_reserved_domain_group: "D8ReservedNodeLabelOrTaintFoundInCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_monitoring_custom_reserved_domain_group: "D8ReservedNodeLabelOrTaintFoundInCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: "Node {{`{{ $labels.name }}`}} needs fixing up"
       description: |-
         Node {{`{{ $labels.name }}`}} uses:

@@ -10,8 +10,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_ignore_labels: "job"
       description: >
         Check the status of the etcd Pods: `kubectl -n kube-system get pod -l component=etcd`
@@ -28,8 +28,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_ignore_labels: "job"
-      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: >
         Check the status of the etcd Pods: `kubectl -n kube-system get pod -l component=etcd`
         or Prometheus logs: `kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus`
@@ -44,8 +44,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: >
         Check the status of the etcd Pods: `kubectl -n kube-system get pod -l component=etcd | grep {{ $labels.node }}`.
       summary: The etcd cluster member running on the {{ $labels.node }} Node has lost the leader.
@@ -61,9 +61,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_caused_by__ping: "NodePingPacketLoss,tier=cluster,prometheus=deckhouse,destination_node={{ $labels.node }}"
-      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_caused_by__ping: "NodePingPacketLoss,tier=cluster,prometheus=deckhouse,destination_node={{ $labels.node }},kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         There were {{ $value }} leader re-elections for the etcd cluster member running on the {{ $labels.node }} Node in the last 10 minutes.
 
@@ -82,8 +82,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: >
         Check the status of the etcd pods: `kubectl -n kube-system get pod -l component=etcd`.
       summary: There are insufficient members in the etcd cluster; the cluster will fail if one of the remaining members will become unavailable.
@@ -97,8 +97,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
-      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         In the last 15 minutes, the 99th percentile of the fsync duration for WAL files is longer than 0.5 seconds: {{ $value }}.
 
