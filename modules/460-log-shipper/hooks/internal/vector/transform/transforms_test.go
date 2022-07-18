@@ -22,11 +22,11 @@ import (
 	"testing"
 
 	"github.com/clarketm/json"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 func compareMock(t *testing.T, data []byte, parts ...string) {

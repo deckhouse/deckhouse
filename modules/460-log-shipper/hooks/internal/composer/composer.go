@@ -17,12 +17,13 @@ limitations under the License.
 package composer
 
 import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/source"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transform"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
 type Composer struct {

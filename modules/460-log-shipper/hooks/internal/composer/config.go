@@ -20,8 +20,8 @@ import (
 	"bytes"
 
 	"github.com/clarketm/json"
-	"github.com/deckhouse/deckhouse/go_lib/set"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
 

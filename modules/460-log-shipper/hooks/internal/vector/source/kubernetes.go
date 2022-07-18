@@ -21,11 +21,11 @@ import (
 	"strings"
 
 	"github.com/clarketm/json"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 // Kubernetes represents `kubernetes_logs` vector source

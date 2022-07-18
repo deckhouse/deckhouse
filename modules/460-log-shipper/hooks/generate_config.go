@@ -19,7 +19,6 @@ package hooks
 import (
 	"time"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/composer"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -29,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/composer"
 )
 
 func filterPodLoggingConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
