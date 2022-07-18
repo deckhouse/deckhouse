@@ -21,7 +21,7 @@ It's a release with some potentially dangerous changes (change some default valu
 To handle this release, you should add disruption check logic in a release at least `X-1` (previous release), for example — register DisruptionFunc in init() [example](modules/402-ingress-nginx/hooks/requirements.go).
 And add record for a specified release, where this logic will be checked. (e.g.: `"1.36": ["ingressNginx"]` to the [release.yaml](release.yaml) file, section `disruptions`.
 
-Example:
+How to add a disruptive change:
 - In current release (say, 1.35.0) set disruption check logic into the `ingressNginx` function;
 - Add record `"1.36": ["ingressNginx"]` to the `release.yaml` file.
 - In the release 1.36.0 logic function will run and disruptions will be checked.
