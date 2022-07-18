@@ -24,13 +24,14 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-type mutateFilter func(*v1alpha1.Filter)
+type mutateFilter func(*v1alpha1.Filter, *vrl.Rule)
 
 func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {
-	return createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter) {
+	return createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter, rule *vrl.Rule) {
 		// parsed_data is a key for parsed json data from a message, we use it to quickly filter inputs
 		// "filter_field" -> "parsed_data.filter_field", "" -> "parsed_data"
 		filter.Field = strings.Join([]string{"parsed_data", filter.Field}, ".")
+		*rule = vrl.Combine(vrl.ParseJSONRule, *rule)
 	})
 }
 
@@ -48,7 +49,7 @@ func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutate
 		}
 
 		if mutate != nil {
-			mutate(&filter)
+			mutate(&filter, &rule)
 		}
 
 		condition, err := rule.Render(vrl.Args{"filter": filter})

@@ -1,38 +1,6 @@
 {
   "sources": {
-    "d8_cluster_source_test-source_test-es-dest": {
-      "type": "kubernetes_logs",
-      "extra_label_selector": "app=test",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=tests-whispers",
-      "annotation_fields": {
-        "container_image": "image",
-        "container_name": "container",
-        "pod_ip": "pod_ip",
-        "pod_labels": "pod_labels",
-        "pod_name": "pod",
-        "pod_namespace": "namespace",
-        "pod_node_name": "node",
-        "pod_owner": "pod_owner"
-      },
-      "glob_minimum_cooldown_ms": 1000
-    },
-    "d8_cluster_source_test-source_test-logstash-dest": {
-      "type": "kubernetes_logs",
-      "extra_label_selector": "app=test",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=tests-whispers",
-      "annotation_fields": {
-        "container_image": "image",
-        "container_name": "container",
-        "pod_ip": "pod_ip",
-        "pod_labels": "pod_labels",
-        "pod_name": "pod",
-        "pod_namespace": "namespace",
-        "pod_node_name": "node",
-        "pod_owner": "pod_owner"
-      },
-      "glob_minimum_cooldown_ms": 1000
-    },
-    "d8_cluster_source_test-source_test-loki-dest": {
+    "d8_cluster_source_test-source": {
       "type": "kubernetes_logs",
       "extra_label_selector": "app=test",
       "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=tests-whispers",
@@ -50,357 +18,141 @@
     }
   },
   "transforms": {
-    "d8_tf_test-source_test-es-dest_00_clean_up": {
-      "drop_on_abort": false,
-      "inputs": [
-        "d8_cluster_source_test-source_test-es-dest"
-      ],
-      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
-      "type": "remap"
-    },
-    "d8_tf_test-source_test-es-dest_01_json_parse": {
-      "drop_on_abort": false,
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_00_clean_up"
-      ],
-      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
-      "type": "remap"
-    },
-    "d8_tf_test-source_test-es-dest_02_elastic_dedot": {
+    "d8_tf_test-es-dest_00_elastic_dedot": {
       "hooks": {
         "process": "process"
       },
       "inputs": [
-        "d8_tf_test-source_test-es-dest_01_json_parse"
+        "d8_tf_test-source_00_label_filter"
       ],
-      "source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend",
+      "source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\temit(event)\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend",
       "type": "lua",
       "version": "2"
     },
-    "d8_tf_test-source_test-es-dest_03_extra_fields": {
+    "d8_tf_test-es-dest_01_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
-        "d8_tf_test-source_test-es-dest_02_elastic_dedot"
+        "d8_tf_test-es-dest_00_elastic_dedot"
       ],
-      "source": " .foo=\"bar\" \n",
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.foo=\"bar\"",
       "type": "remap"
     },
-    "d8_tf_test-source_test-es-dest_04_label_filter": {
-      "condition": "exists(.foo)",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_03_extra_fields"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_05_label_filter": {
-      "condition": "!exists(.fo)",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_04_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_06_label_filter": {
-      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else {\n    includes([111], .test);\n}",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_05_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_07_label_filter": {
-      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else {\n    !includes([\"test-test\"], .test);\n}",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_06_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_08_label_filter": {
-      "condition": "match!(.test, r'^test.*$')",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_07_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_09_label_filter": {
-      "condition": "if exists(.foo) \u0026\u0026 is_string(.foo) {\n    matched = false\n    matched0, err = match(.foo, r'^test.+$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_08_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_10_log_filter": {
-      "condition": "exists(.parsed_data.foo)",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_09_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_11_log_filter": {
-      "condition": "!exists(.parsed_data.fo)",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_10_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_12_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_11_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_13_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_12_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_14_log_filter": {
-      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_13_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_15_log_filter": {
-      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
-      "inputs": [
-        "d8_tf_test-source_test-es-dest_14_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-es-dest_16_del_parsed_data": {
+    "d8_tf_test-es-dest_02_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "d8_tf_test-source_test-es-dest_15_log_filter"
+        "d8_tf_test-es-dest_01_extra_fields"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
-    "d8_tf_test-source_test-logstash-dest_00_clean_up": {
-      "drop_on_abort": false,
-      "inputs": [
-        "d8_cluster_source_test-source_test-logstash-dest"
-      ],
-      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
-      "type": "remap"
-    },
-    "d8_tf_test-source_test-logstash-dest_01_json_parse": {
-      "drop_on_abort": false,
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_00_clean_up"
-      ],
-      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
-      "type": "remap"
-    },
-    "d8_tf_test-source_test-logstash-dest_02_elastic_dedot": {
+    "d8_tf_test-logstash-dest_00_elastic_dedot": {
       "hooks": {
         "process": "process"
       },
       "inputs": [
-        "d8_tf_test-source_test-logstash-dest_01_json_parse"
+        "d8_tf_test-source_00_label_filter"
       ],
-      "source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend",
+      "source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\temit(event)\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend",
       "type": "lua",
       "version": "2"
     },
-    "d8_tf_test-source_test-logstash-dest_03_extra_fields": {
+    "d8_tf_test-logstash-dest_01_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
-        "d8_tf_test-source_test-logstash-dest_02_elastic_dedot"
+        "d8_tf_test-logstash-dest_00_elastic_dedot"
       ],
-      "source": " .foo=\"bar\" \n",
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.foo=\"bar\"",
       "type": "remap"
     },
-    "d8_tf_test-source_test-logstash-dest_04_label_filter": {
-      "condition": "exists(.foo)",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_03_extra_fields"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_05_label_filter": {
-      "condition": "!exists(.fo)",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_04_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_06_label_filter": {
-      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else {\n    includes([111], .test);\n}",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_05_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_07_label_filter": {
-      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else {\n    !includes([\"test-test\"], .test);\n}",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_06_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_08_label_filter": {
-      "condition": "match!(.test, r'^test.*$')",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_07_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_09_label_filter": {
-      "condition": "if exists(.foo) \u0026\u0026 is_string(.foo) {\n    matched = false\n    matched0, err = match(.foo, r'^test.+$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_08_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_10_log_filter": {
-      "condition": "exists(.parsed_data.foo)",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_09_label_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_11_log_filter": {
-      "condition": "!exists(.parsed_data.fo)",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_10_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_12_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_11_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_13_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_12_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_14_log_filter": {
-      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_13_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_15_log_filter": {
-      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
-      "inputs": [
-        "d8_tf_test-source_test-logstash-dest_14_log_filter"
-      ],
-      "type": "filter"
-    },
-    "d8_tf_test-source_test-logstash-dest_16_del_parsed_data": {
+    "d8_tf_test-logstash-dest_02_del_parsed_data": {
       "drop_on_abort": false,
       "inputs": [
-        "d8_tf_test-source_test-logstash-dest_15_log_filter"
+        "d8_tf_test-logstash-dest_01_extra_fields"
       ],
       "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
       "type": "remap"
     },
-    "d8_tf_test-source_test-loki-dest_00_clean_up": {
-      "drop_on_abort": false,
-      "inputs": [
-        "d8_cluster_source_test-source_test-loki-dest"
-      ],
-      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
-      "type": "remap"
-    },
-    "d8_tf_test-source_test-loki-dest_01_json_parse": {
-      "drop_on_abort": false,
-      "inputs": [
-        "d8_tf_test-source_test-loki-dest_00_clean_up"
-      ],
-      "source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
-      "type": "remap"
-    },
-    "d8_tf_test-source_test-loki-dest_02_label_filter": {
+    "d8_tf_test-source_00_label_filter": {
       "condition": "exists(.foo)",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_01_json_parse"
+        "d8_cluster_source_test-source"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_03_label_filter": {
+    "d8_tf_test-source_01_label_filter": {
       "condition": "!exists(.fo)",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_02_label_filter"
+        "d8_tf_test-source_00_label_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_04_label_filter": {
+    "d8_tf_test-source_02_label_filter": {
       "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else {\n    includes([111], .test);\n}",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_03_label_filter"
+        "d8_tf_test-source_01_label_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_05_label_filter": {
+    "d8_tf_test-source_03_label_filter": {
       "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else {\n    !includes([\"test-test\"], .test);\n}",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_04_label_filter"
+        "d8_tf_test-source_02_label_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_06_label_filter": {
+    "d8_tf_test-source_04_label_filter": {
       "condition": "match!(.test, r'^test.*$')",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_05_label_filter"
+        "d8_tf_test-source_03_label_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_07_label_filter": {
+    "d8_tf_test-source_05_label_filter": {
       "condition": "if exists(.foo) \u0026\u0026 is_string(.foo) {\n    matched = false\n    matched0, err = match(.foo, r'^test.+$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_06_label_filter"
+        "d8_tf_test-source_04_label_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_08_log_filter": {
-      "condition": "exists(.parsed_data.foo)",
+    "d8_tf_test-source_06_log_filter": {
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nexists(.parsed_data.foo)",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_07_label_filter"
+        "d8_tf_test-source_05_label_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_09_log_filter": {
-      "condition": "!exists(.parsed_data.fo)",
+    "d8_tf_test-source_07_log_filter": {
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n!exists(.parsed_data.fo)",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_08_log_filter"
+        "d8_tf_test-source_06_log_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_10_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+    "d8_tf_test-source_08_log_filter": {
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {\n    data, err = to_string(.parsed_data.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else {\n    includes([111], .parsed_data.test);\n}",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_09_log_filter"
+        "d8_tf_test-source_07_log_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_11_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+    "d8_tf_test-source_09_log_filter": {
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {\n    data, err = to_string(.parsed_data.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else {\n    !includes([\"test-test\"], .parsed_data.test);\n}",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_10_log_filter"
+        "d8_tf_test-source_08_log_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_12_log_filter": {
-      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
+    "d8_tf_test-source_10_log_filter": {
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n} match!(.parsed_data.test, r'^test.*$')",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_11_log_filter"
+        "d8_tf_test-source_09_log_filter"
       ],
       "type": "filter"
     },
-    "d8_tf_test-source_test-loki-dest_13_log_filter": {
-      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
+    "d8_tf_test-source_11_log_filter": {
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^test.+$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_12_log_filter"
+        "d8_tf_test-source_10_log_filter"
       ],
       "type": "filter"
     }
@@ -409,7 +161,7 @@
     "d8_cluster_sink_test-es-dest": {
       "type": "elasticsearch",
       "inputs": [
-        "d8_tf_test-source_test-es-dest_16_del_parsed_data"
+        "d8_tf_test-es-dest_02_del_parsed_data"
       ],
       "healthcheck": {
         "enabled": false
@@ -443,7 +195,7 @@
     "d8_cluster_sink_test-logstash-dest": {
       "type": "socket",
       "inputs": [
-        "d8_tf_test-source_test-logstash-dest_16_del_parsed_data"
+        "d8_tf_test-logstash-dest_02_del_parsed_data"
       ],
       "healthcheck": {
         "enabled": false
@@ -469,7 +221,7 @@
     "d8_cluster_sink_test-loki-dest": {
       "type": "loki",
       "inputs": [
-        "d8_tf_test-source_test-loki-dest_13_log_filter"
+        "d8_tf_test-source_00_label_filter"
       ],
       "healthcheck": {
         "enabled": false

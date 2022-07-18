@@ -70,6 +70,11 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		transforms = append(transforms, ThrottleTransform(dest.Spec.RateLimit))
 	}
 
+	switch dest.Spec.Type {
+	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash, v1alpha1.DestVector:
+		transforms = append(transforms, CleanUpParsedDataTransform())
+	}
+
 	dTransforms, err := BuildFromMapSlice(name, transforms)
 	if err != nil {
 		return nil, fmt.Errorf("add source transforms: %v", err)

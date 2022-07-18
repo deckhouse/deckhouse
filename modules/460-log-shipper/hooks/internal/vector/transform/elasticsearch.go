@@ -17,8 +17,6 @@ limitations under the License.
 package transform
 
 import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
@@ -94,13 +92,4 @@ func CleanUpParsedDataTransform() *DynamicTransform {
 			"drop_on_abort": false,
 		},
 	}
-}
-
-func CreateDefaultCleanUpTransforms(dest v1alpha1.ClusterLogDestination) []apis.LogTransform {
-	transforms := make([]apis.LogTransform, 0)
-	switch dest.Spec.Type {
-	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash, v1alpha1.DestVector:
-		transforms = append(transforms, CleanUpParsedDataTransform())
-	}
-	return transforms
 }

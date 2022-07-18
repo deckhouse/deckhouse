@@ -21,6 +21,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
 // Copied these regexes from another place. Remove them after refactoring.
@@ -97,7 +99,7 @@ func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 			Type: "remap",
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source":        strings.Join(tmpFields, ""),
+			"source":        vrl.Combine(vrl.ParseJSONRule, vrl.Rule(strings.Join(tmpFields, ""))).String(),
 			"drop_on_abort": false,
 		},
 	}
