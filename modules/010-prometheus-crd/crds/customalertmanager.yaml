@@ -636,29 +636,36 @@ spec:
                           slackConfigs:
                             description: List of Slack configurations.
                             items:
-                              description: SlackConfig configures notifications via Slack. [Details...](https://prometheus.io/docs/alerting/latest/configuration/#slack_config)
+                              description: Configures notifications via Slack. [Details...](https://prometheus.io/docs/alerting/latest/configuration/#slack_config)
                               properties:
                                 actions:
-                                  description: A list of Slack actions that are sent with
-                                    each notification.
+                                  description: A list of Slack actions that are sent with each notification.
                                   items:
-                                    description: SlackAction configures a single Slack action
-                                      that is sent with each notification. More information [here...](https://api.slack.com/docs/message-attachments#action_fields) and [here](https://api.slack.com/docs/message-buttons).
+                                    description: |
+                                      Configures a single Slack action that is sent with each notification.
+
+                                      More information [here...](https://api.slack.com/docs/message-attachments#action_fields) and [here](https://api.slack.com/docs/message-buttons).
                                     properties:
                                       confirm:
-                                        description: SlackConfirmationField protect users
-                                          from destructive actions or particularly distinguished
-                                          decisions by asking them to confirm their button
-                                          click one more time. [Details...](https://api.slack.com/docs/interactive-message-field-guide#confirmation_fields).
+                                        description: Protects users from destructive actions or particularly distinguished
+                                          decisions by asking them to confirm their button click one more time. [Details...](https://api.slack.com/docs/interactive-message-field-guide#confirmation_fields).
                                         properties:
                                           dismissText:
+                                            description: The text label for the button to cancel the action.
                                             type: string
                                           okText:
+                                            description: The text label for the button to continue with an action.
                                             type: string
                                           text:
+                                            description: |
+                                              Describe in detail the consequences of the action and contextualize your button text choices.
+
+                                              Use a maximum of 30 characters or so for best results across form factors.
                                             minLength: 1
                                             type: string
                                           title:
+                                            description: |
+                                              Brief title of the pop up window.
                                             type: string
                                         required:
                                         - text

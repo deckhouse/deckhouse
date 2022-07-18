@@ -10,7 +10,7 @@ spec:
               properties:
                 folder:
                   description: |
-                    Каталог, в который попадёт данный dashboard. Если такого каталога нет, он будет создан.
+                    Папка, в которую попадёт данный dashboard. Если такой папки нет, она будет создана.
                 definition:
                   description: |
                     JSON-манифест dashboard.

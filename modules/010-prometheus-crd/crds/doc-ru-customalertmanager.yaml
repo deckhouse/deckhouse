@@ -60,11 +60,7 @@ spec:
                           Правила запрета используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения ([подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
                         properties:
                           equal:
-                            description: Лейблы, которые должны иметь одинаковое значение в исходном
-                              и целевом алерте, чтобы запрет вступил в силу.
-                            items:
-                              type: string
-                            type: array
+                            description: Лейблы, которые должны иметь одинаковое значение в исходном и целевом алерте, чтобы запрет вступил в силу.
                           sourceMatch:
                             description: |
                               Список условий которым должно удовлетворять один или более алертов, чтобы запрет вступил в силу.
@@ -75,18 +71,10 @@ spec:
                               properties: &match-properties
                                 name:
                                   description: Название лейбла для удовлетворения условию.
-                                  minLength: 1
-                                  type: string
                                 regex:
                                   description: Тип сравнения — по равенству (false) или по регулярному выражению (true).
-                                  type: boolean
                                 value:
                                   description: Значение лейбла (regex-шаблон) для удовлетворения условию.
-                                  type: string
-                              required:
-                              - name
-                              type: object
-                            type: array
                           targetMatch:
                             description: |
                               Список условий проверяемых в алертах, при выполнении которых алерты будут отключены.
@@ -95,12 +83,6 @@ spec:
                             items:
                               description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
                               properties: *match-properties
-                              required:
-                              - name
-                              type: object
-                            type: array
-                        type: object
-                      type: array
                     receivers:
                       description: |
                         Список получателей.
@@ -228,26 +210,16 @@ spec:
                                   properties: *data-in-secret-properties
                                 apiURL:
                                   description: URL-адрес OpsGenie API для отправки запросов.
-                                  type: string
                                 description:
                                   description: Описание инцидента.
-                                  type: string
                                 details:
                                   description: Список произвольных пар ключ/значение, которые содержат более подробную информацию об инциденте.
                                   items:
                                     properties:
                                       key:
                                         description: Ключ.
-                                        minLength: 1
-                                        type: string
                                       value:
                                         description: Значение.
-                                        type: string
-                                    required:
-                                    - key
-                                    - value
-                                    type: object
-                                  type: array
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
                                   properties:
@@ -273,13 +245,10 @@ spec:
                                     tlsConfig: *tls-config
                                 message:
                                   description: Текст алерта. Максимум 130 символов.
-                                  type: string
                                 note:
                                   description: Дополнительный текст алерта.
-                                  type: string
                                 priority:
                                   description: Приоритет алерта. Доступны варианты P1, P2, P3, P4, и P5.
-                                  type: string
                                 responders:
                                   description: Список responder'ов, ответственных за уведомления.
                                   items:
@@ -433,27 +402,28 @@ spec:
                                 Конфигурация определяет параметры отправки оповещений с помощью Slack. [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#slack_config)
                               properties:
                                 actions:
-                                  description: Список действий Slack, которые отправляются с каждым уведомлением.
+                                  description: Список Slack actions, которые отправляются с каждым уведомлением.
                                   items:
-                                    description: SlackAction настраивает одно действие Slack,
-                                      которое отправляется с каждым уведомлением. Больше информации
-                                      [здесь](https://api.slack.com/docs/message-attachments#action_fields) и [здесь](https://api.slack.com/docs/message-buttons).
+                                    description: |
+                                      Настраивает один Slack action, который отправляется с каждым уведомлением.
+
+                                      Больше информации [здесь](https://api.slack.com/docs/message-attachments#action_fields) и [здесь](https://api.slack.com/docs/message-buttons).
                                     properties:
                                       confirm:
-                                        description: SlackConfirmationField защищает пользователей от
-                                          деструктивных действий или особо выдающихся решений,
-                                          попросив их подтвердить нажатие кнопки еще раз.
+                                        description: Защищает пользователей от деструктивных действий, прося их подтвердить нажатие кнопки еще раз.
                                           [Подробнее...](https://api.slack.com/docs/interactive-message-field-guide#confirmation_fields)
                                         properties:
                                           dismissText:
-                                            type: string
+                                            description: Надпись на кнопке отмены.
                                           okText:
-                                            type: string
+                                            description: Надпись на кнопке подтверждения.
                                           text:
-                                            minLength: 1
-                                            type: string
+                                            description: |
+                                              Подробное описание последствий выполнения действия и назначения кнопок.
+
+                                              Не более 30 символов.
                                           title:
-                                            type: string
+                                            description: Короткий заголовок всплывающего окна.
                                       name:
                                         type: string
                                       style:
@@ -478,8 +448,6 @@ spec:
                                   type: string
                                 channel:
                                   description: Канал или пользователь для отправки уведомлений.
-                                    to.
-                                  type: string
                                 color:
                                   type: string
                                 fallback:
@@ -539,8 +507,6 @@ spec:
                                   type: string
                                 username:
                                   type: string
-                              type: object
-                            type: array
                           victoropsConfigs:
                             description: Список конфигураций для отправки оповещений через VictorOps.
                             items:
