@@ -103,25 +103,18 @@ spec:
                   description: Internal Alertmanager parameters.
                   properties:
                     inhibitRules:
-                      description: |
-                        List of inhibition rules.
-
-                        The rules will only apply to alerts matching the resource’s namespace.
+                      description: List of inhibition rules.
                       items:
                         description: |
                           InhibitRule defines an inhibition rule that allows to mute alerts when other alerts are already firing ([details...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
                         properties:
                           equal:
-                            description: Labels that must have an equal value in the source
-                              and target alert for the inhibition to take effect.
+                            description: Labels that must have an equal value in the source and target alert for the inhibition to take effect.
                             items:
                               type: string
                             type: array
                           sourceMatch:
-                            description: |
-                              Matchers for which one or more alerts have to exist for the inhibition to take effect.
-
-                              The operator enforces that the alert matches the resource’s namespace.
+                            description: Matchers for which one or more alerts have to exist for the inhibition to take effect.
                             items:
                               description: Matcher defines how to match on alert's labels.
                               properties: &match-properties
@@ -140,10 +133,7 @@ spec:
                               type: object
                             type: array
                           targetMatch:
-                            description: |
-                              Matchers that have to be fulfilled in the alerts to be muted.
-
-                              The operator enforces that the alert matches the resource’s namespace.
+                            description: Matchers that have to be fulfilled in the alerts to be muted.
                             items:
                               description: Matcher defines how to match on alert's labels.
                               properties: *match-properties
@@ -176,8 +166,6 @@ spec:
                                     key:
                                       description: |
                                         The key of the secret to select from.
-
-                                        Must be a valid secret key.
                                       type: string
                                     name:
                                       description: |
@@ -186,8 +174,7 @@ spec:
                                         [More info...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                       type: string
                                     optional:
-                                      description: Specify whether the Secret or its key
-                                        must be defined.
+                                      description: Specify whether the Secret or its key must exist.
                                       type: boolean
                                   required:
                                   - key
@@ -268,8 +255,7 @@ spec:
                                                 [More info...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                               type: string
                                             optional:
-                                              description: Specify whether the ConfigMap
-                                                or its key must be defined.
+                                              description: Specify whether the ConfigMap or its key must exist.
                                               type: boolean
                                           required:
                                           - key
@@ -367,15 +353,13 @@ spec:
                                       description: BasicAuth for the client.
                                       properties:
                                         password:
-                                          description: The secret in the service monitor
-                                            namespace that contains the password for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
                                           type: object
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
@@ -436,16 +420,14 @@ spec:
                                   description: Backlink to the sender of the notification.
                                   type: string
                                 tags:
-                                  description: Comma separated list of tags attached to
-                                    the notifications.
+                                  description: Comma separated list of tags attached to the notifications.
                                   type: string
                               type: object
                             type: array
                           pagerdutyConfigs:
                             description: List of PagerDuty configurations.
                             items:
-                              description: PagerDutyConfig configures notifications via
-                                PagerDuty. See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config
+                              description: PagerDutyConfig configures notifications via PagerDuty. [Details...](See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
                               properties:
                                 class:
                                   description: The class/type of the event.
@@ -457,15 +439,13 @@ spec:
                                   description: Backlink to the sender of notification.
                                   type: string
                                 component:
-                                  description: The part or component of the affected system
-                                    that is broken.
+                                  description: The part or component of the affected system that is broken.
                                   type: string
                                 description:
                                   description: Description of the incident.
                                   type: string
                                 details:
-                                  description: Arbitrary key/value pairs that provide further
-                                    detail about the incident.
+                                  description: Arbitrary key/value pairs that provide further detail about the incident.
                                   items:
                                     properties:
                                       key:
@@ -490,15 +470,13 @@ spec:
                                       description: BasicAuth for the client.
                                       properties:
                                         password:
-                                          description: The secret in the service monitor
-                                            namespace that contains the password for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
                                           type: object
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
@@ -554,8 +532,7 @@ spec:
                                     notification.
                                   type: string
                                 html:
-                                  description: Whether notification message is HTML or plain
-                                    text.
+                                  description: Whether notification message is HTML or plain text.
                                   type: boolean
                                 httpConfig:
                                   description: HTTP client configuration.
@@ -564,15 +541,13 @@ spec:
                                       description: BasicAuth for the client.
                                       properties:
                                         password:
-                                          description: The secret in the service monitor
-                                            namespace that contains the password for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
                                           type: object
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
@@ -709,11 +684,10 @@ spec:
                                 fallback:
                                   type: string
                                 fields:
-                                  description: A list of Slack fields that are sent with
-                                    each notification.
+                                  description: A list of Slack fields that are sent with each notification.
                                   items:
                                     description: |
-                                      SlackField configures a single Slack field that is sent with each notification.
+                                      Configures a single Slack field that is sent with each notification.
 
                                       Each field must contain a title, value, and optionally, a boolean value to indicate if the field is short enough to
                                       be displayed next to other fields designated as short. [More information...](https://api.slack.com/docs/message-attachments#fields)
@@ -740,15 +714,13 @@ spec:
                                       description: BasicAuth for the client.
                                       properties:
                                         password:
-                                          description: The secret in the service monitor
-                                            namespace that contains the password for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
                                           type: object
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
@@ -836,15 +808,13 @@ spec:
                                       description: BasicAuth for the client.
                                       properties:
                                         password:
-                                          description: The secret in the service monitor
-                                            namespace that contains the password for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
                                           type: object
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
@@ -886,14 +856,13 @@ spec:
                                       description: BasicAuth for the client.
                                       properties:
                                         password:
-                                          description: The secret in the service monitor namespace that contains the password for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
                                           type: object
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
@@ -966,15 +935,13 @@ spec:
                                       description: BasicAuth for the client.
                                       properties:
                                         password:
-                                          description: The secret in the service monitor
-                                            namespace that contains the password for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the password for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key
                                           type: object
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
+                                          description: The secret in the `d8-monitoring` namespace that contains the username for authentication.
                                           properties: *data-in-secret-properties
                                           required:
                                           - key

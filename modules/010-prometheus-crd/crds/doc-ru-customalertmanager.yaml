@@ -51,21 +51,14 @@ spec:
                   description: Параметры настройки внутренного Alertmanager.
                   properties:
                     inhibitRules:
-                      description: |
-                        Список правил запрета.
-
-                        Правила будут применяться только к оповещениям, соответствующим пространству имен ресурса.
+                      description: Список правил запрета.
                       items:
-                        description: |
-                          Правила запрета используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения ([подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
+                        description: Правила запрета используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения ([подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
                         properties:
                           equal:
                             description: Лейблы, которые должны иметь одинаковое значение в исходном и целевом алерте, чтобы запрет вступил в силу.
                           sourceMatch:
-                            description: |
-                              Список условий которым должно удовлетворять один или более алертов, чтобы запрет вступил в силу.
-
-                              Оператор обеспечивает соответствие оповещения пространству имен ресурса.
+                            description: Список условий которым должно удовлетворять один или более алертов, чтобы запрет вступил в силу.
                             items:
                               description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
                               properties: &match-properties
@@ -76,10 +69,7 @@ spec:
                                 value:
                                   description: Значение лейбла (regex-шаблон) для удовлетворения условию.
                           targetMatch:
-                            description: |
-                              Список условий проверяемых в алертах, при выполнении которых алерты будут отключены.
-
-                              Оператор обеспечивает соответствие алерта пространству имен ресурса.
+                            description: Список условий проверяемых в алертах, при выполнении которых алерты будут отключены.
                             items:
                               description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
                               properties: *match-properties
@@ -105,8 +95,6 @@ spec:
                                     key:
                                       description: |
                                         Ключ (имя ключа) Secret'а, из которого брать данные.
-
-                                        Указанный ключ Secret'a должен существовать.
                                     name:
                                       description: |
                                         Ссылка на Secret.
@@ -114,7 +102,7 @@ spec:
                                         [Подробнее о формате...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                     optional:
                                       description: |
-                                        Определяет, обязательно ли указание Secret'а или его ключа (`false`) или нет (`true`).
+                                        Определяет, обязательно ли (`false`) указанные Secret или его ключ должны существовать.
                                 authSecret:
                                   description: |
                                     Ключ Secret'а, содержащий CRAM-MD5-секрет для аутентификации.
@@ -172,7 +160,7 @@ spec:
                                                 [Подробнее о формате...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                             optional:
                                               description: |
-                                                Определяет, обязательно ли указание ConfigMap'а или его ключа (`false`) или нет (`true`).
+                                                Определяет, обязательно ли (`false`) указанные ConfigMap или его ключ должны существовать.
                                         secret:
                                           description: Secret, содержащий данные для использования в target'е.
                                           properties: *data-in-secret-properties
@@ -227,12 +215,10 @@ spec:
                                       description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
-                                          description: Секрет в пространстве имен service monitor,
-                                            который содержит пароль для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
                                           properties: *data-in-secret-properties
                                         username:
-                                          description: Секрет в пространстве имен service monitor,
-                                            который содержит имя пользователя для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
                                           properties: *data-in-secret-properties
                                     bearerTokenSecret: &bearer-token-secret
                                       description: |
@@ -286,8 +272,7 @@ spec:
                                 description:
                                   description: Описание инцидента.
                                 details:
-                                  description: Список произвольных пар ключ/значение, которые
-                                    предоставляют более подробную информацию об инциденте.
+                                  description: Список произвольных пар ключ/значение, которые содержат более подробную информацию об инциденте.
                                   items:
                                     properties:
                                       key:
@@ -303,12 +288,10 @@ spec:
                                       description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
-                                          description: Secret в пространстве имен service monitor,
-                                            который содержит пароль для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
                                           properties: *data-in-secret-properties
                                         username:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит имя пользователя для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
                                           properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
@@ -353,12 +336,10 @@ spec:
                                       description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит пароль для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
                                           properties: *data-in-secret-properties
                                         username:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит имя пользователя для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
                                           properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
@@ -456,7 +437,7 @@ spec:
                                   description: Список полей Slack, которые отправляются с каждым уведомлением.
                                   items:
                                     description: |
-                                      SlackField настраивает одно поле Slack, которое отправляется с каждым уведомлением.
+                                      Каждый элемент списка настраивает одно поле Slack, которое отправляется с каждым уведомлением.
 
                                       Каждое поле должно содержать заголовок (`title`), значение (`value`) и, необязательный параметр `short`, указывающий, достаточно ли короткое поле для отображения рядом с другими 'короткими' полями. [Подробнее...](https://api.slack.com/docs/message-attachments#fields)
                                 footer:
@@ -468,12 +449,10 @@ spec:
                                       description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит пароль для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
                                           properties: *data-in-secret-properties
                                         username:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит имя пользователя для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
                                           properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
@@ -538,12 +517,10 @@ spec:
                                       description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит пароль для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
                                           properties: *data-in-secret-properties
                                         username:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит имя пользователя для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
                                           properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
@@ -571,12 +548,10 @@ spec:
                                       description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит пароль для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
                                           properties: *data-in-secret-properties
                                         username:
-                                          description: The secret in the service monitor
-                                            namespace that contains the username for authentication.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
                                           properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
@@ -630,12 +605,10 @@ spec:
                                       description: Параметры базовой аутентификации клиента.
                                       properties:
                                         password:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит пароль для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
                                           properties: *data-in-secret-properties
                                         username:
-                                          description: Secret в пространстве имен `service monitor`,
-                                            который содержит имя пользователя для проверки подлинности.
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
                                           properties: *data-in-secret-properties
                                     bearerTokenSecret: *bearer-token-secret
                                     proxyURL:
