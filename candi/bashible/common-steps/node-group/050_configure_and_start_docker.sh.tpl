@@ -48,7 +48,7 @@ if [ ${docker_major_version} -ge 20 ]; then
 fi
 
 mkdir -p /etc/docker
-bb-sync-file /etc/docker/daemon.json - docker-config-changed <<< ${daemon_json}
+bb-sync-file /etc/docker/daemon.json - docker-config-changed <<< "${daemon_json}"
 
 {{- if .registry.ca }}
 mkdir -p /etc/docker/certs.d/{{ .registry.address }}
