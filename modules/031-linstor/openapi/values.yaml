@@ -11,6 +11,8 @@ properties:
     - sslControllerCert
     - sslNodeCert
     properties:
+      masterPassphrase:
+        type: string
       httpsClientCert:
         type: object
         default: {}
