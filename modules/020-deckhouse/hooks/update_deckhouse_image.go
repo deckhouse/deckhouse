@@ -254,7 +254,7 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		Version:      semver.MustParse(release.Spec.Version),
 		ApplyAfter:   release.Spec.ApplyAfter,
 		Requirements: release.Spec.Requirements,
-		Disruptions:                     release.Spec.Disruptions,
+		Disruptions:  release.Spec.Disruptions,
 		Status: v1alpha1.DeckhouseReleaseStatus{
 			Phase:    release.Status.Phase,
 			Approved: release.Status.Approved,
