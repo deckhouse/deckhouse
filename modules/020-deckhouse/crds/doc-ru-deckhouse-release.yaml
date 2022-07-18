@@ -51,3 +51,7 @@ spec:
           jsonPath: .status.transitionTime
           type: date
           description: 'Показывает, когда статус релиза изменился.'
+        - name: message
+          jsonPath: .status.message
+          type: string
+          description: 'Детали статуса релиза.'
