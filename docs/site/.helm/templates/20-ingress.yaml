@@ -79,7 +79,7 @@ kind: Certificate
 metadata:
   name: {{ .Chart.Name }}-cert
 spec:
-  # certificateOwnerRef: false
+  certificateOwnerRef: false
   secretName: tls-{{ $host }}
   issuerRef:
     kind: ClusterIssuer
