@@ -93,7 +93,7 @@ function __on_group::main-np() {
     .snapshots.ingressgateway_service[0].filterResult.port as $port |
     [.snapshots.pods[].filterResult.nodeName] as $pod_nodes |
     [
-        .snapshots.nodes[] | select(.isActive) | .filterResult | .name as $name | select($pod_nodes | index($name)) | {"address": .address, "port": $port}
+        .snapshots.nodes[].filterResult | select(.isActive) | .name as $name | select($pod_nodes | index($name)) | {"address": .address, "port": $port}
     ]' > /metadata/ingressgateways-array.json
 }
 
