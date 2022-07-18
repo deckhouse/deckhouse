@@ -61,6 +61,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix docker config creation. [#2044](https://github.com/deckhouse/deckhouse/pull/2044)
  - **[candi]** Fixed the applying of disk size for CloudPermanent nodes in `YandexClusterConfiguration`. [#1900](https://github.com/deckhouse/deckhouse/pull/1900)
  - **[cert-manager]** Fix patch for cert-manager certificate owner ref field [#1985](https://github.com/deckhouse/deckhouse/pull/1985)
  - **[cert-manager]** Respect the global IngressClass in the `letsencrypt` ClusterIssuer. [#1750](https://github.com/deckhouse/deckhouse/pull/1750)
