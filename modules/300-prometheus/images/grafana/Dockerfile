@@ -2,7 +2,7 @@ ARG BASE_ALPINE
 ARG BASE_NODE_16_ALPINE
 ARG BASE_GOLANG_17_BUSTER
 ARG BASE_DEBIAN
-ARG GRAFANA_VERSION="8.5.2"
+ARG GRAFANA_VERSION="8.5.9"
 ARG STATUSMAP_VERSION="0.5.1"
 ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel"
 
