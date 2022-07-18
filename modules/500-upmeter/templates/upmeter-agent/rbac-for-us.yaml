@@ -22,9 +22,12 @@ rules:
       - create
       - delete
   # - In monitoring, we check daemonset availability based on available nodes
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
   # - In various probes, we check pods readiness
   - apiGroups: [""]
-    resources: ["nodes", "pods"]
+    resources: ["pods"]
     verbs: ["get", "list"]
   # Deckhouse hooks checked via the CR change sync, and nodegroup probes
   - apiGroups: ["deckhouse.io"]
