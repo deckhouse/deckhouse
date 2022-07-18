@@ -20,6 +20,7 @@ import (
 	"bytes"
 
 	"github.com/clarketm/json"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
@@ -27,12 +28,18 @@ import (
 // Pipeline is a representation of a single logical tube.
 //   Example: ClusterLoggingConfig +(destinationRef) ClusterLogsDestination = Single Pipeline.
 type Pipeline struct {
-	Source       apis.LogSource
-	Transforms   []apis.LogTransform
+	Source       PipelineSource
 	Destinations []PipelineDestination
 }
 
+type PipelineSource struct {
+	Source     apis.LogSource
+	Transforms []apis.LogTransform
+}
+
 type PipelineDestination struct {
+	Inputs set.Set
+
 	Destination apis.LogDestination
 	Transforms  []apis.LogTransform
 }
@@ -73,68 +80,52 @@ func (v *VectorFile) ConvertToJSON() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// LogConfigGenerator accumulates pipelines and converts them to the vector config file.
-type LogConfigGenerator struct {
-	sources         []apis.LogSource
-	transformations []apis.LogTransform
-	destinations    map[string]apis.LogDestination
-}
-
-// NewLogConfigGenerator return a new instance of a LogConfigGenerator.
-func NewLogConfigGenerator() *LogConfigGenerator {
-	return &LogConfigGenerator{
-		destinations: make(map[string]apis.LogDestination),
-	}
-}
-
 // AppendLogPipeline adds the pipeline to the accumulated ones.
 // Pipeline always contains a single log source and one or more transform rules / sinks.
-func (g *LogConfigGenerator) AppendLogPipeline(pipeline *Pipeline) {
-	sources := pipeline.Source.BuildSources()
-
-	sourcesNames := make([]string, 0, len(sources))
-	for _, source := range sources {
-		sourcesNames = append(sourcesNames, source.GetName())
+func (v *VectorFile) AppendLogPipeline(pipeline *Pipeline) error {
+	compiledSrc := pipeline.Source.Source.BuildSources()
+	for _, src := range compiledSrc {
+		v.Sources[src.GetName()] = src
 	}
 
 	destinationInputs := make([]string, 0)
 
-	if len(pipeline.Transforms) > 0 {
-		pipeline.Transforms[0].SetInputs(sourcesNames)
-		destinationInputs = append(destinationInputs, pipeline.Transforms[len(pipeline.Transforms)-1].GetName())
+	sourcesNames := set.New()
+	for _, src := range compiledSrc {
+		sourcesNames.Add(src.GetName())
+	}
+
+	if len(pipeline.Source.Transforms) > 0 {
+		pipeline.Source.Transforms[0].SetInputs(sourcesNames.Slice())
+		destinationInputs = append(destinationInputs, pipeline.Source.Transforms[0].GetName())
 	} else {
-		destinationInputs = sourcesNames
+		destinationInputs = sourcesNames.Slice()
+	}
+
+	for _, trans := range pipeline.Source.Transforms {
+		v.Transforms[trans.GetName()] = trans
 	}
 
 	for _, pipelineDest := range pipeline.Destinations {
 		dest := pipelineDest.Destination
 
-		if _, ok := g.destinations[dest.GetName()]; !ok {
-			g.destinations[dest.GetName()] = dest
+		if _, ok := v.Sinks[dest.GetName()]; !ok {
+			v.Sinks[dest.GetName()] = dest
 		}
 
-		g.destinations[dest.GetName()].AppendInputs(destinationInputs)
+		for _, trans := range pipelineDest.Transforms {
+			v.Transforms[trans.GetName()] = trans
+		}
+
+		if len(pipelineDest.Transforms) > 0 {
+			pipelineDest.Transforms[0].SetInputs(destinationInputs)
+			v.Sinks[dest.GetName()].SetInputs(
+				[]string{pipelineDest.Transforms[len(pipelineDest.Transforms)-1].GetName()},
+			)
+		} else {
+			v.Sinks[dest.GetName()].SetInputs(destinationInputs)
+		}
 	}
 
-	g.sources = append(g.sources, sources...)
-	g.transformations = append(g.transformations, pipeline.Transforms...)
-}
-
-// GenerateConfig returns collected pipelines as a JSON formatted document.
-func (g *LogConfigGenerator) GenerateConfig() ([]byte, error) {
-	vectorFile := NewVectorFile()
-
-	for _, src := range g.sources {
-		vectorFile.Sources[src.GetName()] = src
-	}
-
-	for _, tr := range g.transformations {
-		vectorFile.Transforms[tr.GetName()] = tr
-	}
-
-	for _, dest := range g.destinations {
-		vectorFile.Sinks[dest.GetName()] = dest
-	}
-
-	return vectorFile.ConvertToJSON()
+	return nil
 }

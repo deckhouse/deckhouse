@@ -32,5 +32,5 @@ type LogTransform interface {
 
 type LogDestination interface {
 	GetName() string
-	AppendInputs([]string)
+	SetInputs([]string)
 }

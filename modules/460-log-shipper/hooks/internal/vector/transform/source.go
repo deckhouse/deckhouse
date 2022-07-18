@@ -17,6 +17,8 @@ limitations under the License.
 package transform
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
@@ -30,7 +32,7 @@ type LogSourceConfig struct {
 	LogFilter   []v1alpha1.Filter
 }
 
-func CreateLogSourceTransforms(cfg *LogSourceConfig) ([]apis.LogTransform, error) {
+func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTransform, error) {
 	transforms := make([]apis.LogTransform, 0)
 
 	transforms = append(transforms, CreateMultiLineTransforms(cfg.MultilineType)...)
@@ -47,5 +49,10 @@ func CreateLogSourceTransforms(cfg *LogSourceConfig) ([]apis.LogTransform, error
 	}
 	transforms = append(transforms, logFilterTransforms...)
 
-	return transforms, nil
+	sTransforms, err := BuildFromMapSlice(name, transforms)
+	if err != nil {
+		return nil, fmt.Errorf("add source transforms: %v", err)
+	}
+
+	return sTransforms, nil
 }

@@ -16,7 +16,10 @@ limitations under the License.
 
 package destination
 
-import "encoding/base64"
+import (
+	"encoding/base64"
+	"sort"
+)
 
 type CommonSettings struct {
 	Name        string      `json:"-"`
@@ -43,23 +46,9 @@ type Buffer struct {
 	Type string `json:"type,omitempty"`
 }
 
-// AppendInputs append inputs to destination. If input is already exists - skip it (dedup)
-func (cs *CommonSettings) AppendInputs(inp []string) {
-	if len(cs.Inputs) == 0 {
-		cs.Inputs = inp
-		return
-	}
-
-	m := make(map[string]bool, len(cs.Inputs))
-	for _, d := range cs.Inputs {
-		m[d] = true
-	}
-
-	for _, newinp := range inp {
-		if _, ok := m[newinp]; !ok {
-			cs.Inputs = append(cs.Inputs, newinp)
-		}
-	}
+func (cs *CommonSettings) SetInputs(inp []string) {
+	sort.Strings(inp)
+	cs.Inputs = inp
 }
 
 func (cs *CommonSettings) GetName() string {

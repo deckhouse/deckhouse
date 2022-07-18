@@ -19,6 +19,7 @@ package transform
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/clarketm/json"
 
@@ -56,6 +57,7 @@ func (cs *CommonTransform) SetName(name string) {
 }
 
 func (cs *CommonTransform) SetInputs(inp []string) {
+	sort.Strings(inp)
 	cs.Inputs = inp
 }
 

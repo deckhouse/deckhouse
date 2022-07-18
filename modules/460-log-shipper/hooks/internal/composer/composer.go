@@ -59,51 +59,65 @@ func FromInput(input *go_hook.HookInput) *Composer {
 }
 
 func (c *Composer) Do() ([]byte, error) {
-	destinationRefs := c.composeDestinations()
+	destinationRefs, err := c.composeDestinations()
+	if err != nil {
+		return nil, err
+	}
 
-	generator := NewLogConfigGenerator()
+	file := NewVectorFile()
 
 	for _, s := range c.Source {
+		transforms, err := transform.CreateLogSourceTransforms(s.Name, &transform.LogSourceConfig{
+			SourceType:    s.Spec.Type,
+			MultilineType: s.Spec.MultiLineParser.Type,
+			LabelFilter:   s.Spec.LabelFilters,
+			LogFilter:     s.Spec.LabelFilters,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		src := PipelineSource{
+			Source:     newLogSource(s.Spec.Type, s.Name, s.Spec),
+			Transforms: transforms,
+		}
+
 		destinations := make([]PipelineDestination, 0, len(s.Spec.DestinationRefs))
 
 		for _, ref := range s.Spec.DestinationRefs {
 			destinations = append(destinations, destinationRefs["d8_cluster_sink_"+ref])
 		}
 
-		transforms, err := transform.CreateLogSourceTransforms(&transform.LogSourceConfig{
-			SourceType:    s.Spec.Type,
-			MultilineType: s.Spec.MultiLineParser.Type,
-			LabelFilter:   s.Spec.LabelFilters,
-			LogFilter:     s.Spec.LabelFilters,
+		err = file.AppendLogPipeline(&Pipeline{
+			Source:       src,
+			Destinations: destinations,
 		})
-
 		if err != nil {
 			return nil, err
 		}
-
-		generator.AppendLogPipeline(&Pipeline{
-			Source:       newLogSource(s.Spec.Type, s.Name, s.Spec),
-			Transforms:   transforms,
-			Destinations: destinations,
-		})
 	}
 
-	return generator.GenerateConfig()
+	return file.ConvertToJSON()
 }
 
-func (c *Composer) composeDestinations() map[string]PipelineDestination {
+func (c *Composer) composeDestinations() (map[string]PipelineDestination, error) {
 	destinationByName := make(map[string]PipelineDestination)
 
 	for _, d := range c.Dest {
 		dest := newLogDest(d.Spec.Type, d.Name, d.Spec)
 
+		transforms, err := transform.CreateLogDestinationTransforms(d.Name, d)
+		if err != nil {
+			return nil, err
+		}
+
 		destinationByName[dest.GetName()] = PipelineDestination{
 			Destination: dest,
-			Transforms:  transform.CreateLogDestinationTransforms(d),
+			Transforms:  transforms,
 		}
 	}
 
-	return destinationByName
+	return destinationByName, nil
 }
 
 func newLogSource(typ, name string, spec v1alpha1.ClusterLoggingConfigSpec) apis.LogSource {

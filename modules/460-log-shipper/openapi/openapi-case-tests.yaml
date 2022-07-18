@@ -20,10 +20,10 @@ positive:
             max: 2
             min: 0.2
   values:
-    - { internal: {} }
+    - internal: {}
 negative:
   configValues:
-    - { somethingInConfig: yes }
+    - somethingInConfig: yes
     - resourcesRequests:
         mode: "VPA"
         vpa:
@@ -37,4 +37,4 @@ negative:
             max: "512cpu"
             min: "16Mi"
   values:
-    - { somethingInConfig: yes }
+    - somethingInConfig: yes

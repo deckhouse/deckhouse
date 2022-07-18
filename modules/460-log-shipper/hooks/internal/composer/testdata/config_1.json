@@ -37,8 +37,8 @@
     "d8_cluster_sink_testoutput": {
       "type": "loki",
       "inputs": [
-        "d8_clusterns_source_foot_testsource",
-        "d8_clusterns_source_baar_testsource"
+        "d8_clusterns_source_baar_testsource",
+        "d8_clusterns_source_foot_testsource"
       ],
       "healthcheck": {
         "enabled": false

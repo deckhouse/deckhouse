@@ -17,6 +17,8 @@ limitations under the License.
 package transform
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
@@ -48,7 +50,7 @@ func JSONParseTransform() *DynamicTransform {
 	}
 }
 
-func CreateLogDestinationTransforms(dest v1alpha1.ClusterLogDestination) []apis.LogTransform {
+func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination) ([]apis.LogTransform, error) {
 	transforms := make([]apis.LogTransform, 0)
 
 	switch dest.Spec.Type {
@@ -68,5 +70,10 @@ func CreateLogDestinationTransforms(dest v1alpha1.ClusterLogDestination) []apis.
 		transforms = append(transforms, ThrottleTransform(dest.Spec.RateLimit))
 	}
 
-	return transforms
+	dTransforms, err := BuildFromMapSlice(name, transforms)
+	if err != nil {
+		return nil, fmt.Errorf("add source transforms: %v", err)
+	}
+
+	return dTransforms, nil
 }
