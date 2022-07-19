@@ -107,4 +107,18 @@ data:
 			Expect(f.ValuesGet("linstor.internal.masterPassphrase").String()).To(Equal("hackme"))
 		})
 	})
+
+	fb := HookExecutionConfigInit(`{"linstor":{"internal":{"masterPassphrase": "abcdef"}}}`, initConfigValuesString)
+	Context("Master passphrase :: Passphrase removal", func() {
+		BeforeEach(func() {
+			fb.BindingContexts.Set(
+				fb.KubeStateSet(``), fb.GenerateBeforeHelmContext())
+			fb.RunHook()
+		})
+
+		It("Master passphrase removed from values", func() {
+			Expect(fb).To(ExecuteSuccessfully())
+			Expect(fb.ValuesGet("linstor.internal.masterPassphrase").Exists()).To(BeFalse())
+		})
+	})
 })

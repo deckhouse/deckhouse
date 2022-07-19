@@ -12,7 +12,7 @@ data:
 After enabling the module, the cluster is automatically configured to use LINSTOR, and all that remains is to configure the storage.
 
 The module requires no configuration and has no parameters. However, some functions may require a master passphrase.  
-To set a master passphrase, create a secret in the `d8-system` namespace:
+To set a master passphrase, create a Secret in the `d8-system` namespace:
 
 ```yaml
 apiVersion: v1
@@ -25,7 +25,7 @@ stringData:
   MASTER_PASSPHRASE: *!passphrase* # Master passphrase for LINSTOR
 ```
 
-> **Warning**: Be responsible to choose the master passphrase for LINSTOR. If it get lost, the encrypted data will be inaccessible.
+> **Warning**: Choose strong passphrase and store it securely. If it get lost, the encrypted data will be inaccessible.
 
 ## LINSTOR storage configuration
 
