@@ -70,7 +70,7 @@ properties:
     items:
       type: string
     x-examples:
-    - ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
+    - ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class", "operator-prometheus-crd"]
   discovery:
     additionalProperties: true
     type: object
