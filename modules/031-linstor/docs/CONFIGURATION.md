@@ -95,6 +95,4 @@ Specify the `schedulerName: linstor` parameter in the Pod description to use the
 
 In case your application does not support high availability and runs in a single instance, you may want to force a migration from a node where problems occurred may arise. For example, if there are network issues, disk subsystem issues, etc.
 
-To solve the problem, specify the label `linstor.csi.linbit.com/on-storage-lost: remove` in the Pod description. The linstor module will automatically remove such Pods from the node where the problem occurred, allowing Kubernetes to restart the application on another node.
-
-[Example...](usage.html#application-reschedule-in-case-of-node-problem-storage-based-fencing)
+The linstor module automatically removes the Pods from the node where the problem occurred (network or storage issues, etc.). This leads to restarting them on another node.

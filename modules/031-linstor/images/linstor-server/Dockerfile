@@ -4,7 +4,7 @@ ARG BASE_GOLANG_18_BULLSEYE
 FROM $BASE_DEBIAN_BULLSEYE as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
-ARG LINSTOR_VERSION=1.18.2
+ARG LINSTOR_VERSION=1.19.0-rc.1
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -30,9 +30,9 @@ RUN dpkg-buildpackage -us -uc
 FROM $BASE_DEBIAN_BULLSEYE as client-builder
 
 ARG API_GITREPO=https://github.com/LINBIT/linstor-api-py
-ARG API_VERSION=1.13.1
+ARG API_VERSION=1.14.0
 ARG CLIENT_GITREPO=https://github.com/LINBIT/linstor-client
-ARG CLIENT_VERSION=1.13.1
+ARG CLIENT_VERSION=1.14.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -79,7 +79,7 @@ RUN git clone ${K8S_AWAIT_ELECTION_GITREPO} /usr/local/go/k8s-await-election/ \
 FROM $BASE_DEBIAN_BULLSEYE as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.21.1
+ARG UTILS_VERSION=9.21.4
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -120,7 +120,8 @@ RUN dpkg-buildpackage -us -uc
 # ------------------------------------------------------------------------------
 
 FROM $BASE_DEBIAN_BULLSEYE
-ARG PIRAEUS_COMMIT_REF=b428c87889d1d367a967fab7aade288610942113
+ARG PIRAEUS_GITREPO=https://github.com/piraeusdatastore/piraeus
+ARG PIRAEUS_COMMIT_REF=01a24d397bde1942ec3e12955ebeda076a5797fc
 
 COPY --from=linstor-builder /linstor-common_*.deb /linstor-controller_*.deb /linstor-satellite_*.deb /packages/
 COPY --from=client-builder /python-linstor_*.deb /linstor-client_*.deb /packages/
@@ -191,7 +192,7 @@ EXPOSE 3376/tcp 3377/tcp 3370/tcp 3371/tcp
 # satellite
 EXPOSE 3366/tcp 3367/tcp
 
-RUN curl -Lfo /usr/bin/piraeus-entry.sh https://github.com/piraeusdatastore/piraeus/raw/${PIRAEUS_COMMIT_REF}/dockerfiles/piraeus-server/entry.sh \
+RUN curl -Lfo /usr/bin/piraeus-entry.sh ${PIRAEUS_GITREPO}/raw/${PIRAEUS_COMMIT_REF}/dockerfiles/piraeus-server/entry.sh \
  && chmod +x /usr/bin/piraeus-entry.sh
 
 CMD ["startSatellite"]
