@@ -419,7 +419,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 	Context("Disruption release", func() {
 		BeforeEach(func() {
-			f.ValuesSet("deckhouse.update.disruptionMode", "Manual")
+			f.ValuesSet("deckhouse.update.disruptionApproval", "Manual")
 			f.KubeStateSet(deckhousePodYaml + disruptionRelease)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 

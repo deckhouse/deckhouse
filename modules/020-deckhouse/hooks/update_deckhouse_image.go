@@ -480,7 +480,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	// check: release requirements
 	passed := du.checkReleaseRequirements(input, predictedRelease)
 	if !passed {
-		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name, "reason": "requirements"}, metrics.WithGroup(metricReleasesGroup))
+		input.MetricsCollector.Set("d8_release_blocked", 1, map[string]string{"name": predictedRelease.Name, "reason": "requirement"}, metrics.WithGroup(metricReleasesGroup))
 		input.LogEntry.Warningf("Release %s requirements are not met", predictedRelease.Name)
 		return
 	}
@@ -498,7 +498,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 }
 
 func (du *deckhouseUpdater) checkReleaseDisruptions(input *go_hook.HookInput, rl *deckhouseRelease) bool {
-	dMode, ok := input.Values.GetOk("deckhouse.update.disruptionMode")
+	dMode, ok := input.Values.GetOk("deckhouse.update.disruptionApproval")
 	if !ok || dMode.String() == "Auto" {
 		return true
 	}

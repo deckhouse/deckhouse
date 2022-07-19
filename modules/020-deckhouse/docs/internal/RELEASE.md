@@ -5,7 +5,7 @@
 | annotation                               | description                                                                        |
 |------------------------------------------|------------------------------------------------------------------------------------|
 | `release.deckhouse.io/force`               | Apply specified release without any checks. Force deploy.                          |
-| `release.deckhouse.io/disruption-approved` | Approve release with disruptive changes. Works if `update.disruptionMode` is Manual. |
+| `release.deckhouse.io/disruption-approved` | Approve release with disruptive changes. Works if `update.disruptionApproval` is Manual. |
 | `release.deckhouse.io/approved`            | Approve release for deployment. Works if `update.mode` is Manual.                    |
 
 ## Difference between disruption check and requirement check

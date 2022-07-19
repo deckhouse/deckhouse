@@ -43,7 +43,7 @@ properties:
         enum:
           - 'Auto'
           - 'Manual'
-      disruptionMode:
+      disruptionApproval:
         type: string
         default: 'Auto'
         enum:

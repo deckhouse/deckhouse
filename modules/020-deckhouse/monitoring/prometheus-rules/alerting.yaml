@@ -71,7 +71,7 @@
       summary: |
         Deckhouse release is waiting for manual approval.
   - alert: DeckhouseReleaseIsBlocked
-    expr: max by (name) (d8_release_blocked{reason="requirements"}) >= 1
+    expr: max by (name) (d8_release_blocked{reason="requirement"}) >= 1
     labels:
       severity_level: "5"
       d8_module: deckhouse

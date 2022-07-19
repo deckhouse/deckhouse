@@ -25,7 +25,7 @@ properties:
           - `Manual` (ручной) — для обновления минорной версии Deckhouse в ручном режиме (обновление релиза, например, с `v1.26.*` на `v1.27.*`), необходимо подтверждение.
 
             Для подтверждения обновления, в соответствующем [custom resource `DeckhouseRelease`](https://deckhouse.io/ru/documentation/v1/modules/020-deckhouse/cr.html) необходимо установить поле `approved` в `true`.
-      disruptionMode:
+      disruptionApproval:
         description: |
           Режим обновления версий Deckhouse, имеющих disruptions (потенциально опасные изменения)
           - 'Auto' (автоматический) - обновления применяются автоматически.
