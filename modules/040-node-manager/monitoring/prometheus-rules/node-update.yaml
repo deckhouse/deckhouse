@@ -180,7 +180,7 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-        plk_create_group_if_not_exists__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__cluster_has_nodes_stuck_in_draining_for_disruption_during_update: "ClusterHasNodesStuckInDrainingForDisruptionDuringUpdate,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node is stuck in draining.
       description: |
