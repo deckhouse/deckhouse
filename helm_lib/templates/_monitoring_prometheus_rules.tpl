@@ -23,7 +23,7 @@
     {{- $definition = $definition | replace "__SCRAPE_INTERVAL__" (printf "%ds" ($context.Values.global.discovery.prometheusScrapeInterval | default 30)) | replace "__SCRAPE_INTERVAL_X_2__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 2)) | replace "__SCRAPE_INTERVAL_X_3__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 3)) | replace "__SCRAPE_INTERVAL_X_4__" (printf "%ds" (mul ($context.Values.global.discovery.prometheusScrapeInterval | default 30) 4)) }}
 
 {{/*    Patch expression based on `d8_ignore_on_update` annotation*/}}
-    {{ $definition = dict "Rules" $definition }}
+    {{ $definition = printf "Rules:\n%s" ($definition | nindent 2) }}
     {{- $definitionStruct :=  ( $definition | fromYaml )}}
     {{- if $definitionStruct.Error }}
       {{- fail ($definitionStruct.Error | toString) }}
