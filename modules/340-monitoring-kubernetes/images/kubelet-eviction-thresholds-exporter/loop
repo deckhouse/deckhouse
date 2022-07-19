@@ -34,7 +34,7 @@ mountpoint () {
   path_to_mount="$1"
 
   # readlink returns 1 error code if file not link
-  if link="$(readlink /host$path_to_mount)" 2>/dev/null; then
+  if link="$(readlink /host$path_to_mount)"; then
     path_to_mount="$link"
   fi
 
