@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 func TestParseLVMThinPoolsEmpty(t *testing.T) {
@@ -196,7 +197,6 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 	got := newKubernetesStorageClass(&tp, 2)
 
 	volBindMode := storagev1.VolumeBindingImmediate
-	allowVolumeExpansion := true
 	reclaimPolicy := v1.PersistentVolumeReclaimDelete
 
 	expected := storagev1.StorageClass{
@@ -205,7 +205,34 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 		},
 		Provisioner:          "linstor.csi.linbit.com",
 		VolumeBindingMode:    &volBindMode,
-		AllowVolumeExpansion: &allowVolumeExpansion,
+		AllowVolumeExpansion: pointer.BoolPtr(true),
+		ReclaimPolicy:        &reclaimPolicy,
+		Parameters: map[string]string{
+			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
+			"linstor.csi.linbit.com/placementCount":                                              "2",
+			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
+			"property.linstor.csi.linbit.com/DrbdOptions/Net/rr-conflict":                        "retry-connect",
+		},
+	}
+
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("\nexpected: %+v\ngot: %+v", expected, got)
+	}
+}
+
+func TestAllParametersAreSet(t *testing.T) {
+	volBindMode := storagev1.VolumeBindingImmediate
+	reclaimPolicy := v1.PersistentVolumeReclaimDelete
+
+	oldSC := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "linstor-ssd-r2",
+		},
+		Provisioner:          "linstor.csi.linbit.com",
+		VolumeBindingMode:    &volBindMode,
+		AllowVolumeExpansion: pointer.BoolPtr(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":    "ssd",
@@ -213,7 +240,105 @@ func TestNewKubernetesStorageClasses(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("\nexpected: %+v\ngot: %+v", expected, got)
+	sc := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "linstor-ssd-r2",
+		},
+		Provisioner:          "linstor.csi.linbit.com",
+		VolumeBindingMode:    &volBindMode,
+		AllowVolumeExpansion: pointer.BoolPtr(true),
+		ReclaimPolicy:        &reclaimPolicy,
+		Parameters: map[string]string{
+			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
+			"linstor.csi.linbit.com/placementCount":                                              "2",
+			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
+			"property.linstor.csi.linbit.com/DrbdOptions/Net/rr-conflict":                        "retry-connect",
+		},
+	}
+
+	if allParametersAreSet(sc, oldSC) {
+		t.Errorf("\nexpected: %+v\ngot: %+v", false, true)
+	}
+
+	if !allParametersAreSet(oldSC, sc) {
+		t.Errorf("\nexpected: %+v\ngot: %+v", true, false)
+	}
+
+}
+
+func TestAppendOldParameters(t *testing.T) {
+	volBindMode := storagev1.VolumeBindingImmediate
+	reclaimPolicy := v1.PersistentVolumeReclaimDelete
+
+	oldSC := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "linstor-ssd-r2",
+			Annotations: map[string]string{
+				"storageclass.kubernetes.io/is-default-class": "true",
+			},
+			Labels: map[string]string{
+				"foo": "bar",
+			},
+		},
+		Provisioner:          "linstor.csi.linbit.com",
+		VolumeBindingMode:    &volBindMode,
+		AllowVolumeExpansion: pointer.BoolPtr(true),
+		ReclaimPolicy:        &reclaimPolicy,
+		Parameters: map[string]string{
+			"linstor.csi.linbit.com/storagePool":    "ssd",
+			"linstor.csi.linbit.com/placementCount": "2",
+			"fsType":                                "xfs",
+		},
+	}
+
+	sc := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "linstor-ssd-r2",
+		},
+		Provisioner:          "linstor.csi.linbit.com",
+		VolumeBindingMode:    &volBindMode,
+		AllowVolumeExpansion: pointer.BoolPtr(true),
+		ReclaimPolicy:        &reclaimPolicy,
+		Parameters: map[string]string{
+			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
+			"linstor.csi.linbit.com/placementCount":                                              "2",
+			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
+			"property.linstor.csi.linbit.com/DrbdOptions/Net/rr-conflict":                        "retry-connect",
+		},
+	}
+
+	expected := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "linstor-ssd-r2",
+			Annotations: map[string]string{
+				"storageclass.kubernetes.io/is-default-class": "true",
+			},
+			Labels: map[string]string{
+				"foo": "bar",
+			},
+		},
+		Provisioner:          "linstor.csi.linbit.com",
+		VolumeBindingMode:    &volBindMode,
+		AllowVolumeExpansion: pointer.BoolPtr(true),
+		ReclaimPolicy:        &reclaimPolicy,
+		Parameters: map[string]string{
+			"linstor.csi.linbit.com/storagePool":                                                 "ssd",
+			"linstor.csi.linbit.com/placementCount":                                              "2",
+			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
+			"property.linstor.csi.linbit.com/DrbdOptions/Net/rr-conflict":                        "retry-connect",
+			"fsType": "xfs",
+		},
+	}
+
+	appendOldParameters(sc, oldSC)
+
+	if !reflect.DeepEqual(sc, expected) {
+		t.Errorf("\nexpected: %+v\ngot: %+v", expected, sc)
 	}
 }
