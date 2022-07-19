@@ -39,6 +39,7 @@
  - **[monitoring-kubernetes-control-plane]** Added dashboard showing deprecated APIs. [#1867](https://github.com/deckhouse/deckhouse/pull/1867)
  - **[monitoring-kubernetes-control-plane]** Removed the `plk_pending_until_firing_for` annotation from all alerts. [#1446](https://github.com/deckhouse/deckhouse/pull/1446)
  - **[node-local-dns]** Removed the `plk_pending_until_firing_for` annotation from all alerts. [#1446](https://github.com/deckhouse/deckhouse/pull/1446)
+ - **[node-manager]** Yandex.Cloud's Preemptible instances will start being gracefully deleted when crossing 20 hours since creation. [#1744](https://github.com/deckhouse/deckhouse/pull/1744)
  - **[node-manager]** Removed the `plk_pending_until_firing_for` annotation from all alerts. [#1446](https://github.com/deckhouse/deckhouse/pull/1446)
  - **[okmeter]** Removed the `plk_pending_until_firing_for` annotation from all alerts. [#1446](https://github.com/deckhouse/deckhouse/pull/1446)
  - **[operator-prometheus]** Removed the `plk_pending_until_firing_for` annotation from all alerts. [#1446](https://github.com/deckhouse/deckhouse/pull/1446)
@@ -81,6 +82,8 @@
  - **[node-local-dns]** Updated CoreDNS to v1.9.3. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
  - **[node-manager]** Fix unbound variable bootstrap_job_log_pid when bootstrap static-node [#1917](https://github.com/deckhouse/deckhouse/pull/1917)
  - **[node-manager]** Increased the `cluster-autoscaler` node cooldown after scaling-up to prevent flapping (10m instead of 2m) [#1746](https://github.com/deckhouse/deckhouse/pull/1746)
+ - **[prometheus]** Update Grafana to 8.5.9 to fix various CVE [#2039](https://github.com/deckhouse/deckhouse/pull/2039)
+ - **[upmeter]** Add RBAC to watch nodes [#2051](https://github.com/deckhouse/deckhouse/pull/2051)
  - **[upmeter]** Fixed garbage collection for control-plane probes [#1943](https://github.com/deckhouse/deckhouse/pull/1943)
  - **[user-authn]** Refactor Dex probes, and collect metrics from Dex. [#1935](https://github.com/deckhouse/deckhouse/pull/1935)
 
