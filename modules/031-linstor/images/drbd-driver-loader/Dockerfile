@@ -21,18 +21,16 @@ RUN git clone ${DRBD_GITREPO} /drbd \
 #  && wget -O /drbd.tar.gz ${DRBD_PKG}
 
 RUN tar xvf /drbd.tar.gz --strip-components=2 --wildcards 'drbd-*/docker/entry.sh' \
- && mv ./entry.sh /entry.sh \
  && chmod +x /entry.sh
 
 FROM $BASE_DEBIAN_BULLSEYE
 
 RUN apt-get update \
- && apt-get install -y kmod gnupg wget make gcc patch curl coccinelle \
+ && apt-get install -y kmod gnupg wget make gcc patch curl \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /entry.sh /drbd.tar.gz /
-ENV SPAAS=false
 
 ENV LB_HOW compile
 ENTRYPOINT [ "/entry.sh" ]
