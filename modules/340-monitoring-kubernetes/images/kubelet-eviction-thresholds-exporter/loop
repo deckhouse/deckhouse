@@ -31,7 +31,14 @@ evictions () {
 }
 
 mountpoint () {
-  stat -c "%m" "/host$1" | sed 's#/host#/#g' | sed 's#//#/#g'
+  path_to_mount="$1"
+
+  # readlink returns 1 error code if file not link
+  if link="$(readlink /host$path_to_mount)" 2>/dev/null; then
+    path_to_mount="$link"
+  fi
+
+  stat -c "%m" "/host$path_to_mount" | sed 's#/host#/#g' | sed 's#//#/#g'
 }
 
 total_bytes () {
