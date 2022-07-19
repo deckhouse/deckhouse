@@ -25,6 +25,9 @@
 {{/*    Patch expression based on `d8_ignore_on_update` annotation*/}}
     {{ $definition = printf "Rules:\n%s" $definition }}
     {{- $definitionStruct :=  ( $definition | fromYaml )}}
+    {{- if $definitionStruct.Error }}
+      {{- fail ($definitionStruct.Error | toString) }}
+    {{- end }}
     {{- range $rule := $definitionStruct.Rules }}
       {{- range $dedicatedRule := $rule.rules }}
         {{- if $dedicatedRule.annotations }}
