@@ -103,6 +103,9 @@
         {{- if $provider.ldap.insecureSkipVerify }}
         insecureSkipVerify: true
         {{- end }}
+        {{- if $provider.ldap.insecureNoSSL }}
+        insecureNoSSL: true
+        {{- end }}
         {{- if $provider.ldap.rootCAData }}
         rootCAData: {{ $provider.ldap.rootCAData | b64enc }}
         {{- end }}
