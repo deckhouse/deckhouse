@@ -61,6 +61,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f).To(ExecuteSuccessfully())
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-26-0")
+			Expect(rl.Field("status.message").String()).To(Equal("Release is waiting for update window"))
 		})
 	})
 
