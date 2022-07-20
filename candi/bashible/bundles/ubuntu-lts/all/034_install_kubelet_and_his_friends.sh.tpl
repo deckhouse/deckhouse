@@ -18,6 +18,7 @@ bb-rp-remove kubeadm
 bb-rp-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCniUbuntu%s" $kubernetesCniVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectlUbuntu%s" $kubernetesVersion) | toString }}"
 
 old_kubelet_hash=""
+echo ${BB_RP_INSTALLED_PACKAGES_STORE}
 if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/tag" ]; then
   old_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/tag")
 fi
