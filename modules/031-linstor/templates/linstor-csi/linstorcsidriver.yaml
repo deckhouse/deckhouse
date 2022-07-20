@@ -96,18 +96,24 @@ spec:
   nodeTolerations:
     {{- index (include "helm_lib_tolerations" (tuple . "wildcard") | fromYaml) "tolerations" | toYaml | nindent 4 }}
   controllerAffinity:
+    {{- with (include "helm_lib_node_selector" (tuple . "system")) }}
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
         - matchExpressions:
-          {{- range $k, $v := index ((include "helm_lib_node_selector" (tuple . "system")) | fromYaml) "nodeSelector" }}
+          {{- range $k, $v := index (fromYaml .) "nodeSelector" }}
           - key: {{ $k }}
             operator: In
             values:
             - {{ $v | quote }}
           {{- end }}
+    {{- else }}
+    nodeAffinity: {}
+    {{- end }}
     {{- with (index (fromYaml (include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app.kubernetes.io/component" "csi-controller" "app.kubernetes.io/instance" "linstor" "app.kubernetes.io/managed-by" "piraeus-operator" "app.kubernetes.io/name" "piraeus-csi")))) "affinity") }}
     {{ toYaml . | nindent 4 }}
+    {{- else }}
+    podAntiAffinity: {}
     {{- end }}
   controllerTolerations:
     {{- index (include "helm_lib_tolerations" (tuple . "system") | fromYaml) "tolerations" | toYaml | nindent 4 }}
