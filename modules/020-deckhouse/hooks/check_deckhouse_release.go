@@ -321,6 +321,7 @@ type releaseMetadata struct {
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
 	Disruptions  map[string][]string       `json:"disruptions"`
+	Cooldown     Duration                  `json:"cooldown"`
 	Suspend      bool                      `json:"suspend"`
 
 	Changelog map[string]interface{}
