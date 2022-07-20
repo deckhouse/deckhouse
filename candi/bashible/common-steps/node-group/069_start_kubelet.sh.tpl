@@ -71,6 +71,16 @@ if bb-flag? kubelet-need-restart; then
   systemctl restart "kubelet.service"
   {{ else }}
   if ! bb-flag? reboot; then
+    {{- if eq .cri "Docker" }}
+    # This hack need for prevent high load by kubelet to docker when restarts kubelet double time
+    if major_docker_version="$(dockerd -v | sed -nr 's/Docker version ([0-9]{2}).+/\1/p')"; then
+      if [[ "$major_docker_version" == "18" ]]; then
+        sleep_seconds=300
+        echo "You're using old docker major version ${major_docker_version}. We should sleep ${sleep_seconds} seconds before kubelet restart"
+        sleep "$sleep_seconds"
+      fi
+    fi
+    {{- end }}
     systemctl restart "kubelet.service"
     # Issue with oscillating cloud LoadBalancer targets is tracked here.
     # https://github.com/kubernetes/kubernetes/issues/102367
