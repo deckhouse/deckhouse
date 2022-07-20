@@ -202,6 +202,10 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 			if !updatePermitted {
 				input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
+				release := updater.PredictedRelease()
+				if release != nil {
+					updateStatus(input, release, "Release is waiting for update window", v1alpha1.PhasePending)
+				}
 				return nil
 			}
 		}
@@ -372,7 +376,7 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	input.LogEntry.Info("New deckhouse image found. Restarting.")
+	input.LogEntry.Info("New deckhouse image found. Restarting")
 
 	input.PatchCollector.Delete("v1", "Pod", deckhousePod.Namespace, deckhousePod.Name)
 
@@ -457,7 +461,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if !du.PredictedReleaseIsPatch() {
 		if !du.deckhousePodIsReady {
 			input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
-			updateStatus(input, predictedRelease, "Waiting for Deckhouse pod to be ready.", v1alpha1.PhasePending)
+			updateStatus(input, predictedRelease, "Waiting for Deckhouse pod to be ready", v1alpha1.PhasePending)
 			return
 		}
 	}
@@ -466,7 +470,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if predictedRelease.ApplyAfter != nil {
 		if du.now.Before(*predictedRelease.ApplyAfter) {
 			input.LogEntry.Infof("Release %s is postponed by canary process. Waiting", predictedRelease.Name)
-			updateStatus(input, predictedRelease, fmt.Sprintf("Waiting for canary apply time: %s.", predictedRelease.ApplyAfter.Format(time.RFC822)), v1alpha1.PhasePending)
+			updateStatus(input, predictedRelease, fmt.Sprintf("Waiting for canary apply time: %s", predictedRelease.ApplyAfter.Format(time.RFC822)), v1alpha1.PhasePending)
 			return
 		}
 	}
@@ -475,7 +479,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if !predictedRelease.Status.Approved && !du.PredictedReleaseIsPatch() {
 		input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
 		input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
-		updateStatus(input, predictedRelease, "Waiting for manual approval.", v1alpha1.PhasePending)
+		updateStatus(input, predictedRelease, "Waiting for manual approval", v1alpha1.PhasePending)
 		return
 	}
 
@@ -497,6 +501,16 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 
 	// all checks are passed, deploy release
 	du.runReleaseDeploy(input, predictedRelease, currentRelease)
+}
+
+func (du *deckhouseUpdater) PredictedRelease() *deckhouseRelease {
+	if du.predictedReleaseIndex == -1 {
+		return nil // has no predicted release
+	}
+
+	predictedRelease := &(du.releases[du.predictedReleaseIndex])
+
+	return predictedRelease
 }
 
 func (du *deckhouseUpdater) checkReleaseDisruptions(input *go_hook.HookInput, rl *deckhouseRelease) bool {
