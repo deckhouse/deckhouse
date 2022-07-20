@@ -18,7 +18,6 @@ bb-rp-remove kubeadm
 bb-rp-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCniUbuntu%s" $kubernetesCniVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectlUbuntu%s" $kubernetesVersion) | toString }}"
 
 old_kubelet_hash=""
-echo ${BB_RP_INSTALLED_PACKAGES_STORE}
 if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/tag" ]; then
   old_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/tag")
 fi
@@ -30,7 +29,7 @@ chmod +x /usr/sbin/policy-rc.d
 bb-rp-install "kubelet:{{ index .images.registrypackages (printf "kubeletUbuntu%s" $kubernetesVersion) | toString }}"
 rm -f /usr/sbin/policy-rc.d
 new_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/tag")
-if [ "${old_kubelet_hash} -ne "${new_kubelet_hash}" ]; then
+if [ "${old_kubelet_hash}" -ne "${new_kubelet_hash}" ]; then
   bb-flag-set kubelet-need-restart
 fi
 
