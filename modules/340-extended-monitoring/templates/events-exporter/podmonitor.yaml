@@ -18,7 +18,7 @@ spec:
     tlsConfig:
       insecureSkipVerify: true
     honorLabels: true
-    scrapeTimeout: 25s
+    scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 25) }}
   selector:
     matchLabels:
       app: events-exporter

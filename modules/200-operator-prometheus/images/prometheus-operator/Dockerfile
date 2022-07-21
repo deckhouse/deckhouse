@@ -8,10 +8,8 @@ RUN mkdir /prometheus-operator && cd /prometheus-operator \
   && git clone -b "v0.56.3" --single-branch https://github.com/prometheus-operator/prometheus-operator.git
 
 WORKDIR /prometheus-operator/prometheus-operator
-COPY patches/scrape-params.patch ./
 COPY patches/scrape-timestamp-align.patch ./
 RUN patch -p1 < scrape-timestamp-align.patch && \
-    patch -p1 < scrape-params.patch && \
     go mod tidy && \
     make operator
 
