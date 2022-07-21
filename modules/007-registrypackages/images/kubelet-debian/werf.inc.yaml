@@ -21,7 +21,7 @@ docker:
     kubelet: {{ printf "%s.%s" $version $patch }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_DEBIAN_BULLSEYE }}
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -30,9 +30,15 @@ git:
       - '**/*'
 shell:
   beforeInstall:
-  - apk add --no-cache curl
+    - apt-get install curl
   setup:
-  - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubelet_{{ printf "%s.%s" $version $patch }}-00  | awk '{print $2}')"
-  - curl -sfL ${DEB_PACKAGE} --output /kubelet_amd64.deb
+    - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubelet_{{ printf "%s.%s" $version $patch }}-00  | awk '{print $2}')"
+    - curl -sfL ${DEB_PACKAGE} --output /kubelet_amd64.deb
+    - mkdir /kubelet
+    # Remove autostart kubelet from postinst script
+    - dpkg-deb -R /kubelet_amd64.deb /kubelet
+    - sed -i "s/deb-systemd-invoke start/# deb-systemd-invoke start/g" /kubelet/DEBIAN/postinst
+    - dpkg-deb -b /kubelet /kubelet_amd64.deb
 {{- end }}
+
 
