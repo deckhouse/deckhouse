@@ -30,6 +30,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -186,20 +187,22 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	// update windows works only for Auto deployment mode
-	if !updater.inManualMode {
-		windows, exists := input.Values.GetOk("deckhouse.update.windows")
-		if exists {
-			if updater.PredictedReleaseIsPatch() {
-				// patch release does not respect update windows
-				updater.ApplyPredictedRelease(input)
-				return nil
-			}
-
-			updatePermitted, err := isUpdatePermitted([]byte(windows.Raw))
+	if updater.PredictedReleaseIsPatch() {
+		// patch release does not respect update windows or ManualMode
+		updater.ApplyPredictedRelease(input)
+		return nil
+	} else {
+		// update windows works only for Auto deployment mode
+		if !updater.inManualMode {
+			windows, err := getUpdateWindows(input)
 			if err != nil {
 				return fmt.Errorf("update windows configuration is not valid: %s", err)
 			}
+			updatePermitted, err := isUpdatePermitted(windows)
+			if err != nil {
+				return fmt.Errorf("update windows configuration is not valid: %s", err)
+			}
+
 			if !updatePermitted {
 				input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
 				release := updater.PredictedRelease()
@@ -213,6 +216,39 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 
 	updater.ApplyPredictedRelease(input)
 	return nil
+}
+
+// getUpdateWindows return set update windows or default windows for EA/Stable/RockSolid channels
+func getUpdateWindows(input *go_hook.HookInput) (update.Windows, error) {
+	windowsData, exists := input.Values.GetOk("deckhouse.update.windows")
+	if exists {
+		return update.FromJSON([]byte(windowsData.Raw))
+	}
+
+	releaseChannel := input.Values.Get("deckhouse.releaseChannel").String()
+
+	switch strcase.ToKebab(releaseChannel) {
+	case "early-access":
+		return []update.Window{{
+			From: "8:30",
+			To:   "10:00",
+			Days: []string{"Wed"},
+		}}, nil
+	case "stable":
+		return []update.Window{{
+			From: "8:30",
+			To:   "10:00",
+			Days: []string{"Tue"},
+		}}, nil
+	case "rock-solid":
+		return []update.Window{{
+			From: "8:30",
+			To:   "10:00",
+			Days: []string{"Mon"},
+		}}, nil
+	default:
+		return nil, nil
+	}
 }
 
 // used also in check_deckhouse_release.go
@@ -313,20 +349,15 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func isUpdatePermitted(windowsData []byte) (bool, error) {
-	if len(windowsData) == 0 {
+func isUpdatePermitted(windows update.Windows) (bool, error) {
+	if len(windows) == 0 {
 		return true, nil
 	}
 
 	now := time.Now()
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
-	}
-
-	windows, err := update.FromJSON(windowsData)
-	if err != nil {
-		return false, err
+		now = time.Date(2021, 01, 05, 9, 30, 00, 00, time.UTC)
 	}
 
 	return windows.IsAllowed(now), nil
