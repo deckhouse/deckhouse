@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/felixge/httpsnoop"
 	"github.com/google/uuid"
 )
 
@@ -95,32 +96,27 @@ func (t *kubeTransport) GetToken() string {
 
 // 2. Log requests
 
-type logTransport struct {
-	base   http.RoundTripper
+type logHandler struct {
+	base   http.HandlerFunc
 	logger *log.Logger
 }
 
-func wrapLoggerTransport(base http.RoundTripper) http.RoundTripper {
-	t := &logTransport{base: base, logger: infLog}
+func wrapLoggerHandler(base http.HandlerFunc) http.Handler {
+	t := &logHandler{base: base, logger: infLog}
 	return t
 }
 
-func (t *logTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+func (t *logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := uuid.New()
-	startTime := time.Now()
-
-	ctx := context.WithValue(r.Context(), "id", id.String())
-	r.WithContext(ctx)
-
 	t.logger.Printf("%s -- Start request: %s [%s] %s %s\n",
 		id, r.RemoteAddr, r.UserAgent(), r.Method, r.URL.String(),
 	)
 
-	resp, err := t.base.RoundTrip(r)
-	if err != nil {
-		return resp, err
-	}
+	ctx := context.WithValue(r.Context(), "id", id.String())
+	req := r.WithContext(ctx)
+	*r = *req
 
-	t.logger.Printf("%s -- Response: %d, %s\n", id, resp.StatusCode, time.Now().Sub(startTime).String())
-	return resp, nil
+	m := httpsnoop.CaptureMetrics(t.base, w, r)
+
+	t.logger.Printf("%s -- Response: %d, %s, %d bytes\n", id, m.Code, m.Duration.String(), m.Written)
 }

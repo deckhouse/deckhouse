@@ -27,8 +27,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 func initHttpTransport() http.RoundTripper {
@@ -45,8 +43,6 @@ func initHttpTransport() http.RoundTripper {
 	})
 
 	httpTransport = wrapKubeTransport(httpTransport)
-	httpTransport = wrapLoggerTransport(httpTransport)
-
 	return httpTransport
 }
 
@@ -77,20 +73,17 @@ func NewServer() *Server {
 	return &Server{
 		listenAddr:    listenAddr,
 		PrometheusURL: promURL,
-		Transport:     transport,
 		Client:        httpClient,
 		ProxyPass:     proxy,
 	}
 }
 
 func (s *Server) Listen() {
-	initHttpTransport()
-
 	infLog.Println("PROMETHEUS_URL=", s.PrometheusURL.String(), "...")
 	infLog.Println("server is starting to listen on ", s.listenAddr, "...")
 
 	router := http.NewServeMux()
-	router.Handle("/", http.HandlerFunc(s.router))
+	router.Handle("/", wrapLoggerHandler(s.router))
 
 	router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Ok.")
@@ -119,9 +112,9 @@ func (s *Server) router(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlerCustomMetric(w http.ResponseWriter, r *http.Request) {
-	reqID := r.Context().Value("id").(uuid.UUID)
+	reqID := r.Context().Value("id").(string)
 
-	const queryArgsNumber = 4
+	const queryArgsNumber = 5
 
 	// query=custom_query::<ObjectType>::<MetricName>::<Selector>::<GroupBy>
 	args := strings.Split(r.URL.Query().Get("query"), "::")
