@@ -34,7 +34,7 @@ func checkImageAvailabilityObjects(hec *Config, exist bool) {
 	Expect(hec.KubernetesResource("PodDisruptionBudget", "d8-monitoring", "image-availability-exporter").Exists()).To(matcher)
 	Expect(hec.KubernetesResource("ServiceAccount", "d8-monitoring", "image-availability-exporter").Exists()).To(matcher)
 	Expect(hec.KubernetesResource("PrometheusRule", "d8-monitoring", "extended-monitoring-image-checks").Exists()).To(matcher)
-	Expect(hec.KubernetesResource("PrometheusRule", "d8-monitoring", "extended-monitoring-exporter-health").Exists()).To(matcher)
+	Expect(hec.KubernetesResource("PrometheusRule", "d8-monitoring", "extended-monitoring-image-availability-exporter-health").Exists()).To(matcher)
 }
 
 var _ = Describe("Module :: extendedMonitoring :: helm template :: image availability ", func() {
