@@ -30,7 +30,7 @@ git:
       - '**/*'
 shell:
   beforeInstall:
-    - apt-get update
+    - apt-get update -y
     - apt-get install curl
   setup:
     - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubelet_{{ printf "%s.%s" $version $patch }}-00  | awk '{print $2}')"
