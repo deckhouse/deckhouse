@@ -41,12 +41,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filter.KeyFromConfigMap("scrapeInterval"),
 		},
 	},
-}, discoveryPromscaleScrapeInterval)
+}, discoveryPrometheusScrapeInterval)
 
 // discoveryPromscaleScrapeInterval
 // There is CM d8-monitoring/prometheus-scrape-interval with prometheus scrape interval.
 // Hook must store it to `global.discovery.prometheusScrapeInterval`.
-func discoveryPromscaleScrapeInterval(input *go_hook.HookInput) error {
+func discoveryPrometheusScrapeInterval(input *go_hook.HookInput) error {
 	intervalScrapSnap := input.Snapshots["prometheus_scrape_interval"]
 
 	intervalInSeconds := 30

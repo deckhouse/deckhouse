@@ -1,9 +1,5 @@
 # Patches
 
-## Scrape params
-
-With that patch, we are avoiding `ScrapeTimeout` being greater than `ScrapeInterval`.
-
 ## Scrape timestamp align
 
 There is a bug in Go runtime. Because of it, tickers from the std library are not precise.
