@@ -51,13 +51,17 @@ function __main__() {
     return 0
   fi
 
-  malformed_dashboards=/tmp/malformed_dashboards
+  malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
-    title=$(jq -rc '.definition | fromjson | .title' <<< ${dashboard} | slugify)
-    folder=$(jq -rc '.folder' <<< ${dashboard})
-    name=$(jq -rc '.name' <<< ${dashboard})
+    title=$(jq -rc '.definition | try(fromjson | .title)' <<< ${dashboard} | slugify)
 
+    if [[ x"$title" == "x" ]]; then
+      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name' <<< ${dashboard})"
+      continue
+    fi
+
+    folder=$(jq -rc '.folder' <<< ${dashboard})
     file="${folder}/${title}.json"
 
     # General folder can't be provisioned, see the link for more details
@@ -67,16 +71,11 @@ function __main__() {
     fi
 
     mkdir -p "/tmp/dashboards/${folder}"
-    jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${file}" 2> "err-${name}"
-    if [[ -f "err-${name}" ]]; then
-        rm "err-${name}"
-        echo "${name}" >> ${malformed_dashboards}
-    fi
+    jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${file}"
   done
 
-  if [[ -f /tmp/malformed_dashboards ]]; then
-    names=$(echo -n "$(tr -s '\n' ', ' < "${malformed_dashboards}")" | sed 's/,$//')
-    >&2 echo "Malformed dashboard definitions: ${names}"
+  if [[ "x${malformed_dashboards}" != "x" ]]; then
+    echo "Some dashboards are malformed: ${malformed_dashboards}"
     exit 1
   fi
 
