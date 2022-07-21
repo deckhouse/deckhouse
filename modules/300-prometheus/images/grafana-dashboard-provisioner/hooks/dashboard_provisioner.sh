@@ -22,7 +22,7 @@ for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
 done
 
 function __config__() {
-  cat << EOF
+  cat <<EOF
     configVersion: v1
     kubernetes:
     - name: dashboard_resources
@@ -34,28 +34,31 @@ function __config__() {
 EOF
 }
 
-function clear_tmp() {
-  find /tmp/dashboards/ -mindepth 1 -exec rm -rf {} \;
-}
-
 function clear_data() {
   find /etc/grafana/dashboards/ -mindepth 1 -exec rm -rf {} \;
 }
 
 function __main__() {
+  rm -rf /tmp/dashboards || true
   mkdir -p /tmp/dashboards/
-  clear_tmp
 
-  if ! context::has snapshots.dashboard_resources.0 ; then
+  if ! context::has snapshots.dashboard_resources.0; then
     clear_data
     return 0
   fi
 
+  malformed_dashboards=""
   for i in $(context::jq -r '.snapshots.dashboard_resources | keys[]'); do
     dashboard=$(context::get snapshots.dashboard_resources.${i}.filterResult)
-    title=$(jq -rc '.definition | fromjson | .title' <<< ${dashboard} | slugify)
-    folder=$(jq -rc '.folder' <<< ${dashboard})
+    title=$(jq -rc '.definition | try(fromjson | .title)' <<<${dashboard})
+    if [[ "x${title}" == "x" ]]; then
+      malformed_dashboards="${malformed_dashboards} $(jq -rc '.name' <<<${dashboard})"
+      continue
+    fi
 
+    title=$(slugify <<<${title})
+
+    folder=$(jq -rc '.folder' <<<${dashboard})
     file="${folder}/${title}.json"
 
     # General folder can't be provisioned, see the link for more details
@@ -65,13 +68,18 @@ function __main__() {
     fi
 
     mkdir -p "/tmp/dashboards/${folder}"
-    jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${file}"
+    jq -rc '.definition' <<<${dashboard} >"/tmp/dashboards/${file}"
   done
+
+  if [[ "x${malformed_dashboards}" != "x" ]]; then
+    echo "Some dashboards are malformed: ${malformed_dashboards}"
+    exit 1
+  fi
 
   clear_data
   cp -TR /tmp/dashboards/ /etc/grafana/dashboards/
 
-  echo -n "ok" > /tmp/ready
+  echo -n "ok" >/tmp/ready
 }
 
 hook::run "$@"
