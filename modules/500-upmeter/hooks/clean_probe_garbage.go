@@ -248,7 +248,7 @@ func (r *deployRepo) Delete(ctx context.Context, name string) error {
 var upmeterHookProbeGVR = schema.GroupVersionResource{
 	Group:    "deckhouse.io",
 	Version:  "v1",
-	Resource: "uphookprobes",
+	Resource: "upmeterhookprobes",
 }
 
 type upmeterHookProbeRepo struct {
