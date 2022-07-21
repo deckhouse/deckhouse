@@ -105,10 +105,20 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	releaseName := strings.ReplaceAll(releaseChecker.releaseMetadata.Version, ".", "-")
 
 	// run only if it's a canary release
-	var applyAfter *time.Time
+	var applyAfter, cooldownUntil *time.Time
+	if releaseChecker.releaseMetadata.Cooldown.Duration > 0 {
+		cooldown := time.Now().UTC().Add(releaseChecker.releaseMetadata.Cooldown.Duration)
+		cooldownUntil = &cooldown
+	}
+
 	if releaseChecker.IsCanaryRelease() {
+		ts := time.Now()
+		// if cooldown is set, calculate canary delay from cooldown time, not current
+		if cooldownUntil != nil {
+			ts = *cooldownUntil
+		}
 		clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
-		applyAfter = releaseChecker.CalculateReleaseDelay(clusterUUID)
+		applyAfter = releaseChecker.CalculateReleaseDelay(ts.UTC(), clusterUUID)
 	}
 
 	newSemver, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
@@ -181,6 +191,7 @@ releaseLoop:
 		Spec: v1alpha1.DeckhouseReleaseSpec{
 			Version:       releaseChecker.releaseMetadata.Version,
 			ApplyAfter:    applyAfter,
+			CooldownUntil: cooldownUntil,
 			Requirements:  releaseChecker.releaseMetadata.Requirements,
 			Disruptions:   disruptions,
 			Changelog:     enabledModulesChangelog,
@@ -387,13 +398,13 @@ func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash strin
 	return imageDigest.String(), nil
 }
 
-func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(clusterUUID string) *time.Time {
+func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterUUID string) *time.Time {
 	hash := murmur3.Sum64([]byte(clusterUUID + dcr.releaseMetadata.Version))
 	wave := hash % uint64(dcr.releaseCanarySettings().Waves)
 
 	if wave != 0 {
 		delay := time.Duration(wave) * dcr.releaseCanarySettings().Interval.Duration
-		applyAfter := time.Now().UTC().Add(delay)
+		applyAfter := ts.Add(delay)
 		return &applyAfter
 	}
 

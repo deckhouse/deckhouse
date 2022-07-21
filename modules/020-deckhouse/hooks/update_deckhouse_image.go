@@ -254,11 +254,12 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 	}
 
 	return deckhouseRelease{
-		Name:         release.Name,
-		Version:      semver.MustParse(release.Spec.Version),
-		ApplyAfter:   release.Spec.ApplyAfter,
-		Requirements: release.Spec.Requirements,
-		Disruptions:  release.Spec.Disruptions,
+		Name:          release.Name,
+		Version:       semver.MustParse(release.Spec.Version),
+		ApplyAfter:    release.Spec.ApplyAfter,
+		CooldownUntil: release.Spec.CooldownUntil,
+		Requirements:  release.Spec.Requirements,
+		Disruptions:   release.Spec.Disruptions,
 		Status: v1alpha1.DeckhouseReleaseStatus{
 			Phase:    release.Status.Phase,
 			Approved: release.Status.Approved,
@@ -410,9 +411,10 @@ type deckhouseRelease struct {
 	HasForceAnnotation              bool
 	HasDisruptionApprovedAnnotation bool
 
-	Requirements map[string]string
-	Disruptions  []string
-	ApplyAfter   *time.Time
+	Requirements  map[string]string
+	Disruptions   []string
+	ApplyAfter    *time.Time
+	CooldownUntil *time.Time
 
 	Status v1alpha1.DeckhouseReleaseStatus // don't set transition time here to avoid snapshot overload
 }
@@ -453,6 +455,15 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if du.deckhouseIsBootstrapping && len(du.releases) == 1 {
 		du.runReleaseDeploy(input, predictedRelease, currentRelease)
 		return
+	}
+
+	// check: release cooldown
+	if predictedRelease.CooldownUntil != nil {
+		if du.now.Before(*predictedRelease.CooldownUntil) {
+			input.LogEntry.Infof("Release %s in cooldown", predictedRelease.Name)
+			updateStatus(input, predictedRelease, fmt.Sprintf("Waiting release cooldown until: %s", predictedRelease.CooldownUntil.Format(time.RFC822)), v1alpha1.PhasePending)
+			return
+		}
 	}
 
 	// check: Deckhouse pod is ready. Ignore patch releases

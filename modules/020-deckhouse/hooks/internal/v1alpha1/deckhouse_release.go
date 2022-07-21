@@ -54,6 +54,7 @@ type DeckhouseReleaseSpec struct {
 	ApplyAfter    *time.Time             `json:"applyAfter,omitempty"`
 	Requirements  map[string]string      `json:"requirements,omitempty"`
 	Disruptions   []string               `json:"disruptions,omitempty"`
+	CooldownUntil *time.Time             `json:"cooldownUntil,omitempty"`
 	Changelog     map[string]interface{} `json:"changelog,omitempty"`
 	ChangelogLink string                 `json:"changelogLink,omitempty"`
 }
