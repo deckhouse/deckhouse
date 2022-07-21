@@ -52,7 +52,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			&deployRepo{k},
 			&podRepo{k},
 			&namespaceRepo{k},
-			&upmeterHokProbeRepo{k},
+			&upmeterHookProbeRepo{k},
 		}
 
 		for _, r := range repos {
@@ -251,18 +251,18 @@ var upmeterHookProbeGVR = schema.GroupVersionResource{
 	Resource: "uphookprobes",
 }
 
-type upmeterHookProbe struct {
+type upmeterHookProbeRepo struct {
 	k k8s.Client
 }
 
-func (r *upmeterHookProbe) List(ctx context.Context) ([]metav1.Object, error) {
+func (r *upmeterHookProbeRepo) List(ctx context.Context) ([]metav1.Object, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetName("35d78cbb") // empty NODE_NAME results in this hash, fixing the bug
 	obj.SetCreationTimestamp(metav1.NewTime(time.Now().Add(-1 * time.Hour)))
 	return []metav1.Object{obj}, nil
 }
 
-func (r *upmeterHookProbe) Delete(ctx context.Context, name string) error {
+func (r *upmeterHookProbeRepo) Delete(ctx context.Context, name string) error {
 	return r.k.Dynamic().
 		Resource(upmeterHookProbeGVR).
 		Delete(ctx, name, metav1.DeleteOptions{})
