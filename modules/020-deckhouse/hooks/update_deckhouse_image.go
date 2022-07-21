@@ -191,26 +191,22 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		// patch release does not respect update windows or ManualMode
 		updater.ApplyPredictedRelease(input)
 		return nil
-	} else {
+	} else if !updater.inManualMode {
 		// update windows works only for Auto deployment mode
-		if !updater.inManualMode {
-			windows, err := getUpdateWindows(input)
-			if err != nil {
-				return fmt.Errorf("update windows configuration is not valid: %s", err)
-			}
-			updatePermitted, err := isUpdatePermitted(windows)
-			if err != nil {
-				return fmt.Errorf("update windows configuration is not valid: %s", err)
-			}
+		windows, err := getUpdateWindows(input)
+		if err != nil {
+			return fmt.Errorf("update windows configuration is not valid: %s", err)
+		}
 
-			if !updatePermitted {
-				input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
-				release := updater.PredictedRelease()
-				if release != nil {
-					updateStatus(input, release, "Release is waiting for update window", v1alpha1.PhasePending)
-				}
-				return nil
+		updatePermitted := isUpdatePermitted(windows)
+
+		if !updatePermitted {
+			input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
+			release := updater.PredictedRelease()
+			if release != nil {
+				updateStatus(input, release, "Release is waiting for update window", v1alpha1.PhasePending)
 			}
+			return nil
 		}
 	}
 
@@ -349,9 +345,9 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func isUpdatePermitted(windows update.Windows) (bool, error) {
+func isUpdatePermitted(windows update.Windows) bool {
 	if len(windows) == 0 {
-		return true, nil
+		return true
 	}
 
 	now := time.Now()
@@ -360,7 +356,7 @@ func isUpdatePermitted(windows update.Windows) (bool, error) {
 		now = time.Date(2021, 01, 05, 9, 30, 00, 00, time.UTC)
 	}
 
-	return windows.IsAllowed(now), nil
+	return windows.IsAllowed(now)
 }
 
 // tagUpdate update by tag, in dev mode or specified image
