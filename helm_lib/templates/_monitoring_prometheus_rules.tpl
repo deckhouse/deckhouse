@@ -78,3 +78,16 @@ spec:
 {{- include "helm_lib_prometheus_rules_recursion" (list $context $namespace "monitoring/prometheus-rules") }}
   {{- end }}
 {{- end }}
+
+{{- /* Usage: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . <timeout>) }} */ -}}
+{{- /* returns adjust timeout value to scrape interval / */ -}}
+{{- define "helm_lib_prometheus_target_scrape_timeout_seconds" -}}
+  {{- $context := index . 0 }}
+  {{- $timeout := index . 1 }}
+  {{- $scrape_interval := (int $context.Values.global.discovery.prometheusScrapeInterval | default 30) }}
+  {{- if gt $timeout $scrape_interval -}}
+{{ $scrape_interval }}s
+  {{- else -}}
+{{ $timeout }}s
+  {{- end }}
+{{- end }}
