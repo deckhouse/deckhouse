@@ -37,7 +37,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "delete_probe_garbage",
-			Crontab: "*/15 * * * *",
+			Crontab: "*/2 * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(
