@@ -41,9 +41,6 @@ spec:
                   type: string
                   description: Deckhouse version.
                   example: 'v1.24.20'
-                cooldownUntil:
-                  type: string
-                  description: TODO
                 applyAfter:
                   type: string
                   description: Marks release as a part of canary release. This release will be delayed until this time.

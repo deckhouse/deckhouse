@@ -294,6 +294,28 @@ status:
 		})
 	})
 
+	Context("Release has cooldown", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"cooldown":{"alpha":"1m","beta":"1m","early-access":"5m","rock-solid":"15m","stable":"10m"},"version":"v1.31.0"}`}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
+				},
+			}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with requirements", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
+			Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
+		})
+	})
+
 	Context("Release has disruptions", func() {
 		BeforeEach(func() {
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{

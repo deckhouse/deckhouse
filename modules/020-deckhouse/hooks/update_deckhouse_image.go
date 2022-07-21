@@ -253,11 +253,19 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		releaseApproved = release.Approved
 	}
 
+	var cooldown *time.Time
+	if v, ok := release.Annotations["release.deckhouse.io/cooldown"]; ok {
+		cd, err := time.Parse(time.RFC3339, v)
+		if err == nil {
+			cooldown = &cd
+		}
+	}
+
 	return deckhouseRelease{
 		Name:          release.Name,
 		Version:       semver.MustParse(release.Spec.Version),
 		ApplyAfter:    release.Spec.ApplyAfter,
-		CooldownUntil: release.Spec.CooldownUntil,
+		CooldownUntil: cooldown,
 		Requirements:  release.Spec.Requirements,
 		Disruptions:   release.Spec.Disruptions,
 		Status: v1alpha1.DeckhouseReleaseStatus{
@@ -457,19 +465,18 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 		return
 	}
 
-	// check: release cooldown
-	if predictedRelease.CooldownUntil != nil {
-		if du.now.Before(*predictedRelease.CooldownUntil) {
-			input.LogEntry.Infof("Release %s in cooldown", predictedRelease.Name)
-			updateStatus(input, predictedRelease, fmt.Sprintf("Waiting release cooldown until: %s", predictedRelease.CooldownUntil.Format(time.RFC822)), v1alpha1.PhasePending)
-			return
-		}
-	}
-
-	// check: Deckhouse pod is ready. Ignore patch releases
-	// upgrade only when current release is ready.
-	// skip it for patches.
+	// check: only for minor versions (Ignore patches)
 	if !du.PredictedReleaseIsPatch() {
+		// check: release cooldown
+		if predictedRelease.CooldownUntil != nil {
+			if du.now.Before(*predictedRelease.CooldownUntil) {
+				input.LogEntry.Infof("Release %s in cooldown", predictedRelease.Name)
+				updateStatus(input, predictedRelease, fmt.Sprintf("Release is in cooldown until: %s", predictedRelease.CooldownUntil.Format(time.RFC822)), v1alpha1.PhasePending)
+				return
+			}
+		}
+
+		// check: Deckhouse pod is ready
 		if !du.deckhousePodIsReady {
 			input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
 			updateStatus(input, predictedRelease, "Waiting for Deckhouse pod to be ready", v1alpha1.PhasePending)

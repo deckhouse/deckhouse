@@ -106,9 +106,9 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// run only if it's a canary release
 	var applyAfter, cooldownUntil *time.Time
-	if releaseChecker.releaseMetadata.Cooldown.Duration > 0 {
-		cooldown := time.Now().UTC().Add(releaseChecker.releaseMetadata.Cooldown.Duration)
-		cooldownUntil = &cooldown
+	if releaseChecker.releaseCooldown().Duration > 0 {
+		cd := time.Now().UTC().Add(releaseChecker.releaseCooldown().Duration)
+		cooldownUntil = &cd
 	}
 
 	if releaseChecker.IsCanaryRelease() {
@@ -186,12 +186,12 @@ releaseLoop:
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: releaseName,
+			Name:        releaseName,
+			Annotations: make(map[string]string),
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
 			Version:       releaseChecker.releaseMetadata.Version,
 			ApplyAfter:    applyAfter,
-			CooldownUntil: cooldownUntil,
 			Requirements:  releaseChecker.releaseMetadata.Requirements,
 			Disruptions:   disruptions,
 			Changelog:     enabledModulesChangelog,
@@ -201,7 +201,10 @@ releaseLoop:
 	}
 
 	if releaseChecker.releaseMetadata.Suspend {
-		release.ObjectMeta.Annotations = map[string]string{"release.deckhouse.io/suspended": "true"}
+		release.ObjectMeta.Annotations["release.deckhouse.io/suspended"] = "true"
+	}
+	if cooldownUntil != nil {
+		release.ObjectMeta.Annotations["release.deckhouse.io/cooldown"] = cooldownUntil.UTC().Format(time.RFC3339)
 	}
 
 	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())
@@ -328,20 +331,20 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 }
 
 type releaseMetadata struct {
-	Version      string                    `json:"version"`
-	Canary       map[string]canarySettings `json:"canary"`
-	Requirements map[string]string         `json:"requirements"`
-	Disruptions  map[string][]string       `json:"disruptions"`
-	Cooldown     Duration                  `json:"cooldown"`
-	Suspend      bool                      `json:"suspend"`
+	Version      string                       `json:"version"`
+	Canary       map[string]canarySettings    `json:"canary"`
+	Requirements map[string]string            `json:"requirements"`
+	Disruptions  map[string][]string          `json:"disruptions"`
+	Cooldown     map[string]v1alpha1.Duration `json:"cooldown"`
+	Suspend      bool                         `json:"suspend"`
 
 	Changelog map[string]interface{}
 }
 
 type canarySettings struct {
-	Enabled  bool     `json:"enabled"`
-	Waves    uint     `json:"waves"`
-	Interval Duration `json:"interval"` // in minutes
+	Enabled  bool              `json:"enabled"`
+	Waves    uint              `json:"waves"`
+	Interval v1alpha1.Duration `json:"interval"` // in minutes
 }
 
 func getCA(input *go_hook.HookInput) string {
@@ -368,6 +371,10 @@ func (dcr *DeckhouseReleaseChecker) IsCanaryRelease() bool {
 
 func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
 	return dcr.releaseMetadata.Canary[dcr.releaseChannel]
+}
+
+func (dcr *DeckhouseReleaseChecker) releaseCooldown() v1alpha1.Duration {
+	return dcr.releaseMetadata.Cooldown[dcr.releaseChannel]
 }
 
 func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (digestHash string, err error) {
@@ -427,36 +434,6 @@ func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	return dcr, nil
-}
-
-// custom type for appropriate json marshalling / unmarshalling (like "15m")
-type Duration struct {
-	time.Duration
-}
-
-func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
-}
-
-func (d *Duration) UnmarshalJSON(b []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	switch value := v.(type) {
-	case float64:
-		d.Duration = time.Duration(value)
-		return nil
-	case string:
-		var err error
-		d.Duration, err = time.ParseDuration(value)
-		if err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.New("invalid duration")
-	}
 }
 
 func buildSuspendAnnotation(suspend bool) map[string]interface{} {
