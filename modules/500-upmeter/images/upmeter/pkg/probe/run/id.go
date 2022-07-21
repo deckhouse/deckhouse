@@ -44,15 +44,15 @@ var id string
 
 func ID() string {
 	if id == "" {
-		h32 := murmur3.New32WithSeed(seed)
-		_, _ = h32.Write([]byte(NodeName()))
-		id = strconv.FormatInt(int64(h32.Sum32()), 16)
+		id = nodeNameHash(os.Getenv("NODE_NAME"))
 	}
 	return id
 }
 
-func NodeName() string {
-	return os.Getenv("NODE_NAME")
+func nodeNameHash(nodeName string) string {
+	h32 := murmur3.New32WithSeed(seed)
+	_, _ = h32.Write([]byte(nodeName))
+	return strconv.FormatInt(int64(h32.Sum32()), 16)
 }
 
 func randomAlphaNum(count int) string {
