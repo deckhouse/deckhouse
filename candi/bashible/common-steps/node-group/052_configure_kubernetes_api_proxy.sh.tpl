@@ -66,7 +66,7 @@ metadata:
     component: kubernetes-api-proxy
     tier: control-plane
   name: kubernetes-api-proxy
-  namespace: d8-system
+  namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
   hostNetwork: true
