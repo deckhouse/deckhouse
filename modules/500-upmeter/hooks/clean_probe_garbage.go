@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -51,6 +52,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			&deployRepo{k},
 			&podRepo{k},
 			&namespaceRepo{k},
+			&upmeterHokProbeRepo{k},
 		}
 
 		for _, r := range repos {
@@ -94,12 +96,6 @@ type objectRepository interface {
 	Delete(context.Context, string) error
 }
 
-var certificateGVR = schema.GroupVersionResource{
-	Group:    "cert-manager.io",
-	Version:  "v1",
-	Resource: "certificates",
-}
-
 type configMapRepo struct {
 	k k8s.Client
 }
@@ -120,6 +116,12 @@ func (r *configMapRepo) List(ctx context.Context) ([]metav1.Object, error) {
 
 func (r *configMapRepo) Delete(ctx context.Context, name string) error {
 	return r.k.CoreV1().ConfigMaps("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+var certificateGVR = schema.GroupVersionResource{
+	Group:    "cert-manager.io",
+	Version:  "v1",
+	Resource: "certificates",
 }
 
 type certRepo struct {
@@ -241,4 +243,27 @@ func (r *deployRepo) List(ctx context.Context) ([]metav1.Object, error) {
 
 func (r *deployRepo) Delete(ctx context.Context, name string) error {
 	return r.k.AppsV1().Deployments("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+var upmeterHookProbeGVR = schema.GroupVersionResource{
+	Group:    "deckhouse.io",
+	Version:  "v1",
+	Resource: "uphookprobes",
+}
+
+type upmeterHookProbe struct {
+	k k8s.Client
+}
+
+func (r *upmeterHookProbe) List(ctx context.Context) ([]metav1.Object, error) {
+	obj := &unstructured.Unstructured{}
+	obj.SetName("35d78cbb") // empty NODE_NAME results in this hash, fixing the bug
+	obj.SetCreationTimestamp(metav1.NewTime(time.Now().Add(-1 * time.Hour)))
+	return []metav1.Object{obj}, nil
+}
+
+func (r *upmeterHookProbe) Delete(ctx context.Context, name string) error {
+	return r.k.Dynamic().
+		Resource(upmeterHookProbeGVR).
+		Delete(ctx, name, metav1.DeleteOptions{})
 }

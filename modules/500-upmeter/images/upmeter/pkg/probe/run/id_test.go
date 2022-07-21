@@ -34,3 +34,26 @@ func Test_RandomIdentifier(t *testing.T) {
 		t.Errorf("expected %q != %q", a, b)
 	}
 }
+
+func Test_nodeNameHash(t *testing.T) {
+	tests := []struct {
+		nodeName string
+		want     string
+	}{
+		{nodeName: "", want: "35d78cbb"},
+		{nodeName: "kube-master", want: "36174012"},
+		{nodeName: "kube-master-0", want: "c349c19b"},
+		{nodeName: "kube-master-1", want: "57fb8ddf"},
+		{nodeName: "kube-master-2", want: "2a547f6c"},
+		{nodeName: "dev2-master-0", want: "7131bf4e"},
+		{nodeName: "dev2-master-1", want: "ccbabc3"},
+		{nodeName: "dev2-master-2", want: "35dc4115"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.nodeName, func(t *testing.T) {
+			if got := nodeNameHash(tt.nodeName); got != tt.want {
+				t.Errorf("nodeNameHash(%q) = %v, want %v", tt.nodeName, got, tt.want)
+			}
+		})
+	}
+}
