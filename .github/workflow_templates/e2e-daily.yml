@@ -3,7 +3,7 @@
 name: '{!{ $workflowName }!}'
 on:
   schedule:
-  - cron: '5 21 * * *'
+  - cron: '0 3 * * 1-5'
   workflow_dispatch:
 
 env:
@@ -23,7 +23,7 @@ jobs:
     if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
-      run: echo "We use job's 'if' for checking repository. We do not need any action in this job, but Github enforce use 'steps' to us."
+      run: echo "Empty action to fulfil Github requirements."
 
 
 # Note: git_info is needed for werf.yaml
@@ -43,7 +43,7 @@ jobs:
 {!{-   $layout := (tmpl.Exec "e2e_get_layout" (dict "provider" $provider) | strings.TrimSpace ) -}!}
 {!{-   $providerForJobId := $providerName | replaceAll "." "_" | toLower -}!}
 {!{-   $jobID := printf "run_%s_%s_%s" $providerForJobId $cri $kubernetesVersionSlug -}!}
-{!{-   $jobName := printf "%s, %s, %s, Kubernetes %s" $workflowName $providerName $criName $kubernetesVersion -}!}
+{!{-   $jobName := printf "%s, %s, Kubernetes %s" $providerName $criName $kubernetesVersion -}!}
 {!{-   $jobCtx := (dict "provider" $provider "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "providerName" $providerName "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
