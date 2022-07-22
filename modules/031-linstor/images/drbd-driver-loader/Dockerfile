@@ -31,6 +31,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /entry.sh /drbd.tar.gz /
+ENV SSL_CERT_FILE=/etc/spaas/certs/ca.crt
 
 ENV LB_HOW compile
 ENTRYPOINT [ "/entry.sh" ]
