@@ -2,7 +2,8 @@ positive:
   configValues:
   - {}
   values:
-  - { internal: {} }
+  - internal:
+      clusterDNSRedirectAddress: "192.168.0.10"
 negative:
   configValues:
   - { somethingInConfig: yes }

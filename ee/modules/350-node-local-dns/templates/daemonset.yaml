@@ -4,7 +4,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ .Chart.Name }}
-  namespace: d8-system
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-local-dns
-  namespace: d8-system
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | nindent 2 }}
 spec:
   selector:
@@ -33,9 +33,11 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+{{- if not (.Values.global.enabledModules | has "cni-cilium" )}}
       hostNetwork: true
-      serviceAccountName: node-local-dns
       dnsPolicy: ClusterFirstWithHostNet
+{{- end }}
+      serviceAccountName: d8-node-local-dns
       containers:
       - name: coredns
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_BIND_SERVICE" "NET_ADMIN" "NET_RAW")) | nindent 8 }}
@@ -46,6 +48,10 @@ spec:
           value: {{ .Values.global.discovery.clusterDomain | quote }}
         - name: KUBE_DNS_SVC_IP
           value: {{ .Values.global.discovery.clusterDNSAddress | quote }}
+{{- if not (.Values.global.enabledModules | has "cni-cilium") }}
+        - name: SHOULD_SETUP_IPTABLES
+          value: "yes"
+{{- end }}
         ports:
         - containerPort: 53
           name: dns
@@ -54,15 +60,27 @@ spec:
           name: dns-tcp
           protocol: TCP
         livenessProbe:
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+          httpGet:
+            path: /health
+            port: 9225
+{{- else }}
           exec:
             command:
             - /liveness.sh
           periodSeconds: 20
           timeoutSeconds: 7
+{{- end }}
         readinessProbe:
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+          httpGet:
+            path: /health
+            port: 9225
+{{- else }}
           exec:
             command:
             - /readiness.sh
+{{- end }}
           periodSeconds: 5
           timeoutSeconds: 7
         volumeMounts:
@@ -76,6 +94,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "cni-cilium" )}}
       - name: iptables-loop
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_BIND_SERVICE" "NET_ADMIN" "NET_RAW")) | nindent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nodeLocalDns.iptablesLoop }}
@@ -91,6 +110,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
@@ -112,7 +132,7 @@ spec:
               path: /metrics
               authorization:
                 resourceAttributes:
-                  namespace: d8-system
+                  namespace: kube-system
                   apiGroup: apps
                   apiVersion: v1
                   resource: daemonsets

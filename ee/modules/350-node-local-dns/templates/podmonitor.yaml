@@ -13,7 +13,7 @@ spec:
       app: node-local-dns
   namespaceSelector:
     matchNames:
-    - d8-system
+    - kube-system
   podMetricsEndpoints:
   - port: https-metrics
     scheme: https
