@@ -22,6 +22,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -79,7 +80,7 @@ func cleanGarbage(ctx context.Context, repo objectRepository) error {
 		if !isOldEnough {
 			continue
 		}
-		if err := repo.Delete(ctx, obj.GetName()); err != nil {
+		if err := repo.Delete(ctx, obj.GetName()); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("deleting %s: %v", obj.GetName(), err)
 		}
 		limit--
