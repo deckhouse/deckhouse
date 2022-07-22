@@ -78,11 +78,17 @@
     Ingress controller Pods will be restarted.
  - **[kube-dns]** Updated CoreDNS to v1.9.3. With patches to persuade coredns to respect deprecated Service annotation `service.alpha.kubernetes.io/tolerate-unready-endpoints`. Alerts the user to the need for migrating from deprecated annotation. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
  - **[log-shipper]** Fix DaemonSet alerts. [#1912](https://github.com/deckhouse/deckhouse/pull/1912)
+ - **[monitoring-kubernetes]** Fix eviction inodes imagefs and node fs if containerd and kubelet directory is a symlink. [#2061](https://github.com/deckhouse/deckhouse/pull/2061)
  - **[monitoring-kubernetes]** Fixed PVC usage Grafana dashboards. [#1868](https://github.com/deckhouse/deckhouse/pull/1868)
+ - **[node-local-dns]** node-local-dns now works properly with cni-cilium. [#2037](https://github.com/deckhouse/deckhouse/pull/2037)
+    node-local-dns Pods should restart.
  - **[node-local-dns]** Updated CoreDNS to v1.9.3. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
  - **[node-manager]** Fix unbound variable bootstrap_job_log_pid when bootstrap static-node [#1917](https://github.com/deckhouse/deckhouse/pull/1917)
  - **[node-manager]** Increased the `cluster-autoscaler` node cooldown after scaling-up to prevent flapping (10m instead of 2m) [#1746](https://github.com/deckhouse/deckhouse/pull/1746)
+ - **[operator-prometheus]** Adjust scrape timeout using helm helper. [#2083](https://github.com/deckhouse/deckhouse/pull/2083)
  - **[prometheus]** Update Grafana to 8.5.9 to fix various CVE [#2039](https://github.com/deckhouse/deckhouse/pull/2039)
+ - **[upmeter]** Added the auto-clean of garbage `UpmeterHookProbe` object produced by a bug. [#2080](https://github.com/deckhouse/deckhouse/pull/2080)
+ - **[upmeter]** Fix certificate name for DexAuthenticator. [#2060](https://github.com/deckhouse/deckhouse/pull/2060)
  - **[upmeter]** Add RBAC to watch nodes [#2051](https://github.com/deckhouse/deckhouse/pull/2051)
  - **[upmeter]** Fixed garbage collection for control-plane probes [#1943](https://github.com/deckhouse/deckhouse/pull/1943)
  - **[user-authn]** Refactor Dex probes, and collect metrics from Dex. [#1935](https://github.com/deckhouse/deckhouse/pull/1935)
@@ -118,12 +124,15 @@
     `kube-proxy` Pods will be restarted.
  - **[monitoring-kubernetes-control-plane]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
  - **[node-manager]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
+ - **[prometheus]** Added names of malformed dashboard definitions to the log of `dashboard_provisioner` container. [#2085](https://github.com/deckhouse/deckhouse/pull/2085)
  - **[prometheus-metrics-adapter]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
  - **[registrypackages]** Added labels to registry package images. [#1847](https://github.com/deckhouse/deckhouse/pull/1847)
     Some of the registry packages will be reinstalled.
  - **[snapshot-controller]** fix typo in documentation [#1969](https://github.com/deckhouse/deckhouse/pull/1969)
     low
  - **[snapshot-controller]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
+ - **[upmeter]** Added envs for a proxy to StatefulSet. [#2081](https://github.com/deckhouse/deckhouse/pull/2081)
+    upmeter Pods will be restarted.
  - **[upmeter]** Added descriptions for avaiability groups "nodegroups" and "nginx". [#2013](https://github.com/deckhouse/deckhouse/pull/2013)
  - **[upmeter]** Tracking nodes switched to informer instead of direct listing requests. [#2007](https://github.com/deckhouse/deckhouse/pull/2007)
  - **[upmeter]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
