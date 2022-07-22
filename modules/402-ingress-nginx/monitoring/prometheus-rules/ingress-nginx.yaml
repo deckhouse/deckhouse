@@ -19,10 +19,10 @@
         The configuration testing (nginx -t) of the {{ $labels.controller }} Ingress controller in the {{ $labels.controller_namespace }} Namespace has failed.
 
         The recommended course of action:
-        1. Check controllers logs: `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c ingress-nginx-controller`;
+        1. Check controllers logs: `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller`;
         2. Find the newest Ingress in the cluster: `kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"`;
         3. Probably, there is an error in configuration-snippet or server-snippet.
-      summary: Config test failed on Nginx Ingress {{ $labels.controller }} in {{ $labels.controller_namespcae }} Namespace.
+      summary: Config test failed on Nginx Ingress {{ $labels.controller }} in {{ $labels.controller_namespace }} Namespace.
   - alert: NginxIngressSslWillExpire
     expr: count by (job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
     for: 1h
