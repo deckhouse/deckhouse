@@ -1,0 +1,28 @@
+candi:
+  fixes:
+    - summary: fix aws terraform for static nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2071
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix eviction inodes imagefs and node fs if containerd and kubelet directory is a symlink.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2061
+node-local-dns:
+  fixes:
+    - summary: node-local-dns now works properly with cni-cilium.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2037
+      impact: node-local-dns Pods should restart.
+operator-prometheus:
+  fixes:
+    - summary: Adjust scrape timeout using helm helper.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2083
+prometheus:
+  fixes:
+    - summary: fix node-update alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2063
+upmeter:
+  fixes:
+    - summary: Added the auto-clean of garbage `UpmeterHookProbe` object produced by a bug.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2080
+    - summary: Fix certificate name for DexAuthenticator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2060
+
