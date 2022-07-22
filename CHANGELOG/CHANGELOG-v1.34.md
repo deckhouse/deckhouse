@@ -131,6 +131,7 @@
  - **[snapshot-controller]** fix typo in documentation [#1969](https://github.com/deckhouse/deckhouse/pull/1969)
     low
  - **[snapshot-controller]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
+ - **[upmeter]** Fixed up garbage cleaning [#2090](https://github.com/deckhouse/deckhouse/pull/2090)
  - **[upmeter]** Added envs for a proxy to StatefulSet. [#2081](https://github.com/deckhouse/deckhouse/pull/2081)
     upmeter Pods will be restarted.
  - **[upmeter]** Added descriptions for avaiability groups "nodegroups" and "nginx". [#2013](https://github.com/deckhouse/deckhouse/pull/2013)
