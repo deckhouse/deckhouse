@@ -36,7 +36,7 @@ standard:
 provider:
   authURL: 'https://cloud.flant.com/v3/'
   domainName: 'Default'
-  tenantName: 'dev-rnd'
+  tenantName: 'd8-tests'
   username: 'e2e-tests'
   password: '${OS_PASSWORD}'
   region: 'HetznerFinland'
