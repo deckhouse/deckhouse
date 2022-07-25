@@ -7,7 +7,6 @@
 var documents=[
 {%- assign searchedpages = site.pages | where: "searchable", true | where: "lang", page.lang %}
 {%- for page in searchedpages %}
-{%- unless page.searchable == false %}
 {
 {%- capture removed_prefix %}/{{ page.lang }}/{%- endcapture -%}
 "title": "{{ page.title | escape }}",
@@ -15,7 +14,6 @@ var documents=[
 "content": {{ page.content | strip_html | strip | regex_replace: "\n", ' ' | regex_replace: '\s\s+', ' ' | jsonify }}
 }
 {%- unless forloop.last %},{% endunless %}
-{%- endunless %}
 {%- endfor -%}
 ];
 </script>
