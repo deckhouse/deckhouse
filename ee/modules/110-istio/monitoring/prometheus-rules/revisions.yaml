@@ -85,5 +85,5 @@
         There are Pods in `{{$labels.namespace}}` Namespace with data-plane patch versions different from control-plane one. Consider restarting the Pods to actualize it.
         Getting affected Pods:
         ```
-        kubectl -n c1 get pods -o json | jq -r --arg tag "{{$labels.actual_sidecar_image_tag}}" '.items[] | select(.spec.containers[] | select(.image | endswith(":" + $tag))) | .metadata.name'
+        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg tag "{{$labels.actual_sidecar_image_tag}}" '.items[] | select(.spec.containers[] | select(.image | endswith(":" + $tag))) | .metadata.name'
         ```
