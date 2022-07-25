@@ -19,7 +19,7 @@ spec:
     updateMode: "Off"
     {{- end }}
 ---
-{{- if semverCompare ">= 1.21" .Values.global.discovery.kubernetesVersion }}
+{{- if semverCompare ">= 1.21" $context.Values.global.discovery.kubernetesVersion }}
 apiVersion: policy/v1
 {{- else }}
 apiVersion: policy/v1beta1
