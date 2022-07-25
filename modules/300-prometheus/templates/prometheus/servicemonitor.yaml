@@ -21,7 +21,7 @@ spec:
       replacement: cluster
   selector:
     matchLabels:
-      app.kubernetes.io/name: prometheus
+      app: prometheus
   namespaceSelector:
     matchNames:
     - d8-monitoring
