@@ -7,7 +7,7 @@ title: "Architecture description"
   - [CRD](#crd)
     - [Downtime](#downtime)
     - [UpmeterRemoteWrite](#upmeterremotewrite)
-- [Probes](#проверки)
+- [Probes](#probes)
   - [Control Plane](#control-plane)
     - [Lifecycle of an object](#lifecycle-of-an-object)
     - [Lifecycle of an object state](#lifecycle-of-an-object-state)
