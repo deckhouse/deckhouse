@@ -68,7 +68,7 @@ spec:
     updateMode: "Auto"
     {{- end }}
 ---
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">= 1.21" $context.Values.global.discovery.kubernetesVersion }}
 apiVersion: policy/v1
 {{- else }}
 apiVersion: policy/v1beta1

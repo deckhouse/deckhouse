@@ -1,7 +1,7 @@
 {{- if (hasKey .Values.prometheus.internal.alertmanagers "internal") }}
   {{- range .Values.prometheus.internal.alertmanagers.internal }}
 ---
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">= 1.21" .Values.global.discovery.kubernetesVersion }}
 apiVersion: policy/v1
 {{- else }}
 apiVersion: policy/v1beta1
