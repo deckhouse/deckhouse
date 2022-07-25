@@ -2,17 +2,17 @@
 
 ## Install OpenLDAP
 
-* Apply [**ldap**](./ldap.yaml) manifests to the cluster.
+* Apply [**ldap**](./ldap.yaml) manifest to the cluster.
 
 ## Add DexProvider
 
 * Apply [**dex-provider**](./dex-provider.yaml) manifest to the cluster.
-* Login to Kubeconfig (username: `janedoe@example.com`, password: `foo` or username: `johndoe@example.com`, password: `bar`)
+* Login to Kubeconfig (username: `janedoe@example.com`, password: `foo` or username: `johndoe@example.com`, password: `bar`).
 
 ## Generate kubeconfig
 
-* Copy kubeconfig to your PC
-* Show how kubeconfig works
+* Copy kubeconfig to your PC.
+* Show how kubeconfig works.
 
 ## Deploy simple echo server
 
