@@ -1,6 +1,6 @@
 # Based on https://github.com/istio/istio/blob/1.13.3/pilot/docker/Dockerfile.proxyv2
 ARG BASE_DEBIAN
-FROM docker.io/istio/proxyv2:1.13.3@sha256:e8986efce46a7e1fcaf837134f453ea2b5e0750a464d0f2405502f8ddf0e2cd2 as artifact
+FROM registry.deckhouse.io/istio/proxyv2:1.13.3@sha256:e8986efce46a7e1fcaf837134f453ea2b5e0750a464d0f2405502f8ddf0e2cd2 as artifact
 
 FROM $BASE_DEBIAN
 WORKDIR /

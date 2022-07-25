@@ -1,6 +1,6 @@
 # Based on https://github.com/cloudnativelabs/kube-router/blob/master/Dockerfile
 ARG BASE_ALPINE
-FROM docker.io/cloudnativelabs/kube-router:v0.3.2@sha256:12459f482a57f496737378921dcc57a50bbf414acaf92d31a46513ef5c116c92 as artifact
+FROM registry.deckhouse.io/cloudnativelabs/kube-router:v0.3.2@sha256:12459f482a57f496737378921dcc57a50bbf414acaf92d31a46513ef5c116c92 as artifact
 
 FROM $BASE_ALPINE
 RUN apk add --no-cache \

@@ -1,7 +1,7 @@
 # Based on https://github.com/istio/istio/blob/1.13.3/pilot/docker/Dockerfile.pilot
 ARG BASE_DEBIAN
 
-FROM docker.io/istio/pilot:1.13.3@sha256:dec8156bed76ea584b5285e8d427ca6421d9f79949472792bc3132991dc7ee57 as artifact
+FROM registry.deckhouse.io/istio/pilot:1.13.3@sha256:dec8156bed76ea584b5285e8d427ca6421d9f79949472792bc3132991dc7ee57 as artifact
 
 FROM $BASE_DEBIAN
 RUN apt-get update && \

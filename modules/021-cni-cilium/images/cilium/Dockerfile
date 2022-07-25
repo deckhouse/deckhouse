@@ -3,14 +3,14 @@
 # Copyright 2020-2021 Authors of Cilium
 # SPDX-License-Identifier: Apache-2.0
 
-ARG GOLANG_IMAGE=docker.io/library/golang:1.17.9@sha256:c1bf2101f7e1e0b08ce8f792735a81cd71b9d81cbcdceef2382140694f1ffbaf
-ARG UBUNTU_IMAGE=docker.io/library/ubuntu:20.04@sha256:cf31af331f38d1d7158470e095b132acd126a7180a54f263d386da88eb681d93
+ARG GOLANG_IMAGE=registry.deckhouse.io/cni-cilium/golang:1.17.9@sha256:c1bf2101f7e1e0b08ce8f792735a81cd71b9d81cbcdceef2382140694f1ffbaf
+ARG UBUNTU_IMAGE=registry.deckhouse.io/cni-cilium/ubuntu:20.04@sha256:cf31af331f38d1d7158470e095b132acd126a7180a54f263d386da88eb681d93
 
-ARG CILIUM_LLVM_IMAGE=quay.io/cilium/cilium-llvm:0147a23fdada32bd51b4f313c645bcb5fbe188d6@sha256:24fd3ad32471d0e45844c856c38f1b2d4ac8bd0a2d4edf64cffaaa3fd0b21202
-ARG CILIUM_BPFTOOL_IMAGE=quay.io/cilium/cilium-bpftool:7a5420acb4a0fa276a549eb4674515eadb2821d7@sha256:3e204885a1b9ec2a5b593584608664721ef0bd221d3920c091c2e77eb259090c
-ARG CILIUM_IPROUTE2_IMAGE=quay.io/cilium/cilium-iproute2:824df0c341c724f4b12cc48762f80aa3d698b589@sha256:0af5e059b2a43c6383a3daa293182b50cb88f7761f543dacf43c1c3f8f79030c
+ARG CILIUM_LLVM_IMAGE=registry.deckhouse.io/cni-cilium/cilium-llvm:0147a23fdada32bd51b4f313c645bcb5fbe188d6@sha256:24fd3ad32471d0e45844c856c38f1b2d4ac8bd0a2d4edf64cffaaa3fd0b21202
+ARG CILIUM_BPFTOOL_IMAGE=registry.deckhouse.io/cni-cilium/cilium-bpftool:7a5420acb4a0fa276a549eb4674515eadb2821d7@sha256:3e204885a1b9ec2a5b593584608664721ef0bd221d3920c091c2e77eb259090c
+ARG CILIUM_IPROUTE2_IMAGE=registry.deckhouse.io/cni-cilium/cilium-iproute2:824df0c341c724f4b12cc48762f80aa3d698b589@sha256:0af5e059b2a43c6383a3daa293182b50cb88f7761f543dacf43c1c3f8f79030c
 
-ARG CILIUM_BUILDER_IMAGE=quay.io/cilium/cilium-builder:a5ba9ba04c230e4fe86c1eac885de7a911e9ce74@sha256:cb302f02973c69231c3a8837c950ac3ed1c1a1216404d46b9b786e033fed4351
+ARG CILIUM_BUILDER_IMAGE=registry.deckhouse.io/cni-cilium/cilium-builder:a5ba9ba04c230e4fe86c1eac885de7a911e9ce74@sha256:cb302f02973c69231c3a8837c950ac3ed1c1a1216404d46b9b786e033fed4351
 ARG CILIUM_RUNTIME_IMAGE=cilium-runtime
 
 FROM ${CILIUM_LLVM_IMAGE} as llvm-dist
@@ -61,7 +61,7 @@ COPY --from=rootfs / /
 
 # cilium-envoy from github.com/cilium/proxy
 #
-FROM quay.io/cilium/cilium-envoy:9c0d933166ba192713f9e2fc3901f788557286ee@sha256:943f1f522bdfcb1ca3fe951bd8186c41b970afa254096513ae6e0e0efda1a10d as cilium-envoy
+FROM registry.deckhouse.io/cni-cilium/cilium-envoy:9c0d933166ba192713f9e2fc3901f788557286ee@sha256:943f1f522bdfcb1ca3fe951bd8186c41b970afa254096513ae6e0e0efda1a10d as cilium-envoy
 
 #
 # Hubble CLI

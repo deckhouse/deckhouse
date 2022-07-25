@@ -1,6 +1,6 @@
 # Based on https://github.com/istio/istio/blob/1.13.3/operator/docker/Dockerfile.operator
 ARG BASE_DEBIAN
-FROM docker.io/istio/operator:1.13.3@sha256:fbf1c3ad009106632951ba2a5ba978be789f627063ff3df4cebadb8683ea4650 as artifact
+FROM registry.deckhouse.io/istio/operator:1.13.3@sha256:fbf1c3ad009106632951ba2a5ba978be789f627063ff3df4cebadb8683ea4650 as artifact
 
 FROM $BASE_DEBIAN
 

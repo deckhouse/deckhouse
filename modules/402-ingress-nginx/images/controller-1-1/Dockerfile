@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     make GO111MODULE=on USE_DOCKER=false build
 
 # luarocks assets for luajit artifact
-FROM quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.1@sha256:d0b22f715fcea5598ef7f869d308b55289a3daaa12922fa52a1abf17703c88e7 as controller_0_26_1
+FROM registry.deckhouse.io/ingress-nginx/nginx-ingress-controller:0.26.1@sha256:d0b22f715fcea5598ef7f869d308b55289a3daaa12922fa52a1abf17703c88e7 as controller_0_26_1
 USER root
 RUN apt-get update \
   && apt-get install -y --no-install-recommends patch gcc build-essential \
@@ -23,7 +23,7 @@ RUN apt-get update \
   && luarocks install lua-iconv 7-3
 
 # IngressNginxController docker image
-FROM registry.k8s.io/ingress-nginx/controller:v1.1.3@sha256:31f47c1e202b39fadecf822a9b76370bd4baed199a005b3e7d4d1455f4fd3fe2 as controller_image
+FROM registry.deckhouse.io/ingress-nginx/controller:v1.1.3@sha256:31f47c1e202b39fadecf822a9b76370bd4baed199a005b3e7d4d1455f4fd3fe2 as controller_image
 
 # Final image
 FROM $BASE_ALPINE
