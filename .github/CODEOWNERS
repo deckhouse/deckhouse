@@ -16,7 +16,7 @@
 340-monitoring-*/           @nabokihms
 350-node-local-dns/         @zuzzas
 380-metallb/                @RomanenkoDenys @kvaps
-402-ingress-nginx/          @nabokihms
+402-ingress-nginx/          @nabokihms @yalosev
 460-log-shipper/            @nabokihms
 470-chrony/                 @RomanenkoDenys
 500-openvpn/                @vitaliy-sn
