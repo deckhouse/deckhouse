@@ -57,8 +57,6 @@ spec:
         - '(^/(dev|proc|sys|run|var/lib/kubelet)($|/))|(^/var/lib/docker/)|(^/var/lib/containerd/)|(^/home/kubernetes/)'
         - '--collector.netclass.ignored-devices=^(veth.*|[a-f0-9]{15})$'
         - '--collector.netdev.ignored-devices=^(veth.*|[a-f0-9]{15})$'
-        - '--collector.filesystem.ignored-fs-types'
-        - '^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|tmpfs|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$'
         - '--collector.textfile.directory'
         - '/host/textfile'
         - '--collector.netstat.fields'
