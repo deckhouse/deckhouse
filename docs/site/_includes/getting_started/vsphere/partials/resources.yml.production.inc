@@ -159,10 +159,10 @@ spec:
       name: frontend
     # [<en>] the maximum number of instances for the group in each zone
     # [<ru>] максимальное количество инстансов в зоне
-    maxPerZone: 2
+    maxPerZone: 3
     # [<en>] the minimum number of instances for the group in each zone
     # [<ru>] минимальное количество инстансов в зоне
-    minPerZone: 3
+    minPerZone: 2
     # [<en>] list of availability zones to create instances in
     # [<ru>] переопределение перечня зон, в которых создаются инстансы
     # [<ru>] возможно, захотите изменить
