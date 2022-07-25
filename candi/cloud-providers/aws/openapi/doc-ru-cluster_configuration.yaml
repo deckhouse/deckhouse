@@ -36,7 +36,7 @@ apiVersions:
               additionalSecurityGroups:
                 type: array
                 description: |
-                  Дополнительные теги, которые будут присвоены созданным инстансам.
+                  Дополнительные secutiry groups, которые будут присвоены созданным инстансам.
                 items:
                   type: string
               diskType:
@@ -130,7 +130,7 @@ apiVersions:
                   additionalSecurityGroups:
                     type: array
                     description: |
-                      Дополнительные теги, которые будут присвоены созданному инстансу.
+                      Дополнительные security groups, которые будут присвоены созданному инстансу.
                     items:
                       type: string
                   diskType:
