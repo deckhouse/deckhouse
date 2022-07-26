@@ -83,6 +83,7 @@
  - **[monitoring-kubernetes]** Ignore containers rootfs mount point for node-exporter in GKE. [#2100](https://github.com/deckhouse/deckhouse/pull/2100)
  - **[monitoring-kubernetes]** Fix eviction inodes imagefs and node fs if containerd and kubelet directory is a symlink. [#2061](https://github.com/deckhouse/deckhouse/pull/2061)
  - **[monitoring-kubernetes]** Fixed PVC usage Grafana dashboards. [#1868](https://github.com/deckhouse/deckhouse/pull/1868)
+ - **[node-local-dns]** Revert service account to prevent Pod from getting stuck in a Terminating state. [#2111](https://github.com/deckhouse/deckhouse/pull/2111)
  - **[node-local-dns]** node-local-dns now works properly with cni-cilium. [#2037](https://github.com/deckhouse/deckhouse/pull/2037)
     node-local-dns Pods should restart.
  - **[node-local-dns]** Updated CoreDNS to v1.9.3. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
