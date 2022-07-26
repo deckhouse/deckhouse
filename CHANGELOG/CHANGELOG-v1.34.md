@@ -72,12 +72,15 @@
  - **[extended-monitoring]** Fixed PVC usage alerts. [#1868](https://github.com/deckhouse/deckhouse/pull/1868)
  - **[helm_lib]** Tolerate evictions for cluster components on node scaling. [#1912](https://github.com/deckhouse/deckhouse/pull/1912)
     All controllers with the all-node toleration strategy (master node components, system daemonsets) will be restarted.
+ - **[ingress-nginx]** Update the `D8IngressNginxControllerVersionDeprecated` alert description. [#2088](https://github.com/deckhouse/deckhouse/pull/2088)
  - **[ingress-nginx]** Upgrade 0.49 ingress controller to fix out-of-bounds temporary error [#1945](https://github.com/deckhouse/deckhouse/pull/1945)
     IngressNginxController of the version 0.49 will be restarted
  - **[ingress-nginx]** Fixed wildcard `vhost` label in `ingress-controller` metrics. [#1630](https://github.com/deckhouse/deckhouse/pull/1630)
     Ingress controller Pods will be restarted.
+ - **[istio]** Fixed `D8IstioDataPlanePatchVersionMismatch` alert description. [#2048](https://github.com/deckhouse/deckhouse/pull/2048)
  - **[kube-dns]** Updated CoreDNS to v1.9.3. With patches to persuade coredns to respect deprecated Service annotation `service.alpha.kubernetes.io/tolerate-unready-endpoints`. Alerts the user to the need for migrating from deprecated annotation. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
  - **[log-shipper]** Fix DaemonSet alerts. [#1912](https://github.com/deckhouse/deckhouse/pull/1912)
+ - **[monitoring-kubernetes]** Ignore containers rootfs mount point for node-exporter in GKE. [#2100](https://github.com/deckhouse/deckhouse/pull/2100)
  - **[monitoring-kubernetes]** Fix eviction inodes imagefs and node fs if containerd and kubelet directory is a symlink. [#2061](https://github.com/deckhouse/deckhouse/pull/2061)
  - **[monitoring-kubernetes]** Fixed PVC usage Grafana dashboards. [#1868](https://github.com/deckhouse/deckhouse/pull/1868)
  - **[node-local-dns]** node-local-dns now works properly with cni-cilium. [#2037](https://github.com/deckhouse/deckhouse/pull/2037)
@@ -86,6 +89,7 @@
  - **[node-manager]** Fix unbound variable bootstrap_job_log_pid when bootstrap static-node [#1917](https://github.com/deckhouse/deckhouse/pull/1917)
  - **[node-manager]** Increased the `cluster-autoscaler` node cooldown after scaling-up to prevent flapping (10m instead of 2m) [#1746](https://github.com/deckhouse/deckhouse/pull/1746)
  - **[operator-prometheus]** Adjust scrape timeout using helm helper. [#2083](https://github.com/deckhouse/deckhouse/pull/2083)
+ - **[prometheus]** Rollback prometheus-module ServiceMonitor label selector to `app=prometheus`. [#2107](https://github.com/deckhouse/deckhouse/pull/2107)
  - **[prometheus]** Update Grafana to 8.5.9 to fix various CVE [#2039](https://github.com/deckhouse/deckhouse/pull/2039)
  - **[upmeter]** Added the auto-clean of garbage `UpmeterHookProbe` object produced by a bug. [#2080](https://github.com/deckhouse/deckhouse/pull/2080)
  - **[upmeter]** Fix certificate name for DexAuthenticator. [#2060](https://github.com/deckhouse/deckhouse/pull/2060)
