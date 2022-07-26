@@ -50,6 +50,8 @@ topnav:
           url: /products/enterprise_edition.html
         - title: Deckhouse Commander
           url: /products/commander.html
+        - title: Как купить?
+          url: /products/enterprise_edition.html#how-to-buy
       - title: Услуги
         url: '#'
         items:
@@ -64,5 +66,3 @@ topnav:
             url: /security.html
           - title: Сравнение с KaaS
             url: /deckhouse_vs_kaas.html
-          - title: Как купить?
-            url: /products/enterprise_edition.html#how-to-buy
