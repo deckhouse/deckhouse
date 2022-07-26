@@ -285,7 +285,7 @@ done
 
 Также рекомендуем сделать бекап директории `/etc/kubernetes/pki/etcd` в которой находятся [ключи и сертификаты доступа](https://etcd.io/docs/v3.5/op-guide/security/) к etcd-серверу.  
 
-Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также ключи и сертификаты доступа к etcd-сервера в зашифрованном виде вне кластера Deckhouse.
+Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также ключи и сертификаты доступа к etcd-серверу в зашифрованном виде вне кластера Deckhouse.
 Для этого вы можете использовать сторонние инструменты, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) или другие инструменты резервного копирования файлов.
 
 О возможных вариантах восстановления состояния кластера etcd из снимка вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
