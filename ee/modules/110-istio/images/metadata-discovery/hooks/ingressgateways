@@ -72,8 +72,9 @@ EOF
             "name": .metadata.name,
             "address": ((.status.addresses[] | select(.type == "ExternalIP") | .address) // (.status.addresses[] | select(.type == "InternalIP") | .address)),
             "isActive": (
-               (any((.spec.taints // [])[]; .key == "node.kubernetes.io/unschedulable") | not) and
-               ([.status.conditions[] | select(.type == "Ready")][-1].status == "True")
+              all((.spec.taints // [])[] ; .key != "node.kubernetes.io/unschedulable")
+              and
+              (.status.conditions[] // [] | select(.type == "Ready") | .status == "True")
             )
           }
 EOF
