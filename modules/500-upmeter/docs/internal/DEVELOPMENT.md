@@ -1,6 +1,4 @@
----
-title: "Architecture description"
----
+# Architecture description
 
 - [Agent](#agent)
 - [Server](#server)
@@ -61,14 +59,14 @@ Note that this functionality is not fully implemented yet.
 Information about the activities that took place in the cluster or on the infrastructure and caused downtime can be documented using the `downtime.deckhouse.io` CRD object. In it, you can specify the expected type of downtime, the time interval, and the accessibility groups or probes affected. The server will treat this time as `uncertain` for the specified groups and probes.
 
 - Can read the `Downtime` CR; in these CRDs:
-  - startDate, endDate: start time and end time of the downtime in ISO format,
-  - type: downtime type:
-    - Accident – an incident on our side;
-    - Maintenance – scheduled maintenance;
-    - InfrastructureMaintenance – scheduled maintenance at the infrastructure provider;
-    - InfrastructureAccident – problems with the provider's infrastructure;
-  - description: information for users;
-  - affected: a list of subsystems/components that are affected by the Downtime.
+  - startDate, endDate — start time and end time of the downtime in ISO format;
+  - type — downtime type:
+    - Accident — an incident on our side;
+    - Maintenance — scheduled maintenance;
+    - InfrastructureMaintenance — scheduled maintenance at the infrastructure provider;
+    - InfrastructureAccident — problems with the provider's infrastructure;
+  - description — information for users;
+  - affected — a list of subsystems/components that are affected by the Downtime.
 
 An example of a Downtime:
 
@@ -161,8 +159,8 @@ This probe checks the availability of the API server. The object lifecycle is ch
 
 Probes:
 
-- `Basic Functionality` – ckecks whether a ConfigMap object is created and deleted;
-- `Namespace` – ckecks whether a ConfigMap object is created and deleted.
+- `Basic Functionality` — checks whether a ConfigMap object is created and deleted;
+- `Namespace` — checks whether a ConfigMap object is created and deleted.
 
 ![Single object lifecycle](01-single-object-lifecycle.png)
 
@@ -172,7 +170,7 @@ This probe finds out the state of the object as part of its lifecycle. The probe
 
 Probes:
 
-- `Scheduler` – checks whether a Pod gets scheduled to a node.
+- `Scheduler` — checks whether a Pod gets scheduled to a node.
 
 ![Controller object lifecycle](02-controller-object-lifecycle.png)
 
@@ -189,11 +187,11 @@ Probes:
 
 ### Synthetic
 
-Probes belonging to the "synthetic" group send requests to the smoke-mini – a model web server application. This allows the user to estimate the behavior of real-life applications in the cluster. The `smoke-mini` app runs five HTTP server StatefulSets and provides an API for running tests. Pods of one of the StatefulSets are re-scheduled once a minute on random nodes. The `smokemini/reschedule.go` hook is responsible for scheduling
+Probes belonging to the "synthetic" group send requests to the smoke-mini — a model web server application. This allows the user to estimate the behavior of real-life applications in the cluster. The `smoke-mini` app runs five HTTP server StatefulSets and provides an API for running tests. Pods of one of the StatefulSets are re-scheduled once a minute on random nodes. The `smokemini/reschedule.go` hook is responsible for scheduling.
 
 #### Supported probing methods
 
-* `/` – checks whether the Pod is available; returns the 200 response code in all cases;
-* `/dns` – checks whether the cluster DNS is working by resolving the `kubernetes.default` domain name;
-* `/neighbor` – checks whether there is access to the "neighboring" StatefulSet using the HTTP address of the Pod;
-* `/neighbor-via-service` – checks whether the "neighboring" StatefulSet is accessible over a shared service.
+* `/` — checks whether the Pod is available; returns the 200 response code in all cases;
+* `/dns` — checks whether the cluster DNS is working by resolving the `kubernetes.default` domain name;
+* `/neighbor` — checks whether there is access to the "neighboring" StatefulSet using the HTTP address of the Pod;
+* `/neighbor-via-service` — checks whether the "neighboring" StatefulSet is accessible over a shared service.
