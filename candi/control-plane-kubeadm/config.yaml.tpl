@@ -49,8 +49,10 @@ apiServer:
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
 {{- end }}
-{{- if and (semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion) (eq .cni "Cilium") }}
+{{- if hasKey . "cni" }}
+  {{- if and (semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion) (eq .cni "Cilium") }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
+  {{- end }}
 {{- end }}
 {{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "TTLAfterFinished=true"
