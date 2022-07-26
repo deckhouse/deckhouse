@@ -280,7 +280,7 @@ done
 In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.
 From this file, you can restore the previous etcd cluster state in the future.
 
-We also recommend that you make a backup of the directory `/etc/kubernetes/pki/etcd` where [access keys and certificates](https://etcd.io/docs/v3.5/op-guide/security/) of the etcd-server are located.
+Also, we recommend you backup the `/etc/kubernetes/pki/etcd` directory, where [access keys and certificates](https://etcd.io/docs/v3.5/op-guide/security/) of the etcd-server are located.
 
 We recommend encrypting etcd snapshot backups as well as keys and certificates for access to the etcd-server and saving them outside the Deckhouse cluster.
 You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc.
