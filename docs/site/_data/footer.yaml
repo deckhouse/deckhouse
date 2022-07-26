@@ -49,6 +49,8 @@ columns:
         url: '/community/community_edition.html'
       - title: Deckhouse Platform EE
         url: '/products/enterprise_edition.html'
+      - title: Как купить?
+        url: '/products/enterprise_edition.html#how-to-buy'
   - title: Услуги
     items:
       - title: Managed Kubernetes
@@ -61,7 +63,5 @@ columns:
         url: '/security.html'
       - title: Сравнение с KaaS
         url: '/deckhouse_vs_kaas.html'
-      - title: Как купить?
-        url: '/products/enterprise_edition.html#how-to-buy'
       - title: Политика конфиденциальности
         url: '/security-policy.html'
