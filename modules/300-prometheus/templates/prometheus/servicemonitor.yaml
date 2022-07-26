@@ -22,6 +22,7 @@ spec:
   selector:
     matchLabels:
       app: prometheus
+      prometheus.deckhouse.io/target: prometheus
   namespaceSelector:
     matchNames:
     - d8-monitoring
