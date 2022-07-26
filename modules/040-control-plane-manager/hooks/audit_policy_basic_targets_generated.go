@@ -87,6 +87,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"network-policy-engine",
 	"node-exporter",
 	"node-group",
+	"node-local-dns",
 	"node-termination-handler",
 	"okmeter",
 	"openvpn",
