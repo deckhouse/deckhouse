@@ -122,8 +122,7 @@ Jobs for visual control allowed editions when approving deploy to environments.
           fi
 
       {!{ range $werfEnv := slice "CE" "EE" "FE" }!}
-      - name: Set cooldown for release
-        id: update_release_channel_version_on_cooldown
+      - name: Set cooldown for release ({!{ $werfEnv }!})
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
