@@ -74,7 +74,7 @@ EOF
             "isActive": (
               all((.spec.taints // [])[] ; .key != "node.kubernetes.io/unschedulable")
               and
-              (.status.conditions[] // [] | select(.type == "Ready") | .status == "True")
+              ((.status.conditions // [])[] | select(.type == "Ready") | .status == "True")
             )
           }
 EOF
