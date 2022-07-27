@@ -286,8 +286,7 @@ jobs:
           fi
 
 
-      - name: Set cooldown for release
-        id: update_release_channel_version_on_cooldown
+      - name: Set cooldown for release (CE)
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -308,8 +307,7 @@ jobs:
 
           echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
-      - name: Set cooldown for release
-        id: update_release_channel_version_on_cooldown
+      - name: Set cooldown for release (EE)
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
@@ -330,8 +328,7 @@ jobs:
 
           echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
-      - name: Set cooldown for release
-        id: update_release_channel_version_on_cooldown
+      - name: Set cooldown for release (FE)
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
