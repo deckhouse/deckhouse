@@ -106,9 +106,8 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 
 	// run only if it's a canary release
 	var applyAfter, cooldownUntil *time.Time
-	if releaseChecker.releaseCooldown().Duration > 0 {
-		cd := time.Now().UTC().Add(releaseChecker.releaseCooldown().Duration)
-		cooldownUntil = &cd
+	if releaseChecker.releaseMetadata.Cooldown != nil {
+		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
 	}
 
 	if releaseChecker.IsCanaryRelease() {
@@ -163,7 +162,15 @@ releaseLoop:
 
 			return nil
 
+		// LT
 		default:
+			// inherit cooldown from previous minor release
+			// we need this to automatically set cooldown for next patch releases
+			if cooldownUntil == nil && release.CooldownUntil != nil {
+				if release.Version.Major() == newSemver.Major() && release.Version.Minor() == newSemver.Minor() {
+					cooldownUntil = release.CooldownUntil
+				}
+			}
 			break releaseLoop
 		}
 	}
@@ -331,12 +338,12 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 }
 
 type releaseMetadata struct {
-	Version      string                       `json:"version"`
-	Canary       map[string]canarySettings    `json:"canary"`
-	Requirements map[string]string            `json:"requirements"`
-	Disruptions  map[string][]string          `json:"disruptions"`
-	Cooldown     map[string]v1alpha1.Duration `json:"cooldown"`
-	Suspend      bool                         `json:"suspend"`
+	Version      string                    `json:"version"`
+	Canary       map[string]canarySettings `json:"canary"`
+	Requirements map[string]string         `json:"requirements"`
+	Disruptions  map[string][]string       `json:"disruptions"`
+	Cooldown     *time.Time                `json:"cooldown"`
+	Suspend      bool                      `json:"suspend"`
 
 	Changelog map[string]interface{}
 }
@@ -371,10 +378,6 @@ func (dcr *DeckhouseReleaseChecker) IsCanaryRelease() bool {
 
 func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
 	return dcr.releaseMetadata.Canary[dcr.releaseChannel]
-}
-
-func (dcr *DeckhouseReleaseChecker) releaseCooldown() v1alpha1.Duration {
-	return dcr.releaseMetadata.Cooldown[dcr.releaseChannel]
 }
 
 func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (digestHash string, err error) {

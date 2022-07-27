@@ -21,13 +21,6 @@
     waves: 5
     interval: "5m"
 
-cooldown:
-  alpha: '1m'
-  beta: '1m'
-  early-access: '2h'
-  stable: '24h'
-  rock-solid: '24h'
-
 # release requirements, don't forget to register check function in a file requirements.go
 requirements:
   "k8s": "1.19.0" # modules/040-control-plane-manager/hooks/requirements.go

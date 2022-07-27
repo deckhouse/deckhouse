@@ -430,7 +430,7 @@ type deckhouseUpdater struct {
 	totalPendingManualReleases int
 
 	predictedReleaseIndex       int
-	skippedPatcheIndexes        []int
+	skippedPatchIndexes         []int
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
 
@@ -461,7 +461,7 @@ func newDeckhouseUpdater(mode string, podIsReady, isBootstrapping bool) *deckhou
 		predictedReleaseIndex:       -1,
 		currentDeployedReleaseIndex: -1,
 		forcedReleaseIndex:          -1,
-		skippedPatcheIndexes:        make([]int, 0),
+		skippedPatchIndexes:         make([]int, 0),
 		deckhousePodIsReady:         podIsReady,
 		deckhouseIsBootstrapping:    isBootstrapping,
 	}
@@ -605,8 +605,8 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 		updateStatus(input, currentRelease, "Last Deployed release outdated", v1alpha1.PhaseOutdated)
 	}
 
-	if len(du.skippedPatcheIndexes) > 0 {
-		for _, index := range du.skippedPatcheIndexes {
+	if len(du.skippedPatchIndexes) > 0 {
+		for _, index := range du.skippedPatchIndexes {
 			release := du.releases[index]
 			updateStatus(input, &release, "Skipped because of new patches", v1alpha1.PhaseOutdated, true)
 		}
@@ -714,7 +714,7 @@ func (du *deckhouseUpdater) processPendingRelease(index int, release deckhouseRe
 			return
 		}
 		// it's a patch for predicted release, continue
-		du.skippedPatcheIndexes = append(du.skippedPatcheIndexes, du.predictedReleaseIndex)
+		du.skippedPatchIndexes = append(du.skippedPatchIndexes, du.predictedReleaseIndex)
 	}
 
 	// release is predicted to be Deployed
