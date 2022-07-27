@@ -33,7 +33,7 @@ function setup_iptables() {
   echo -n "not-ready" > /tmp/coredns-readiness
 }
 
-if [[ -e "$SHOULD_SETUP_IPTABLES" ]]; then
+if [[ "$SHOULD_SETUP_IPTABLES" == "yes" ]]; then
   setup_iptables
 fi
 
