@@ -46,17 +46,21 @@ apiServer:
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
 {{- end }}
     anonymous-auth: "false"
+{{- $featureGates := "" }}
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
-{{- end }}
-{{- if hasKey . "cni" }}
-  {{- if and (semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion) (eq .cni "Cilium") }}
-    feature-gates: "EndpointSliceTerminatingCondition=true"
-  {{- end }}
+    {{- $featureGates = "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true" }}
 {{- end }}
 {{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "TTLAfterFinished=true"
+    {{- $featureGates = "TTLAfterFinished=true" }}
 {{- end }}
+{{- if semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion }}
+  {{- if hasKey . "cni" }}
+    {{- if eq .cni "Cilium" }}
+      {{- $featureGates = printf "%s,%s" $featureGates "EndpointSliceTerminatingCondition=true" }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+    feature-gates: {{ $featureGates | quote }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
