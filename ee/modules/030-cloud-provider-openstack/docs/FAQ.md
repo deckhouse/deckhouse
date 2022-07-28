@@ -198,9 +198,9 @@ username = {{ nova_service_user_name }}
 
 ### Disks in OpenStack
 
-The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (сinder storage). The first one is deleted along with the VM, and the second one remains in the cloud when the VM is deleted.
+The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (cinder storage). The first one is deleted along with the VM, and the second one remains in the cloud when the VM is deleted.
 
-* A network disk is preferred for the master node so that the node can migrate between hypervisors. 
+* A network disk is preferred for the master node so that the node can migrate between hypervisors.
 * A local disk is preffered for the ephemeral node to save on cost. Not all cloud providers support the use of local disks. If local disks are not supported, you have to use network disks for ephemeral nodes.
 
 | Local disk (ephemeral)        | Network disk (persistent)                    |
@@ -228,7 +228,7 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 
 - Use flavor with the specified disk size.
 - Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used. 
+- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
 
 #### How do I check the disk volume in a flavor?
 
