@@ -2,9 +2,9 @@ groups:
  - name: "v1"
    channels:
     - name: alpha
-      version: v1.34.8
+      version: v1.34.9
     - name: beta
-      version: v1.34.8
+      version: v1.34.9
     - name: ea
       version: v1.33.14
     - name: stable
