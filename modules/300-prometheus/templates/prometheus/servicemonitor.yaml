@@ -1,4 +1,3 @@
-{{- if not (.Values.global.enabledModules | has "monitoring-applications") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -22,8 +21,6 @@ spec:
   selector:
     matchLabels:
       app: prometheus
-      prometheus.deckhouse.io/target: prometheus
   namespaceSelector:
     matchNames:
     - d8-monitoring
-{{- end }}

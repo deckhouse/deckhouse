@@ -4,11 +4,7 @@ kind: Service
 metadata:
   name: prometheus
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus" "prometheus" "main" "prometheus.deckhouse.io/target" "prometheus")) | nindent 2 }}
-  annotations:
-    prometheus.deckhouse.io/port: "9090"
-    prometheus.deckhouse.io/tls: "true"
-    prometheus.deckhouse.io/sample-limit: "5000"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus" "prometheus" "main")) | nindent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None
@@ -18,8 +14,8 @@ spec:
     protocol: TCP
     targetPort: https
   selector:
-    app.kubernetes.io/name: prometheus
     prometheus: main
+    app.kubernetes.io/name: prometheus
 {{- if (include "helm_lib_ha_enabled" .) }}
 ---
 apiVersion: v1
@@ -28,9 +24,6 @@ metadata:
   name: prometheus-main-0
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
-  annotations:
-    prometheus.deckhouse.io/port: "9090"
-    prometheus.deckhouse.io/tls: "true"
 spec:
   type: ClusterIP
   clusterIP: None
@@ -39,8 +32,8 @@ spec:
     port: 9090
     targetPort: https
   selector:
-    app.kubernetes.io/name: prometheus
     prometheus: main
+    app.kubernetes.io/name: prometheus
     statefulset.kubernetes.io/pod-name: prometheus-main-0
 ---
 apiVersion: v1
@@ -49,9 +42,6 @@ metadata:
   name: prometheus-main-1
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
-  annotations:
-    prometheus.deckhouse.io/port: "9090"
-    prometheus.deckhouse.io/tls: "true"
 spec:
   type: ClusterIP
   clusterIP: None
@@ -60,7 +50,7 @@ spec:
     port: 9090
     targetPort: https
   selector:
-    app.kubernetes.io/name: prometheus
     prometheus: main
+    app.kubernetes.io/name: prometheus
     statefulset.kubernetes.io/pod-name: prometheus-main-1
 {{- end }}
