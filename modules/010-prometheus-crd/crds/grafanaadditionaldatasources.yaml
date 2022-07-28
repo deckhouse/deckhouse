@@ -53,7 +53,7 @@ spec:
                   description: Database name (if used).
                 withCredentials:
                   type: boolean
-                  description: Enable/disable with credentials headers
+                  description: Enable/disable with credentials headers ([details...](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials)).
                 basicAuth:
                   type: boolean
                   description: Enable/disable basic auth.
@@ -106,7 +106,7 @@ spec:
                   description: Database name (if used).
                 withCredentials:
                   type: boolean
-                  description: Enable/disable with credentials headers
+                  description: Enable/disable with credentials headers ([details...](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials)).
                 basicAuth:
                   type: boolean
                   description: Enable/disable basic auth.
