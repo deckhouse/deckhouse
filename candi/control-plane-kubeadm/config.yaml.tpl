@@ -6,11 +6,7 @@
     {{- $featureGates = "TTLAfterFinished=true" }}
 {{- end }}
 {{- if semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion }}
-  {{- if hasKey . "cni" }}
-    {{- if eq .cni "Cilium" }}
-      {{- $featureGates = printf "%s,%s" $featureGates "EndpointSliceTerminatingCondition=true" }}
-    {{- end }}
-  {{- end }}
+    {{- $featureGates = printf "%s,%s" $featureGates "EndpointSliceTerminatingCondition=true" }}
 {{- end }}
 
 {{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}

@@ -24,9 +24,6 @@
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
 {{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
-{{- if (.Values.global.enabledModules | has "cni-cilium") }}
-  {{- $_ := set $tpl_context "cni" "Cilium" }}
-{{- end }}
 
 {{- if hasKey .Values.controlPlaneManager.internal "etcdServers" }}
   {{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
