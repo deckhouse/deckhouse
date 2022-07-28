@@ -15,17 +15,17 @@ spec:
                 access:
                   description: Режим доступа.
                 url:
-                  description: Datasource URL.
+                  description: URL-адрес datasource.
                 user:
-                  description: Database username.
+                  description: Имя пользователя БД.
                 database:
-                  description: Database name, если используется.
+                  description: Имя БД (если используется).
                 withCredentials:
-                  description: Enable/disable with credentials headers
+                  description: Включение/отключение флага [withCredentials](https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest/withCredentials) (влияет на формирование заголовков).
                 basicAuth:
-                  description: Включить/выключить basic auth.
+                  description: Включить/выключить использование базовой авторизации.
                 basicAuthUser:
-                  description: Basic auth username.
+                  description: Имя пользователя для базовой авторизации.
                 jsonData:
                   description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
                 secureJsonData:
@@ -45,17 +45,17 @@ spec:
                 access:
                   description: Режим доступа.
                 url:
-                  description: Datasource URL.
+                  description: URL-адрес datasource.
                 user:
-                  description: Database username.
+                  description: Имя пользователя БД.
                 database:
-                  description: Database name, если используется.
+                  description: Имя БД (если используется).
                 withCredentials:
-                  description: Enable/disable with credentials headers
+                  description: Включение/отключение флага [withCredentials](https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest/withCredentials) (влияет на формирование заголовков).
                 basicAuth:
-                  description: Включить/выключить basic auth.
+                  description: Включить/выключить использование базовой авторизации.
                 basicAuthUser:
-                  description: Basic auth username.
+                  description: Имя пользователя для базовой авторизации.
                 jsonData:
                   description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
                 secureJsonData:

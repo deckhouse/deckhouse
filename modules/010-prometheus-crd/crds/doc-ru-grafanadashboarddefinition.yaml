@@ -10,12 +10,12 @@ spec:
               properties:
                 folder:
                   description: |
-                    В какую папку попадёт данный dashboard. Если такой папки нет, она будет создана.
+                    Папка, в которую попадёт данный dashboard. Если такой папки нет, она будет создана.
                 definition:
                   description: |
                     JSON-манифест dashboard.
 
-                    **Важно!** Следите, чтобы помимо `uid` в манифесте не было "местного" `id` по адресу `.id`.
+                    > **Важно!** Следите, чтобы помимо `uid` в манифесте не было "местного" `id` по адресу `.id`.
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.folder
           name: Folder
