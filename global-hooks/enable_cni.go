@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -26,6 +27,17 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 )
+
+/*
+This hook enables cni module enabled either explicitly in configuration or
+during installation in Secret/d8-cni-configuration.
+
+Developer notes:
+- It uses "dynamic enable" feature of addon-operator to enable module in runtime.
+- It executes on Synchronization to return values patch before ConvergeModules task.
+- It is the only hook that subscribes to configuration ConfigMap because
+  there is no way to get enabled modules list in global hook.
+*/
 
 var (
 	cniNameToModule = map[string]string{
@@ -56,7 +68,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "ConfigMap",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"deckhouse"},
+				MatchNames: []string{os.Getenv("ADDON_OPERATOR_CONFIG_MAP")},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{

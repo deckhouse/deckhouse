@@ -6,40 +6,142 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
+// Set locations from config values or set a default one with generated password.
+
+const (
+	secretNS              = "kube-basic-auth"
+	secretName            = "htpasswd"
+	secretBinding         = "htpasswd_secret"
+	locationsKey          = "basicAuth.locations"
+	locationsInternalKey  = "basicAuth.internal.locations"
+	generatedPasswdLength = 20
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       secretBinding,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{secretName},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{secretNS},
+				},
+			},
+			// Synchronization is redundant because of OnBeforeHelm.
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			FilterFunc:                   filterHtpasswdSecret,
+		},
+	},
+
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, generatePassword)
 
-const defaultLocationTemplate = `
-[ {
-  "users": {"admin": "%s"},
-  "location": "/"
-} ]
-`
+func filterHtpasswdSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert secret to struct: %v", err)
+	}
+
+	return secret.Data, nil
+}
+
+const defaultUserName = `admin`
+
+func generateDefaultLocation(password string) []map[string]interface{} {
+	return []map[string]interface{}{
+		{
+			"users": map[string]interface{}{
+				defaultUserName: password,
+			},
+			"location": "/",
+		},
+	}
+}
 
 func generatePassword(input *go_hook.HookInput) error {
-	_, ok := input.Values.GetOk("basicAuth.locations")
+	// Set values from user controlled configuration.
+	userLocations, ok := input.ConfigValues.GetOk(locationsKey)
 	if ok {
+		input.Values.Set(locationsInternalKey, userLocations.Value())
 		return nil
 	}
 
-	rawLocations := make([]map[string]interface{}, 0)
+	// No config values. Try to restore generated password from the Secret.
+	// Generate default location if no valid generated password available.
 
-	locations := fmt.Sprintf(defaultLocationTemplate, pwgen.AlphaNum(20))
-	err := json.Unmarshal([]byte(locations), &rawLocations)
+	pass, err := restorePasswordFromSnapshot(input.Snapshots[secretBinding])
 	if err != nil {
-		return err
+		input.LogEntry.Infof("Generate default location for basic auth: %s", err)
+		pass = pwgen.AlphaNum(generatedPasswdLength)
 	}
 
-	input.ConfigValues.Set("basicAuth.locations", rawLocations)
+	locations := generateDefaultLocation(pass)
+	input.Values.Set(locationsInternalKey, locations)
 	return nil
+}
+
+// restorePasswordFromSnapshot returns generated password for default location from Secret.
+// password is considered generated if:
+// - there is only 1 snapshot
+// - there is only htpasswd field in Secret
+// - there is only one line contains "admin:{PLAIN}" in htpasswd
+//
+// Hook should generate new default location if Secret
+// contains more fields or passwords.
+//
+// NOTE: This algorithm is coupled with the field name in secret.yaml and "users" template in _helpers.tpl.
+func restorePasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error) {
+	// Only one Secret is expected.
+	if len(snapshot) != 1 {
+		return "", fmt.Errorf("secret/%s not found", secretName)
+	}
+
+	secretData, ok := snapshot[0].(map[string][]byte)
+	if !ok {
+		return "", fmt.Errorf("secret/%s has empty data", secretName)
+	}
+	// Only one field is expected.
+	if len(secretData) != 1 {
+		return "", fmt.Errorf("secret/%s has many fields", secretName)
+	}
+
+	// Expect htpasswd field is present.
+	htpasswdBytes, ok := secretData["htpasswd"]
+	if !ok {
+		return "", fmt.Errorf("secret/%s has no htpasswd field", secretName)
+	}
+	htpasswd := string(htpasswdBytes)
+
+	// Expect only one user-password pair.
+	if strings.Count(htpasswd, "{PLAIN}") != 1 {
+		return "", fmt.Errorf("secret/%s has many users in htpasswd field", secretName)
+	}
+
+	userPrefix := defaultUserName + ":{PLAIN}"
+	if strings.Count(htpasswd, userPrefix) != 1 {
+		return "", fmt.Errorf("secret/%s has no password for %s user", secretName, defaultUserName)
+	}
+
+	// Extract password.
+	cleaned := strings.TrimSpace(htpasswd)
+	pass := strings.TrimPrefix(cleaned, defaultUserName+":{PLAIN}")
+
+	return pass, nil
 }

@@ -16,6 +16,8 @@
 
 source /shell_lib.sh
 
+DECKHOUSE_CONFIG_MAP=${DECKHOUSE_CONFIG_MAP:-deckhouse}
+
 function __config__(){
   cat <<EOF
 configVersion: v1
@@ -23,7 +25,6 @@ kubernetes:
   - name: endpoints
     apiVersion: v1
     kind: Endpoints
-    queue: "endpoints-config"
     group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
@@ -38,7 +39,6 @@ kubernetes:
   - name: cluster_config
     apiVersion: v1
     kind: Secret
-    queue: "cluster-config"
     group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
@@ -53,7 +53,6 @@ kubernetes:
   - name: deckhouse_config
     apiVersion: v1
     kind: ConfigMap
-    queue: "deckhouse-config"
     group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
@@ -62,7 +61,7 @@ kubernetes:
       nameSelector:
         matchNames: ["d8-system"]
     nameSelector:
-      matchNames: ["deckhouse"]
+      matchNames: ["${DECKHOUSE_CONFIG_MAP}"]
     jqFilter: '.data.global // ""'
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io

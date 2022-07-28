@@ -88,6 +88,23 @@ properties:
             default: []
             items:
               type: string
+      auth:
+        type: object
+        default: {}
+        properties:
+          status:
+            type: object
+            default: {}
+            properties:
+              password:
+                type: string
+          webui:
+            type: object
+            default: {}
+            properties:
+              password:
+                type: string
+
 definitions:
   stsEntry:
     type: object

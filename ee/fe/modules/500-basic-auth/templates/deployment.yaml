@@ -100,7 +100,7 @@ spec:
         secret:
           secretName: htpasswd
           items:
-{{- range $location := .Values.basicAuth.locations }}
+{{- range $location := .Values.basicAuth.internal.locations }}
   {{- if eq $location.location "/" }}
           - key: htpasswd
             path: htpasswd

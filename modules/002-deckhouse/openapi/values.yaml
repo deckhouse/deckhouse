@@ -31,3 +31,6 @@ properties:
           ca:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      configMapName:
+        type: string
+        x-examples: ["deckhouse"]

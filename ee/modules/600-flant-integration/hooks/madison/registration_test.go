@@ -7,6 +7,8 @@ package madison
 
 import (
 	"bytes"
+	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -21,7 +23,8 @@ import (
 
 var _ = Describe("Flant integration :: hooks :: madison registration ::", func() {
 	const (
-		initValuesString = `
+		madisonTestAuthKey    = "abc"
+		valuesWithLicenseOnly = `
 {
   "global": {
   },
@@ -31,36 +34,105 @@ var _ = Describe("Flant integration :: hooks :: madison registration ::", func()
     }
   }
 }`
-		initValuesStringMadisonKeyExists = `
+		valuesWithAuthKey = `
 {
   "global": {
   },
   "flantIntegration": {
-    "madisonAuthKey": "abc",
     "internal": {
+      "madisonAuthKey": "` + madisonTestAuthKey + `",
       "licenseKey": "xxx"
     }
   }
 }`
 	)
 
-	Context("Madison Auth key exists", func() {
-		f := HookExecutionConfigInit(initValuesStringMadisonKeyExists, ``)
+	var (
+		madisonNS = `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ` + madisonSecretNS + `
+`
+		madisonAuthKeyB64 = base64.StdEncoding.EncodeToString([]byte(madisonTestAuthKey))
+		madisonSecret     = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ` + madisonSecretName + `
+  namespace: ` + madisonSecretNS + `
+data:
+  ` + madisonSecretField + `: |
+    ` + madisonAuthKeyB64
+	)
+
+	Context("No license key in internal values", func() {
+		f := HookExecutionConfigInit(`{"global": {}, "flantIntegration": {"internal": {}} }`, `{"flantIntegration":{}}`)
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSet(madisonKeyPath, madisonTestAuthKey)
+			f.ValuesSet(internalMadisonKeyPath, madisonTestAuthKey)
+			f.RunHook()
+		})
+
+		It("should remove auth key internal values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(internalMadisonKeyPath).String()).To(BeEmpty())
+		})
+	})
+
+	Context("Madison Auth key in config values", func() {
+		f := HookExecutionConfigInit(valuesWithLicenseOnly, fmt.Sprintf(`{"flantIntegration":{"madisonAuthKey":"%s"}}`, madisonTestAuthKey))
+
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
-		It("Hook must not fail", func() {
+		It("should set auth key from config values", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(internalMadisonKeyPath).String()).To(Equal(madisonTestAuthKey))
+		})
+	})
+
+	Context("Madison Auth key stored in Secret", func() {
+		f := HookExecutionConfigInit(valuesWithLicenseOnly, ``)
+
+		BeforeEach(func() {
+			f.KubeStateSet(madisonNS + madisonSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("should set auth key from Secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(internalMadisonKeyPath).String()).To(Equal(madisonTestAuthKey))
+		})
+	})
+
+	Context("Madison Auth key already in internal values", func() {
+		f := HookExecutionConfigInit(valuesWithAuthKey, ``)
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("should keep auth key in values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(internalMadisonKeyPath).String()).To(Equal(madisonTestAuthKey))
 		})
 	})
 
 	Context("Madison Auth key doesn't exist", func() {
-		f := HookExecutionConfigInit(initValuesString, ``)
+		f := HookExecutionConfigInit(valuesWithLicenseOnly, ``)
 
 		BeforeEach(func() {
-			buf := bytes.NewBufferString(`{"error": "", "auth_key":"cde"}`)
+			// Mock HTTP client to emulate registration.
+			buf := bytes.NewBufferString(fmt.Sprintf(`{"error": "", "auth_key":"%s"}`, madisonTestAuthKey))
 			rc := ioutil.NopCloser(buf)
 			dependency.TestDC.HTTPClient.DoMock.
 				Expect(&http.Request{}).
@@ -70,39 +142,35 @@ var _ = Describe("Flant integration :: hooks :: madison registration ::", func()
 					Body:       rc,
 				}, nil)
 
+			f.KubeStateSet(madisonNS)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
-		It("values must be present", func() {
+		It("should register new auth key", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").String()).To(Equal("cde"))
+			Expect(f.ValuesGet(internalMadisonKeyPath).String()).To(Equal(madisonTestAuthKey))
 		})
 	})
 
 	Context("createMadisonPayload", func() {
-		schemaMock := func(schema string) func() (string, error) {
-			return func() (string, error) { return schema, nil }
-		}
-
 		table.DescribeTable("createMadisonPayload",
-			func(domainTemplate string, schemaMock func() (string, error), want madisonRequestData) {
-				p, err := createMadisonPayload(domainTemplate, schemaMock)
-
-				Expect(err).NotTo(HaveOccurred())
+			func(domainTemplate string, schema string, want madisonRequestData) {
+				p := createMadisonPayload(domainTemplate, schema)
 				Expect(p).To(Equal(want))
 			},
 			table.Entry(
 				"empty input, schema ignored",
 				"",
-				schemaMock("http"),
+				"http",
 				madisonRequestData{GrafanaURL: "-", PrometheusURL: "-"},
 			),
 			table.Entry(
 				"template available and http",
 				"%s.one.two",
-				schemaMock("http"),
+				"http",
 				madisonRequestData{
+					Type:          "prometheus",
 					GrafanaURL:    "http://grafana.one.two",
 					PrometheusURL: "http://grafana.one.two/prometheus",
 				},
@@ -110,25 +178,13 @@ var _ = Describe("Flant integration :: hooks :: madison registration ::", func()
 			table.Entry(
 				"template available and https",
 				"%s.one.two",
-				schemaMock("https"),
+				"https",
 				madisonRequestData{
+					Type:          "prometheus",
 					GrafanaURL:    "https://grafana.one.two",
 					PrometheusURL: "https://grafana.one.two/prometheus",
 				},
 			),
-		)
-	})
-
-	Context("calculatePromentheusURLSchema", func() {
-		table.DescribeTable("calculation of promentheus URL schema from values",
-			func(globalMode, promMode, want string) {
-				schema := calculatePromentheusURLSchema(globalMode, promMode)
-				Expect(schema).To(Equal(want))
-			},
-			table.Entry("empty inputs", "", "", "https"),
-			table.Entry("globally disabled", "Disabled", "", "http"),
-			table.Entry("disabled for prom", "", "Disabled", "http"),
-			table.Entry("both disabled", "Disabled", "Disabled", "http"),
 		)
 	})
 })

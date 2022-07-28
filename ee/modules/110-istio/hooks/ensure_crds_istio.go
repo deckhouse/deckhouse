@@ -25,10 +25,10 @@ func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 	var theNewestVersion string
 
 	var globalVersion string
-	if !input.ConfigValues.Get("istio.globalVersion").Exists() {
-		return fmt.Errorf("istio.globalVersion config value is mandatory (isn't discovered by revisions_discovery.go yet?)")
+	if !input.Values.Exists("istio.internal.globalVersion") {
+		return fmt.Errorf("istio.internal.globalVersion value isn't discovered by revisions_discovery.go yet")
 	}
-	globalVersion = input.ConfigValues.Get("istio.globalVersion").String()
+	globalVersion = input.Values.Get("istio.internal.globalVersion").String()
 	var additionalVersions = make([]string, 0)
 	for _, versionResult := range input.ConfigValues.Get("istio.additionalVersions").Array() {
 		additionalVersions = append(additionalVersions, versionResult.String())

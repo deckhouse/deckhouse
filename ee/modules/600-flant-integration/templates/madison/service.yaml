@@ -1,4 +1,4 @@
-{{- if .Values.flantIntegration.madisonAuthKey }}
+{{- if .Values.flantIntegration.internal.madisonAuthKey }}
 ---
 apiVersion: v1
 kind: Service

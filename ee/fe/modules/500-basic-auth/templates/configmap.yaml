@@ -55,7 +55,7 @@ data:
           return 200;
         }
 
-        {{- range $location := .Values.basicAuth.locations }}
+        {{- range $location := .Values.basicAuth.internal.locations }}
           {{- if eq $location.location "/" }}
         location / {
           {{- else }}

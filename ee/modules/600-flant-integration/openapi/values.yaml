@@ -95,3 +95,9 @@ properties:
         x-examples: ["kasakdhaksdhkadkadh"]
         description: |
           Client license key.
+      madisonAuthKey:
+        oneOf:
+          - type: string
+          - type: boolean
+            enum: [false]
+        x-examples: ["abc"]

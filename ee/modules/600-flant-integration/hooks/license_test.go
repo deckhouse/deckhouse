@@ -13,9 +13,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/rand"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Flant integration :: hooks :: license ::", func() {
+
 	Context("reading docker config", func() {
 		It("Parses full config", func() {
 			registry := rand.String(8)
@@ -99,6 +102,78 @@ var _ = Describe("Flant integration :: hooks :: license ::", func() {
 			Expect(lic).To(Equal(passwordWithNoSpaces))
 		})
 	})
+
+	Context("get license key", func() {
+		const (
+			testLicenseKey = "TeStLiCeNsE"
+			testRepo       = "test.repo"
+		)
+
+		var (
+			revokedCMManifest = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ` + revokedCMName + `
+  namespace: ` + revokedCMNamespace + "\n"
+		)
+
+		f := HookExecutionConfigInit(`{"global":{}, "flantIntegration":{"internal": {}}}`, `{"flantIntegration":{}}`)
+
+		Context("with license key in configuration", func() {
+
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.ConfigValuesSet(licenseKeyPath, testLicenseKey)
+				f.RunHook()
+			})
+
+			It("should set internal value from configuration", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(internalLicenseKeyPath).String()).To(Equal(testLicenseKey))
+			})
+		})
+
+		Context("with license key in docker config", func() {
+			readFile = func(path string) ([]byte, error) {
+				return getDockerConfig(testRepo, testLicenseKey), nil
+			}
+
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.ConfigValuesSet(licenseKeyPath, "")
+				f.ValuesSet(globalRegistryPath, "test.repo")
+				f.RunHook()
+			})
+
+			It("should set internal value from configuration", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(internalLicenseKeyPath).String()).To(Equal(testLicenseKey))
+			})
+		})
+
+		Context("with revoked config map", func() {
+			readFile = func(path string) ([]byte, error) {
+				return getDockerConfig(testRepo, testLicenseKey), nil
+			}
+
+			BeforeEach(func() {
+				f.KubeStateSet(revokedCMManifest)
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.ConfigValuesSet(licenseKeyPath, "")
+				f.ValuesSet(globalRegistryPath, "test.repo")
+				f.ValuesSet(internalLicenseKeyPath, testLicenseKey)
+				f.RunHook()
+			})
+
+			It("should remove internal value", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(internalLicenseKeyPath).String()).To(BeEmpty())
+			})
+		})
+
+	})
 })
 
 func getConfig() authn.AuthConfig {
@@ -118,4 +193,14 @@ func prepareDockerConfig(a authn.AuthConfig, registry string) []byte {
 	}}
 	j, _ := json.Marshal(c)
 	return j
+}
+
+func getDockerConfig(repo string, licenseKey string) []byte {
+	auth := authn.AuthConfig{
+		Username: "user",
+		Password: licenseKey,
+		Auth:     base64.StdEncoding.EncodeToString([]byte("user:" + licenseKey)),
+	}
+
+	return prepareDockerConfig(auth, repo)
 }

@@ -24,31 +24,38 @@ import (
 )
 
 var _ = Describe("Modules :: openvpn :: hooks :: set_search_domains ", func() {
-	f := HookExecutionConfigInit(`{"global": {"discovery":{"clusterDomain":"test.test"}},"openvpn":{"internal":{}, "auth": {}}}`, `{"openvpn":{}}`)
-	Context("openvpn.pushToClientSearchDomains not set", func() {
+	const globalClusterDomain = "test.test"
+
+	f := HookExecutionConfigInit(
+		`{ "global": {"discovery":{}}, "openvpn":{"internal":{"auth": {}}} }`,
+		`{"openvpn":{}}`)
+	Context("openvpn.pushToClientSearchDomains is not set", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet(clusterDomainGlobalPath, globalClusterDomain)
 			f.RunHook()
 		})
 
-		It("domain should be set to test.test", func() {
+		It("domain should be set to global value", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ConfigValuesGet("openvpn.pushToClientSearchDomains.0").String()).Should(Equal("test.test"))
+			Expect(f.ValuesGet(clusterDomainsInternalValuesPath + ".0").String()).Should(Equal(globalClusterDomain))
 		})
 	})
 
-	Context("openvpn.pushToClientSearchDomains is set", func() {
+	Context("openvpn.pushToClientSearchDomains is set in configuration", func() {
+		const userDefinedDomain = "example.example"
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ConfigValuesSet("openvpn.pushToClientSearchDomains.0", "example.example")
+			f.ValuesSet(clusterDomainGlobalPath, globalClusterDomain)
+			f.ConfigValuesSet("openvpn.pushToClientSearchDomains", []string{userDefinedDomain})
 			f.RunHook()
 		})
 
-		It("domain should be set to example.example", func() {
+		It("domain should be set to user defined value", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ConfigValuesGet("openvpn.pushToClientSearchDomains.0").String()).Should(Equal("example.example"))
+			Expect(f.ValuesGet(clusterDomainsInternalValuesPath + ".0").String()).Should(Equal(userDefinedDomain))
 		})
 	})
 })

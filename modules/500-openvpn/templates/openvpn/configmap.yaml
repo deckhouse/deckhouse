@@ -38,15 +38,15 @@ data:
     group nogroup
     push "topology subnet"
     push "route-metric 9999"
-    {{- if hasKey .Values.openvpn "pushToClientRoutes" }}
-    {{- range $route := .Values.openvpn.pushToClientRoutes }}
+    {{- if hasKey .Values.openvpn.internal "pushToClientRoutes" }}
+    {{- range $route := .Values.openvpn.internal.pushToClientRoutes }}
     push "route {{ $route | replace "/" " " }}"
     {{- end }}
     {{- else }}
     {{- end }}
     push "dhcp-option DNS {{ .Values.openvpn.pushToClientDNS | default .Values.global.discovery.clusterDNSAddress }}"
-    {{- if hasKey .Values.openvpn "pushToClientSearchDomains" }}
-      {{- range $searchDomain := .Values.openvpn.pushToClientSearchDomains }}
+    {{- if hasKey .Values.openvpn.internal "pushToClientSearchDomains" }}
+      {{- range $searchDomain := .Values.openvpn.internal.pushToClientSearchDomains }}
     push "dhcp-option DOMAIN {{ $searchDomain }}"
       {{- end }}
     {{- end }}
@@ -76,15 +76,15 @@ data:
     group nogroup
     push "topology subnet"
     push "route-metric 9999"
-    {{- if hasKey .Values.openvpn "pushToClientRoutes" }}
-    {{- range $route := .Values.openvpn.pushToClientRoutes }}
+    {{- if hasKey .Values.openvpn.internal "pushToClientRoutes" }}
+    {{- range $route := .Values.openvpn.internal.pushToClientRoutes }}
     push "route {{ $route | replace "/" " " }}"
     {{- end }}
     {{- else }}
     {{- end }}
     push "dhcp-option DNS {{ .Values.openvpn.pushToClientDNS | default .Values.global.discovery.clusterDNSAddress }}"
-    {{- if hasKey .Values.openvpn "pushToClientSearchDomains" }}
-      {{- range $searchDomain := .Values.openvpn.pushToClientSearchDomains }}
+    {{- if hasKey .Values.openvpn.internal "pushToClientSearchDomains" }}
+      {{- range $searchDomain := .Values.openvpn.internal.pushToClientSearchDomains }}
     push "dhcp-option DOMAIN {{ $searchDomain }}"
       {{- end }}
     {{- end }}

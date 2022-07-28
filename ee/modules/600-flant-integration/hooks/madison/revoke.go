@@ -13,8 +13,16 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+)
+
+const (
+	revokedCMName      = "madison-revoked-project"
+	revokedCMNamespace = "d8-monitoring"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -36,17 +44,19 @@ type statusRequest struct {
 }
 
 func revokeHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	madisonAuthKey, ok := input.Values.GetOk(madisonKeyPath)
+	licenseKey, ok := input.Values.GetOk(internalLicenseKeyPath)
 	if !ok {
 		return nil
 	}
 
-	if madisonAuthKey.String() == "false" {
+	// Ignore revoking if madison is disabled.
+	cfgMadisonAuthKey := input.ConfigValues.Get(madisonKeyPath).String()
+	if cfgMadisonAuthKey == "false" {
 		return nil
 	}
 
-	licenseKey, ok := input.Values.GetOk(licenseKeyPath)
-	if !ok {
+	madisonAuthKey, ok := input.Values.GetOk(internalMadisonKeyPath)
+	if !ok || madisonAuthKey.String() == "false" {
 		return nil
 	}
 
@@ -84,9 +94,28 @@ func revokeHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil // dont this we need an error
 	}
 
+	// Create a ConfigMap to indicate revocation and prevent re-registration.
 	if madisonResp.Error == "Archived setup" {
-		input.ConfigValues.Remove("flantIntegration.licenseKey")
-		input.ConfigValues.Remove("flantIntegration.madisonAuthKey")
+		// Create CM to indicate revoked license.
+		cm := &v1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      revokedCMName,
+				Namespace: revokedCMNamespace,
+				Labels: map[string]string{
+					"heritage": "flant-integration",
+				},
+			},
+		}
+		input.PatchCollector.Create(cm, object_patch.IgnoreIfExists())
+
+		// Remove internal values.
+		// No more telemetry right after project become archived.
+		input.Values.Remove(internalMadisonKeyPath)
+		input.Values.Remove(internalLicenseKeyPath)
 	}
 
 	return nil

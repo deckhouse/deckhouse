@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant CJSC
+Copyright 2021 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,4 +20,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 )
 
-var _ = generate_password.RegisterHook("openvpn")
+const (
+	moduleValuesKey = "openvpn"
+	authSecretNS    = "d8-openvpn"
+	authSecretName  = "basic-auth"
+)
+
+var _ = generate_password.RegisterHook(moduleValuesKey, authSecretNS, authSecretName)

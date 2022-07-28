@@ -38,9 +38,30 @@ globalVersion: 1.2.3-beta.45 # default version "from openapi/values.yaml"
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
 
-			Expect(f.ConfigValuesGet("istio.globalVersion").String()).To(Equal("1.2.3-beta.45"))
 			Expect(f.ValuesGet("istio.internal.revisionsToInstall").String()).To(MatchJSON(`["v1x2x3beta45"]`))
 			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x2x3beta45"))
+			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2.3-beta.45"))
+		})
+	})
+
+	Context("No globalVersion in CM and globalVersion was previously discovered", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
+
+			values := `
+internal:
+  supportedVersions: ["1.10.1", "1.3", "1.4"]
+  globalVersion: "1.42"
+globalVersion: "1.4" # default version "from openapi/values.yaml"
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.RunHook()
+		})
+		It("Previously discovered value 1.42 must be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.revisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x42"}))
+			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x42"))
+			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.42"))
 		})
 	})
 
@@ -77,11 +98,9 @@ spec: {}
 
 			f.RunHook()
 		})
-		It("Migration for 1.10.1 should trigger", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.revisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x10x1"}))
-			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x10x1"))
-			Expect(f.ConfigValuesGet("istio.globalVersion").String()).To(Equal("1.10.1"))
+		It("Hook must fail with error", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError).To(MatchError("can't find istio.deckhouse.io/global-version annotation for istiod global Service d8-istio/istiod"))
 		})
 	})
 
@@ -123,7 +142,7 @@ spec: {}
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.revisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x3"}))
 			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x3"))
-			Expect(f.ConfigValuesGet("istio.globalVersion").String()).To(Equal("1.3"))
+			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.3"))
 		})
 	})
 
@@ -166,7 +185,7 @@ spec: {}
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.revisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x2"}))
 			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x2"))
-			Expect(f.ConfigValuesGet("istio.globalVersion").String()).To(Equal("1.2"))
+			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))
 		})
 	})
 

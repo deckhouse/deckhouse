@@ -17,59 +17,104 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/hooks/generate_password"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: deckhouse-web :: hooks :: generate_password", func() {
+	var (
+		hook = generate_password.NewBasicAuthPlainHook(moduleValuesKey, authSecretNS, authSecretName)
 
-	const (
-		authKey         = "deckhouseWeb.auth"
-		passwordKey     = "deckhouseWeb.auth.password"
-		externalAuthKey = "deckhouseWeb.auth.externalAuthentication"
+		testPassword    = generate_password.GeneratePassword()
+		testPasswordB64 = base64.StdEncoding.EncodeToString([]byte(
+			fmt.Sprintf("admin:{PLAIN}%s", testPassword),
+		))
+
+		// Secret with password.
+		authSecretManifest = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ` + authSecretName + `
+  namespace: ` + authSecretNS + `
+data:
+  auth: ` + testPasswordB64 + "\n"
 	)
+
 	f := HookExecutionConfigInit(
-		`{"deckhouseWeb": {"internal": {}} }`,
+		`{"deckhouseWeb": {"internal": {"auth":{}}} }`,
 		`{"deckhouseWeb":{}}`,
 	)
-	Context("without external auth", func() {
+
+	Context("giving no Secret", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should generate new password", func() {
+		It("should generate password value from Secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ConfigValuesGet(passwordKey).String()).ShouldNot(BeEmpty())
+			Expect(f.ValuesGet(hook.PasswordInternalKey()).String()).ShouldNot(BeEmpty())
 		})
 	})
-	Context("with existing password", func() {
+
+	Context("giving external auth configuration", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSet(passwordKey, "zxczxczxc")
+			f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
+			f.ValuesSet(hook.PasswordInternalKey(), []byte(`password`))
 			f.RunHook()
 		})
-		It("should get existing password", func() {
+		It("should clean password from values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(passwordKey).String()).Should(BeEquivalentTo("zxczxczxc"))
+			Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
 		})
 	})
-	Context("with external auth", func() {
+
+	Context("giving password in Secret", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
+			f.KubeStateSet(authSecretManifest)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSetFromYaml(externalAuthKey, []byte(`{"authURL": "test"}`))
 			f.RunHook()
 		})
-		It("should run without error", func() {
+		It("should set password value from Secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(hook.PasswordInternalKey()).String()).Should(BeEquivalentTo(testPassword))
 		})
-		It("should clean auth data", func() {
-			Expect(f.ValuesGet(passwordKey).String()).Should(BeEmpty())
-			Expect(f.ConfigValuesGet(authKey).Exists()).Should(BeFalse())
+
+		Context("giving Secret is deleted", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(""))
+				f.RunHook()
+			})
+			It("should generate new password value", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				pass := f.ValuesGet(hook.PasswordInternalKey()).String()
+				Expect(pass).ShouldNot(BeEquivalentTo(testPassword))
+				Expect(pass).ShouldNot(BeEmpty())
+			})
 		})
+
+		Context("with external auth configuration", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
+				f.RunHook()
+			})
+			It("should clean password from values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
+			})
+		})
+
 	})
+
 })

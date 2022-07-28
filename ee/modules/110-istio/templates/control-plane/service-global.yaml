@@ -6,7 +6,7 @@ metadata:
   name: istiod
   namespace: d8-istio
   annotations:
-    istio.deckhouse.io/global-version: {{ .Values.istio.globalVersion | quote }}
+    istio.deckhouse.io/global-version: {{ .Values.istio.internal.globalVersion | quote }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "istiod" "istio" "pilot" "istio.io/rev" .Values.istio.internal.globalRevision)) | nindent 2 }}
 spec:
   ports:

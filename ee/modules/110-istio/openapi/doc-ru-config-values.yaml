@@ -270,9 +270,9 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          > Если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/), параметры externalAuthentication настраиваются автоматически.
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/).
         properties:
           authURL:
             description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
@@ -280,9 +280,7 @@ properties:
             description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
       password:
         description: |
-          Пароль для HTTP-авторизации для пользователя admin (генерируется автоматически, но можно менять).
-
-          Используется, если не включен параметр `externalAuthentication`.
+          Параметр устарел.
       allowedUserGroups:
         description: |
           Массив групп, пользователям которых позволен доступ в публичные веб-интерфейсы модуля.

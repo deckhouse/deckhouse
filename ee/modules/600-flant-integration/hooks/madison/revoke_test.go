@@ -20,30 +20,15 @@ import (
 
 var _ = Describe("Flant integration :: hooks :: madison revoke ::", func() {
 	const (
-		initValuesString = `
-{
-  "global": {
-  },
-  "flantIntegration": {
-    "madisonAuthKey": "abc",
-    "internal": {
-      "licenseKey": "xxx"
-    }
-  }
-}`
-
-		initConfigValuesString = `
-{
-  "flantIntegration": {
-    "madisonAuthKey": "abc",
-    "licenseKey": "xxx"
-  }
-}`
+		testMadisonAuthKey = "abc"
+		testLicenseKey     = "license"
 	)
 
-	Context("Project is archived", func() {
-		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f := HookExecutionConfigInit(
+		`{ "global": {}, "flantIntegration": {"internal": {}} }`,
+		`{"flantIntegration": {}}`)
 
+	Context("project is archived", func() {
 		BeforeEach(func() {
 			buf := bytes.NewBufferString(`{"error": "Archived setup"}`)
 			rc := ioutil.NopCloser(buf)
@@ -55,19 +40,39 @@ var _ = Describe("Flant integration :: hooks :: madison revoke ::", func() {
 					Body:       rc,
 				}, nil)
 
+			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
-			f.RunHook()
 		})
 
-		It("values must be absent", func() {
-			Expect(f.ConfigValuesGet("flantIntegration.licenseKey").Exists()).To(BeFalse())
-			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").Exists()).To(BeFalse())
+		Context("with license and madison key", func() {
+			BeforeEach(func() {
+				f.ValuesSet(internalLicenseKeyPath, testLicenseKey)
+				f.ValuesSet(internalMadisonKeyPath, testMadisonAuthKey)
+				f.RunHook()
+			})
+
+			It("should remove internal values and create ConfigMap", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(internalLicenseKeyPath).String()).To(BeEmpty())
+				Expect(f.ValuesGet(internalMadisonKeyPath).String()).To(BeEmpty())
+
+				Expect(f.KubernetesResource("ConfigMap", revokedCMNamespace, revokedCMName).Exists()).To(BeTrue())
+			})
+		})
+
+		Context("without license", func() {
+			BeforeEach(func() {
+				f.RunHook()
+			})
+
+			It("should not remove internal values or create ConfigMap", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesResource("ConfigMap", revokedCMNamespace, revokedCMName).Exists()).To(BeFalse())
+			})
 		})
 	})
 
-	Context("Project is active", func() {
-		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-
+	Context("project is active", func() {
 		BeforeEach(func() {
 			dependency.TestDC.HTTPClient.DoMock.
 				Expect(&http.Request{}).
@@ -77,47 +82,64 @@ var _ = Describe("Flant integration :: hooks :: madison revoke ::", func() {
 					Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 				}, nil)
 
+			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
-			f.RunHook()
 		})
 
-		It("values must be present", func() {
-			Expect(f.ConfigValuesGet("flantIntegration.licenseKey").Exists()).To(BeTrue())
-			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").Exists()).To(BeTrue())
-		})
-	})
+		Context("no license key", func() {
+			BeforeEach(func() {
+				f.RunHook()
+			})
 
-	Context("Metrics are disabled by `false` as a string", func() {
-		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-
-		BeforeEach(func() {
-			f.ConfigValuesSet("flantIntegration.madisonAuthKey", "false")
-			f.ValuesSet("flantIntegration.madisonAuthKey", "false")
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
-			f.RunHook()
+			It("should not create ConfigMap", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesResource("ConfigMap", revokedCMNamespace, revokedCMName).Exists()).To(BeFalse())
+			})
 		})
 
-		It("values must be present", func() {
-			Expect(f.ConfigValuesGet("flantIntegration.licenseKey").Exists()).To(BeTrue())
-			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").Exists()).To(BeTrue())
-			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").String()).To(Equal("false"))
-		})
-	})
+		Context("with license key", func() {
+			BeforeEach(func() {
+				f.ValuesSet(internalLicenseKeyPath, "license")
+			})
 
-	Context("Metrics are disabled by `false` as a boolean", func() {
-		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+			When("madison is disabled", func() {
+				BeforeEach(func() {
+					f.ConfigValuesSet(madisonKeyPath, "false")
+					f.RunHook()
+				})
 
-		BeforeEach(func() {
-			f.ConfigValuesSet("flantIntegration.madisonAuthKey", false)
-			f.ValuesSet("flantIntegration.madisonAuthKey", false)
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
-			f.RunHook()
-		})
+				It("should not create ConfigMap", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.KubernetesResource("ConfigMap", revokedCMNamespace, revokedCMName).Exists()).To(BeFalse())
+					Expect(f.ConfigValuesGet(madisonKeyPath).Exists()).To(BeTrue())
+				})
+			})
 
-		It("values must be present", func() {
-			Expect(f.ConfigValuesGet("flantIntegration.licenseKey").Exists()).To(BeTrue())
-			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").Exists()).To(BeTrue())
-			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").String()).To(Equal("false"))
+			When("madison is disabled with boolean", func() {
+				BeforeEach(func() {
+					f.ConfigValuesSet(madisonKeyPath, false)
+					f.RunHook()
+				})
+
+				It("should not create ConfigMap", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.KubernetesResource("ConfigMap", revokedCMNamespace, revokedCMName).Exists()).To(BeFalse())
+					Expect(f.ConfigValuesGet(madisonKeyPath).Exists()).To(BeTrue())
+				})
+			})
+
+			When("madison is disabled in internal values", func() {
+				BeforeEach(func() {
+					f.ValuesSet(internalMadisonKeyPath, "false")
+					f.RunHook()
+				})
+
+				It("should not create ConfigMap", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.KubernetesResource("ConfigMap", revokedCMNamespace, revokedCMName).Exists()).To(BeFalse())
+					Expect(f.ValuesGet(internalMadisonKeyPath).Exists()).To(BeTrue())
+				})
+			})
 		})
 	})
 })

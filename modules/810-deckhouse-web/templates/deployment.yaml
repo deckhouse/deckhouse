@@ -50,7 +50,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: deckhouse-web
+            name: d8-deckhouse-version-info
         - name: tmp
           emptyDir: {}
 {{- end }}

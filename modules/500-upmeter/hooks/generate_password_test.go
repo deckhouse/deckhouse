@@ -17,27 +17,75 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
-	for _, app := range []string{"status", "webui"} {
-		Context(app, func() {
-			var (
-				authKey         = "upmeter.auth." + app
-				passwordKey     = "upmeter.auth." + app + ".password"
-				externalAuthKey = "upmeter.auth." + app + ".externalAuthentication"
-			)
+type appTestSettings struct {
+	appName    string
+	secretName string
 
+	password          string
+	generatedPassword string
+
+	externalAuthValuesPath     string
+	passwordInternalValuesPath string
+}
+
+func (a *appTestSettings) GeneratedSecret() string {
+	return `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ` + a.secretName + `
+  namespace: ` + upmeterNS + `
+data:
+  auth: ` + base64.StdEncoding.EncodeToString([]byte("admin:{PLAIN}"+a.generatedPassword)) + "\n"
+}
+
+func (a *appTestSettings) CustomSecret() string {
+	return `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ` + a.secretName + `
+  namespace: ` + upmeterNS + `
+data:
+  auth: ` + base64.StdEncoding.EncodeToString([]byte("admin:{PLAIN}"+a.password)) + "\n"
+}
+
+var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
+	testSettings := make(map[string]*appTestSettings)
+	for secretName, appName := range upmeterApps {
+		settings := &appTestSettings{
+			secretName:                 secretName,
+			appName:                    appName,
+			password:                   fmt.Sprintf("t3stPassw0rd-%s", appName),
+			generatedPassword:          GeneratePassword(),
+			externalAuthValuesPath:     fmt.Sprintf(externalAuthValuesTmpl, appName),
+			passwordInternalValuesPath: fmt.Sprintf(passwordInternalValuesTmpl, appName),
+		}
+
+		testSettings[appName] = settings
+	}
+
+	for appName, settings := range testSettings {
+		Context(appName, func() {
+
+			// Initialize internal.auth object for values patch to work.
 			f := HookExecutionConfigInit(
-				`{"upmeter": {"internal": {}} }`,
+				`{"global":{}, "upmeter": {"internal": {"auth": {"status": {}, "webui": {}}}} }`,
 				`{"upmeter":{}}`,
 			)
 
-			Context("without external auth", func() {
+			Context("giving no Secret", func() {
 				BeforeEach(func() {
 					f.KubeStateSet("")
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -46,63 +94,72 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 
 				It("should generate new password", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ConfigValuesGet(passwordKey).String()).ShouldNot(BeEmpty())
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).ShouldNot(BeEmpty())
 				})
 			})
 
-			Context("with existing password", func() {
+			Context("giving external auth configuration", func() {
 				BeforeEach(func() {
 					f.KubeStateSet("")
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-					f.ValuesSet(passwordKey, "zxczxczxc")
+					f.ValuesSetFromYaml(settings.externalAuthValuesPath, []byte(`{"authURL": "test"}`))
+					f.ValuesSet(settings.passwordInternalValuesPath, []byte(`password`))
 					f.RunHook()
 				})
-
-				It("should generate new password", func() {
+				It("should clean password from values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet(passwordKey).String()).Should(BeEquivalentTo("zxczxczxc"))
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).Exists()).Should(BeFalse(), "should delete internal value")
 				})
 			})
 
-			Context("with external auth", func() {
+			Context("giving password in Secret", func() {
 				BeforeEach(func() {
-					f.KubeStateSet("")
+					f.KubeStateSet(settings.GeneratedSecret())
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-					f.ValuesSetFromYaml(externalAuthKey, []byte(`{"authURL": "test"}`))
 					f.RunHook()
 				})
-
-				It("should run without error", func() {
+				It("should set password value from Secret", func() {
 					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(BeEquivalentTo(settings.generatedPassword))
 				})
 
-				It("should clean auth data", func() {
-					Expect(f.ValuesGet(passwordKey).String()).Should(BeEmpty())
-					Expect(f.ConfigValuesGet(authKey).Exists()).Should(BeFalse())
+				Context("giving Secret is deleted", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSet(""))
+						f.RunHook()
+					})
+					It("should generate new password value", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						pass := f.ValuesGet(settings.passwordInternalValuesPath).String()
+						Expect(pass).ShouldNot(BeEquivalentTo(settings.generatedPassword))
+						Expect(pass).ShouldNot(BeEmpty())
+					})
 				})
+
+				Context("giving external auth configuration", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+						f.ValuesSetFromYaml(settings.externalAuthValuesPath, []byte(`{"authURL": "test"}`))
+						f.RunHook()
+					})
+					It("should clean password from values", func() {
+						Expect(f).To(ExecuteSuccessfully())
+						Expect(f.ValuesGet(settings.passwordInternalValuesPath).Exists()).Should(BeFalse(), "should delete internal value")
+					})
+				})
+
 			})
+
 		})
 	}
 
-	Context("both", func() {
+	Context("all apps", func() {
 		f := HookExecutionConfigInit(
-			`{"upmeter": {"internal": {}} }`,
+			`{"upmeter": {"internal": {"auth": {"status": {}, "webui": {}}}} }`,
 			`{"upmeter":{}}`,
 		)
 
-		var (
-			rootKey = "upmeter.auth"
-
-			authKey1         = "upmeter.auth.status"
-			passwordKey1     = "upmeter.auth.status.password"
-			externalAuthKey1 = "upmeter.auth.status.externalAuthentication"
-
-			authKey2         = "upmeter.auth.webui"
-			passwordKey2     = "upmeter.auth.webui.password"
-			externalAuthKey2 = "upmeter.auth.webui.externalAuthentication"
-		)
-
-		Context("without external auth", func() {
+		Context("giving no Secret", func() {
 			BeforeEach(func() {
 				f.KubeStateSet("")
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -112,56 +169,89 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 			It("should generate new password", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(f.ConfigValuesGet(passwordKey1).String()).ShouldNot(BeEmpty())
-				Expect(f.ConfigValuesGet(passwordKey2).String()).ShouldNot(BeEmpty())
+				for appName, settings := range testSettings {
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).ShouldNot(BeEmpty(), "Should generate password for '%s'", appName)
+				}
 			})
 		})
 
-		Context("with existing password", func() {
-			BeforeEach(func() {
-				f.KubeStateSet("")
-				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-
-				f.ValuesSet(passwordKey1, "xxx")
-				f.ValuesSet(passwordKey2, "ooo")
-
-				f.RunHook()
-			})
-
-			It("should generate new password", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet(passwordKey1).String()).Should(BeEquivalentTo("xxx"))
-				Expect(f.ValuesGet(passwordKey2).String()).Should(BeEquivalentTo("ooo"))
-			})
-		})
-
-		Context("with external auth", func() {
+		Context("giving external auth configuration", func() {
 			BeforeEach(func() {
 				f.KubeStateSet("")
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 
 				extAuth := []byte(`{"authURL": "test"}`)
 
-				f.ValuesSetFromYaml(externalAuthKey1, extAuth)
-				f.ValuesSetFromYaml(externalAuthKey2, extAuth)
+				for _, settings := range testSettings {
+					f.ValuesSetFromYaml(settings.externalAuthValuesPath, extAuth)
+					f.ValuesSet(settings.passwordInternalValuesPath, []byte(`password`))
+				}
+
 				f.RunHook()
 			})
-
-			It("should run without error", func() {
+			It("should clean password from values", func() {
 				Expect(f).To(ExecuteSuccessfully())
-			})
-
-			It("should clean auth data for both", func() {
-				Expect(f.ValuesGet(passwordKey1).String()).Should(BeEmpty())
-				Expect(f.ValuesGet(passwordKey2).String()).Should(BeEmpty())
-
-				Expect(f.ConfigValuesGet(authKey1).Exists()).Should(BeFalse())
-				Expect(f.ConfigValuesGet(authKey2).Exists()).Should(BeFalse())
-			})
-
-			It("should not set root value", func() {
-				Expect(f.ConfigValuesGet(rootKey).Exists()).Should(BeFalse())
+				for appName, settings := range testSettings {
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).Exists()).Should(BeFalse(), "should delete internal value for '%s'", appName)
+				}
 			})
 		})
+
+		Context("giving password in Secret", func() {
+			BeforeEach(func() {
+				secrets := ""
+				for _, settings := range testSettings {
+					secrets += settings.GeneratedSecret()
+				}
+				f.KubeStateSet(secrets)
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.RunHook()
+			})
+			It("should restore generated passwords", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				for _, settings := range testSettings {
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(BeEquivalentTo(settings.generatedPassword))
+				}
+			})
+
+			Context("giving Secret is deleted", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(""))
+					f.RunHook()
+				})
+				It("should generate new passwords", func() {
+					Expect(f).To(ExecuteSuccessfully())
+
+					Expect(f).To(ExecuteSuccessfully())
+					for _, settings := range testSettings {
+						pass := f.ValuesGet(settings.passwordInternalValuesPath).String()
+						Expect(pass).ShouldNot(BeEquivalentTo(settings.generatedPassword))
+						Expect(pass).ShouldNot(BeEmpty())
+					}
+				})
+			})
+
+			Context("giving external auth configuration", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
+					extAuth := []byte(`{"authURL": "test"}`)
+
+					for _, settings := range testSettings {
+						f.ValuesSetFromYaml(settings.externalAuthValuesPath, extAuth)
+						f.ValuesSet(settings.passwordInternalValuesPath, []byte(`password`))
+					}
+
+					f.RunHook()
+				})
+				It("should clean password from values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					for appName, settings := range testSettings {
+						Expect(f.ValuesGet(settings.passwordInternalValuesPath).Exists()).Should(BeFalse(), "should delete internal value for '%s'", appName)
+					}
+				})
+			})
+		})
+
 	})
 })
