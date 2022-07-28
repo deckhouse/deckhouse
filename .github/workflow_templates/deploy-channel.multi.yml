@@ -36,7 +36,7 @@ on:
         description: 'Comma separated editions to deploy. Example: ee,fe,ce'
         required: false
       cooldown:
-        description: 'Postpone release until specified datetime (RFC3339). (2026-06-06T16:16:16Z)'
+        description: 'Postpone release until specified datetime (RFC3339). Example: 2026-06-06T16:16:16Z'
         required: false
 
 env:

@@ -298,17 +298,24 @@ status:
 		BeforeEach(func() {
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 				LayersStub: func() ([]v1.Layer, error) {
-					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"cooldown": "2026-06-06T16:16:16Z","version":"v1.31.0"}`}}}, nil
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.0"}`}}}, nil
 				},
 				DigestStub: func() (v1.Hash, error) {
 					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
+				},
+				ConfigFileStub: func() (*v1.ConfigFile, error) {
+					return &v1.ConfigFile{
+						Config: v1.Config{
+							Labels: map[string]string{"cooldown": "2026-06-06T16:16:16Z"},
+						},
+					}, nil
 				},
 			}, nil)
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
-		It("Release should be created with requirements", func() {
+		It("Release should be created with cooldown", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
 			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
@@ -343,10 +350,17 @@ status:
 			BeforeEach(func() {
 				dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 					LayersStub: func() ([]v1.Layer, error) {
-						return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.2", "cooldown": "2030-05-05T15:15:15Z"}`}}}, nil
+						return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.2"}`}}}, nil
 					},
 					DigestStub: func() (v1.Hash, error) {
 						return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+					},
+					ConfigFileStub: func() (*v1.ConfigFile, error) {
+						return &v1.ConfigFile{
+							Config: v1.Config{
+								Labels: map[string]string{"cooldown": "2030-05-05T15:15:15Z"},
+							},
+						}, nil
 					},
 				}, nil)
 				f.KubeStateSet("")

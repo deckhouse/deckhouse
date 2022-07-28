@@ -334,7 +334,40 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 		meta.Changelog = changelog
 	}
 
+	cooldown := dcr.fetchCooldown(image)
+	if cooldown != nil {
+		meta.Cooldown = cooldown
+	}
+
 	return meta, nil
+}
+
+func (dcr *DeckhouseReleaseChecker) fetchCooldown(image v1.Image) *time.Time {
+	cfg, err := image.ConfigFile()
+	if err != nil {
+		dcr.logger.Warnf("image config error: %s", err)
+		return nil
+	}
+
+	if cfg == nil {
+		return nil
+	}
+
+	if len(cfg.Config.Labels) == 0 {
+		return nil
+	}
+
+	if v, ok := cfg.Config.Labels["cooldown"]; ok {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			dcr.logger.Errorf("parse cooldown(%s) error: %s", v, err)
+			return nil
+		}
+
+		return &t
+	}
+
+	return nil
 }
 
 type releaseMetadata struct {
@@ -342,10 +375,11 @@ type releaseMetadata struct {
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
 	Disruptions  map[string][]string       `json:"disruptions"`
-	Cooldown     *time.Time                `json:"cooldown"`
 	Suspend      bool                      `json:"suspend"`
 
 	Changelog map[string]interface{}
+
+	Cooldown *time.Time `json:"-"`
 }
 
 type canarySettings struct {
