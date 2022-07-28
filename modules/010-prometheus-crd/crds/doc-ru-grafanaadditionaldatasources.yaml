@@ -21,7 +21,7 @@ spec:
                 database:
                   description: Имя БД (если используется).
                 withCredentials:
-                  description: Включение/отключение с помощью заголовков учетных данных.
+                  description: Включение/отключение флага [withCredentials](https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest/withCredentials) (влияет на формирование заголовков).
                 basicAuth:
                   description: Включить/выключить использование базовой авторизации.
                 basicAuthUser:
@@ -51,7 +51,7 @@ spec:
                 database:
                   description: Имя БД (если используется).
                 withCredentials:
-                  description: Включение/отключение с помощью заголовков учетных данных.
+                  description: Включение/отключение флага [withCredentials](https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest/withCredentials) (влияет на формирование заголовков).
                 basicAuth:
                   description: Включить/выключить использование базовой авторизации.
                 basicAuthUser:

@@ -169,9 +169,7 @@ spec:
                                       type: string
                                     name:
                                       description: |
-                                        Name of the referent.
-
-                                        [More info...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+                                        Name of the secret.
                                       type: string
                                     optional:
                                       description: Specify whether the Secret or its key must exist.
@@ -249,10 +247,7 @@ spec:
                                               description: The key to select.
                                               type: string
                                             name:
-                                              description: |
-                                                Name of the referent.
-
-                                                [More info...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+                                              description: Name of the ConfigMap.
                                               type: string
                                             optional:
                                               description: Specify whether the ConfigMap or its key must exist.

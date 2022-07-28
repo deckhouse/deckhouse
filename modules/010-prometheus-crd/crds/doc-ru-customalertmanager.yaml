@@ -51,33 +51,33 @@ spec:
                   description: Параметры настройки внутренного Alertmanager.
                   properties:
                     inhibitRules:
-                      description: Список правил запрета.
+                      description: Список правил подавления.
                       items:
-                        description: Правила запрета используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения ([подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
+                        description: Правила подавления используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения ([подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
                         properties:
                           equal:
-                            description: Лейблы, которые должны иметь одинаковое значение в исходном и целевом алерте, чтобы запрет вступил в силу.
+                            description: Лейблы, которые должны иметь одинаковое значение в исходном и целевом алерте, чтобы подавление вступило в силу.
                           sourceMatch:
-                            description: Список условий которым должно удовлетворять один или более алертов, чтобы запрет вступил в силу.
+                            description: Список условий которым должен удовлетворять один или более алертов, чтобы подавление вступило в силу.
                             items:
-                              description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
+                              description: Условие содержит критерии сравнения лейблов алертов.
                               properties: &match-properties
                                 name:
-                                  description: Название лейбла для удовлетворения условию.
+                                  description: Имя лейбла для сравнения.
                                 regex:
                                   description: Тип сравнения — по равенству (false) или по регулярному выражению (true).
                                 value:
                                   description: Значение лейбла (regex-шаблон) для удовлетворения условию.
                           targetMatch:
-                            description: Список условий проверяемых в алертах, при выполнении которых алерты будут отключены.
+                            description: Список условий проверяемых в алертах, при выполнении которых алерты будут подавлены.
                             items:
                               description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
                               properties: *match-properties
                     receivers:
                       description: |
-                        Список получателей.
+                        Список receiver'ов.
                       items:
-                        description: Получатель определяет одну или несколько интеграций для отправки оповещений.
+                        description: Receiver определяет одну или несколько интеграций для отправки оповещений.
                         properties:
                           emailConfigs:
                             description: Список конфигураций для отправки оповещений по электронной почте.
@@ -94,12 +94,10 @@ spec:
                                   properties: &data-in-secret-properties
                                     key:
                                       description: |
-                                        Ключ (имя ключа) Secret'а, из которого брать данные.
+                                        Ключ Secret'а, из которого брать данные.
                                     name:
                                       description: |
-                                        Ссылка на Secret.
-
-                                        [Подробнее о формате...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+                                        Имя Secret'а.
                                     optional:
                                       description: |
                                         Определяет, обязательно ли (`false`) указанные Secret или его ключ должны существовать.
@@ -117,7 +115,7 @@ spec:
                                   description: |
                                     Список дополнительных заголовков электронной почты.
 
-                                    Переопределяет все заголовки, установленные ранее интеграцией для отправки оповещений.
+                                    Переопределяет все установленные ранее заголовки.
                                   items:
                                     description: Определяется набором пар ключ/значение.
                                     properties:
@@ -131,33 +129,28 @@ spec:
                                   description: HTML-содержимое тела письма оповещения.
                                 requireTLS:
                                   description: |
-                                    Требование использования SMTP TLS.
+                                    Использовать SMTP TLS.
 
                                     Обратите внимание, что Go не поддерживает незашифрованные SMTP-подключения.
                                 sendResolved:
-                                  description: Уведомлять или нет о завершении алертов.
+                                  description: Уведомлять или нет о том, алерт более не активен.
                                 smarthost:
                                   description: SMTP-хост, через который отправляются электронные письма.
                                 text:
-                                  description: Текстовое содержимое тела письма оповещения.
+                                  description: Текстовое содержимое тела письма.
                                 tlsConfig: &tls-config
                                   description: Конфигурация TLS.
                                   properties:
                                     ca:
-                                      description: Структура, содержащая сертификат CA для
-                                        target'ов.
+                                      description: Структура, содержащая сертификат CA для target'ов.
                                       properties:
                                         configMap:
                                           description: ConfigMap, содержащая данные для использования в target'е.
                                           properties: &data-in-cm-properties
                                             key:
-                                              description: |
-                                                Ключ (имя ключа) ConfigMap, из которого брать данные.
+                                              description: Ключ ConfigMap, из которого брать данные.
                                             name:
-                                              description: |
-                                                Ссылка на ConfigMap.
-
-                                                [Подробнее о формате...](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
+                                              description: Имя ConfigMap.
                                             optional:
                                               description: |
                                                 Определяет, обязательно ли (`false`) указанные ConfigMap или его ключ должны существовать.
@@ -165,8 +158,7 @@ spec:
                                           description: Secret, содержащий данные для использования в target'е.
                                           properties: *data-in-secret-properties
                                     cert:
-                                      description: Структура, содержащая файл сертификата клиента
-                                        для target'а.
+                                      description: Структура, содержащая файл клиентского сертификата target'а.
                                       properties:
                                         configMap:
                                           description: ConfigMap, содержащая данные для использования в target'е.
@@ -184,7 +176,7 @@ spec:
                                 to:
                                   description: Адрес e-mail, на который будут отправлены оповещения.
                           name:
-                            description: Имя получателя. Должно быть уникальным для всего списка получателей.
+                            description: Имя receiver'а. Должно быть уникальным для всего списка receiver'ов.
                           opsgenieConfigs:
                             description: Список конфигураций для отправки оповещений через OpsGenie.
                             items:
@@ -268,7 +260,7 @@ spec:
                                 clientURL:
                                   description: Обратная ссылка на отправителя уведомления.
                                 component:
-                                  description: Сломанная часть (компонент) затронутой системы.
+                                  description: Компонент системы отноящийся к алерту.
                                 description:
                                   description: Описание инцидента.
                                 details:
@@ -316,7 +308,7 @@ spec:
                                     Secret должен находиться в пространстве имен `d8-monitoring`.
                                   properties: *data-in-secret-properties
                                 severity:
-                                  description: Серьезность инцидента.
+                                  description: Уровень инцидента.
                                 url:
                                   description: URL-адрес для отправки запроса.
                           pushoverConfigs:
@@ -346,17 +338,15 @@ spec:
                                       description: URL-адрес прокси-сервера (опционально).
                                     tlsConfig: *tls-config
                                 message:
-                                  description: Сообщение уведомления.
+                                  description: Содержание сообщения.
                                 priority:
-                                  description: Пиоритет. [Подробнее…](https://pushover.net/api#priority)
+                                  description: Приоритет. [Подробнее…](https://pushover.net/api#priority)
                                 retry:
                                   description: Как часто серверы Pushover будут отправлять одно и то же уведомление пользователю. Должно быть не менее 30 секунд.
                                 sendResolved:
                                   description: Уведомлять или нет о завершении алертов.
                                 sound:
-                                  description: Название одного из звуков, поддерживаемых клиентами
-                                    устройств, для переопределения звука, выбранного пользователем
-                                    по умолчанию.
+                                  description: Переопределение звука по умолчанию.
                                 title:
                                   description: Заголовок уведомления.
                                 token:
@@ -529,7 +519,7 @@ spec:
                                 messageType:
                                   description: Тип предупреждения (CRITICAL, WARNING, INFO).
                                 monitoringTool:
-                                  description: Инструмент мониторинга, с которого поступает сообщение о состоянии.
+                                  description: Название инструмента мониторинга, с которого поступает сообщение о состоянии.
                                 routingKey:
                                   description: Ключ, используемый для сопоставления оповещения с командой.
                                 sendResolved:
