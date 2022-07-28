@@ -4,7 +4,7 @@ ARG BASE_GOLANG_18_BULLSEYE
 FROM $BASE_DEBIAN_BULLSEYE as linstor-builder
 
 ARG LINSTOR_GITREPO=https://github.com/LINBIT/linstor-server
-ARG LINSTOR_VERSION=1.19.0
+ARG LINSTOR_VERSION=1.19.1
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
