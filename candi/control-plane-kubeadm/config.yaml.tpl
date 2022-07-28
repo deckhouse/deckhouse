@@ -2,11 +2,11 @@
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true" }}
 {{- end }}
-{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = "TTLAfterFinished=true" }}
-{{- end }}
 {{- if semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = printf "%s,%s" $featureGates "EndpointSliceTerminatingCondition=true" }}
+    {{- $featureGates = "EndpointSliceTerminatingCondition=true,TTLAfterFinished=true" }}
+{{- end }}
+{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = "TTLAfterFinished=true" }}
 {{- end }}
 
 {{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
