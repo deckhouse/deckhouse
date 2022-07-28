@@ -191,6 +191,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
@@ -243,6 +244,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
@@ -318,6 +320,7 @@ podAntiAffinity:
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
@@ -370,6 +373,7 @@ podAntiAffinity:
   operator: Exists
 - key: dedicated
   operator: Exists
+- key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
