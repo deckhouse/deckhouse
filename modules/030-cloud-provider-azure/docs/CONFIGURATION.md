@@ -20,17 +20,7 @@ It allows you to configure additional StorageClasses for volumes with configurab
 
 StorageClass Configuration Parameters:
 
-* `provision` — sets additional StorageClasses for [Azure ultra disks](https://docs.microsoft.com/en-us/azure/virtual-machines/disks-types#ultra-disk):
-  * `name` — the name of the class to create;
-  * `type` — Azure disk storage account type. Available values are `Standard_LRS`, `Premium_LRS`, `StandardSSD_LRS`, `UltraSSD_LRS`, `Premium_ZRS`, `StandardSSD_ZRS`. Check out [Azure docs](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-overview#types-of-storage-accounts) for more information.
-  * `cachingMode` — string value that corresponds to destired caching mode;
-      Can be `None`, `ReadOnly`, `ReadWrite`. If expected disk size is more than 4 TiB, you have to set `cachineMode: None`.
-      Check out [Azure docs](https://docs.microsoft.com/en-us/azure/virtual-machines/premium-storage-performance#disk-caching) for more information.
-  * `diskIOPSReadWrite` — disk IOPS (limit of 300 IOPS/GiB, up to a maximum of 160 K IOPS per disk);
-  * `diskMBpsReadWrite` — disk throughput, `MBps`, (limit of a single disk is 256 KiB/s for each provisioned IOPS).
-* `exclude` — a list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster;
-* `default` — the name of StorageClass that will be used by default in the cluster:
-  * If the parameter is omitted, the default StorageClass is `managed-standard-ssd`.
+<!-- SCHEMA -->
 
 An example of Storage Class configuration:
 

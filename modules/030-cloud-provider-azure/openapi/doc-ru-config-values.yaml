@@ -1,0 +1,38 @@
+type: object
+properties:
+  storageClass:
+    properties:
+      exclude:
+        description: |
+          Полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
+        x-examples:
+        - ["pd-standard.*", "pd-ssd-replicated"]
+      default:
+        description: |
+          Имя StorageClass, который будет использоваться в кластере по умолчанию.
+            * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
+              * Присутствующий в кластере StorageClass по умолчанию (имеющий аннотацию ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
+              * Первый StorageClass из создаваемых модулем (в порядке из таблицы выше).
+        x-examples:
+        - "pd-ssd-not-replicated"
+      provision:
+        description: |
+          Дополнительные StorageClass'ы для Azure ultra disks.
+        items:
+          required: ["name", "diskIOPSReadWrite", "diskMBpsReadWrite"]
+          properties:
+            name:
+              description: |
+                Имя будущего класса.
+            type:
+              description: |
+                Тип Azure диска. В [Azure документации](https://docs.microsoft.com/ru-ru/azure/storage/common/storage-account-overview#types-of-storage-accounts) больше информации.
+            cachingMode:
+              description: |
+                Желаемый режим кэширования. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`. Обратитесь к [документации Azure](https://docs.microsoft.com/ru-ru/azure/virtual-machines/premium-storage-performance#disk-caching) за дополнительной информацией.
+            diskIOPSReadWrite:
+              description: |
+                Количество IOPS (лимит 300 IOPS/GiB, и максимум 160 K IOPS на диск).
+            diskMBpsReadWrite:
+              description: |
+                скорость обращения к диску, `MBps` (лимит 256 KiB/s на каждый IOPS).

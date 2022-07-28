@@ -3,6 +3,24 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    x-examples:
+      - layout: Standard
+        apiVersion: deckhouse.io/v1
+        kind: AzureClusterConfiguration
+        sshPublicKey: test
+        vNetCIDR: 10.0.0.0/16
+        subnetCIDR: 10.0.0.0/24
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            machineSize: test
+            urn: test
+        provider:
+          location: test
+          subscriptionId: test
+          clientId: test
+          clientSecret: test
+          tenantId: test
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, vNetCIDR, subnetCIDR, masterNodeGroup, sshPublicKey]
     properties:

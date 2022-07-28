@@ -20,17 +20,7 @@ title: "Cloud provider — Azure: настройки"
 
 Параметры конфигурации StorageClass'ов:
 
-* `provision` — дополнительные StorageClass'ы для [Azure ultra disks](https://docs.microsoft.com/en-us/azure/virtual-machines/disks-types#ultra-disk):
-  * `name` — имя будущего класса;
-  * `type` — тип Azure диска. Доступные значения: `Standard_LRS`, `Premium_LRS`, `StandardSSD_LRS`, `UltraSSD_LRS`, `Premium_ZRS`, `StandardSSD_ZRS`. В [Azure документации](https://docs.microsoft.com/ru-ru/azure/storage/common/storage-account-overview#types-of-storage-accounts) больше информации.
-  * `cachingMode` — строка, обозначающая желаемый режим кэширования;
-      Может быть `None`, `ReadOnly`, `ReadWrite`. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`.
-      Обратитесь к [документации Azure](https://docs.microsoft.com/ru-ru/azure/virtual-machines/premium-storage-performance#disk-caching) за информацией.
-  * `diskIOPSReadWrite` — количество IOPS (лимит 300 IOPS/GiB, и максимум 160 K IOPS на диск);
-  * `diskMBpsReadWrite` — скорость обращения к диску, `MBps` (лимит 256 KiB/s на каждый IOPS).
-* `exclude` — полные имена (или regex выражения имён) StorageClass'ов, которые не будут созданы в кластере;
-* `default` — имя StorageClass'а, который будет использоваться в кластере по умолчанию:
-  * Если параметр не задан, фактическим StorageClass'ом по умолчанию будет `managed-standard-ssd`.
+<!-- SCHEMA -->
 
 Пример конфигурации StorageClass:
 
@@ -39,6 +29,8 @@ cloudProviderAzure: |
   storageClass:
     provision:
     - name: managed-ultra-ssd
+      type: UltraSSD_LRS
+      cachingMode: None
       diskIOPSReadWrite: 600
       diskMBpsReadWrite: 150
     exclude:
