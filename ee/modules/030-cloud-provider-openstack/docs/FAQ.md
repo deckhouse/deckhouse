@@ -213,10 +213,10 @@ The node disk can be local or network. A local disk in OpenStack, is an ephemera
 
 The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavor has a disk size parameter. Which disk will be ordered depending on the combination of parameters is shown in the table:
 
-|                              | flavor disk size = 0                 | flavor disk size > 0                              |
-| ---------------------------- | ------------------------------------ | ------------------------------------------------- |
+|                                     | flavor disk size = 0                 | flavor disk size > 0                              |
+| ----------------------------------- | ------------------------------------ | ------------------------------------------------- |
 | **`rootDiskSize` is not specified** | ❗️*You need to set the size*. Without specifying the size, there will be an error creating a VM. | Local disk with size according to the flavor    |
-| **`rootDiskSize` is specified**    | Network disk with the `rootDiskSize` size                                         | ❗ Network disk (rootDiskSize) and local disk (according to the flavor). Avoid using this option, as the cloud provider will charge for both disks. |
+| **`rootDiskSize` is specified**     | Network disk with the `rootDiskSize` size                                         | ❗ Network disk (rootDiskSize) and local disk (according to the flavor). Avoid using this option, as the cloud provider will charge for both disks. |
 
 #### Network disk is recommended for master nodes and bastion host
 
@@ -230,7 +230,7 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 - Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
 - Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
 
-#### How do I check the disk volume in a flavor?
+### How do I check the disk volume in a flavor?
 
 ```shell
 # openstack flavor show m1.medium-50g -c disk
