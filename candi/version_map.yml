@@ -2,8 +2,8 @@ bashible: &bashible
   ubuntu: &ubuntu
     '16.04':
       docker:
-        desiredVersion: "docker-ce=5:18.09.7~3-0~ubuntu-xenial"
-        allowedPattern: ""
+        desiredVersion: "docker-ce=5:20.10.7~3-0~ubuntu-xenial"
+        allowedPattern: "^docker-ce=5:(19|20).+"
         containerd:
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
@@ -16,11 +16,11 @@ bashible: &bashible
           allowedPattern: "4.18"
     '18.04':
       docker:
-        desiredVersion: "docker-ce=5:18.09.7~3-0~ubuntu-bionic"
-        allowedPattern: ""
+        desiredVersion: "docker-ce=5:20.10.17~3-0~ubuntu-bionic"
+        allowedPattern: "^docker-ce=5:(19|20).+"
         containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
+          desiredVersion: "containerd.io=1.5.11-1"
+          allowedPattern: "containerd.io=1.[2345]"
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: "containerd.io=1.[56]"
@@ -39,11 +39,11 @@ bashible: &bashible
           allowedPattern: "5.3"
     '20.04':
       docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-focal"
-        allowedPattern: ""
+        desiredVersion: "docker-ce=5:20.10.17~3-0~ubuntu-focal"
+        allowedPattern: "^docker-ce=5:(19|20).+"
         containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
+          desiredVersion: "containerd.io=1.5.11-1"
+          allowedPattern: "containerd.io=1.[2345]"
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: "containerd.io=1.[56]"
@@ -62,8 +62,8 @@ bashible: &bashible
           allowedPattern: "5.4"
     '22.04':
       docker:
-        desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
-        allowedPattern: ""
+        desiredVersion: "docker-ce=5:20.10.17~3-0~ubuntu-jammy"
+        allowedPattern: "^docker-ce=5:20.+"
         containerd:
           desiredVersion: "containerd.io=1.5.11-1"
           allowedPattern: "containerd.io=1.[56]"
