@@ -87,7 +87,7 @@ bashible: &bashible
     '9': &debian9
       docker:
         desiredVersion: "docker-ce=5:19.03.15~3-0~debian-stretch"
-        allowedPattern: ""
+        allowedPattern: "^docker-ce=5:19.+"
         containerd:
           desiredVersion: "containerd.io=1.4.3-1"
           allowedPattern: "containerd.io=1.[234]"
@@ -100,11 +100,11 @@ bashible: &bashible
           allowedPattern: "4.9|4.15|4.19|5.4|5.10"
     '10':
       docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
-        allowedPattern: ""
+        desiredVersion: "docker-ce=5:20.10.17~3-0~debian-buster"
+        allowedPattern: "^docker-ce=5:(19|20).+"
         containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
+          desiredVersion: "containerd.io=1.5.11-1"
+          allowedPattern: "containerd.io=1.[2345]"
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: "containerd.io=1.[56]"
@@ -114,11 +114,11 @@ bashible: &bashible
           allowedPattern: "4.19"
     '11':
       docker:
-        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-bullseye"
-        allowedPattern: ""
+        desiredVersion: "docker-ce=5:20.10.17~3-0~debian-bullseye"
+        allowedPattern: "^docker-ce=5:(19|20).+"
         containerd:
-          desiredVersion: "containerd.io=1.4.6-1"
-          allowedPattern: "containerd.io=1.[234]"
+          desiredVersion: "containerd.io=1.5.11-1"
+          allowedPattern: "containerd.io=1.[2345]"
       containerd:
         desiredVersion: "containerd.io=1.5.11-1"
         allowedPattern: "containerd.io=1.[56]"
