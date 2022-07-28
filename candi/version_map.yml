@@ -129,11 +129,11 @@ bashible: &bashible
   centos:
     '7':
       docker:
-        desiredVersion: "docker-ce-18.09.9-3.el7.x86_64"
-        allowedPattern: ""
+        desiredVersion: "docker-ce-20.10.17-3.el7.x86_64"
+        allowedPattern: "^docker-ce-(19|20).+"
         containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el7.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
+          desiredVersion: "containerd.io-1.5.11-3.1.el7.x86_64"
+          allowedPattern: "containerd.io-1.[12345]"
       containerd:
         desiredVersion: "containerd.io-1.5.11-3.1.el7.x86_64"
         allowedPattern: "containerd.io-1.[56]"
@@ -143,11 +143,11 @@ bashible: &bashible
           allowedPattern: "3.10|5.[014]"
     '8':
       docker:
-        desiredVersion: "docker-ce-19.03.15-3.el8.x86_64"
-        allowedPattern: ""
+        desiredVersion: "docker-ce-20.10.17-3.el8.x86_64"
+        allowedPattern: "^docker-ce-(19|20).+"
         containerd:
-          desiredVersion: "containerd.io-1.4.6-3.1.el8.x86_64"
-          allowedPattern: "containerd.io-1.[1234]"
+          desiredVersion: "containerd.io-1.5.11-3.1.el8.x86_64"
+          allowedPattern: "containerd.io-1.[12345]"
       containerd:
         desiredVersion: "containerd.io-1.5.11-3.1.el8.x86_64"
         allowedPattern: "containerd.io-1.[56]"
