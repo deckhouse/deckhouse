@@ -30,7 +30,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -217,34 +216,11 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 // getUpdateWindows return set update windows or default windows for EA/Stable/RockSolid channels
 func getUpdateWindows(input *go_hook.HookInput) (update.Windows, error) {
 	windowsData, exists := input.Values.GetOk("deckhouse.update.windows")
-	if exists {
-		return update.FromJSON([]byte(windowsData.Raw))
-	}
-
-	releaseChannel := input.Values.Get("deckhouse.releaseChannel").String()
-
-	switch strcase.ToKebab(releaseChannel) {
-	case "early-access":
-		return []update.Window{{
-			From: "8:30",
-			To:   "10:00",
-			Days: []string{"Wed"},
-		}}, nil
-	case "stable":
-		return []update.Window{{
-			From: "8:30",
-			To:   "10:00",
-			Days: []string{"Tue"},
-		}}, nil
-	case "rock-solid":
-		return []update.Window{{
-			From: "8:30",
-			To:   "10:00",
-			Days: []string{"Mon"},
-		}}, nil
-	default:
+	if !exists {
 		return nil, nil
 	}
+
+	return update.FromJSON([]byte(windowsData.Raw))
 }
 
 // used also in check_deckhouse_release.go
