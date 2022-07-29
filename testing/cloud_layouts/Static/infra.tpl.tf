@@ -10,7 +10,7 @@ terraform {
 provider "openstack" {
   auth_url = "https://cloud.flant.com/v3/"
   domain_name = "Default"
-  tenant_name = "dev-rnd"
+  tenant_name = "d8-tests"
   user_name = "e2e-tests"
   password = "${OS_PASSWORD}"
   region = "HetznerFinland"
