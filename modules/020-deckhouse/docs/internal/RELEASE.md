@@ -17,7 +17,7 @@ All release settings, requirements, and disruptions are stored in the [release.y
 
 ### Disruptive release
 
-It's a release with some potentially dangerous changes (change some default value / behavior / docker -> containerd, etc)
+It's a release with some potentially dangerous changes (e.g. which changes some default value, behavior, or changes docker to containerd, etc.).
 To handle this release, you should add disruption check logic in a release at least `X-1` (previous release), for example — register DisruptionFunc in init() [example](modules/402-ingress-nginx/hooks/requirements.go).
 And add record for a specified release, where this logic will be checked. (e.g.: `"1.36": ["ingressNginx"]` to the [release.yaml](release.yaml) file, section `disruptions`.
 
