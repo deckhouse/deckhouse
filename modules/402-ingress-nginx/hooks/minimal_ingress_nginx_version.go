@@ -71,7 +71,7 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 
 	var minVersion *semver.Version
 	classVersionMap := make(map[string]*semver.Version)
-	var isDisruptionUpdate = false
+	var isDisruptionUpdate bool
 
 	for _, s := range snap {
 		if s == nil {
