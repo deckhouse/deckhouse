@@ -161,9 +161,10 @@ scheduler:
 {{- end }}
     profiling: "false"
 {{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = "DefaultPodTopologySpread=true" }}
-{{- end }}
+    feature-gates: "DefaultPodTopologySpread=true"
+{{- else }}
     feature-gates: {{ $featureGates | quote }}
+{{- end }}
     bind-address: "127.0.0.1"
     port: "0"
 {{- if hasKey . "etcd" }}
