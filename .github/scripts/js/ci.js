@@ -617,7 +617,10 @@ const detectSlashCommand = ({ comment }) => {
   let inputs = null;
 
   // Detect /e2e/run/* commands and /e2e/use/* arguments.
-  const isE2E = knownLabels.e2e.some(l => command.startsWith('/'+l));
+  const isE2E = Object.entries(knownLabels)
+    .some(([name, info]) => {
+      return info.type.startsWith('e2e') && command.startsWith('/'+name)
+    })
   if (isE2E) {
     for (const provider of knownProviders) {
       if (command.includes(provider)) {
