@@ -176,6 +176,9 @@ func shouldSkipModuleContainer(module string, container string) bool {
 	if module == "okmeter" && container == "okagent" {
 		return true
 	}
+	if module == "d8-control-plane-manager" && strings.HasPrefix(container, "image-holder") {
+		return true
+	}
 	return false
 }
 
