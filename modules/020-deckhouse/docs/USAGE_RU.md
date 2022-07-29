@@ -85,7 +85,7 @@ deckhouse: |
   ...
   releaseChannel: Stable
   update:
-    disruptionApproval: Manual
+    disruptionApprovalMode: Manual
 ```
 
 В этом режиме необходимо подтверждать каждое минорное потенциально опасное(disruptive) обновление Deckhouse (без учёта patch-версий) с помощью аннотации:

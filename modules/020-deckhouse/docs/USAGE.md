@@ -85,7 +85,7 @@ deckhouse: |
   ...
   releaseChannel: Stable
   update:
-    disruptionApproval: Manual
+    disruptionApprovalMode: Manual
 ```
 
 In this mode, it will be necessary to confirm each minor disruptive update with an annotation:

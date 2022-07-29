@@ -498,7 +498,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 }
 
 func (du *deckhouseUpdater) checkReleaseDisruptions(input *go_hook.HookInput, rl *deckhouseRelease) bool {
-	dMode, ok := input.Values.GetOk("deckhouse.update.disruptionApproval")
+	dMode, ok := input.Values.GetOk("deckhouse.update.disruptionApprovalMode")
 	if !ok || dMode.String() == "Auto" {
 		return true
 	}
