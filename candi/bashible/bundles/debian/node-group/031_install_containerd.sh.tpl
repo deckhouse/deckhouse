@@ -47,8 +47,8 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
 fi
 
 # set default
-desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | quote }}
-allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "allowedPattern" | quote }}
+desired_version={{ index .k8s .kubernetesVersion "bashible" "debian" "10" "containerd" "desiredVersion" | quote }}
+allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "debian" "10" "containerd" "allowedPattern" | quote }}
 
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
   {{- $debianVersion := toString $key }}
@@ -77,7 +77,7 @@ fi
 
 if [[ "$should_install_containerd" == true ]]; then
 # set default
-containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "9" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
+containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "10" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
 
 {{- $debianName := dict "9" "Stretch" "10" "Buster" "11" "Bullseye" }}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
