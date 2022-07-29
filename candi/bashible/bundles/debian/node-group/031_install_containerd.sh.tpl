@@ -77,7 +77,7 @@ fi
 
 if [[ "$should_install_containerd" == true ]]; then
 # set default
-containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sStretch" (index .k8s .kubernetesVersion "bashible" "debian" "10" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
+containerd_tag="{{- index $.images.registrypackages (printf "containerdDebian%sBuster" (index .k8s .kubernetesVersion "bashible" "debian" "10" "containerd" "desiredVersion" | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
 
 {{- $debianName := dict "9" "Stretch" "10" "Buster" "11" "Bullseye" }}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "debian" }}
