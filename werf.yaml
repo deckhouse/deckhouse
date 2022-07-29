@@ -614,7 +614,7 @@ git:
       - release.yaml
 ---
 image: release-channel-version
-from: spotify/scratch
+from: {{ .Images.BASE_SCRATCH }}
 import:
   - artifact: release-channel-version-artifact
     add: /
