@@ -1,3 +1,19 @@
+{!{/* Get layout for cloud provider. */}!}
+{!{- define "e2e_get_layout" -}!}
+{!{- $ctx := . -}!}
+{!{- $layout := "WithoutNAT" -}!}
+{!{- if eq $ctx.provider "azure"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
+{!{- if eq $ctx.provider "vsphere"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
+{!{- if eq $ctx.provider "static"  -}!}
+{!{-   $layout = "Static" -}!}
+{!{- end -}!}
+{!{ $layout }!}
+{!{ end -}!}
+
 {!{ define "e2e_run_template" }!}
 # <template: e2e_run_template>
 {!{- $provider := index . 0 -}!}
@@ -111,3 +127,221 @@ check_e2e_labels:
           return await ci.checkE2ELabels({github, context, core, provider});
 # </template: check_e2e_labels_job>
 {!{- end -}!}
+
+{!{/* One e2e job. */}!}
+{!{- define "e2e_run_job_template" -}!}
+{!{- $ctx := . -}!}
+{!{- $runsOnLabel := "e2e-common" -}!}
+{!{- if eq $ctx.provider "vsphere"  -}!}
+{!{-   $runsOnLabel = "e2e-vsphere" -}!}
+{!{- end -}!}
+# <template: e2e_run_job_template>
+{!{ $ctx.jobID }!}:
+  name: "{!{ $ctx.jobName }!}"
+  needs:
+{!{- if coll.Has $ctx "manualRun" }!}
+    - check_e2e_labels
+{!{- end }!}
+    - git_info
+{!{- if coll.Has $ctx "manualRun" }!}
+  if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
+{!{- end }!}
+  env:
+    PROVIDER: {!{ $ctx.providerName }!}
+    CRI: {!{ $ctx.criName }!}
+    LAYOUT: {!{ $ctx.layout }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+    EVENT_LABEL: ${{ github.event.label.name }}
+  runs-on: [self-hosted, {!{ $runsOnLabel }!}]
+  steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
+
+{!{- if coll.Has $ctx "manualRun" }!}
+{!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
+{!{- end }!}
+
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
+
+    - name: Setup
+      id: setup
+      env:
+        DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+        CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+        REF_FULL: ${{needs.git_info.outputs.ref_full}}
+      run: |
+        # Calculate unique prefix for e2e test.
+        # GITHUB_RUN_ID is a unique number for each workflow run.
+        # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+        # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+        # CRI value is trimmed to reduce prefix length.
+        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+        # Create tmppath for test script.
+        TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+        if [[ -d "${TMP_DIR_PATH}" ]] ; then
+          echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+          ls -la ${TMP_DIR_PATH}
+          exit 1
+        else
+          echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+          mkdir -p "${TMP_DIR_PATH}"
+        fi
+
+        ## Source: ci_templates/build.yml
+
+        # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+        REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+        if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+          # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+          REPO_SUFFIX=
+        fi
+
+        # Use dev-registry for Git branches.
+        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+        # Use rw-registry for Git tags.
+        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+        if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+          # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+          # Use dev-regisry for branches and Github Container Registry for semver tags.
+          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+        fi
+
+        # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+        # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+        # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+        INSTALL_IMAGE_NAME=
+        if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+        fi
+        if [[ -n ${CI_COMMIT_TAG} ]] ; then
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+          INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+        fi
+        SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+        echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+        # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+        echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+        docker pull "${INSTALL_IMAGE_NAME}"
+
+        echo '::echo::on'
+        echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+        echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+        echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+        echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+        echo '::echo::off'
+
+    - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
+      env:
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+        PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+        DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+{!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test") | strings.Indent 6 }!}
+
+    - name: Cleanup bootstrapped cluster
+      if: always()
+      env:
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+        PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+        DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
+{!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
+
+    - name: Save test results
+      if: always()
+      uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+      with:
+        name: test_output_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
+        path: |
+          testing/cloud_layouts/
+
+    - name: Cleanup temp directory
+      if: always()
+      env:
+        TMPPATH: ${{ steps.setup.outputs.tmppath}}
+      run: |
+        echo "Remove temporary directory '${TMPPATH}' ..."
+        if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+          rm -rf "${TMPPATH}"
+        else
+          echo Not a directory.
+        fi
+
+{!{- if coll.Has $ctx "manualRun" }!}
+{!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
+{!{- end }!}
+
+{!{- if not (coll.Has $ctx "manualRun") }!}
+    - name: Check alerting credentials
+      id: check_alerting
+      if: always()
+      env:
+        KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+      run: |
+        if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
+
+    - name: Alert on fail in default branch
+      if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+      env:
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+      run: |
+        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+        echo $WORKFLOW_URL
+
+        alertData=$(cat <<EOF
+        {
+          "labels": {
+            "severity_level": 7,
+            "trigger": "CloudLayoutTestFailed",
+            "provider": "${PROVIDER}",
+            "layout": "${LAYOUT}",
+            "cri": "${CRI}",
+            "kubernetes_version": "${KUBERNETES_VERSION}"
+          },
+          "annotations": {
+            "summary": "Cloud Layout Test failed",
+            "description": "Check Github workflow log for more information",
+            "plk_protocol_version": "1",
+            "plk_link_url/job": "${WORKFLOW_URL}",
+            "plk_link_title_en/job": "Github job run",
+            "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+            "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+          }
+        }
+        EOF
+        )
+
+        curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+          -H 'Content-Type: application/json' \
+          -d "${alertData}"
+
+{!{- end }!}
+# </template: e2e_run_job_template>
+{!{ end -}!}

@@ -220,6 +220,7 @@ jobs:
 
       # </template: update_comment_on_start>
 
+
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -473,7 +474,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -504,52 +504,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.19"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -596,6 +550,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -850,7 +805,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -881,52 +835,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.20"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -973,6 +881,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -1227,7 +1136,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -1258,52 +1166,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.21"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1350,6 +1212,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -1604,7 +1467,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -1635,52 +1497,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.22"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -1727,6 +1543,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -1981,7 +1798,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -2012,52 +1828,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Docker
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.23"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2104,6 +1874,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -2358,7 +2129,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -2389,52 +2159,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Containerd
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.19"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2481,6 +2205,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -2735,7 +2460,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -2766,52 +2490,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Containerd
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.20"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -2858,6 +2536,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -3112,7 +2791,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -3143,52 +2821,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Containerd
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.21"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -3235,6 +2867,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -3489,7 +3122,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -3520,52 +3152,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Containerd
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.22"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
@@ -3612,6 +3198,7 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -3866,7 +3453,6 @@ jobs:
           else
             echo Not a directory.
           fi
-
       # <template: update_comment_on_finish>
       - name: Update comment on finish
         id: update_comment_on_finish
@@ -3897,52 +3483,6 @@ jobs:
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
-
-      - name: Check alerting credentials
-        id: check_alerting
-        if: always()
-        env:
-          KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
-        run: |
-          if [[ -n $KEY ]]; then echo "::set-output name=has_credentials::true"; fi
-
-      - name: Alert on fail in default branch
-        if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        env:
-          PROVIDER: Azure
-          CRI: Containerd
-          LAYOUT: Standard
-          KUBERNETES_VERSION: "1.23"
-        run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          echo $WORKFLOW_URL
-
-          alertData=$(cat <<EOF
-          {
-            "labels": {
-              "severity_level": 7,
-              "trigger": "CloudLayoutTestFailed",
-              "provider": "${PROVIDER}",
-              "layout": "${LAYOUT}",
-              "cri": "${CRI}",
-              "kubernetes_version": "${KUBERNETES_VERSION}"
-            },
-            "annotations": {
-              "summary": "Cloud Layout Test failed",
-              "description": "Check Github workflow log for more information",
-              "plk_protocol_version": "1",
-              "plk_link_url/job": "${WORKFLOW_URL}",
-              "plk_link_title_en/job": "Github job run",
-              "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
-              "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
-            }
-          }
-          EOF
-          )
-
-          curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-            -H 'Content-Type: application/json' \
-            -d "${alertData}"
   # </template: e2e_run_job_template>
 
 

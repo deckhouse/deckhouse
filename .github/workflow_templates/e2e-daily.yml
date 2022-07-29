@@ -1,0 +1,51 @@
+{!{- $enableWorkflowOnTestRepos := false -}!}
+{!{- $workflowName := "Daily e2e tests" -}!}
+name: '{!{ $workflowName }!}'
+on:
+  schedule:
+  - cron: '0 3 * * 1-5'
+  workflow_dispatch:
+
+env:
+  WERF_DRY_RUN: "false"
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+# Always run a single job at a time.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: e2e-daily
+
+jobs:
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+
+
+# Note: git_info is needed for werf.yaml
+{!{- $gitInfoJobCtx := coll.Merge . (dict "dependJobs" (slice "skip_tests_repos")) -}!}
+{!{ tmpl.Exec "git_info_job" $gitInfoJobCtx | strings.Indent 2 }!}
+
+
+{!{/* Jobs for each CRI and Kubernetes version */}!}
+{!{- $criName := "Containerd" -}!}
+{!{- $kubernetesVersion := "1.21" -}!}
+{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" -}!}
+{!{- range $providerName := $providerNames -}!}
+{!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
+{!{-   $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower -}!}
+{!{-   $cri := $criName | toLower -}!}
+{!{-   $criEnv := $cri | toUpper -}!}
+{!{-   $layout := (tmpl.Exec "e2e_get_layout" (dict "provider" $provider) | strings.TrimSpace ) -}!}
+{!{-   $providerForJobId := $providerName | replaceAll "." "_" | toLower -}!}
+{!{-   $jobID := printf "run_%s_%s_%s" $providerForJobId $cri $kubernetesVersionSlug -}!}
+{!{-   $jobName := printf "%s, %s, Kubernetes %s" $providerName $criName $kubernetesVersion -}!}
+{!{-   $jobCtx := (dict "provider" $provider "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
+{!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}
+{!{-   $jobCtx = coll.Merge $jobCtx (dict "providerName" $providerName "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
+{!{   tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
+{!{- end -}!}
