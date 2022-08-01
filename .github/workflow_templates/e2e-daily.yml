@@ -30,11 +30,15 @@ jobs:
 {!{- $gitInfoJobCtx := coll.Merge . (dict "dependJobs" (slice "skip_tests_repos")) -}!}
 {!{ tmpl.Exec "git_info_job" $gitInfoJobCtx | strings.Indent 2 }!}
 
+{!{- $dependsJobsForAlert := slice "skip_tests_repos" "git_info" -}!}
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
 {!{- $kubernetesVersion := "1.21" -}!}
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" -}!}
+{!{- if $enableWorkflowOnTestRepos -}!}
+{!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
+{!{- end -}!}
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
 {!{-   $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower -}!}
@@ -43,9 +47,22 @@ jobs:
 {!{-   $layout := (tmpl.Exec "e2e_get_layout" (dict "provider" $provider) | strings.TrimSpace ) -}!}
 {!{-   $providerForJobId := $providerName | replaceAll "." "_" | toLower -}!}
 {!{-   $jobID := printf "run_%s_%s_%s" $providerForJobId $cri $kubernetesVersionSlug -}!}
+{!{-   $dependsJobsForAlert = $dependsJobsForAlert | coll.Append $jobID -}!}
 {!{-   $jobName := printf "%s, %s, Kubernetes %s" $providerName $criName $kubernetesVersion -}!}
 {!{-   $jobCtx := (dict "provider" $provider "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug) }!}
 {!{-   $jobCtx = coll.Merge $jobCtx (dict "providerName" $providerName "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
 {!{   tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
-{!{- end -}!}
+{!{- end }!}
+
+  send_alert_about_workflow_problem:
+    name: Send alert about workflow problem
+    runs-on: ubuntu-latest
+    needs: {!{ $dependsJobsForAlert | data.ToJSON }!}
+    if: ${{ failure() }}
+    steps:
+{!{- $labels := dict "trigger" "DailyE2EWorkflowFailed" -}!}
+{!{- $annotations := dict "summary" "Daily e2e tests workflow failed" -}!}
+{!{- $annotations = coll.Merge $annotations (dict "description" "Check Daily e2e workflow log for more information or see another alerts in this group.") -}!}
+
+{!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 -}!}
