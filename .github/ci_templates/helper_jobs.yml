@@ -113,6 +113,8 @@ pull_request_info:
     pr_description: ${{ steps.pr_props.outputs.pr_description }}
     diff_url: ${{ steps.pr_props.outputs.diff_url }}
     labels: ${{ steps.pr_props.outputs.labels }}
+    changes_docs: ${{ steps.changes.outputs.docs }}
+    changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
 
   # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
   if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
@@ -283,11 +285,11 @@ pull_request_info:
       with:
         ref: ${{ steps.pr_props.outputs.ref }}
 
-    # Detect dangerous changes in external PR.
-    - name: Check for dangerous changes
+    # Detect dangerous changes in external PR
+    - name: Check for dangerous changes in PR
       uses: {!{ index (ds "actions") "dorny/paths-filter" }!}
       if: steps.pr_props.outputs.should_check == 'true'
-      id: changes
+      id: dangerous_changes
       with:
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         filters: |
@@ -300,9 +302,28 @@ pull_request_info:
             - './docs/**/images/**'
             - './docs/**/assets/**'
 
+    # Get info about other changes.
+    - name: Get info about PR changes
+      uses: {!{ index (ds "actions") "dorny/paths-filter" }!}
+      id: changes
+      with:
+        token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+        # docs - detect changes in files that belong to the documentation scope
+        # not_markdown - detect changes not in markdown files
+        filters: |
+          docs:
+            - './**/*.md'
+            - './docs/**'
+            - './**/crds/*'
+            - './**/openapi/*config-values.yaml'
+            - './candi/**/openapi/*'
+            - './ee/candi/**/openapi/*'
+          not_markdown:
+            - '!./**/*.md'
+
     # Stop workflow if external PR contains dangerous changes.
     - name: Fail workflow on dangerous changes
-      if: steps.changes.outputs.dangerous == 'true'
+      if: steps.dangerous_changes.outputs.dangerous == 'true'
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
