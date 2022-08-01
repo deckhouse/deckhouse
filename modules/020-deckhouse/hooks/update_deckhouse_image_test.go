@@ -374,7 +374,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 	Context("Release with not met requirements", func() {
 		BeforeEach(func() {
-			requirements.Register("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 				v := getter.Get("global.discovery.kubernetesVersion").String()
 				if v != requirementValue {
 					return false, errors.New("min k8s version failed")
@@ -413,6 +413,45 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 				Expect(r130.Field("status.message").String()).To(Equal(``))
 				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.30.0"))
+			})
+		})
+	})
+
+	Context("Disruption release", func() {
+		BeforeEach(func() {
+			f.ValuesSet("deckhouse.update.disruptionApprovalMode", "Manual")
+			f.KubeStateSet(deckhousePodYaml + disruptionRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+			var df requirements.DisruptionFunc = func() (bool, string) {
+				return true, "some test reason"
+			}
+			requirements.RegisterDisruption("testme", df)
+
+			f.RunHook()
+
+		})
+
+		It("Should block the release", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
+			Expect(r136.Field("status.phase").String()).To(Equal("Pending"))
+			Expect(r136.Field("status.message").String()).To(Equal("Release requires disruption approval (`kubectl annotate DeckhouseRelease v1-36-0 release.deckhouse.io/disruption-approved=true`): some test reason"))
+		})
+
+		Context("Disruption release approved", func() {
+			BeforeEach(func() {
+				f.KubeStateSet(deckhousePodYaml + disruptionReleaseApproved)
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+
+				f.RunHook()
+			})
+
+			It("Should deploy the release", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				r136 := f.KubernetesGlobalResource("DeckhouseRelease", "v1-36-0")
+				Expect(r136.Field("status.phase").String()).To(Equal("Deployed"))
+				Expect(r136.Field("status.message").String()).To(Equal(""))
 			})
 		})
 	})
@@ -741,5 +780,34 @@ spec:
   version: "v1.31.1"
 status:
   phase: Suspended
+`
+
+	disruptionRelease = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-36-0
+spec:
+  version: "v1.36.0"
+  disruptions:
+    - testme
+status:
+  phase: Pending
+`
+	disruptionReleaseApproved = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-36-0
+  annotations:
+    release.deckhouse.io/disruption-approved: "true"
+spec:
+  version: "v1.36.0"
+  disruptions:
+    - testme
+status:
+  phase: Pending
 `
 )

@@ -589,24 +589,40 @@ shell:
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
 
 ---
-image: release-channel-version
-from: spotify/scratch
+artifact: release-channel-version-artifact
+from: {{ .Images.BASE_ALPINE }}
 shell:
+  beforeInstall:
+    - apk add --no-cache curl
+    - curl -sfL https://github.com/mikefarah/yq/releases/download/2.4.1/yq_linux_amd64 --output /usr/local/bin/yq
+    - chmod +x /usr/local/bin/yq
   install:
-  - |
-    version="{{ env "CI_COMMIT_REF_NAME" }}"
-    canary='{{ .Files.Get "canary.json" | fromJson | toJson }}'
-    requirements='{{ .Files.Get "requirements.json" | fromJson | toJson }}'
-    json="{\"version\": \"${version}\", \"canary\": ${canary}, \"requirements\": ${requirements}}"
-    echo "$json" > /version.json
-    # changelog exists only for tags, we have to skip it for branches
-    {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
-    {{ if $changelog }}
-    /.werf/stapel/embedded/bin/cat <<EOF > /changelog.yaml
-    {{ $changelog | nindent 4 }}
-    EOF
-    {{ end }}
-
+    - |
+      version="{{ env "CI_COMMIT_REF_NAME" }}"
+      yq w /deckhouse/release.yaml version $version | yq r - -j > version.json
+      # changelog exists only for tags, we have to skip it for branches
+      {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
+      {{ if $changelog }}
+      cat <<EOF > /changelog.yaml
+      {{ $changelog | nindent 4 }}
+      EOF
+      {{ end }}
+git:
+  - add: /
+    to: /deckhouse
+    includePaths:
+      - release.yaml
+---
+image: release-channel-version
+from: {{ .Images.BASE_SCRATCH }}
+import:
+  - artifact: release-channel-version-artifact
+    add: /
+    to: /
+    after: install
+    includePaths:
+      - version.json
+      - changelog.yaml
 
 # modules_images
 {{- define "module_image_template" }}

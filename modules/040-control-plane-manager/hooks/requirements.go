@@ -43,5 +43,5 @@ func init() {
 		return true, nil
 	}
 
-	requirements.Register("k8s", f)
+	requirements.RegisterCheck("k8s", f)
 }

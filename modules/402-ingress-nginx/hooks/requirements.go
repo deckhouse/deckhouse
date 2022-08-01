@@ -24,8 +24,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
+var (
+	hasDisruptionVersionUpdate bool
+)
+
 func init() {
-	f := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		hasIncompatibleCtrls := getter.Get(incompatibleVersionsKey).Bool()
 		if hasIncompatibleCtrls {
 			return false, errors.New("cluster has 2+ ingress controllers with the same ingress class but different versions")
@@ -52,5 +56,14 @@ func init() {
 		return true, nil
 	}
 
-	requirements.Register("ingressNginx", f)
+	disruptionCheckFunc := func() (bool, string) {
+		reason := ""
+		if hasDisruptionVersionUpdate {
+			reason = "Default IngressNginxController version 0.33 will be automatically changed to 1.1, this action will restart all controllers with non-specified version"
+		}
+		return hasDisruptionVersionUpdate, reason
+	}
+
+	requirements.RegisterCheck("ingressNginx", checkRequirementFunc)
+	requirements.RegisterDisruption("ingressNginx", disruptionCheckFunc)
 }

@@ -158,6 +158,16 @@ releaseLoop:
 		}
 	}
 
+	var disruptions []string
+	if len(releaseChecker.releaseMetadata.Disruptions) > 0 {
+		version, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
+		if err != nil {
+			return err
+		}
+		disruptionsVersion := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
+		disruptions = releaseChecker.releaseMetadata.Disruptions[disruptionsVersion]
+	}
+
 	enabledModulesChangelog := releaseChecker.generateChangelogForEnabledModules(input)
 
 	release := &v1alpha1.DeckhouseRelease{
@@ -172,6 +182,7 @@ releaseLoop:
 			Version:       releaseChecker.releaseMetadata.Version,
 			ApplyAfter:    applyAfter,
 			Requirements:  releaseChecker.releaseMetadata.Requirements,
+			Disruptions:   disruptions,
 			Changelog:     enabledModulesChangelog,
 			ChangelogLink: fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseChecker.releaseMetadata.Version),
 		},
@@ -309,6 +320,7 @@ type releaseMetadata struct {
 	Version      string                    `json:"version"`
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
+	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
 
 	Changelog map[string]interface{}
