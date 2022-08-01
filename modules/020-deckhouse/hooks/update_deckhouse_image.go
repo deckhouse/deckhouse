@@ -376,7 +376,7 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	input.LogEntry.Info("New deckhouse image found. Restarting")
+	input.LogEntry.Info("New deckhouse image found. Restarting.")
 
 	input.PatchCollector.Delete("v1", "Pod", deckhousePod.Namespace, deckhousePod.Name)
 

@@ -15,11 +15,6 @@ All release settings, requirements, and disruptions are stored in the [release.y
 - RequirementCheck (like `"ingressNginx": "1.1"`, or `"k8s": "1.19"` in the section `requirements`) — it's some strict check of outer dependencies which deny a release deploy until a requirement is met (hard block).
 - DisruptionCheck - (like `"ingressNginx"` in the section `disruptions`) — it's a check that warn a user about some meaningful changes, which are controlled by our code and logic (simple: we are changing some behavior or default value) (soft block).
 
-## Difference between disruption check and requirement check
-
-- RequirementCheck (like `"ingressNginx": "1.1"`, or `"k8s": "1.19"`) - it's some strict check of outer dependencies which deny a release deploy until a requirement is met. (hard block)
-- DisruptionCheck - (like `"disruption:ingressNginx": "true"`) - it's a check, that warn user about some meaningful changes, which are controlled by our code and logic (simple: we are changing some behavior / default value) (soft block)
-
 ### Disruptive release
 
 It's a release with some potentially dangerous changes (e.g. which changes some default value, behavior, or changes docker to containerd, etc.).
