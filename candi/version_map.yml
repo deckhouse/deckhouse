@@ -2,7 +2,7 @@ bashible: &bashible
   ubuntu: &ubuntu
     '16.04':
       docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu"
+        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-xenial"
         allowedPattern: ""
         containerd:
           desiredVersion: "containerd.io=1.4.6-1"
@@ -16,7 +16,7 @@ bashible: &bashible
           allowedPattern: "4.18"
     '18.04':
       docker:
-        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu"
+        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-bionic"
         allowedPattern: ""
         containerd:
           desiredVersion: "containerd.io=1.4.6-1"
