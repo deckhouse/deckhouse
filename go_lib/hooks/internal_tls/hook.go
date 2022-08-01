@@ -31,6 +31,9 @@ import (
 type GenSelfSignedTLSHookConf struct {
 	// SANs - list of domains to include into certificate
 	SANs []string
+	// SANsGenerator dynamic SANs generator based in hook input (e.x.: values like cluster domain)
+	SANsGenerator func(input *go_hook.HookInput) []string
+
 	// CN - Certificate common Name
 	// often it is module name
 	CN string
@@ -55,6 +58,23 @@ type GenSelfSignedTLSHookConf struct {
 	// Data in values store as plain text
 	// In helm templates you need use `b64enc` function to encode
 	FullValuesPathPrefix string
+
+	// You can set Paths for internal values explicitly or use FullValuesPathPrefix
+	CAValuesPath   string
+	CertValuesPath string
+	KeyValuesPath  string
+}
+
+// if values path is set explicitly - use them; if not - generate them from prefix
+func (gss *GenSelfSignedTLSHookConf) fillValuesPath() {
+	if gss.CAValuesPath != "" && gss.KeyValuesPath != "" && gss.CertValuesPath != "" {
+		return
+	}
+
+	// backward compatibility
+	gss.CAValuesPath = gss.FullValuesPathPrefix + "CA"
+	gss.CertValuesPath = gss.FullValuesPathPrefix + "Pem"
+	gss.KeyValuesPath = gss.FullValuesPathPrefix + "Key"
 }
 
 // RegisterInternalTLSHook
@@ -84,29 +104,28 @@ func RegisterInternalTLSHook(conf GenSelfSignedTLSHookConf) bool {
 					MatchNames: []string{conf.TLSSecretName},
 				},
 
-				FilterFunc: tlsFilter(),
+				FilterFunc: tlsFilter,
 			},
 		},
 	}, genSelfSignedTLS(conf))
 }
 
-func tlsFilter() func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-		secret := new(v1.Secret)
-		err := sdk.FromUnstructured(obj, secret)
-		if err != nil {
-			return nil, err
-		}
-
-		return certificate.Certificate{
-			CA:   string(secret.Data["ca.crt"]),
-			Cert: string(secret.Data["tls.crt"]),
-			Key:  string(secret.Data["tls.key"]),
-		}, nil
+func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret v1.Secret
+	err := sdk.FromUnstructured(obj, &secret)
+	if err != nil {
+		return nil, err
 	}
+
+	return certificate.Certificate{
+		CA:   string(secret.Data["ca.crt"]),
+		Cert: string(secret.Data["tls.crt"]),
+		Key:  string(secret.Data["tls.key"]),
+	}, nil
 }
 
 func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInput) error {
+	conf.fillValuesPath()
 	return func(input *go_hook.HookInput) error {
 		var cert certificate.Certificate
 		var err error
@@ -121,17 +140,33 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 		} else {
 			// Certificate is in the snapshot => load it.
 			cert = input.Snapshots["secret"][0].(certificate.Certificate)
+			// update certificate if less than 6 month left. We create certificate for 10 years, so it looks acceptable
+			// and we don't need to create Crontab schedule
+			expiring, err := certificate.IsCertificateExpiringSoon([]byte(cert.Cert), 4380*time.Hour) // 6 month
+			if err != nil {
+				return err
+			}
+			if expiring {
+				cert, err = generateNewTLS(input, conf)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		// Note that []byte values will be encoded in base64. Use strings here!
-		input.Values.Set(conf.FullValuesPathPrefix+"CA", cert.CA)
-		input.Values.Set(conf.FullValuesPathPrefix+"Pem", cert.Cert)
-		input.Values.Set(conf.FullValuesPathPrefix+"Key", cert.Key)
+		input.Values.Set(conf.CAValuesPath, cert.CA)
+		input.Values.Set(conf.CertValuesPath, cert.Cert)
+		input.Values.Set(conf.KeyValuesPath, cert.Key)
 		return nil
 	}
 }
 
 func generateNewTLS(input *go_hook.HookInput, conf GenSelfSignedTLSHookConf) (certificate.Certificate, error) {
+	if conf.SANsGenerator != nil {
+		conf.SANs = append(conf.SANs, conf.SANsGenerator(input)...)
+	}
+
 	ca, err := certificate.GenerateCA(input.LogEntry,
 		conf.CN,
 		certificate.WithKeyAlgo("ecdsa"),
