@@ -77,7 +77,7 @@
   "gnetId": null,
   "graphTooltip": 2,
   "id": null,
-  "iteration": 1647374865827,
+  "iteration": 1659360879340,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -2202,7 +2202,7 @@
       "type": "table"
     }
   ],
-  "refresh": false,
+  "refresh": "30s",
   "schemaVersion": 32,
   "style": "dark",
   "tags": [],
@@ -2258,8 +2258,8 @@
     ]
   },
   "time": {
-    "from": "2022-03-10T17:42:58.093Z",
-    "to": "2022-03-10T18:20:49.101Z"
+    "from": "now-3h",
+    "to": "now"
   },
   "timepicker": {},
   "timezone": "",
