@@ -21,9 +21,13 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+
+	"github.com/deckhouse/deckhouse/go_lib/certificate"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -63,16 +67,19 @@ data:
 }
 
 var (
+	cert                 = generateTestCert()
 	secretCreatedFixture = setupHookTest(tlsTest{
-		ca:  "a",
-		crt: "b",
-		key: "c",
+		ca:  cert.CA,
+		crt: cert.Cert,
+		key: cert.Key,
 	})
 
+	cert2 = generateTestCert()
+
 	secretChangedFixture = setupHookTest(tlsTest{
-		ca:  "x",
-		crt: "y",
-		key: "z",
+		ca:  cert2.CA,
+		crt: cert2.Cert,
+		key: cert2.Key,
 	})
 )
 
@@ -223,6 +230,37 @@ func assertExistsTLSInValues(f *HookExecutionConfig) tlsTest {
 		crt: crt.String(),
 		key: key.String(),
 	}
+
+	return cert
+}
+
+func generateTestCert() certificate.Certificate {
+	l := logrus.NewEntry(logrus.New())
+
+	ca, _ := certificate.GenerateCA(l,
+		"d8-module-name:module-name:internal",
+		certificate.WithKeyAlgo("ecdsa"),
+		certificate.WithKeySize(256),
+		certificate.WithCAExpiry("87600h"))
+
+	sans := []string{
+		"module.d8-module-name",
+		"127.0.0.1",
+	}
+
+	cert, _ := certificate.GenerateSelfSignedCert(l,
+		"d8-module-name:module-name:internal",
+		ca,
+		certificate.WithSANs(sans...),
+		certificate.WithKeyAlgo("ecdsa"),
+		certificate.WithKeySize(256),
+		certificate.WithSigningDefaultExpiry(87600*time.Hour),
+		certificate.WithSigningDefaultUsage([]string{
+			"signing",
+			"key encipherment",
+			"requestheader-client",
+		}),
+	)
 
 	return cert
 }
