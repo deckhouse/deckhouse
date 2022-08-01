@@ -7,20 +7,20 @@ apiVersions:
       - layout: Standard
         apiVersion: deckhouse.io/v1
         kind: AzureClusterConfiguration
-        sshPublicKey: test
+        sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
         vNetCIDR: 10.0.0.0/16
         subnetCIDR: 10.0.0.0/24
         masterNodeGroup:
           replicas: 1
           instanceClass:
-            machineSize: test
-            urn: test
+            machineSize: Standard_D4ds_v4
+            urn: Canonical:UbuntuServer:18.04-LTS:18.04.202207120
         provider:
-          location: test
-          subscriptionId: test
-          clientId: test
-          clientSecret: test
-          tenantId: test
+          location: "westeurope"
+          subscriptionId: "<SUBSCRIPTION_ID>"
+          clientId: "<CLIENT_ID>"
+          clientSecret: "<CLIENT_SECRET>"
+          tenantId: "<TENANT_ID>"
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, vNetCIDR, subnetCIDR, masterNodeGroup, sshPublicKey]
     properties:

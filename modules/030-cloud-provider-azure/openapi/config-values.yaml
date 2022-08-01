@@ -8,16 +8,17 @@ properties:
         items:
           type: string
         description: |
-          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster;
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
         x-examples:
         - ["pd-standard.*", "pd-ssd-replicated"]
       default:
         type: string
         description: |
           The name of StorageClass that will be used in the cluster by default;
-            * If the parameter is omitted, the default StorageClass is either:
-              * existing default StorageClass (that has the annotation ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
-              * the first StorageClass created by the module (in accordance with the order listed in the table above).
+
+          If the parameter is omitted, the default StorageClass is either:
+          * Existing default StorageClass (that has the annotation [storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
+          * The first (in lexicographic order) StorageClass [created by the module](#storage).
         x-examples:
         - "pd-ssd-not-replicated"
       provision:
@@ -59,4 +60,4 @@ properties:
             diskMBpsReadWrite:
               type: number
               description: |
-                Disk throughput, `MBps`, (limit of a single disk is 256 KiB/s for each provisioned IOPS).
+                Disk throughput in `MBps` (limit of a single disk is 256 KiB/s for each provisioned IOPS).
