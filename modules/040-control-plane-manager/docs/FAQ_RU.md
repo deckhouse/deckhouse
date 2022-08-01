@@ -283,9 +283,12 @@ done
 В текущей директории будет создан файл `etcd-backup.snapshot` со снимком базы etcd одного из членов etcd-кластера.
 Из полученного снимка можно будет восстановить состояние кластера etcd.
 
-Также рекомендуем сделать бекап директории `/etc/kubernetes/pki/etcd` в которой находятся [ключи и сертификаты доступа](https://etcd.io/docs/v3.5/op-guide/security/) к etcd-серверу.  
+Также рекомендуем сделать бекап директории `/etc/kubernetes` в которой находятся манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components)
+и [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/). 
+Данная директория поможет быстро восстановить кластер при полной потери control-plane узлов без создания нового кластера 
+и без пересоединения остальных нод в новый кластер. 
 
-Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также ключи и сертификаты доступа к etcd-серверу в зашифрованном виде вне кластера Deckhouse.
-Для этого вы можете использовать сторонние инструменты, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) или другие инструменты резервного копирования файлов.
+Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также бекап директории `/etc/kubernetes/` в зашифрованном виде вне кластера Deckhouse.
+Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
 
-О возможных вариантах восстановления состояния кластера etcd из снимка вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
