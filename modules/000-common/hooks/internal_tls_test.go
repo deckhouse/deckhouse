@@ -28,7 +28,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
-
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
