@@ -62,7 +62,7 @@ func applyLinstorDeplotmentsFilter(obj *unstructured.Unstructured) (go_hook.Filt
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "deployments",
@@ -79,23 +79,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyLinstorDeplotmentsFilter,
 		},
 	},
-}, checkAndDeleteWrongResources)
+}, deleteWrongResources)
 
-func checkAndDeleteWrongResources(input *go_hook.HookInput) error {
+func deleteWrongResources(input *go_hook.HookInput) error {
 	snaps := input.Snapshots["deployments"]
 LOOP:
 	for _, snap := range snaps {
 		s := snap.(*LinstorDeploymentsSnapshot)
 		for _, tolleration := range s.Tollertations {
 			if tolleration.Key == "node-role.kubernetes.io/master" {
-				deleteWrongResources(input, s.Name)
+				input.PatchCollector.Delete("apps/v1", "Deployment", "d8-linstor", s.Name)
 				continue LOOP
 			}
 		}
 		for _, terms := range s.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
 			for _, a := range terms.MatchExpressions {
 				if a.Key == "node-role.kubernetes.io/master" {
-					deleteWrongResources(input, s.Name)
+					input.PatchCollector.Delete("apps/v1", "Deployment", "d8-linstor", s.Name)
 					continue LOOP
 				}
 			}
@@ -103,10 +103,4 @@ LOOP:
 	}
 
 	return nil
-}
-
-func deleteWrongResources(input *go_hook.HookInput, name string) {
-	input.PatchCollector.Delete("apps/v1", "Deployment", "d8-linstor", name)
-	input.PatchCollector.Delete("piraeus.linbit.com/v1", "LinstorController", "d8-linstor", "linstor")
-	input.PatchCollector.Delete("piraeus.linbit.com/v1", "LinstorCSIDriver", "d8-linstor", "linstor")
 }

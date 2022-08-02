@@ -25,25 +25,11 @@ import (
 
 var _ = Describe("Modules :: linstor :: hooks :: fix_lastapplied ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-	f.RegisterCRD("piraeus.linbit.com", "v1", "LinstorController", true)
-	f.RegisterCRD("piraeus.linbit.com", "v1", "LinstorCSIDriver", true)
 
 	Context("Linstor deployments created with affinity on master", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
----
-apiVersion: piraeus.linbit.com/v1
-kind: LinstorCSIDriver
-metadata:
-  name: linstor
-  namespace: d8-linstor
----
-apiVersion: piraeus.linbit.com/v1
-kind: LinstorController
-metadata:
-  name: linstor
-  namespace: d8-linstor
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -108,16 +94,14 @@ spec:
 			f.RunHook()
 		})
 
-		It("Must delete linstor-controller deployment and CR with nodeAffinity and tolerations set for master", func() {
+		It("Must delete linstor-controller deployment with nodeAffinity and tolerations set for master", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-controller").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("LinstorController", "d8-linstor", "linstor").Exists()).To(BeFalse())
 		})
 
-		It("Must delete linstor-csi-controller deployment and CR with nodeAffinity and tolerations set for master", func() {
+		It("Must delete linstor-csi-controller deployment with nodeAffinity and tolerations set for master", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-csi-controller").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("LinstorCSIDriver", "d8-linstor", "linstor").Exists()).To(BeFalse())
 		})
 	})
 
@@ -126,18 +110,6 @@ spec:
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
 ---
-apiVersion: piraeus.linbit.com/v1
-kind: LinstorCSIDriver
-metadata:
-  name: linstor
-  namespace: d8-linstor
----
-apiVersion: piraeus.linbit.com/v1
-kind: LinstorController
-metadata:
-  name: linstor
-  namespace: d8-linstor
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -201,16 +173,14 @@ spec:
 			f.RunHook()
 		})
 
-		It("Must keep linstor-controller deployment and CRwith nodeAffinity and tolerations set for system", func() {
+		It("Must keep linstor-controller deployment with nodeAffinity and tolerations set for system", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("LinstorController", "d8-linstor", "linstor").Exists()).To(BeTrue())
 		})
 
-		It("Must keep linstor-csi-controller deployment and CRwith nodeAffinity and tolerations set for system", func() {
+		It("Must keep linstor-csi-controller deployment with nodeAffinity and tolerations set for system", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-csi-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("LinstorCSIDriver", "d8-linstor", "linstor").Exists()).To(BeTrue())
 		})
 	})
 
