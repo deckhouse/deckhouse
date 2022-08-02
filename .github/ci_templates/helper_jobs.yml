@@ -285,23 +285,6 @@ pull_request_info:
       with:
         ref: ${{ steps.pr_props.outputs.ref }}
 
-    # Detect dangerous changes in external PR
-    - name: Check for dangerous changes in PR
-      uses: {!{ index (ds "actions") "dorny/paths-filter" }!}
-      if: steps.pr_props.outputs.should_check == 'true'
-      id: dangerous_changes
-      with:
-        token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-        filters: |
-          dangerous:
-            - './.github/**'
-            - './tools/**'
-            - './testing/**'
-            - './docs/**/js/**'
-            - './docs/**/css/**'
-            - './docs/**/images/**'
-            - './docs/**/assets/**'
-
     # Get info about other changes.
     - name: Get info about PR changes
       uses: {!{ index (ds "actions") "dorny/paths-filter" }!}
@@ -311,6 +294,14 @@ pull_request_info:
         # docs - detect changes in files that belong to the documentation scope
         # not_markdown - detect changes not in markdown files
         filters: |
+          dangerous:
+            - './.github/**'
+            - './tools/**'
+            - './testing/**'
+            - './docs/**/js/**'
+            - './docs/**/css/**'
+            - './docs/**/images/**'
+            - './docs/**/assets/**'
           docs:
             - './**/*.md'
             - './docs/**'
@@ -323,7 +314,7 @@ pull_request_info:
 
     # Stop workflow if external PR contains dangerous changes.
     - name: Fail workflow on dangerous changes
-      if: steps.dangerous_changes.outputs.dangerous == 'true'
+      if: ${{ steps.pr_props.outputs.should_check == 'true' && steps.changes.outputs.dangerous == 'true' }}
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
         script: |
