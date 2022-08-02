@@ -286,7 +286,7 @@ done
 Также рекомендуем сделать бекап директории `/etc/kubernetes` в которой находятся манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components)
 и [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
 Данная директория поможет быстро восстановить кластер при полной потери control-plane узлов без создания нового кластера
-и без пересоединения остальных нод в новый кластер.
+и без повторного присоединения нод в новый кластер.
 
 Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также бекап директории `/etc/kubernetes/` в зашифрованном виде вне кластера Deckhouse.
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
