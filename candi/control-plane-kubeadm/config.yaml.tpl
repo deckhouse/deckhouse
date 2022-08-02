@@ -1,3 +1,14 @@
+{{- $featureGates := "" }}
+{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true" }}
+{{- end }}
+{{- if semverCompare "= 1.20" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = "EndpointSliceTerminatingCondition=true,TTLAfterFinished=true" }}
+{{- end }}
+{{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = "TTLAfterFinished=true" }}
+{{- end }}
+
 {{- if semverCompare ">= 1.22" .clusterConfiguration.kubernetesVersion }}
 apiVersion: kubeadm.k8s.io/v1beta3
 {{- else }}
@@ -46,12 +57,7 @@ apiServer:
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
 {{- end }}
     anonymous-auth: "false"
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
-{{- end }}
-{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "TTLAfterFinished=true"
-{{- end }}
+    feature-gates: {{ $featureGates | quote }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
@@ -126,12 +132,7 @@ controllerManager:
   extraArgs:
     profiling: "false"
     terminated-pod-gc-threshold: "12500"
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
-{{- end }}
-{{- if semverCompare "< 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "TTLAfterFinished=true"
-{{- end }}
+    feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
     port: "0"
@@ -159,11 +160,10 @@ scheduler:
     config: "/etc/kubernetes/deckhouse/extra-files/scheduler-config.yaml"
 {{- end }}
     profiling: "false"
-{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
-    feature-gates: "EndpointSliceTerminatingCondition=true,DaemonSetUpdateSurge=true"
-{{- end }}
 {{- if semverCompare "< 1.20" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "DefaultPodTopologySpread=true"
+{{- else }}
+    feature-gates: {{ $featureGates | quote }}
 {{- end }}
     bind-address: "127.0.0.1"
     port: "0"
