@@ -25,17 +25,18 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 /*
-Temporary hook, it could be removed after 01.11.2022
+Temporary hook used for migration, it could be removed after 01.11.2022
 */
 
 /*
 Piraeus-operator prior v1.9.0 incorrectly set the last applied annotation, which makes thee way
-merge patch not working for removing such keys as nodeAffinity and tollerations. In Deckhouse v1.35
+merge patch not working for removing such keys as nodeAffinity and tolerations. In Deckhouse v1.35
 we moved LINSTOR from master to system nodes, so we should to take care about all affected objects.
-Thuse we just remove them, piraeus-operator will create new ones with correct settings.
+Thus we just remove them, piraeus-operator will create new ones with correct settings.
 More details here:
 - https://github.com/piraeusdatastore/piraeus-operator/issues/321
 - https://github.com/piraeusdatastore/piraeus-operator/pull/323
@@ -62,7 +63,7 @@ func applyLinstorDeplotmentsFilter(obj *unstructured.Unstructured) (go_hook.Filt
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "deployments",
@@ -70,32 +71,38 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Deployment",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-linstor"},
+					MatchNames: []string{linstorNamespace},
 				},
 			},
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"linstor-controller", "linstor-csi-controller"},
 			},
-			FilterFunc: applyLinstorDeplotmentsFilter,
+			FilterFunc:                   applyLinstorDeplotmentsFilter,
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			WaitForSynchronization:       pointer.BoolPtr(false),
 		},
 	},
 }, deleteWrongResources)
 
 func deleteWrongResources(input *go_hook.HookInput) error {
-	snaps := input.Snapshots["deployments"]
+
 LOOP:
-	for _, snap := range snaps {
-		s := snap.(*LinstorDeploymentsSnapshot)
-		for _, tolleration := range s.Tollertations {
-			if tolleration.Key == "node-role.kubernetes.io/master" {
-				input.PatchCollector.Delete("apps/v1", "Deployment", "d8-linstor", s.Name)
+	for _, snapshot := range input.Snapshots["deployments"] {
+		linstorDeploymentSnapshot := snapshot.(*LinstorDeploymentsSnapshot)
+		if linstorDeploymentSnapshot.Name != "linstor-controller" && linstorDeploymentSnapshot.Name != "linstor-csi-controller" {
+			continue LOOP
+		}
+		for _, toleration := range linstorDeploymentSnapshot.Tollertations {
+			if toleration.Key == "node-role.kubernetes.io/master" {
+				input.PatchCollector.Delete("apps/v1", "Deployment", linstorNamespace, linstorDeploymentSnapshot.Name)
 				continue LOOP
 			}
 		}
-		for _, terms := range s.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
+		for _, terms := range linstorDeploymentSnapshot.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
 			for _, a := range terms.MatchExpressions {
 				if a.Key == "node-role.kubernetes.io/master" {
-					input.PatchCollector.Delete("apps/v1", "Deployment", "d8-linstor", s.Name)
+					input.PatchCollector.Delete("apps/v1", "Deployment", linstorNamespace, linstorDeploymentSnapshot.Name)
 					continue LOOP
 				}
 			}

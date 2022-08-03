@@ -29,14 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
 
-const (
-	namespace   = "d8-linstor"
-	serviceName = "spaas"
-	serviceHost = serviceName + "." + namespace + ".svc"
-	secretName  = "spaas-certs"
-	certPath    = "linstor.internal.spaasCert"
-)
-
 type SpaasCertSnapshot struct {
 	Name string
 	Cert certificate.Certificate
@@ -67,11 +59,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{namespace},
+					MatchNames: []string{linstorNamespace},
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{secretName},
+				MatchNames: []string{spaasSecretName},
 			},
 			FilterFunc: applySpaasCertsFilter,
 		},
@@ -100,8 +92,8 @@ func generateSpaasCertificates(input *go_hook.HookInput) error {
 			caCert,
 			certificate.WithSigningDefaultExpiry(87600*time.Hour),
 			certificate.WithSANs(
-				serviceName,
-				serviceHost,
+				spaasServiceName,
+				spaasServiceHost,
 				"localhost",
 				"::1",
 				"127.0.0.1",
@@ -112,6 +104,6 @@ func generateSpaasCertificates(input *go_hook.HookInput) error {
 		}
 	}
 
-	input.Values.Set(certPath, cert)
+	input.Values.Set(spaasCertPath, cert)
 	return nil
 }

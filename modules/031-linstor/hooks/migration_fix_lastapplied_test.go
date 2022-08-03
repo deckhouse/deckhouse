@@ -26,8 +26,23 @@ import (
 var _ = Describe("Modules :: linstor :: hooks :: fix_lastapplied ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
+	Context("Modules :: linstor :: hooks :: empty_cluster ::", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(
+				f.KubeStateSet(``),
+				f.GenerateBeforeHelmContext(),
+			)
+			f.RunHook()
+			It("Must execute succefully", func() {
+				Expect(f).To(ExecuteSuccessfully())
+			})
+		})
+
+	})
+
 	Context("Linstor deployments created with affinity on master", func() {
 		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
 ---
@@ -54,11 +69,6 @@ spec:
         operator: Exists
       - key: dedicated
         operator: Exists
-      - key: ToBeDeletedByClusterAutoscaler
-      - key: node.kubernetes.io/not-ready
-      - key: node.kubernetes.io/out-of-disk
-      - key: node.kubernetes.io/memory-pressure
-      - key: node.kubernetes.io/disk-pressure
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -83,30 +93,47 @@ spec:
         operator: Exists
       - key: dedicated
         operator: Exists
-      - key: ToBeDeletedByClusterAutoscaler
-      - key: node.kubernetes.io/not-ready
-      - key: node.kubernetes.io/out-of-disk
-      - key: node.kubernetes.io/memory-pressure
-      - key: node.kubernetes.io/disk-pressure
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: piraeus-operator
+  namespace: d8-linstor
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: In
+                values:
+                - ""
+      tolerations:
+      - key: node-role.kubernetes.io/master
+      - key: dedicated.deckhouse.io
+        operator: Exists
+      - key: dedicated
+        operator: Exists
 			`),
 				f.GenerateBeforeHelmContext(),
 			)
 			f.RunHook()
 		})
 
-		It("Must delete linstor-controller deployment with nodeAffinity and tolerations set for master", func() {
+		It("Must delete linstor deployments with nodeAffinity and tolerations set for master", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-controller").Exists()).To(BeFalse())
-		})
-
-		It("Must delete linstor-csi-controller deployment with nodeAffinity and tolerations set for master", func() {
-			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-csi-controller").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-linstor", "piraeus-operator").Exists()).To(BeTrue())
 		})
 	})
 
 	Context("Linstor deployments created with affinity on system", func() {
 		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
 ---
@@ -133,11 +160,6 @@ spec:
         operator: Exists
       - key: dedicated
         operator: Exists
-      - key: ToBeDeletedByClusterAutoscaler
-      - key: node.kubernetes.io/not-ready
-      - key: node.kubernetes.io/out-of-disk
-      - key: node.kubernetes.io/memory-pressure
-      - key: node.kubernetes.io/disk-pressure
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -162,25 +184,41 @@ spec:
         operator: Exists
       - key: dedicated
         operator: Exists
-      - key: ToBeDeletedByClusterAutoscaler
-      - key: node.kubernetes.io/not-ready
-      - key: node.kubernetes.io/out-of-disk
-      - key: node.kubernetes.io/memory-pressure
-      - key: node.kubernetes.io/disk-pressure
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: piraeus-operator
+  namespace: d8-linstor
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/system
+                operator: In
+                values:
+                - ""
+      tolerations:
+      - key: node-role.kubernetes.io/system
+      - key: dedicated.deckhouse.io
+        operator: Exists
+      - key: dedicated
+        operator: Exists
 			`),
 				f.GenerateBeforeHelmContext(),
 			)
 			f.RunHook()
 		})
 
-		It("Must keep linstor-controller deployment with nodeAffinity and tolerations set for system", func() {
+		It("Must keep linstor deployments with nodeAffinity and tolerations set for system", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-controller").Exists()).To(BeTrue())
-		})
-
-		It("Must keep linstor-csi-controller deployment with nodeAffinity and tolerations set for system", func() {
-			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-csi-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-linstor", "piraeus-operator").Exists()).To(BeTrue())
 		})
 	})
 

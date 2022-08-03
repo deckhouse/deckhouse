@@ -34,13 +34,13 @@ RUN dpkg-buildpackage -us -uc
 
 FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG PIRAEUS_HA_CONTROLLER_GITREPO=https://github.com/piraeusdatastore/piraeus-ha-controller
-ARG PIRAEUS_HA_CONTROLLER_VERSION=1.0.1
+ARG PIRAEUS_HA_CONTROLLER_VERSION=1.1.0
 
 RUN git clone ${PIRAEUS_HA_CONTROLLER_GITREPO} /usr/local/go/piraeus-ha-controller \
  && cd /usr/local/go/piraeus-ha-controller \
  && git reset --hard v${PIRAEUS_HA_CONTROLLER_VERSION} \
  && cd cmd/agent \
- && go build -ldflags="-X github.com/piraeusdatastore/piraeus-ha-controller/pkg/consts.Version=v${PIRAEUS_HA_CONTROLLER_VERSION}" \
+ && go build -ldflags="-X github.com/piraeusdatastore/piraeus-ha-controller/pkg/metadata.Version=v${PIRAEUS_HA_CONTROLLER_VERSION}" \
  && mv ./agent /
 
 # ------------------------------------------------------------------------------
