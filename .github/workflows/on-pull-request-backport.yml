@@ -21,9 +21,17 @@ jobs:
           echo "release_branch=${releaseBranch}" >> $GITHUB_ENV
 
           echo "Create cherry-pick to $releaseBranch of commit: ${GITHUB_SHA}"
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Cherry-pick
+        uses: carloscastrojumo/github-cherry-pick-action@v1.0.1
+        with:
+          branch: ${{ env.release_branch }}
       - name: Add comment
         uses: mshick/add-pr-comment@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          message: "Cherry-picked ${{ env.last_commit }} to the branch: ${{ env.release_branch }}"
+          repo-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          repo-token-user-login: "deckhouse-BOaTswain"
+          message: "Cherry-picked ${{ env.last_commit }} to the branch: [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) "
