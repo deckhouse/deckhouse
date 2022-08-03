@@ -280,8 +280,9 @@ done
 In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.
 From this file, you can restore the previous etcd cluster state in the future.
 
-Also, we recommended to make a backup of the directory `/etc/kubernetes` which contains the manifests and configuration of the [control-plane components](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components)
-and [Kubernetes cluster PKI](https://kubernetes.io/docs/setup/best-practices/certificates/).
+Also, we recommend making a backup of the `/etc/kubernetes` directory, which contains:
+- manifests and configurations of [control-plane components](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
+- [Kubernetes cluster PKI](https://kubernetes.io/docs/setup/best-practices/certificates/).
 This directory will help to quickly restore a cluster in case of complete loss of control-plane nodes without creating a new cluster
 and without rejoin the remaining nodes into the new cluster.
 

@@ -283,8 +283,9 @@ done
 В текущей директории будет создан файл `etcd-backup.snapshot` со снимком базы etcd одного из членов etcd-кластера.
 Из полученного снимка можно будет восстановить состояние кластера etcd.
 
-Также рекомендуем сделать бекап директории `/etc/kubernetes` в которой находятся манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components)
-и [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
+Также рекомендуем сделать бекап директории `/etc/kubernetes` в которой находятся:
+- манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
+- [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
 Данная директория поможет быстро восстановить кластер при полной потери control-plane узлов без создания нового кластера
 и без повторного присоединения узлов в новый кластер.
 
