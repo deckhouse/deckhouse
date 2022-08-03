@@ -13,27 +13,26 @@
         plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         description: |
           The size of the etcd database on `{{ $labels.node }}` has almost exceeded.
-
           Possibly there are a lot of events (e.g. Pod evictions) or a high number of other resources are created in the cluster recently.
 
           Possible solutions:
-
           - You can do defragmentation. Use next command:
-
           `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s'`
-
           - Increase node memory. Begin from 24 GB `quota-backend-bytes` will be increased on 1G every extra 8 GB node memory.
-          For example:
+            For example:
+            Node Memory  quota-backend-bytes
+            16GB         2147483648 (2GB)
+            24GB         3221225472 (3GB)
+            32GB         4294967296 (4GB)
+            40GB         5368709120 (5GB)
+            48GB         6442450944 (6GB)
+            56GB         7516192768 (7GB)
+            64GB         8589934592 (8GB)
+            72GB         8589934592 (8GB)
+            ....
 
-          Node Memory  quota-backend-bytes
-          16GB         2GB
-          24GB         3GB
-          32GB         4GB
-          ...          ...
-          64GB         8GB
-          72GB         8GB
         summary: etcd db size is close to the limit
-    - alert: D8EtcdCannotDecreaseQuotaBackendBytes
+    - alert: D8NeedDecreaseEtcdQuotaBackendBytes
       expr: max(d8_etcd_quota_backend_should_decrease) > 0
       labels:
         tier: cluster
@@ -46,17 +45,24 @@
         summary: Deckhouse considers that quota-backend-bytes should be reduced.
         description: |
           Deckhouse can increase `quota-backend-bytes` only.
-
           It happens when control-plane nodes memory was reduced.
-
           If is true, you should set quota-backend-bytes manually with `controlPlaneManager.etcd.maxDbSize` configuration parameter.
-
           Before set new value, please check current DB usage on every control-plane node:
           ```
-          kubectl -n kube-system exec -ti etcd-MASTER_NODE_HERE -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.c/etc/kubernetes/pki/etcd/ca.key endpoint status -w json' | jq -r '.[0].Status.dbSize'
+          for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do kubectl -n kube-system exec -ti "$pod" -- /bin/sh -c 'ETCDCTL_API=3 /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key endpoint status -w json' | jq --arg a "$pod" -r '.[0].Status.dbSize / 1024 / 1024 | tostring | $a + ": " + . + " MB"'; done
           ```
           Recommendations:
           - `controlPlaneManager.etcd.maxDbSize` maximum value is 8 GB.
           - If control-plane nodes have less than 24 GB, use 2 GB for `controlPlaneManager.etcd.maxDbSize`.
           - For >= 24GB increase value on 1GB every extra 8 GB.
+            Node Memory  quota-backend-bytes
+            16GB         2147483648 (2GB)
+            24GB         3221225472 (3GB)
+            32GB         4294967296 (4GB)
+            40GB         5368709120 (5GB)
+            48GB         6442450944 (6GB)
+            56GB         7516192768 (7GB)
+            64GB         8589934592 (8GB)
+            72GB         8589934592 (8GB)
+            ....
 
