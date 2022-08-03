@@ -1,0 +1,74 @@
+diff --git a/pkg/endpoint/events.go b/pkg/endpoint/events.go
+index b6232c6ff1c..7c6c5d2f746 100644
+--- a/pkg/endpoint/events.go
++++ b/pkg/endpoint/events.go
+@@ -288,7 +288,7 @@ func (ev *EndpointPolicyBandwidthEvent) Handle(res chan interface{}) {
+ 			err = bwmap.Update(e.ID, bps)
+ 		}
+ 	} else {
+-		err = bwmap.Delete(e.ID)
++		err = bwmap.SilentDelete(e.ID)
+ 	}
+ 	if err != nil {
+ 		res <- &EndpointRegenerationResult{
+diff --git a/pkg/endpoint/policy.go b/pkg/endpoint/policy.go
+index 1ed031108ee..4c26c1ffa9c 100644
+--- a/pkg/endpoint/policy.go
++++ b/pkg/endpoint/policy.go
+@@ -823,7 +823,12 @@ func (e *Endpoint) UpdateNoTrackRules(annoCB AnnotationsResolverCB) {
+ 		e.getLogger().WithError(err).Error("Unable to enqueue endpoint notrack event")
+ 		return
+ 	}
+-	<-ch
++
++	updateRes := <-ch
++	regenResult := updateRes.(*EndpointRegenerationResult)
++	if regenResult.err != nil {
++		e.getLogger().WithError(regenResult.err).Error("EndpointNoTrackEvent event failed")
++	}
+ }
+
+ // UpdateVisibilityPolicy updates the visibility policy of this endpoint to
+@@ -840,7 +845,12 @@ func (e *Endpoint) UpdateVisibilityPolicy(annoCB AnnotationsResolverCB) {
+ 		e.getLogger().WithError(err).Error("Unable to enqueue endpoint policy visibility event")
+ 		return
+ 	}
+-	<-ch
++
++	updateRes := <-ch
++	regenResult := updateRes.(*EndpointRegenerationResult)
++	if regenResult.err != nil {
++		e.getLogger().WithError(regenResult.err).Error("EndpointPolicyVisibilityEvent event failed")
++	}
+ }
+
+ // UpdateBandwidthPolicy updates the egress bandwidth of this endpoint to
+@@ -854,7 +864,12 @@ func (e *Endpoint) UpdateBandwidthPolicy(annoCB AnnotationsResolverCB) {
+ 		e.getLogger().WithError(err).Error("Unable to enqueue endpoint policy bandwidth event")
+ 		return
+ 	}
+-	<-ch
++
++	updateRes := <-ch
++	regenResult := updateRes.(*EndpointRegenerationResult)
++	if regenResult.err != nil {
++		e.getLogger().WithError(regenResult.err).Error("EndpointPolicyBandwidthEvent event failed")
++	}
+ }
+
+ // GetRealizedPolicyRuleLabelsForKey returns the list of policy rule labels
+diff --git a/pkg/maps/bwmap/bwmap.go b/pkg/maps/bwmap/bwmap.go
+index 275d62c953b..66face45046 100644
+--- a/pkg/maps/bwmap/bwmap.go
++++ b/pkg/maps/bwmap/bwmap.go
+@@ -66,3 +66,10 @@ func Delete(Id uint16) error {
+ 	return ThrottleMap.Delete(
+ 		&EdtId{Id: uint64(Id)})
+ }
++
++func SilentDelete(Id uint16) error {
++	_, err := ThrottleMap.SilentDelete(
++		&EdtId{Id: uint64(Id)})
++
++	return err
++}
