@@ -8,6 +8,9 @@ Before doing this, make sure that etcd is not running. To stop etcd, remove the 
 ### Restoring from a backup
 
 Follow these steps to restore from a backup:
+
+1. If necessary restore etcd-server access keys and certificates into `/etc/kubernetes` directory.
+
 1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
 
    ```shell
@@ -99,6 +102,8 @@ On another (two) nodes do the following:
    ```
 
 On the selected node do the following:
+1. If necessary restore etcd-server access keys and certificates into `/etc/kubernetes` directory.
+
 1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
 
    ```shell
