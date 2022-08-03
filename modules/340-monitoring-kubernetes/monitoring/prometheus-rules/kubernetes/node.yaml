@@ -112,6 +112,6 @@
         You should check cgroupDriver on the {{ $labels.node }} Node:
         - `cat /var/lib/kubelet/config.yaml | grep 'cgroupDriver: systemd'`
 
-        If cgroupDriver is set to systemd then reboot is required to roll-back to cgroupfs driver. Please, drain and reboot the node.
+        If cgroupDriver is set to systemd then reboot is required to roll back to cgroupfs driver. Please, drain and reboot the node.
 
         You can check this [issue](https://github.com/deckhouse/deckhouse/issues/2152) for extra information.
