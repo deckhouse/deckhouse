@@ -1,0 +1,44 @@
+name: Run automatic cherry-pick on backport PRs
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+jobs:
+#  hasBackportLabel:
+#    name: analyse labels
+#    runs-on: ubuntu-latest
+#    outputs:
+#      backport: ${{ steps.hasBackportLabel.outputs.labeled-status/backport }}
+#    steps:
+#      - name: Labeled to preview
+#        id: haslabel
+#        uses: DanielTamkin/HasLabel@v1.0.4
+#        with:
+#          exact: 'status/backport'
+  check-label:
+    name: Check label
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'status/backport') || github.event.pull_request.merged == false }}
+    steps:
+      - run: exit 1
+  check-milestone:
+    name: Check Milestone
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.milestone == null }}
+    steps:
+      - run: exit 1
+  xxxxx:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Testme
+        env:
+          MILESTONE: ${{ github.event.pull_request.milestone }}
+          HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          echo "The PR was merged with ${MILESTONE}"
+          echo "SHA ${GITHUB_SHA}"
+          echo "REF ${GITHUB_REF}"
+          echo "HEAD ${HEAD_PR_SHA}"
