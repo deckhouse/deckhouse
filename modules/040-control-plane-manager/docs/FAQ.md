@@ -277,10 +277,16 @@ for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane
 done
 ```
 
-In the current directory etcd snapshot file `etc-backup.snapshot` will be created from one of an etcd cluster members.
+In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.
 From this file, you can restore the previous etcd cluster state in the future.
 
-You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
+Also, we recommend making a backup of the `/etc/kubernetes` directory, which contains:
+- manifests and configurations of [control-plane components](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
+- [Kubernetes cluster PKI](https://kubernetes.io/docs/setup/best-practices/certificates/).
+This directory will help to quickly restore a cluster in case of complete loss of control-plane nodes without creating a new cluster
+and without rejoin the remaining nodes into the new cluster.
 
-We recommend encrypting etcd snapshot backups and saving them outside the Deckhouse cluster.
+We recommend encrypting etcd snapshot backups as well as backup of the directory `/etc/kubernetes/` and saving them outside the Deckhouse cluster.
 You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc.
+
+You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
