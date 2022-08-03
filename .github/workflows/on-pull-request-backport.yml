@@ -15,8 +15,6 @@ jobs:
         env:
           MILESTONE: ${{ github.event.pull_request.milestone.title }}
           HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
-        outputs:
-          started_at: ${{ steps.started_at.outputs.started_at }}
         run: |
           export PR_LAST_COMMIT=${GITHUB_SHA}
           echo "::set-env name=PR_LAST_COMMIT::$PR_LAST_COMMIT"
