@@ -4,6 +4,7 @@
 
 
  - **All Deckhouse components will be restarted** including control-plane, ingress-nginx.
+ - After upgrading Deckhouse all nodes with Docker 18.* will request `disruptive update`. You will receive `NodeRequiresDisruptionApprovalForUpdate` if you have manual `approvalMode` in NodeGroup.
  - Modified existing alerts:
     * Removed predefined groups in Polk.
     * Added group auto-creation in Polk.
@@ -16,6 +17,8 @@
 ## Features
 
 
+ - **[candi]** Forbid using Docker 18.* [#2134](https://github.com/deckhouse/deckhouse/pull/2134)
+    After upgrading Deckhouse all nodes with Docker 18.* will request `disruptive update`. You will receive `NodeRequiresDisruptionApprovalForUpdate` if you have manual `approvalMode` in NodeGroup.
  - **[candi]** New Kuberenetes patch versions. [#1724](https://github.com/deckhouse/deckhouse/pull/1724)
     Restart of Kubernetes control plane components.
  - **[cert-manager]** Removed the `plk_pending_until_firing_for` annotation from all alerts. [#1446](https://github.com/deckhouse/deckhouse/pull/1446)
@@ -25,6 +28,8 @@
     The `ru-central1-c` **Yandex.cloud** zone was [deprecated](https://cloud.yandex.com/en/docs/overview/concepts/ru-central1-c-deprecation).
     For new clusters NAT-instance will be created in `ru-central1-a` zone. For old instances you should add to `withNATInstance.natInstanceInternalAddress` (you can get address from Yandex.Cloud console) 
     and `withNATInstance.internalSubnetID` (you can get address using command `kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values cloud-provider-yandex -o json | jq -r '.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap["ru-central1-c"]'`) to prevent NAT-instance recreation during a converge process.
+ - **[control-plane-manager]** Added feature gate `EndpointSliceTerminatingCondition` for Kubernetes 1.20. [#2112](https://github.com/deckhouse/deckhouse/pull/2112)
+    all control-plane components should be restarted.
  - **[control-plane-manager]** Removed the `plk_pending_until_firing_for` annotation from all alerts. [#1446](https://github.com/deckhouse/deckhouse/pull/1446)
  - **[deckhouse]** Add collect debug info command [#1787](https://github.com/deckhouse/deckhouse/pull/1787)
  - **[deckhouse]** Removed the `plk_pending_until_firing_for` annotation from all alerts. [#1446](https://github.com/deckhouse/deckhouse/pull/1446)
@@ -62,10 +67,13 @@
 ## Fixes
 
 
+ - **[candi]** Use Debian buster containerd package by default. [#2135](https://github.com/deckhouse/deckhouse/pull/2135)
+ - **[candi]** Start kubelet manually if it is not running. [#2132](https://github.com/deckhouse/deckhouse/pull/2132)
  - **[candi]** Fix docker config creation. [#2044](https://github.com/deckhouse/deckhouse/pull/2044)
  - **[candi]** Fixed the applying of disk size for CloudPermanent nodes in `YandexClusterConfiguration`. [#1900](https://github.com/deckhouse/deckhouse/pull/1900)
  - **[cert-manager]** Fix patch for cert-manager certificate owner ref field [#1985](https://github.com/deckhouse/deckhouse/pull/1985)
  - **[cert-manager]** Respect the global IngressClass in the `letsencrypt` ClusterIssuer. [#1750](https://github.com/deckhouse/deckhouse/pull/1750)
+ - **[cni-cilium]** Bandwidth controller metrics are not erroring out now. Also added logging to three controllers so that we can diagnose possible issues better. [#2155](https://github.com/deckhouse/deckhouse/pull/2155)
  - **[deckhouse]** Change DeckhouseUpdating Prometheus rule severity_level to avoid alert deferring [#1929](https://github.com/deckhouse/deckhouse/pull/1929)
  - **[dhctl]** Do not try to remove the `dhctl.deckhouse.io/node-for-converge` label if the node object was deleted during converge. [#1930](https://github.com/deckhouse/deckhouse/pull/1930)
  - **[dhctl]** Exclude password authentication check while connecting to host. [#1629](https://github.com/deckhouse/deckhouse/pull/1629)
@@ -80,6 +88,7 @@
  - **[istio]** Fixed `D8IstioDataPlanePatchVersionMismatch` alert description. [#2048](https://github.com/deckhouse/deckhouse/pull/2048)
  - **[kube-dns]** Updated CoreDNS to v1.9.3. With patches to persuade coredns to respect deprecated Service annotation `service.alpha.kubernetes.io/tolerate-unready-endpoints`. Alerts the user to the need for migrating from deprecated annotation. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
  - **[log-shipper]** Fix DaemonSet alerts. [#1912](https://github.com/deckhouse/deckhouse/pull/1912)
+ - **[monitoring-kubernetes]** Added alert `NodeSUnreclaimBytesUsageHigh`. [#2154](https://github.com/deckhouse/deckhouse/pull/2154)
  - **[monitoring-kubernetes]** Ignore containers rootfs mount point for node-exporter in GKE. [#2100](https://github.com/deckhouse/deckhouse/pull/2100)
  - **[monitoring-kubernetes]** Fix eviction inodes imagefs and node fs if containerd and kubelet directory is a symlink. [#2061](https://github.com/deckhouse/deckhouse/pull/2061)
  - **[monitoring-kubernetes]** Fixed PVC usage Grafana dashboards. [#1868](https://github.com/deckhouse/deckhouse/pull/1868)
@@ -120,6 +129,7 @@
     All control plane Pods will be restarted.
  - **[deckhouse]** image-copier one-liner to detect if there are Pods with irrelevant registry. [#1959](https://github.com/deckhouse/deckhouse/pull/1959)
  - **[dhctl]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
+ - **[docs]** Clarified docs for `rootDiskSize` in OpenStackInstanceClass [#2041](https://github.com/deckhouse/deckhouse/pull/2041)
  - **[ingress-nginx]** Mark Ingress controllers below 1.1 as deprecated. [#2004](https://github.com/deckhouse/deckhouse/pull/2004)
     Fire alerts about deprecated ingress controllers.
  - **[ingress-nginx]** Switched to the new official Kubernetes registry. [#1717](https://github.com/deckhouse/deckhouse/pull/1717)
