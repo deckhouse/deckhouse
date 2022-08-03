@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Testme
         env:
-          MILESTONE: ${{ github.event.pull_request.milestone }}
+          MILESTONE: ${{ github.event.pull_request.milestone.title }}
           HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           echo "The PR was merged with ${MILESTONE}"
