@@ -8,15 +8,26 @@ on:
       - main
 jobs:
   xxxxx:
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'status/backport') && github.event.pull_request.milestone != null }}
     runs-on: ubuntu-latest
     steps:
       - name: Testme
-        if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'status/backport') && github.event.pull_request.milestone != null }}
         env:
           MILESTONE: ${{ github.event.pull_request.milestone.title }}
           HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        outputs:
+          started_at: ${{ steps.started_at.outputs.started_at }}
         run: |
-          lastCommit=${GITHUB_SHA}
+          export PR_LAST_COMMIT=${GITHUB_SHA}
+          echo "::set-env name=PR_LAST_COMMIT::$PR_LAST_COMMIT"
           releaseBranch="release-$(echo ${MILESTONE} | sed -nre 's/v([0-9]+\.[0-9]+)\.[0-9]+/\1/p')"
+          export RELEASE_BRANCH=${releaseBranch}
+          echo "::set-env name=RELEASE_BRANCH::$RELEASE_BRANCH"
 
           echo "Create cherry-pick to $releaseBranch of commit: $lastCommit"
+      - name: Add comment
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: "Cherry-picked $PR_LAST_COMMIT to the branch: $RELEASE_BRANCH"
