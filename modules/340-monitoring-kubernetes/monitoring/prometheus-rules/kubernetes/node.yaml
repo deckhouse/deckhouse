@@ -8,6 +8,8 @@
       tier: cluster
     annotations:
       plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |-
         The CPU steal is too high on the {{ $labels.node }} Node in the last 30 minutes.
 
@@ -23,6 +25,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |-
         Some of the Node system exporters don't work correctly for the {{ $labels.node }} Node.
 
@@ -40,6 +44,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |-
         The conntrack table on the {{ $labels.node }} is {{ $value }}% of the maximum size.
 
@@ -57,6 +63,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |-
         The `conntrack` table on the {{ $labels.node }} Node is full!
 
@@ -74,6 +82,8 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The {{ $labels.node }} Node is cordon-protected; no new Pods can be scheduled onto it.
       description: |-
         The {{ $labels.node }} Node is cordon-protected; no new Pods can be scheduled onto it.
@@ -83,3 +93,25 @@
         - `kubectl drain {{ $labels.node }}` that runs for more than 20 minutes
 
         Probably, this is due to the maintenance of this Node.
+
+  - alert: NodeSUnreclaimBytesUsageHigh
+    expr: predict_linear(node_memory_SUnreclaim_bytes[2h], 43200) > node_memory_MemTotal_bytes * 0.3
+    for: 20m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The {{ $labels.node }} Node has high kernel memory usage.
+      description: |-
+        The {{ $labels.node }} Node has potential kernel memory leak. There is one known issue that can be reason for it.
+
+        You should check cgroupDriver on the {{ $labels.node }} Node:
+        - `cat /var/lib/kubelet/config.yaml | grep 'cgroupDriver: systemd'`
+
+        If cgroupDriver is set to systemd then reboot is required to roll-back to cgroupfs driver. Please, drain and reboot the node.
+
+        You can check this [issue](https://github.com/deckhouse/deckhouse/issues/2152) for extra information.
