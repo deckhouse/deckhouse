@@ -88,7 +88,7 @@ provider:
   #      "created_at": "2022-08-04T05:38:34.756137618Z",
   #      "key_algorithm": "RSA_2048",
   #      "public_key": "-----BEGIN PUBLIC KEY-----...-----END PUBLIC KEY-----\n",
-  #      "private_key": "-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----\n",
+  #      "private_key": "-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----\n"
   #    }
   serviceAccountJSON: *!CHANGE_ServiceAccountJSON*
 masterNodeGroup:
