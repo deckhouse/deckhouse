@@ -18,10 +18,12 @@ package sender
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 
@@ -149,9 +151,23 @@ func createSecureTransport(caPath string, timeout time.Duration) (*http.Transpor
 	return tr, nil
 }
 
+func defaultTransportDialContext(dialer *net.Dialer) func(context.Context, string, string) (net.Conn, error) {
+	return dialer.DialContext
+}
+
 func newTransport(timeout time.Duration) *http.Transport {
-	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.ResponseHeaderTimeout = timeout
+	t := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: defaultTransportDialContext(&net.Dialer{
+			Timeout:   timeout,
+			KeepAlive: timeout / 2,
+		}),
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          1,
+		IdleConnTimeout:       time.Minute, // two sending intervals which are defined
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: timeout,
+	}
 	return t
 }
 
