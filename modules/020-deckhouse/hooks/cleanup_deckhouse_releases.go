@@ -70,14 +70,14 @@ func cleanupReleases(input *go_hook.HookInput) error {
 	)
 
 	for i, release := range releases {
-		switch release.Phase {
+		switch release.Status.Phase {
 		case v1alpha1.PhasePending:
 			pendingReleasesIndexes = append(pendingReleasesIndexes, i)
 
 		case v1alpha1.PhaseDeployed:
 			deployedReleasesIndexes = append(deployedReleasesIndexes, i)
 
-		case v1alpha1.PhaseOutdated:
+		case v1alpha1.PhaseOutdated, v1alpha1.PhaseSuspended:
 			outdatedReleasesIndexes = append(outdatedReleasesIndexes, i)
 		}
 	}

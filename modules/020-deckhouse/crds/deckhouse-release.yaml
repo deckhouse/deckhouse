@@ -98,3 +98,7 @@ spec:
           type: date
           format: date-time
           description: 'When the release status was changed.'
+        - name: message
+          jsonPath: .status.message
+          type: string
+          description: 'Release status details.'

@@ -202,6 +202,10 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 			}
 			if !updatePermitted {
 				input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
+				release := updater.PredictedRelease()
+				if release != nil {
+					updateStatus(input, release, "Release is waiting for update window", v1alpha1.PhasePending)
+				}
 				return nil
 			}
 		}
@@ -250,14 +254,17 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 	}
 
 	return deckhouseRelease{
-		Name:                            release.Name,
-		Version:                         semver.MustParse(release.Spec.Version),
-		ApplyAfter:                      release.Spec.ApplyAfter,
-		Requirements:                    release.Spec.Requirements,
-		Disruptions:                     release.Spec.Disruptions,
-		Phase:                           release.Status.Phase,
+		Name:         release.Name,
+		Version:      semver.MustParse(release.Spec.Version),
+		ApplyAfter:   release.Spec.ApplyAfter,
+		Requirements: release.Spec.Requirements,
+		Disruptions:  release.Spec.Disruptions,
+		Status: v1alpha1.DeckhouseReleaseStatus{
+			Phase:    release.Status.Phase,
+			Approved: release.Status.Approved,
+			Message:  release.Status.Message,
+		},
 		ManuallyApproved:                releaseApproved,
-		StatusApproved:                  release.Status.Approved,
 		HasSuspendAnnotation:            hasSuspendAnnotation,
 		HasForceAnnotation:              hasForceAnnotation,
 		HasDisruptionApprovedAnnotation: hasDisruptionApprovedAnnotation,
@@ -387,7 +394,7 @@ type deckhouseUpdater struct {
 	totalPendingManualReleases int
 
 	predictedReleaseIndex       int
-	skippedPatcheIndexes        []int
+	skippedPatchesIndexes       []int
 	currentDeployedReleaseIndex int
 	forcedReleaseIndex          int
 
@@ -407,8 +414,7 @@ type deckhouseRelease struct {
 	Disruptions  []string
 	ApplyAfter   *time.Time
 
-	StatusApproved bool
-	Phase          string
+	Status v1alpha1.DeckhouseReleaseStatus // don't set transition time here to avoid snapshot overload
 }
 
 func newDeckhouseUpdater(mode string, podIsReady, isBootstrapping bool) *deckhouseUpdater {
@@ -418,7 +424,7 @@ func newDeckhouseUpdater(mode string, podIsReady, isBootstrapping bool) *deckhou
 		predictedReleaseIndex:       -1,
 		currentDeployedReleaseIndex: -1,
 		forcedReleaseIndex:          -1,
-		skippedPatcheIndexes:        make([]int, 0),
+		skippedPatchesIndexes:       make([]int, 0),
 		deckhousePodIsReady:         podIsReady,
 		deckhouseIsBootstrapping:    isBootstrapping,
 	}
@@ -455,7 +461,7 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if !du.PredictedReleaseIsPatch() {
 		if !du.deckhousePodIsReady {
 			input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
-			updateStatusMsg(input, predictedRelease, "Waiting for Deckhouse pod to be ready.")
+			updateStatus(input, predictedRelease, "Waiting for Deckhouse pod to be ready", v1alpha1.PhasePending)
 			return
 		}
 	}
@@ -464,16 +470,16 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	if predictedRelease.ApplyAfter != nil {
 		if du.now.Before(*predictedRelease.ApplyAfter) {
 			input.LogEntry.Infof("Release %s is postponed by canary process. Waiting", predictedRelease.Name)
-			updateStatusMsg(input, predictedRelease, fmt.Sprintf("Waiting for canary apply time: %s.", predictedRelease.ApplyAfter.Format(time.RFC822)))
+			updateStatus(input, predictedRelease, fmt.Sprintf("Waiting for canary apply time: %s", predictedRelease.ApplyAfter.Format(time.RFC822)), v1alpha1.PhasePending)
 			return
 		}
 	}
 
 	// check: release is approved or it's a patch
-	if !predictedRelease.StatusApproved && !du.PredictedReleaseIsPatch() {
+	if !predictedRelease.Status.Approved && !du.PredictedReleaseIsPatch() {
 		input.LogEntry.Infof("Release %s is waiting for manual approval", predictedRelease.Name)
 		input.MetricsCollector.Set("d8_release_waiting_manual", float64(du.totalPendingManualReleases), map[string]string{"name": predictedRelease.Name}, metrics.WithGroup(metricReleasesGroup))
-		updateStatusMsg(input, predictedRelease, "Waiting for manual approval.")
+		updateStatus(input, predictedRelease, "Waiting for manual approval", v1alpha1.PhasePending)
 		return
 	}
 
@@ -497,6 +503,16 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 	du.runReleaseDeploy(input, predictedRelease, currentRelease)
 }
 
+func (du *deckhouseUpdater) PredictedRelease() *deckhouseRelease {
+	if du.predictedReleaseIndex == -1 {
+		return nil // has no predicted release
+	}
+
+	predictedRelease := &(du.releases[du.predictedReleaseIndex])
+
+	return predictedRelease
+}
+
 func (du *deckhouseUpdater) checkReleaseDisruptions(input *go_hook.HookInput, rl *deckhouseRelease) bool {
 	dMode, ok := input.Values.GetOk("deckhouse.update.disruptionApprovalMode")
 	if !ok || dMode.String() == "Auto" {
@@ -508,13 +524,7 @@ func (du *deckhouseUpdater) checkReleaseDisruptions(input *go_hook.HookInput, rl
 		if hasDisruptionUpdate {
 			if !rl.HasDisruptionApprovedAnnotation {
 				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.Name, reason)
-				st := statusPatch{
-					Phase:          v1alpha1.PhasePending,
-					Message:        msg,
-					Approved:       false,
-					TransitionTime: du.now,
-				}
-				input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+				updateStatus(input, rl, msg, v1alpha1.PhasePending)
 				return false
 			}
 		}
@@ -544,34 +554,16 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 		return sdk.ToUnstructured(&depl)
 	}, "apps/v1", "Deployment", "d8-system", "deckhouse")
 
-	st := statusPatch{
-		Phase:          v1alpha1.PhaseDeployed,
-		Approved:       true,
-		Message:        "",
-		TransitionTime: du.now,
-	}
-	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", predictedRelease.Name, object_patch.WithSubresource("/status"))
+	updateStatus(input, predictedRelease, "", v1alpha1.PhaseDeployed, true)
 
 	if currentRelease != nil {
-		sp := statusPatch{
-			Phase:          v1alpha1.PhaseOutdated,
-			Approved:       currentRelease.StatusApproved,
-			Message:        "Last Deployed release outdated",
-			TransitionTime: du.now,
-		}
-		input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentRelease.Name, object_patch.WithSubresource("/status"))
+		updateStatus(input, currentRelease, "Last Deployed release outdated", v1alpha1.PhaseOutdated)
 	}
 
-	if len(du.skippedPatcheIndexes) > 0 {
-		sp := statusPatch{
-			Phase:          v1alpha1.PhaseOutdated,
-			Approved:       true,
-			Message:        "Skipped because of new patches",
-			TransitionTime: du.now,
-		}
-		for _, index := range du.skippedPatcheIndexes {
+	if len(du.skippedPatchesIndexes) > 0 {
+		for _, index := range du.skippedPatchesIndexes {
 			release := du.releases[index]
-			input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			updateStatus(input, &release, "Skipped because of new patches", v1alpha1.PhaseOutdated, true)
 		}
 	}
 }
@@ -580,7 +572,7 @@ func (du *deckhouseUpdater) runReleaseDeploy(input *go_hook.HookInput, predicted
 // it skips patch releases and save only the latest one
 func (du *deckhouseUpdater) PredictNextRelease() {
 	for i, release := range du.releases {
-		switch release.Phase {
+		switch release.Status.Phase {
 		case v1alpha1.PhaseOutdated, v1alpha1.PhaseSuspended:
 			// pass
 
@@ -633,15 +625,10 @@ func (du *deckhouseUpdater) ApplyForcedRelease(input *go_hook.HookInput) {
 	input.PatchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", forcedRelease.Name)
 
 	// Outdate all previous releases
-	st := statusPatch{
-		Phase:          v1alpha1.PhaseOutdated,
-		Approved:       true,
-		Message:        "",
-		TransitionTime: du.now,
-	}
+
 	for i, release := range du.releases {
 		if i < du.forcedReleaseIndex {
-			input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
+			updateStatus(input, &release, "", v1alpha1.PhaseOutdated, true)
 		}
 	}
 }
@@ -682,7 +669,7 @@ func (du *deckhouseUpdater) processPendingRelease(index int, release deckhouseRe
 			return
 		}
 		// it's a patch for predicted release, continue
-		du.skippedPatcheIndexes = append(du.skippedPatcheIndexes, du.predictedReleaseIndex)
+		du.skippedPatchesIndexes = append(du.skippedPatchesIndexes, du.predictedReleaseIndex)
 	}
 
 	// release is predicted to be Deployed
@@ -690,20 +677,11 @@ func (du *deckhouseUpdater) processPendingRelease(index int, release deckhouseRe
 }
 
 func (du *deckhouseUpdater) patchInitialStatus(input *go_hook.HookInput, release deckhouseRelease) deckhouseRelease {
-	if release.Phase != "" {
+	if release.Status.Phase != "" {
 		return release
 	}
 
-	statusPatch := statusPatch{
-		Phase:          v1alpha1.PhasePending,
-		Approved:       release.StatusApproved,
-		TransitionTime: du.now,
-	}
-
-	input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
-
-	release.StatusApproved = statusPatch.Approved
-	release.Phase = statusPatch.Phase
+	updateStatus(input, &release, "", v1alpha1.PhasePending)
 
 	return release
 }
@@ -721,32 +699,22 @@ func (du *deckhouseUpdater) patchSuspendedStatus(input *go_hook.HookInput, relea
 		},
 	}
 
-	statusPatch := statusPatch{
-		Phase:          v1alpha1.PhaseSuspended,
-		Approved:       false,
-		Message:        "Release is suspended",
-		TransitionTime: du.now,
-	}
-
 	input.PatchCollector.MergePatch(annotationsPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name)
-	input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
-
-	release.StatusApproved = statusPatch.Approved
-	release.Phase = statusPatch.Phase
+	updateStatus(input, &release, "Release is suspended", v1alpha1.PhaseSuspended, false)
 
 	return release
 }
 
 func (du *deckhouseUpdater) patchManualRelease(input *go_hook.HookInput, release deckhouseRelease) deckhouseRelease {
-	if release.Phase != v1alpha1.PhasePending {
+	if release.Status.Phase != v1alpha1.PhasePending {
 		return release
 	}
 
 	var statusChanged bool
 
 	statusPatch := statusPatch{
-		Phase:          release.Phase,
-		Approved:       release.StatusApproved,
+		Phase:          release.Status.Phase,
+		Approved:       release.Status.Approved,
 		TransitionTime: du.now,
 	}
 
@@ -755,20 +723,19 @@ func (du *deckhouseUpdater) patchManualRelease(input *go_hook.HookInput, release
 		statusPatch.Approved = false
 		statusPatch.Message = "Release is waiting for manual approval"
 		du.totalPendingManualReleases++
-		if release.StatusApproved {
+		if release.Status.Approved {
 			statusChanged = true
 		}
 	} else {
 		statusPatch.Approved = true
-		if !release.StatusApproved {
+		if !release.Status.Approved {
 			statusChanged = true
 		}
 	}
 
 	if statusChanged {
 		input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
-
-		release.StatusApproved = statusPatch.Approved
+		release.Status.Approved = statusPatch.Approved
 	}
 
 	return release
@@ -812,13 +779,7 @@ func (du *deckhouseUpdater) checkReleaseRequirements(input *go_hook.HookInput, r
 				input.LogEntry.Error(err)
 				msg = fmt.Sprintf("%q requirement not registered", key)
 			}
-			st := statusPatch{
-				Phase:          v1alpha1.PhasePending,
-				Message:        msg,
-				Approved:       false,
-				TransitionTime: du.now,
-			}
-			input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+			updateStatus(input, rl, msg, v1alpha1.PhasePending, false)
 			return false
 		}
 	}
@@ -856,13 +817,27 @@ func deleteUpdatingCM(input *go_hook.HookInput) {
 	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "d8-release-updating", object_patch.InBackground())
 }
 
-func updateStatusMsg(input *go_hook.HookInput, release *deckhouseRelease, msg string) {
+func updateStatus(input *go_hook.HookInput, release *deckhouseRelease, msg, phase string, approvedFlag ...bool) {
+	approved := release.Status.Approved
+	if len(approvedFlag) > 0 {
+		approved = approvedFlag[0]
+	}
+
+	if phase == release.Status.Phase && msg == release.Status.Message && approved == release.Status.Approved {
+		return
+	}
+
 	st := statusPatch{
+		Phase:          phase,
 		Message:        msg,
-		Approved:       release.StatusApproved,
+		Approved:       approved,
 		TransitionTime: time.Now().UTC(),
 	}
 	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.WithSubresource("/status"))
+
+	release.Status.Phase = phase
+	release.Status.Message = msg
+	release.Status.Approved = approved
 }
 
 type byVersion []deckhouseRelease

@@ -131,13 +131,13 @@ releaseLoop:
 		switch {
 		case release.Version.GreaterThan(newSemver):
 			// cleanup versions which are older then current version in a specified channel and are in a Pending state
-			if release.Phase == v1alpha1.PhasePending {
+			if release.Status.Phase == v1alpha1.PhasePending {
 				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.InBackground())
 			}
 
 		case release.Version.Equal(newSemver):
 			input.LogEntry.Debugf("Release with version %s already exists", release.Version)
-			switch release.Phase {
+			switch release.Status.Phase {
 			case v1alpha1.PhasePending, "":
 				if releaseChecker.releaseMetadata.Suspend {
 					patch := buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend)
