@@ -95,9 +95,9 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		BoolVar(&config.ClientConfig.TLS)
 
 	cmd.Flag("period", "The period of episodes sending to server, and at the same the client timeout.").
-		Envar("UPMETER_PERIOD").
-		Default("1s").
-		DurationVar(&config.Period)
+		Envar("UPMETER_SEND_INTERVAL").
+		Default("5s").
+		DurationVar(&config.Interval)
 
 	// Database
 	cmd.Flag("db-path", "SQLite file path.").

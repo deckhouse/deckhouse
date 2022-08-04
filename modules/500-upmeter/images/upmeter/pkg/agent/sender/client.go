@@ -93,7 +93,10 @@ func NewHttpClient(config *ClientConfig, timeout time.Duration) *http.Client {
 	client, err := createSecureHttpClient(config.TLS, config.CAPath, timeout)
 	if err != nil {
 		log.Errorf("falling back to default HTTP client: %v", err)
-		return &http.Client{Timeout: timeout}
+		return &http.Client{
+			Timeout:   timeout,
+			Transport: newTransport(timeout / 2),
+		}
 	}
 	return client
 }
@@ -103,7 +106,7 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 		return nil, fmt.Errorf("TLS is off by client")
 	}
 
-	tlsTransport, err := createHttpTransport(caPath)
+	tlsTransport, err := createSecureTransport(caPath, timeout/2)
 	if err != nil {
 		return nil, err
 	}
@@ -123,17 +126,15 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 	return client, nil
 }
 
-func createHttpTransport(caPath string) (*http.Transport, error) {
+func createSecureTransport(caPath string, timeout time.Duration) (*http.Transport, error) {
+	tr := newTransport(timeout)
+
 	if caPath == "" {
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
+		// Unsecure
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		return tr, nil
 	}
 
-	// Create transport with tls and CA certificate checking
 	caCertBytes, err := ioutil.ReadFile(caPath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read CA certificate from '%s': %v", caPath, err)
@@ -142,13 +143,15 @@ func createHttpTransport(caPath string) (*http.Transport, error) {
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCertBytes)
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: caCertPool,
-		},
-	}
+	tr.TLSClientConfig = &tls.Config{RootCAs: caCertPool}
 
 	return tr, nil
+}
+
+func newTransport(timeout time.Duration) *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.ResponseHeaderTimeout = timeout
+	return t
 }
 
 func getServiceAccountToken() (string, error) {

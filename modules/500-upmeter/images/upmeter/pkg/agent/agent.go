@@ -46,7 +46,7 @@ type Agent struct {
 }
 
 type Config struct {
-	Period       time.Duration
+	Interval     time.Duration
 	ClientConfig *sender.ClientConfig
 	DatabasePath string
 	UserAgent    string
@@ -109,10 +109,10 @@ func (a *Agent) Start(ctx context.Context) error {
 
 	ch := make(chan []check.Episode)
 
-	client := sender.NewClient(a.config.ClientConfig, a.config.Period) // use period as timeout
+	client := sender.NewClient(a.config.ClientConfig, a.config.Interval) // uses interval as client timeout
 	storage := sender.NewStorage(dbctx)
 
-	a.sender = sender.New(client, ch, storage, a.config.Period)
+	a.sender = sender.New(client, ch, storage, a.config.Interval)
 	a.scheduler = scheduler.New(registry, ch)
 
 	a.sender.Start()
