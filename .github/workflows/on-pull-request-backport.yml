@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - name: Cherry-pick
         id: cherry-pick-pr
-        uses: deckhouse/backport-action@master
+        uses: deckhouse/backport-action@v0.9.0
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
