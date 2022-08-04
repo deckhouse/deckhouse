@@ -136,6 +136,8 @@ func (c *BashibleContext) subscribe(ctx context.Context, factory informers.Share
 
 	// Launch the informer
 	informer := factory.Core().V1().Secrets().Informer()
+	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+
 	go informer.Run(ctx.Done())
 
 	// Subscribe to updates
@@ -192,7 +194,7 @@ func (c *BashibleContext) parseImagesTagsFile() {
 
 	klog.Info("images_tags.json file has been changed")
 
-	c.update()
+	c.update("file: images_tags")
 }
 
 func (c *BashibleContext) parseVersionMapFile() {
@@ -228,7 +230,7 @@ func (c *BashibleContext) parseVersionMapFile() {
 	c.contextBuilder.SetVersionMapData(versionMap)
 	c.saveChecksum(versionMapFile, fileHash)
 
-	c.update()
+	c.update("file: version_map")
 }
 
 func (c *BashibleContext) runFilesWatcher() {
@@ -295,7 +297,7 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.contextBuilder.SetInputData(input)
 			c.contextSynced = true
 			c.saveChecksum(dataKey, checksum)
-			c.update()
+			c.update("secret: bashible-apiserver-context")
 
 		case data := <-registrySecretC:
 			var input registryInputData
@@ -316,13 +318,13 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.contextBuilder.SetRegistryData(input.toRegistry())
 			c.registrySynced = true
 			c.saveChecksum("registry", checksum)
-			c.update()
+			c.update("secret: registry")
 
-		case <-c.stepsStorage.OnNodeConfigurationsChanged():
-			c.update()
+		case <-c.stepsStorage.OnNodeGroupConfigurationsChanged():
+			c.update("NodeGroupConfiguration")
 
-		case <-c.nodeUsersConfigurationChanged:
-			c.update()
+		case <-c.OnNodeUserConfigurationsChanged():
+			c.update("NodeUserConfiguration")
 
 		case <-ctx.Done():
 			return
@@ -330,7 +332,7 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 	}
 }
 
-func (c *BashibleContext) update() {
+func (c *BashibleContext) update(src string) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
@@ -338,7 +340,7 @@ func (c *BashibleContext) update() {
 		return
 	}
 
-	klog.Info("Running context update")
+	klog.Infof("Running context update. (Source: '%s')", src)
 
 	// renderErr contains errors only from template rendering. We always have data here
 	data, ngmap, checksumErrors := c.contextBuilder.Build()
@@ -387,10 +389,6 @@ func (c *BashibleContext) update() {
 func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
-
-	// TODO remove after 1.31 release !!!
-	// This replace is needed to first bsahible converge after change bundle name from centos-7 to centos
-	contextKey = strings.ReplaceAll(contextKey, "centos-7", "centos")
 
 	raw, ok := c.data[contextKey]
 	if !ok {
@@ -502,6 +500,7 @@ func (c *BashibleContext) subscribeOnNodeUserCRD(ctx context.Context, ngConfigFa
 	})
 
 	informer := ginformer.Informer()
+	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -625,4 +624,8 @@ func (c *BashibleContext) runNodeUserCRDQueue(ctx context.Context) {
 			c.emitter.emitChanges()
 		}
 	}
+}
+
+func (c *BashibleContext) OnNodeUserConfigurationsChanged() chan struct{} {
+	return c.nodeUsersConfigurationChanged
 }
