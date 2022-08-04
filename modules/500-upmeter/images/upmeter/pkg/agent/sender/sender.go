@@ -75,6 +75,7 @@ func (s *Sender) receiveLoop() {
 
 func (s *Sender) sendLoop() {
 	ticker := time.NewTicker(s.interval)
+	defer ticker.Stop()
 
 	for {
 		select {
@@ -84,7 +85,6 @@ func (s *Sender) sendLoop() {
 				log.Errorf("sendLoop: %v", err)
 			}
 		case <-s.stop:
-			ticker.Stop()
 			s.done <- struct{}{}
 			return
 		}
@@ -130,7 +130,7 @@ func (s *Sender) export() error {
 	slot := episodes[0].TimeSlot
 	err = s.storage.Clean(slot)
 	if err != nil {
-		return fmt.Errorf("cannot clean storage for slot=%v: %v", slot, err)
+		return fmt.Errorf("cleaning send storage, slot=%v: %v", slot, err)
 	}
 	return nil
 }

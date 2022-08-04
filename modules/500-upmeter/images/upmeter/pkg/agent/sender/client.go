@@ -53,12 +53,13 @@ type ClientConfig struct {
 	CAPath    string
 	TLS       bool
 	UserAgent string
+	Timeout   time.Duration
 }
 
-func NewClient(config *ClientConfig, timeout time.Duration) *Client {
+func NewClient(config *ClientConfig) *Client {
 	return &Client{
 		url:       getEndpoint(config),
-		client:    NewHttpClient(config, timeout),
+		client:    NewHttpClient(config),
 		UserAgent: config.UserAgent,
 	}
 }
@@ -89,13 +90,13 @@ func (c *Client) Send(reqBody []byte) error {
 	return nil
 }
 
-func NewHttpClient(config *ClientConfig, timeout time.Duration) *http.Client {
-	client, err := createSecureHttpClient(config.TLS, config.CAPath, timeout)
+func NewHttpClient(config *ClientConfig) *http.Client {
+	client, err := createSecureHttpClient(config.TLS, config.CAPath, config.Timeout)
 	if err != nil {
 		log.Errorf("falling back to default HTTP client: %v", err)
 		return &http.Client{
-			Timeout:   timeout,
-			Transport: newTransport(timeout / 2),
+			Timeout:   config.Timeout,
+			Transport: newTransport(config.Timeout / 2),
 		}
 	}
 	return client
