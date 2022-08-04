@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - name: Cherry-pick
         id: cherry-pick-pr
-        uses: deckhouse/backport-action@v0.9.0
+        uses: deckhouse/backport-action@v1.0.0
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
@@ -36,20 +36,23 @@ jobs:
           automerge: true
       - name: Add successful comment
         if: steps.cherry-pick-pr.outcome == 'success'
-        uses: mshick/add-pr-comment@v1
+        uses: peter-evans/create-or-update-comment@v2
         with:
-          repo-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          repo-token-user-login: "deckhouse-BOaTswain"
-          message: "Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful"
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          reactions: hooray
+          body: "Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful!"
       - name: Remove backport label
         if: steps.cherry-pick-pr.outcome == 'success'
         uses: actions-ecosystem/action-remove-labels@v1
         with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           labels: "status/backport"
       - name: Add error comment
         if: steps.cherry-pick-pr.outcome == 'failure'
-        uses: mshick/add-pr-comment@v1
+        uses: peter-evans/create-or-update-comment@v2
         with:
-          repo-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          repo-token-user-login: "deckhouse-BOaTswain"
-          message: "Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) failed"
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          reactions: '-1'
+          body: "!!!Failed: Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }})"
