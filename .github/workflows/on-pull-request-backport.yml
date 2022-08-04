@@ -7,11 +7,11 @@ on:
     branches:
       - main
 jobs:
-  xxxxx:
+  cherry_pick_backport:
     if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'status/backport') && github.event.pull_request.milestone != null }}
     runs-on: ubuntu-latest
     steps:
-      - name: Testme
+      - name: Get backport info
         env:
           MILESTONE: ${{ github.event.pull_request.milestone.title }}
           HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
@@ -26,12 +26,18 @@ jobs:
         with:
           fetch-depth: 0
       - name: Cherry-pick
-        uses: carloscastrojumo/github-cherry-pick-action@v1.0.1
+        id: cherry-pick-pr
+        uses: deckhouse/backport-action@master
         with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
           branch: ${{ env.release_branch }}
+          labels: auto-cherry-pick
+          automerge: true
       - name: Add comment
         uses: mshick/add-pr-comment@v1
         with:
           repo-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           repo-token-user-login: "deckhouse-BOaTswain"
-          message: "Cherry-picked ${{ env.last_commit }} to the branch: [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) "
+          message: "Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) done"
+#          message: "Cherry-picked ${{ env.last_commit }} to the branch: [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) "
