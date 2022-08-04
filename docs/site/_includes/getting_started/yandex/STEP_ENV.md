@@ -16,7 +16,7 @@ name: deckhouse
 Assign the `editor` role to the newly created user:
 {% snippetcut %}
 ```yaml
-yc resource-manager folder add-access-binding <foldername> --role editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding <folderID> --role editor --subject serviceAccount:<userID>
 ```
 {% endsnippetcut %}
 
@@ -26,8 +26,6 @@ Create a JSON file containing the parameters for user authorization in the cloud
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
 {% endsnippetcut %}
-
-Please note that when you need to use the contents of this file during the next step — adding it to your YAML manifest (in the `serviceAccountJSON` parameter) — you will need to make it compact via `cat deckhouse-sa-key.json | jq -c`.
 
 <div id="standard-layout-notes" style="display:none" markdown="1">
 **Caution!**
