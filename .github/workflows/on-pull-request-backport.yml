@@ -35,19 +35,19 @@ jobs:
           labels: auto-cherry-pick
           automerge: true
       - name: Add successful comment
-        if: ${{ steps.cherry-pick-pr.outcome == "success" }}
+        if: steps.cherry-pick-pr.outcome == 'success'
         uses: mshick/add-pr-comment@v1
         with:
           repo-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           repo-token-user-login: "deckhouse-BOaTswain"
           message: "Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful"
       - name: Remove backport label
-        if: ${{ steps.cherry-pick-pr.outcome == "success" }}
+        if: steps.cherry-pick-pr.outcome == 'success'
         uses: actions-ecosystem/action-remove-labels@v1
         with:
           labels: "status/backport"
       - name: Add error comment
-        if: ${{ steps.cherry-pick-pr.outcome == "failure" }}
+        if: steps.cherry-pick-pr.outcome == 'failure'
         uses: mshick/add-pr-comment@v1
         with:
           repo-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
