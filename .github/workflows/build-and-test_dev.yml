@@ -42,6 +42,8 @@ jobs:
       pr_description: ${{ steps.pr_props.outputs.pr_description }}
       diff_url: ${{ steps.pr_props.outputs.diff_url }}
       labels: ${{ steps.pr_props.outputs.labels }}
+      changes_docs: ${{ steps.changes.outputs.docs }}
+      changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
 
     # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
     if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
@@ -212,11 +214,11 @@ jobs:
         with:
           ref: ${{ steps.pr_props.outputs.ref }}
 
-      # Detect dangerous changes in external PR.
-      - name: Check for dangerous changes
+      # Detect dangerous changes in external PR
+      - name: Check for dangerous changes in PR
         uses: dorny/paths-filter@v2
         if: steps.pr_props.outputs.should_check == 'true'
-        id: changes
+        id: dangerous_changes
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           filters: |
@@ -229,9 +231,28 @@ jobs:
               - './docs/**/images/**'
               - './docs/**/assets/**'
 
+      # Get info about other changes.
+      - name: Get info about PR changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          # docs - detect changes in files that belong to the documentation scope
+          # not_markdown - detect changes not in markdown files
+          filters: |
+            docs:
+              - './**/*.md'
+              - './docs/**'
+              - './**/crds/*'
+              - './**/openapi/*config-values.yaml'
+              - './candi/**/openapi/*'
+              - './ee/candi/**/openapi/*'
+            not_markdown:
+              - '!./**/*.md'
+
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
-        if: steps.changes.outputs.dangerous == 'true'
+        if: steps.dangerous_changes.outputs.dangerous == 'true'
         uses: actions/github-script@v5.0.0
         with:
           script: |
@@ -766,6 +787,7 @@ jobs:
     # </template: main_web_build_template>
 
   tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests
     needs:
       - git_info
@@ -854,6 +876,7 @@ jobs:
     # </template: tests_template>
 
   matrix_tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Matrix tests
     needs:
       - git_info
@@ -942,6 +965,7 @@ jobs:
     # </template: tests_template>
 
   dhctl_tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Dhctl Tests
     needs:
       - git_info
@@ -1030,6 +1054,7 @@ jobs:
     # </template: tests_template>
 
   golangci_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: GolangCI Lint
     needs:
       - git_info
@@ -1118,6 +1143,7 @@ jobs:
     # </template: tests_template>
 
   openapi_test_cases:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: OpenAPI Test Cases
     needs:
       - git_info
@@ -1206,6 +1232,7 @@ jobs:
     # </template: tests_template>
 
   web_links_test:
+    if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' }}
     name: Web links test
     needs:
       - git_info
@@ -1358,6 +1385,7 @@ jobs:
     # </template: web_links_test_template>
 
   validators:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Validators
     needs:
       - git_info
