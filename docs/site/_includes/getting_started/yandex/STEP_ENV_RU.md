@@ -16,7 +16,7 @@ name: deckhouse
 Назначьте роль `editor` вновь созданному пользователю для своего облака:
 {% snippetcut %}
 ```yaml
-yc resource-manager folder add-access-binding <foldername> --role editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding <folderID> --role editor --subject serviceAccount:<userID>
 ```
 {% endsnippetcut %}
 
@@ -26,8 +26,6 @@ yc resource-manager folder add-access-binding <foldername> --role editor --subje
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
 {% endsnippetcut %}
-
-Обратите внимание, что на следующем этапе, когда потребуется скопировать содержимое этого файла в YAML-манифест (через параметр `serviceAccountJSON`), его потребуется предварительно привести в компактный вид с помощью команды `cat deckhouse-sa-key.json | jq -c`.
 
 <div id="standard-layout-notes" style="display:none" markdown="1">
 **Внимание!**

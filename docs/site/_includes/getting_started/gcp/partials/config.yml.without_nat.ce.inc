@@ -71,7 +71,7 @@ provider:
   # [<en>] Example of serviceAccountJSON:
   # [<ru>] Пример заполнения serviceAccountJSON:
   # serviceAccountJSON: |
-  #     {
+  #    {
   #      "type": "service_account",
   #      "project_id": "somproject-sandbox",
   #      "private_key_id": "***",
@@ -83,7 +83,7 @@ provider:
   #      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
   #      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/somproject-sandbox.gserviceaccount.com"
   #    }
-  serviceAccountJSON: *!CHANGE_SA_JSON*
+  serviceAccountJSON: *!CHANGE_ServiceAccountJSON*
   # [<en>] cluster region
   # [<ru>] регион привязки кластера
   # [<en>] you might consider changing this
