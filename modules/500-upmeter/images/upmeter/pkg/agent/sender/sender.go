@@ -75,7 +75,6 @@ func (s *Sender) receiveLoop() {
 
 func (s *Sender) sendLoop() {
 	ticker := time.NewTicker(s.interval)
-	defer ticker.Stop()
 
 	for {
 		select {
@@ -85,6 +84,7 @@ func (s *Sender) sendLoop() {
 				log.Errorf("sendLoop: %v", err)
 			}
 		case <-s.stop:
+			ticker.Stop()
 			s.done <- struct{}{}
 			return
 		}
