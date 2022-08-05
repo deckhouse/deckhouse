@@ -1,0 +1,100 @@
+{!{- $ctx := . -}!}
+
+name: Build and test for release branches
+
+# On every push to relese branches.
+on:
+  push:
+    branches:
+      - 'release-*'
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+# Cancel in-progress jobs for the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+{!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
+
+  go_generate:
+    name: Go Generate
+    needs:
+      - git_info
+{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
+
+  build_deckhouse:
+    name: Build Deckhouse FE
+    needs:
+      - git_info
+      - go_generate
+    env:
+      WERF_ENV: "FE"
+{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+
+  doc_web_build:
+    name: Doc web build
+    # Wait for success build of modules.
+    needs:
+      - git_info
+{!{ tmpl.Exec "doc_web_build_template" $ctx | strings.Indent 4 }!}
+
+  main_web_build:
+    name: Main web build
+    # Wait for success build of modules.
+    needs:
+      - git_info
+{!{ tmpl.Exec "main_web_build_template" $ctx | strings.Indent 4 }!}
+
+  tests:
+    name: Tests
+    needs:
+      - git_info
+      - build_deckhouse
+{!{ tmpl.Exec "tests_template" (slice $ctx "unit" "build_deckhouse") | strings.Indent 4 }!}
+
+  matrix_tests:
+    name: Matrix tests
+    needs:
+      - git_info
+      - build_deckhouse
+{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "build_deckhouse") | strings.Indent 4 }!}
+
+  dhctl_tests:
+    name: Dhctl Tests
+    needs:
+      - git_info
+      - build_deckhouse
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_deckhouse") | strings.Indent 4 }!}
+
+  golangci_lint:
+    name: GolangCI Lint
+    needs:
+      - git_info
+      - build_deckhouse
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_deckhouse") | strings.Indent 4 }!}
+
+  openapi_test_cases:
+    name: OpenAPI Test Cases
+    needs:
+      - git_info
+      - build_deckhouse
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_deckhouse") | strings.Indent 4 }!}
+
+  web_links_test:
+    name: Web links test
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    continue-on-error: true
+{!{ tmpl.Exec "web_links_test_template" $ctx | strings.Indent 4 }!}
+
+  validators:
+    name: Validators
+    needs:
+      - git_info
+      - build_deckhouse
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
