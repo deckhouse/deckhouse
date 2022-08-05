@@ -9,7 +9,7 @@ properties:
     additionalProperties: false
     default: {}
     x-required-for-helm:
-    - adapter
+    - adapterCert
     properties:
       adapterCert:
         type: object
