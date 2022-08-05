@@ -98,7 +98,7 @@ func NewHttpClient(config *ClientConfig) *http.Client {
 		log.Errorf("falling back to default HTTP client: %v", err)
 		return &http.Client{
 			Timeout:   config.Timeout,
-			Transport: newTransport(config.Timeout / 2),
+			Transport: newTransport(config.Timeout),
 		}
 	}
 	return client
@@ -109,7 +109,7 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 		return nil, fmt.Errorf("TLS is off by client")
 	}
 
-	tlsTransport, err := createSecureTransport(caPath, timeout/2)
+	tlsTransport, err := createSecureTransport(caPath, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -156,19 +156,18 @@ func defaultTransportDialContext(dialer *net.Dialer) func(context.Context, strin
 }
 
 func newTransport(timeout time.Duration) *http.Transport {
-	t := &http.Transport{
+	return &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: defaultTransportDialContext(&net.Dialer{
 			Timeout:   timeout,
 			KeepAlive: timeout / 2,
 		}),
 		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          1,
-		IdleConnTimeout:       time.Minute, // two sending intervals which are defined
+		MaxIdleConns:          1,           // single connection to the server
+		IdleConnTimeout:       time.Minute, // two episode sending intervals which are always 30s
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: timeout,
 	}
-	return t
 }
 
 func getServiceAccountToken() (string, error) {
