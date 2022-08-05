@@ -34,5 +34,5 @@ var _ = hooks.RegisterInternalTLSHook(hooks.GenSelfSignedTLSHookConf{
 	Namespace:     "d8-monitoring",
 	TLSSecretName: "prometheus-metrics-adapter-server-cert",
 
-	FullValuesPathPrefix: "prometheusMetricsAdapter.internal.adapter",
+	FullValuesPathPrefix: "prometheusMetricsAdapter.internal.adapterCert",
 })
