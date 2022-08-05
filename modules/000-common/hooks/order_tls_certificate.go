@@ -21,11 +21,11 @@ import (
 
 	certificatesv1 "k8s.io/api/certificates/v1"
 
-	"github.com/deckhouse/deckhouse/go_lib/hooks/order_certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
-var _ = order_certificate.RegisterOrderCertificateHook(
-	[]order_certificate.OrderCertificateRequest{
+var _ = tls_certificate.RegisterOrderCertificateHook(
+	[]tls_certificate.OrderCertificateRequest{
 		{
 			Namespace:  "d8-module-name",
 			SecretName: "module-name-tls",

@@ -9,22 +9,24 @@ properties:
     additionalProperties: false
     default: {}
     x-required-for-helm:
-    - adapterPem
-    - adapterKey
-    - adapterCA
+    - adapter
     properties:
-      adapterPem:
-        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
-        type: string
-
-      adapterCA:
-        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
-        type: string
-
-      adapterKey:
-        x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
-        type: string
-
+      adapterCert:
+        type: object
+        x-required-for-helm:
+          - ca
+          - crt
+          - key
+        properties:
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
       customMetrics:
         type: object
         default: {}

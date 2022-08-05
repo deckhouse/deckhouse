@@ -6,11 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package pricing
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/order_certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
-var _ = order_certificate.RegisterOrderCertificateHook(
-	[]order_certificate.OrderCertificateRequest{
+var _ = tls_certificate.RegisterOrderCertificateHook(
+	[]tls_certificate.OrderCertificateRequest{
 		{
 			Namespace:  "d8-flant-integration",
 			SecretName: "pricing-prometheus-api-client-tls",

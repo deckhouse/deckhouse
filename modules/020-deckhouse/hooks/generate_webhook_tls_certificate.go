@@ -17,11 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-
-	hooks "github.com/deckhouse/deckhouse/go_lib/hooks/internal_tls"
+	hooks "github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
 const (
@@ -29,29 +25,18 @@ const (
 )
 
 var _ = hooks.RegisterInternalTLSHook(hooks.GenSelfSignedTLSHookConf{
-	SANsGenerator: func(input *go_hook.HookInput) []string {
-		webhookServiceFQDN := fmt.Sprintf(
-			"%s.%s",
-			webhookServiceHost,
-			input.Values.Get("global.discovery.clusterDomain").String(),
-		)
-
-		return []string{
-			webhookServiceHost,
-			webhookServiceFQDN,
-			"validating-" + webhookServiceHost,
-			"conversion-" + webhookServiceHost,
-			"validating-" + webhookServiceFQDN,
-			"conversion-" + webhookServiceFQDN,
-		}
-	},
+	SANs: hooks.DefaultSANs([]string{
+		"webhook-handler.d8-system.svc",
+		"validating-webhook-handler.d8-system.svc",
+		"conversion-webhook-handler.d8-system.svc",
+		hooks.ClusterDomainSAN("webhook-handler.d8-system.svc"),
+		hooks.ClusterDomainSAN("validating-webhook-handler.d8-system.svc"),
+		hooks.ClusterDomainSAN("conversion-webhook-handler.d8-system.svc"),
+	}),
 
 	CN: "webhook-handler.d8-system.svc",
 
-	Namespace:     "d8-system",
-	TLSSecretName: "webhook-handler-certs",
-
-	CertValuesPath: "deckhouse.internal.webhookHandlerCert.crt",
-	CAValuesPath:   "deckhouse.internal.webhookHandlerCert.ca",
-	KeyValuesPath:  "deckhouse.internal.webhookHandlerCert.key",
+	Namespace:            "d8-system",
+	TLSSecretName:        "webhook-handler-certs",
+	FullValuesPathPrefix: "deckhouse.internal.webhookHandlerCert",
 })
