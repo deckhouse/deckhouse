@@ -216,9 +216,9 @@ func assertCaSignTLS(certFields tlsTest, dnsName string) {
 }
 
 func assertExistsTLSInValues(f *HookExecutionConfig) tlsTest {
-	ca := f.ValuesGet("moduleName.internal.moduleNameCA")
-	crt := f.ValuesGet("moduleName.internal.moduleNamePem")
-	key := f.ValuesGet("moduleName.internal.moduleNameKey")
+	ca := f.ValuesGet("moduleName.internal.moduleName.ca")
+	crt := f.ValuesGet("moduleName.internal.moduleName.crt")
+	key := f.ValuesGet("moduleName.internal.moduleName.key")
 
 	Expect(ca.Exists()).To(BeTrue())
 	Expect(crt.Exists()).To(BeTrue())
