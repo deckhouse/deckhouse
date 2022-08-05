@@ -83,7 +83,7 @@ var (
 )
 
 var _ = Describe("Modules :: common :: hooks :: internal_tls", func() {
-	f := HookExecutionConfigInit(`{"moduleName":{"internal":{}}}`, "{}")
+	f := HookExecutionConfigInit(`{"moduleName":{"internal":{"moduleName": {}}}}`, "{}")
 
 	Context("For empty cluster", func() {
 		BeforeEach(func() {

@@ -25,6 +25,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/net"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
@@ -198,9 +199,27 @@ func isOutdatedCert(certData string, desiredSANSs []string) (bool, error) {
 	if time.Until(cert.NotAfter) < certOutdateDuration {
 		return true, nil
 	}
+	var dnsNames, ipAddrs []string
+	for _, san := range desiredSANSs {
+		if net.IsIPv4String(san) {
+			ipAddrs = append(ipAddrs, san)
+		} else {
+			dnsNames = append(dnsNames, san)
+		}
+	}
 
-	if !arrayAreEqual(desiredSANSs, cert.DNSNames) {
+	if !arrayAreEqual(dnsNames, cert.DNSNames) {
 		return true, nil
+	}
+
+	if len(ipAddrs) > 0 {
+		certIPs := make([]string, 0, len(cert.IPAddresses))
+		for _, cip := range cert.IPAddresses {
+			certIPs = append(certIPs, cip.String())
+		}
+		if !arrayAreEqual(ipAddrs, certIPs) {
+			return true, nil
+		}
 	}
 
 	return false, nil
