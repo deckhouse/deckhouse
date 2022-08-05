@@ -180,6 +180,12 @@
          accurateTrackBounce:true,
          webvisor:true
     });
+
+    window.addEventListener("smallchat:ready", function() {
+      Smallchat.on("chat:opened", () => {
+        ym(78422802, 'reachGoal', 'open_online_chat');
+      })
+    })
  </script>
  <noscript><div><img src="https://mc.yandex.ru/watch/78422802" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
  <!-- /Yandex.Metrika counter -->
