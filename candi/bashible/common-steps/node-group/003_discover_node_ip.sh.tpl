@@ -39,9 +39,9 @@ internal_network_cidrs={{ .nodeGroup.static.internalNetworkCIDRs | join " " | qu
   {{- end }}
 if [[ -z "$internal_network_cidrs" ]]; then
   # if internal network cidrs is not set, and the node has one interface, use its network as internal_network_cidr
-  ip_route_get_cmd="$(ip route show scope link proto kernel | grep -vE 'cni|docker|flannel|cilium|nodelocaldns')"
-  if [[ "$(wc -l <<< "$ip_route_get_cmd")" -eq 1 ]]; then
-    internal_network_cidrs="$(awk '{print $1}' <<< "$ip_route_get_cmd")"
+  physical_iface="$(ls -l /sys/class/net/ | grep -vE "virtual|total" | awk '{print $9}')"
+  if [[ "$(wc -l <<< "${physical_iface}")" -eq 1 ]]; then
+    internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
   else
     bb-log-error "Cannot discover internal network CIDRs. Node has more than one interface, and StaticClusterConfiguration internalNetworkCIDRs is not set."
     bb-log-error "Please deploy StaticClusterConfiguration with internalNetworkCIDRs set to one of the node networks:"
