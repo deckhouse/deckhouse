@@ -76,6 +76,7 @@ steps:
 # </template: tests_template>
 {!{- end -}!}
 
+{!{/* TODO change args in tests_template and merge two templates */}!}
 {!{ define "tests_before_build_template" }!}
 # <template: tests_before_build_template>
 {!{- $ctx       := index . 0 }!}
