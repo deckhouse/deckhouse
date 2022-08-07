@@ -18,11 +18,11 @@ package rules
 
 import (
 	"fmt"
+	"github.com/google/go-containerregistry/pkg/name"
 	"os"
 	"regexp"
 	"strings"
 
-	"helm.sh/helm/v3/pkg/chart"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
-const defaultRegistry = "registry.deckhouse.io/deckhouse/fe"
+const defaultRegistry = "registry.example.com/deckhouse"
 
 func skipObjectIfNeeded(o *storage.StoreObject) bool {
 	// Dynatrace module deprecated and will be removed
@@ -90,7 +90,6 @@ type ObjectLinter struct {
 	Module         utils.Module
 	Values         string
 	EnabledModules map[string]struct{}
-	HelmTemplates  []*chart.File
 }
 
 func (l *ObjectLinter) CheckModuleEnabled(name string) bool {
@@ -173,9 +172,13 @@ func containerEnvVariablesDuplicates(object storage.StoreObject, containers []v1
 }
 
 func shouldSkipModuleContainer(module string, container string) bool {
+	// okmeter module uses images from external repo - registry.okmeter.io/agent/okagent:stub
 	if module == "okmeter" && container == "okagent" {
 		return true
 	}
+	// control-plane-manager uses `$images` as dict to render static pod manifests,
+	// so we cannot use helm lib `helm_lib_module_image` helper because `$images`
+	// is also rendered in `dhctl` tool on cluster bootstrap.
 	if module == "d8-control-plane-manager" && strings.HasPrefix(container, "image-holder") {
 		return true
 	}
@@ -183,33 +186,37 @@ func shouldSkipModuleContainer(module string, container string) bool {
 }
 
 func containerImageTagCheck(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+	// https://regex101.com/library/FKV8ot
+	r := regexp.MustCompile("^[A-Fa-f0-9]{64}$")
+
 	for _, c := range containers {
 		if shouldSkipModuleContainer(object.Unstructured.GetName(), c.Name) {
 			continue
 		}
 
-		imageParts := strings.Split(c.Image, ":")
-		if len(imageParts) != 2 {
+		t, err := name.NewTag(c.Image)
+		if err != nil {
 			return errors.NewLintRuleError(
 				"CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Can't parse an image for container",
+				"Can't parse an image for container: %v", err,
 			)
 		}
+		registry := fmt.Sprintf("%s/%s", t.RegistryStr(), t.RepositoryStr())
+		tag := t.TagStr()
 
-		if imageParts[0] != defaultRegistry {
+		if registry != defaultRegistry {
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Image name should be "+defaultRegistry,
+				"All images must be deployed from the same default registry - "+defaultRegistry,
 			)
 		}
 
-		r := regexp.MustCompile("[A-Fa-f0-9]{64}")
 		switch os.Getenv("CI") {
 		case "true":
-			matched := r.MatchString(imageParts[1])
+			matched := r.MatchString(tag)
 			if !matched {
 				return errors.NewLintRuleError("CONTAINER003",
 					object.Identity()+"; container = "+c.Name,
@@ -218,7 +225,7 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 				)
 			}
 		default:
-			if imageParts[1] != "imageHash" {
+			if tag != "imageHash" {
 				return errors.NewLintRuleError("CONTAINER004",
 					object.Identity()+"; container = "+c.Name,
 					nil,

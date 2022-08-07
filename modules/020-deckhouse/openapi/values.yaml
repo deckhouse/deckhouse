@@ -13,7 +13,7 @@ properties:
       currentReleaseImageName:
         type: string
         pattern: '^[a-zA-Z0-9\.\/@:\-_]+$'
-        x-examples: ["registry.deckhouse.io/deckhouse/fe:imageHash"]
+        x-examples: ["registry.example.com/deckhouse:imageHash"]
       webhookHandlerCert:
         type: object
         default: {}

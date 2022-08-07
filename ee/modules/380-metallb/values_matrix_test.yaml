@@ -30,7 +30,7 @@ global:
       - ["vertical-pod-autoscaler-crd", "priority-class"]
       - ["priority-class"]
   modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
+    registry: registry.example.com/deckhouse
     registryDockercfg: Y2ZnCg==
     tags:
       metallb: {}

@@ -21,7 +21,7 @@ global:
           customCertificate:
             secretName: plainstring
   modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
+    registry: registry.example.com/deckhouse
     registryDockercfg: Y2ZnCg==
     tags:
       openvpn: {}

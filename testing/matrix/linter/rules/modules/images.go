@@ -30,10 +30,6 @@ import (
 func skipModuleImageNameIfNeeded(filePath string) bool {
 	switch filePath {
 	case
-		// Following images will be removed soon
-		"/deckhouse/modules/110-istio/images/operator-v1x9x1trustca/Dockerfile",
-		"/deckhouse/modules/110-istio/images/pilot-v1x9x1trustca/Dockerfile",
-		"/deckhouse/modules/110-istio/images/proxyv2-v1x9x1trustca/Dockerfile",
 		"/deckhouse/modules/021-cni-cilium/images/cilium/Dockerfile":
 		return true
 	}

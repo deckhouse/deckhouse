@@ -7,14 +7,13 @@ docker_options: '-w /deckhouse -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
 
 {!{ define "matrix_run_args" }!}
 # <template: matrix_run_args>
-args: 'sh -c "rm -f ee/modules/030-cloud-provider-openstack/candi ee/modules/030-cloud-provider-vsphere/candi; go test -timeout=${{env.TEST_TIMEOUT}} ./testing/matrix/ -v ; ln -s /deckhouse/candi/cloud-providers/openstack/ ee/modules/030-cloud-provider-openstack/candi ; ln -s /deckhouse/candi/cloud-providers/vsphere/ ee/modules/030-cloud-provider-vsphere/candi"'
+args: 'sh -c "apk add -f make; make tests-matrix"'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
 # </template: matrix_run_args>
 {!{- end -}!}
 
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
-image: dhctl-tests
 args: 'make ci'
 docker_options: '-w /deckhouse/dhctl -v ${{env.HOME}}/go-pkg-cache:/go/pkg'
 # </template: dhctl_run_args>
