@@ -155,6 +155,7 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 		request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
 		result, lastErr = request.DoRaw(context.TODO())
 		if lastErr != nil {
+			log.DebugF("printErrorsForTask: %s\n %s", lastErr.Error(), string(result))
 			return ErrRequestFailed
 		}
 
@@ -271,6 +272,7 @@ func (d *LogPrinter) checkDeckhousePodReady() (bool, error) {
 
 	runningPod, err := d.kubeCl.CoreV1().Pods("d8-system").Get(context.TODO(), d.deckhousePod.Name, metav1.GetOptions{})
 	if err != nil {
+		log.DebugF("checkDeckhousePodReady: %s\n", err.Error())
 		return false, ErrRequestFailed
 	}
 
@@ -322,7 +324,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 			request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
 			result, err := request.DoRaw(context.TODO())
 			if err != nil {
-				log.DebugLn(err)
+				log.DebugF("Print: %s\n %s", err.Error(), string(result))
 				return false, ErrRequestFailed
 			}
 
@@ -330,7 +332,12 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 
 			time.Sleep(time.Second)
 			currentTime := metav1.NewTime(time.Now())
-			logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &currentTime}
+			logOptions = corev1.PodLogOptions{
+				Container: "deckhouse",
+				SinceTime: &currentTime,
+				// see above
+				InsecureSkipTLSVerifyBackend: true,
+			}
 		}
 	}
 }
