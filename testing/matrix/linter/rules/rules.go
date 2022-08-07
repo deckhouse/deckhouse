@@ -219,7 +219,7 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 			}
 		default:
 			if imageParts[1] != "imageHash" {
-				return errors.NewLintRuleError("CONTAINER003",
+				return errors.NewLintRuleError("CONTAINER004",
 					object.Identity()+"; container = "+c.Name,
 					nil,
 					"Image tag should be `imageHash`",
