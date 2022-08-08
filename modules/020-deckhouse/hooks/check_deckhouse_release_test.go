@@ -19,6 +19,7 @@ package hooks
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"sort"
@@ -466,29 +467,30 @@ global:
 		})
 	})
 
-	// 	Context("Generate release", func() {
-	// 		const releaseJson = `
-	// 		{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2},"beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"disruptions":{"1.36":["ingressNginx"]},"requirements":{"ingressNginx":"0.33","k8s":"1.19.0"},"version":"v1.666.0"}
-	// `
-	// 		BeforeEach(func() {
-	// 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
-	// 				LayersStub: func() ([]v1.Layer, error) {
-	// 					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": releaseJson}}}, nil
-	// 				},
-	// 				DigestStub: func() (v1.Hash, error) {
-	// 					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f63859")
-	// 				},
-	// 			}, nil)
-	// 			f.KubeStateSet("")
-	// 			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
-	// 			f.RunHook()
-	// 		})
-	// 		It("Release should be created with requirements", func() {
-	// 			Expect(f).To(ExecuteSuccessfully())
-	// 			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-666-0")
-	// 			fmt.Println("\n" + rl.ToYaml())
-	// 		})
-	// 	})
+	// for manual release generating (manual testing)
+	XContext("Generate release", func() {
+		const releaseJson = `
+			{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2},"beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"disruptions":{"1.36":["ingressNginx"]},"requirements":{"ingressNginx":"0.33","k8s":"1.19.0"},"version":"v1.666.0"}
+	`
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": releaseJson}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f63859")
+				},
+			}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with requirements", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-666-0")
+			fmt.Println("\n" + rl.ToYaml())
+		})
+	})
 
 })
 
