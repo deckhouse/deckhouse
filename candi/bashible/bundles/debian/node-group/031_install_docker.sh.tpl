@@ -39,7 +39,7 @@ post-install() {
 
 # TODO: remove after 1.35 release
 if bb-apt-package? docker.io ; then
-  bb-log-warning '"docker.io" an "containerd" packages should remove and install "docker-ce" and it's desired "containerd" version'
+  bb-log-warning '"docker.io" an "containerd" packages should remove and install "docker-ce" and it desired "containerd" version'
 
   # copy-pasted from 031_install_containerd.sh.tpl with logs adding
   bb-deckhouse-get-disruptive-update-approval
