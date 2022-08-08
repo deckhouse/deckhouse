@@ -95,7 +95,7 @@
         Probably, this is due to the maintenance of this Node.
 
   - alert: NodeSUnreclaimBytesUsageHigh
-    expr: predict_linear(node_memory_SUnreclaim_bytes[2h], 43200) > node_memory_MemTotal_bytes * 0.3
+    expr: predict_linear(node_memory_SUnreclaim_bytes[2h], 43200) > node_memory_MemTotal_bytes * 0.25
     for: 20m
     labels:
       severity_level: "4"
