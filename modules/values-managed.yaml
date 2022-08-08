@@ -1,6 +1,5 @@
 # CE Bundle "Managed"
 certManagerEnabled: true
-chronyEnabled: true
 dashboardEnabled: true
 deckhouseEnabled: true
 deckhouseWebEnabled: true
@@ -17,7 +16,6 @@ namespaceConfiguratorEnabled: true
 operatorPrometheusCrdEnabled: true
 operatorPrometheusEnabled: true
 podReloaderEnabled: true
-priorityClassEnabled: true
 prometheusCrdEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
