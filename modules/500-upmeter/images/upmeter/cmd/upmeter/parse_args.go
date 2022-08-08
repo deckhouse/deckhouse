@@ -94,13 +94,13 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Default("false").
 		BoolVar(&config.ClientConfig.TLS)
 
-	cmd.Flag("send-interval", "The interval for sending episodes to the server.").
-		Envar("UPMETER_SEND_INTERVAL").
+	cmd.Flag("export-interval", "Exporting interval when sending from WAL.").
+		Envar("UPMETER_EXPORT_INTERVAL").
 		Default("1s").
 		DurationVar(&config.Interval)
 
-	cmd.Flag("send-timeout", "Sending response timeout before retry.").
-		Envar("UPMETER_SEND_TIMEOUT").
+	cmd.Flag("export-timeout", "Exporting response timeout before retry.").
+		Envar("UPMETER_EXPORT_TIMEOUT").
 		Default("5s").
 		DurationVar(&config.ClientConfig.Timeout)
 
