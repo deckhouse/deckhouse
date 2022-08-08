@@ -84,11 +84,11 @@ tests-matrix: ## Test how helm templates are rendered with different input value
   ##~ Options: FOCUS=module-name
   # TODO: Need to find a proper way to maintain these symlinks.
 	@rm -f ee/modules/030-cloud-provider-openstack/candi ee/modules/030-cloud-provider-vsphere/candi modules/040-node-manager/images_tags.json
-	go test ./testing/matrix/ -v
+	go test ./testing/matrix/ -v; ret=$$?
 	@ln -s /deckhouse/candi/cloud-providers/openstack/ ee/modules/030-cloud-provider-openstack/candi
 	@ln -s /deckhouse/candi/cloud-providers/vsphere/ ee/modules/030-cloud-provider-vsphere/candi
 	@ln -s ../images_tags.json /deckhouse/modules/040-node-manager/images_tags.json
-
+	@exit $$ret
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
 
