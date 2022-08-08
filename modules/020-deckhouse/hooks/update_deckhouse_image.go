@@ -186,33 +186,41 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	// update windows works only for Auto deployment mode
-	if !updater.inManualMode {
-		windows, exists := input.Values.GetOk("deckhouse.update.windows")
-		if exists {
-			if updater.PredictedReleaseIsPatch() {
-				// patch release does not respect update windows
-				updater.ApplyPredictedRelease(input)
-				return nil
-			}
+	if updater.PredictedReleaseIsPatch() {
+		// patch release does not respect update windows or ManualMode
+		updater.ApplyPredictedRelease(input)
+		return nil
+	} else if !updater.inManualMode {
+		// update windows works only for Auto deployment mode
+		windows, err := getUpdateWindows(input)
+		if err != nil {
+			return fmt.Errorf("update windows configuration is not valid: %s", err)
+		}
 
-			updatePermitted, err := isUpdatePermitted([]byte(windows.Raw))
-			if err != nil {
-				return fmt.Errorf("update windows configuration is not valid: %s", err)
+		updatePermitted := isUpdatePermitted(windows)
+
+		if !updatePermitted {
+			input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
+			release := updater.PredictedRelease()
+			if release != nil {
+				updateStatus(input, release, "Release is waiting for update window", v1alpha1.PhasePending)
 			}
-			if !updatePermitted {
-				input.LogEntry.Info("Deckhouse update does not get into update windows. Skipping")
-				release := updater.PredictedRelease()
-				if release != nil {
-					updateStatus(input, release, "Release is waiting for update window", v1alpha1.PhasePending)
-				}
-				return nil
-			}
+			return nil
 		}
 	}
 
 	updater.ApplyPredictedRelease(input)
 	return nil
+}
+
+// getUpdateWindows return set update windows or default windows for EA/Stable/RockSolid channels
+func getUpdateWindows(input *go_hook.HookInput) (update.Windows, error) {
+	windowsData, exists := input.Values.GetOk("deckhouse.update.windows")
+	if !exists {
+		return nil, nil
+	}
+
+	return update.FromJSON([]byte(windowsData.Raw))
 }
 
 // used also in check_deckhouse_release.go
@@ -253,12 +261,21 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		releaseApproved = release.Approved
 	}
 
+	var cooldown *time.Time
+	if v, ok := release.Annotations["release.deckhouse.io/cooldown"]; ok {
+		cd, err := time.Parse(time.RFC3339, v)
+		if err == nil {
+			cooldown = &cd
+		}
+	}
+
 	return deckhouseRelease{
-		Name:         release.Name,
-		Version:      semver.MustParse(release.Spec.Version),
-		ApplyAfter:   release.Spec.ApplyAfter,
-		Requirements: release.Spec.Requirements,
-		Disruptions:  release.Spec.Disruptions,
+		Name:          release.Name,
+		Version:       semver.MustParse(release.Spec.Version),
+		ApplyAfter:    release.Spec.ApplyAfter,
+		CooldownUntil: cooldown,
+		Requirements:  release.Spec.Requirements,
+		Disruptions:   release.Spec.Disruptions,
 		Status: v1alpha1.DeckhouseReleaseStatus{
 			Phase:    release.Status.Phase,
 			Approved: release.Status.Approved,
@@ -304,23 +321,18 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func isUpdatePermitted(windowsData []byte) (bool, error) {
-	if len(windowsData) == 0 {
-		return true, nil
+func isUpdatePermitted(windows update.Windows) bool {
+	if len(windows) == 0 {
+		return true
 	}
 
 	now := time.Now()
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
+		now = time.Date(2021, 01, 05, 9, 30, 00, 00, time.UTC)
 	}
 
-	windows, err := update.FromJSON(windowsData)
-	if err != nil {
-		return false, err
-	}
-
-	return windows.IsAllowed(now), nil
+	return windows.IsAllowed(now)
 }
 
 // tagUpdate update by tag, in dev mode or specified image
@@ -376,7 +388,7 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	input.LogEntry.Info("New deckhouse image found. Restarting.")
+	input.LogEntry.Info("New deckhouse image found. Restarting")
 
 	input.PatchCollector.Delete("v1", "Pod", deckhousePod.Namespace, deckhousePod.Name)
 
@@ -410,9 +422,10 @@ type deckhouseRelease struct {
 	HasForceAnnotation              bool
 	HasDisruptionApprovedAnnotation bool
 
-	Requirements map[string]string
-	Disruptions  []string
-	ApplyAfter   *time.Time
+	Requirements  map[string]string
+	Disruptions   []string
+	ApplyAfter    *time.Time
+	CooldownUntil *time.Time
 
 	Status v1alpha1.DeckhouseReleaseStatus // don't set transition time here to avoid snapshot overload
 }
@@ -455,10 +468,18 @@ func (du *deckhouseUpdater) ApplyPredictedRelease(input *go_hook.HookInput) {
 		return
 	}
 
-	// check: Deckhouse pod is ready. Ignore patch releases
-	// upgrade only when current release is ready.
-	// skip it for patches.
+	// check: only for minor versions (Ignore patches)
 	if !du.PredictedReleaseIsPatch() {
+		// check: release cooldown
+		if predictedRelease.CooldownUntil != nil {
+			if du.now.Before(*predictedRelease.CooldownUntil) {
+				input.LogEntry.Infof("Release %s in cooldown", predictedRelease.Name)
+				updateStatus(input, predictedRelease, fmt.Sprintf("Release is in cooldown until: %s", predictedRelease.CooldownUntil.Format(time.RFC822)), v1alpha1.PhasePending)
+				return
+			}
+		}
+
+		// check: Deckhouse pod is ready
 		if !du.deckhousePodIsReady {
 			input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
 			updateStatus(input, predictedRelease, "Waiting for Deckhouse pod to be ready", v1alpha1.PhasePending)

@@ -105,10 +105,19 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	releaseName := strings.ReplaceAll(releaseChecker.releaseMetadata.Version, ".", "-")
 
 	// run only if it's a canary release
-	var applyAfter *time.Time
+	var applyAfter, cooldownUntil *time.Time
+	if releaseChecker.releaseMetadata.Cooldown != nil {
+		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
+	}
+
 	if releaseChecker.IsCanaryRelease() {
+		ts := time.Now()
+		// if cooldown is set, calculate canary delay from cooldown time, not current
+		if cooldownUntil != nil {
+			ts = *cooldownUntil
+		}
 		clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
-		applyAfter = releaseChecker.CalculateReleaseDelay(clusterUUID)
+		applyAfter = releaseChecker.CalculateReleaseDelay(ts.UTC(), clusterUUID)
 	}
 
 	newSemver, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
@@ -153,7 +162,15 @@ releaseLoop:
 
 			return nil
 
+		// LT
 		default:
+			// inherit cooldown from previous minor release
+			// we need this to automatically set cooldown for next patch releases
+			if cooldownUntil == nil && release.CooldownUntil != nil {
+				if release.Version.Major() == newSemver.Major() && release.Version.Minor() == newSemver.Minor() {
+					cooldownUntil = release.CooldownUntil
+				}
+			}
 			break releaseLoop
 		}
 	}
@@ -176,7 +193,8 @@ releaseLoop:
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: releaseName,
+			Name:        releaseName,
+			Annotations: make(map[string]string),
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
 			Version:       releaseChecker.releaseMetadata.Version,
@@ -190,7 +208,10 @@ releaseLoop:
 	}
 
 	if releaseChecker.releaseMetadata.Suspend {
-		release.ObjectMeta.Annotations = map[string]string{"release.deckhouse.io/suspended": "true"}
+		release.ObjectMeta.Annotations["release.deckhouse.io/suspended"] = "true"
+	}
+	if cooldownUntil != nil {
+		release.ObjectMeta.Annotations["release.deckhouse.io/cooldown"] = cooldownUntil.UTC().Format(time.RFC3339)
 	}
 
 	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())
@@ -313,7 +334,40 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releas
 		meta.Changelog = changelog
 	}
 
+	cooldown := dcr.fetchCooldown(image)
+	if cooldown != nil {
+		meta.Cooldown = cooldown
+	}
+
 	return meta, nil
+}
+
+func (dcr *DeckhouseReleaseChecker) fetchCooldown(image v1.Image) *time.Time {
+	cfg, err := image.ConfigFile()
+	if err != nil {
+		dcr.logger.Warnf("image config error: %s", err)
+		return nil
+	}
+
+	if cfg == nil {
+		return nil
+	}
+
+	if len(cfg.Config.Labels) == 0 {
+		return nil
+	}
+
+	if v, ok := cfg.Config.Labels["cooldown"]; ok {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			dcr.logger.Errorf("parse cooldown(%s) error: %s", v, err)
+			return nil
+		}
+
+		return &t
+	}
+
+	return nil
 }
 
 type releaseMetadata struct {
@@ -324,12 +378,14 @@ type releaseMetadata struct {
 	Suspend      bool                      `json:"suspend"`
 
 	Changelog map[string]interface{}
+
+	Cooldown *time.Time `json:"-"`
 }
 
 type canarySettings struct {
-	Enabled  bool     `json:"enabled"`
-	Waves    uint     `json:"waves"`
-	Interval Duration `json:"interval"` // in minutes
+	Enabled  bool              `json:"enabled"`
+	Waves    uint              `json:"waves"`
+	Interval v1alpha1.Duration `json:"interval"` // in minutes
 }
 
 func getCA(input *go_hook.HookInput) string {
@@ -386,13 +442,13 @@ func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash strin
 	return imageDigest.String(), nil
 }
 
-func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(clusterUUID string) *time.Time {
+func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts time.Time, clusterUUID string) *time.Time {
 	hash := murmur3.Sum64([]byte(clusterUUID + dcr.releaseMetadata.Version))
 	wave := hash % uint64(dcr.releaseCanarySettings().Waves)
 
 	if wave != 0 {
 		delay := time.Duration(wave) * dcr.releaseCanarySettings().Interval.Duration
-		applyAfter := time.Now().UTC().Add(delay)
+		applyAfter := ts.Add(delay)
 		return &applyAfter
 	}
 
@@ -415,36 +471,6 @@ func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Containe
 	}
 
 	return dcr, nil
-}
-
-// custom type for appropriate json marshalling / unmarshalling (like "15m")
-type Duration struct {
-	time.Duration
-}
-
-func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
-}
-
-func (d *Duration) UnmarshalJSON(b []byte) error {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	switch value := v.(type) {
-	case float64:
-		d.Duration = time.Duration(value)
-		return nil
-	case string:
-		var err error
-		d.Duration, err = time.ParseDuration(value)
-		if err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.New("invalid duration")
-	}
 }
 
 func buildSuspendAnnotation(suspend bool) map[string]interface{} {

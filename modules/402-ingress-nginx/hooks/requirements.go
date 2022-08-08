@@ -59,7 +59,7 @@ func init() {
 	disruptionCheckFunc := func() (bool, string) {
 		reason := ""
 		if hasDisruptionVersionUpdate {
-			reason = "Default IngressNginxController version 0.33 will be automatically changed to 1.1, this action will restart all controllers with non-specified version"
+			reason = "Default IngressNginxController version 0.33 will be automatically changed to 1.1. This action will restart all controllers with non-specified version"
 		}
 		return hasDisruptionVersionUpdate, reason
 	}
