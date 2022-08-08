@@ -1,0 +1,59 @@
+name: Run automatic cherry-pick on backport PRs
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+jobs:
+  backport-to-release-branch:
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'status/backport') && github.event.pull_request.milestone != null }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get backport info
+        env:
+          MILESTONE: ${{ github.event.pull_request.milestone.title }}
+          HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          echo "last_commit=${GITHUB_SHA}" >> $GITHUB_ENV
+          releaseBranch="release-$(echo ${MILESTONE} | sed -nre 's/v([0-9]+\.[0-9]+)\.[0-9]+/\1/p')"
+          echo "release_branch=${releaseBranch}" >> $GITHUB_ENV
+
+          echo "Create cherry-pick to $releaseBranch of commit: ${GITHUB_SHA}"
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Cherry-pick
+        id: cherry-pick-pr
+        uses: deckhouse/backport-action@v1.0.0
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
+          branch: ${{ env.release_branch }}
+          labels: auto,backported
+          automerge: true
+          mergeMethod: squash
+      - name: Add successful comment
+        if: steps.cherry-pick-pr.conclusion == 'success'
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          reactions: hooray
+          body: "Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful!"
+      - name: Remove backport label
+        if: steps.cherry-pick-pr.conclusion == 'success'
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          labels: "status/backport"
+      - name: Add error comment
+        if: ${{ failure() && steps.cherry-pick-pr.conclusion == 'failure' }}
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          reactions: 'confused'
+          body: ${{ steps.cherry-pick-pr.outputs.error-message }}
