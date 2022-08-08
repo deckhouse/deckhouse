@@ -82,22 +82,6 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
-	Context("Default update windows", func() {
-		BeforeEach(func() {
-			f.ValuesDelete("deckhouse.update.windows")
-			f.ValuesSet("deckhouse.releaseChannel", "Stable")
-
-			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
-			f.RunHook()
-		})
-		It("Should upgrade deckhouse deployment", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
-			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.26.0"))
-		})
-	})
-
 	Context("Update out of day window", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "23:00", "days": ["Mon", "Tue"]}]`))
