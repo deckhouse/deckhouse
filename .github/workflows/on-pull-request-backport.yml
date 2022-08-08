@@ -36,7 +36,7 @@ jobs:
           automerge: true
           mergeMethod: squash
       - name: Add successful comment
-        if: steps.cherry-pick-pr.outcome == 'success'
+        if: steps.cherry-pick-pr.conclusion == 'success'
         uses: peter-evans/create-or-update-comment@v2
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
@@ -44,16 +44,16 @@ jobs:
           reactions: hooray
           body: "Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful!"
       - name: Remove backport label
-        if: steps.cherry-pick-pr.outcome == 'success'
+        if: steps.cherry-pick-pr.conclusion == 'success'
         uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           labels: "status/backport"
       - name: Add error comment
-        if: steps.cherry-pick-pr.outcome == 'failure'
+        if: ${{ failure() && steps.cherry-pick-pr.conclusion == 'failure' }}
         uses: peter-evans/create-or-update-comment@v2
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
           reactions: '-1'
-          body: "!!!Failed: Cherry pick PR [${{ steps.cherry-pick-pr.outputs.cherry-pr-number }}](${{ steps.cherry-pick-pr.outputs.cherry-pr-url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }})"
+          body: ${{ steps.cherry-pick-pr.outputs.error-message }}
