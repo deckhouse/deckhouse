@@ -163,9 +163,9 @@ func newTransport(timeout time.Duration) *http.Transport {
 			KeepAlive: timeout / 2,
 		}),
 		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          1,           // single connection to the server
-		IdleConnTimeout:       time.Minute, // two episode sending intervals which are always 30s
-		TLSHandshakeTimeout:   10 * time.Second,
+		MaxIdleConns:          1,                // we need only one connection to the server
+		IdleConnTimeout:       time.Minute,      // double scrape interval which is 30s by design
+		TLSHandshakeTimeout:   10 * time.Second, // 10s is the default value
 		ResponseHeaderTimeout: timeout,
 	}
 }
