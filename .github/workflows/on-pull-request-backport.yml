@@ -32,8 +32,8 @@ jobs:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
           branch: ${{ env.release_branch }}
-          labels: auto-backported
-          automerge: false
+          labels: auto,backported
+          automerge: true
           mergeMethod: squash
       - name: Add successful comment
         if: steps.cherry-pick-pr.outcome == 'success'
