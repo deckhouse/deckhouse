@@ -51,7 +51,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 	Context("Update out of window", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "4:00", "to": "8:00"}]`))
+			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "10:00"}]`))
 
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -100,7 +100,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 	Context("Update out of day window", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "23:00", "days": ["Mon", "Fri"]}]`))
+			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "23:00", "days": ["Mon", "Tue"]}]`))
 
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
@@ -115,7 +115,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 	Context("Update in day window", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "23:00", "days": ["Tue", "Sun"]}]`))
+			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "23:00", "days": ["Fri", "Sun"]}]`))
 
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))

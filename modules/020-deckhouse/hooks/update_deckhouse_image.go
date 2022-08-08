@@ -213,7 +213,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-// getUpdateWindows return set update windows or default windows for EA/Stable/RockSolid channels
+// getUpdateWindows return set update windows
 func getUpdateWindows(input *go_hook.HookInput) (update.Windows, error) {
 	windowsData, exists := input.Values.GetOk("deckhouse.update.windows")
 	if !exists {
@@ -329,7 +329,7 @@ func isUpdatePermitted(windows update.Windows) bool {
 	now := time.Now()
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		now = time.Date(2021, 01, 05, 9, 30, 00, 00, time.UTC)
+		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
 	}
 
 	return windows.IsAllowed(now)
