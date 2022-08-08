@@ -118,6 +118,8 @@ spec:
             value: "info"
           - name: LOG_TYPE
             value: "json"
+          - name: UPMETER_EXPORT_TIMEOUT
+            value: "15s"
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}

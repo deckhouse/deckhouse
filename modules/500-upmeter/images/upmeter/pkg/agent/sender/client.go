@@ -18,10 +18,12 @@ package sender
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 
@@ -53,12 +55,13 @@ type ClientConfig struct {
 	CAPath    string
 	TLS       bool
 	UserAgent string
+	Timeout   time.Duration
 }
 
-func NewClient(config *ClientConfig, timeout time.Duration) *Client {
+func NewClient(config *ClientConfig) *Client {
 	return &Client{
 		url:       getEndpoint(config),
-		client:    NewHttpClient(config, timeout),
+		client:    NewHttpClient(config),
 		UserAgent: config.UserAgent,
 	}
 }
@@ -89,11 +92,14 @@ func (c *Client) Send(reqBody []byte) error {
 	return nil
 }
 
-func NewHttpClient(config *ClientConfig, timeout time.Duration) *http.Client {
-	client, err := createSecureHttpClient(config.TLS, config.CAPath, timeout)
+func NewHttpClient(config *ClientConfig) *http.Client {
+	client, err := createSecureHttpClient(config.TLS, config.CAPath, config.Timeout)
 	if err != nil {
 		log.Errorf("falling back to default HTTP client: %v", err)
-		return &http.Client{Timeout: timeout}
+		return &http.Client{
+			Timeout:   config.Timeout,
+			Transport: newTransport(config.Timeout),
+		}
 	}
 	return client
 }
@@ -103,7 +109,7 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 		return nil, fmt.Errorf("TLS is off by client")
 	}
 
-	tlsTransport, err := createHttpTransport(caPath)
+	tlsTransport, err := createSecureTransport(caPath, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -123,17 +129,15 @@ func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (
 	return client, nil
 }
 
-func createHttpTransport(caPath string) (*http.Transport, error) {
+func createSecureTransport(caPath string, timeout time.Duration) (*http.Transport, error) {
+	tr := newTransport(timeout)
+
 	if caPath == "" {
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
+		// Unsecure
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		return tr, nil
 	}
 
-	// Create transport with tls and CA certificate checking
 	caCertBytes, err := ioutil.ReadFile(caPath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read CA certificate from '%s': %v", caPath, err)
@@ -142,13 +146,28 @@ func createHttpTransport(caPath string) (*http.Transport, error) {
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCertBytes)
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: caCertPool,
-		},
-	}
+	tr.TLSClientConfig = &tls.Config{RootCAs: caCertPool}
 
 	return tr, nil
+}
+
+func defaultTransportDialContext(dialer *net.Dialer) func(context.Context, string, string) (net.Conn, error) {
+	return dialer.DialContext
+}
+
+func newTransport(timeout time.Duration) *http.Transport {
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: defaultTransportDialContext(&net.Dialer{
+			Timeout:   timeout,
+			KeepAlive: timeout / 2,
+		}),
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          1,                // we need only one connection to the server
+		IdleConnTimeout:       time.Minute,      // double scrape interval which is 30s by design
+		TLSHandshakeTimeout:   10 * time.Second, // 10s is the default value
+		ResponseHeaderTimeout: timeout,
+	}
 }
 
 func getServiceAccountToken() (string, error) {

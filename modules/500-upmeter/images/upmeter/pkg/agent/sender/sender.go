@@ -29,21 +29,21 @@ import (
 )
 
 type Sender struct {
-	client  *Client
-	recv    chan []check.Episode
-	storage *ListStorage
-	period  time.Duration
+	client   *Client
+	recv     chan []check.Episode
+	storage  *ListStorage
+	interval time.Duration
 
 	stop chan struct{}
 	done chan struct{}
 }
 
-func New(client *Client, recv chan []check.Episode, storage *ListStorage, period time.Duration) *Sender {
+func New(client *Client, recv chan []check.Episode, storage *ListStorage, interval time.Duration) *Sender {
 	s := &Sender{
-		client:  client,
-		recv:    recv,
-		storage: storage,
-		period:  period,
+		client:   client,
+		recv:     recv,
+		storage:  storage,
+		interval: interval,
 
 		stop: make(chan struct{}),
 		done: make(chan struct{}),
@@ -74,7 +74,7 @@ func (s *Sender) receiveLoop() {
 }
 
 func (s *Sender) sendLoop() {
-	ticker := time.NewTicker(s.period)
+	ticker := time.NewTicker(s.interval)
 
 	for {
 		select {
@@ -92,14 +92,14 @@ func (s *Sender) sendLoop() {
 }
 
 func (s *Sender) cleanupLoop() {
-	ticker := time.NewTicker(s.period)
+	ticker := time.NewTicker(s.interval)
 
 	dayBack := -24 * time.Hour
 
 	for {
 		select {
 		case <-ticker.C:
-			deadline := time.Now().Truncate(s.period).Add(dayBack)
+			deadline := time.Now().Truncate(s.interval).Add(dayBack)
 			err := s.storage.Clean(deadline)
 			if err != nil {
 				log.Errorf("cannot clean old episodes: %v", err)
@@ -130,7 +130,7 @@ func (s *Sender) export() error {
 	slot := episodes[0].TimeSlot
 	err = s.storage.Clean(slot)
 	if err != nil {
-		return fmt.Errorf("cannot clean storage for slot=%v: %v", slot, err)
+		return fmt.Errorf("cleaning send storage, slot=%v: %v", slot, err)
 	}
 	return nil
 }
