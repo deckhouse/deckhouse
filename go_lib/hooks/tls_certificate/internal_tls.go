@@ -238,7 +238,7 @@ func isOutdatedCA(ca string) (bool, error) {
 	return false, nil
 }
 
-func generateNewTLS(input *go_hook.HookInput, cn string, sans []string) (certificate.Certificate, error) {
+func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans []string) (certificate.Certificate, error) {
 	ca, err := certificate.GenerateCA(input.LogEntry,
 		cn,
 		certificate.WithKeyAlgo("ecdsa"),
