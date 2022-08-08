@@ -34,6 +34,7 @@ jobs:
           branch: ${{ env.release_branch }}
           labels: auto-backport
           automerge: true
+          mergeMethod: squash
       - name: Add successful comment
         if: steps.cherry-pick-pr.outcome == 'success'
         uses: peter-evans/create-or-update-comment@v2
