@@ -18,11 +18,11 @@ package rules
 
 import (
 	"fmt"
-	"github.com/google/go-containerregistry/pkg/name"
 	"os"
 	"regexp"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
