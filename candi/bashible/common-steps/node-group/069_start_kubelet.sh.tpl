@@ -95,7 +95,7 @@ if bb-flag? kubelet-need-restart; then
 fi
 
 {{- if ne .runType "ImageBuilding" }}
-if ! [ systemctl is-active --quiet "kubelet.service" ] && ! [ bb-flag? reboot ]; then
+if ! systemctl is-active --quiet "kubelet.service" && ! bb-flag? reboot; then
   bb-log-warning "Kubelet service is not running. Start it..."
   if systemctl start "kubelet.service"; then
     bb-log-info "Kubelet has started."
