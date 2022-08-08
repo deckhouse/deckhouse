@@ -17,15 +17,15 @@ limitations under the License.
 package hooks
 
 import (
-	hooks "github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
-var _ = hooks.RegisterInternalTLSHook(hooks.GenSelfSignedTLSHookConf{
-	SANs: hooks.DefaultSANs(
+var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
+	SANs: tls_certificate.DefaultSANs(
 		[]string{
 			"prometheus-metrics-adapter.d8-monitoring",
 			"prometheus-metrics-adapter.d8-monitoring.svc",
-			hooks.ClusterDomainSAN("prometheus-metrics-adapter.d8-monitoring.svc"),
+			tls_certificate.ClusterDomainSAN("prometheus-metrics-adapter.d8-monitoring.svc"),
 		},
 	),
 

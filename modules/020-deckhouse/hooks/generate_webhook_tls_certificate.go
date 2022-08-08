@@ -17,21 +17,21 @@ limitations under the License.
 package hooks
 
 import (
-	hooks "github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
 const (
 	webhookServiceHost = "webhook-handler.d8-system.svc"
 )
 
-var _ = hooks.RegisterInternalTLSHook(hooks.GenSelfSignedTLSHookConf{
-	SANs: hooks.DefaultSANs([]string{
+var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
+	SANs: tls_certificate.DefaultSANs([]string{
 		"webhook-handler.d8-system.svc",
 		"validating-webhook-handler.d8-system.svc",
 		"conversion-webhook-handler.d8-system.svc",
-		hooks.ClusterDomainSAN("webhook-handler.d8-system.svc"),
-		hooks.ClusterDomainSAN("validating-webhook-handler.d8-system.svc"),
-		hooks.ClusterDomainSAN("conversion-webhook-handler.d8-system.svc"),
+		tls_certificate.ClusterDomainSAN("webhook-handler.d8-system.svc"),
+		tls_certificate.ClusterDomainSAN("validating-webhook-handler.d8-system.svc"),
+		tls_certificate.ClusterDomainSAN("conversion-webhook-handler.d8-system.svc"),
 	}),
 
 	CN: "webhook-handler.d8-system.svc",

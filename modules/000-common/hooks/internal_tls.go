@@ -16,10 +16,10 @@ limitations under the License.
 
 package hooks
 
-import hooks "github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
+import "github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 
-var _ = hooks.RegisterInternalTLSHook(hooks.GenSelfSignedTLSHookConf{
-	SANs: hooks.DefaultSANs([]string{
+var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
+	SANs: tls_certificate.DefaultSANs([]string{
 		"module.d8-module-name",
 		"127.0.0.1",
 	}),

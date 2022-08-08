@@ -31,7 +31,16 @@ import (
 )
 
 const (
-	certOutdateDuration = 4380 * time.Hour // 6 month
+	// ca expiration = 10 years
+	caExpiryDurationStr = "87600h"
+	// certificate expiration - 10 years
+	certExpiryDuration = 87600 * time.Hour
+	// when to recreate a certificate - 6 month (total expiration 10 years, so we will have enough time to recreate it)
+	certOutdatedDuration = 4380 * time.Hour
+
+	// certificate encryption algorithm
+	keyAlgorithm = "ecdsa"
+	keySize      = 256
 )
 
 // DefaultSANs helper to generate list of sans for certificate
@@ -156,7 +165,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 		if len(input.Snapshots["secret"]) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
-			cert, err = generateNewTLS(input, cn, sans)
+			cert, err = generateNewSelfSignedTLS(input, cn, sans)
 			if err != nil {
 				return err
 			}
@@ -169,13 +178,13 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			if err != nil {
 				return err
 			}
-			certOutdated, err := isOutdatedCert(cert.Cert, sans)
+			certOutdated, err := isIrrelevantCert(cert.Cert, sans)
 			if err != nil {
 				return err
 			}
 
 			if caOutdated || certOutdated {
-				cert, err = generateNewTLS(input, cn, sans)
+				cert, err = generateNewSelfSignedTLS(input, cn, sans)
 				if err != nil {
 					return err
 				}
@@ -190,13 +199,14 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 	}
 }
 
-func isOutdatedCert(certData string, desiredSANSs []string) (bool, error) {
+// check certificate duration and SANs list
+func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 	cert, err := certificate.ParseCertificate(certData)
 	if err != nil {
 		return false, err
 	}
 
-	if time.Until(cert.NotAfter) < certOutdateDuration {
+	if time.Until(cert.NotAfter) < certOutdatedDuration {
 		return true, nil
 	}
 	var dnsNames, ipAddrs []string
@@ -231,7 +241,7 @@ func isOutdatedCA(ca string) (bool, error) {
 		return false, err
 	}
 
-	if time.Until(cert.NotAfter) < certOutdateDuration {
+	if time.Until(cert.NotAfter) < certOutdatedDuration {
 		return true, nil
 	}
 
@@ -241,9 +251,9 @@ func isOutdatedCA(ca string) (bool, error) {
 func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans []string) (certificate.Certificate, error) {
 	ca, err := certificate.GenerateCA(input.LogEntry,
 		cn,
-		certificate.WithKeyAlgo("ecdsa"),
-		certificate.WithKeySize(256),
-		certificate.WithCAExpiry("87600h"))
+		certificate.WithKeyAlgo(keyAlgorithm),
+		certificate.WithKeySize(keySize),
+		certificate.WithCAExpiry(caExpiryDurationStr))
 	if err != nil {
 		return certificate.Certificate{}, err
 	}
@@ -252,9 +262,9 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans []string
 		cn,
 		ca,
 		certificate.WithSANs(sans...),
-		certificate.WithKeyAlgo("ecdsa"),
-		certificate.WithKeySize(256),
-		certificate.WithSigningDefaultExpiry(87600*time.Hour),
+		certificate.WithKeyAlgo(keyAlgorithm),
+		certificate.WithKeySize(keySize),
+		certificate.WithSigningDefaultExpiry(certExpiryDuration),
 		certificate.WithSigningDefaultUsage([]string{
 			"signing",
 			"key encipherment",
