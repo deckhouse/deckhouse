@@ -5,6 +5,7 @@
 
  - **All Deckhouse components will be restarted** including control-plane, ingress-nginx.
  - After upgrading Deckhouse all nodes with Docker 18.* will request `disruptive update`. You will receive `NodeRequiresDisruptionApprovalForUpdate` if you have manual `approvalMode` in NodeGroup.
+ - After upgrading Deckhouse, all nodes with the installed `docker.io` package will request `disruptive update`. You will receive `NodeRequiresDisruptionApprovalForUpdate` if you have manual `approvalMode` in the NodeGroup.
  - Modified existing alerts:
     * Removed predefined groups in Polk.
     * Added group auto-creation in Polk.
@@ -17,6 +18,8 @@
 ## Features
 
 
+ - **[candi]** Forbid use docker.io package. [#2175](https://github.com/deckhouse/deckhouse/pull/2175)
+    After upgrading Deckhouse, all nodes with the installed `docker.io` package will request `disruptive update`. You will receive `NodeRequiresDisruptionApprovalForUpdate` if you have manual `approvalMode` in the NodeGroup.
  - **[candi]** Forbid using Docker 18.* [#2134](https://github.com/deckhouse/deckhouse/pull/2134)
     After upgrading Deckhouse all nodes with Docker 18.* will request `disruptive update`. You will receive `NodeRequiresDisruptionApprovalForUpdate` if you have manual `approvalMode` in NodeGroup.
  - **[candi]** New Kuberenetes patch versions. [#1724](https://github.com/deckhouse/deckhouse/pull/1724)
@@ -67,6 +70,7 @@
 ## Fixes
 
 
+ - **[candi]** Fix bash for start kubelet step. [#2174](https://github.com/deckhouse/deckhouse/pull/2174)
  - **[candi]** Use Debian buster containerd package by default. [#2135](https://github.com/deckhouse/deckhouse/pull/2135)
  - **[candi]** Start kubelet manually if it is not running. [#2132](https://github.com/deckhouse/deckhouse/pull/2132)
  - **[candi]** Fix docker config creation. [#2044](https://github.com/deckhouse/deckhouse/pull/2044)
