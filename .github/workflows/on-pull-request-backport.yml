@@ -8,9 +8,12 @@ on:
   pull_request:
     types:
       - closed
+      - labeled
     branches:
       - main
 jobs:
+  backport-label-with-milestone:
+    if:
   backport-to-release-branch:
     if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'status/backport') && github.event.pull_request.milestone != null }}
     runs-on: ubuntu-latest
