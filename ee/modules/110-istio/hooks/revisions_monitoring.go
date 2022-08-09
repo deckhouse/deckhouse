@@ -169,6 +169,15 @@ func revisionsMonitoring(input *go_hook.HookInput, dc dependency.Container) erro
 			}
 		}
 
+		// TODO: get rid of everything but this only metric https://github.com/deckhouse/deckhouse/issues/2182
+		labels := map[string]string{
+			"namespace":        istioPod.GetNamespace(),
+			"dataplane_pod":    istioPod.GetName(),
+			"desired_revision": desiredRevision,
+			"revision":         istioPod.getIstioRevision(),
+		}
+		input.MetricsCollector.Set("d8_istio_pod_revision", 1, labels, metrics.WithGroup(revisionsMonitoringMetricsGroup))
+
 		if !internal.Contains(revisionsToInstall, desiredRevision) {
 			// ALARM! Desired revision isn't configured to install
 			labels := map[string]string{

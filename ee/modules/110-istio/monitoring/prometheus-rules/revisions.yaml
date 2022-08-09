@@ -69,8 +69,36 @@
         ### pod-wide configuration
         kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
         ```
-  - alert: D8IstioDataPlanePatchVersionMismatch
-    expr: max by (namespace, revision, actual_sidecar_image_tag) (d8_istio_data_plane_patch_version_mismatch == 1)
+  - alert: D8IstioDataPlaneVersionMismatch
+    expr: |
+      ( # join d8_istio_pod_revision and istio_build metrics to get every Pod's istio version
+        max by (namespace, pod, revision, tag)
+        (
+          label_replace(
+            d8_istio_pod_revision, "pod", "$1", "dataplane_pod", "(.+)"
+          )
+          + on (pod) group_left (tag) istio_build{component="proxy"}
+        )
+      )
+      # enrich the metric above with control-plane istio version (will come in handy for the alert description)
+      + on (revision) group_left (istiod_tag)
+      (
+        max by (istiod_tag, revision)
+        ( # get istiod revision from Pod's label `istio.io/rev`
+          label_replace(
+            istio_build{component="pilot"}, "istiod_tag", "$1", "tag", "(.+)"
+          )
+          + on (pod) group_left(revision)
+          (
+            label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
+          )
+        )
+      )
+      # exclude Pod's with an actual istio version, so only the inappropriate ones left
+      unless on (tag)
+      (
+        istio_build{component="pilot"}
+      )
     for: 5m
     labels:
       severity_level: "8"
@@ -80,10 +108,10 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      summary: There are Pods with data-plane patch versions different from control-plane one.
+      summary: There are Pods with data-plane version different from control-plane one.
       description: |
-        There are Pods in `{{$labels.namespace}}` Namespace with data-plane patch versions different from control-plane one. Consider restarting the Pods to actualize it.
-        Getting affected Pods:
+        There are Pods in `{{$labels.namespace}}` namespace with istio revision `{{$labels.revision}}` and data-plane version `{{$labels.tag}}` which differ from control-plane one `{{$labels.istiod_tag}}`.
+        Consider restarting affected Pods, use PromQL query to get the list:
         ```
-        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg tag "{{$labels.actual_sidecar_image_tag}}" '.items[] | select(.spec.containers[] | select(.image | endswith(":" + $tag))) | .metadata.name'
+        max by (namespace, pod) (istio_build{component="proxy", tag="{{$labels.tag}}"})
         ```
