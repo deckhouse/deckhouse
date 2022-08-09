@@ -176,7 +176,7 @@ spec:
                 platformID:
                   description: |
                     Paltform ID. [List of available platforms...](https://cloud.yandex.com/en-ru/docs/compute/concepts/vm-platforms)
-                  x-doc-default: standard-v2
+                  x-doc-default: standard-v3
                   type: string
                 preemptible:
                   description: |
