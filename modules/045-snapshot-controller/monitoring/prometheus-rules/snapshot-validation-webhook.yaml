@@ -2,7 +2,7 @@
   rules:
     - alert: D8SnapshotValidationWebhookPodIsNotReady
       expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-snapshot-controller", pod=~"snapshot-validation-webhook-.*"}) != 1
-      for: 30m
+      for: 10m
       labels:
         severity_level: "8"
         tier: cluster
@@ -20,7 +20,7 @@
 
     - alert: D8SnapshotValidationWebhookPodIsNotRunning
       expr: absent(kube_pod_status_phase{namespace="d8-snapshot-controller",phase="Running",pod=~"snapshot-validation-webhook-.*"})
-      for: 30m
+      for: 2m
       labels:
         severity_level: "8"
         tier: cluster

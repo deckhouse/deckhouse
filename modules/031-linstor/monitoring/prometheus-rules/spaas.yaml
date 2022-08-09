@@ -2,7 +2,7 @@
   rules:
     - alert: D8DrbdSpaasPodIsNotReady
       expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-linstor", pod=~"spaas-.*"}) != 1
-      for: 30m
+      for: 10m
       labels:
         severity_level: "6"
         tier: cluster
@@ -20,7 +20,7 @@
 
     - alert: D8DrbdSpaasPodIsNotRunning
       expr: absent(kube_pod_status_phase{namespace="d8-linstor",phase="Running",pod=~"spaas-.*"})
-      for: 30m
+      for: 2m
       labels:
         severity_level: "6"
         tier: cluster
