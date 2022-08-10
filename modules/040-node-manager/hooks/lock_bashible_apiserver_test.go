@@ -71,7 +71,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 				f.BindingContexts.Set(f.KubeStateSet(outdatedDeploymentYYY + bashibleSecretLocked))
 				f.RunGoHook()
 			})
-			It("Should remove annotation", func() {
+			It("Should keep annotation", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				serv := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-apiserver-context")
 				Expect(serv.Field(`metadata.annotations.node\.deckhouse\.io\/bashible-locked`).String()).To(Equal("true"))
