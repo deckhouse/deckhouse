@@ -15,7 +15,6 @@ env:
 
 jobs:
   backport-label-with-milestone:
-    id: labeled-pr-info
     concurrent: get_source
     if: ${{ github.event.pull_request.action == "labeled" && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'status/backport') && github.event.pull_request.milestone != null }}
     runs-on: ubuntu-latest
@@ -33,7 +32,7 @@ jobs:
 
   another-job:
     runs-on: ubuntu-latest
-    needs: [labeled-pr-info]
+    needs: [backport-label-with-milestone]
     steps:
       - name: FOO
         run: |
