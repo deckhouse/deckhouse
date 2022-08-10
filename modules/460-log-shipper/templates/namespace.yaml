@@ -3,4 +3,4 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "istio.deckhouse.io/discovery" "disabled")) | nindent 2 }}

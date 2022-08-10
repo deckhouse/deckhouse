@@ -63,6 +63,7 @@ spec:
     discoverySelectors:
     - matchExpressions:
       - {key: "istio.deckhouse.io/discovery", operator: NotIn, values: [disabled]}
+      - {key: "heritage", operator: NotIn, values: [upmeter]}
     outboundTrafficPolicy:
   {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
       mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
