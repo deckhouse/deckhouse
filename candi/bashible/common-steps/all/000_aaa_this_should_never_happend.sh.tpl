@@ -1,1 +1,1 @@
-echo "AAA this should never happened"
+echo "BBB and how about this?"
