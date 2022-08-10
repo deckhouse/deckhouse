@@ -23,6 +23,7 @@ fi
 
 # This folder doesn't have time to create before we stop freshly, unconfigured kubelet during bootstrap (step 034_install_kubelet_and_his_friends.sh).
 mkdir -p /var/lib/kubelet
+echo "a"
 
 # Check CRI type and set appropriated parameters.
 # cgroup default is `systemd`, only for docker cri we use `cgroupfs`.
