@@ -1,1 +1,1 @@
-echo "BBB and how about this?"
+echo "CCC and one more time"
