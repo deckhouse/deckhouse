@@ -34,7 +34,11 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
   revisionHistoryLimit: 2
   replicas: 3
   selector:
@@ -80,11 +84,12 @@ spec:
         ports:
           - name: https
             containerPort: 10423
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: https
-            scheme: HTTPS
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sleep
+              - "115"
         readinessProbe:
           httpGet:
             path: /healthz
@@ -93,6 +98,7 @@ spec:
         resources:
           requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+      terminationGracePeriodSeconds: 120
       volumes:
         - name: certs
           secret:
