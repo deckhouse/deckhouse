@@ -60,6 +60,9 @@ spec:
   meshConfig:
     rootNamespace: d8-{{ $.Chart.Name }}
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+    discoverySelectors:
+    - matchExpressions:
+      - {key: "istio.deckhouse.io/discovery", operator: NotIn, values: [disabled]}
     outboundTrafficPolicy:
   {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
       mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}

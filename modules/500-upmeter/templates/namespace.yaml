@@ -1,6 +1,10 @@
+{{- $additional_labels := dict }}
+{{- if (.Values.global.enabledModules | has "istio") }}
+  {{- $additional_labels = (dict "istio.deckhouse.io/discovery" "disabled") }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . $additional_labels) | nindent 2 }}
