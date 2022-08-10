@@ -15,7 +15,7 @@ env:
 
 jobs:
   backport-label-with-milestone:
-    concurrent: get_source
+    concurrency: get_source
     if: ${{ github.event.pull_request.action == "labeled" && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'status/backport') && github.event.pull_request.milestone != null }}
     runs-on: ubuntu-latest
     steps:
