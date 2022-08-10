@@ -28,7 +28,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 
 	Context("Tags are up to date", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(depl + xxxPod1 + xxxPod2 + bashibleSecret)
+			f.KubeStateSet(actualDeployment + bashibleSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunGoHook()
 		})
@@ -42,7 +42,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 	Context("Tags are different", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.modulesImages.tags.nodeManager.bashibleApiserver", "yyy")
-			f.KubeStateSet(depl + xxxPod1 + xxxPod2 + bashibleSecret)
+			f.KubeStateSet(actualDeployment + bashibleSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunGoHook()
 		})
@@ -55,7 +55,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 		Context("Deployment was updated", func() {
 			BeforeEach(func() {
 				f.ValuesSet("global.modulesImages.tags.nodeManager.bashibleApiserver", "yyy")
-				f.BindingContexts.Set(f.KubeStateSet(deplYYY + yyyPod1 + bashibleSecretLocked))
+				f.BindingContexts.Set(f.KubeStateSet(actualDeploymentYYY + bashibleSecretLocked))
 				f.RunGoHook()
 			})
 			It("Should remove annotation", func() {
@@ -68,7 +68,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 		Context("Deployment was updated but old pod exists", func() {
 			BeforeEach(func() {
 				f.ValuesSet("global.modulesImages.tags.nodeManager.bashibleApiserver", "yyy")
-				f.BindingContexts.Set(f.KubeStateSet(deplYYY + xxxPod1 + yyyPod1 + bashibleSecretLocked))
+				f.BindingContexts.Set(f.KubeStateSet(outdatedDeploymentYYY + bashibleSecretLocked))
 				f.RunGoHook()
 			})
 			It("Should remove annotation", func() {
@@ -82,7 +82,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: Lock Basible Apiserver on 
 })
 
 const (
-	depl = `
+	actualDeployment = `
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -102,8 +102,12 @@ spec:
       containers:
       - name: bashible-apiserver
         image: dev-registry.deckhouse.io/sys/deckhouse-oss:xxx
+status:
+  replicas: 2
+  updatedReplicas: 2
 `
-	deplYYY = `
+
+	actualDeploymentYYY = `
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -123,62 +127,34 @@ spec:
       containers:
       - name: bashible-apiserver
         image: dev-registry.deckhouse.io/sys/deckhouse-oss:yyy
+status:
+  replicas: 2
+  updatedReplicas: 2
 `
 
-	xxxPod1 = `
+	outdatedDeploymentYYY = `
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  labels:
-    app: bashible-apiserver
-  name: bashible-apiserver-79b98bccc8-zxc5g
+  name: bashible-apiserver
   namespace: d8-cloud-instance-manager
 spec:
-  containers:
-  - name: bashible-apiserver
-    image: dev-registry.deckhouse.io/sys/deckhouse-oss:xxx
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bashible-apiserver
+  template:
+    metadata:
+      labels:
+        app: bashible-apiserver
+    spec:
+      containers:
+      - name: bashible-apiserver
+        image: dev-registry.deckhouse.io/sys/deckhouse-oss:yyy
 status:
-  containerStatuses:
-  - name: bashible-apiserver
-    ready: true
-`
-	xxxPod2 = `
----
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: bashible-apiserver
-  name: bashible-apiserver-79b98bccc8-jg5wn
-  namespace: d8-cloud-instance-manager
-spec:
-  containers:
-  - name: bashible-apiserver
-    image: dev-registry.deckhouse.io/sys/deckhouse-oss:xxx
-status:
-  containerStatuses:
-  - name: bashible-apiserver
-    ready: true
-`
-
-	yyyPod1 = `
----
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: bashible-apiserver
-  name: bashible-apiserver-79b98bccc8-yy5tt
-  namespace: d8-cloud-instance-manager
-spec:
-  containers:
-  - name: bashible-apiserver
-    image: dev-registry.deckhouse.io/sys/deckhouse-oss:yyy
-status:
-  containerStatuses:
-  - name: bashible-apiserver
-    ready: true
+  replicas: 2
+  updatedReplicas: 1
 `
 
 	bashibleSecret = `

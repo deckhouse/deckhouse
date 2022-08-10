@@ -25,10 +25,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 )
 
 const (
@@ -54,25 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{bashibleName},
 			},
-			FilterFunc:                   deploymentFilterFunc,
-			ExecuteHookOnEvents:          pointer.BoolPtr(false),
-			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
-		},
-		{
-			Name:       "bashible-apiserver-pods",
-			ApiVersion: "v1",
-			Kind:       "Pod",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{bashibleNamespace},
-				},
-			},
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": bashibleName,
-				},
-			},
-			FilterFunc: podFilterFunc,
+			FilterFunc: deploymentFilterFunc,
 		},
 	},
 }, lockHandler)
@@ -85,8 +64,8 @@ func lockHandler(input *go_hook.HookInput) error {
 
 	valuesTag := input.Values.Get("global.modulesImages.tags.nodeManager.bashibleApiserver").String()
 
-	deploymentTag := snap[0].(string)
-	if deploymentTag != valuesTag {
+	deployment := snap[0].(bashibleDeployment)
+	if deployment.ImageTag != valuesTag {
 		annotationsPatch := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"annotations": map[string]string{
@@ -96,28 +75,20 @@ func lockHandler(input *go_hook.HookInput) error {
 		}
 
 		input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.IgnoreMissingObject())
+		return nil
 	}
 
-	for _, sn := range input.Snapshots["bashible-apiserver-pods"] {
-		if sn == nil {
-			continue
-		}
-
-		podImageTag := sn.(string)
-		if podImageTag != valuesTag {
-			return nil
-		}
-	}
-
-	annotationsPatch := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"node.deckhouse.io/bashible-locked": nil,
+	if deployment.Replicas == deployment.UpdatedReplicas {
+		annotationsPatch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					"node.deckhouse.io/bashible-locked": nil,
+				},
 			},
-		},
-	}
+		}
 
-	input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.IgnoreMissingObject())
+		input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.IgnoreMissingObject())
+	}
 
 	return nil
 }
@@ -141,34 +112,15 @@ func deploymentFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		}
 	}
 
-	return deploymentImageTag, nil
+	return bashibleDeployment{
+		ImageTag:        deploymentImageTag,
+		Replicas:        dep.Status.Replicas,
+		UpdatedReplicas: dep.Status.UpdatedReplicas,
+	}, nil
 }
 
-func podFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var pod corev1.Pod
-
-	err := sdk.FromUnstructured(obj, &pod)
-	if err != nil {
-		return nil, err
-	}
-
-	var podImageTag string
-
-	for _, cs := range pod.Status.ContainerStatuses {
-		if cs.Name == bashibleName && !cs.Ready {
-			return nil, nil
-		}
-	}
-
-	for _, cont := range pod.Spec.Containers {
-		if cont.Name == bashibleName {
-			imageSplitIndex := strings.LastIndex(cont.Image, ":")
-			if imageSplitIndex == -1 {
-				return nil, errors.New("image tag not found")
-			}
-			podImageTag = cont.Image[imageSplitIndex+1:]
-		}
-	}
-
-	return podImageTag, nil
+type bashibleDeployment struct {
+	ImageTag        string
+	Replicas        int32
+	UpdatedReplicas int32
 }
