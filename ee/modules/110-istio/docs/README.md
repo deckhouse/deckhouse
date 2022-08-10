@@ -284,4 +284,4 @@ To create a multicluster, you need to create a set of `IstioMulticluster` resour
 ## Estimating overhead
 
 A rough estimate of overhead when using Istio is available [here](https://istio.io/latest/docs/ops/deployment/performance-and-scalability/).
-You can use the [Sidecar](istio-cr.html#sidecar) resource to limit resource consumption by limiting the field of view of a sidecar.
+You can use the [Sidecar](istio-cr.html#sidecar) resource to limit resource consumption by limiting the field of view of a sidecar. Also, there is a label to exclude Namespace from Istiod view — `istio.deckhouse.io/discovery: disabled`.
