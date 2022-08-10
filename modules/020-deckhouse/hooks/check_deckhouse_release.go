@@ -110,16 +110,6 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
 	}
 
-	if releaseChecker.IsCanaryRelease() {
-		ts := time.Now()
-		// if cooldown is set, calculate canary delay from cooldown time, not current
-		if cooldownUntil != nil {
-			ts = *cooldownUntil
-		}
-		clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
-		applyAfter = releaseChecker.CalculateReleaseDelay(ts.UTC(), clusterUUID)
-	}
-
 	newSemver, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
@@ -138,12 +128,14 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 releaseLoop:
 	for _, release := range releases {
 		switch {
+		// GT
 		case release.Version.GreaterThan(newSemver):
 			// cleanup versions which are older then current version in a specified channel and are in a Pending state
 			if release.Status.Phase == v1alpha1.PhasePending {
 				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.InBackground())
 			}
 
+			// EQ
 		case release.Version.Equal(newSemver):
 			input.LogEntry.Debugf("Release with version %s already exists", release.Version)
 			switch release.Status.Phase {
@@ -173,6 +165,16 @@ releaseLoop:
 			}
 			break releaseLoop
 		}
+	}
+
+	if releaseChecker.IsCanaryRelease() {
+		ts := time.Now()
+		// if cooldown is set, calculate canary delay from cooldown time, not current
+		if cooldownUntil != nil && cooldownUntil.After(ts) {
+			ts = *cooldownUntil
+		}
+		clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
+		applyAfter = releaseChecker.CalculateReleaseDelay(ts.UTC(), clusterUUID)
 	}
 
 	var disruptions []string
