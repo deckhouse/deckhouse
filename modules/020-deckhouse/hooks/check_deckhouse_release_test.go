@@ -307,7 +307,7 @@ status:
 				ConfigFileStub: func() (*v1.ConfigFile, error) {
 					return &v1.ConfigFile{
 						Config: v1.Config{
-							Labels: map[string]string{"cooldown": "2026-06-06T16:16:16Z"},
+							Labels: map[string]string{"cooldown": "2026-06-06 16:16:16"},
 						},
 					}, nil
 				},

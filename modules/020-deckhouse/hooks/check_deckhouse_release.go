@@ -360,7 +360,7 @@ func (dcr *DeckhouseReleaseChecker) fetchCooldown(image v1.Image) *time.Time {
 	}
 
 	if v, ok := cfg.Config.Labels["cooldown"]; ok {
-		t, err := time.Parse(time.RFC3339, v)
+		t, err := parseTime(v)
 		if err != nil {
 			dcr.logger.Errorf("parse cooldown(%s) error: %s", v, err)
 			return nil
@@ -370,6 +370,20 @@ func (dcr *DeckhouseReleaseChecker) fetchCooldown(image v1.Image) *time.Time {
 	}
 
 	return nil
+}
+
+func parseTime(s string) (time.Time, error) {
+	t, err := time.Parse("2006-01-02 15:04", s)
+	if err == nil {
+		return t, nil
+	}
+
+	t, err = time.Parse("2006-01-02 15:04:05", s)
+	if err == nil {
+		return t, nil
+	}
+
+	return time.Parse(time.RFC3339, s)
 }
 
 type releaseMetadata struct {
