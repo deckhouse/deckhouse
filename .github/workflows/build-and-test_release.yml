@@ -1462,14 +1462,14 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.17.3-buster@sha256:be7aa81b44dc85ddf4008bc5f3d5a5acfca8517620d0c4a393601c8e0495fb05"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "apk add -f make; make tests-matrix"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "CGO_ENABLED=0" -v ${{env.HOME}}/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-matrix
     # </template: tests_before_build_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
