@@ -19,6 +19,7 @@ package hooks
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -87,6 +88,8 @@ func lockHandler(input *go_hook.HookInput) error {
 			},
 		}
 
+		input.LogEntry.Errorf("Sleep started")
+		time.Sleep(120 * time.Second)
 		input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.IgnoreMissingObject())
 	}
 
