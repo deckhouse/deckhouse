@@ -16,7 +16,7 @@ env:
 jobs:
   backport-label-with-milestone:
     concurrency: get_source
-    if: ${{ github.event.pull_request.action == 'labeled' && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'status/backport') && github.event.pull_request.milestone != null }}
+    if: ${{ github.event.pull_request.action == 'labeled' }}
     runs-on: ubuntu-latest
     steps:
       - name: Get PR info
@@ -24,7 +24,13 @@ jobs:
           MILESTONE: ${{ github.event.pull_request.milestone.title }}
           HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          AAA: ${{github.event.pull_request.merged == true}}
+          BBB: ${{contains(github.event.pull_request.labels.*.name, 'status/backport')}}
+          CCC: ${{github.event.pull_request.milestone != null}}
         run: |
+          echo "AAA $AAA"
+          echo "BBB $BBB"
+          echo "CCC $CCC"
           echo "LAST_COMMIT_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
           releaseBranch="release-$(echo ${MILESTONE} | sed -nre 's/v([0-9]+\.[0-9]+)\.[0-9]+/\1/p')"
           echo "RELEASE_BRANCH=${releaseBranch}" >> $GITHUB_ENV
