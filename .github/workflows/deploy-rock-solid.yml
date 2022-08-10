@@ -20,7 +20,7 @@ on:
         description: 'Comma separated editions to deploy. Example: ee,fe,ce'
         required: false
       cooldown:
-        description: 'Postpone release until specified datetime (YYYY-MM-DD HH:MM) UTС only. Example: 2026-06-06 16:16'
+        description: 'Postpone release until specified datetime (YYYY-MM-DD HH:MM) UTC only. Example: 2026-06-06 16:16'
         required: false
 
 env:
