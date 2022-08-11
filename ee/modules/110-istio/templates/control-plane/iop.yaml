@@ -62,8 +62,10 @@ spec:
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
     discoverySelectors:
     - matchExpressions:
-      - {key: "istio.deckhouse.io/discovery", operator: NotIn, values: [disabled]}
-      - {key: "heritage", operator: NotIn, values: [upmeter]}
+      - {key: "heritage", operator: In, values: [deckhouse]}
+      - {key: "module",   operator: In, values: [istio,ingress-nginx,user-authn]}
+    - matchExpressions:
+      - {key: "heritage", operator: NotIn, values: [deckhouse,upmeter]}
     outboundTrafficPolicy:
   {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
       mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
