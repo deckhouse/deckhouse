@@ -1,0 +1,5 @@
+node-manager:
+  fixes:
+    - summary: Remove bashible-apiserver deployment to avoid race condition
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2199
+
