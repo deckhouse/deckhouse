@@ -102,6 +102,9 @@
  - **[node-local-dns]** node-local-dns now works properly with cni-cilium. [#2037](https://github.com/deckhouse/deckhouse/pull/2037)
     node-local-dns Pods should restart.
  - **[node-local-dns]** Updated CoreDNS to v1.9.3. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
+ - **[node-manager]** Remove bashible-apiserver deployment to avoid race condition [#2191](https://github.com/deckhouse/deckhouse/pull/2191)
+ - **[node-manager]** Remove race condition while updating `bashible-apiserver`. [#2185](https://github.com/deckhouse/deckhouse/pull/2185)
+    `bashible-apiserver` will restart.
  - **[node-manager]** Fix unbound variable bootstrap_job_log_pid when bootstrap static-node [#1917](https://github.com/deckhouse/deckhouse/pull/1917)
  - **[node-manager]** Increased the `cluster-autoscaler` node cooldown after scaling-up to prevent flapping (10m instead of 2m) [#1746](https://github.com/deckhouse/deckhouse/pull/1746)
  - **[operator-prometheus]** Adjust scrape timeout using helm helper. [#2083](https://github.com/deckhouse/deckhouse/pull/2083)
