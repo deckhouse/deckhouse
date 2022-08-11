@@ -129,28 +129,28 @@
       "type": "filter"
     },
     "d8_tf_test-source_08_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {\n    data, err = to_string(.parsed_data.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else {\n    includes([111], .parsed_data.test);\n}",
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "d8_tf_test-source_07_log_filter"
       ],
       "type": "filter"
     },
     "d8_tf_test-source_09_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {\n    data, err = to_string(.parsed_data.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else {\n    !includes([\"test-test\"], .parsed_data.test);\n}",
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "d8_tf_test-source_08_log_filter"
       ],
       "type": "filter"
     },
     "d8_tf_test-source_10_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n} match!(.parsed_data.test, r'^test.*$')",
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n} match!(.parsed_data.foo, r'^wvrr$')",
       "inputs": [
         "d8_tf_test-source_09_log_filter"
       ],
       "type": "filter"
     },
     "d8_tf_test-source_11_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^test.+$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
       "inputs": [
         "d8_tf_test-source_10_log_filter"
       ],

@@ -72,7 +72,7 @@ func (c *Composer) Do() ([]byte, error) {
 			SourceType:    s.Spec.Type,
 			MultilineType: s.Spec.MultiLineParser.Type,
 			LabelFilter:   s.Spec.LabelFilters,
-			LogFilter:     s.Spec.LabelFilters,
+			LogFilter:     s.Spec.LogFilters,
 		})
 		if err != nil {
 			return nil, err
