@@ -27,49 +27,6 @@ spec:
   metadataEndpoint: https://istio.k8s.example.com/metadata/
 ```
 
-## Enabling load balancing for the `ratings.prod.svc.cluster.local` service
-
-Here is how you can enable smart load balancing for the `myservice` service that was previously load balanced via iptables:
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: myservice-lb
-  namespace: prod
-spec:
-  host: myservice.prod.svc.cluster.local
-  trafficPolicy:
-    loadBalancer:
-      simple: LEAST_CONN
-```
-
-## Adding additional secondary subsets with their own rules to the myservice.prod.svc service
-
-[VirtualService](istio-cr.html#virtualservice)  must be enabled to use these subsets:
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: myservice-extra-subsets
-spec:
-  host: myservice.prod.svc.cluster.local
-  trafficPolicy: # Works if only the regular Service is defined.
-    loadBalancer:
-      simple: LEAST_CONN
-  subsets: # subsets must be declared via VirtualService by specifying them in routes.
-  - name: testv1
-    labels: # The same as selector for the Service. Pods with these labels will be covered by this subset.
-      version: v1
-  - name: testv3
-    labels:
-      version: v3
-    trafficPolicy:
-      loadBalancer:
-        simple: ROUND_ROBIN
-```
-
 ## Circuit Breaker
 
 The [DestinationRule](istio-cr.html#destinationrule) custom resource is used to define the circuit breaker service.

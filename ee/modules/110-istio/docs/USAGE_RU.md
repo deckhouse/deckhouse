@@ -2,49 +2,6 @@
 title: "Модуль istio: примеры конфигурации"
 ---
 
-## Включить балансировку для сервиса `ratings.prod.svc.cluster.local`
-
-Был обыкновенный сервис `myservice`, который балансился через iptables, а мы включили умную балансировку.
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: myservice-lb
-  namespace: prod
-spec:
-  host: myservice.prod.svc.cluster.local
-  trafficPolicy:
-    loadBalancer:
-      simple: LEAST_CONN
-```
-
-## Добавить к сервису myservice.prod.svc дополнительные, вторичные subset-ы со своими правилами
-
-Эти subset-ы работают при использовании [VirtualService](istio-cr.html#virtualservice):
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: myservice-extra-subsets
-spec:
-  host: myservice.prod.svc.cluster.local
-  trafficPolicy: # Срабатывает, если определён лишь классический Service.
-    loadBalancer:
-      simple: LEAST_CONN
-  subsets: # subset-ы необходимо определить через VirtualService, где эти subset-ы указаны в маршрутах.
-  - name: testv1
-    labels: # Аналог selector у Service. Pod'ы с такими лейблами попадут под действие этого subset.
-      version: v1
-  - name: testv3
-    labels:
-      version: v3
-    trafficPolicy:
-      loadBalancer:
-        simple: ROUND_ROBIN
-```
-
 ## Circuit Breaker
 
 Для единственного сервиса потребуется единственный custom resource [DestinationRule](istio-cr.html#destinationrule).
