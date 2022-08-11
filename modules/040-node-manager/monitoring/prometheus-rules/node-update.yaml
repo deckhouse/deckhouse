@@ -185,3 +185,16 @@
       summary: The {{ $labels.node }} Node is stuck in draining.
       description: |
         There is a new update for the {{ $labels.node }} Node of the {{ $labels.node_group }}group. The Node has learned about the update, requested and received approval, started the update, ran into a step that causes possible downtime, and stuck in draining in order to get disruption approval automatically.
+
+  - alert: D8BashibleApiserverLocked
+    expr: d8_bashible_apiserver_locked == 1
+    for: 15m
+    labels:
+      tier: cluster
+      severity_level: "6"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: Bashible-apiserver is locked for too long
+      description: |
+        Check bashible-apiserver pods are up-to-date and running `kubectl -n d8-cloud-instance-manager get pods -l app=bashible-apiserver`

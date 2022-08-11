@@ -89,6 +89,8 @@ type BashibleContext struct {
 
 	nodeUsersQueue                chan usersQueueAction
 	nodeUsersConfigurationChanged chan struct{}
+
+	updateLocked bool
 }
 
 type usersQueueAction struct {
@@ -143,7 +145,7 @@ func (c *BashibleContext) subscribe(ctx context.Context, factory informers.Share
 	// Subscribe to updates
 	informer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: secretMapFilter(secretName),
-		Handler:    &secretEventHandler{ch},
+		Handler:    &secretEventHandler{ch, c},
 	})
 
 	// Wait for the first sync of the informer cache, should not take long
@@ -336,6 +338,11 @@ func (c *BashibleContext) update(src string) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
+	if c.updateLocked {
+		klog.Infof("Context update is locked", src)
+		return
+	}
+
 	if !c.contextSynced || !c.registrySynced {
 		return
 	}
@@ -425,17 +432,41 @@ func secretMapFilter(name string) func(obj interface{}) bool {
 }
 
 type secretEventHandler struct {
-	out chan map[string][]byte
+	out             chan map[string][]byte
+	bashibleContext *BashibleContext
 }
 
 func (x *secretEventHandler) OnAdd(obj interface{}) {
 	secret := obj.(*corev1.Secret)
+
+	if x.lockApplied(secret) {
+		return
+	}
+
 	x.out <- secret.Data
 }
 
 func (x *secretEventHandler) OnUpdate(oldObj, newObj interface{}) {
 	secret := newObj.(*corev1.Secret)
+
+	if x.lockApplied(secret) {
+		return
+	}
+
 	x.out <- secret.Data
+}
+
+func (x *secretEventHandler) lockApplied(secret *corev1.Secret) bool {
+	if v, ok := secret.Annotations["node.deckhouse.io/bashible-locked"]; ok {
+		if v == "true" {
+			x.bashibleContext.updateLocked = true
+			return true
+		}
+	} else {
+		x.bashibleContext.updateLocked = false
+	}
+
+	return false
 }
 
 func (x *secretEventHandler) OnDelete(obj interface{}) {
