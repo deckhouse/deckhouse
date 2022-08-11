@@ -147,6 +147,7 @@ spec:
     pilot:
       autoscaleEnabled: false
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+      rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
       image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" ($revision | title))) }}
       configNamespace: d8-{{ $.Chart.Name }}
       resources:
