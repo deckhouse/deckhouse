@@ -79,16 +79,10 @@ deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane ## Install
 tests-modules: ## Run unit tests for modules hooks and templates.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/...
 
-.ONESHELL:
 tests-matrix: ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
-  # TODO: Need to find a proper way to maintain these symlinks.
-	@rm -f ee/modules/030-cloud-provider-openstack/candi ee/modules/030-cloud-provider-vsphere/candi modules/040-node-manager/images_tags.json
-	go test ./testing/matrix/ -v; ret=$$?
-	@ln -s /deckhouse/candi/cloud-providers/openstack/ ee/modules/030-cloud-provider-openstack/candi
-	@ln -s /deckhouse/candi/cloud-providers/vsphere/ ee/modules/030-cloud-provider-vsphere/candi
-	@ln -s ../images_tags.json /deckhouse/modules/040-node-manager/images_tags.json
-	@exit $$ret
+	go test ./testing/matrix/ -v
+
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
 
