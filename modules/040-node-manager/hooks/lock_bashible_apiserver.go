@@ -57,7 +57,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, lockHandler)
 
 func lockHandler(input *go_hook.HookInput) error {
-
 	snap := input.Snapshots["bashible-apiserver-deployment"]
 	if len(snap) == 0 {
 		return nil
