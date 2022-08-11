@@ -337,7 +337,7 @@ func (c *BashibleContext) update() {
 	defer c.rw.Unlock()
 
 	if c.updateLocked {
-		klog.Infof("Context update is locked", src)
+		klog.Infof("Context update is locked")
 		return
 	}
 
