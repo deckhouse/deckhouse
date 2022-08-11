@@ -14,7 +14,7 @@
 		"type": "filter"
 	},
 	{
-		"condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n} match!(.parsed_data.namespace, r'^d8-.*$') || match!(.parsed_data.namespace, r'^kube-.*$')",
+		"condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nmatch!(.parsed_data.namespace, r'^d8-.*$') || match!(.parsed_data.namespace, r'^kube-.*$')",
 		"inputs": [
 			"d8_tf_testit_01_log_filter"
 		],

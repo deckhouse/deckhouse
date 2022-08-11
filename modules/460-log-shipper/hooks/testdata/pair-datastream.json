@@ -82,7 +82,7 @@
       "type": "filter"
     },
     "d8_tf_test-source_04_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n} match!(.parsed_data.foo, r'^wvrr$')",
+      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nmatch!(.parsed_data.foo, r'^wvrr$')",
       "inputs": [
         "d8_tf_test-source_03_log_filter"
       ],
