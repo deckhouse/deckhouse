@@ -57,6 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, lockHandler)
 
 func lockHandler(input *go_hook.HookInput) error {
+
 	snap := input.Snapshots["bashible-apiserver-deployment"]
 	if len(snap) == 0 {
 		return nil
@@ -74,21 +75,26 @@ func lockHandler(input *go_hook.HookInput) error {
 			},
 		}
 
+		input.MetricsCollector.Set("d8_bashible_apiserver_locked", 1, nil)
 		input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.IgnoreMissingObject())
 		return nil
 	}
 
-	if deployment.Replicas == deployment.UpdatedReplicas {
-		annotationsPatch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"node.deckhouse.io/bashible-locked": nil,
-				},
-			},
-		}
-
-		input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.IgnoreMissingObject())
+	// track replicas count to avoid tracking Pod statuses
+	if deployment.DesiredReplicas != deployment.UpdatedReplicas {
+		return nil
 	}
+
+	annotationsPatch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"node.deckhouse.io/bashible-locked": nil,
+			},
+		},
+	}
+
+	input.MetricsCollector.Set("d8_bashible_apiserver_locked", 0, nil)
+	input.PatchCollector.MergePatch(annotationsPatch, "v1", "Secret", bashibleNamespace, "bashible-apiserver-context", object_patch.IgnoreMissingObject())
 
 	return nil
 }
@@ -114,13 +120,13 @@ func deploymentFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	return bashibleDeployment{
 		ImageTag:        deploymentImageTag,
-		Replicas:        dep.Status.Replicas,
+		DesiredReplicas: dep.Status.Replicas,
 		UpdatedReplicas: dep.Status.UpdatedReplicas,
 	}, nil
 }
 
 type bashibleDeployment struct {
 	ImageTag        string
-	Replicas        int32
+	DesiredReplicas int32
 	UpdatedReplicas int32
 }
