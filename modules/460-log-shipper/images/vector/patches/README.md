@@ -11,8 +11,8 @@ Now we are waiting vector to migrate to the [kube-rs](https://github.com/kube-rs
 
 https://github.com/vectordotdev/vector/issues/9550
 
-### Loki Labels
+### Remove high cardinality labels
 
-Add the ability to extract objets to Loki labels, e.g., `{"pod_labels":{"app":"server","name":"web"}}` -> `{"pod_labels_app": "server", "pod_labels_name": "web"}`. 
+Remove the `file` label to avoid metrics cardinality explosion.
 
-https://github.com/vectordotdev/vector/issues/9549
+https://github.com/vectordotdev/vector/issues/11995#issuecomment-1189387421
