@@ -23,7 +23,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/remove_bashible_apiserver",
-	OnBeforeHelm: &go_hook.OrderedConfig{
+	OnStartup: &go_hook.OrderedConfig{
 		Order: 5,
 	},
 }, removeBashibleHandler)
