@@ -1,7 +1,3 @@
-#
-# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
-#
-
 name: Run automatic cherry-pick on backport PRs
 
 on:
