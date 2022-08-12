@@ -118,7 +118,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			fmt.Printf("COUNTER: %v\n", message)
-			if s.isResourceExcluded(message.Labels) {
+			if s.isResourceExcluded(message.NamespacedIngress) {
 				continue
 			}
 
@@ -133,7 +133,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			fmt.Printf("GAUGE: %v\n", message)
-			if s.isResourceExcluded(message.Labels) {
+			if s.isResourceExcluded(message.NamespacedIngress) {
 				continue
 			}
 
@@ -148,7 +148,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			fmt.Printf("HISTO: %v\n", message)
-			if s.isResourceExcluded(message.Labels) {
+			if s.isResourceExcluded(message.NamespacedIngress) {
 				continue
 			}
 
@@ -177,40 +177,20 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 	}
 }
 
-func (s *TelemetryServer) isResourceExcluded(labels []string) bool {
-	fmt.Println("Labels", labels)
+func (s *TelemetryServer) isResourceExcluded(namespacedIngress string) bool {
+	fmt.Println("NSING", namespacedIngress)
+	pair := strings.Split(namespacedIngress, ":")
+	if len(pair) != 2 {
+		return false
+	}
+	ns := pair[0]
+
 	s.m.RLock()
 	defer s.m.RUnlock()
 
 	if len(s.excludedIngresses) == 0 && len(s.excludedNamespaces) == 0 {
 		return false
 	}
-
-	var ns, ingress string
-
-	for _, label := range labels {
-		fmt.Println("Label", label)
-		labelPair := strings.Split(label, "=")
-		if len(labelPair) != 2 {
-			continue
-		}
-
-		switch labelPair[0] {
-		case "namespace":
-			ns = labelPair[1]
-		case "ingress":
-			ingress = labelPair[1]
-		default:
-			if len(ns) > 0 && len(ingress) > 0 {
-				break
-			} else {
-				continue
-			}
-		}
-	}
-
-	// enrich with ns
-	ingress = ns + ":" + ingress
 
 	if len(s.excludedNamespaces) > 0 {
 		if _, ok := s.excludedNamespaces[ns]; ok {
@@ -219,7 +199,7 @@ func (s *TelemetryServer) isResourceExcluded(labels []string) bool {
 	}
 
 	if len(s.excludedIngresses) > 0 {
-		if _, ok := s.excludedIngresses[ingress]; ok {
+		if _, ok := s.excludedIngresses[namespacedIngress]; ok {
 			return true
 		}
 	}
