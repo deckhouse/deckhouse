@@ -152,7 +152,7 @@ spec:
     {{- end }}
     {{- if .spec.customAuthToken }}
     headers:
-      X-Auth: {{ .spec.customAuthToken }}
+      X-Auth-Token: {{ .spec.customAuthToken }}
     {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
