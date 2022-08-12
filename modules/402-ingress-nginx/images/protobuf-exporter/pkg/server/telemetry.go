@@ -117,6 +117,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.CounterMessage
 			readMessage(readerCloser, &message)
 
+			fmt.Printf("COUNTER: %v\n", message)
 			if s.isResourceExcluded(message.Labels) {
 				continue
 			}
@@ -131,6 +132,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.GaugeMessage
 			readMessage(readerCloser, &message)
 
+			fmt.Printf("GAUGE: %v\n", message)
 			if s.isResourceExcluded(message.Labels) {
 				continue
 			}
@@ -145,6 +147,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.HistogramMessage
 			readMessage(readerCloser, &message)
 
+			fmt.Printf("HISTO: %v\n", message)
 			if s.isResourceExcluded(message.Labels) {
 				continue
 			}
