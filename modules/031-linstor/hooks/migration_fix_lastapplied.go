@@ -86,7 +86,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, deleteWrongResources)
 
 func deleteWrongResources(input *go_hook.HookInput) error {
-
 LOOP:
 	for _, snapshot := range input.Snapshots["deployments"] {
 		linstorDeploymentSnapshot := snapshot.(*LinstorDeploymentsSnapshot)
@@ -98,6 +97,9 @@ LOOP:
 				input.PatchCollector.Delete("apps/v1", "Deployment", linstorNamespace, linstorDeploymentSnapshot.Name)
 				continue LOOP
 			}
+		}
+		if linstorDeploymentSnapshot.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
+			continue LOOP
 		}
 		for _, terms := range linstorDeploymentSnapshot.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
 			for _, a := range terms.MatchExpressions {

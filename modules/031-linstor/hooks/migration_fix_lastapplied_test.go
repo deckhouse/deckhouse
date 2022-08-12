@@ -40,6 +40,35 @@ var _ = Describe("Modules :: linstor :: hooks :: fix_lastapplied ::", func() {
 
 	})
 
+	Context("Linstor deployments created with empty affinity", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linstor-controller
+  namespace: d8-linstor
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity: {}
+      tolerations: []
+			`),
+				f.GenerateBeforeHelmContext(),
+			)
+			f.RunHook()
+		})
+
+		It("Must keep linstor deployment with nodeAffinity and tolerations not set for master", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("Deployment", "d8-linstor", "linstor-controller").Exists()).To(BeTrue())
+		})
+	})
+
 	Context("Linstor deployments created with affinity on master", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
