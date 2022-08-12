@@ -16,7 +16,7 @@ ARG GOPROXY
 
 ENV GOARCH=amd64
 RUN apk add --no-cache make git && \
-    git clone --branch v0.0.2 --depth 1 https://github.com/nabokihms/events_exporter.git . && \
+    git clone --branch v0.0.3 --depth 1 https://github.com/nabokihms/events_exporter.git . && \
     make build
 
 
