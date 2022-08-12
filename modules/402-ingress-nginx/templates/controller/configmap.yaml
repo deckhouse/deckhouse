@@ -236,6 +236,6 @@ metadata:
 data:
   exclude_resources.yml: |
     namespaces:
-      {{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml }}
+{{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml | indent 6 }}
     ingresses:
-      {{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml }}
+{{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml | indent 6 }}
