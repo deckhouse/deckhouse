@@ -21,12 +21,16 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/fsnotify/fsnotify"
 	pio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/common/log"
+	"gopkg.in/yaml.v3"
 
 	mproto "github.com/flant/protobuf_exporter/pkg/proto"
 	"github.com/flant/protobuf_exporter/pkg/stats"
@@ -38,15 +42,26 @@ const (
 	HistogramMarker = byte(1)
 	GaugeMarker     = byte(2)
 	CounterMarker   = byte(3)
+
+	excludeLabelsFile = "/var/files/exclude_resources.yml"
 )
 
 type TelemetryServer struct {
 	vault    *vault.MetricsVault
 	stopChan chan struct{}
+
+	m                  sync.RWMutex
+	excludedNamespaces map[string]struct{}
+	excludedIngresses  map[string]struct{}
 }
 
 func NewTelemetryServer(vault *vault.MetricsVault) *TelemetryServer {
-	return &TelemetryServer{vault: vault, stopChan: make(chan struct{})}
+	return &TelemetryServer{
+		vault:              vault,
+		excludedNamespaces: make(map[string]struct{}),
+		excludedIngresses:  make(map[string]struct{}),
+		stopChan:           make(chan struct{}),
+	}
 }
 
 func (s *TelemetryServer) Start(address string, errorCh chan error) {
@@ -55,6 +70,9 @@ func (s *TelemetryServer) Start(address string, errorCh chan error) {
 		errorCh <- fmt.Errorf("unable to create TCP listener: %v", err)
 		return
 	}
+
+	s.parseFileWithExcludes()
+	go s.runFileWatcher()
 
 	go func() {
 		<-s.stopChan
@@ -99,6 +117,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.CounterMessage
 			readMessage(readerCloser, &message)
 
+			if s.isResourceExcluded(message.Labels) {
+				continue
+			}
+
 			err := s.vault.StoreCounter(int(message.MappingIndex), message.Labels, message.Value)
 			if err != nil {
 				stats.Errors.WithLabelValues("wrong-mapping").Inc()
@@ -109,6 +131,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.GaugeMessage
 			readMessage(readerCloser, &message)
 
+			if s.isResourceExcluded(message.Labels) {
+				continue
+			}
+
 			err := s.vault.StoreGauge(int(message.MappingIndex), message.Labels, message.Value)
 			if err != nil {
 				stats.Errors.WithLabelValues("wrong-mapping").Inc()
@@ -118,6 +144,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 		case HistogramMarker:
 			var message mproto.HistogramMessage
 			readMessage(readerCloser, &message)
+
+			if s.isResourceExcluded(message.Labels) {
+				continue
+			}
 
 			buckets := make(map[float64]uint64, len(message.Buckets))
 			for key, value := range message.Buckets {
@@ -142,6 +172,121 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			return
 		}
 	}
+}
+
+func (s *TelemetryServer) isResourceExcluded(labels []string) bool {
+	fmt.Println("Labels", labels)
+	s.m.RLock()
+	defer s.m.RUnlock()
+
+	if len(s.excludedIngresses) == 0 && len(s.excludedNamespaces) == 0 {
+		return false
+	}
+
+	var ns, ingress string
+
+	for _, label := range labels {
+		fmt.Println("Label", label)
+		labelPair := strings.Split(label, "=")
+		if len(labelPair) != 2 {
+			continue
+		}
+
+		switch labelPair[0] {
+		case "namespace":
+			ns = labelPair[1]
+		case "ingress":
+			ingress = labelPair[1]
+		default:
+			if len(ns) > 0 && len(ingress) > 0 {
+				break
+			} else {
+				continue
+			}
+		}
+	}
+
+	if len(s.excludedNamespaces) > 0 {
+		if _, ok := s.excludedNamespaces[ns]; ok {
+			return true
+		}
+	}
+
+	if len(s.excludedIngresses) > 0 {
+		if _, ok := s.excludedIngresses[ingress]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *TelemetryServer) runFileWatcher() {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatalf("start file watcher failed: %s", err)
+	}
+	defer watcher.Close()
+
+	err = watcher.Add(excludeLabelsFile)
+	if err != nil {
+		log.Fatalf("add watcher for file failed: %s", err)
+	}
+
+	for {
+		select {
+		case event := <-watcher.Events:
+			if event.Op == fsnotify.Remove {
+				// k8s configmaps use symlinks,
+				// old file is deleted and a new link with the same name is created
+				_ = watcher.Remove(event.Name)
+				err = watcher.Add(event.Name)
+				if err != nil {
+					log.Fatal(err)
+				}
+				switch event.Name {
+				case excludeLabelsFile:
+					go s.parseFileWithExcludes()
+				}
+			}
+
+		case err := <-watcher.Errors:
+			log.Errorf("watch files error: %s", err)
+
+		case <-s.stopChan:
+			return
+		}
+	}
+}
+
+func (s *TelemetryServer) parseFileWithExcludes() {
+	f, err := os.Open(excludeLabelsFile) // reader
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	var exc excludes
+
+	err = yaml.NewDecoder(f).Decode(&exc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.m.Lock()
+	for _, ns := range exc.Namespaces {
+		s.excludedNamespaces[ns] = struct{}{}
+	}
+	for _, ing := range exc.Ingresses {
+		s.excludedIngresses[ing] = struct{}{}
+	}
+	fmt.Println("SET EXCLUDES", s.excludedIngresses, s.excludedNamespaces)
+	s.m.Unlock()
+}
+
+type excludes struct {
+	Namespaces []string `json:"namespaces" yaml:"namespaces"`
+	Ingresses  []string `json:"ingresses" yaml:"ingresses"`
 }
 
 func readMessage(closer pio.Reader, message proto.Message) {

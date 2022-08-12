@@ -334,6 +334,9 @@ spec:
             memory: 20Mi
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+          - mountPath: /var/files
+            name: exclude-metric-resources-file
       - name: kube-rbac-proxy
         image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
         args:
@@ -397,6 +400,9 @@ spec:
       - name: webhook-cert
         secret:
           secretName: ingress-admission-certificate
+      - name: exclude-metric-resources-file
+        configMap:
+          name: d8-ingress-excluded-metric-resources
 {{- end }}
 
 {{- $context := . }}

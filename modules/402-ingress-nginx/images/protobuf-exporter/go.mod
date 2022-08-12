@@ -3,6 +3,7 @@ module github.com/flant/protobuf_exporter
 go 1.16
 
 require (
+	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.4.0
 	github.com/prometheus/client_golang v1.6.0

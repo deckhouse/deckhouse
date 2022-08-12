@@ -288,3 +288,18 @@ properties:
             type: array
             items:
               type: string
+    excludedMetricResources:
+      type: object
+      default: {}
+      description: Exclude ingress metrics for the next resources.
+      properties:
+        namespaces:
+          type: array
+          default: []
+          items:
+            type: string
+        ingresses:
+          type: array
+          default: []
+          items:
+            type: string
