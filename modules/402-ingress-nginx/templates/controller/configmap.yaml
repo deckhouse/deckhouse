@@ -236,12 +236,14 @@ metadata:
 data:
   exclude_resources.yml: |
     {{- if len $context.Values.ingressNginx.internal.excludedMetricResources.namespaces }}
-    namespaces: {{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml }}
+    namespaces:
+      {{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml }}
     {{- else }}
     namespaces: []
     {{- end }}
     {{- if len $context.Values.ingressNginx.internal.excludedMetricResources.ingresses }}
-    ingresses: {{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml }}
+    ingresses:
+      {{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml }}
     {{- else }}
     ingresses: []
     {{- end }}
