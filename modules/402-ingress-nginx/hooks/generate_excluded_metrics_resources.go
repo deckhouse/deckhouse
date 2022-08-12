@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,9 +40,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: nameFilter,
 		},
 		{
-			Name:       "labeled_nodes",
+			Name:       "labeled_ns",
 			ApiVersion: "v1",
-			Kind:       "Node",
+			Kind:       "Namespace",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"ingress.deckhouse.io/exclude-metrics": "true",
@@ -57,12 +59,14 @@ func handleExcludes(input *go_hook.HookInput) error {
 
 	snap := input.Snapshots["labeled_ingress"]
 	for _, sn := range snap {
-		ings = append(ings, sn.(string))
+		res := sn.(excludeResource)
+		ings = append(ings, strings.Join([]string{res.Namespace, res.Name}, ":"))
 	}
 
-	snap = input.Snapshots["labeled_nodes"]
+	snap = input.Snapshots["labeled_ns"]
 	for _, sn := range snap {
-		nss = append(nss, sn.(string))
+		res := sn.(excludeResource)
+		nss = append(nss, res.Name)
 	}
 
 	input.Values.Set("ingressNginx.internal.excludedMetricResources.namespaces", nss)
@@ -72,5 +76,13 @@ func handleExcludes(input *go_hook.HookInput) error {
 }
 
 func nameFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
+	return excludeResource{
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+	}, nil
+}
+
+type excludeResource struct {
+	Name      string
+	Namespace string
 }

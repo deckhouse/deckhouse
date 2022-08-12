@@ -206,6 +206,9 @@ func (s *TelemetryServer) isResourceExcluded(labels []string) bool {
 		}
 	}
 
+	// enrich with ns
+	ingress = ns + ":" + ingress
+
 	if len(s.excludedNamespaces) > 0 {
 		if _, ok := s.excludedNamespaces[ns]; ok {
 			return true
