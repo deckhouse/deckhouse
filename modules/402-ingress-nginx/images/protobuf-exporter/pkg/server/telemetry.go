@@ -266,7 +266,8 @@ func (s *TelemetryServer) parseFileWithExcludes() {
 	for _, ing := range exc.Ingresses {
 		s.excludedIngresses[ing] = struct{}{}
 	}
-	fmt.Println("SET EXCLUDES", s.excludedIngresses, s.excludedNamespaces)
+	log.Infof("Excluded namespaces: %v", s.excludedNamespaces)
+	log.Infof("Excluded ingresses: %v", s.excludedIngresses)
 	s.m.Unlock()
 }
 
