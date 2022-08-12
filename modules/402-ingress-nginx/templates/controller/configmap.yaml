@@ -235,5 +235,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 data:
   exclude_resources.yml: |
-    namespaces: {{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml | nindent 6 }}
-    ingresses: {{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml | nindent 6 }}
+    namespaces:
+      {{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml }}
+    ingresses:
+      {{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml }}
