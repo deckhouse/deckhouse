@@ -400,7 +400,7 @@ spec:
           secretName: ingress-admission-certificate
       - name: exclude-metric-resources-file
         configMap:
-          name: d8-ingress-excluded-metric-resources
+          name: d8-ingress-metrics
 {{- end }}
 
 {{- $context := . }}

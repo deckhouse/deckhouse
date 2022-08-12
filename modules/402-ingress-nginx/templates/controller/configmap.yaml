@@ -230,7 +230,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: d8-ingress-excluded-metric-resources
+  name: d8-ingress-metrics
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 data:

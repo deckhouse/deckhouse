@@ -118,9 +118,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			if s.isResourceExcluded(message.NamespacedIngress) {
-				fmt.Println("Exclude COUNTER", message.NamespacedIngress)
+				fmt.Println("excluded", message.NamespacedIngress)
 				continue
 			}
+			fmt.Println("is ok", message.NamespacedIngress)
 
 			err := s.vault.StoreCounter(int(message.MappingIndex), message.Labels, message.Value)
 			if err != nil {
@@ -133,9 +134,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			if s.isResourceExcluded(message.NamespacedIngress) {
-				fmt.Println("Exclude GAUGE", message.NamespacedIngress)
+				fmt.Println("excluded", message.NamespacedIngress)
 				continue
 			}
+			fmt.Println("is ok", message.NamespacedIngress)
 
 			err := s.vault.StoreGauge(int(message.MappingIndex), message.Labels, message.Value)
 			if err != nil {
@@ -148,9 +150,10 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			if s.isResourceExcluded(message.NamespacedIngress) {
-				fmt.Println("Exclude HISTO", message.NamespacedIngress)
+				fmt.Println("excluded", message.NamespacedIngress)
 				continue
 			}
+			fmt.Println("is ok", message.NamespacedIngress)
 
 			buckets := make(map[float64]uint64, len(message.Buckets))
 			for key, value := range message.Buckets {
@@ -187,18 +190,14 @@ func (s *TelemetryServer) isResourceExcluded(namespacedIngress string) bool {
 	s.m.RLock()
 	defer s.m.RUnlock()
 
-	if len(s.excludedIngresses) == 0 && len(s.excludedNamespaces) == 0 {
-		return false
-	}
-
-	if len(s.excludedNamespaces) > 0 {
-		if _, ok := s.excludedNamespaces[ns]; ok {
+	if len(s.excludedIngresses) > 0 {
+		if _, ok := s.excludedIngresses[namespacedIngress]; ok {
 			return true
 		}
 	}
 
-	if len(s.excludedIngresses) > 0 {
-		if _, ok := s.excludedIngresses[namespacedIngress]; ok {
+	if len(s.excludedNamespaces) > 0 {
+		if _, ok := s.excludedNamespaces[ns]; ok {
 			return true
 		}
 	}
