@@ -22,7 +22,7 @@ bashible: &bashible
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
       containerd:
-        desiredVersion: "containerd.io=1.5.11-1"
+        desiredVersion: "containerd.io=1.6.8-1"
         allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
@@ -45,7 +45,7 @@ bashible: &bashible
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
       containerd:
-        desiredVersion: "containerd.io=1.5.11-1"
+        desiredVersion: "containerd.io=1.6.8-1"
         allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
@@ -65,10 +65,10 @@ bashible: &bashible
         desiredVersion: "docker-ce=5:20.10.14~3-0~ubuntu-jammy"
         allowedPattern: ""
         containerd:
-          desiredVersion: "containerd.io=1.5.11-1"
+          desiredVersion: "containerd.io=1.6.8-1"
           allowedPattern: "containerd.io=1.[56]"
       containerd:
-        desiredVersion: "containerd.io=1.5.11-1"
+        desiredVersion: "containerd.io=1.6.8-1"
         allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
@@ -106,7 +106,7 @@ bashible: &bashible
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
       containerd:
-        desiredVersion: "containerd.io=1.5.11-1"
+        desiredVersion: "containerd.io=1.6.8-1"
         allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
@@ -120,7 +120,7 @@ bashible: &bashible
           desiredVersion: "containerd.io=1.4.6-1"
           allowedPattern: "containerd.io=1.[234]"
       containerd:
-        desiredVersion: "containerd.io=1.5.11-1"
+        desiredVersion: "containerd.io=1.6.8-1"
         allowedPattern: "containerd.io=1.[56]"
       kernel:
         generic:
@@ -172,7 +172,7 @@ k8s:
               desiredVersion: "containerd.io=1.4.6-1"
               allowedPattern: "containerd.io=1.[234]"
           containerd:
-            desiredVersion: "containerd.io=1.5.11-1"
+            desiredVersion: "containerd.io=1.6.8-1"
             allowedPattern: "containerd.io=1.[56]"
           kernel:
             generic:
