@@ -71,18 +71,21 @@ message HistogramMessage {
     map<string, uint64> Buckets = 3;
     double Sum = 4;
     uint64 Count = 5;
+    string NamespacedIngress = 6;
 }
 
 message CounterMessage {
     int32 MappingIndex = 1;
     repeated string Labels = 2;
     uint64 Value = 3;
+    string NamespacedIngress = 4;
 }
 
 message GaugeMessage {
     int32 MappingIndex = 1;
     repeated string Labels = 2;
     double Value = 3;
+    string NamespacedIngress = 4;
 }
 ]])
 
@@ -120,19 +123,19 @@ local function _extract_labels(line)
 end
 
 -- _add() adds value to the metric
-local function _add(metrichash, mapping, value)
-  local metric_data = buffer[metrichash] or {MappingIndex = mapping, Value = 0, Labels = _extract_labels(metrichash)}
+local function _add(metrichash, namespacedIngress, mapping, value)
+  local metric_data = buffer[metrichash] or { MappingIndex = mapping, Value = 0, Labels = _extract_labels(metrichash), NamespacedIngress = namespacedIngress }
   metric_data["Value"] = metric_data["Value"] + value
   buffer[metrichash] = metric_data
 end
 
 -- _increment() adds one to the metric
-local function _increment(metrichash, mapping)
-  _add(metrichash, mapping, 1)
+local function _increment(metrichash, namespacedIngress, mapping)
+  _add(metrichash, namespacedIngress, mapping, 1)
 end
 
-local function _observe(buckets, metrichash, mapping, value)
-  local metric_data = buffer[metrichash] or {MappingIndex = mapping, Sum = 0, Count = 0, Labels = _extract_labels(metrichash)}
+local function _observe(buckets, metrichash, namespacedIngress, mapping, value)
+  local metric_data = buffer[metrichash] or { MappingIndex = mapping, Sum = 0, Count = 0, Labels = _extract_labels(metrichash), NamespacedIngress = namespacedIngress }
   metric_data["Sum"] = metric_data["Sum"] + value
   metric_data["Count"] = metric_data["Count"] + 1
 
@@ -150,30 +153,28 @@ local function _observe(buckets, metrichash, mapping, value)
   buffer[metrichash] = metric_data
 end
 
-local _TIME_BUCKETS = {0.001, 0.002, 0.003, 0.004, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 90, 120, 180, 240, 270, 300, 360, 420, 480, 540, 600, 900, 1200, 1500, 1800, 3600}
+local _TIME_BUCKETS = { 0.001, 0.002, 0.003, 0.004, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 90, 120, 180, 240, 270, 300, 360, 420, 480, 540, 600, 900, 1200, 1500, 1800, 3600 }
 
 -- _time_observe() prepares histogram metrics for time buckets
-local function _time_observe(metrichash, mapping, value)
-  _observe(_TIME_BUCKETS, metrichash, mapping, value)
+local function _time_observe(metrichash, namespacedIngress, mapping, value)
+  _observe(_TIME_BUCKETS, metrichash, namespacedIngress, mapping, value)
 end
 
-
-local _BYTES_BUCKETS = {64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296}
+local _BYTES_BUCKETS = { 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296 }
 
 -- _bytes_observe() prepares histogram metrics for bytes buckets
-local function _bytes_observe(metrichash, mapping, value)
-  _observe(_BYTES_BUCKETS, metrichash, mapping, tonumber(value))
+local function _bytes_observe(metrichash, namespacedIngress, mapping, value)
+  _observe(_BYTES_BUCKETS, metrichash, namespacedIngress, mapping, tonumber(value))
 end
 
-local _LOWRES_BUCKETS = {0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2, 3, 4, 5, 10}
+local _LOWRES_BUCKETS = { 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2, 3, 4, 5, 10 }
 
 -- _lowres_observe() prepares histogram metrics for lowres time buckets
-local function _lowres_observe(metrichash, mapping, value)
-  _observe(_LOWRES_BUCKETS, metrichash, mapping, value)
+local function _lowres_observe(metrichash, namespacedIngress, mapping, value)
+  _observe(_LOWRES_BUCKETS, metrichash, namespacedIngress, mapping, value)
 end
 
-
-local function _increment_geohash(overall_key, geoip_latitude, geoip_longitude, var_geoip_city, var_geoip_region_name, var_geoip_country_name)
+local function _increment_geohash(overall_key, geoip_latitude, geoip_longitude, var_geoip_city, var_geoip_region_name, var_geoip_country_name, namespacedIngress)
   local geoip_latitude = tonumber(geoip_latitude)
   local geoip_longitude = tonumber(geoip_longitude)
 
@@ -195,7 +196,7 @@ local function _increment_geohash(overall_key, geoip_latitude, geoip_longitude, 
     end
 
     -- geohash
-    _increment("c21#" .. overall_key .. "#" .. geohash .. "#" .. coded_place, 21)
+    _increment("c21#" .. overall_key .. "#" .. geohash .. "#" .. coded_place, namespacedIngress, 21)
   end
 end
 
@@ -212,7 +213,7 @@ local function fill_buffer()
   local var_server_name = ngx.var.server_name:gsub("^*", ""):gsub("~^%(%?<subdomain>%[\\w%-]%+%)", ""):gsub("$$", ""):gsub("\\", "")
 
   if var_server_name == "_" then
-    _increment("c22", 22)
+    _increment("c22", "", 22)
     return
   end
 
@@ -272,36 +273,36 @@ local function fill_buffer()
   local var_service_name = ngx.var.service_name == "" and "-" or ngx.var.service_name
   local var_service_port = ngx.var.service_port == "" and "-" or ngx.var.service_port
   local var_location_path = ngx.var.location_path == "" and "-" or ngx.var.location_path
-
+  local var_namespaced_ingress = var_namespace .. ":" .. var_ingress_name
 
   local overall_key = content_kind .. "#" .. var_namespace .. "#" .. var_server_name
-  local detail_key = content_kind .. "#" .. var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port .. "#"  .. var_server_name .. "#" .. var_location_path
-  local backend_key = var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port  .. "#" .. var_server_name .. "#" .. var_location_path
+  local detail_key = content_kind .. "#" .. var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port .. "#" .. var_server_name .. "#" .. var_location_path
+  local backend_key = var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port .. "#" .. var_server_name .. "#" .. var_location_path
   -- requests
   local var_scheme = ngx.var.scheme
   local var_request_method = ngx.var.request_method
-  _increment("c00#" .. overall_key .. "#" .. var_scheme .. "#" .. var_request_method, 0)
-  _increment("c01#" .. detail_key .. "#" .. var_scheme .. "#" .. var_request_method, 1)
+  _increment("c00#" .. overall_key .. "#" .. var_scheme .. "#" .. var_request_method, var_namespaced_ingress, 0)
+  _increment("c01#" .. detail_key .. "#" .. var_scheme .. "#" .. var_request_method, var_namespaced_ingress, 1)
 
   -- responses
   local var_status = ngx.var.status
-  _increment("c02#" .. overall_key .. "#" .. var_status, 2)
-  _increment("c03#" .. detail_key .. "#" .. var_status, 3)
+  _increment("c02#" .. overall_key .. "#" .. var_status, var_namespaced_ingress, 2)
+  _increment("c03#" .. detail_key .. "#" .. var_status, var_namespaced_ingress, 3)
 
   -- request time
   local var_request_time = tonumber(ngx.var.request_time)
-  _time_observe("h04#" .. overall_key, 4, var_request_time)
-  _time_observe("h05#" .. detail_key, 5, var_request_time)
+  _time_observe("h04#" .. overall_key, var_namespaced_ingress, 4, var_request_time)
+  _time_observe("h05#" .. detail_key, var_namespaced_ingress, 5, var_request_time)
 
   -- bytes sent
   local var_bytes_sent = ngx.var.bytes_sent
-  _bytes_observe("h06#" .. overall_key, 6, var_bytes_sent)
-  _bytes_observe("h07#" .. detail_key, 7, var_bytes_sent)
+  _bytes_observe("h06#" .. overall_key, var_namespaced_ingress, 6, var_bytes_sent)
+  _bytes_observe("h07#" .. detail_key, var_namespaced_ingress, 7, var_bytes_sent)
 
   -- bytes received (according to https://serverfault.com/questions/346853/logging-request-response-size-in-access-log-of-nginx)
   local var_request_length = ngx.var.request_length
-  _bytes_observe("h08#" .. overall_key, 8, var_request_length)
-  _bytes_observe("h09#" .. detail_key, 9, var_request_length)
+  _bytes_observe("h08#" .. overall_key, var_namespaced_ingress, 8, var_request_length)
+  _bytes_observe("h09#" .. detail_key, var_namespaced_ingress, 9, var_request_length)
 
   -- upstreams
   if var_upstream_addr then
@@ -322,15 +323,15 @@ local function fill_buffer()
       upstream_requests = upstream_requests + 1
 
       -- upstream response time (for each backend)
-      _lowres_observe("h18#" .. backend_key .. "#" .. backends[n], 18, response_time)
+      _lowres_observe("h18#" .. backend_key .. "#" .. backends[n], var_namespaced_ingress, 18, response_time)
     end
     ngx.var.total_upstream_response_time = upstream_response_time
 
     -- upstream response time
-    _time_observe("h10#" .. overall_key, 10, upstream_response_time)
-    _time_observe("h11#" .. detail_key, 11, upstream_response_time)
-    _lowres_observe("h12#" .. overall_key, 12, upstream_response_time)
-    _lowres_observe("h13#" .. detail_key, 13, upstream_response_time)
+    _time_observe("h10#" .. overall_key, var_namespaced_ingress, 10, upstream_response_time)
+    _time_observe("h11#" .. detail_key, var_namespaced_ingress, 11, upstream_response_time)
+    _lowres_observe("h12#" .. overall_key, var_namespaced_ingress, 12, upstream_response_time)
+    _lowres_observe("h13#" .. detail_key, var_namespaced_ingress, 13, upstream_response_time)
 
     local upstream_redirects = 0
     for _ in gmatch(var_upstream_response_time, ":") do
@@ -341,38 +342,38 @@ local function fill_buffer()
     ngx.var.upstream_retries = upstream_retries
     if upstream_retries > 0 then
       -- upstream retries (count)
-      _increment("c14#" .. overall_key, 14)
-      _increment("c15#" .. detail_key, 15)
+      _increment("c14#" .. overall_key, var_namespaced_ingress, 14)
+      _increment("c15#" .. detail_key, var_namespaced_ingress, 15)
 
       -- upstream retries (sum)
-      _add("g16#" .. overall_key, 16, upstream_retries)
-      _add("g17#" .. detail_key, 17, upstream_retries)
+      _add("g16#" .. overall_key, var_namespaced_ingress, 16, upstream_retries)
+      _add("g17#" .. detail_key, var_namespaced_ingress, 17, upstream_retries)
     end
 
     n = 0
     for status in gmatch(ngx.var.upstream_status, "[%d]+") do
       -- responses (for each backend)
       n = n + 1
-      _increment("c19#" .. backend_key .. "#" .. backends[n] .. "#" .. sub(status, 1, 1) .. "xx", 19)
+      _increment("c19#" .. backend_key .. "#" .. backends[n] .. "#" .. sub(status, 1, 1) .. "xx", var_namespaced_ingress, 19)
     end
 
     n = 0
     for upstream_bytes_received in gmatch(ngx.var.upstream_bytes_received, "[%d]+") do
       -- upstream bytes received (for each backend)
       n = n + 1
-      _add("g20#" .. backend_key .. "#" .. backends[n], 20, upstream_bytes_received)
+      _add("g20#" .. backend_key .. "#" .. backends[n], var_namespaced_ingress, 20, upstream_bytes_received)
     end
   end
 
   if use_geoip2 then
-    _increment_geohash(overall_key, ngx.var.geoip2_latitude, ngx.var.geoip2_longitude, ngx.var.geoip2_city, ngx.var.geoip2_region_name, ngx.var.geoip2_city_country_code)
+    _increment_geohash(overall_key, ngx.var.geoip2_latitude, ngx.var.geoip2_longitude, ngx.var.geoip2_city, ngx.var.geoip2_region_name, ngx.var.geoip2_city_country_code, var_namespaced_ingress)
   else
-    _increment_geohash(overall_key, ngx.var.geoip_latitude, ngx.var.geoip_longitude, ngx.var.geoip_city, ngx.var.geoip_region_name, ngx.var.geoip_city_country_code)
+    _increment_geohash(overall_key, ngx.var.geoip_latitude, ngx.var.geoip_longitude, ngx.var.geoip_city, ngx.var.geoip_region_name, ngx.var.geoip_city_country_code, var_namespaced_ingress)
   end
 
   if debug_enabled then
-      update_time()
-      log(WARNING, format("lua parse seconds: %s", tostring(now() - start_time)))
+    update_time()
+    log(WARNING, format("lua parse seconds: %s", tostring(now() - start_time)))
   end
 end
 
@@ -418,8 +419,8 @@ local function send(premature)
   sock:close()
 
   if debug_enabled then
-      update_time()
-      log(WARNING, format("lua send seconds: %s", tostring(now() - start_time)))
+    update_time()
+    log(WARNING, format("lua send seconds: %s", tostring(now() - start_time)))
   end
 end
 

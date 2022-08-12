@@ -256,7 +256,6 @@ spec:
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
     {{- end }}
   {{- end }}
-  {{- if semverCompare ">=0.26" $controllerVersion }}
         lifecycle:
   {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
           postStart:
@@ -270,7 +269,6 @@ spec:
             exec:
               command:
                 - /wait-shutdown
-  {{- end }}
   {{- end }}
         resources:
           requests:

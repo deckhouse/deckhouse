@@ -117,8 +117,8 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.CounterMessage
 			readMessage(readerCloser, &message)
 
-			fmt.Printf("COUNTER: %v\n", message)
 			if s.isResourceExcluded(message.NamespacedIngress) {
+				fmt.Println("Exclude COUNTER", message.NamespacedIngress)
 				continue
 			}
 
@@ -132,8 +132,8 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.GaugeMessage
 			readMessage(readerCloser, &message)
 
-			fmt.Printf("GAUGE: %v\n", message)
 			if s.isResourceExcluded(message.NamespacedIngress) {
+				fmt.Println("Exclude GAUGE", message.NamespacedIngress)
 				continue
 			}
 
@@ -147,8 +147,8 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.HistogramMessage
 			readMessage(readerCloser, &message)
 
-			fmt.Printf("HISTO: %v\n", message)
 			if s.isResourceExcluded(message.NamespacedIngress) {
+				fmt.Println("Exclude HISTO", message.NamespacedIngress)
 				continue
 			}
 
@@ -178,7 +178,6 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 }
 
 func (s *TelemetryServer) isResourceExcluded(namespacedIngress string) bool {
-	fmt.Println("NSING", namespacedIngress)
 	pair := strings.Split(namespacedIngress, ":")
 	if len(pair) != 2 {
 		return false
@@ -259,8 +258,8 @@ func (s *TelemetryServer) parseFileWithExcludes() {
 		log.Fatal(err)
 	}
 
-	log.Infof("Excluded namespaces: %v", exc.Namespaces)
-	log.Infof("Excluded ingresses: %v", exc.Ingresses)
+	log.Infof("Exclude metrics from namespaces: %v", exc.Namespaces)
+	log.Infof("Exclude metrics from ingresses: %v", exc.Ingresses)
 
 	s.m.Lock()
 	for _, ns := range exc.Namespaces {
