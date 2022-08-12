@@ -255,9 +255,12 @@ func (s *TelemetryServer) parseFileWithExcludes() {
 	var exc excludes
 
 	err = yaml.NewDecoder(f).Decode(&exc)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		log.Fatal(err)
 	}
+
+	log.Infof("Excluded namespaces: %v", exc.Namespaces)
+	log.Infof("Excluded ingresses: %v", exc.Ingresses)
 
 	s.m.Lock()
 	for _, ns := range exc.Namespaces {
@@ -266,8 +269,6 @@ func (s *TelemetryServer) parseFileWithExcludes() {
 	for _, ing := range exc.Ingresses {
 		s.excludedIngresses[ing] = struct{}{}
 	}
-	log.Infof("Excluded namespaces: %v", s.excludedNamespaces)
-	log.Infof("Excluded ingresses: %v", s.excludedIngresses)
 	s.m.Unlock()
 }
 
