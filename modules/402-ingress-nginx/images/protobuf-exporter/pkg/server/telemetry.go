@@ -265,11 +265,20 @@ func (s *TelemetryServer) parseFileWithExcludes() {
 	log.Infof("Exclude metrics from ingresses: %v", exc.Ingresses)
 
 	s.m.Lock()
-	for _, ns := range exc.Namespaces {
-		s.excludedNamespaces[ns] = struct{}{}
+	if len(exc.Namespaces) == 0 {
+		s.excludedNamespaces = make(map[string]struct{})
+	} else {
+		for _, ns := range exc.Namespaces {
+			s.excludedNamespaces[ns] = struct{}{}
+		}
 	}
-	for _, ing := range exc.Ingresses {
-		s.excludedIngresses[ing] = struct{}{}
+
+	if len(exc.Ingresses) == 0 {
+		s.excludedIngresses = make(map[string]struct{})
+	} else {
+		for _, ing := range exc.Ingresses {
+			s.excludedIngresses[ing] = struct{}{}
+		}
 	}
 	s.m.Unlock()
 }
