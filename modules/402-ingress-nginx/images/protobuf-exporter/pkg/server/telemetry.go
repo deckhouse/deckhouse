@@ -118,10 +118,8 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			if s.isResourceExcluded(message.NamespacedIngress) {
-				fmt.Println("excluded", message.NamespacedIngress)
 				continue
 			}
-			fmt.Println("is ok", message.NamespacedIngress)
 
 			err := s.vault.StoreCounter(int(message.MappingIndex), message.Labels, message.Value)
 			if err != nil {
@@ -134,10 +132,8 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			if s.isResourceExcluded(message.NamespacedIngress) {
-				fmt.Println("excluded", message.NamespacedIngress)
 				continue
 			}
-			fmt.Println("is ok", message.NamespacedIngress)
 
 			err := s.vault.StoreGauge(int(message.MappingIndex), message.Labels, message.Value)
 			if err != nil {
@@ -150,10 +146,8 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			readMessage(readerCloser, &message)
 
 			if s.isResourceExcluded(message.NamespacedIngress) {
-				fmt.Println("excluded", message.NamespacedIngress)
 				continue
 			}
-			fmt.Println("is ok", message.NamespacedIngress)
 
 			buckets := make(map[float64]uint64, len(message.Buckets))
 			for key, value := range message.Buckets {
@@ -190,18 +184,14 @@ func (s *TelemetryServer) isResourceExcluded(namespacedIngress string) bool {
 	s.m.RLock()
 	defer s.m.RUnlock()
 
-	fmt.Println("EX ING", s.excludedIngresses)
 	if len(s.excludedIngresses) > 0 {
 		if _, ok := s.excludedIngresses[namespacedIngress]; ok {
-			fmt.Println("IS ING", namespacedIngress)
 			return true
 		}
 	}
 
-	fmt.Println("EX NS", s.excludedNamespaces)
 	if len(s.excludedNamespaces) > 0 {
 		if _, ok := s.excludedNamespaces[ns]; ok {
-			fmt.Println("IS NS", ns)
 			return true
 		}
 	}
