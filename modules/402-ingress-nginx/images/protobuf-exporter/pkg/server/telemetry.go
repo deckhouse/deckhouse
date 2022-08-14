@@ -184,14 +184,14 @@ func (s *TelemetryServer) isResourceExcluded(namespacedIngress string) bool {
 	s.m.RLock()
 	defer s.m.RUnlock()
 
-	if len(s.excludedIngresses) > 0 {
-		if _, ok := s.excludedIngresses[namespacedIngress]; ok {
+	if len(s.excludedNamespaces) > 0 {
+		if _, ok := s.excludedNamespaces[ns]; ok {
 			return true
 		}
 	}
 
-	if len(s.excludedNamespaces) > 0 {
-		if _, ok := s.excludedNamespaces[ns]; ok {
+	if len(s.excludedIngresses) > 0 {
+		if _, ok := s.excludedIngresses[namespacedIngress]; ok {
 			return true
 		}
 	}

@@ -233,3 +233,24 @@ spec:
 ```
 
 In this case Deckhouse will not create an IngressClass object and will use your own.
+
+
+## How to turn off Ingress detailed stats collection
+
+By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster. This behavior may generate
+high load on the monitoring system. You can disable statistics collection by adding the label `ingress.deckhouse.io/exclude-metrics: "true"`.
+to the Namespace or Ingress resource.
+
+For example:
+command
+```shell
+kubectl label ns review-1 ingress.deckhouse.io/exclude-metrics=true
+```
+will exclude metrics for all ingresses in namespace `review-1`
+
+command
+```shell
+kubectl label ingress test-site -n development ingress.deckhouse.io/exclude-metrics=true
+```
+will exclude metrics for ingress `test-site` in namespace `development`
+

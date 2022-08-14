@@ -234,3 +234,22 @@ spec:
 ```
 
 В таком случае, при указании данного IngressClass в CRD IngressNginxController, Deckhouse не будет создавать объект, а использует уже существующий.
+
+
+## Как отключить сборку детализированной статистики Ingress ресурсов
+
+По-умолчанию Deckhouse собирается подробную статистику со всех Ingress ресурсов в кластере, что может генерировать
+высокую нагрузку на систему мониторинга. Вы можете отключить сбор статистики, добавив label `ingress.deckhouse.io/exclude-metrics: "true"`
+к Namespace или Ingress ресурсу.
+Например:
+команда
+```shell
+kubectl label ns review-1 ingress.deckhouse.io/exclude-metrics=true
+```
+исключит сбор статистики (метрик) для всех ingress'ов в namespace `review-1`
+
+команда
+```shell
+kubectl label ingress test-site -n development ingress.deckhouse.io/exclude-metrics=true
+```
+исключит сбор статистики для Ingress `test-site` в namespace `development`
