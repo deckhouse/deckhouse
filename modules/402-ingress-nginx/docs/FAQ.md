@@ -256,4 +256,3 @@ kubectl label ingress test-site -n development ingress.deckhouse.io/exclude-metr
 ```
 
 will exclude metrics for ingress `test-site` in namespace `development`
-
