@@ -31,7 +31,7 @@ spec:
         {{- include "linstor_satellite_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 200m
-        memory: 300Mi
+        memory: 700Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     - containerName: drbd-prometheus-exporter
       minAllowed:
