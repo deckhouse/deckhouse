@@ -315,7 +315,7 @@ k8s:
   '1.24':
     status: available
     patch: 3
-    cniVersion: 0.9.1
+    cniVersion: 0.8.7 # What about 0.9.1? But I cant find it into the deb repo
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.24.2
