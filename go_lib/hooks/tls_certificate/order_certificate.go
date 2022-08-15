@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package order_certificate
+package tls_certificate
 
 import (
 	"context"
@@ -36,19 +36,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
-
-const (
-	publicDomainPrefix  = "%PUBLIC_DOMAIN%://"
-	clusterDomainPrefix = "%CLUSTER_DOMAIN%://"
-)
-
-func PublicDomainSAN(s string) string {
-	return publicDomainPrefix + s
-}
-
-func ClusterDomainSAN(s string) string {
-	return clusterDomainPrefix + s
-}
 
 // certificateWaitTimeoutDefault controls default amount of time we wait for certificate
 // approval in one iteration.
@@ -176,12 +163,10 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 		for index, san := range request.SANs {
 			switch {
 			case strings.HasPrefix(san, publicDomainPrefix) && publicDomain != "":
-				san = strings.TrimPrefix(san, publicDomainPrefix)
-				request.SANs[index] = fmt.Sprintf(publicDomain, san)
+				request.SANs[index] = getPublicDomainSAN(san, publicDomain)
 
 			case strings.HasPrefix(san, clusterDomainPrefix) && clusterDomain != "":
-				san = strings.TrimPrefix(san, clusterDomainPrefix)
-				request.SANs[index] = fmt.Sprintf("%s.%s", san, clusterDomain)
+				request.SANs[index] = getClusterDomainSAN(san, clusterDomain)
 			}
 		}
 
@@ -316,16 +301,16 @@ func shouldGenerateNewCert(cert []byte, request OrderCertificateRequest, duratio
 		return true, nil
 	}
 
-	if !compareArrays(c.Subject.Organization, request.Groups) {
+	if !arraysAreEqual(c.Subject.Organization, request.Groups) {
 		return true, nil
 	}
 
-	if !compareArrays(c.DNSNames, request.SANs) {
+	if !arraysAreEqual(c.DNSNames, request.SANs) {
 		return true, nil
 	}
 
 	// TODO: compare usages
-	// if !compareArrays(c.ExtKeyUsage, request.Usages) {
+	// if !arraysAreEqual(c.ExtKeyUsage, request.Usages) {
 	//	  return true, nil
 	// }
 
@@ -335,7 +320,7 @@ func shouldGenerateNewCert(cert []byte, request OrderCertificateRequest, duratio
 	return false, nil
 }
 
-func compareArrays(a, b []string) bool {
+func arraysAreEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}

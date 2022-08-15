@@ -31,6 +31,8 @@ spec:
     metadata:
       labels:
         app: webhook-handler
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/webhook-handler/secret.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}

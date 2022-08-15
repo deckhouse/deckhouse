@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,19 +20,23 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
+const (
+	webhookServiceHost = "webhook-handler.d8-system.svc"
+)
+
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
-	SANs: tls_certificate.DefaultSANs(
-		[]string{
-			"prometheus-metrics-adapter.d8-monitoring",
-			"prometheus-metrics-adapter.d8-monitoring.svc",
-			tls_certificate.ClusterDomainSAN("prometheus-metrics-adapter.d8-monitoring.svc"),
-		},
-	),
+	SANs: tls_certificate.DefaultSANs([]string{
+		"webhook-handler.d8-system.svc",
+		"validating-webhook-handler.d8-system.svc",
+		"conversion-webhook-handler.d8-system.svc",
+		tls_certificate.ClusterDomainSAN("webhook-handler.d8-system.svc"),
+		tls_certificate.ClusterDomainSAN("validating-webhook-handler.d8-system.svc"),
+		tls_certificate.ClusterDomainSAN("conversion-webhook-handler.d8-system.svc"),
+	}),
 
-	CN: "prometheus-metrics-adapter",
+	CN: "webhook-handler.d8-system.svc",
 
-	Namespace:     "d8-monitoring",
-	TLSSecretName: "prometheus-metrics-adapter-server-cert",
-
-	FullValuesPathPrefix: "prometheusMetricsAdapter.internal.adapterCert",
+	Namespace:            "d8-system",
+	TLSSecretName:        "webhook-handler-certs",
+	FullValuesPathPrefix: "deckhouse.internal.webhookHandlerCert",
 })

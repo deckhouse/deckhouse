@@ -19,11 +19,11 @@ package hooks
 import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 
-	"github.com/deckhouse/deckhouse/go_lib/hooks/order_certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
-var _ = order_certificate.RegisterOrderCertificateHook(
-	[]order_certificate.OrderCertificateRequest{
+var _ = tls_certificate.RegisterOrderCertificateHook(
+	[]tls_certificate.OrderCertificateRequest{
 		{
 			Namespace:  "d8-user-authn",
 			SecretName: "dex-tls",
@@ -31,8 +31,8 @@ var _ = order_certificate.RegisterOrderCertificateHook(
 			SANs: []string{
 				"dex.d8-user-authn",
 				"dex.d8-user-authn.svc",
-				order_certificate.ClusterDomainSAN("dex.d8-user-authn.svc"),
-				order_certificate.PublicDomainSAN("dex"),
+				tls_certificate.ClusterDomainSAN("dex.d8-user-authn.svc"),
+				tls_certificate.PublicDomainSAN("dex"),
 			},
 			Usages: []certificatesv1.KeyUsage{
 				certificatesv1.UsageDigitalSignature,
