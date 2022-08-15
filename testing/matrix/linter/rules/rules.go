@@ -18,8 +18,6 @@ package rules
 
 import (
 	"fmt"
-	"os"
-	"regexp"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -186,9 +184,6 @@ func shouldSkipModuleContainer(module string, container string) bool {
 }
 
 func containerImageTagCheck(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
-	// https://regex101.com/library/FKV8ot
-	r := regexp.MustCompile("^[A-Fa-f0-9]{64}$")
-
 	for _, c := range containers {
 		if shouldSkipModuleContainer(object.Unstructured.GetName(), c.Name) {
 			continue
@@ -214,24 +209,12 @@ func containerImageTagCheck(object storage.StoreObject, containers []v1.Containe
 			)
 		}
 
-		switch os.Getenv("CI") {
-		case "true":
-			matched := r.MatchString(tag)
-			if !matched {
-				return errors.NewLintRuleError("CONTAINER003",
-					object.Identity()+"; container = "+c.Name,
-					nil,
-					"Image tag should be in form sha256 hash",
-				)
-			}
-		default:
-			if tag != "imageHash" {
-				return errors.NewLintRuleError("CONTAINER004",
-					object.Identity()+"; container = "+c.Name,
-					nil,
-					"Image tag should be `imageHash`",
-				)
-			}
+		if tag != "imageHash" {
+			return errors.NewLintRuleError("CONTAINER004",
+				object.Identity()+"; container = "+c.Name,
+				nil,
+				"Image tag should be `imageHash`",
+			)
 		}
 	}
 	return errors.EmptyRuleError
