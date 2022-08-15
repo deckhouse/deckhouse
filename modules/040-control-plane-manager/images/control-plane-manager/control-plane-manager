@@ -88,7 +88,7 @@ if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksu
 fi
 
 # verify Kubernetes version
-declare -A supported_kubernetes_versions=( ["1.19"]="1.19" ["1.20"]="1.20" ["1.21"]="1.21" ["1.22"]="1.22" ["1.23"]="1.23" )
+declare -A supported_kubernetes_versions=( ["1.19"]="1.19" ["1.20"]="1.20" ["1.21"]="1.21" ["1.22"]="1.22" ["1.23"]="1.23" ["1.24"]="1.24" )
 if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
   echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
   exit 1
