@@ -4,42 +4,68 @@ title: "Модуль istio: примеры конфигурации"
 
 ## Circuit Breaker
 
-Для единственного сервиса потребуется единственный custom resource [DestinationRule](istio-cr.html#destinationrule).
+Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в [DestinationRule](istio-cr.html#destinationrule).
+Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
 
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: myservice-circuit-breaker
+  name: reviews-cb-policy
 spec:
-  host: myservice.prod.svc.cluster.local # либо полный FQDN, либо локальный для namespace домен.
+  host: reviews.prod.svc.cluster.local
   trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпоинтов
+      http:
+        maxRequestsPerConnection: 10 # Каждые 10 запросов коннект будет пересоздаваться
     outlierDetection:
-      consecutiveErrors: 7 # можно допустить не более семи ошибок
-      interval: 5m # в течение пяти минут,
-      baseEjectionTime: 15m # при этом проблемный эндпоинт будет исключён из работы на 15 минут.
+      consecutive5xxErrors: 7 # Допустимо 7 ошибок (включая пятисотые, TCP-таймауты и HTTP-таймауты)
+      interval: 5m            # В течение пяти минут
+      baseEjectionTime: 15m   # После которых эндпоинт будет исключён из балансировки на 15 минут.
+```
+
+А также, для настройки HTTP-таймаутов используется ресурс [VirtualService](istio-cr.html#virtualservice). Эти таймауты также учитываются при подсчёте статистики ошибок на эндпоинтах:
+
+```
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: my-productpage-rule
+  namespace: myns
+spec:
+  hosts:
+  - productpage
+  http:
+  - timeout: 5s
+    route:
+    - destination:
+        host: productpage
 ```
 
 ## Retry
 
-Для единственного сервиса потребуется единственный custom resource[VirtualService](istio-cr.html#virtualservice).
+С помощью ресурса [VirtualService](istio-cr.html#virtualservice) можно настроить Retry для запросов.
+
+*Внимание!* По умолчанию все запросы включая POST ретраятся по три раза.
 
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: productpage-retry
+  name: ratings-route
 spec:
   hosts:
-    - productpage # Либо полный FQDN, либо локальный для namespace домен.
+  - ratings.prod.svc.cluster.local
   http:
   - route:
     - destination:
-        host: productpage # Хотя бы один destination или rewrite необходим. В данном примере не меняем направление.
-    timeout: 8s
+        host: ratings.prod.svc.cluster.local
     retries:
       attempts: 3
-      perTryTimeout: 3s
+      perTryTimeout: 2s
+      retryOn: gateway-error,connect-failure,refused-stream
 ```
 
 ## Canary
