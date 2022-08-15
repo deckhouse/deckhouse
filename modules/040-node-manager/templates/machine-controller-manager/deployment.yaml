@@ -28,7 +28,7 @@ spec:
       maxAllowed:
         cpu: 20m
         memory: 70Mi
-    - {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
 ---
 apiVersion: apps/v1

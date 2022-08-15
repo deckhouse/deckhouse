@@ -2,7 +2,7 @@
 
 ## General description
 
-The `minAllowed` and `maxAllowed` values are chosen based on the actual cpu and memory consumption of the containers.
+The `minAllowed` and `maxAllowed` values are chosen based on the actual CPU and memory consumption of the containers.
 
 If the `vertical-pod-autoscaler` module is disabled, the `minAllowed` values are used to set the containers requests.
 
@@ -17,7 +17,7 @@ When writing a new module, the following rules must be observed:
 * The `minAllowed` container resources are described using the helm function at the beginning of the `vpa.yaml` file.
 * For `maxAllowed` resources the helm function is optional.
 
-!!! Attention!!! The name for helm-functions with `minAllowed`-resources must be unique within the module !
+> Attention! The name for helm-functions with `minAllowed`-resources must be unique within the module.
 
 For the `kube_rbac_proxy` container, the function `helm_lib_vpa_kube_rbac_proxy_resources` is used to set both `minAllowed` and `maxAllowed` resources.
 

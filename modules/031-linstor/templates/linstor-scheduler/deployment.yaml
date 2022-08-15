@@ -1,7 +1,7 @@
 # Source https://github.com/kvaps/linstor-scheduler-extender/blob/master/deploy/all.yaml
 {{- define "kube_scheduler_resources" }}
 cpu: 10m
-memory: 25Mi
+memory: 30Mi
 {{- end }}
 
 {{- define "linstor_scheduler_extender_resources" }}
@@ -31,13 +31,13 @@ spec:
       minAllowed:
         {{- include "kube_scheduler_resources" . | nindent 8 }}
       maxAllowed:
-        memory: 50Mi
+        memory: 60Mi
         cpu: 20m
     - containerName: linstor-scheduler-extender
       minAllowed:
         {{- include "linstor_scheduler_extender_resources" . | nindent 8 }}
       maxAllowed:
-        memory: 25Mi
+        memory: 40Mi
         cpu: 20m
 {{- end }}
 ---
