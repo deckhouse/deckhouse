@@ -47,7 +47,7 @@ nodeGroups:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+sshPublicKey: <SSH_PUBLIC_KEY>
 tags:
   team: rangers
 ```
@@ -104,7 +104,7 @@ nodeGroups:
       backup: me
 vpcNetworkCIDR: "10.241.0.0/16"
 nodeNetworkCIDR: "10.241.32.0/20"
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+sshPublicKey: <SSH_PUBLIC_KEY>
 tags:
   team: rangers
 ```

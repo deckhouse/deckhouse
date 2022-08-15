@@ -28,16 +28,16 @@ EOF
 Создайте кластер kind:
 {% snippetcut selector="create-kind-cluster" %}
 ```shell
-kind create cluster --image "kindest/node:v1.21.12@sha256:6f19412d7d7c4156b3302d4de16168227173f155271be69250893e5c8585cb86" --config kind.cfg
+kind create cluster --image "kindest/node:v1.23.6@sha256:51d988ac40b04965b5379e251a113cdd44150b758ae339b0e941769e584040f5" --config kind.cfg
 ```
 {% endsnippetcut %}
 
 Пример вывода команды создания кластера:
 
 ```shell
-$ kind create cluster --image "kindest/node:v1.21.12@sha256:6f19412d7d7c4156b3302d4de16168227173f155271be69250893e5c8585cb86" --config kind.cfg
+$ kind create cluster --image "kindest/node:v1.23.6@sha256:51d988ac40b04965b5379e251a113cdd44150b758ae339b0e941769e584040f5" --config kind.cfg
 Creating cluster "kind" ...
- ✓ Ensuring node image (kindest/node:v1.21.12) 🖼
+ ✓ Ensuring node image (kindest/node:v1.23.6) 🖼
  ✓ Preparing nodes 📦  
  ✓ Writing configuration 📜 
  ✓ Starting control-plane 🕹️ 

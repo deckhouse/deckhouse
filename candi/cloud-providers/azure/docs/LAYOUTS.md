@@ -19,7 +19,7 @@ Example of the layout configuration:
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>" # Required.
+sshPublicKey: "<SSH_PUBLIC_KEY>" # Required.
 vNetCIDR: 10.50.0.0/16 # Required.
 subnetCIDR: 10.50.0.0/24 # Required.
 standard:

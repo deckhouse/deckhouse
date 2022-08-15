@@ -19,7 +19,7 @@ title: "Cloud provider — Azure: схемы размещения"
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>" # Обязательный параметр.
+sshPublicKey: "<SSH_PUBLIC_KEY>" # Обязательный параметр.
 vNetCIDR: 10.50.0.0/16 # Обязательный параметр.
 subnetCIDR: 10.50.0.0/24 # Обязательный параметр.
 standard:
