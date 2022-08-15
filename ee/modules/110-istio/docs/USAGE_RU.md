@@ -4,7 +4,7 @@ title: "Модуль istio: примеры конфигурации"
 
 ## Circuit Breaker
 
-Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в [DestinationRule](istio-cr.html#destinationrule).
+Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в CR [DestinationRule](istio-cr.html#destinationrule).
 Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
 
 ```yaml
@@ -44,6 +44,41 @@ spec:
         host: productpage
 ```
 
+## Балансировка gRPC
+
+*Важно!* Для того, чтобы балансировка gRPC-сервисов заработала автоматически, присвойте name с префиксом или значением `grpc` для порта в соответствующем Service.
+
+## Locality Failover
+
+Основная документация: https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/
+
+Istio позволяет настроить приоритетный географический фейловер между эндпоинтами. Для определения зоны Istio использует лейблы нод с соответствующей иерархией:
+
+* `topology.istio.io/subzone`
+* `topology.kubernetes.io/zone`
+* `topology.kubernetes.io/region`
+
+Это полезно для межкластерного фейловера при использовании совместно с [мультикластером](readme.html#multicluster).
+
+*Важно!* Для включения Locality Failover используется ресурс DestinationRule, в котором также необходимо настроить outlierDetection.\
+
+```
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: helloworld
+spec:
+  host: helloworld
+  trafficPolicy:
+    loadBalancer:
+      localityLbSetting:
+        enabled: true # включили LF
+    outlierDetection: # outlierDetection включить обязательно
+      consecutive5xxErrors: 1
+      interval: 1s
+      baseEjectionTime: 1m
+```
+
 ## Retry
 
 С помощью ресурса [VirtualService](istio-cr.html#virtualservice) можно настроить Retry для запросов.
@@ -70,30 +105,59 @@ spec:
 
 ## Canary
 
+*Важно!* Istio отвечает лишь за гибкую маршрутизацию запросов, которая опирается на спец-заголовки запросов (например, куки) или просто на случайность. За настройку этой маршрутизации и "переключение" между канареечными версиями отвечает CI/CD система.
+
 Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У Pod'ов разных версий разные лейблы (`version: v1` и `version: v2`).
 
 Требуется настроить два custom resource:
-* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения.
+* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения (subset-ы).
 * [VirtualService](istio-cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
 
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: productpage-canary
 spec:
   host: productpage
-  subsets: # subset-ы работают только если к хосту обращаются через VirtualService, в котором эти subset-ы указаны в маршрутах.
+  subsets: # subset-ы доступны только при обращении к хосту через через VirtualService из пода под управлением Istio. Эти subset-ы должны быть указаны в маршрутах.
   - name: v1
-    labels: # Аналог selector у Service. Pod'ы с такими лейблами попадут под действие этого subset.
+    labels:
       version: v1
   - name: v2
     labels:
       version: v2
 ```
 
+### Распределение по наличию cookie
+
+```
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: productpage-canary
+spec:
+  hosts:
+  - productpage
+  http:
+  - match:
+    - headers:
+       cookie:
+         regex: "^(.*;?)?(canary=yes)(;.*)?"
+    route:
+    - destination:
+        host: productpage
+        subset: v2 # Ссылка на subset из DestinationRule.
+  - route:
+    - destination:
+        host: productpage
+        subset: v1
+```
+
+### Распределение по вероятности
+
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: productpage-canary
@@ -111,52 +175,6 @@ spec:
         host: productpage
         subset: v2
       weight: 10
-```
-
-### Распределение нагрузки между сервисами с разными версиями для Canary Deployment
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: reviews-route
-spec:
-  hosts:
-  - reviews.prod.svc.cluster.local
-  http:
-  - route:
-    - destination:
-        host: reviews.prod.svc.cluster.local
-        subset: testv1 # Ссылка на subset из DestinationRule.
-      weight: 25
-    - destination:
-        host: reviews.prod.svc.cluster.local
-        subset: testv3
-      weight: 75
-```
-
-#### Перенаправление location /uploads в другой сервис
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: uploads-route
-spec:
-  hosts:
-  - gallery.prod.svc.cluster.local
-  http:
-  - match:
-    - uri:
-        prefix: "/uploads" # Если обратились на gallery.prod.svc.cluster.local/uploads/a.jpg,
-    rewrite:
-      uri: "/data" # ... то меняем uri на /data/a.jpg,
-    route:
-    - destination:
-        host: share.prod.svc.cluster.local # ... и обращаемся к share.prod.svc.cluster.local/data/a.jpg,
-  - route:
-    - destination:
-        host: gallery.prod.svc.cluster.local # ...остальные запросы оставляем как есть.
 ```
 
 ## Ingress
@@ -493,3 +511,8 @@ spec:
   * Поменять настройку `istio.globalVersion` на `1.13` и удалить `additionalVersions`.
   * Убедиться, что старый Pod `istiod` удалился.
   * Поменять лейблы прикладных namespace на `istio-injection: enabled`.
+
+Найти все поды под управлением старой ревизии Istio:
+```
+kubectl get pods -A -o json | jq --arg revision "v1x12" '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
+```

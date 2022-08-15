@@ -22,6 +22,7 @@ Among other things, Istio solves the following tasks in a transparent for applic
   * Sticky Sessions:
     * Binding requests from end users to the service endpoint.
   * Locality Failover — prioritizing endpoints in the local availability zone.
+  * gRPC services load-balancing.
 * [Improving Observability](#observability):
   * Collecting and visualizing data for tracing service requests using Jaeger.
   * Exporting metrics about traffic between services to Prometheus and visualizing them using Grafana.
