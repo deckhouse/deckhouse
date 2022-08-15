@@ -1,7 +1,7 @@
 # Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/operator-satelliteset.yaml
 {{- define "linstor_satellite_resources" }}
 cpu: 100m
-memory: 150Mi
+memory: 250Mi
 {{- end }}
 
 {{- define "drbd_prometheus_exporter_resources" }}
