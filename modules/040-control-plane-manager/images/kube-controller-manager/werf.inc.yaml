@@ -52,7 +52,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache make bash git mercurial patch rsync gcc
+  - apk add --no-cache make bash git mercurial patch rsync gcc musl-dev
   install:
   - mkdir /src
   - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
