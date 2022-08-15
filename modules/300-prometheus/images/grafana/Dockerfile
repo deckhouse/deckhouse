@@ -27,8 +27,8 @@ RUN patch -p1 < ./feat_prometheus_extra_vars.patch
 COPY ./patches/fix_heatmap_thin_bars_on_ff.patch .
 RUN patch -p1 < ./fix_heatmap_thin_bars_on_ff.patch
 # Set more useful version than 'dev'. There are tabs in patch, so -l is used.
-COPY ./patches/build_go.patch .
-RUN patch -p1 -l < ./build_go.patch
+COPY patches/build_go.patch.tpl .
+RUN sed 's/GRAFANA_VERSION_HERE/${GRAFANA_VERSION}/g' ./build_go.patch.tpl > ./build_go.patch && patch -p1 -l < ./build_go.patch
 # Patch to copy bundled plugins at start from ro directory to rw.
 COPY ./patches/run_sh.patch .
 RUN patch -p1 < ./run_sh.patch
