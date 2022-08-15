@@ -44,8 +44,8 @@ const (
 )
 
 var (
-	stateSecretCreated = generateSecret(false)
-	expiredSecret      = generateSecret(true)
+	secretWithActualCert, actualCA, actualCert, actualKey     = generateSecret(false)
+	secretWithExpiredCert, expiredCA, expiredCert, expiredKey = generateSecret(true)
 )
 
 var _ = Describe("Deckhouse hooks :: generate_selfsigned_ca ::", func() {
@@ -84,7 +84,7 @@ var _ = Describe("Deckhouse hooks :: generate_selfsigned_ca ::", func() {
 
 	Context("Secret Created", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateSecretCreated))
+			f.BindingContexts.Set(f.KubeStateSet(secretWithActualCert))
 			f.RunHook()
 		})
 
@@ -98,7 +98,7 @@ var _ = Describe("Deckhouse hooks :: generate_selfsigned_ca ::", func() {
 
 	Context("Before Helm", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(stateSecretCreated)
+			f.KubeStateSet(secretWithActualCert)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
@@ -113,7 +113,7 @@ var _ = Describe("Deckhouse hooks :: generate_selfsigned_ca ::", func() {
 
 	Context("Expired certificate", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(expiredSecret)
+			f.KubeStateSet(secretWithExpiredCert)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
@@ -126,16 +126,6 @@ var _ = Describe("Deckhouse hooks :: generate_selfsigned_ca ::", func() {
 		})
 	})
 })
-
-var (
-	actualCert = ""
-	actualCA   = ""
-	actualKey  = ""
-
-	expiredCert = ""
-	expiredCA   = ""
-	expiredKey  = ""
-)
 
 func generateTestCert(expired bool) certificate.Certificate {
 	expireStr := "87600h"
@@ -183,16 +173,10 @@ func generateTestCert(expired bool) certificate.Certificate {
 		}),
 	)
 
-	if expired {
-		expiredCA, expiredCert, expiredKey = cert.CA, cert.Cert, cert.Key
-	} else {
-		actualCA, actualCert, actualKey = cert.CA, cert.Cert, cert.Key
-	}
-
 	return cert
 }
 
-func generateSecret(expired bool) string {
+func generateSecret(expired bool) (string, string, string, string) {
 	cert := generateTestCert(expired)
 	ca, crt, key := cert.CA, cert.Cert, cert.Key
 
@@ -208,5 +192,5 @@ data:
   ca.crt: %s
 `, base64.StdEncoding.EncodeToString([]byte(crt)), base64.StdEncoding.EncodeToString([]byte(key)), base64.StdEncoding.EncodeToString([]byte(ca)))
 
-	return sec
+	return sec, ca, crt, key
 }

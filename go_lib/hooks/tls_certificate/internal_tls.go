@@ -218,7 +218,7 @@ func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 		}
 	}
 
-	if !arrayAreEqual(dnsNames, cert.DNSNames) {
+	if !arraysAreEqual(dnsNames, cert.DNSNames) {
 		return true, nil
 	}
 
@@ -227,7 +227,7 @@ func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 		for _, cip := range cert.IPAddresses {
 			certIPs = append(certIPs, cip.String())
 		}
-		if !arrayAreEqual(ipAddrs, certIPs) {
+		if !arraysAreEqual(ipAddrs, certIPs) {
 			return true, nil
 		}
 	}

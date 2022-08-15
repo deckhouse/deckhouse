@@ -301,16 +301,16 @@ func shouldGenerateNewCert(cert []byte, request OrderCertificateRequest, duratio
 		return true, nil
 	}
 
-	if !arrayAreEqual(c.Subject.Organization, request.Groups) {
+	if !arraysAreEqual(c.Subject.Organization, request.Groups) {
 		return true, nil
 	}
 
-	if !arrayAreEqual(c.DNSNames, request.SANs) {
+	if !arraysAreEqual(c.DNSNames, request.SANs) {
 		return true, nil
 	}
 
 	// TODO: compare usages
-	// if !arrayAreEqual(c.ExtKeyUsage, request.Usages) {
+	// if !arraysAreEqual(c.ExtKeyUsage, request.Usages) {
 	//	  return true, nil
 	// }
 
@@ -320,7 +320,7 @@ func shouldGenerateNewCert(cert []byte, request OrderCertificateRequest, duratio
 	return false, nil
 }
 
-func arrayAreEqual(a, b []string) bool {
+func arraysAreEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}
