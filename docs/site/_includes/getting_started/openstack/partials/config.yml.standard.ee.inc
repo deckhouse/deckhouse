@@ -26,7 +26,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 # [<en>] Kubernetes version to install
 # [<ru>] устанавливаемая версия Kubernetes
-kubernetesVersion: "1.21"
+kubernetesVersion: "1.23"
 # [<en>] cluster domain (used for local routing)
 # [<ru>] домен кластера (используется для локальной маршрутеризации)
 clusterDomain: "cluster.local"
@@ -133,4 +133,4 @@ masterNodeGroup:
     rootDiskSize: 40
 # [<en>] ssh public key for access to nodes
 # [<ru>] публичный ключ ssh для доступа к узлам
-sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
+sshPublicKey: <SSH_PUBLIC_KEY>
