@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SYSTEM_PACKAGES="curl wget virt-what inotify-tools bash-completion lvm2 parted apt-transport-https sudo nfs-common"
+SYSTEM_PACKAGES="curl wget virt-what inotify-tools bash-completion lvm2 parted apt-transport-https sudo nfs-common libseccomp2"
 KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethtool conntrack"
 
 bb-apt-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SYSTEM_PACKAGES="curl wget inotify-tools bash-completion lvm2 parted apt-transport-https sudo nfs-common vim"
+SYSTEM_PACKAGES="curl wget inotify-tools bash-completion lvm2 parted apt-transport-https sudo nfs-common vim libseccomp2"
 KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethtool"
 
 if bb-is-debian-version? 9 || bb-is-debian-version? 10 || bb-is-debian-version? 11; then
