@@ -1,7 +1,7 @@
 # Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/operator-satelliteset.yaml
 {{- define "linstor_controller_resources" }}
 cpu: 30m
-memory: 150Mi
+memory: 300Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
