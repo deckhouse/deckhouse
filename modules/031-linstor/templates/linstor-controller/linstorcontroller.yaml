@@ -26,7 +26,7 @@ spec:
         {{- include "linstor_controller_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 60m
-        memory: 300Mi
+        memory: 800Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
