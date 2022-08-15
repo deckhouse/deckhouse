@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright 2021 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,5 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -Eeo pipefail
-rm -f /usr/local/bin/containerd
+# TODO remove on next release !!!
+
+{{- if eq .cri "Containerd" }}
+# Upgrade containerd-flant-edition if needed
+if [[ -f /etc/systemd/system/containerd.service.d/override.conf ]]; then
+  rm -rf /usr/local/bin/containerd ${BB_RP_INSTALLED_PACKAGES_STORE}/containerd-fe ${BB_RP_INSTALLED_PACKAGES_STORE}/containerd-flant-edition /etc/systemd/system/containerd.service.d
+  systemctl daemon-reload
+  systemctl restart containerd.service
+fi
+{{- end }}

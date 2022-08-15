@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2022 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -84,19 +84,4 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}"
 fi
-
-# Upgrade containerd-flant-edition if needed
-containerd_fe_tag="{{ index .images.registrypackages "containerdFe1511" | toString }}"
-if ! bb-rp-is-installed? "containerd-flant-edition" "${containerd_fe_tag}" ; then
-  systemctl stop containerd.service
-  bb-rp-install "containerd-flant-edition:${containerd_fe_tag}"
-
-  mkdir -p /etc/systemd/system/containerd.service.d
-  bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF
-[Service]
-ExecStart=
-ExecStart=-/usr/local/bin/containerd
-EOF
-fi
-
 {{- end }}
