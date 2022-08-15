@@ -315,7 +315,7 @@ spec:
 			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(7))
+			Expect(m).To(HaveLen(16))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "expire",
@@ -331,6 +331,30 @@ spec:
 				},
 			}))
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"namespace":        "ns-global",
+					"dataplane_pod":    "pod-global-revision-actual",
+					"desired_revision": "v1x42",
+					"revision":         "v1x42",
+				},
+			}))
+			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"desired_revision": "v1x42",
+					"revision":         "v1x15",
+					"namespace":        "ns-global",
+					"dataplane_pod":    "pod-global-revision-not-actual",
+				},
+			}))
+			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_actual_data_plane_revision_ne_desired",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -341,7 +365,31 @@ spec:
 					"desired_revision": "v1x42",
 				},
 			}))
-			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[5]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"desired_revision": "v1x42",
+					"revision":         "v1x42",
+					"namespace":        "ns-global",
+					"dataplane_pod":    "pod-minor-version-is-actual",
+				},
+			}))
+			Expect(m[6]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"desired_revision": "v1x42",
+					"revision":         "v1x42",
+					"namespace":        "ns-global",
+					"dataplane_pod":    "pod-minor-version-mismatch",
+				},
+			}))
+			Expect(m[7]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_data_plane_patch_version_mismatch",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -353,7 +401,31 @@ spec:
 					"namespace":                 "ns-global",
 				},
 			}))
-			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[8]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"namespace":        "ns-nodesired",
+					"dataplane_pod":    "pod-definite-revision-installed",
+					"desired_revision": "v1x15",
+					"revision":         "v1x15",
+				},
+			}))
+			Expect(m[9]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"namespace":        "ns-nodesired",
+					"dataplane_pod":    "pod-definite-revision-not-installed",
+					"desired_revision": "v1xexotic",
+					"revision":         "unknown",
+				},
+			}))
+			Expect(m[10]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_desired_revision_is_not_installed",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -363,7 +435,7 @@ spec:
 					"namespace":        "ns-nodesired",
 				},
 			}))
-			Expect(m[5]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[11]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_data_plane_without_desired_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -373,7 +445,31 @@ spec:
 					"namespace":       "ns-nodesired",
 				},
 			}))
-			Expect(m[6]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[12]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"dataplane_pod":    "pod-definite-ns-revision-actual",
+					"desired_revision": "v1x15",
+					"revision":         "v1x15",
+					"namespace":        "ns-rev1x15",
+				},
+			}))
+			Expect(m[13]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"desired_revision": "v1x15",
+					"revision":         "v1x42",
+					"namespace":        "ns-rev1x15",
+					"dataplane_pod":    "pod-definite-ns-revision-not-actual",
+				},
+			}))
+			Expect(m[14]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_actual_data_plane_revision_ne_desired",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -382,6 +478,18 @@ spec:
 					"actual_revision":  "v1x42",
 					"desired_revision": "v1x15",
 					"namespace":        "ns-rev1x15",
+				},
+			}))
+			Expect(m[15]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
+				Group:  revisionsMonitoringMetricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"namespace":        "ns-v1x10x1",
+					"dataplane_pod":    "pod-regular-v1x10x1",
+					"desired_revision": "v1x10x1",
+					"revision":         "v1x10x1",
 				},
 			}))
 		})
