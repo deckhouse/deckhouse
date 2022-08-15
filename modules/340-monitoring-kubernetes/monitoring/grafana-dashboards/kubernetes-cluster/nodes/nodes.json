@@ -289,7 +289,7 @@
               },
               {
                 "id": "unit",
-                "value": "bytes"
+                "value": "Bps"
               },
               {
                 "id": "decimals",
@@ -313,7 +313,7 @@
               },
               {
                 "id": "unit",
-                "value": "bytes"
+                "value": "Bps"
               },
               {
                 "id": "decimals",
@@ -1699,7 +1699,7 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
+          "format": "Bps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1707,7 +1707,7 @@
           "show": true
         },
         {
-          "format": "bytes",
+          "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1807,7 +1807,7 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
+          "format": "Bps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1815,7 +1815,7 @@
           "show": true
         },
         {
-          "format": "bytes",
+          "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
