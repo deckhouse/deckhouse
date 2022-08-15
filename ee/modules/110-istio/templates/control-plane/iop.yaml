@@ -60,6 +60,23 @@ spec:
   meshConfig:
     rootNamespace: d8-{{ $.Chart.Name }}
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+
+    # The rules below exclude deckhouse-related namespaces from istiod's point of view.
+    # So, their influence to istio performance will be reduced:
+    # * upmeter's events used to affect the traffic significantly between control-plane and data-plane,
+    # * deckhouse-related services were stored in sidecar-proxies, which made no sense.
+    # The same time we need to handle some namespaces including d8-istio itself, d8-ingress-nginx to serve controllers
+    # with enableIstioSidecar and d8-user-authn to interact between applications and the dex installation.
+    discoverySelectors:
+      # Include d8-istio, d8-ingress-nginx and d8-user-authn namespaces:
+    - matchExpressions:
+      - {key: "heritage", operator: In, values: [deckhouse]}
+      - {key: "module",   operator: In, values: [istio,ingress-nginx,user-authn]}
+
+      # Exclude everything else related to deckhouse and upmeter:
+    - matchExpressions:
+      - {key: "heritage", operator: NotIn, values: [deckhouse,upmeter]}
+
     outboundTrafficPolicy:
   {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
       mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
