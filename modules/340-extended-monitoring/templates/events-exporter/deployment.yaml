@@ -50,6 +50,7 @@ spec:
         image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.extendedMonitoring.eventsExporter }}"
         args:
         - "-server.exporter-address=127.0.0.1:9000"
+        - "-server.log-level=debug"
         {{- if eq .Values.extendedMonitoring.events.severityLevel "OnlyWarnings" }}
         - "-kube.field-selector=type!=Normal"
         {{- end }}
