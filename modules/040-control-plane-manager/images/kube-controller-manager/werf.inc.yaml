@@ -33,7 +33,7 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.24" $version }}
-from: {{ $.Images.BASE_GOLANG_18_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_18_BUSTER }} # gcc required
     {{- else if semverCompare ">=1.23" $version }}
 from: {{ $.Images.BASE_GOLANG_17_ALPINE }}
     {{- else if semverCompare ">=1.21" $version }}
