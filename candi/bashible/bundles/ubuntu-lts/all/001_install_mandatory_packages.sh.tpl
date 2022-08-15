@@ -20,6 +20,7 @@ bb-apt-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl7800 }}"
 
 # containerd 1.6.7 requires libseccomp version >= 2.5.0
-if bb-is-ubuntu-version? 18.04; then
+libseccomp_version="$(dpkg-query --show --showformat '${Version}' libseccomp2)"
+if dpkg --compare-versions ${libseccomp_version} lt 2.5; then
   bb-apt-install --force libseccomp2
 fi
