@@ -91,9 +91,9 @@ spec:
 
 ## Специальные лейблы для VPA-ресурсов
 
-Если поды присутствуют только на мастер-узлах, для VPA-ресурса довавляется label `workload-resource-policy.deckhouse.io: master`.
+Если Pod'ы присутствуют только на мастер-узлах, для VPA-ресурса добавляется label `workload-resource-policy.deckhouse.io: master`.
 
-Если поды присутствуют на каждом узле, для VPA-ресурса довавляется label `workload-resource-policy.deckhouse.io: every-node`.
+Если Pod'ы присутствуют на каждом узле, для VPA-ресурса добавляется label `workload-resource-policy.deckhouse.io: every-node`.
 
 ## TODO
 
