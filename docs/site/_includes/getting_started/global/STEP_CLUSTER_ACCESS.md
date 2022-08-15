@@ -54,13 +54,13 @@ Point a DNS domain you specified in the "[Cluster Installation](./step3.html)" s
         DNS</a> (e.g., <code>%s.kube.my</code>), then add
         {%- if page.platform_code == 'aws' %} a corresponding wildcard CNAME record containing the hostname of load
         balancer (<code>BALANCER_HOSTNAME</code>)
-        {%- else %} a corresponding wildcard A record containing the IP of {% if page.platform_code == 'vsphere' %}the master node{% else %}the load balancer (<code>BALANCER_IP</code>){% endif %}{%-
-        endif -%}, you've discovered previously.
+        {%- else %} a corresponding wildcard A record containing the IP of {% if page.platform_code == 'vsphere' %}the master node, you've discovered previously (if dedicated frontend nodes are configured, then use their IP instead of the IP of the master node){% else %}the load balancer (<code>BALANCER_IP</code>), you've discovered previously{% endif %}{%- endif -%}.
       </li>
       <li>If your cluster DNS name template is <strong>NOT</strong> a <a
               href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>),
-        then add A or CNAME records containing the IP of {% if page.platform_code == 'vsphere' %}the master node{% else %}the load balancer (<code>BALANCER_IP</code>){% endif %}, you've discovered
-        previously, for the following Deckhouse service DNS names:
+        then add A or CNAME records containing the IP of {% if page.platform_code == 'vsphere' %}the master node, you've discovered
+        previously (if dedicated frontend nodes are configured, then use their IP instead of the IP of the master node){% else %}the load balancer (<code>BALANCER_IP</code>), you've discovered
+        previously{% endif %}, for the following Deckhouse service DNS names:
         <div class="highlight">
 <pre class="highlight">
 <code example-hosts>dashboard.example.com
@@ -95,15 +95,15 @@ BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
     <li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address you got:</p>
 {% snippetcut %}
 ```bash
-export BALANCER_IP="<PUT_BALANCER_IP_HERE>"
+export BALANCER_IP="<BALANCER_IP>"
 ```
 {% endsnippetcut %}
     </li>
 {%- else %}
-    <li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address of <strong>the master node</strong> you've got:</p>
+    <li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address of <strong>the master node</strong> you've got (if dedicated frontend nodes are configured, then use their IP instead of the IP of the master node):</p>
 {% snippetcut %}
 ```bash
-export BALANCER_IP="<MASTER_IP>"
+export BALANCER_IP="<MASTER_OR_FRONT_IP>"
 ```
 {% endsnippetcut %}
     </li>
