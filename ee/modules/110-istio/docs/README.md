@@ -18,7 +18,7 @@ Among other things, Istio solves the following tasks in a transparent for applic
   * Circuit Breaker:
     * Temporarily excluding endpoints from balancing if the error limit is exceeded.
     * Setting limits on the number of TCP connections and the number of requests per endpoint.
-    * Detecting abnormal requests and terminating them with an error code.
+    * Detecting abnormal requests and terminating them with an error code (HTTP request timeout).
   * Sticky Sessions:
     * Binding requests from end users to the service endpoint.
   * Locality Failover — prioritizing endpoints in the local availability zone.
