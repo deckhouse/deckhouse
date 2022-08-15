@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# libseccomp - containerd.io dependencies
 SYSTEM_PACKAGES="curl wget inotify-tools bash-completion lvm2 parted apt-transport-https sudo nfs-common vim libseccomp2"
 KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethtool"
 

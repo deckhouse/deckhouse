@@ -11,10 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# libseccomp - containerd.io dependencies
 SYSTEM_PACKAGES="curl wget virt-what inotify-tools bash-completion lvm2 parted apt-transport-https sudo nfs-common libseccomp2"
 KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethtool conntrack"
 
 bb-apt-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 
 bb-rp-install "jq:{{ .images.registrypackages.jq16 }}" "curl:{{ .images.registrypackages.d8Curl7800 }}"
+
+# containerd 1.6.7 requires libseccomp version >= 2.5.0
+if bb-is-ubuntu-version? 18.04; then
+  bb-apt-install --force libseccomp2
+fi
