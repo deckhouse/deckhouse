@@ -19,6 +19,7 @@ package hooks
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"sort"
@@ -294,6 +295,89 @@ status:
 		})
 	})
 
+	Context("Release has cooldown", func() {
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.0"}`}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
+				},
+				ConfigFileStub: func() (*v1.ConfigFile, error) {
+					return &v1.ConfigFile{
+						Config: v1.Config{
+							Labels: map[string]string{"cooldown": "2026-06-06 16:16:16"},
+						},
+					}, nil
+				},
+			}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with cooldown", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0").Exists()).To(BeTrue())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-0")
+			Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
+			Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2026-06-06T16:16:16Z"))
+		})
+
+		Context("Inherit release cooldown", func() {
+			BeforeEach(func() {
+				dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.1"}`}}}, nil
+					},
+					DigestStub: func() (v1.Hash, error) {
+						return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76869")
+					},
+				}, nil)
+				f.KubeStateSet("")
+				f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+				f.RunHook()
+			})
+			It("Release should inherit cooldown from previous one", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1").Exists()).To(BeTrue())
+				rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-1")
+				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
+				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2026-06-06T16:16:16Z"))
+			})
+		})
+
+		Context("Patch release has own cooldown", func() {
+			BeforeEach(func() {
+				dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.2"}`}}}, nil
+					},
+					DigestStub: func() (v1.Hash, error) {
+						return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+					},
+					ConfigFileStub: func() (*v1.ConfigFile, error) {
+						return &v1.ConfigFile{
+							Config: v1.Config{
+								Labels: map[string]string{"cooldown": "2030-05-05T15:15:15Z"},
+							},
+						}, nil
+					},
+				}, nil)
+				f.KubeStateSet("")
+				f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+				f.RunHook()
+			})
+			It("Release should not inherit cooldown from previous one", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-2").Exists()).To(BeTrue())
+				rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-31-2")
+				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).Exists()).To(BeTrue())
+				Expect(rl.Field(`metadata.annotations.release\.deckhouse\.io/cooldown`).String()).To(Equal("2030-05-05T15:15:15Z"))
+			})
+		})
+	})
+
 	Context("Release has disruptions", func() {
 		BeforeEach(func() {
 			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
@@ -382,6 +466,32 @@ global:
 			Expect(link.String()).To(BeEquivalentTo("https://github.com/deckhouse/deckhouse/releases/tag/v1.31.0"))
 		})
 	})
+
+	// for manual release generating (manual testing)
+	XContext("Generate release", func() {
+		const releaseJSON = `
+			{"canary":{"alpha":{"enabled":true,"interval":"5m","waves":2},"beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5},"stable":{"enabled":true,"interval":"30m","waves":6}},"disruptions":{"1.36":["ingressNginx"]},"requirements":{"ingressNginx":"0.33","k8s":"1.19.0"},"version":"v1.666.0"}
+	`
+		BeforeEach(func() {
+			dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": releaseJSON}}}, nil
+				},
+				DigestStub: func() (v1.Hash, error) {
+					return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f63859")
+				},
+			}, nil)
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			f.RunHook()
+		})
+		It("Release should be created with requirements", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			rl := f.KubernetesGlobalResource("DeckhouseRelease", "v1-666-0")
+			fmt.Println("\n" + rl.ToYaml())
+		})
+	})
+
 })
 
 type fakeLayer struct {

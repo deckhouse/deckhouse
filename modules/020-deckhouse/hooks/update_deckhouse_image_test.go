@@ -68,7 +68,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 
 	Context("No update windows configured", func() {
 		BeforeEach(func() {
-			f.ValuesDelete("deckhouse.windows")
+			f.ValuesDelete("deckhouse.update.windows")
+			f.ValuesSet("deckhouse.releaseChannel", "Alpha")
 
 			f.KubeStateSet(deckhousePodYaml + deckhouseReleases)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
