@@ -31,9 +31,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
-// migration: Delete redundant objects
+// This hook deletes abandoned objects produced by upmeter.
 //
-// TODO (shvgn): Delete this hook in Deckhouse v1.35
+// TODO (shvgn): Change this hook in Deckhouse v1.35, so it would track objects created by agents
+// that are not present anymore, e.g. when multi-master was changed to single-master.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
