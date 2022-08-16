@@ -34,7 +34,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Ingress",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					"ingress.deckhouse.io/exclude-metrics": "true",
+					"ingress.deckhouse.io/discard-metrics": "true",
 				},
 			},
 			FilterFunc: nameFilter,
@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Namespace",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					"ingress.deckhouse.io/exclude-metrics": "true",
+					"ingress.deckhouse.io/discard-metrics": "true",
 				},
 			},
 			FilterFunc: nameFilter,

@@ -239,16 +239,16 @@ spec:
 
 По-умолчанию Deckhouse собирает подробную статистику со всех Ingress-ресурсов в кластере, что может генерировать высокую нагрузку на систему мониторинга.
 
-Для отключения сбора статистики добавьте label `ingress.deckhouse.io/exclude-metrics: "true"` к соответствующему Namespace или Ingress-ресурсу.
+Для отключения сбора статистики добавьте label `ingress.deckhouse.io/discard-metrics: "true"` к соответствующему Namespace или Ingress-ресурсу.
 
 Пример отключения сбора статистики (метрик) для всех Ingress-ресурсов в пространстве имен `review-1`:
 
 ```shell
-kubectl label ns review-1 ingress.deckhouse.io/exclude-metrics=true
+kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
 ```
 
 Пример отключения сбора статистики (метрик) для всех Ingress-ресурсов `test-site` в пространстве имен `development`:
 
 ```shell
-kubectl label ingress test-site -n development ingress.deckhouse.io/exclude-metrics=true
+kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
 ```

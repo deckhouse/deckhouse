@@ -239,16 +239,16 @@ In this case Deckhouse will not create an IngressClass object and will use your 
 By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster. This behavior may generate
 high load on the monitoring system.
 
-To disable statistics collection, add label `ingress.deckhouse.io/exclude-metrics: "true"` to the corresponding Namespace or Ingress resource.
+To disable statistics collection, add label `ingress.deckhouse.io/discard-metrics: "true"` to the corresponding Namespace or Ingress resource.
 
 Example of disabling statistics (metrics) collection for all Ingress resources in the `review-1` namespace:
 
 ```shell
-kubectl label ns review-1 ingress.deckhouse.io/exclude-metrics=true
+kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
 ```
 
 Example of disabling statistics (metrics) collection for all `test-site` Ingress resources in the `development` namespace:
 
 ```shell
-kubectl label ingress test-site -n development ingress.deckhouse.io/exclude-metrics=true
+kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
 ```
