@@ -38,7 +38,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "delete_probe_garbage",
-			Crontab: "* * * * *",
+			Crontab: "*/15 * * * *",
 		},
 	},
 }, dependency.WithExternalDependencies(
@@ -58,9 +58,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 		for _, r := range repos {
 			if err := cleanGarbage(ctx, r); err != nil {
-				// The queue shouldn't be stopped if there is an error
+				// The queue shouldn't be stopped event if there is an API error
 				input.LogEntry.Warn(err)
-				return err
 			}
 		}
 
