@@ -18,6 +18,7 @@ import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
 	RenderBashibleBundleDir = ""
+	BundleName              = ""
 
 	ParseInputFile = ""
 	ParseOutput    = "json"
@@ -29,6 +30,13 @@ func DefineRenderConfigFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("bundle-dir", "Directory to render bashible bundle.").
 		Envar(configEnvName("BUNDLE_DIR")).
 		StringVar(&RenderBashibleBundleDir)
+}
+
+func DefineRenderBundleFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("bundle-name", "Bundle name for render bashible bundle.").
+		Envar(configEnvName("BUNDLE_NAME")).
+		Required().
+		StringVar(&BundleName)
 }
 
 func DefineEditorConfigFlags(cmd *kingpin.CmdClause) {
