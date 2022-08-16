@@ -224,7 +224,7 @@ func (s *TelemetryServer) runFileWatcher() {
 				}
 				switch event.Name {
 				case excludeLabelsFile:
-					go s.parseFileWithExcludes()
+					s.parseFileWithExcludes()
 				}
 			}
 
