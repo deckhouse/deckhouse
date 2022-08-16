@@ -15,7 +15,6 @@
 # TODO remove on next release !!!
 
 {{- if eq .cri "Containerd" }}
-# Upgrade containerd-flant-edition if needed
 if [[ -f /etc/systemd/system/containerd.service.d/override.conf ]]; then
   rm -rf /usr/local/bin/containerd ${BB_RP_INSTALLED_PACKAGES_STORE}/containerd-fe ${BB_RP_INSTALLED_PACKAGES_STORE}/containerd-flant-edition /etc/systemd/system/containerd.service.d
   systemctl daemon-reload
