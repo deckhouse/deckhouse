@@ -8,7 +8,7 @@ index bd0128d..b4d7550 100644
  	b.WriteString("-w")
 -	b.WriteString(fmt.Sprintf(" -X main.version=%s", opts.version))
 -	b.WriteString(fmt.Sprintf(" -X main.commit=%s", getGitSha()))
-+	b.WriteString(fmt.Sprintf(" -X main.version=%s", os.Getenv("GRAFANA_VERSION_HERE")))
++	b.WriteString(fmt.Sprintf(" -X main.version=%s", os.Getenv("GRAFANA_VERSION")))
 +	b.WriteString(fmt.Sprintf(" -X main.commit=%s", "fix_heatmap,feat_extra_vars"))
  	b.WriteString(fmt.Sprintf(" -X main.buildstamp=%d", buildStamp))
  	b.WriteString(fmt.Sprintf(" -X main.buildBranch=%s", getGitBranch()))
