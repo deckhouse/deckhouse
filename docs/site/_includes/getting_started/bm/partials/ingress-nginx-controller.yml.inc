@@ -24,6 +24,6 @@ spec:
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
   - operator: Exists

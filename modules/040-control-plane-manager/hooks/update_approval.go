@@ -37,7 +37,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      "node-role.kubernetes.io/master",
+						Key:      "node-role.kubernetes.io/control-plane",
 						Operator: v1.LabelSelectorOpExists,
 					},
 				},

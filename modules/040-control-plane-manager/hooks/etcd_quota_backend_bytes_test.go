@@ -336,7 +336,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: etcd-quota-back
 spec:
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 `
 		}
 		return fmt.Sprintf(`
@@ -345,7 +345,7 @@ kind: Node
 metadata:
   name: %s
   labels:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 %s
 status:
   addresses:

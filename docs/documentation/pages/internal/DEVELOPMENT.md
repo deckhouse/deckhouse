@@ -229,7 +229,7 @@ There are four strategies in total:
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no dedicated monitoring nodes in the cluster, then the components of monitoring-related modules run on the system nodes.
 
 3. `master` - this strategy uses the following logic:
-    * If nodes with the `node-role.kubernetes.io/master="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
+    * If nodes with the `node-role.kubernetes.io/control-plane="""` label are found in the cluster, then this value is used as the nodeSelector. These nodes are considered dedicated for all components that use this deployment strategy.
     * If nodes with the `node-role.deckhouse.io/master="""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no master nodes in the cluster (e.g., in the managed cluster), then the components of such modules run on the nodes set as masters.
     * If nodes with the `node-role.deckhouse.io/system=""` label are found in the cluster, then this value is used as the nodeSelector. It is assumed that if there are no master nodes and nodes with labels designating these nodes as masters in the cluster, then the components of such modules run on system nodes.
 
@@ -281,7 +281,7 @@ The helper gets the global context and the desired strategy as the input to set 
 
   ```yaml
   tolerations:
-  - key: node-role.kubernetes.io/master
+  - key: node-role.kubernetes.io/control-plane
   - key: dedicated.deckhouse.io
   - key: dedicated
   - key: node.deckhouse.io/uninitialized

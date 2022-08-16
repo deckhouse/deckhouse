@@ -319,7 +319,7 @@ k8s:
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.24.2
-      yandex: 7fbb12a197294fc8924d4425f580f8167d45c83b # TODO
+      yandex: cd3c1d369b40df22e94359fe37adeaf6b3b956f0 # TODO
       aws: v1.24.1
       vsphere: v1.24.0
       azure: v1.24.4

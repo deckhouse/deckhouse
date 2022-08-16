@@ -73,7 +73,7 @@ spec:
     httpsPort: 443
     realIPHeader: X-Forwarded-For
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
   - operator: Exists
 ---

@@ -93,7 +93,7 @@ title: "Управление control plane: FAQ"
 
 ## Как убрать роль master-узла, сохранив узел?
 
-1. Снимите лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/master: ""`, затем дождитесь, пока etcd member будет удален автоматически.
+1. Снимите лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`, затем дождитесь, пока etcd member будет удален автоматически.
 2. Зайдите на узел и выполните следующие действия:
 
    ```shell

@@ -62,7 +62,7 @@ kind: Node
 metadata:
   name: main-master-0
   labels:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 status:
   addresses:
     - address: 192.168.1.1
@@ -73,7 +73,7 @@ kind: Node
 metadata:
   name: main-master-1
   labels:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 status:
   addresses:
     - address: 192.168.1.2
@@ -84,7 +84,7 @@ kind: Node
 metadata:
   name: main-master-2
   labels:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 status:
   addresses:
     - address: 192.168.1.3
@@ -150,7 +150,7 @@ kind: Node
 metadata:
   name: main-master-3
   labels:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 status:
   addresses:
     - address: 192.168.1.4

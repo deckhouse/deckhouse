@@ -37,5 +37,5 @@ title: "Модуль cni-cilium"
         - kube-apiserver
       nodeSelector:
         matchLabels:
-          node-role.kubernetes.io/master: ""
+          node-role.kubernetes.io/control-plane: ""
     ```

@@ -64,7 +64,7 @@ var (
 				Kind:       "Node",
 				LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      "node-role.kubernetes.io/master",
+						Key:      "node-role.kubernetes.io/control-plane",
 						Operator: "Exists",
 					},
 				}},

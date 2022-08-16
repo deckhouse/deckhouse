@@ -36,7 +36,7 @@ kind: Node
 metadata:
   name: sandbox-%d
   labels:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 status:
   allocatable:
     cpu: "%s"

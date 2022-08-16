@@ -58,10 +58,10 @@ nodeSelector:
   {{- else if eq $strategy "master" }}
     {{- if gt (index $context.Values.global.discovery "clusterMasterCount" | int) 0 }}
 nodeSelector:
-  node-role.kubernetes.io/master: ""
+  node-role.kubernetes.io/control-plane: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
 nodeSelector:
-  node-role.deckhouse.io/master: ""
+  node-role.deckhouse.io/control-plane: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "system" | int) 0 }}
 nodeSelector:
   node-role.deckhouse.io/system: ""
@@ -72,6 +72,7 @@ nodeSelector:
 
 {{- define "_helm_lib_any_node_tolerations" }}
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: "Exists"
 - key: dedicated

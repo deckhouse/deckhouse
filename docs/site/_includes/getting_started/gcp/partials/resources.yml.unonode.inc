@@ -11,3 +11,4 @@ spec:
   controllerVersion: "1.1"
   tolerations:
   - key: node-role.kubernetes.io/master
+  - key: node-role.kubernetes.io/control-plane

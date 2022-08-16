@@ -131,8 +131,8 @@ On the selected node do the following:
 1. Remove master role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
-   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 Start kubelet on another nodes:
@@ -171,7 +171,7 @@ On the first recovered node do the following steps:
 Add master role for each other master nodes:
 
 ```shell
-kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
 ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`:
@@ -197,8 +197,8 @@ Perform the following steps to restore the quorum in the etcd cluster:
 1. Remove master role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
-   kubectl label no LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label no LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 If nodes have been lost permanently, add new ones using the `dhctl converge` command (or manually if the cluster is static).
@@ -258,7 +258,7 @@ To turn them into cluster members, do the following on those nodes:
 Ddd a master role for each lost nodes:
 
 ```shell
-kubectl label no LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+kubectl label no LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
 ```
 
 Wait for all control plane Pods to roll over and become `Ready`:
@@ -440,7 +440,7 @@ Do the following:
 1. Remove master role label from affected node.
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 On the affected node:
@@ -460,7 +460,7 @@ On the affected node:
 1. Add master role to affected node.
 
    ```shell
-   kubectl label no AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+   kubectl label no AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`:
@@ -580,8 +580,8 @@ On the selected node do the following:
 1. Remove master role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
-   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/master- node-role.kubernetes.io/control-plane-
+   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 On another nodes, start kubelet:
@@ -622,7 +622,7 @@ For each another master nodes:
 1. Add master role.
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/master= node-role.kubernetes.io/control-plane=
+   kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`.

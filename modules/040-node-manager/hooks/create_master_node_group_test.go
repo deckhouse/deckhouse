@@ -84,7 +84,6 @@ spec:
       test-annot: test-annot
     labels:
       test-label: "test-label"
-      node-role.kubernetes.io/master: ""
       node-role.kubernetes.io/control-plane: ""
   nodeType: CloudStatic
 `

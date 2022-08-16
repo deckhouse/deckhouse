@@ -338,7 +338,7 @@ func generateJob(registry, tag, csrb64 string) *batchv1.Job {
 					},
 					HostPID: true,
 					NodeSelector: map[string]string{
-						"node-role.kubernetes.io/master": "",
+						"node-role.kubernetes.io/control-plane": "",
 					},
 					Tolerations: []corev1.Toleration{
 						{
