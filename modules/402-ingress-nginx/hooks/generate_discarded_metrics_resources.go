@@ -59,30 +59,34 @@ func handleExcludes(input *go_hook.HookInput) error {
 
 	snap := input.Snapshots["labeled_ingress"]
 	for _, sn := range snap {
-		res := sn.(excludeResource)
-		ings = append(ings, strings.Join([]string{res.Namespace, res.Name}, ":"))
+		res := sn.(discardedIngress)
+		ings = append(ings, res.String())
 	}
 
 	snap = input.Snapshots["labeled_ns"]
 	for _, sn := range snap {
-		res := sn.(excludeResource)
+		res := sn.(discardedIngress)
 		nss = append(nss, res.Name)
 	}
 
-	input.Values.Set("ingressNginx.internal.excludedMetricResources.namespaces", nss)
-	input.Values.Set("ingressNginx.internal.excludedMetricResources.ingresses", ings)
+	input.Values.Set("ingressNginx.internal.discardMetricResources.namespaces", nss)
+	input.Values.Set("ingressNginx.internal.discardMetricResources.ingresses", ings)
 
 	return nil
 }
 
 func nameFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return excludeResource{
+	return discardedIngress{
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
 	}, nil
 }
 
-type excludeResource struct {
+type discardedIngress struct {
 	Name      string
 	Namespace string
+}
+
+func (di discardedIngress) String() string {
+	return strings.Join([]string{di.Namespace, di.Name}, ":")
 }

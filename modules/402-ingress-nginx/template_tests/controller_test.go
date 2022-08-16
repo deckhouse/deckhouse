@@ -49,8 +49,8 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
-		hec.ValuesSet("ingressNginx.internal.excludedMetricResources.namespaces", json.RawMessage("[]"))
-		hec.ValuesSet("ingressNginx.internal.excludedMetricResources.ingresses", json.RawMessage("[]"))
+		hec.ValuesSet("ingressNginx.internal.discardMetricResources.namespaces", json.RawMessage("[]"))
+		hec.ValuesSet("ingressNginx.internal.discardMetricResources.ingresses", json.RawMessage("[]"))
 	})
 	Context("With ingress nginx controller in values", func() {
 		BeforeEach(func() {

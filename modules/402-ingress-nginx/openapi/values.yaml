@@ -288,7 +288,7 @@ properties:
             type: array
             items:
               type: string
-      excludedMetricResources:
+      discardMetricResources:
         type: object
         default: {}
         description: Exclude ingress metrics for the next resources.

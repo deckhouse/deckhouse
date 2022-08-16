@@ -237,6 +237,6 @@ data:
   telemetry_config.yml: |
     discard:
       namespaces:
-        {{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml | indent 8 }}
+{{ $context.Values.ingressNginx.internal.discardMetricResources.namespaces | toYaml | indent 8 }}
       ingresses:
-        {{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml | indent 8 }}
+{{ $context.Values.ingressNginx.internal.discardMetricResources.ingresses | toYaml | indent 8 }}
