@@ -17,8 +17,6 @@ limitations under the License.
 package server
 
 import (
-	"fmt"
-
 	"github.com/prometheus/common/log"
 )
 
@@ -35,7 +33,10 @@ type discardProcessor struct {
 // newDiscardProcessor message processor decides which messages could be dropped prometheus exporter
 func newDiscardProcessor(cfg *discardConfig) *discardProcessor {
 	if cfg == nil {
-		cfg = &discardConfig{}
+		return &discardProcessor{
+			Namespaces: make(map[string]struct{}),
+			Ingresses:  make(map[string]struct{}),
+		}
 	}
 	log.Infof("Exclude metrics from namespaces: %v", cfg.Namespaces)
 	log.Infof("Exclude metrics from ingresses: %v", cfg.Ingresses)
@@ -71,19 +72,15 @@ func (dp *discardProcessor) IsDiscarded(msgAnnotations map[string]string) bool {
 
 	if len(dp.Namespaces) > 0 {
 		if _, ok := dp.Namespaces[ns]; ok {
-			fmt.Println("DISCARDED", ns)
 			return true
 		}
 	}
 
 	if len(dp.Ingresses) > 0 {
 		if _, ok := dp.Ingresses[namespacedIngress]; ok {
-			fmt.Println("DISCARDED ING", namespacedIngress)
 			return true
 		}
 	}
-
-	fmt.Println("OK", namespacedIngress)
 
 	return false
 }
