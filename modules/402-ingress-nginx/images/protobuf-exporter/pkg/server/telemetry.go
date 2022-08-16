@@ -18,23 +18,19 @@ package server
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"strconv"
 	"strings"
-	"sync"
-
-	"github.com/fsnotify/fsnotify"
-	pio "github.com/gogo/protobuf/io"
-	"github.com/gogo/protobuf/proto"
-	"github.com/prometheus/common/log"
-	"gopkg.in/yaml.v3"
 
 	mproto "github.com/flant/protobuf_exporter/pkg/proto"
 	"github.com/flant/protobuf_exporter/pkg/stats"
 	"github.com/flant/protobuf_exporter/pkg/vault"
+	pio "github.com/gogo/protobuf/io"
+	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/common/log"
 )
 
 // Markers are used as first byte of message to detect metric type because lua-protobuf doesn't support oneof streaming
@@ -42,40 +38,41 @@ const (
 	HistogramMarker = byte(1)
 	GaugeMarker     = byte(2)
 	CounterMarker   = byte(3)
-
-	excludeLabelsFile = "/var/files/exclude_resources.yml"
 )
 
 type TelemetryServer struct {
+	ctx      context.Context
+	stopFunc context.CancelFunc
 	vault    *vault.MetricsVault
-	stopChan chan struct{}
 
-	m                  sync.RWMutex
-	excludedNamespaces map[string]struct{}
-	excludedIngresses  map[string]struct{}
+	messageProcessor *telemetryMessageProcessor
 }
 
 func NewTelemetryServer(vault *vault.MetricsVault) *TelemetryServer {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &TelemetryServer{
-		vault:              vault,
-		excludedNamespaces: make(map[string]struct{}),
-		excludedIngresses:  make(map[string]struct{}),
-		stopChan:           make(chan struct{}),
+		ctx:              ctx,
+		stopFunc:         cancel,
+		vault:            vault,
+		messageProcessor: newTelemetryMessageProcessor(),
 	}
 }
 
 func (s *TelemetryServer) Start(address string, errorCh chan error) {
+	err := s.messageProcessor.LoadConfig(s.ctx)
+	if err != nil {
+		errorCh <- fmt.Errorf("unable to Load config: %v", err)
+		return
+	}
+
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		errorCh <- fmt.Errorf("unable to create TCP listener: %v", err)
 		return
 	}
 
-	s.parseFileWithExcludes()
-	go s.runFileWatcher()
-
 	go func() {
-		<-s.stopChan
+		<-s.ctx.Done()
 		_ = ln.Close()
 	}()
 	log.Infof("Start listening telemetry on %q", address)
@@ -93,7 +90,7 @@ func (s *TelemetryServer) Start(address string, errorCh chan error) {
 }
 
 func (s *TelemetryServer) Close() {
-	s.stopChan <- struct{}{}
+	s.stopFunc()
 }
 
 func (s *TelemetryServer) handleConn(c *net.TCPConn) {
@@ -117,7 +114,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.CounterMessage
 			readMessage(readerCloser, &message)
 
-			if s.isResourceExcluded(message.NamespacedIngress) {
+			if s.isMessagedDiscarded(message.Annotations) {
 				continue
 			}
 
@@ -131,7 +128,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.GaugeMessage
 			readMessage(readerCloser, &message)
 
-			if s.isResourceExcluded(message.NamespacedIngress) {
+			if s.isMessagedDiscarded(message.Annotations) {
 				continue
 			}
 
@@ -145,7 +142,7 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 			var message mproto.HistogramMessage
 			readMessage(readerCloser, &message)
 
-			if s.isResourceExcluded(message.NamespacedIngress) {
+			if s.isMessagedDiscarded(message.Annotations) {
 				continue
 			}
 
@@ -174,106 +171,8 @@ func (s *TelemetryServer) handleConn(c *net.TCPConn) {
 	}
 }
 
-func (s *TelemetryServer) isResourceExcluded(namespacedIngress string) bool {
-	pair := strings.Split(namespacedIngress, ":")
-	if len(pair) != 2 {
-		return false
-	}
-	ns := pair[0]
-
-	s.m.RLock()
-	defer s.m.RUnlock()
-
-	if len(s.excludedNamespaces) > 0 {
-		if _, ok := s.excludedNamespaces[ns]; ok {
-			return true
-		}
-	}
-
-	if len(s.excludedIngresses) > 0 {
-		if _, ok := s.excludedIngresses[namespacedIngress]; ok {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (s *TelemetryServer) runFileWatcher() {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatalf("start file watcher failed: %s", err)
-	}
-	defer watcher.Close()
-
-	err = watcher.Add(excludeLabelsFile)
-	if err != nil {
-		log.Fatalf("add watcher for file failed: %s", err)
-	}
-
-	for {
-		select {
-		case event := <-watcher.Events:
-			if event.Op == fsnotify.Remove {
-				// k8s configmaps use symlinks,
-				// old file is deleted and a new link with the same name is created
-				_ = watcher.Remove(event.Name)
-				err = watcher.Add(event.Name)
-				if err != nil {
-					log.Fatal(err)
-				}
-				switch event.Name {
-				case excludeLabelsFile:
-					s.parseFileWithExcludes()
-				}
-			}
-
-		case err := <-watcher.Errors:
-			log.Errorf("watch files error: %s", err)
-
-		case <-s.stopChan:
-			return
-		}
-	}
-}
-
-func (s *TelemetryServer) parseFileWithExcludes() {
-	f, err := os.Open(excludeLabelsFile) // reader
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	var exc excludes
-
-	err = yaml.NewDecoder(f).Decode(&exc)
-	if err != nil && err != io.EOF {
-		log.Fatal(err)
-	}
-
-	log.Infof("Exclude metrics from namespaces: %v", exc.Namespaces)
-	log.Infof("Exclude metrics from ingresses: %v", exc.Ingresses)
-
-	nss := make(map[string]struct{})
-	ings := make(map[string]struct{})
-
-	for _, ns := range exc.Namespaces {
-		nss[ns] = struct{}{}
-	}
-
-	for _, ing := range exc.Ingresses {
-		ings[ing] = struct{}{}
-	}
-
-	s.m.Lock()
-	s.excludedNamespaces = nss
-	s.excludedIngresses = ings
-	s.m.Unlock()
-}
-
-type excludes struct {
-	Namespaces []string `json:"namespaces" yaml:"namespaces"`
-	Ingresses  []string `json:"ingresses" yaml:"ingresses"`
+func (s *TelemetryServer) isMessagedDiscarded(annotation map[string]string) bool {
+	return s.messageProcessor.discardProcessor.IsDiscarded(annotation)
 }
 
 func readMessage(closer pio.Reader, message proto.Message) {

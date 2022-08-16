@@ -24,12 +24,12 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type HistogramMessage struct {
-	MappingIndex      int32             `protobuf:"varint,1,opt,name=MappingIndex,proto3" json:"MappingIndex,omitempty"`
-	Labels            []string          `protobuf:"bytes,2,rep,name=Labels,proto3" json:"Labels,omitempty"`
-	Buckets           map[string]uint64 `protobuf:"bytes,3,rep,name=Buckets,proto3" json:"Buckets,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	Sum               float64           `protobuf:"fixed64,4,opt,name=Sum,proto3" json:"Sum,omitempty"`
-	Count             uint64            `protobuf:"varint,5,opt,name=Count,proto3" json:"Count,omitempty"`
-	NamespacedIngress string            `protobuf:"bytes,6,opt,name=NamespacedIngress,proto3" json:"NamespacedIngress,omitempty"`
+	MappingIndex int32             `protobuf:"varint,1,opt,name=MappingIndex,proto3" json:"MappingIndex,omitempty"`
+	Labels       []string          `protobuf:"bytes,2,rep,name=Labels,proto3" json:"Labels,omitempty"`
+	Buckets      map[string]uint64 `protobuf:"bytes,3,rep,name=Buckets,proto3" json:"Buckets,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	Sum          float64           `protobuf:"fixed64,4,opt,name=Sum,proto3" json:"Sum,omitempty"`
+	Count        uint64            `protobuf:"varint,5,opt,name=Count,proto3" json:"Count,omitempty"`
+	Annotations  map[string]string `protobuf:"bytes,6,rep,name=Annotations,proto3" json:"Annotations,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (m *HistogramMessage) Reset()         { *m = HistogramMessage{} }
@@ -100,18 +100,18 @@ func (m *HistogramMessage) GetCount() uint64 {
 	return 0
 }
 
-func (m *HistogramMessage) GetNamespacedIngress() string {
+func (m *HistogramMessage) GetAnnotations() map[string]string {
 	if m != nil {
-		return m.NamespacedIngress
+		return m.Annotations
 	}
-	return ""
+	return nil
 }
 
 type CounterMessage struct {
-	MappingIndex      int32    `protobuf:"varint,1,opt,name=MappingIndex,proto3" json:"MappingIndex,omitempty"`
-	Labels            []string `protobuf:"bytes,2,rep,name=Labels,proto3" json:"Labels,omitempty"`
-	Value             uint64   `protobuf:"varint,3,opt,name=Value,proto3" json:"Value,omitempty"`
-	NamespacedIngress string   `protobuf:"bytes,4,opt,name=NamespacedIngress,proto3" json:"NamespacedIngress,omitempty"`
+	MappingIndex int32             `protobuf:"varint,1,opt,name=MappingIndex,proto3" json:"MappingIndex,omitempty"`
+	Labels       []string          `protobuf:"bytes,2,rep,name=Labels,proto3" json:"Labels,omitempty"`
+	Value        uint64            `protobuf:"varint,3,opt,name=Value,proto3" json:"Value,omitempty"`
+	Annotations  map[string]string `protobuf:"bytes,4,rep,name=Annotations,proto3" json:"Annotations,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (m *CounterMessage) Reset()         { *m = CounterMessage{} }
@@ -168,18 +168,18 @@ func (m *CounterMessage) GetValue() uint64 {
 	return 0
 }
 
-func (m *CounterMessage) GetNamespacedIngress() string {
+func (m *CounterMessage) GetAnnotations() map[string]string {
 	if m != nil {
-		return m.NamespacedIngress
+		return m.Annotations
 	}
-	return ""
+	return nil
 }
 
 type GaugeMessage struct {
-	MappingIndex      int32    `protobuf:"varint,1,opt,name=MappingIndex,proto3" json:"MappingIndex,omitempty"`
-	Labels            []string `protobuf:"bytes,2,rep,name=Labels,proto3" json:"Labels,omitempty"`
-	Value             float64  `protobuf:"fixed64,3,opt,name=Value,proto3" json:"Value,omitempty"`
-	NamespacedIngress string   `protobuf:"bytes,4,opt,name=NamespacedIngress,proto3" json:"NamespacedIngress,omitempty"`
+	MappingIndex int32             `protobuf:"varint,1,opt,name=MappingIndex,proto3" json:"MappingIndex,omitempty"`
+	Labels       []string          `protobuf:"bytes,2,rep,name=Labels,proto3" json:"Labels,omitempty"`
+	Value        float64           `protobuf:"fixed64,3,opt,name=Value,proto3" json:"Value,omitempty"`
+	Annotations  map[string]string `protobuf:"bytes,4,rep,name=Annotations,proto3" json:"Annotations,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (m *GaugeMessage) Reset()         { *m = GaugeMessage{} }
@@ -236,26 +236,29 @@ func (m *GaugeMessage) GetValue() float64 {
 	return 0
 }
 
-func (m *GaugeMessage) GetNamespacedIngress() string {
+func (m *GaugeMessage) GetAnnotations() map[string]string {
 	if m != nil {
-		return m.NamespacedIngress
+		return m.Annotations
 	}
-	return ""
+	return nil
 }
 
 func init() {
 	proto.RegisterType((*HistogramMessage)(nil), "proto.HistogramMessage")
+	proto.RegisterMapType((map[string]string)(nil), "proto.HistogramMessage.AnnotationsEntry")
 	proto.RegisterMapType((map[string]uint64)(nil), "proto.HistogramMessage.BucketsEntry")
 	proto.RegisterType((*CounterMessage)(nil), "proto.CounterMessage")
+	proto.RegisterMapType((map[string]string)(nil), "proto.CounterMessage.AnnotationsEntry")
 	proto.RegisterType((*GaugeMessage)(nil), "proto.GaugeMessage")
+	proto.RegisterMapType((map[string]string)(nil), "proto.GaugeMessage.AnnotationsEntry")
 }
 
 func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
-	// 315 bytes of a gzipped FileDescriptorProto
+	// 349 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xcd, 0x4d, 0x2d, 0x2e,
-	0x4e, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x53, 0x4a, 0x0b, 0x98,
+	0x4e, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x53, 0x4a, 0xff, 0x98,
 	0xb8, 0x04, 0x3c, 0x32, 0x8b, 0x4b, 0xf2, 0xd3, 0x8b, 0x12, 0x73, 0x7d, 0x21, 0x2a, 0x84, 0x94,
 	0xb8, 0x78, 0x7c, 0x13, 0x0b, 0x0a, 0x32, 0xf3, 0xd2, 0x3d, 0xf3, 0x52, 0x52, 0x2b, 0x24, 0x18,
 	0x15, 0x18, 0x35, 0x58, 0x83, 0x50, 0xc4, 0x84, 0xc4, 0xb8, 0xd8, 0x7c, 0x12, 0x93, 0x52, 0x73,
@@ -264,16 +267,18 @@ var fileDescriptor_33c57e4bae7b9afd = []byte{
 	0xe8, 0xb6, 0xe8, 0x41, 0x95, 0xb9, 0xe6, 0x95, 0x14, 0x55, 0x06, 0xc1, 0x34, 0x09, 0x09, 0x70,
 	0x31, 0x07, 0x97, 0xe6, 0x4a, 0xb0, 0x28, 0x30, 0x6a, 0x30, 0x06, 0x81, 0x98, 0x42, 0x22, 0x5c,
 	0xac, 0xce, 0xf9, 0xa5, 0x79, 0x25, 0x12, 0xac, 0x0a, 0x8c, 0x1a, 0x2c, 0x41, 0x10, 0x8e, 0x90,
-	0x0e, 0x97, 0xa0, 0x5f, 0x62, 0x6e, 0x6a, 0x71, 0x41, 0x62, 0x72, 0x6a, 0x8a, 0x67, 0x5e, 0x7a,
-	0x51, 0x6a, 0x71, 0xb1, 0x04, 0x9b, 0x02, 0xa3, 0x06, 0x67, 0x10, 0xa6, 0x84, 0x94, 0x15, 0x17,
-	0x0f, 0xb2, 0x75, 0x20, 0x5b, 0xb2, 0x53, 0x2b, 0xc1, 0x1e, 0xe3, 0x0c, 0x02, 0x31, 0x41, 0xb6,
-	0x94, 0x25, 0xe6, 0x94, 0xa6, 0x4a, 0x30, 0x41, 0x6c, 0x01, 0x73, 0xac, 0x98, 0x2c, 0x18, 0x95,
-	0x26, 0x30, 0x72, 0xf1, 0x81, 0xed, 0x4c, 0x2d, 0xa2, 0x46, 0x00, 0x89, 0x70, 0xb1, 0x86, 0x81,
-	0x2d, 0x62, 0x86, 0x58, 0x04, 0xe6, 0x60, 0xf7, 0x0e, 0x0b, 0x0e, 0xef, 0x28, 0xf5, 0x31, 0x72,
-	0xf1, 0xb8, 0x27, 0x96, 0xa6, 0xa7, 0x52, 0xdd, 0x41, 0x8c, 0x64, 0x39, 0xc8, 0x49, 0xe2, 0xc4,
-	0x23, 0x39, 0xc6, 0x0b, 0x8f, 0xe4, 0x18, 0x1f, 0x3c, 0x92, 0x63, 0x9c, 0xf0, 0x58, 0x8e, 0xe1,
-	0xc2, 0x63, 0x39, 0x86, 0x1b, 0x8f, 0xe5, 0x18, 0x92, 0xd8, 0xc0, 0xb1, 0x6f, 0x0c, 0x08, 0x00,
-	0x00, 0xff, 0xff, 0xe3, 0x91, 0xeb, 0xd4, 0x7f, 0x02, 0x00, 0x00,
+	0x17, 0x17, 0xb7, 0x63, 0x5e, 0x5e, 0x7e, 0x49, 0x62, 0x49, 0x66, 0x7e, 0x5e, 0xb1, 0x04, 0x1b,
+	0xd8, 0x2e, 0x0d, 0x5c, 0x76, 0x21, 0x29, 0x85, 0xd8, 0x87, 0xac, 0x59, 0xca, 0x8a, 0x8b, 0x07,
+	0xd9, 0x31, 0x20, 0x37, 0x64, 0xa7, 0x56, 0x82, 0xbd, 0xcd, 0x19, 0x04, 0x62, 0x82, 0xdc, 0x50,
+	0x96, 0x98, 0x53, 0x9a, 0x2a, 0xc1, 0x04, 0x71, 0x03, 0x98, 0x63, 0xc5, 0x64, 0xc1, 0x28, 0x65,
+	0xc7, 0x25, 0x80, 0x6e, 0x38, 0x21, 0xfd, 0x9c, 0x48, 0xfa, 0x95, 0xde, 0x30, 0x72, 0xf1, 0x81,
+	0x7d, 0x94, 0x5a, 0x44, 0x8d, 0xe0, 0x17, 0xe1, 0x62, 0x0d, 0x03, 0x5b, 0xc4, 0x0c, 0x71, 0x28,
+	0x98, 0x23, 0xe4, 0x81, 0x1a, 0x58, 0x2c, 0xe0, 0xc0, 0x52, 0x83, 0x06, 0x16, 0xaa, 0xed, 0x04,
+	0x82, 0x8a, 0x52, 0xef, 0xbe, 0x60, 0xe4, 0xe2, 0x71, 0x4f, 0x2c, 0x4d, 0x4f, 0xa5, 0xba, 0x67,
+	0x19, 0x61, 0x9e, 0x75, 0xc3, 0xe6, 0x59, 0x58, 0x2a, 0x44, 0xb6, 0x9b, 0xb6, 0x5e, 0x75, 0x92,
+	0x38, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x27, 0x3c, 0x96,
+	0x63, 0xb8, 0xf0, 0x58, 0x8e, 0xe1, 0xc6, 0x63, 0x39, 0x86, 0x24, 0x36, 0xb0, 0x5b, 0x8c, 0x01,
+	0x01, 0x00, 0x00, 0xff, 0xff, 0x51, 0x2e, 0xe8, 0xb4, 0x93, 0x03, 0x00, 0x00,
 }
 
 func (m *HistogramMessage) Marshal() (dAtA []byte, err error) {
@@ -296,12 +301,24 @@ func (m *HistogramMessage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.NamespacedIngress) > 0 {
-		i -= len(m.NamespacedIngress)
-		copy(dAtA[i:], m.NamespacedIngress)
-		i = encodeVarintMessage(dAtA, i, uint64(len(m.NamespacedIngress)))
-		i--
-		dAtA[i] = 0x32
+	if len(m.Annotations) > 0 {
+		for k := range m.Annotations {
+			v := m.Annotations[k]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintMessage(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintMessage(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintMessage(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x32
+		}
 	}
 	if m.Count != 0 {
 		i = encodeVarintMessage(dAtA, i, uint64(m.Count))
@@ -368,12 +385,24 @@ func (m *CounterMessage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.NamespacedIngress) > 0 {
-		i -= len(m.NamespacedIngress)
-		copy(dAtA[i:], m.NamespacedIngress)
-		i = encodeVarintMessage(dAtA, i, uint64(len(m.NamespacedIngress)))
-		i--
-		dAtA[i] = 0x22
+	if len(m.Annotations) > 0 {
+		for k := range m.Annotations {
+			v := m.Annotations[k]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintMessage(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintMessage(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintMessage(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x22
+		}
 	}
 	if m.Value != 0 {
 		i = encodeVarintMessage(dAtA, i, uint64(m.Value))
@@ -417,12 +446,24 @@ func (m *GaugeMessage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.NamespacedIngress) > 0 {
-		i -= len(m.NamespacedIngress)
-		copy(dAtA[i:], m.NamespacedIngress)
-		i = encodeVarintMessage(dAtA, i, uint64(len(m.NamespacedIngress)))
-		i--
-		dAtA[i] = 0x22
+	if len(m.Annotations) > 0 {
+		for k := range m.Annotations {
+			v := m.Annotations[k]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintMessage(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintMessage(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintMessage(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x22
+		}
 	}
 	if m.Value != 0 {
 		i -= 8
@@ -487,9 +528,13 @@ func (m *HistogramMessage) Size() (n int) {
 	if m.Count != 0 {
 		n += 1 + sovMessage(uint64(m.Count))
 	}
-	l = len(m.NamespacedIngress)
-	if l > 0 {
-		n += 1 + l + sovMessage(uint64(l))
+	if len(m.Annotations) > 0 {
+		for k, v := range m.Annotations {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovMessage(uint64(len(k))) + 1 + len(v) + sovMessage(uint64(len(v)))
+			n += mapEntrySize + 1 + sovMessage(uint64(mapEntrySize))
+		}
 	}
 	return n
 }
@@ -512,9 +557,13 @@ func (m *CounterMessage) Size() (n int) {
 	if m.Value != 0 {
 		n += 1 + sovMessage(uint64(m.Value))
 	}
-	l = len(m.NamespacedIngress)
-	if l > 0 {
-		n += 1 + l + sovMessage(uint64(l))
+	if len(m.Annotations) > 0 {
+		for k, v := range m.Annotations {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovMessage(uint64(len(k))) + 1 + len(v) + sovMessage(uint64(len(v)))
+			n += mapEntrySize + 1 + sovMessage(uint64(mapEntrySize))
+		}
 	}
 	return n
 }
@@ -537,9 +586,13 @@ func (m *GaugeMessage) Size() (n int) {
 	if m.Value != 0 {
 		n += 9
 	}
-	l = len(m.NamespacedIngress)
-	if l > 0 {
-		n += 1 + l + sovMessage(uint64(l))
+	if len(m.Annotations) > 0 {
+		for k, v := range m.Annotations {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovMessage(uint64(len(k))) + 1 + len(v) + sovMessage(uint64(len(v)))
+			n += mapEntrySize + 1 + sovMessage(uint64(mapEntrySize))
+		}
 	}
 	return n
 }
@@ -775,9 +828,9 @@ func (m *HistogramMessage) Unmarshal(dAtA []byte) error {
 			}
 		case 6:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NamespacedIngress", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Annotations", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMessage
@@ -787,23 +840,118 @@ func (m *HistogramMessage) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthMessage
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthMessage
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.NamespacedIngress = string(dAtA[iNdEx:postIndex])
+			if m.Annotations == nil {
+				m.Annotations = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowMessage
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessage
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthMessage
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessage
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthMessage
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipMessage(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Annotations[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -927,9 +1075,9 @@ func (m *CounterMessage) Unmarshal(dAtA []byte) error {
 			}
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NamespacedIngress", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Annotations", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMessage
@@ -939,23 +1087,118 @@ func (m *CounterMessage) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthMessage
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthMessage
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.NamespacedIngress = string(dAtA[iNdEx:postIndex])
+			if m.Annotations == nil {
+				m.Annotations = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowMessage
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessage
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthMessage
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessage
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthMessage
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipMessage(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Annotations[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1071,9 +1314,9 @@ func (m *GaugeMessage) Unmarshal(dAtA []byte) error {
 			m.Value = float64(math.Float64frombits(v))
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NamespacedIngress", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Annotations", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMessage
@@ -1083,23 +1326,118 @@ func (m *GaugeMessage) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthMessage
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthMessage
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.NamespacedIngress = string(dAtA[iNdEx:postIndex])
+			if m.Annotations == nil {
+				m.Annotations = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowMessage
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessage
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthMessage
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessage
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthMessage
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipMessage(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthMessage
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Annotations[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

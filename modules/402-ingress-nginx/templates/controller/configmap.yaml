@@ -230,20 +230,13 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: d8-ingress-metrics
+  name: d8-ingress-telemetry-config
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 data:
-  exclude_resources.yml: |
-    {{- if len $context.Values.ingressNginx.internal.excludedMetricResources.namespaces }}
-    namespaces:
-{{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml | indent 6 }}
-    {{- else }}
-    namespaces: []
-    {{- end }}
-    {{- if len $context.Values.ingressNginx.internal.excludedMetricResources.ingresses }}
-    ingresses:
-{{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml | indent 6 }}
-    {{- else }}
-    ingresses: []
-    {{- end }}
+  telemetry_config.yml: |
+    discard:
+      namespaces:
+        {{ $context.Values.ingressNginx.internal.excludedMetricResources.namespaces | toYaml | indent 8 }}
+      ingresses:
+        {{ $context.Values.ingressNginx.internal.excludedMetricResources.ingresses | toYaml | indent 8 }}

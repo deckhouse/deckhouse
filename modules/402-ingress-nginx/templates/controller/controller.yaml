@@ -334,7 +334,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
         volumeMounts:
           - mountPath: /var/files
-            name: exclude-metric-resources-file
+            name: telemetry-config-file
       - name: kube-rbac-proxy
         image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
         args:
@@ -398,9 +398,9 @@ spec:
       - name: webhook-cert
         secret:
           secretName: ingress-admission-certificate
-      - name: exclude-metric-resources-file
+      - name: telemetry-config-file
         configMap:
-          name: d8-ingress-metrics
+          name: d8-ingress-telemetry-config
 {{- end }}
 
 {{- $context := . }}
