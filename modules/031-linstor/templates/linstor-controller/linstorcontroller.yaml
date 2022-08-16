@@ -40,7 +40,9 @@ spec:
     {{ toYaml . | nindent 4 }}
     {{- end }}
   dbConnectionURL: k8s
-  #luksSecret: linstor-passphrase
+  {{- if .Values.linstor.internal.masterPassphrase }}
+  luksSecret: linstor-passphrase
+  {{- end }}
   sslSecret: linstor-controller-ssl-cert
   dbCertSecret: ""
   dbUseClientCert: false

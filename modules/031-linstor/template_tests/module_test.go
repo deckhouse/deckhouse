@@ -97,6 +97,7 @@ const (
 `
 	moduleValues = `
   internal:
+    masterPassphrase: hackme
     httpsClientCert:
       ca: |
         -----BEGIN CERTIFICATE-----
