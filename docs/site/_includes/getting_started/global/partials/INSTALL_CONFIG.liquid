@@ -2,9 +2,11 @@
 
 {% if revision == 'ee' %}
 {% include getting_started/global/EE_ACCESS.md %}
+<div class="custom-disabled-block disabled">
 {% endif %}
 
-The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
+<div markdown="1">
+  The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
 - `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc){% else %} access parameters{% endif %}, and the initial cluster parameters.
 {% if page.platform_type == 'cloud' %}- `resources.yml` — description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc).{% endif %}
 
@@ -49,4 +51,9 @@ You can control on which nodes the Deckhouse core components will run by setting
 >           - app.kubernetes.io/instance
 > ```
 {% endofftopic %}
+{% endif %}
+</div>
+
+{% if revision == 'ee' %}
+</div>
 {% endif %}

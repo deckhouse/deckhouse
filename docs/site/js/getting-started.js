@@ -179,12 +179,16 @@ function getDockerConfigFromToken(registry, username, password) {
 
 // Update license token and docker config
 function update_license_parameters(newtoken = '') {
-  if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
+  const token = $('[license-token]').val();
+
+  // if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
+  if (token !== '' || newtoken !== '') {
     let registry = 'registry.deckhouse.io';
     let username = 'license-token';
     let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
     let matchStringDockerLogin = 'echo <LICENSE_TOKEN>';
-    let password = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
+    // let password = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
+    let password = token;
     let passwordHash = btoa(password);
 
     if (newtoken) {
@@ -194,7 +198,7 @@ function update_license_parameters(newtoken = '') {
       }
       password = newtoken;
       passwordHash = btoa(password);
-      $.cookie('license-token', newtoken, {path: '/', expires: 365})
+      // $.cookie('license-token', newtoken, {path: '/', expires: 365})
     }
 
     let config = getDockerConfigFromToken(registry, username, password);

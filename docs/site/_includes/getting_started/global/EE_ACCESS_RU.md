@@ -1,44 +1,45 @@
-<blockquote>
-<h3 class="text text_h3" style="margin-top: 0;">
-  Лицензионный ключ доступа Deckhouse Platform Enterprise Edition
-</h3>
-<div style="width: 500px;">
-<p class="text">Лицензионный ключ используется компонентами Deckhouse для доступа к геораспределенному container registry, в котором хранятся все используемые Deckhouse образы.</p>
-
-<p class="text">Приведенные на данной странице команды и файлы конфигурации <strong>сгенерированы</strong> с учетом введенного лицензионного ключа.</p>
-</div>
-
-<div style="width: 500px;">
-{% include request_access_form.html %}
-</div>
-
+<div class="license-form__wrap">
+<div class="license-form-enter">
 <h3 class="text text_h3">
   Введите лицензионный ключ
 </h3>
 
-<div class="form" style="width: 500px;">
+<div class="form form--inline" style="width: 500px;">
   <div class="form__row">
     <label class="label">
       Лицензионный ключ
     </label>
-    <input class="textfield"
+    <input id="license-token-input" class="textfield"
       type="text" license-token name="license-token"
       autocomplete="off" />
   </div>
+  <a href="#" id="enter-license-key" class="button button_alt">Ввести</a>
 </div>
-</blockquote>
+</div>
+
+<div class="license-form-request">
+<h3 class="text text_h3">
+  Или запросить лицензионный ключ
+</h3>
+<div class="button-group">
+  <a href="javascript:raOpen()" class="button button_alt">Запросить бесплатный 30-дневный доступ!</a>
+</div>
+</div>
+</div>
 
 <script>
 $(document).ready(function() {
+    $('#enter-license-key').click((e)=> {
+        e.preventDefault();
+        const input = $('[license-token]');
+        const wrapper = $('.custom-disabled-block');
 
-    tokenInputElement = $('[license-token]');
-    if ($.cookie("demotoken") || $.cookie("license-token")) {
-        let token = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
-        tokenInputElement.val(token);
-    }
-
-    tokenInputElement.change(function () {
-        update_license_parameters($(this).val());
+        if (input.val() !== '') {
+          update_license_parameters(input.val());
+          wrapper.removeClass('disabled');
+        } else {
+          wrapper.addClass('disabled');
+        }
     });
 })
 </script>

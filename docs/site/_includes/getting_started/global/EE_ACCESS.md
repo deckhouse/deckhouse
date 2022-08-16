@@ -1,44 +1,45 @@
-<blockquote>
-<h3 class="text text_h3" style="margin-top: 0;">
-  Deckhouse Platform Enterprise Edition license key
-</h3>
-<div style="width: 500px;">
-<p class="text">The license key is used by Deckhouse components to access the geo-distributed container registry, where all images used by the Deckhouse are stored.</p>
-
-<p class="text">The commands and configuration files on this page are <strong>generated</strong> using the license key you entered.</p>
-</div>
-
-<div style="width: 500px;">
-{% include request_access_form.html %}
-</div>
-
+<div class="license-form__wrap">
+<div class="license-form-enter">
 <h3 class="text text_h3">
   Enter license key
 </h3>
 
-<div class="form" style="width: 500px;">
+<div class="form form--inline" style="width: 500px;">
   <div class="form__row">
     <label class="label">
       License key
     </label>
-    <input class="textfield"
+    <input id="license-token-input" class="textfield"
       type="text" license-token name="license-token"
       autocomplete="off" />
   </div>
+  <a href="#" id="enter-license-key" class="button button_alt">Enter</a>
 </div>
-</blockquote>
+</div>
+
+<div class="license-form-request">
+<h3 class="text text_h3">
+  Or request license key
+</h3>
+<div class="button-group">
+  <a href="javascript:raOpen()" class="button button_alt">Request 30-day free trial access!</a>
+</div>
+</div>
+</div>
 
 <script>
 $(document).ready(function() {
+    $('#enter-license-key').click((e)=> {
+        e.preventDefault();
+        const input = $('[license-token]');
+        const wrapper = $('.custom-disabled-block');
 
-    tokenInputElement = $('[license-token]');
-    if ($.cookie("demotoken") || $.cookie("license-token")) {
-        let token = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
-        tokenInputElement.val(token);
-    }
-
-    tokenInputElement.change(function () {
-        update_license_parameters($(this).val());
+        if (input.val() !== '') {
+          update_license_parameters(input.val());
+          wrapper.removeClass('disabled');
+        } else {
+          wrapper.addClass('disabled');
+        }
     });
 })
 </script>

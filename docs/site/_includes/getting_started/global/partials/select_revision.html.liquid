@@ -41,6 +41,8 @@
 {% endfor %}
 {%- endfor %}
 
+<div class="custom-disabled-block">
+
 {% if page.platform_type == 'cloud' %}
 {%- for preset in site.data.getting_started.data.presets %}
 <div id='block_preset_{{ preset[0] }}' class="tabs__content tabs__content_preset" {% if preset[1].recommended %}recommended-preset{% endif %} markdown="1">
@@ -57,8 +59,15 @@ Resources for the **"{{ preset[1].name[page.lang] }}"** preset.
 {%- endfor %}
 {% endif %}
 
+</div>
+
 {%- for revision in site.data.getting_started.data.global.revisions %}
 {%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
+
+{% if revision == 'ee' %}
+<div class="custom-disabled-block disabled">
+{% endif %}
+
 <div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
 {% if page.lang == 'ru' %}
 {% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
@@ -66,6 +75,10 @@ Resources for the **"{{ preset[1].name[page.lang] }}"** preset.
 {% include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
 {% endif %}
 </div>
+{% if revision == 'ee' %}
+</div>
+{% endif %}
+
 {% endfor %}
 
 <script>
