@@ -28,10 +28,7 @@ import (
 )
 
 func TestMatrix(t *testing.T) {
-	discoveredModules, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
-	require.NoError(t, err)
-
-	// Use environment variable to focus on specific module, e.g. D8_TEST_MATRIX_FOCUS=user-authn,user-authz
+	// Use environment variable to focus on specific module, e.g. FOCUS=user-authn,user-authz
 	focus := os.Getenv("FOCUS")
 
 	focusNames := make(map[string]struct{})
@@ -41,6 +38,9 @@ func TestMatrix(t *testing.T) {
 			focusNames[part] = struct{}{}
 		}
 	}
+
+	discoveredModules, err := modules.GetDeckhouseModulesWithValuesMatrixTests(focusNames)
+	require.NoError(t, err)
 
 	for _, module := range discoveredModules {
 		_, ok := focusNames[module.Name]
