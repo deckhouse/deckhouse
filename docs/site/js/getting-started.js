@@ -182,7 +182,7 @@ function getDockerConfigFromToken(registry, username, password) {
 //
 // Removes `disabled` class on target block selector if the item has a value otherwise, adds `disabled` class.
 //
-function triggerBlockOnItemContent(itemSelector, targetSelector) {
+function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonElement = false) {
   const input = $(itemSelector);
   const wrapper = $(targetSelector);
   if (input.val() !== '') {
@@ -190,6 +190,10 @@ function triggerBlockOnItemContent(itemSelector, targetSelector) {
     wrapper.removeClass('disabled');
   } else {
     wrapper.addClass('disabled');
+    if (turnCommonElement) {
+      $(targetSelector + '.common').removeClass('disabled');
+      console.log('Turn common element');
+    }
   }
 }
 

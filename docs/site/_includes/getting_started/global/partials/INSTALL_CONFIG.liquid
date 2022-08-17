@@ -2,7 +2,7 @@
 
 {% if revision == 'ee' %}
 {% include getting_started/global/EE_ACCESS.md %}
-<div class="dimmer-block-content{% if page.platform_code == 'openstack' or page.platform_code == 'vsphere' %} disabled{% endif %}">
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
 
 <div markdown="1">
