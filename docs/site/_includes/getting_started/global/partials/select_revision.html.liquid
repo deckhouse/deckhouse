@@ -85,10 +85,6 @@ Resources for the **"{{ preset[1].name[page.lang] }}"** preset.
 <script>
 $(document).ready(function() {
 
-  $('#license-token-input').change(function () {
-      triggerBlockOnItemContent('[license-token]', '.dimmer-block-content');
-  });
-
   $('#enter-license-key').click((e)=> {
       e.preventDefault();
       triggerBlockOnItemContent('[license-token]', '.dimmer-block-content');
