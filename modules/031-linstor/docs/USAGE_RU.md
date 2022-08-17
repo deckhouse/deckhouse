@@ -217,6 +217,8 @@ spec:
 
 1. Создайте `VolumeSnapshotContent`, указывающий на конкретный id снапшота.
 
+   > VolumeSnapshotContent — ресурс на уровне кластера. Каждый VolumeSnapshotClass может быть связан только с одним VolumeSnapshot. Поэтому удостоверьтесь в уникальности его имени.
+
    Пример:
 
    ```yaml
