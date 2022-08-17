@@ -186,14 +186,14 @@ metricsPath: /metrics`
 
 			mergedProxy := `
 instances:
-  425f55b4:
+  f409c5ed:
     components:
     - name: KubeControllerManager
       values:
         accessType: ThroughNode
+        metricsPath: /metrics
         pod:
           podSelector: {}
-        metricsPath: /metrics
         throughNode:
           authenticationMethod: None
           localPort: 10252
@@ -204,9 +204,9 @@ instances:
     - name: KubeScheduler
       values:
         accessType: ThroughNode
+        metricsPath: /metrics
         pod:
           podSelector: {}
-        metricsPath: /metrics
         throughNode:
           authenticationMethod: None
           localPort: 10251
@@ -217,10 +217,10 @@ instances:
     - name: KubeEtcdMain
       values:
         accessType: ThroughNode
-        pod:
-          podSelector: {}
         metricsPath: /metrics
         name: main
+        pod:
+          podSelector: {}
         throughNode:
           authenticationMethod: HostPathCertificate
           hostPathCertificate: /etc/kubernetes/pki/apiserver-etcd-client.crt
@@ -354,38 +354,38 @@ data:
 			mergedProxy := `
 instances:
   9dc5c6b4:
-	components:
-	- name: KubeApiserver
-	  values:
-		accessType: ThroughNode
-		metricsPath: /metrics
-		pod:
-		  podSelector: {}
-		throughNode:
-		  nodeSelector:
-			abc: xyz
-		  proxyListenPort: 10361
-		throughNodeKubernetes:
-		  authenticationMethod: ProxyServiceAccount
-	nodeSelector:
-	  abc: xyz
+    components:
+    - name: KubeApiserver
+      values:
+        accessType: ThroughNode
+        metricsPath: /metrics
+        pod:
+          podSelector: {}
+        throughNode:
+          nodeSelector:
+            abc: xyz
+          proxyListenPort: 10361
+        throughNodeKubernetes:
+          authenticationMethod: ProxyServiceAccount
+    nodeSelector:
+      abc: xyz
   f409c5ed:
-	components:
-	- name: KubeScheduler
-	  values:
-		accessType: ThroughNode
-		metricsPath: /metrics
-		pod:
-		  podSelector: {}
-		throughNode:
-		  authenticationMethod: None
-		  localPort: 10251
-		  nodeSelector:
-			node-role.kubernetes.io/control-plane: ""
-		  proxyListenPort: 10363
-		  scheme: http
-	nodeSelector:
-	  node-role.kubernetes.io/control-plane: ""
+    components:
+    - name: KubeScheduler
+      values:
+        accessType: ThroughNode
+        metricsPath: /metrics
+        pod:
+          podSelector: {}
+        throughNode:
+          authenticationMethod: None
+          localPort: 10251
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          proxyListenPort: 10363
+          scheme: http
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: ""
 `
 			Expect(f.ValuesGet("monitoringKubernetesControlPlane.internal.proxy").String()).To(MatchYAML(mergedProxy))
 		})
@@ -572,26 +572,7 @@ data:
 
 			mergedProxy := `
 instances:
-  425f55b4:
-    components:
-    - name: KubeEtcdMain
-      values:
-        accessType: ThroughNode
-        pod:
-          podSelector: {}
-        metricsPath: /metrics
-        name: main
-        throughNode:
-          authenticationMethod: HostPathCertificate
-          hostPathCertificate: /etc/kubernetes/pki/apiserver-etcd-client.crt
-          hostPathCertificateKey: /etc/kubernetes/pki/apiserver-etcd-client.key
-          localPort: 2379
-          nodeSelector:
-            node-role.kubernetes.io/control-plane: ""
-          proxyListenPort: 10370
-    nodeSelector:
-      node-role.kubernetes.io/control-plane: ""
-  f409c5ed:
+  e5a31108:
     components:
     - name: KubeEtcdNice1
       values:
@@ -607,6 +588,25 @@ instances:
           proxyListenPort: 10372
     nodeSelector:
       xxx: yyy
+  f409c5ed:
+    components:
+    - name: KubeEtcdMain
+      values:
+        accessType: ThroughNode
+        metricsPath: /metrics
+        name: main
+        pod:
+          podSelector: {}
+        throughNode:
+          authenticationMethod: HostPathCertificate
+          hostPathCertificate: /etc/kubernetes/pki/apiserver-etcd-client.crt
+          hostPathCertificateKey: /etc/kubernetes/pki/apiserver-etcd-client.key
+          localPort: 2379
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          proxyListenPort: 10370
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: ""
 `
 			Expect(f.ValuesGet("monitoringKubernetesControlPlane.internal.proxy").String()).To(MatchYAML(mergedProxy))
 		})
