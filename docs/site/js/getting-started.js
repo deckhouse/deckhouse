@@ -203,7 +203,7 @@ function update_license_parameters(newtoken = '') {
     let username = 'license-token';
     let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
     let matchStringDockerLogin = 'echo <LICENSE_TOKEN>';
-    let password = lastUsedLicenseToken;
+    let password = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
     let passwordHash = btoa(password);
 
     if (newtoken) {
