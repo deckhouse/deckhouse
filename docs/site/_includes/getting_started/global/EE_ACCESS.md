@@ -26,20 +26,3 @@
 </div>
 </div>
 </div>
-
-<script>
-$(document).ready(function() {
-    $('#enter-license-key').click((e)=> {
-        e.preventDefault();
-        const input = $('[license-token]');
-        const wrapper = $('.custom-disabled-block');
-
-        if (input.val() !== '') {
-          update_license_parameters(input.val());
-          wrapper.removeClass('disabled');
-        } else {
-          wrapper.addClass('disabled');
-        }
-    });
-})
-</script>

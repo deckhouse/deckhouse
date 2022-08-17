@@ -1,3 +1,5 @@
+let lastUsedLicenseToken = '';
+
 $(document).ready(function () {
   $('[gs-revision-tabs]').on('click', function () {
     var name = $(this).attr('data-features-tabs-trigger');
@@ -177,6 +179,20 @@ function getDockerConfigFromToken(registry, username, password) {
   return btoa('{"auths": { "' + registry + '": { "username": "' + username + '", "password": "' + password + '", "auth": "' + getDockerAuthFromToken(username, password) + '"}}}');
 }
 
+//
+// Removes `disabled` class on target block selector if the item has a value otherwise, adds `disabled` class.
+//
+function triggerBlockOnItemContent(itemSelector, targetSelector) {
+  const input = $(itemSelector);
+  const wrapper = $(targetSelector);
+  if (input.val() !== '') {
+    update_license_parameters(input.val());
+    wrapper.removeClass('disabled');
+  } else {
+    wrapper.addClass('disabled');
+  }
+}
+
 // Update license token and docker config
 function update_license_parameters(newtoken = '') {
   const token = $('[license-token]').val();
@@ -187,8 +203,7 @@ function update_license_parameters(newtoken = '') {
     let username = 'license-token';
     let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
     let matchStringDockerLogin = 'echo <LICENSE_TOKEN>';
-    // let password = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
-    let password = token;
+    let password = lastUsedLicenseToken;
     let passwordHash = btoa(password);
 
     if (newtoken) {
@@ -198,7 +213,7 @@ function update_license_parameters(newtoken = '') {
       }
       password = newtoken;
       passwordHash = btoa(password);
-      // $.cookie('license-token', newtoken, {path: '/', expires: 365})
+      lastUsedLicenseToken = newtoken;
     }
 
     let config = getDockerConfigFromToken(registry, username, password);
