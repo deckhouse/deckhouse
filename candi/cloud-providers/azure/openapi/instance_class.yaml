@@ -49,7 +49,7 @@ spec:
 
                     **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                    > **Caution!** Currently, `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
+                    > **Caution!** Currently, `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` are supported and tested to work.
                   example: 'Canonical:UbuntuServer:18.04-LTS:18.04.202010140'
                   x-doc-required: false
                 diskSizeGb:
