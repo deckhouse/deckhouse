@@ -10,13 +10,28 @@ const icons = {
 
 function formatDate(date) {
   return new Intl.DateTimeFormat('en-US', {
-      dateStyle: 'full',
+      dateStyle: 'short',
       timeStyle: 'short'
   }).format(date);
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  const url = 'https://flow.deckhouse.io/deployments';
+  const url = 'https://flow.deckhouse.io/releases';
+
+  const channels = ['a', 'b', 'ea', 's', 'rs'];
+  const channelCodes = {
+    "Alpha": 'a',
+    "Beta": 'b',
+    "Early Access": 'ea',
+    "Stable": 's',
+    "Rock Solid": 'rs' };
+  const editions = ['fe', 'ee', 'ce'];
+
+  const root = document.querySelector('.releases-page__table--wrap');
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const trHead = document.createElement('tr');
+  const tbody = document.createElement('tbody');
 
   fetch(url, {
       headers: {
@@ -25,38 +40,26 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .then(respose => respose.json())
     .then(data => {
-      for (const item of data.deployments) {
+      for (const channelItem in channelCodes) {
         const trBody = document.createElement('tr');
         const channel = document.createElement('td');
-        const version = document.createElement('td');
-        const state = document.createElement('td');
-        const link = document.createElement('a');
-        const date = new Date(Date.parse(item['updated']))
-
-
-        channel.innerText = item['channel'];
-        version.innerText = item['version'];
-        link.href = item['log'];
-        link.innerText = item['state'];
-        link.style.paddingLeft = '5px';
-        state.innerText = ` at ${formatDate(date)}`;
-
-        state.prepend(link);
-        const icon = icons[item['state']];
-        if (icon) {
-          state.prepend(icon);
+        channel.innerText = channelItem[0].toUpperCase() + channelItem.slice(1);
+        trBody.append(channel)
+        for (const edition of editions) {
+           const itemData = data.releases[channelCodes[channelItem] + '-' + edition]
+           const rawItem = document.createElement('td');
+           const link = document.createElement('a');
+           const date = new Date(Date.parse(itemData['date']))
+           link.href = `../${itemData['version']}/`;
+           link.innerText = itemData['version'];
+           rawItem.innerText = ` (${formatDate(date)})`;
+           rawItem.prepend(link);
+           trBody.append(rawItem)
         }
-
-        trBody.append(channel, version, state);
         tbody.append(trBody);
       }
-    });
 
-  const root = document.querySelector('.releases-page__table--wrap');
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-  const trHead = document.createElement('tr');
-  const tbody = document.createElement('tbody');
+    });
 
   let th = document.createElement('th');
 
@@ -64,13 +67,11 @@ document.addEventListener("DOMContentLoaded", function () {
   trHead.append(th);
   thead.append(trHead);
 
-  th = document.createElement('th');
-  th.innerText = 'Version';
-  trHead.append(th);
-
-  th = document.createElement('th');
-  th.innerText = 'State';
-  trHead.append(th);
+  for (const edition of editions) {
+    th = document.createElement('th');
+    th.innerText = edition.toUpperCase();
+    trHead.append(th);
+  }
 
   table.append(thead);
   table.append(tbody);
