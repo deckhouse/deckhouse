@@ -218,6 +218,8 @@ To recover data from S3 storage into another namespace or Kubernetes cluster, fo
 
 1. Create a `VolumeSnapshotContent`, pointing to a specific snapshot id.
 
+   > VolumeSnapshotContent is a cluster-wide resource. Each VolumeSnapshotClass can only be bound with one VolumeSnapshot. So make sure its name is unique.
+   
    Example:
 
    ```yaml
