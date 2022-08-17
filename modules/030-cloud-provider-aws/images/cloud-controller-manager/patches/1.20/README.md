@@ -13,15 +13,15 @@ which allows you to create ApplicationLoadBalancer with automatically managed ta
 
 Upstream [PR](https://github.com/kubernetes/cloud-provider-aws/pull/429)
 
-## 003-dont-delete-ingress-sg-rules-elb.patch
+## 003-additional-subnet-configuration-for-elb.patch
+
+Support subnets without cluster tag for auto-discovery.
+Add support for manual subnet configuration via service annotation.
+
+Upstream [PR](https://github.com/kubernetes/kubernetes/pull/97431)
+
+## 004-dont-delete-ingress-sg-rules-elb.patch
 
 We shouldn't delete Ingress SG rule, if it allows access from configured "ElbSecurityGroup", so that we won't disrupt access to Nodes from other ELBs.
 
 Upstream [PR](https://github.com/kubernetes/kubernetes/pull/105194)
-
-### 004-go-mod.patch
-
-Maintainers of the cloud-provider-aws forgot to make `go mod tidy` in the v1.22.3 tag, and we have dirty go.mod there.
-Probably you won't need this patch in later tags.
-
-(not important, fixed in later releases)
