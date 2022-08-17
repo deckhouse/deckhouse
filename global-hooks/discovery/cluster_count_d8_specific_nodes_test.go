@@ -79,6 +79,7 @@ kind: Node
 metadata:
   name: master
   labels:
+    node-role.deckhouse.io/master: ""
     node-role.kubernetes.io/control-plane: ""
 ---
 apiVersion: v1
