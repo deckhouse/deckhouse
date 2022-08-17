@@ -30,10 +30,10 @@ func TestValidateConfigWithVector(t *testing.T) {
 	dockerImage := "timberio/vector:0.23.3-debian"
 
 	script := `
-    set -e
-    for file in $(find /deckhouse/modules/460-log-shipper/hooks/testdata/*); do
-      vector validate --no-environment $file;
-    done`
+	set -e
+	for file in $(find /deckhouse/modules/460-log-shipper/hooks/testdata/*); do
+	  vector validate --no-environment $file;
+	done`
 
 	cmd := exec.Command(
 		"docker",
