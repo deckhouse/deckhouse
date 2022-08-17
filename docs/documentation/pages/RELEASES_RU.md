@@ -49,5 +49,4 @@ Deckhouse может «мягко» переключаться между кан
 {%- unless site.mode == "local" %}
 <h2 class="releases-page__table--title">Релизы</h2>
 <div class="releases-page__table--wrap"></div>
-<a class="releases-page__deployments" href="https://github.com/deckhouse/deckhouse/deployments/">Deployments on Github</a>
 {%- endunless %}

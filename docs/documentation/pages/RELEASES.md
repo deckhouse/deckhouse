@@ -48,5 +48,4 @@ Deckhouse can "soft" switch between release channels using the [deckhouse](modul
 {%- unless site.mode == "local" %}
 <h2 class="releases-page__table--title">Releases</h2>
 <div class="releases-page__table--wrap"></div>
-<a class="releases-page__deployments" href="https://github.com/deckhouse/deckhouse/deployments/">Deployments on Github</a>
 {%- endunless%}
