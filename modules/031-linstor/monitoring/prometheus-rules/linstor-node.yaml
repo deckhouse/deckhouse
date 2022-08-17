@@ -39,7 +39,7 @@
 
     - alert: D8LinstorNodePodIsNotReady
       expr: min by (pod) (avg by(node,pod,namespace)(kube_pod_info{}) * on(pod, namespace) group_right(node) kube_pod_status_ready{condition="true", namespace="d8-linstor", pod=~"linstor-node-.*"}) != 1
-      for: 30m
+      for: 10m
       labels:
         severity_level: "6"
         tier: cluster
@@ -57,7 +57,7 @@
 
     - alert: D8LinstorNodePodIsNotRunning
       expr: absent(avg by(node,pod,namespace)(kube_pod_info{}) * on(pod, namespace) group_right(node) kube_pod_status_phase{namespace="d8-linstor",phase="Running",pod=~"linstor-node-.*"})
-      for: 30m
+      for: 2m
       labels:
         severity_level: "6"
         tier: cluster

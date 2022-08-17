@@ -1,17 +1,17 @@
-# Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/ha-controller-deployment.yaml
+# Source https://github.com/piraeusdatastore/linstor-affinity-controller/blob/main/charts/linstor-affinity-controller/templates/deployment.yaml
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: linstor-ha-controller
+  name: linstor-affinity-controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-ha-controller" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-affinity-controller" )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: linstor-ha-controller
+    name: linstor-affinity-controller
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
@@ -22,44 +22,44 @@ metadata:
   annotations:
     helm.sh/hook: post-upgrade, post-install
     helm.sh/hook-delete-policy: before-hook-creation
-  name: linstor-ha-controller
+  name: linstor-affinity-controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-ha-controller" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-affinity-controller" )) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
-      app: linstor-ha-controller
+      app: linstor-affinity-controller
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: linstor-ha-controller
+  name: linstor-affinity-controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-ha-controller" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-affinity-controller" )) | nindent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: linstor-ha-controller
+      app: linstor-affinity-controller
   template:
     metadata:
       labels:
-        app: linstor-ha-controller
+        app: linstor-affinity-controller
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "linstor-ha-controller")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "linstor-affinity-controller")) | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
-      serviceAccountName: linstor-ha-controller
+      serviceAccountName: linstor-affinity-controller
       initContainers:
         - name: wait-for-linstor
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.piraeusHaController }}"
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorAffinityController }}"
           imagePullPolicy: "IfNotPresent"
           command:
             - /linstor-wait-until
@@ -83,17 +83,21 @@ spec:
                   name: linstor-client-https-cert
                   key: ca.crt
       containers:
-        - name: piraeus-ha-controller
+        - name: linstor-affinity-controller
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
-          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.piraeusHaController }}"
+          image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorAffinityController }}"
           imagePullPolicy: "IfNotPresent"
           args:
             - --leader-election=true
-            - --leader-election-lease-name=$(NAME)
-            - --leader-election-namespace=$(NAMESPACE)
-            - --leader-election-resource-name=linstor-ha-controller
-            - --v=5
+            - --v=1
           env:
+            - name: LEASE_LOCK_NAME
+              value: linstor-affinity-controller
+            - name: LEASE_HOLDER_IDENTITY
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+                  apiVersion: v1
             - name: LS_CONTROLLERS
               value: https://linstor.d8-{{ .Chart.Name }}.svc:3371
             - name: LS_USER_CERTIFICATE
@@ -119,9 +123,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          readinessProbe:
+            httpGet:
+              port: 8000
+              path: /readyz
           livenessProbe:
             httpGet:
-              port: 8080
+              port: 8000
               path: /healthz
           resources:
             requests:

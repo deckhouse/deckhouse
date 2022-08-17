@@ -32,27 +32,3 @@ spec:
     persistentVolumeClaim:
       claimName: "test-volume"
 ```
-
-## Application reschedule in case of node problem (storage-based fencing)
-
-If the label `linstor.csi.linbit.com/on-storage-lost: remove` is present on a Pod, the linstor module automatically removes the Pods from the node where the problem occurred (network or storage issues, etc.). This leads to restarting them on another node.  
-
-Example StatefulSet with the `linstor.csi.linbit.com/on-storage-lost: remove` label:
-
-```yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: my-stateful-app
-spec:
-  serviceName: my-stateful-app
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: my-stateful-app
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: my-stateful-app
-        linstor.csi.linbit.com/on-storage-lost: remove # <--
-    ...
-```

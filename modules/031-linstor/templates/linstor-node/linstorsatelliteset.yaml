@@ -42,7 +42,18 @@ spec:
   kernelModuleInjectionImage: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdDriverLoader }}"
   kernelModuleInjectionMode: Compile
   kernelModuleInjectionResources: {}
-  additionalEnv: null
+  kernelModuleInjectionExtraVolumeMounts:
+    - name: spaas-certs
+      mountPath: /etc/spaas/certs/ca.crt
+      subPath: ca.crt
+      readOnly: true
+  additionalEnv:
+  - name: SPAAS_URL
+    value: "https://spaas.d8-linstor.svc:2020"
+  extraVolumes:
+  - name: spaas-certs
+    secret:
+      secretName: spaas-certs
   logLevel: info
   sidecars:
   - name: kube-rbac-proxy

@@ -60,7 +60,7 @@
       labels:
         severity_level: "6"
         tier: cluster
-      for: 30m
+      for: 10m
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
@@ -78,7 +78,7 @@
       labels:
         severity_level: "6"
         tier: cluster
-      for: 30m
+      for: 2m
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"

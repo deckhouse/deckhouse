@@ -30,27 +30,3 @@ spec:
     persistentVolumeClaim:
       claimName: "test-volume"
 ```
-
-## Перенос приложения при проблемах с узлом (storage-based fencing)
-
-При наличии лейбла `linstor.csi.linbit.com/on-storage-lost: remove` у Pod'а, модуль linstor автоматически удалит Pod'ы с узла где возникли проблемы (с хранилищем, сетью и т.п.), что вызовет их перезапуск на другом узле.
-
-Пример описания StatefulSet с лейблом `linstor.csi.linbit.com/on-storage-lost: remove`:
-
-```yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: my-stateful-app
-spec:
-  serviceName: my-stateful-app
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: my-stateful-app
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: my-stateful-app
-        linstor.csi.linbit.com/on-storage-lost: remove # <--
-    ...
-```

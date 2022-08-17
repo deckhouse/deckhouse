@@ -74,6 +74,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"kube-state-metrics",
 	"legacy-cert-manager",
 	"legacy-webhook",
+	"linstor-affinity-controller",
 	"linstor-controller",
 	"linstor-ha-controller",
 	"linstor-node",
