@@ -21,7 +21,21 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
+
+func CleanUpAfterSourceTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name: "clean_up",
+			Type: "remap",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.CleanUpAfterSourceRule.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
 
 type LogSourceConfig struct {
 	SourceType string
@@ -33,7 +47,7 @@ type LogSourceConfig struct {
 }
 
 func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTransform, error) {
-	transforms := make([]apis.LogTransform, 0)
+	transforms := []apis.LogTransform{CleanUpAfterSourceTransform()}
 
 	transforms = append(transforms, CreateMultiLineTransforms(cfg.MultilineType)...)
 
