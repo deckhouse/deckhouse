@@ -256,7 +256,6 @@ spec:
         - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
     {{- end }}
   {{- end }}
-  {{- if semverCompare ">=0.26" $controllerVersion }}
         lifecycle:
   {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
           postStart:
@@ -270,7 +269,6 @@ spec:
             exec:
               command:
                 - /wait-shutdown
-  {{- end }}
   {{- end }}
         resources:
           requests:
@@ -334,6 +332,9 @@ spec:
             memory: 20Mi
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+          - mountPath: /var/files
+            name: telemetry-config-file
       - name: kube-rbac-proxy
         image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
         args:
@@ -397,6 +398,9 @@ spec:
       - name: webhook-cert
         secret:
           secretName: ingress-admission-certificate
+      - name: telemetry-config-file
+        configMap:
+          name: d8-ingress-telemetry-config
 {{- end }}
 
 {{- $context := . }}
