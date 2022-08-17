@@ -1,9 +1,9 @@
 {
   "sources": {
-    "d8_cluster_source_tests-whispers_whispers-logs": {
+    "d8_clusterns_source_tests-whispers_tests-whispers_whispers-logs": {
       "type": "kubernetes_logs",
       "extra_label_selector": "app=test",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=tests-whispers",
+      "extra_field_selector": "metadata.namespace=tests-whispers,metadata.name!=$VECTOR_SELF_POD_NAME",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -51,7 +51,7 @@
         "stream"
       ],
       "inputs": [
-        "d8_cluster_source_tests-whispers_whispers-logs"
+        "d8_clusterns_source_tests-whispers_tests-whispers_whispers-logs"
       ],
       "merge_strategies": {
         "message": "concat"

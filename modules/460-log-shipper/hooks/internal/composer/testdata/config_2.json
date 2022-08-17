@@ -3,7 +3,7 @@
     "d8_clusterns_source_baar_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb,baz in (norf,qux)",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=baar",
+      "extra_field_selector": "metadata.namespace=baar,metadata.name!=$VECTOR_SELF_POD_NAME",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -19,7 +19,7 @@
     "d8_clusterns_source_foot_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb,baz in (norf,qux)",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=foot",
+      "extra_field_selector": "metadata.namespace=foot,metadata.name!=$VECTOR_SELF_POD_NAME",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",

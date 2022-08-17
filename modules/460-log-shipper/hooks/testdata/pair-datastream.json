@@ -1,9 +1,9 @@
 {
   "sources": {
-    "d8_cluster_source_test-source": {
+    "d8_clusterns_source_tests-whispers_test-source": {
       "type": "kubernetes_logs",
       "extra_label_selector": "app=test,tier in (cache)",
-      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME,metadata.namespace=tests-whispers",
+      "extra_field_selector": "metadata.namespace=tests-whispers,metadata.name!=$VECTOR_SELF_POD_NAME",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -23,7 +23,7 @@
         "process": "process"
       },
       "inputs": [
-        "d8_tf_test-source_00_log_filter"
+        "d8_tf_test-source_05_log_filter"
       ],
       "source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\temit(event)\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend",
       "type": "lua",
@@ -56,7 +56,7 @@
     "d8_tf_test-source_00_log_filter": {
       "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nexists(.parsed_data.foo)",
       "inputs": [
-        "d8_cluster_source_test-source"
+        "d8_clusterns_source_tests-whispers_test-source"
       ],
       "type": "filter"
     },

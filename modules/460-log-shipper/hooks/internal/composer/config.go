@@ -97,7 +97,7 @@ func (v *VectorFile) AppendLogPipeline(pipeline *Pipeline) error {
 
 	if len(pipeline.Source.Transforms) > 0 {
 		pipeline.Source.Transforms[0].SetInputs(sourcesNames.Slice())
-		destinationInputs = append(destinationInputs, pipeline.Source.Transforms[0].GetName())
+		destinationInputs = append(destinationInputs, pipeline.Source.Transforms[len(pipeline.Source.Transforms)-1].GetName())
 	} else {
 		destinationInputs = sourcesNames.Slice()
 	}
