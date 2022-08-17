@@ -1,6 +1,6 @@
 {
   "sources": {
-    "d8_cluster_source_testsource": {
+    "cluster_logging_config/testsource": {
       "type": "kubernetes_logs",
       "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME",
       "annotation_fields": {
@@ -17,10 +17,10 @@
     }
   },
   "sinks": {
-    "d8_cluster_sink_testoutput": {
+    "destination/cluster/testoutput": {
       "type": "vector",
       "inputs": [
-        "d8_cluster_source_testsource"
+        "cluster_logging_config/testsource"
       ],
       "healthcheck": {
         "enabled": false

@@ -86,7 +86,7 @@ func (c *Composer) Do() ([]byte, error) {
 		destinations := make([]PipelineDestination, 0, len(s.Spec.DestinationRefs))
 
 		for _, ref := range s.Spec.DestinationRefs {
-			destinations = append(destinations, destinationRefs["d8_cluster_sink_"+ref])
+			destinations = append(destinations, destinationRefs[destination.ComposeName(ref)])
 		}
 
 		err = file.AppendLogPipeline(&Pipeline{

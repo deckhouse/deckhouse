@@ -102,7 +102,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
 
 	return &Loki{
 		CommonSettings: CommonSettings{
-			Name: "d8_cluster_sink_" + name,
+			Name: ComposeName(name),
 			Type: "loki",
 		},
 		Auth: LokiAuth{

@@ -48,7 +48,7 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		transforms = append(transforms, CleanUpParsedDataTransform())
 	}
 
-	dTransforms, err := BuildFromMapSlice(name, transforms)
+	dTransforms, err := BuildFromMapSlice("destination", name, transforms)
 	if err != nil {
 		return nil, fmt.Errorf("add source transforms: %v", err)
 	}

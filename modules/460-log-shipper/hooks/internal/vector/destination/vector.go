@@ -57,7 +57,7 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 
 	return &Vector{
 		CommonSettings: CommonSettings{
-			Name: "d8_cluster_sink_" + name,
+			Name: ComposeName(name),
 			Type: "vector",
 		},
 		TLS: VectorTLS{

@@ -130,23 +130,18 @@ func (k *Kubernetes) newRawSource(name string, fields []string) *rawKubernetesLo
 
 // BuildSources denormalizes sources for vector config, which can handle only one namespace per source
 // (it is impossible to use OR clauses for the field-selector, so you can only select a single namespace)
-//
-// Also mutates name of the source:
-// 1. Namespaced - d8_namespaced_<ns>_<source_name>
-// 2. Cluster - d8_cluster_<ns>_<source_name>
-// 3. Cluster with NamespaceSelector - d8_clusterns_<ns>_<source_name>
 func (k *Kubernetes) BuildSources() []apis.LogSource {
 	if k.namespaced {
 		ns := k.namespaces[0]
 		return []apis.LogSource{k.newRawSource(
-			"d8_namespaced_source_"+ns+"_"+k.Name,
+			"pod_logging_config/"+k.Name+"/"+ns,
 			append([]string{"metadata.namespace=" + ns}, k.fields...),
 		)}
 	}
 
 	if len(k.namespaces) == 0 {
 		return []apis.LogSource{k.newRawSource(
-			"d8_cluster_source_"+k.Name,
+			"cluster_logging_config/"+k.Name,
 			k.fields,
 		)}
 	}
@@ -155,7 +150,7 @@ func (k *Kubernetes) BuildSources() []apis.LogSource {
 
 	for _, ns := range k.namespaces {
 		res = append(res, k.newRawSource(
-			"d8_clusterns_source_"+ns+"_"+k.Name,
+			"cluster_logging_config/"+k.Name+":"+ns,
 			append([]string{"metadata.namespace=" + ns}, k.fields...),
 		))
 	}

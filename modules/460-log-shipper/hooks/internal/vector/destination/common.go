@@ -59,3 +59,7 @@ func decodeB64(input string) string {
 	res, _ := base64.StdEncoding.DecodeString(input)
 	return string(res)
 }
+
+func ComposeName(n string) string {
+	return "destination/cluster/" + n
+}

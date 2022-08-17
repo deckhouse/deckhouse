@@ -34,7 +34,7 @@ type File struct {
 func NewFile(name string, spec v1alpha1.FileSpec) *File {
 	return &File{
 		commonSource: commonSource{
-			Name: name,
+			Name: "cluster_logging_config/" + name,
 			Type: "file",
 		},
 		Exclude:   spec.Exclude,

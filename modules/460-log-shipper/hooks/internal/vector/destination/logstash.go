@@ -68,7 +68,7 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 
 	return &Logstash{
 		CommonSettings: CommonSettings{
-			Name: "d8_cluster_sink_" + name,
+			Name: ComposeName(name),
 			Type: "socket",
 		},
 		Encoding: LogstashEncoding{

@@ -1,6 +1,6 @@
 {
   "sources": {
-    "d8_clusterns_source_baar_testsource": {
+    "cluster_logging_config/testsource:baar": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb",
       "extra_field_selector": "metadata.namespace=baar,metadata.name!=$VECTOR_SELF_POD_NAME",
@@ -16,7 +16,7 @@
       },
       "glob_minimum_cooldown_ms": 1000
     },
-    "d8_clusterns_source_foot_testsource": {
+    "cluster_logging_config/testsource:foot": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb",
       "extra_field_selector": "metadata.namespace=foot,metadata.name!=$VECTOR_SELF_POD_NAME",
@@ -34,11 +34,11 @@
     }
   },
   "sinks": {
-    "d8_cluster_sink_testoutput": {
+    "destination/cluster/testoutput": {
       "type": "loki",
       "inputs": [
-        "d8_clusterns_source_baar_testsource",
-        "d8_clusterns_source_foot_testsource"
+        "cluster_logging_config/testsource:baar",
+        "cluster_logging_config/testsource:foot"
       ],
       "healthcheck": {
         "enabled": false

@@ -97,7 +97,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec) *El
 
 	return &Elasticsearch{
 		CommonSettings: CommonSettings{
-			Name: "d8_cluster_sink_" + name,
+			Name: ComposeName(name),
 			Type: "elasticsearch",
 		},
 		Auth: ElasticsearchAuth{
