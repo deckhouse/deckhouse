@@ -84,10 +84,10 @@ Resources for the **"{{ preset[1].name[page.lang] }}"** preset.
 
 <script>
 $(document).ready(function() {
-
   $('#enter-license-key').click((e)=> {
       e.preventDefault();
       triggerBlockOnItemContent('[license-token]', '.dimmer-block-content');
+      update_license_parameters($(this).val());
   });
   triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
 

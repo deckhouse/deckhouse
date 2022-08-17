@@ -1,5 +1,3 @@
-let lastUsedLicenseToken = '';
-
 $(document).ready(function () {
   $('[gs-revision-tabs]').on('click', function () {
     var name = $(this).attr('data-features-tabs-trigger');
@@ -199,10 +197,8 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
 
 // Update license token and docker config
 function update_license_parameters(newtoken = '') {
-  const token = $('[license-token]').val();
 
-  // if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
-  if (token !== '' || newtoken !== '') {
+  if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
     let registry = 'registry.deckhouse.io';
     let username = 'license-token';
     let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
@@ -217,7 +213,8 @@ function update_license_parameters(newtoken = '') {
       }
       password = newtoken;
       passwordHash = btoa(password);
-      lastUsedLicenseToken = newtoken;
+      $.cookie('license-token', newtoken, {path: '/', expires: 1})
+
     }
 
     let config = getDockerConfigFromToken(registry, username, password);

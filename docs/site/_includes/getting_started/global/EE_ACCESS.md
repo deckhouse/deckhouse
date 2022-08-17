@@ -17,6 +17,17 @@
 </div>
 </div>
 
+<script>
+$(document).ready(function() {
+
+    tokenInputElement = $('[license-token]');
+    if ($.cookie("demotoken") || $.cookie("license-token")) {
+        let token = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
+        tokenInputElement.val(token);
+    }
+})
+</script>
+
 <div class="license-form-request">
 <h3 class="text text_h3">
   Or request license key
