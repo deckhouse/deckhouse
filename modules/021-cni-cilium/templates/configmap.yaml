@@ -36,9 +36,6 @@ data:
 
   enable-xt-socket-fallback: "true"
   install-iptables-rules: "true"
-  {{- if eq (.Values.cniCilium.tunnelMode | lower) "vxlan" }}
-  install-no-conntrack-iptables-rules: "true"
-  {{- end }}
   auto-direct-node-routes: {{ .Values.cniCilium.createNodeRoutes | quote }}
   enable-bandwidth-manager: "true"
 
