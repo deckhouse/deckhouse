@@ -107,11 +107,12 @@ jobs:
         uses: deckhouse/backport-action@v1.0.0
         env:
           RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
-          GITHUB_SHA: ${{ steps.prepare.outputs.commit }}
+          COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
           branch: ${{ env.RELEASE_BRANCH }}
+          commit: ${{ env.COMMIT_SHA }}
           labels: auto,backported
           automerge: true
           merge_method: squash
