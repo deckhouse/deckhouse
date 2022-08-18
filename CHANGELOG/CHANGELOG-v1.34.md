@@ -91,6 +91,7 @@
     Ingress controller Pods will be restarted.
  - **[istio]** Fixed `D8IstioDataPlanePatchVersionMismatch` alert description. [#2048](https://github.com/deckhouse/deckhouse/pull/2048)
  - **[kube-dns]** Updated CoreDNS to v1.9.3. With patches to persuade coredns to respect deprecated Service annotation `service.alpha.kubernetes.io/tolerate-unready-endpoints`. Alerts the user to the need for migrating from deprecated annotation. [#1952](https://github.com/deckhouse/deckhouse/pull/1952)
+ - **[linstor]** fix timestamp on linstor dashboard [#2250](https://github.com/deckhouse/deckhouse/pull/2250)
  - **[log-shipper]** Fix DaemonSet alerts. [#1912](https://github.com/deckhouse/deckhouse/pull/1912)
  - **[monitoring-kubernetes]** Added alert `NodeSUnreclaimBytesUsageHigh`. [#2154](https://github.com/deckhouse/deckhouse/pull/2154)
  - **[monitoring-kubernetes]** Ignore containers rootfs mount point for node-exporter in GKE. [#2100](https://github.com/deckhouse/deckhouse/pull/2100)
@@ -109,8 +110,10 @@
  - **[node-manager]** Fix unbound variable bootstrap_job_log_pid when bootstrap static-node [#1917](https://github.com/deckhouse/deckhouse/pull/1917)
  - **[node-manager]** Increased the `cluster-autoscaler` node cooldown after scaling-up to prevent flapping (10m instead of 2m) [#1746](https://github.com/deckhouse/deckhouse/pull/1746)
  - **[operator-prometheus]** Adjust scrape timeout using helm helper. [#2083](https://github.com/deckhouse/deckhouse/pull/2083)
+ - **[prometheus]** Use `X-Auth-Token` header for remote write credentials according to the documentation. [#2205](https://github.com/deckhouse/deckhouse/pull/2205)
  - **[prometheus]** Rollback prometheus-module ServiceMonitor label selector to `app=prometheus`. [#2107](https://github.com/deckhouse/deckhouse/pull/2107)
  - **[prometheus]** Update Grafana to 8.5.9 to fix various CVE [#2039](https://github.com/deckhouse/deckhouse/pull/2039)
+ - **[upmeter]** Fixed bug when cleaning old upmeter probe garbage resulting in errors stucks Deckhouse main queue [#2221](https://github.com/deckhouse/deckhouse/pull/2221)
  - **[upmeter]** Added the auto-clean of garbage `UpmeterHookProbe` object produced by a bug. [#2080](https://github.com/deckhouse/deckhouse/pull/2080)
  - **[upmeter]** Fix certificate name for DexAuthenticator. [#2060](https://github.com/deckhouse/deckhouse/pull/2060)
  - **[upmeter]** Add RBAC to watch nodes [#2051](https://github.com/deckhouse/deckhouse/pull/2051)
