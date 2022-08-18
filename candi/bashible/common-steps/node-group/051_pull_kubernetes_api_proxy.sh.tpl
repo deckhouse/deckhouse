@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+image="{{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}"
 if docker version >/dev/null 2>/dev/null; then
-  HOME=/ docker pull {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+  HOME=/ docker pull "$image"
+# We use ctr because it respect http_proxy and https_proxy environment variables and allows to install in air-gapped environments using simple http proxy
+# Fallback to crictl if ctr is not installed for some reason. This is just small safety precaution.
+elif ctr --version >/dev/null 2>/dev/null; then
+  ctr -n=k8s.io images pull "$image"
 elif crictl version >/dev/null 2>/dev/null; then
-  crictl pull {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+  crictl pull "$image"
 fi
