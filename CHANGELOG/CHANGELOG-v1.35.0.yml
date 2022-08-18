@@ -116,9 +116,6 @@ linstor:
       impact: >-
         A master password enables some features like backup shipping and volume encryption using
         LUKS.
-  fixes:
-    - summary: fix timestamp on linstor dashboard
-      pull_request: https://github.com/deckhouse/deckhouse/pull/2147
 node-local-dns:
   features:
     - summary: Returned serve_stale cache option
