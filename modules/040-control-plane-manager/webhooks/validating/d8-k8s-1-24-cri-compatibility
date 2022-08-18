@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+# Copyright 2021 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: nodegroups
+    apiVersion: deckhouse.io/v1
+    kind: NodeGroup
+    queue: "nodegroups-list"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "name": .metadata.name,
+        "criType": .spec.cri.type
+      }
+kubernetesValidating:
+- name: d8-cluster-configuration-secret.deckhouse.io
+  includeSnapshotsFrom: ["nodegroups"]
+  group: main
+  labelSelector:
+    matchLabels:
+      name: d8-cluster-configuration
+  namespace:
+    nameSelector:
+      matchNames: [kube-system]
+  rules:
+  - apiGroups:   [""]
+    apiVersions: ["v1"]
+    operations:  ["UPDATE"]
+    resources:   ["secrets"]
+    scope:       "Namespaced"
+EOF
+}
+
+function __main__() {
+    clusterConfig="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d)"
+
+    k8sVersion="$(echo "${clusterConfig}" | yq eval '.kubernetesVersion // "1.21"' -)"
+    echo "k8sVersion ${k8sVersion}"
+
+    if [ "$k8sVersion" != "1.24" ]; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+
+        return 0
+    fi
+
+    defaultCRI="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d | yq eval '.defaultCRI // "Containerd"' -)"
+    echo "DefaultCRI ${defaultCRI}"
+
+    for i in $(context::jq -r '.snapshots.nodegroups | keys[]'); do
+        nodeGroup=$(context::get snapshots.nodegroups.${i}.filterResult)
+        name=$(jq -rc '.name' <<<${nodeGroup})
+        criType=$(jq -rc '.criType' <<<${nodeGroup})
+        echo "NG ${name} with criType ${criType}"
+        if [ -z ${criType} ]; then
+          echo "setting defaultCRI"
+          criType=${defaultCRI}
+        fi
+
+        if [ "$criType" == "Docker" ]; then
+          cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"Docker CRI is not supported by kubernetes 1.24. NodeGroup ${name} has incompatible CRI type"}
+EOF
+
+          return 0
+        fi
+    done
+
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"TMP"}
+EOF
+    return 0
+
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+
+  return 0
+}
+
+hook::run "$@"
