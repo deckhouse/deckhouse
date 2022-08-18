@@ -604,7 +604,7 @@ shell:
       {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
       {{ if $changelog }}
       cat <<EOF > /changelog.yaml
-      {{ $changelog | nindent 4 }}
+      {{ $changelog | nindent 6 }}
       EOF
       {{ end }}
 git:
