@@ -19,7 +19,7 @@ if docker version >/dev/null 2>/dev/null; then
 # If ctr is not installed for some reason, fallback to crictl. This is just a small safety precaution.
 elif ctr --version >/dev/null 2>/dev/null; then
 {{- if .registry.auth }}
-  ctr -n=k8s.io images pull --user {{ .registry.auth | b64decode }} "$image"
+  ctr -n=k8s.io images pull --user {{ .registry.auth | b64dec }} "$image"
 {{- else }}
   ctr -n=k8s.io images pull "$image"
 {{- end }}
