@@ -38,7 +38,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -70,7 +70,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 `
 	const moduleValues = `
   internal:
-    effectiveKubernetesVersion: "1.19"
+    effectiveKubernetesVersion: "1.21"
     etcdServers:
       - https://192.168.199.186:2379
     pkiChecksum: checksum

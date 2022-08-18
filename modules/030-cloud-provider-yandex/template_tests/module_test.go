@@ -50,7 +50,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Docker
     kind: ClusterConfiguration
-    kubernetesVersion: "1.19"
+    kubernetesVersion: "1.21"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
