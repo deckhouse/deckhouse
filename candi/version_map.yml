@@ -156,11 +156,11 @@ bashible: &bashible
           desiredVersion: "4.18.0-305.3.1.el8.x86_64"
           allowedPattern: "4.18"
 k8s:
-  '1.19':
+  '1.20':
     status: available
-    patch: 16
+    patch: 15
     cniVersion: 0.8.7
-    bashible: &bashible_k8s_ge_1_19
+    bashible: &bashible_k8s_ge_1_20
       !!merge <<: *bashible
       ubuntu:
         !!merge <<: *ubuntu
@@ -188,32 +188,6 @@ k8s:
               desiredVersion: "5.3.0-1018-gcp"
               allowedPattern: "5.3"
     ccm:
-      openstack: v1.19.2
-      yandex: v0.21.3
-      aws: b390ec15ea471adc8312b4528cf37814852b993e
-      vsphere: v1.19.1
-      azure: v0.6.0@sha256:8073113a20882642a980b338635cdc5945e5673a18aef192090e6fde2b89a75c
-      gcp: ca1e685df450fd5d32b57a659eb363b870b03937
-    csi:
-      openstack: v1.19.0
-      provisioner: v2.0.4@sha256:bec571992d40203edcd056ac0b0d97003887ee5e4be144c41932d18639673b03
-      attacher: v3.0.2@sha256:6f80b12657a7e0a5c683b24e806c4bbbe33a43e39b041fe9b7514d665d478ea4
-      resizer: v1.0.0@sha256:5a8d85cdd1c80f43fb8fe6dcde1fae707a3177aaf0a786ff4b9f6f20247ec3ff
-      registrar: v2.0.1@sha256:e07f914c32f0505e4c470a62a40ee43f84cbf8dc46ff861f31b14457ccbad108
-      snapshotter: v3.0.3@sha256:9af9bf28430b00a0cedeb2ec29acadce45e6afcecd8bdf31c793c624cfa75fa7
-      livenessprobe: v2.5.0@sha256:44d8275b3f145bc290fd57cb00de2d713b5e72d2e827d8c5555f8ddb40bf3f02
-    controlPlane:
-      # etcd: sha256 digest isn't needed because this component is compiled from source
-      # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
-      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:1a335251eaef4e209d5757da0bf5499ecdce6e65413f7cb92ff4cc633d6fc7dd
-      kubeProxy: sha256:092f9526686d27964d17be772c42cde086690209cc8aea10c49991456eb879c2
-  '1.20':
-    status: available
-    patch: 15
-    cniVersion: 0.8.7
-    bashible: *bashible_k8s_ge_1_19
-    ccm:
       openstack: v1.20.1
       yandex: v0.21.3
       aws: v1.20.2
@@ -238,7 +212,7 @@ k8s:
     status: available
     patch: 14
     cniVersion: 0.8.7
-    bashible: *bashible_k8s_ge_1_19
+    bashible: *bashible_k8s_ge_1_20
     ccm:
       openstack: v1.21.0
       yandex: v0.21.3
@@ -264,7 +238,7 @@ k8s:
     status: available
     patch: 12
     cniVersion: 0.8.7
-    bashible: *bashible_k8s_ge_1_19
+    bashible: *bashible_k8s_ge_1_20
     ccm:
       openstack: v1.22.0
       yandex: v0.22.0
@@ -290,7 +264,7 @@ k8s:
     status: available
     patch: 9
     cniVersion: 0.8.7
-    bashible: *bashible_k8s_ge_1_19
+    bashible: *bashible_k8s_ge_1_20
     ccm:
       openstack: v1.23.1
       yandex: v0.23.0

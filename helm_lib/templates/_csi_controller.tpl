@@ -192,9 +192,7 @@ spec:
   {{- else }}
         - "--feature-gates=Topology=false"
   {{- end }}
-  {{- if semverCompare ">= 1.19" $context.Values.global.discovery.kubernetesVersion }}
         - "--default-fstype=ext4"
-  {{- end }}
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
   {{- if semverCompare ">= 1.21" $context.Values.global.discovery.kubernetesVersion }}

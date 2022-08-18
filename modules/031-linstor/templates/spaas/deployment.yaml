@@ -96,17 +96,11 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 15
-          {{- if semverCompare "<1.20-0" .Capabilities.KubeVersion.Version }}
-          initialDelaySeconds: 120
-          {{- end }}
         readinessProbe:
           httpGet:
             path: /api/v1/hello
             port: 2020
             scheme: HTTPS
-          {{- if semverCompare "<1.20-0" .Capabilities.KubeVersion.Version }}
-          initialDelaySeconds: 120
-          {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

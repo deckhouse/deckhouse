@@ -65,7 +65,7 @@ positive:
         podSubnetNodeCIDRPrefix: "24"
         podSubnetCIDR: 10.244.0.0/16
         serviceSubnetCIDR: 192.168.0.0/16
-        kubernetesVersion: "1.19"
+        kubernetesVersion: "1.21"
         clusterDomain: test
         clusterType: "Cloud"
         cloud:
@@ -118,7 +118,7 @@ positive:
         clusterType: Static
         defaultCRI: Containerd
         kind: ClusterConfiguration
-        kubernetesVersion: "1.19"
+        kubernetesVersion: "1.21"
         podSubnetCIDR: 10.111.0.0/16
         podSubnetNodeCIDRPrefix: "24"
         serviceSubnetCIDR: 10.222.0.0/16
