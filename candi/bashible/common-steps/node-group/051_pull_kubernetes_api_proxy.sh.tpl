@@ -18,7 +18,11 @@ if docker version >/dev/null 2>/dev/null; then
 # Use ctr because it respects http_proxy and https_proxy environment variables and allows installing in air-gapped environments using simple http proxy.
 # If ctr is not installed for some reason, fallback to crictl. This is just a small safety precaution.
 elif ctr --version >/dev/null 2>/dev/null; then
+{{- if .registry.auth }}
+  ctr -n=k8s.io images pull --user {{ .registry.auth | b64decode }} "$image"
+{{- else }}
   ctr -n=k8s.io images pull "$image"
+{{- end }}
 elif crictl version >/dev/null 2>/dev/null; then
   crictl pull "$image"
 fi
