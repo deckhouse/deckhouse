@@ -33,3 +33,18 @@
 
         Consider checking state of the `kube-system/d8-control-plane-manager` DaemonSet and its Pods:
         `kubectl -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager`
+
+  - alert: D8KubernetesVersionIsDeprecated
+    for: 10m
+    expr: max by (k8s_version) (d8_kubernetes_version{k8s_version="1.23"}) == 1
+    labels:
+      severity_level: "7"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Kubernetes version {{ $labels.k8s_version }} is deprecated
+      description: |-
+        Current kubernetes version {{ $labels.k8s_version }} is deprecated and will be removed in the 1.36 release
+
+        Please migrate to the next kubernetes version (at least 1.20)

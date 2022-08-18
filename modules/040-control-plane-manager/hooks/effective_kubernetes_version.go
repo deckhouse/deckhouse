@@ -227,6 +227,7 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	resultStr := fmt.Sprintf("%d.%d", effectiveKubernetesVersion.Major(), effectiveKubernetesVersion.Minor())
 
 	input.Values.Set("controlPlaneManager.internal.effectiveKubernetesVersion", resultStr)
+	input.MetricsCollector.Set("d8_kubernetes_version", 1, map[string]string{"k8s_version": resultStr})
 
 	if !effectiveKubernetesVersion.LessThan(maxUsedControlPlaneVersion) {
 		encoded := base64.StdEncoding.EncodeToString([]byte(resultStr))
