@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -21,45 +22,43 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// This type implements the http.RoundTripper interface
+var _ http.RoundTripper = LoggingRoundTripper{}
+
 type LoggingRoundTripper struct {
 	Proxied http.RoundTripper
 }
 
-func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
-
+func (lrt LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	dump, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
 		log.Error(err)
 	}
-	// Send the request, get the response (or the error)
-	res, e = lrt.Proxied.RoundTrip(req)
+
+	res, e := lrt.Proxied.RoundTrip(req)
 
 	log.Infof("%s", string(dump))
 	if res != nil {
 		log.Infof("response: %s", res.Status)
 	}
-	return
+
+	return res, e
 }
 
 type PathCheckRoundTripper struct {
 	Proxied http.RoundTripper
 }
 
-func (prt PathCheckRoundTripper) RoundTrip(req *http.Request) (res *http.Response, e error) {
-
+func (prt PathCheckRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	switch {
-	case strings.Contains(req.URL.Path, "/api/events/prometheus"):
-		// Do nothing
-	case req.URL.Path == "/healthz":
+	case
+		strings.Contains(req.URL.Path, "/api/events/prometheus"),
+		req.URL.Path == "/healthz":
 		// Do nothing
 	default:
 		return nil, errors.New(fmt.Sprintf("path %q is not allowed ", req.URL.Path))
 	}
 
-	res, e = prt.Proxied.RoundTrip(req)
-
-	return
+	return prt.Proxied.RoundTrip(req)
 }
 
 type config struct {
@@ -105,16 +104,16 @@ func (c *config) getEnvConfig() error {
 }
 
 func main() {
-
 	log.SetFormatter(&log.JSONFormatter{})
 
-	var config config
-	err := config.getEnvConfig()
+	cfg := config{}
+
+	err := cfg.getEnvConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	proxy := newMadisonProxy(config)
+	proxy := newMadisonProxy(cfg)
 
 	mux := http.NewServeMux()
 
@@ -122,34 +121,35 @@ func main() {
 	mux.HandleFunc("/", proxy.ServeHTTP)
 
 	s := &http.Server{
-		Addr:    config.ListenHost + ":" + config.ListenPort,
+		Addr:    net.JoinHostPort(cfg.ListenHost, cfg.ListenPort),
 		Handler: mux,
 	}
 
-	ch1 := make(chan os.Signal, 1)
-	ch2 := make(chan struct{})
-	signal.Notify(ch1, syscall.SIGTERM, syscall.SIGINT)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+
+	doneCh := make(chan struct{})
 
 	go func() {
 		err := s.ListenAndServe()
+		close(doneCh)
 		if err == nil || err == http.ErrServerClosed {
-			ch2 <- struct{}{}
 			return
 		}
-		log.Fatal(err)
+
+		log.Error(err)
 	}()
 
 	// Block to wait for a signal
 	select {
-	case sig := <-ch1:
+	case sig := <-sigCh:
 		log.Info("Got signal ", sig)
-	case <-ch2:
+	case <-doneCh:
 		log.Info("Shutting down.")
 	}
 
 	// 30 sec is the readiness check timeout
-	deadline := time.Now().Add(30 * time.Second)
-	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	err = s.Shutdown(ctx)
@@ -165,6 +165,13 @@ func readyHandler(w http.ResponseWriter, _ *http.Request) {
 func newMadisonProxy(c config) http.Handler {
 	transport := http.DefaultTransport
 	transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	// Disable HTTP2 to avoid the following error:
+	//
+	// http: proxy error: http2: Transport: cannot retry err
+	// [http2: Transport received Server's graceful shutdown GOAWAY] after Request.Body was written;
+	// define Request.GetBody to avoid this error
+	transport.(*http.Transport).TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
+
 	return &httputil.ReverseProxy{
 		Transport: PathCheckRoundTripper{LoggingRoundTripper{transport}},
 		Director: func(req *http.Request) {
