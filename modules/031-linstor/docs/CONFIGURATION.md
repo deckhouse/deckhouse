@@ -9,9 +9,23 @@ data:
   linstorEnabled: "true"
 ```
 
-The module requires no configuration and has no parameters.
-
 After enabling the module, the cluster is automatically configured to use LINSTOR, and all that remains is to configure the storage.
+
+The module requires no configuration and has no parameters. However, some functions may require a master passphrase.  
+To set a master passphrase, create a Secret in the `d8-system` namespace:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linstor-passphrase
+  namespace: d8-system
+immutable: true
+stringData:
+  MASTER_PASSPHRASE: *!passphrase* # Master passphrase for LINSTOR
+```
+
+> **Warning**: Choose strong passphrase and store it securely. If it get lost, the encrypted data will be inaccessible.
 
 ## LINSTOR storage configuration
 
@@ -95,6 +109,4 @@ Specify the `schedulerName: linstor` parameter in the Pod description to use the
 
 In case your application does not support high availability and runs in a single instance, you may want to force a migration from a node where problems occurred may arise. For example, if there are network issues, disk subsystem issues, etc.
 
-To solve the problem, specify the label `linstor.csi.linbit.com/on-storage-lost: remove` in the Pod description. The linstor module will automatically remove such Pods from the node where the problem occurred, allowing Kubernetes to restart the application on another node.
-
-[Example...](usage.html#application-reschedule-in-case-of-node-problem-storage-based-fencing)
+The linstor module automatically removes the Pods from the node where the problem occurred (network or storage issues, etc.) and adds specfic taint on it that guarantees restarting pods on other healthy nodes in a cluster.

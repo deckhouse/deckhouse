@@ -36,6 +36,38 @@ const (
 	DefaultKubernetesVersion = "1.21"
 )
 
+const (
+	versionMap     = "/deckhouse/candi/version_map.yml"
+	imagesTagsJSON = "/deckhouse/candi/images_tags.json"
+)
+
+func LoadConfigFromFile(path string) (*MetaConfig, error) {
+	metaConfig, err := ParseConfig(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if metaConfig.ClusterConfig == nil {
+		return nil, fmt.Errorf("ClusterConfiguration must be provided")
+	}
+
+	err = metaConfig.LoadVersionMap(versionMap)
+	if err != nil {
+		return nil, err
+	}
+
+	err = metaConfig.LoadImagesTags(imagesTagsJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	if metaConfig.ClusterType == CloudClusterType && len(metaConfig.ProviderClusterConfig) == 0 {
+		return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
+	}
+
+	return metaConfig, nil
+}
+
 func numerateManifestLines(manifest []byte) string {
 	manifestLines := strings.Split(string(manifest), "\n")
 	builder := strings.Builder{}

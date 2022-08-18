@@ -3,7 +3,7 @@ ARG BASE_DEBIAN_BULLSEYE
 FROM $BASE_DEBIAN_BULLSEYE as utils-builder
 
 ARG UTILS_GITREPO=https://github.com/LINBIT/drbd-utils
-ARG UTILS_VERSION=9.21.1
+ARG UTILS_VERSION=9.21.4
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
@@ -34,7 +34,7 @@ RUN dpkg-buildpackage -us -uc
 FROM $BASE_DEBIAN_BULLSEYE as reactor-builder
 
 ARG REACTOR_GITREPO=https://github.com/LINBIT/drbd-reactor
-ARG REACTOR_VERSION=0.7.0
+ARG REACTOR_VERSION=0.8.0
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \

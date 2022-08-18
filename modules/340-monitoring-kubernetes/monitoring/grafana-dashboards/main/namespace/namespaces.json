@@ -351,7 +351,7 @@
               },
               {
                 "id": "unit",
-                "value": "bps"
+                "value": "Bps"
               },
               {
                 "id": "decimals",
@@ -375,7 +375,7 @@
               },
               {
                 "id": "unit",
-                "value": "bps"
+                "value": "Bps"
               },
               {
                 "id": "decimals",
@@ -791,7 +791,7 @@
           "pattern": "Value #L",
           "thresholds": [],
           "type": "number",
-          "unit": "bps"
+          "unit": "Bps"
         },
         {
           "alias": "TX Network",
@@ -808,7 +808,7 @@
           "pattern": "Value #M",
           "thresholds": [],
           "type": "number",
-          "unit": "bps"
+          "unit": "Bps"
         },
         {
           "alias": "Read IOPS",

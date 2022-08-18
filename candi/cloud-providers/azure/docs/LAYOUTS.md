@@ -19,7 +19,7 @@ Example of the layout configuration:
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>" # Required.
+sshPublicKey: "<SSH_PUBLIC_KEY>" # Required.
 vNetCIDR: 10.50.0.0/16 # Required.
 subnetCIDR: 10.50.0.0/24 # Required.
 standard:
@@ -33,10 +33,10 @@ masterNodeGroup:
     urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140 # Required.
     enableExternalIP: false # Optional, by default true.
 provider:
-  subscriptionId: "" # Required.
-  clientId: "" # Required.
-  clientSecret: "" # Required.
-  tenantId: "" # Required.
+  subscriptionId: "<SUBSCRIPTION_ID>" # Required.
+  clientId: "<CLIENT_ID>" # Required.
+  clientSecret: "<CLIENT_SECRET>" # Required.
+  tenantId: "<TENANT_ID>" # Required.
   location: "westeurope" # Required.
 # Optional, list of Azure VNets with which Kubernetes VNet will be peered.
 peeredVNets:

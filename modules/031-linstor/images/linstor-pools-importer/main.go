@@ -276,14 +276,27 @@ func genKubernetesStorageClasses(ctx context.Context, lc *lclient.Client, cand C
 }
 
 func syncKubernetesStorageClass(ctx context.Context, kc kclient.Client, sc storagev1.StorageClass) (bool, error) {
+	oldSC := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: sc.GetName(),
+		},
+	}
 	// Check old storage class
-	err := kc.Get(ctx, types.NamespacedName{Name: sc.GetName()}, &sc)
-	if err == nil {
-		return false, nil
-	}
-	if !kerrors.IsNotFound(err) {
+	err := kc.Get(ctx, types.NamespacedName{Name: sc.GetName()}, oldSC)
+	if err != nil && !kerrors.IsNotFound(err) {
 		return false, fmt.Errorf("Failed to get Kubernetes storage class: %w", err)
+	} else {
+		// Found old storage class, check if it is actual
+		if allParametersAreSet(&sc, oldSC) {
+			return false, nil
+		} else {
+			// Append old labels and annotations
+			appendOldParameters(&sc, oldSC)
+			// Delete old storage class
+			kc.Delete(ctx, oldSC)
+		}
 	}
+
 	// Create new storage class
 	err = kc.Create(ctx, &sc)
 	if err != nil {
@@ -540,8 +553,44 @@ func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.Storage
 		AllowVolumeExpansion: pointer.BoolPtr(true),
 		ReclaimPolicy:        &reclaimPolicy,
 		Parameters: map[string]string{
-			"linstor.csi.linbit.com/storagePool":    sp.StoragePoolName,
-			"linstor.csi.linbit.com/placementCount": fmt.Sprintf("%d", r),
+			"linstor.csi.linbit.com/storagePool":                                                 sp.StoragePoolName,
+			"linstor.csi.linbit.com/placementCount":                                              fmt.Sprintf("%d", r),
+			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
+			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
+			"property.linstor.csi.linbit.com/DrbdOptions/Net/rr-conflict":                        "retry-connect",
 		},
+	}
+}
+
+func allParametersAreSet(sc, oldSC *storagev1.StorageClass) bool {
+	for k := range sc.Parameters {
+		if oldSC.Parameters[k] != sc.Parameters[k] {
+			return false
+		}
+	}
+	return true
+}
+
+func appendOldParameters(sc, oldSC *storagev1.StorageClass) {
+	for k, v := range oldSC.Parameters {
+		if _, ok := sc.Parameters[k]; !ok {
+			if sc.Parameters == nil {
+				sc.Parameters = map[string]string{}
+			}
+			sc.Parameters[k] = v
+		}
+	}
+	for k, v := range oldSC.Labels {
+		if sc.Labels == nil {
+			sc.Labels = map[string]string{}
+		}
+		sc.Labels[k] = v
+	}
+	for k, v := range oldSC.Annotations {
+		if sc.Annotations == nil {
+			sc.Annotations = map[string]string{}
+		}
+		sc.Annotations[k] = v
 	}
 }

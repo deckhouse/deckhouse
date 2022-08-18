@@ -90,6 +90,17 @@ function __main__() {
   done < <(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq --arg class $ctrlClass --arg name $ctrlName -cr '.items[] | select(.spec.ingressClass == $class and .metadata.name != $name) | .spec.controllerVersion // 0.33')
   # // End check controller versions
 
+  # Only ingress controller >= 1.1 is allowed for kubernetes >= 1.22
+  if context::jq -e -r '.review.request.operation == "CREATE"' >/dev/null 2>&1; then
+    if semver::lt "$ctrlVersion" "1.0.0"; then
+        k8sVersion=$(kubectl version --short -o json | jq -r '.serverVersion.gitVersion' | sed 's/v//')
+        if semver::ge "$k8sVersion" "1.22.0"; then
+          forbid "only IngressNginxController 1.1 is allowed for k8s >= 1.22"
+          exit 0
+        fi
+    fi
+  fi
+
   # Allowed response.
   jq -nc '{"allowed": true}' > $VALIDATING_RESPONSE_PATH
 }

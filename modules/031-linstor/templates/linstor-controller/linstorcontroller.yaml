@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: linstor-controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-controller" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-controller")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -24,23 +24,31 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-controller")) | nindent 2 }}
 spec:
   {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 2 }}
-  {{- include "helm_lib_tolerations" (tuple . "master") | nindent 2 }}
+  {{- include "helm_lib_tolerations" (tuple . "system") | nindent 2 }}
   affinity:
+    {{- with (include "helm_lib_node_selector" (tuple . "system")) }}
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
         - matchExpressions:
-          {{- range $k, $v := index ((include "helm_lib_node_selector" (tuple . "master")) | fromYaml) "nodeSelector" }}
+          {{- range $k, $v := index (fromYaml .) "nodeSelector" }}
           - key: {{ $k }}
             operator: In
             values:
             - {{ $v | quote }}
           {{- end }}
+    {{- else }}
+    nodeAffinity: {}
+    {{- end }}
     {{- with (index (fromYaml (include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app.kubernetes.io/instance" "linstor" "app.kubernetes.io/managed-by" "piraeus-operator" "app.kubernetes.io/name" "piraeus-controller")))) "affinity") }}
     {{ toYaml . | nindent 4 }}
+    {{- else }}
+    podAntiAffinity: {}
     {{- end }}
   dbConnectionURL: k8s
-  #luksSecret: linstor-passphrase
+  {{- if .Values.linstor.internal.masterPassphrase }}
+  luksSecret: linstor-passphrase
+  {{- end }}
   sslSecret: linstor-controller-ssl-cert
   dbCertSecret: ""
   dbUseClientCert: false

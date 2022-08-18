@@ -38,7 +38,7 @@
 
     - alert: D8SnapshotControllerPodIsNotReady
       expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-snapshot-controller", pod=~"snapshot-controller-.*"}) != 1
-      for: 30m
+      for: 10m
       labels:
         severity_level: "8"
         tier: cluster
@@ -56,7 +56,7 @@
 
     - alert: D8SnapshotControllerPodIsNotRunning
       expr: absent(kube_pod_status_phase{namespace="d8-snapshot-controller",phase="Running",pod=~"snapshot-controller-.*"})
-      for: 30m
+      for: 2m
       labels:
         severity_level: "8"
         tier: cluster

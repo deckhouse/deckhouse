@@ -38,7 +38,7 @@
 
     - alert: D8PiraeusOperatorPodIsNotReady
       expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-linstor", pod=~"piraeus-operator-.*"}) != 1
-      for: 30m
+      for: 10m
       labels:
         severity_level: "6"
         tier: cluster
@@ -56,7 +56,7 @@
 
     - alert: D8PiraeusOperatorPodIsNotRunning
       expr: absent(kube_pod_status_phase{namespace="d8-linstor",phase="Running",pod=~"piraeus-operator-.*"})
-      for: 30m
+      for: 2m
       labels:
         severity_level: "6"
         tier: cluster

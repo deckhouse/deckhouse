@@ -29,14 +29,14 @@ To configure via the command line interface, follow these steps:
 1. Export environment variables:
 
    ```shell
-   export PROJECT=sandbox
+   export PROJECT_ID=sandbox
    export SERVICE_ACCOUNT_NAME=deckhouse
    ```
 
 2. Select a project:
 
    ```shell
-   gcloud config set project $PROJECT
+   gcloud config set project $PROJECT_ID
    ```
 
 3. Create a service account:
@@ -49,7 +49,7 @@ To configure via the command line interface, follow these steps:
 
    ```shell
    for role in roles/compute.admin roles/iam.serviceAccountUser roles/networkmanagement.admin;
-   do gcloud projects add-iam-policy-binding ${PROJECT} --member=serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com \
+   do gcloud projects add-iam-policy-binding ${PROJECT_ID} --member=serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
       --role=${role}; done
    ```
 
@@ -64,13 +64,13 @@ To configure via the command line interface, follow these steps:
 5. Verify service account roles:
 
    ```shell
-   gcloud projects get-iam-policy ${PROJECT} --flatten="bindings[].members" --format='table(bindings.role)' \
-         --filter="bindings.members:${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com"
+   gcloud projects get-iam-policy ${PROJECT_ID} --flatten="bindings[].members" --format='table(bindings.role)' \
+         --filter="bindings.members:${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
    ```
 
 6. Create a `service account key`:
 
    ```shell
-   gcloud iam service-accounts keys create --iam-account ${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com \
-         ~/service-account-key-${PROJECT}-${SERVICE_ACCOUNT_NAME}.json
+   gcloud iam service-accounts keys create --iam-account ${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com \
+         ~/service-account-key-${PROJECT_ID}-${SERVICE_ACCOUNT_NAME}.json
    ```

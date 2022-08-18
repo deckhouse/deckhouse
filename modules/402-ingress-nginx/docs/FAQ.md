@@ -212,7 +212,7 @@ If CPU utilization > 50% HPA-controller scales `hpa-scaler` Deployment with a ne
 
 `hpa-scaler` Deployment has HardPodAntiAffinity and it will order a new Node (inside it's NodeGroup), where one more ingress-controller will be set.
 
-## How to use IngressClass with IngressClassParameters
+## How to use IngressClass with IngressClassParameters?
 
 Since version 1.1 IngressNginxController Deckhouse creates an IngressClass object. If you want to use your own IngressClass
 with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`
@@ -233,3 +233,22 @@ spec:
 ```
 
 In this case Deckhouse will not create an IngressClass object and will use your own.
+
+## How to disable the collection of detailed Ingress resources statistics?
+
+By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster. This behavior may generate
+high load on the monitoring system.
+
+To disable statistics collection, add label `ingress.deckhouse.io/discard-metrics: "true"` to the corresponding Namespace or Ingress resource.
+
+Example of disabling statistics (metrics) collection for all Ingress resources in the `review-1` namespace:
+
+```shell
+kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
+```
+
+Example of disabling statistics (metrics) collection for all `test-site` Ingress resources in the `development` namespace:
+
+```shell
+kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+```

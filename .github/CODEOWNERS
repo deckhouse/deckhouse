@@ -1,6 +1,6 @@
-# cilium/                   @zuzzas @yalosev
 .github/                    @diafour
 020-deckhouse/              @yalosev
+021-cni-cilium/             @zuzzas @yalosev @RomanenkoDenys @konstantin-axenov
 030-cloud-provider-openstack/ @konstantin-axenov
 030-cloud-provider-vsphere/ @RomanenkoDenys
 031-linstor/                @kvaps

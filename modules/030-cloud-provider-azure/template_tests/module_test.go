@@ -85,6 +85,16 @@ const globalValues = `
 const moduleValues = `
   internal:
     providerClusterConfiguration:
+      apiVersion: deckhouse.io/v1
+      kind: AzureClusterConfiguration
+      vNetCIDR: 10.0.0.0/16
+      subnetCIDR: 10.0.0.0/24
+      masterNodeGroup:
+        replicas: 1
+        instanceClass:
+          machineSize: zzz
+          urn: zzz
+      layout: Standard
       sshPublicKey: zzz
       provider:
         clientId: zzz
@@ -93,9 +103,12 @@ const moduleValues = `
         tenantId: zzz
         location: zzz
     providerDiscoveryData:
+      apiVersion: deckhouse.io/v1
+      kind: AzureCloudDiscoveryData
       resourceGroupName: zzz
       vnetName: zzz
       subnetName: zzz
+      zones: ["1"]
       instances:
         urn: zzz
         diskType: zzz

@@ -45,7 +45,7 @@ nodeGroups:
     template: dev/golden_image
     datastore: dev/lun_1
     mainNetwork: k8s-msk/test_187
-sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 zones:
 - ru-central1-a
 - ru-central1-b

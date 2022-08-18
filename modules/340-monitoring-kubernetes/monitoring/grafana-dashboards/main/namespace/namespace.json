@@ -425,7 +425,7 @@
               },
               {
                 "id": "unit",
-                "value": "bps"
+                "value": "Bps"
               },
               {
                 "id": "decimals",
@@ -449,7 +449,7 @@
               },
               {
                 "id": "unit",
-                "value": "bps"
+                "value": "Bps"
               },
               {
                 "id": "decimals",

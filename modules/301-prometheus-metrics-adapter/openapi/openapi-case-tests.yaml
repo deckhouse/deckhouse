@@ -2,9 +2,10 @@ positive:
   values:
   # all in
   - internal:
-      adapterPem: cert
-      adapterCA: cert
-      adapterKey: key
+      adapterCert:
+        ca: cert
+        crt: cert
+        key: key
       customMetrics:
         daemonset:
           name:
@@ -44,9 +45,10 @@ positive:
               ns: query
   # empty metrics types
   - internal:
-      adapterPem: cert
-      adapterCA: cert
-      adapterKey: key
+      adapterCert:
+        ca: cert
+        crt: cert
+        key: key
       customMetrics:
         daemonset: { }
         deployment: { }
@@ -60,9 +62,10 @@ negative:
   values:
   # incorrect metric type
   - internal:
-      adapterPem: cert
-      adapterCA: cert
-      adapterKey: key
+      adapterCert:
+        ca: cert
+        crt: cert
+        key: key
       customMetrics:
         incorrect_metric_type:
           name:
@@ -86,10 +89,11 @@ negative:
         service: { }
         statefulset: { }
 
-  # No required adapterKey.
+  # No required adapterCert.Key.
   - internal:
-      adapterPem: cert
-      adapterCA: cert
+      adapterCert:
+        ca: cert
+        crt: cert
       customMetrics:
         daemonset: { }
         deployment: { }
@@ -101,4 +105,5 @@ negative:
 
   # Only one required field.
   - internal:
-      adapterKey: key
+      adapterCert:
+        key: key

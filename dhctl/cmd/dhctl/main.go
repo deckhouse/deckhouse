@@ -90,6 +90,7 @@ func main() {
 		{
 			commands.DefineRenderBashibleBundle(renderCmd)
 			commands.DefineRenderKubeadmConfig(renderCmd)
+			commands.DefineRenderMasterBootstrap(renderCmd)
 		}
 
 		editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")

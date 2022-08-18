@@ -2,7 +2,7 @@
   rules:
     - alert: D8LinstorCsiControllerPodIsNotReady
       expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-linstor", pod=~"linstor-csi-controller-.*"}) != 1
-      for: 30m
+      for: 10m
       labels:
         severity_level: "6"
         tier: cluster
@@ -23,7 +23,7 @@
       labels:
         severity_level: "6"
         tier: cluster
-      for: 30m
+      for: 2m
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"

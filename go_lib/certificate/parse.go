@@ -84,15 +84,7 @@ func generateTLSCert(crt, key string) (*tls.Certificate, error) {
 
 // ParseCertificatesFromPEM parsing PEM input strings and return ca cert and/or verified tls.Certificate
 func ParseCertificatesFromPEM(ca, crt, key string) (*x509.Certificate, *tls.Certificate, error) {
-	block, _ := pem.Decode([]byte(ca))
-	if block == nil {
-		return nil, nil, fmt.Errorf("block not found")
-	}
-
-	if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
-		return nil, nil, fmt.Errorf("not valid ca certificate")
-	}
-	caCert, err := x509.ParseCertificate(block.Bytes)
+	caCert, err := ParseCertificate(ca)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -103,4 +95,23 @@ func ParseCertificatesFromPEM(ca, crt, key string) (*x509.Certificate, *tls.Cert
 	}
 
 	return caCert, &clientCert, nil
+}
+
+// ParseCertificate parse x509 certificate PEM encoded
+func ParseCertificate(crt string) (*x509.Certificate, error) {
+	block, _ := pem.Decode([]byte(crt))
+	if block == nil {
+		return nil, fmt.Errorf("block not found")
+	}
+
+	if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+		return nil, fmt.Errorf("not valid ca certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
 }

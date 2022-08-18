@@ -2,11 +2,12 @@
 
 ## Available annotations
 
-| annotation                               | description                                                                                  |
-|------------------------------------------|----------------------------------------------------------------------------------------------|
+| annotation                                 | description                                                                                  |
+|--------------------------------------------|----------------------------------------------------------------------------------------------|
 | `release.deckhouse.io/force`               | Apply specified release without any checks. Force deploy.                                    |
 | `release.deckhouse.io/disruption-approved` | Approve release with disruptive changes. Works if `update.disruptionApprovalMode` is Manual. |
 | `release.deckhouse.io/approved`            | Approve release for deployment. Works if `update.mode` is Manual.                            |
+| `release.deckhouse.io/cooldown`            | Timestamp for release cooldown. Works on minor versions. Internal system info.               |
 
 ## Difference between disruption check and requirement check
 
@@ -22,8 +23,8 @@ To handle this release, you should add disruption check logic in a release at le
 And add record for a specified release, where this logic will be checked. (e.g.: `"1.36": ["ingressNginx"]` to the [release.yaml](release.yaml) file, section `disruptions`.
 
 How to add a disruptive change:
-- In current release (say, 1.35.0) set disruption check logic into the `ingressNginx` function.
-- Add record `"1.36": ["ingressNginx"]` to the `release.yaml` file.
+- In the current release (say, 1.35.0) set disruption check logic into the `ingressNginx` function.
+- Add the record `"1.36": ["ingressNginx"]` to the `release.yaml` file.
 - In the release 1.36.0 logic function will run and disruptions will be checked.
 
 ### Release requirements

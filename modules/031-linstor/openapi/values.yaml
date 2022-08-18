@@ -11,6 +11,8 @@ properties:
     - sslControllerCert
     - sslNodeCert
     properties:
+      masterPassphrase:
+        type: string
       httpsClientCert:
         type: object
         default: {}
@@ -63,6 +65,23 @@ properties:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
       sslNodeCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+        - cert
+        - key
+        - ca
+        properties:
+          cert:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          key:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      spaasCert:
         type: object
         default: {}
         x-required-for-helm:
