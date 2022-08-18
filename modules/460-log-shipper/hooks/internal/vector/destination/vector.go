@@ -16,10 +16,7 @@ limitations under the License.
 
 package destination
 
-import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
-)
+import "github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 
 type Vector struct {
 	CommonSettings
@@ -43,7 +40,7 @@ type VectorKeepalive struct {
 	TimeSecs int `json:"time_secs"`
 }
 
-func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
+func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 	spec := cspec.Vector
 
 	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
@@ -60,7 +57,7 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDe
 
 	return &Vector{
 		CommonSettings: CommonSettings{
-			Name: "d8_cluster_sink_" + name,
+			Name: ComposeName(name),
 			Type: "vector",
 		},
 		TLS: VectorTLS{

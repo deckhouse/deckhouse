@@ -14,25 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package transform
+package vrl
 
-import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-)
-
-// ThrottleTransform adds throttling to event's flow.
-func ThrottleTransform(rl v1alpha1.RateLimitSpec) *DynamicTransform {
-	throttleTransform := DynamicTransform{
-		CommonTransform: CommonTransform{
-			Name: "ratelimit",
-			Type: "throttle",
-		},
-		DynamicArgsMap: map[string]interface{}{
-			"exclude":     "null",
-			"threshold":   *rl.LinesPerMinute,
-			"window_secs": 60,
-		},
-	}
-
-	return &throttleTransform
+// ParseJSONRule provides the message data as an object for future modifications/validations.
+// Parsed data will be equal to message to simplify further transformations, e.g., log filtration's.
+//
+// It is usually used in a combination with other rules.
+const ParseJSONRule Rule = `
+if !exists(.parsed_data) {
+    structured, err = parse_json(.message)
+    if err == null {
+        .parsed_data = structured
+    } else {
+        .parsed_data = .message
+    }
 }
+`

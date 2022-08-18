@@ -17,12 +17,12 @@ limitations under the License.
 package transform
 
 import (
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/vrl"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType) []impl.LogTransform {
+func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType) []apis.LogTransform {
 	multiLineTransform := DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name: "multiline",
@@ -49,8 +49,8 @@ func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType) []imp
 	case v1alpha1.MultiLineParserMultilineJSON:
 		multiLineTransform.DynamicArgsMap["starts_when"] = vrl.JSONMultilineRule.String()
 	default:
-		return []impl.LogTransform{}
+		return []apis.LogTransform{}
 	}
 
-	return []impl.LogTransform{&multiLineTransform}
+	return []apis.LogTransform{&multiLineTransform}
 }

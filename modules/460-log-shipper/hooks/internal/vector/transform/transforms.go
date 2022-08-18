@@ -19,17 +19,18 @@ package transform
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/clarketm/json"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
 
-func BuildFromMapSlice(inputName string, trans []impl.LogTransform) ([]impl.LogTransform, error) {
+func BuildFromMapSlice(prefix, inputName string, trans []apis.LogTransform) ([]apis.LogTransform, error) {
 	prevInput := inputName
 
 	for i, trm := range trans {
-		trm.SetName(fmt.Sprintf("d8_tf_%s_%02d_%s", inputName, i, trm.GetName()))
+		trm.SetName(fmt.Sprintf("transform/%s/%s/%02d_%s", prefix, inputName, i, trm.GetName()))
 		trm.SetInputs([]string{prevInput})
 		prevInput = trm.GetName()
 		trans[i] = trm
@@ -56,6 +57,7 @@ func (cs *CommonTransform) SetName(name string) {
 }
 
 func (cs *CommonTransform) SetInputs(inp []string) {
+	sort.Strings(inp)
 	cs.Inputs = inp
 }
 

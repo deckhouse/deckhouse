@@ -53,3 +53,7 @@ func (r Rule) Render(args Args) (string, error) {
 
 // Args for rendering VRL rules.
 type Args map[string]interface{}
+
+func Combine(r1, r2 Rule) Rule {
+	return Rule(strings.TrimSpace(string(r1)) + "\n\n" + strings.TrimSpace(string(r2)))
+}

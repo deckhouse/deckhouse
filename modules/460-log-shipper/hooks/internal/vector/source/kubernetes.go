@@ -17,30 +17,37 @@ limitations under the License.
 package source
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/clarketm/json"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
-// Kubernetes represents `kubernetes_logs` vector source
-// https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/
+const defaultGlobCooldownMs = 1000
+
+// Kubernetes represents a source for collecting Kubernetes logs.
+//
+// Because of how selectors work in Kubernetes, it is not possible to declare OR selector.
+// The following selector `metadata.namespace=ns1,metadata.namespace=ns2` selects nothing,
+// because namespace cannot be ns1 and ns2 at the same time.
+//
+// Vector allows providing only a one node selector.
+// Thus, the only way to collect logs from several namespaces is to render several `kubernetes_logs` sources for vector.
+//
+// Kubernetes handles this logic on building sources and generates the config according to a single deckhouse resource.
+// (ClusterLoggingConfig or PodLoggingConfig)
 type Kubernetes struct {
 	commonSource
 
-	labels labels.Selector
-	fields []string
+	namespaced bool // namespace or cluster Scope
+	namespaces []string
+	fields     []string
 
-	namespaced        bool // namespace or cluster Scope
-	namespaces        []string
-	excludeNamespaces []string
-
+	labelSelector    string
 	annotationFields KubernetesAnnotationFields
+	globCooldownMs   int
 }
 
 // KubernetesAnnotationFields are supported fields for the following vector options
@@ -56,100 +63,97 @@ type KubernetesAnnotationFields struct {
 	PodOwner       string `json:"pod_owner,omitempty"`
 }
 
-func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced bool) impl.LogSource {
+// rawKubernetesLogs represents `kubernetes_logs` vector source
+// https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/
+type rawKubernetesLogs struct {
+	commonSource
+
+	Labels           string                     `json:"extra_label_selector,omitempty"`
+	Fields           string                     `json:"extra_field_selector,omitempty"`
+	AnnotationFields KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
+	GlobCooldownMs   int                        `json:"glob_minimum_cooldown_ms,omitempty"`
+}
+
+func (k *rawKubernetesLogs) BuildSources() []apis.LogSource {
+	return []apis.LogSource{k}
+}
+
+func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced bool) *Kubernetes {
 	labelsSelector, err := metav1.LabelSelectorAsSelector(&spec.LabelSelector)
 	if err != nil {
 		// LabelSelector validated by OpenApi. Error in this place is very strange. We should panic.
 		panic(err)
 	}
 
-	formatFields := KubernetesAnnotationFields{
-		PodName:        "pod",
-		PodLabels:      "pod_labels",
-		PodIP:          "pod_ip",
-		PodNamespace:   "namespace",
-		ContainerImage: "image",
-		ContainerName:  "container",
-		PodNodeName:    "node",
-		PodOwner:       "pod_owner",
+	fields := []string{"metadata.name!=$VECTOR_SELF_POD_NAME"}
+	for _, ns := range spec.NamespaceSelector.ExcludeNames {
+		fields = append(fields, "metadata.namespace!="+ns)
 	}
 
-	return Kubernetes{
+	return &Kubernetes{
 		commonSource: commonSource{
 			Name: name,
 			Type: "kubernetes_logs",
 		},
-		namespaces:        spec.NamespaceSelector.MatchNames,
-		excludeNamespaces: spec.NamespaceSelector.ExcludeNames,
-		labels:            labelsSelector,
-		fields:            make([]string, 0),
-		namespaced:        namespaced,
-		annotationFields:  formatFields,
+
+		namespaced: namespaced,
+		namespaces: spec.NamespaceSelector.MatchNames,
+		fields:     fields,
+
+		labelSelector: labelsSelector.String(),
+		annotationFields: KubernetesAnnotationFields{
+			PodName:        "pod",
+			PodLabels:      "pod_labels",
+			PodIP:          "pod_ip",
+			PodNamespace:   "namespace",
+			ContainerImage: "image",
+			ContainerName:  "container",
+			PodNodeName:    "node",
+			PodOwner:       "pod_owner",
+		},
+		globCooldownMs: defaultGlobCooldownMs,
+	}
+}
+
+func (k *Kubernetes) newRawSource(name string, fields []string) *rawKubernetesLogs {
+	return &rawKubernetesLogs{
+		commonSource: commonSource{
+			Type: k.Type,
+			Name: name,
+		},
+		Fields:           strings.Join(fields, ","),
+		Labels:           k.labelSelector,
+		AnnotationFields: k.annotationFields,
+		GlobCooldownMs:   k.globCooldownMs,
 	}
 }
 
 // BuildSources denormalizes sources for vector config, which can handle only one namespace per source
 // (it is impossible to use OR clauses for the field-selector, so you can only select a single namespace)
-//
-// Also mutates name of the source:
-// 1. Namespaced - d8_namespaced_<ns>_<source_name>
-// 2. Cluster - d8_cluster_<ns>_<source_name>
-// 3. Cluster with NamespaceSelector - d8_clusterns_<ns>_<source_name>
-func (k Kubernetes) BuildSources() []impl.LogSource {
+func (k *Kubernetes) BuildSources() []apis.LogSource {
 	if k.namespaced {
-		k.Name = fmt.Sprintf("d8_namespaced_source_%s_%s", k.namespaces[0], k.Name)
-		return []impl.LogSource{k}
+		ns := k.namespaces[0]
+		return []apis.LogSource{k.newRawSource(
+			"pod_logging_config/"+k.Name+"/"+ns,
+			append([]string{"metadata.namespace=" + ns}, k.fields...),
+		)}
 	}
 
-	if len(k.namespaces) <= 1 {
-		k.Name = "d8_cluster_source_" + k.Name
-		return []impl.LogSource{k}
+	if len(k.namespaces) == 0 {
+		return []apis.LogSource{k.newRawSource(
+			"cluster_logging_config/"+k.Name,
+			k.fields,
+		)}
 	}
 
-	res := make([]impl.LogSource, 0, len(k.namespaces))
+	res := make([]apis.LogSource, 0, len(k.namespaces))
 
 	for _, ns := range k.namespaces {
-		k := Kubernetes{
-			commonSource:     commonSource{Name: fmt.Sprintf("d8_clusterns_source_%s_%s", ns, k.Name), Type: k.Type},
-			namespaces:       []string{ns},
-			labels:           k.labels,
-			annotationFields: k.annotationFields,
-		}
-
-		res = append(res, k)
+		res = append(res, k.newRawSource(
+			"cluster_logging_config/"+k.Name+":"+ns,
+			append([]string{"metadata.namespace=" + ns}, k.fields...),
+		))
 	}
 
 	return res
-}
-
-func (k Kubernetes) MarshalJSON() ([]byte, error) {
-	// Exclude pod logs to avoid fooling in case of problems and debugging.
-	k.fields = append(k.fields, "metadata.name!=$VECTOR_SELF_POD_NAME")
-
-	if len(k.namespaces) > 0 {
-		ns := k.namespaces[0] // namespace should be denormalized here and have only one value
-		k.fields = append(k.fields, "metadata.namespace="+ns)
-	} else {
-		// Apply namespaces exclusions only if the sync is not limited to a particular namespace.
-		// This is validated by the CRD OpenAPI spec.
-		for _, ns := range k.excludeNamespaces {
-			k.fields = append(k.fields, "metadata.namespace!="+ns)
-		}
-	}
-
-	s := struct {
-		Type             string                     `json:"type"`
-		Labels           string                     `json:"extra_label_selector,omitempty"`
-		Fields           string                     `json:"extra_field_selector,omitempty"`
-		AnnotationFields KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
-		GlobCooldownMs   int64                      `json:"glob_minimum_cooldown_ms,omitempty"`
-	}{
-		Type:             k.Type,
-		Labels:           k.labels.String(),
-		Fields:           strings.Join(k.fields, ","),
-		AnnotationFields: k.annotationFields,
-		GlobCooldownMs:   1000,
-	}
-
-	return json.Marshal(s)
 }

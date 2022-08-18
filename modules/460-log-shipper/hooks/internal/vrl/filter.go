@@ -56,8 +56,8 @@ if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
 
 // FilterRegexRule checks that a particular label matches any of provided regexes.
 const FilterRegexRule Rule = `
-{{- range $index, $value := $.filter.Values }}
-{{- if ne $index 0 }} || {{- end }} match!(.{{ $.filter.Field }}, r'{{ $value }}')
+{{ range $index, $value := $.filter.Values }}
+{{- if ne $index 0 }} || {{ end }}match!(.{{ $.filter.Field }}, r'{{ $value }}')
 {{- end }}
 `
 

@@ -1,6 +1,6 @@
 {
   "sources": {
-    "testfile": {
+    "cluster_logging_config/testfile": {
       "type": "file",
       "exclude": [
         "/var/log/syslog"
@@ -12,10 +12,10 @@
     }
   },
   "sinks": {
-    "d8_cluster_sink_testoutput": {
+    "destination/cluster/testoutput": {
       "type": "elasticsearch",
       "inputs": [
-        "testfile"
+        "cluster_logging_config/testfile"
       ],
       "healthcheck": {
         "enabled": false

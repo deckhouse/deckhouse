@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vrl
+package v1alpha1
 
-// ParseJSONRule provides the message data as an object for future modifications/validations.
-// Parsed data will be equal to message to simplify further transformations, e.g., log filtration's.
-const ParseJSONRule Rule = `
-structured, err = parse_json(.message)
-if err == null {
-    .parsed_data = structured
-} else {
-    .parsed_data = .message
-}
-`
+const (
+	DestElasticsearch = "Elasticsearch"
+	DestLogstash      = "Logstash"
+	DestLoki          = "Loki"
+	DestVector        = "Vector"
+)
+
+const (
+	SourceKubernetesPods = "KubernetesPods"
+	SourceFile           = "File"
+)
