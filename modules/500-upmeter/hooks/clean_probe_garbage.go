@@ -31,10 +31,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
-// migration: Delete redundant objects
+// This hook deletes abandoned objects produced by upmeter.
 //
-// TODO (shvgn): Delete this hook in Deckhouse v1.35
+// TODO (shvgn): Change this hook in Deckhouse v1.35, so it would track objects created by agents
+// that are not present anymore, e.g. when multi-master was changed to single-master.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/upmeter/self_cleaning",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "delete_probe_garbage",
@@ -58,7 +60,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 		for _, r := range repos {
 			if err := cleanGarbage(ctx, r); err != nil {
-				return err
+				// The queue shouldn't be stopped event if there is an API error
+				input.LogEntry.Warn(err)
 			}
 		}
 
@@ -80,7 +83,7 @@ func cleanGarbage(ctx context.Context, repo objectRepository) error {
 		if !isOldEnough {
 			continue
 		}
-		if err := repo.Delete(ctx, obj.GetName()); err != nil && !apierrors.IsNotFound(err) {
+		if err := repo.Delete(ctx, obj.GetName()); err != nil {
 			return fmt.Errorf("deleting %s: %v", obj.GetName(), err)
 		}
 		limit--
@@ -135,7 +138,9 @@ func (r *certRepo) List(ctx context.Context) ([]metav1.Object, error) {
 		Namespace("d8-upmeter").
 		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
-		return nil, err
+		// This response depends on the presence of cert-manager certificate CRD
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
 	}
 	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
@@ -264,7 +269,12 @@ func (r *upmeterHookProbeRepo) List(ctx context.Context) ([]metav1.Object, error
 }
 
 func (r *upmeterHookProbeRepo) Delete(ctx context.Context, name string) error {
-	return r.k.Dynamic().
+	err := r.k.Dynamic().
 		Resource(upmeterHookProbeGVR).
 		Delete(ctx, name, metav1.DeleteOptions{})
+	if err == nil || apierrors.IsNotFound(err) {
+		// Since we look for a specific name, it only deletes once
+		return nil
+	}
+	return err
 }
