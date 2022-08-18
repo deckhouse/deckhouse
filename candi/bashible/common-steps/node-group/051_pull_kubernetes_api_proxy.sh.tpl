@@ -15,8 +15,8 @@
 image="{{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}"
 if docker version >/dev/null 2>/dev/null; then
   HOME=/ docker pull "$image"
-# We use ctr because it respect http_proxy and https_proxy environment variables and allows to install in air-gapped environments using simple http proxy
-# Fallback to crictl if ctr is not installed for some reason. This is just small safety precaution.
+# Use ctr because it respects http_proxy and https_proxy environment variables and allows installing in air-gapped environments using simple http proxy.
+# If ctr is not installed for some reason, fallback to crictl. This is just a small safety precaution.
 elif ctr --version >/dev/null 2>/dev/null; then
   ctr -n=k8s.io images pull "$image"
 elif crictl version >/dev/null 2>/dev/null; then
