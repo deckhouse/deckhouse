@@ -30,11 +30,13 @@ data:
   tunnel: {{ .Values.cniCilium.tunnelMode | lower | quote }}
 
   enable-ipv4-masquerade: "true"
+  {{- if eq (.Values.cniCilium.tunnelMode | lower) "vxlan" }}
   enable-bpf-masquerade: "true"
+  {{- end }}
 
   enable-xt-socket-fallback: "true"
   install-iptables-rules: "true"
-  {{- if eq (.Values.cniCilium.tunnelMode | lower) "disabled" }}
+  {{- if eq (.Values.cniCilium.tunnelMode | lower) "vxlan" }}
   install-no-conntrack-iptables-rules: "true"
   {{- end }}
   auto-direct-node-routes: {{ .Values.cniCilium.createNodeRoutes | quote }}
@@ -71,7 +73,9 @@ data:
   ipam: kubernetes
   k8s-require-ipv4-pod-cidr: "true"
 
+  {{- if eq (.Values.cniCilium.tunnelMode | lower) "vxlan" }}
   enable-ipv4-egress-gateway: "true"
+  {{- end }}
 
   enable-k8s-endpoint-slice: "true"
 

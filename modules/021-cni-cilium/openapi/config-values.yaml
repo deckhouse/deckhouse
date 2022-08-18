@@ -17,6 +17,7 @@ properties:
       Create routes to Pods on other Nodes.
 
       All Nodes must be located in the same L2 domain.
+      Works only in `tunnelMode: Disabled`.
   tunnelMode:
     type: string
     enum: ["Disabled", "VXLAN"]

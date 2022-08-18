@@ -39,6 +39,11 @@ func enableNodeRoutes(input *go_hook.HookInput) error {
 // use value from config
 // if not present, enable everywhere except clouds (other than openstack and vsphere)
 func shouldEnableNodeRoutes(input *go_hook.HookInput) bool {
+	// Works only with `tunnelMode: Disabled`
+	if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "VXLAN" {
+		return false
+	}
+
 	// if value is set directly - skip this hook
 	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok {

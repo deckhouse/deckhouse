@@ -55,7 +55,19 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() 
 			Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeTrue())
 		})
 
-		Context("with directly set value in config", func() {
+		Context("with tunnelMode set to VXLAN in config", func() {
+			BeforeEach(func() {
+				f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+				f.RunHook()
+			})
+
+			It("should be false", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeFalse())
+			})
+		})
+
+		Context("with directly set createNodeRoutes value in config", func() {
 			BeforeEach(func() {
 				f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
 				f.RunHook()
@@ -65,19 +77,6 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() 
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeFalse())
 			})
-		})
-	})
-
-	Context("Openstack cluster with directly node-routes set", func() {
-		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-		})
-		It("should be false value", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeFalse())
 		})
 	})
 
@@ -91,6 +90,28 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: enable-node-routes", func() 
 		It("should be false value", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeFalse())
+		})
+		Context("with tunnelMode set to VXLAN in config", func() {
+			BeforeEach(func() {
+				f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+				f.RunHook()
+			})
+
+			It("should be false", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeFalse())
+			})
+		})
+		Context("with directly set createNodeRoutes value in config", func() {
+			BeforeEach(func() {
+				f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+				f.RunHook()
+			})
+
+			It("should be true", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("cniCilium.createNodeRoutes").Bool()).To(BeTrue())
+			})
 		})
 	})
 })
