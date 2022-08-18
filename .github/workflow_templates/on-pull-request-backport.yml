@@ -45,14 +45,14 @@ jobs:
         id: regexp_match
         with:
           text: ${{ github.event.comment.body }}
-          regex: '^/backport\sv?(\d+\.\d+)$' # /backport 1.34 or /backport v1.34
+          regex: '^/backport\sv?(\d+\.\d+)(\.\d+)?$' # /backport 1.34 || /backport v1.34 || /backport 1.34.12 || /backport v1.34.12
       - name: Get comment info
         id: comment_info
         if: ${{ steps.regexp_match.outputs.match != null }}
         env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
+          MINOR_RELEASE: ${{ steps.regexp_match.outputs.group1 }}
         run: |
-          releaseBranch="release-$(echo ${COMMENT_BODY} | awk '{print $2}' | sed 's/v//')"
+          releaseBranch="release-${MINOR_RELEASE}"
           echo "::set-output name=branch::${releaseBranch}"
       - name: Get Pull Request info
         id: pr_info
