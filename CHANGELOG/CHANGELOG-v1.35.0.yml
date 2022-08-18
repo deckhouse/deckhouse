@@ -18,6 +18,8 @@ ci:
     - summary: E2e test daily run
       pull_request: https://github.com/deckhouse/deckhouse/pull/2014
   fixes:
+    - summary: Fix indent
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2235
     - summary: Fix daily e2e tests
       pull_request: https://github.com/deckhouse/deckhouse/pull/2145
     - summary: Fix restart e2e tests
