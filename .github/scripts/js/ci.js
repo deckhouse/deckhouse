@@ -562,7 +562,6 @@ module.exports.checkValidationLabels = ({ core, labels }) => {
  *   /build release-1.30
  *   /e2e/run/aws v1.31.0-alpha.0
  *   /e2e/use/k8s/1.22
- *   /e2e/use/k8s/1.19
  *   /e2e/use/cri/docker
  *   /e2e/use/cri/containerd
  *   /deploy/web/stage v1.3.2
@@ -1087,11 +1086,11 @@ Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kube
 /e2e/run/aws main
 /e2e/use/cri/docker
 /e2e/use/cri/containerd
-/e2e/use/k8s/1.19
-/e2e/use/k8s/1.21
+/e2e/use/k8s/1.20
+/e2e/use/k8s/1.23
 
 This comment will run 4 e2e jobs on AWS with Docker and containerd
-and with Kubernetes version 1.19 and 1.21 using image built from main branch.
+and with Kubernetes version 1.20 and 1.23 using image built from main branch.
 \`\`\`
 
 **Note 2:**

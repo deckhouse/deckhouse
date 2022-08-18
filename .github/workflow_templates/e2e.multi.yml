@@ -20,7 +20,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "Static" -}!}
 {!{- $criNames := slice "Docker" "Containerd" -}!}
-{!{- $kubernetesVersions := slice "1.19" "1.20" "1.21" "1.22" "1.23" "1.24" -}!}
+{!{- $kubernetesVersions := slice "1.20" "1.21" "1.22" "1.23" "1.24" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -65,7 +65,7 @@ on:
         description: 'A comma-separated list of cri to test. Available: Docker and Containerd.'
         required: false
       ver:
-        description: 'A comma-separated list of versions to test. Available: from 1.19 to 1.24.'
+        description: 'A comma-separated list of versions to test. Available: from 1.20 to 1.24.'
         required: false
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
