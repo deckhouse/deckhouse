@@ -147,12 +147,12 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	// production upgrade
 	input.MetricsCollector.Expire(metricReleasesGroup)
 
-	snap := input.Snapshots["deckhouse_pod"]
-	if len(snap) == 0 {
+	deckhousePod := getDeckhousePod(input.Snapshots["deckhouse_pod"])
+	if deckhousePod == nil {
 		input.LogEntry.Warn("Deckhouse pod does not exist. Skipping update")
 		return nil
 	}
-	deckhousePod := snap[0].(deckhousePodInfo)
+
 	if deckhousePod.Ready {
 		input.MetricsCollector.Expire(metricUpdatingGroup)
 		if isUpdatingCMExists(input) {
@@ -297,6 +297,11 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 	err := sdk.FromUnstructured(unstructured, &pod)
 	if err != nil {
 		return nil, err
+	}
+
+	// ignore evicted and shutdown pods
+	if pod.Status.Phase == corev1.PodFailed {
+		return nil, nil
 	}
 
 	var imageName, imageID string
@@ -859,6 +864,26 @@ func updateStatus(input *go_hook.HookInput, release *deckhouseRelease, msg, phas
 	release.Status.Phase = phase
 	release.Status.Message = msg
 	release.Status.Approved = approved
+}
+
+func getDeckhousePod(snap []go_hook.FilterResult) *deckhousePodInfo {
+	var deckhousePod deckhousePodInfo
+
+	if len(snap) == 0 {
+		return nil
+	} else if len(snap) == 1 {
+		deckhousePod = snap[0].(deckhousePodInfo)
+	} else {
+		for _, sn := range snap {
+			if sn == nil {
+				continue
+			}
+			deckhousePod = sn.(deckhousePodInfo)
+			break
+		}
+	}
+
+	return &deckhousePod
 }
 
 type byVersion []deckhouseRelease
