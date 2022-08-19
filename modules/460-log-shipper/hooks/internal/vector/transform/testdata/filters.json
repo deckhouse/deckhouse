@@ -15,7 +15,7 @@
 		"type": "filter"
 	},
 	{
-		"condition": "if is_boolean(.parsed_data.severity) || is_float(.parsed_data.severity) {\n    data, err = to_string(.parsed_data.severity);\n    if err != null {\n        false;\n    } else {\n        includes([\"aaa\",42], data);\n    };\n} else {\n    includes([\"aaa\",42], .parsed_data.severity);\n}",
+		"condition": "if is_boolean(.parsed_data.severity) || is_float(.parsed_data.severity) {\n    data, err = to_string(.parsed_data.severity);\n    if err != null {\n        false;\n    } else {\n        includes([\"aaa\",42], data);\n    };\n} else if .parsed_data.severity == null {\n    \"null\";\n} else {\n    includes([\"aaa\",42], .parsed_data.severity);\n}",
 		"inputs": [
 			"transform/prefix/testit/01_log_filter"
 		],

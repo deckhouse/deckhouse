@@ -23,9 +23,6 @@ import (
 )
 
 func TestValidateConfigWithVector(t *testing.T) {
-	if os.Getenv("D8_LOG_SHIPPER_VECTOR_VALIDATE") != "yes" {
-		t.Skip("Do not run this on CI")
-	}
 
 	dockerImage := "timberio/vector:0.23.3-debian"
 
