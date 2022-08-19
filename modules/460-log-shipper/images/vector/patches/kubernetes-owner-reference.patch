@@ -1,157 +1,53 @@
-diff --git a/src/kubernetes/hash_value.rs b/src/kubernetes/hash_value.rs
-index 9ef13ea05..da061d539 100644
---- a/src/kubernetes/hash_value.rs
-+++ b/src/kubernetes/hash_value.rs
-@@ -53,6 +53,17 @@ where
-         let metadata = self.0.metadata();
-         Some(metadata.name.as_ref()?.as_str())
-     }
+diff --git a/src/kubernetes/mod.rs b/src/kubernetes/mod.rs
+index 8ef6d774f..74a0a6271 100644
+--- a/src/kubernetes/mod.rs
++++ b/src/kubernetes/mod.rs
+@@ -8,5 +8,6 @@
+
+ pub mod pod_manager_logic;
+ pub mod reflector;
++pub mod owner_reference;
+
+ pub use reflector::custom_reflector;
+diff --git a/src/kubernetes/owner_reference.rs b/src/kubernetes/owner_reference.rs
+new file mode 100644
+index 000000000..1e7b335e6
+--- /dev/null
++++ b/src/kubernetes/owner_reference.rs
+@@ -0,0 +1,66 @@
++use k8s_openapi::api::apps::v1::{ReplicaSet};
++use k8s_openapi::api::batch::v1::{Job};
++use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
++use kube::{Api, Client};
 +
-+    /// Get the `metadata` from the `T`'.
-+    pub fn metadata(&self) -> ObjectMeta {
-+        let metadata = self.0.metadata().clone();
-+        metadata
-+    }
++pub async fn enrich_owner_ref(client: &Client, metadata: &mut ObjectMeta) {
++    info!("Start enrich_owner_ref");
 +
-+    /// Gets a mutable reference to the metadata of this resource value.
-+    pub fn metadata_mut(&mut self) -> &mut ObjectMeta {
-+        self.0.metadata_mut()
-+    }
- }
-
- impl<T> PartialEq<Self> for HashValue<T>
-diff --git a/src/kubernetes/reflector.rs b/src/kubernetes/reflector.rs
-index 0abe760b7..5c907cebc 100644
---- a/src/kubernetes/reflector.rs
-+++ b/src/kubernetes/reflector.rs
-@@ -247,6 +247,8 @@ mod tests {
-         apimachinery::pkg::apis::meta::v1::{ObjectMeta, WatchEvent},
-         Metadata,
-     };
-+    use wiremock::MockServer;
-+    use vector_core::config::proxy::ProxyConfig;
-
-     use super::{Error, Reflector};
-     use crate::{
-@@ -258,6 +260,9 @@ mod tests {
-         },
-         test_util::trace_init,
-     };
-+    use crate::kubernetes::client;
-+    use crate::kubernetes::client::Client;
-+    use crate::tls::TlsOptions;
-
-     /// A helper function to simplify assertion on the `evmap` state.
-     fn gather_state<T>(handle: &evmap::ReadHandle<String, state::evmap::Value<T>>) -> Vec<T>
-@@ -1073,9 +1078,18 @@ mod tests {
-         // Freeze time.
-         tokio::time::pause();
-
-+        let mock_server = MockServer::start().await;
-+
-+        let config = client::Config {
-+            base: mock_server.uri().parse().unwrap(),
-+            token: Some("SOMEGARBAGETOKEN".to_string()),
-+            tls_options: TlsOptions::default(),
-+        };
-+        let client = Client::new(config, &ProxyConfig::default()).unwrap();
-+
-         // Prepare state.
-         let (state_reader, state_writer) = evmap::new();
--        let state_writer = state::evmap::Writer::new(state_writer, None, HashKey::Uid); // test without debounce to avoid complexity
-+        let state_writer = state::evmap::Writer::new(client.clone(), state_writer, None, HashKey::Uid); // test without debounce to avoid complexity
-         let state_writer = state::instrumenting::Writer::new(state_writer);
-         let resulting_state_reader = state_reader.clone();
-
-diff --git a/src/kubernetes/state/evmap.rs b/src/kubernetes/state/evmap.rs
-index 4c55d095f..a539445a0 100644
---- a/src/kubernetes/state/evmap.rs
-+++ b/src/kubernetes/state/evmap.rs
-@@ -5,8 +5,16 @@ use std::time::Duration;
- use async_trait::async_trait;
- use evmap::WriteHandle;
- use futures::future::BoxFuture;
--use k8s_openapi::{apimachinery::pkg::apis::meta::v1::ObjectMeta, Metadata};
-+use http::StatusCode;
-+use hyper::body;
-+use k8s_openapi::{
-+    api::apps::v1::{ReadNamespacedReplicaSetResponse, ReplicaSet},
-+    api::batch::v1::{ReadNamespacedJobResponse, Job},
-+    apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference},
-+    Metadata,
-+};
-
-+use crate::kubernetes::client::Client;
- use crate::kubernetes::{
-     debounce::Debounce,
-     hash_value::{HashKey, HashValue},
-@@ -19,6 +27,7 @@ pub struct Writer<T>
- where
-     T: Metadata<Ty = ObjectMeta> + Send,
- {
-+    client: Client,
-     inner: WriteHandle<String, Value<T>>,
-     debounced_flush: Option<Debounce>,
-     hash_key: HashKey,
-@@ -31,6 +40,7 @@ where
-     /// Take a [`WriteHandle`], initialize it and return it wrapped with
-     /// [`Writer`].
-     pub fn new(
-+        client: Client,
-         mut inner: WriteHandle<String, Value<T>>,
-         flush_debounce_timeout: Option<Duration>,
-         hash_key: HashKey,
-@@ -43,6 +53,7 @@ where
-         let debounced_flush = flush_debounce_timeout.map(Debounce::new);
-
-         Self {
-+            client,
-             inner,
-             debounced_flush,
-             hash_key,
-@@ -73,14 +84,16 @@ where
-     type Item = T;
-
-     async fn add(&mut self, item: Self::Item) {
--        if let Some((key, value)) = kv(item, self.hash_key) {
-+        if let Some((key, mut value)) = kv(item, self.hash_key) {
-+            enrich_owner_ref(&mut self.client, value.metadata_mut()).await;
-             self.inner.insert(key, value);
-             self.debounced_flush();
-         }
-     }
-
-     async fn update(&mut self, item: Self::Item) {
--        if let Some((key, value)) = kv(item, self.hash_key) {
-+        if let Some((key, mut value)) = kv(item, self.hash_key) {
-+            enrich_owner_ref(&mut self.client, value.metadata_mut()).await;
-             self.inner.update(key, value);
-             self.debounced_flush();
-         }
-@@ -102,6 +115,100 @@ where
-     }
- }
-
-+async fn enrich_owner_ref(client: &mut Client, metadata: &mut ObjectMeta) {
 +    if let Some(or) = metadata.owner_references.to_owned() {
 +        let mut ns = String::from("default");
 +        if let Some(namespace) = metadata.namespace.to_owned() {
 +            ns = namespace
 +        }
 +
++        info!("Owner references found");
++
 +        match or[0].kind.as_str() {
 +            "ReplicaSet" => {
++                info!("ReplicaSet owner references found");
 +                let owner_ref =
 +                    replicaset_owner_ref(&mut client.clone(), or[0].name.as_str(), ns.as_str())
 +                        .await;
++                info!("ReplicaSet owner references enriched");
 +
 +                if let Some(owner_ref) = owner_ref {
 +                    metadata.owner_references = Some(owner_ref);
 +                }
 +            }
 +            "Job" => {
++                info!("Job owner references found");
 +                let owner_ref =
 +                    job_owner_ref(&mut client.clone(), or[0].name.as_str(), ns.as_str()).await;
++                info!("Job owner references enriched");
 +
 +                if let Some(owner_ref) = owner_ref {
 +                    metadata.owner_references = Some(owner_ref);
@@ -167,31 +63,10 @@ index 4c55d095f..a539445a0 100644
 +    name: &str,
 +    namespace: &str,
 +) -> Option<Vec<OwnerReference>> {
-+    if let Ok((req, resp_body)) =
-+        ReplicaSet::read_namespaced_replica_set(name, namespace, Default::default())
-+    {
-+        let resp = client.send(req).await.ok()?;
-+        let status = resp.status();
-+
-+        if status != StatusCode::OK {
-+            return None;
-+        }
-+
-+        // Read body to not to get EOF error for json parsing
-+        let mut resp_result = resp_body(status);
-+        if let Ok(body) = body::to_bytes(resp.into_body()).await {
-+            resp_result.append_slice(&body);
-+        }
-+
-+        if let Ok(read_rs_result) = resp_result.parse() {
-+            match read_rs_result {
-+                ReadNamespacedReplicaSetResponse::Ok(rs) => {
-+                    return rs.metadata.owner_references;
-+                }
-+                _ => {} // Ignore is cannot get the owner
-+            }
-+        }
-+    }
++    let rs_api = Api::<ReplicaSet>::namespaced(client.clone(), namespace);
++    if let Ok(rs) = rs_api.get(name).await {
++        return rs.metadata.owner_references;
++    };
 +    return None;
 +}
 +
@@ -200,115 +75,108 @@ index 4c55d095f..a539445a0 100644
 +    name: &str,
 +    namespace: &str,
 +) -> Option<Vec<OwnerReference>> {
-+    if let Ok((req, resp_body)) = Job::read_namespaced_job(name, namespace, Default::default()) {
-+        let resp = client.send(req).await.ok()?;
-+        let status = resp.status();
-+
-+        if status != StatusCode::OK {
-+            return None;
-+        }
-+
-+        // Read body to not to get EOF error for json parsing
-+        let mut resp_result = resp_body(status);
-+        if let Ok(body) = body::to_bytes(resp.into_body()).await {
-+            resp_result.append_slice(&body);
-+        }
-+
-+        if let Ok(read_rs_result) = resp_result.parse() {
-+            match read_rs_result {
-+                ReadNamespacedJobResponse::Ok(rs) => {
-+                    return rs.metadata.owner_references;
-+                }
-+                _ => {} // Ignore is cannot get the owner
-+            }
-+        }
-+    }
++    let job_api = Api::<Job>::namespaced(client.clone(), namespace);
++    if let Ok(job) = job_api.get(name).await {
++        return job.metadata.owner_references;
++    };
 +    return None;
 +}
-+
- #[async_trait]
- impl<T> super::MaintainedWrite for Writer<T>
- where
-@@ -138,10 +245,14 @@ fn kv<T: Metadata<Ty = ObjectMeta>>(object: T, hash_key: HashKey) -> Option<(Str
-
- #[cfg(test)]
- mod tests {
-+    use crate::kubernetes::client;
-     use k8s_openapi::api::core::v1::Pod;
-+    use vector_core::config::proxy::ProxyConfig;
-+    use wiremock::MockServer;
-
-     use super::*;
-     use crate::kubernetes::state::{MaintainedWrite, Write};
-+    use crate::tls::TlsOptions;
-
-     fn make_pod(uid: &str) -> Pod {
-         Pod {
-@@ -185,8 +296,17 @@ mod tests {
-
-     #[tokio::test]
-     async fn test_without_debounce() {
-+        let mock_server = MockServer::start().await;
-+
-+        let config = client::Config {
-+            base: mock_server.uri().parse().unwrap(),
-+            token: Some("SOMEGARBAGETOKEN".to_string()),
-+            tls_options: TlsOptions::default(),
-+        };
-+        let client = Client::new(config, &ProxyConfig::default()).unwrap();
-+
-         let (state_reader, state_writer) = evmap::new();
--        let mut state_writer = Writer::new(state_writer, None, HashKey::Uid);
-+        let mut state_writer = Writer::new(client.clone(), state_writer, None, HashKey::Uid);
-
-         assert!(state_reader.is_empty());
-         assert!(state_writer.maintenance_request().is_none());
-@@ -201,13 +321,25 @@ mod tests {
-
-     #[tokio::test]
-     async fn test_with_debounce() {
-+        let mock_server = MockServer::start().await;
-+
-+        let config = client::Config {
-+            base: mock_server.uri().parse().unwrap(),
-+            token: Some("SOMEGARBAGETOKEN".to_string()),
-+            tls_options: TlsOptions::default(),
-+        };
-+        let client = Client::new(config, &ProxyConfig::default()).unwrap();
-+
-         // Due to https://github.com/tokio-rs/tokio/issues/2090 we're not
-         // pausing the time.
--
-         let (state_reader, state_writer) = evmap::new();
-         let flush_debounce_timeout = Duration::from_millis(100);
--        let mut state_writer =
--            Writer::new(state_writer, Some(flush_debounce_timeout), HashKey::Uid);
-+        let mut state_writer = Writer::new(
-+            client.clone(),
-+            state_writer,
-+            Some(flush_debounce_timeout),
-+            HashKey::Uid,
-+        );
-
-         assert!(state_reader.is_empty());
-         assert!(state_writer.maintenance_request().is_none());
 diff --git a/src/sources/kubernetes_logs/mod.rs b/src/sources/kubernetes_logs/mod.rs
-index dc3f6a222..555e51e62 100644
+index 44023790f..308c311ec 100644
 --- a/src/sources/kubernetes_logs/mod.rs
 +++ b/src/sources/kubernetes_logs/mod.rs
-@@ -292,6 +292,7 @@ impl Source {
-         let watcher = k8s::instrumenting_watcher::InstrumentingWatcher::new(watcher);
-         let (state_reader, state_writer) = evmap::new();
-         let state_writer = k8s::state::evmap::Writer::new(
-+            client.clone(),
-             state_writer,
-             Some(Duration::from_millis(10)),
-             HashKey::Uid,
-@@ -315,6 +316,7 @@ impl Source {
-         let ns_watcher = k8s::instrumenting_watcher::InstrumentingWatcher::new(ns_watcher);
-         let (ns_state_reader, ns_state_writer) = evmap::new();
-         let ns_state_writer = k8s::state::evmap::Writer::new(
-+            client.clone(),
-             ns_state_writer,
-             Some(Duration::from_millis(10)),
-             HashKey::Name,
+@@ -13,6 +13,7 @@ use file_source::{
+     Checkpointer, FileServer, FileServerShutdown, FingerprintStrategy, Fingerprinter, Line,
+     ReadFrom,
+ };
++use futures::TryStreamExt;
+ use futures_util::Stream;
+ use k8s_openapi::api::core::v1::{Namespace, Node, Pod};
+ use kube::{
+@@ -22,7 +23,7 @@ use kube::{
+         reflector::{self},
+         watcher,
+     },
+-    Client, Config as ClientConfig,
++    Client, Config as ClientConfig, Resource,
+ };
+ use vector_common::TimeZone;
+ use vector_config::configurable_component;
+@@ -62,7 +63,9 @@ use self::namespace_metadata_annotator::NamespaceMetadataAnnotator;
+ use self::node_metadata_annotator::NodeMetadataAnnotator;
+ use self::parser::Parser;
+ use self::pod_metadata_annotator::PodMetadataAnnotator;
+-use futures::{future::FutureExt, stream::StreamExt};
++use crate::kubernetes::owner_reference::enrich_owner_ref;
++use futures::{executor::block_on, future::FutureExt, stream::StreamExt};
++
+ use k8s_paths_provider::K8sPathsProvider;
+ use lifecycle::Lifecycle;
+ use vector_core::config::LogNamespace;
+@@ -347,24 +350,6 @@ impl Source {
+
+         let mut reflectors = Vec::new();
+
+-        let pods = Api::<Pod>::all(client.clone());
+-        let pod_watcher = watcher(
+-            pods,
+-            ListParams {
+-                field_selector: Some(field_selector),
+-                label_selector: Some(label_selector),
+-                ..Default::default()
+-            },
+-        );
+-        let pod_store_w = reflector::store::Writer::default();
+-        let pod_state = pod_store_w.as_reader();
+-
+-        reflectors.push(tokio::spawn(custom_reflector(
+-            pod_store_w,
+-            pod_watcher,
+-            delay_deletion,
+-        )));
+-
+         // -----------------------------------------------------------------
+
+         let namespaces = Api::<Namespace>::all(client.clone());
+@@ -386,7 +371,7 @@ impl Source {
+
+         // -----------------------------------------------------------------
+
+-        let nodes = Api::<Node>::all(client);
++        let nodes = Api::<Node>::all(client.clone());
+         let node_watcher = watcher(
+             nodes,
+             ListParams {
+@@ -403,6 +388,32 @@ impl Source {
+             delay_deletion,
+         )));
+
++        // -----------------------------------------------------------------
++
++        let pods = Api::<Pod>::all(client.clone());
++
++        let pod_watcher = watcher(
++            pods,
++            ListParams {
++                field_selector: Some(field_selector),
++                label_selector: Some(label_selector),
++                ..Default::default()
++            },
++        )
++        .map_ok(move |ev| {
++            ev.modify(|pod| {
++                block_on(enrich_owner_ref(&client.clone(), pod.meta_mut()));
++            })
++        });
++        let pod_store_w = reflector::store::Writer::default();
++        let pod_state = pod_store_w.as_reader();
++
++        reflectors.push(tokio::spawn(custom_reflector(
++            pod_store_w,
++            pod_watcher,
++            delay_deletion,
++        )));
++
+         let paths_provider =
+             K8sPathsProvider::new(pod_state.clone(), ns_state.clone(), exclude_paths);
+         let annotator = PodMetadataAnnotator::new(pod_state, pod_fields_spec);
