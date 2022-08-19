@@ -25,8 +25,8 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 19,
-  "iteration": 1659003228485,
+  "id": 24,
+  "iteration": 1660911752064,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -79,7 +79,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.2",
+      "pluginVersion": "8.5.9",
       "targets": [
         {
           "exemplar": true,
@@ -177,7 +177,7 @@
             "uid": "P0D6E4079E36703EB"
           },
           "exemplar": true,
-          "expr": "sum by (component_id, component_kind) (rate(vector_utilization{node=~\"$node\"}[$__interval_sx4]))",
+          "expr": "sum by (component_id, component_kind) (rate(vector_utilization{node=~\"$node\"}[$__interval_sx4])) > 0",
           "instant": false,
           "interval": "",
           "legendFormat": "{{ component_kind }}/{{ component_id }}",
@@ -281,7 +281,7 @@
         },
         "showHeader": false
       },
-      "pluginVersion": "8.5.2",
+      "pluginVersion": "8.5.9",
       "targets": [
         {
           "exemplar": true,
@@ -584,7 +584,7 @@
                 "uid": "P0D6E4079E36703EB"
               },
               "editorMode": "code",
-              "expr": "sum by (component_kind, component_id) (rate(vector_component_received_events_total{component_id=~\"$component\"}[$__rate_interval]))",
+              "expr": "sum by (component_kind, component_id) (rate(vector_component_received_events_total{component_id=~\"$component\"}[$__rate_interval])) > 0",
               "legendFormat": "IN: {{component_kind}} / {{ component_id }}",
               "range": true,
               "refId": "A"
@@ -595,7 +595,7 @@
                 "uid": "P0D6E4079E36703EB"
               },
               "editorMode": "code",
-              "expr": "sum by (component_kind, component_id) (rate(vector_component_sent_events_total{component_id=~\"$component\"}[$__rate_interval]))",
+              "expr": "sum by (component_kind, component_id) (rate(vector_component_sent_events_total{component_id=~\"$component\"}[$__rate_interval])) > 0",
               "hide": false,
               "legendFormat": "OUT: {{component_kind}} / {{ component_id }}",
               "range": true,
@@ -689,7 +689,7 @@
                 "uid": "P0D6E4079E36703EB"
               },
               "editorMode": "code",
-              "expr": "sum by (component_kind, component_id) (rate(vector_component_received_event_bytes_total{component_id=~\"$component\"}[$__rate_interval]))",
+              "expr": "sum by (component_kind, component_id) (rate(vector_component_received_event_bytes_total{component_id=~\"$component\"}[$__rate_interval])) > 0",
               "legendFormat": "IN: {{component_kind}} / {{ component_id }}",
               "range": true,
               "refId": "A"
@@ -700,7 +700,7 @@
                 "uid": "P0D6E4079E36703EB"
               },
               "editorMode": "code",
-              "expr": "sum by (component_kind, component_id) (rate(vector_component_sent_event_bytes_total{component_id=~\"$component\"}[$__rate_interval]))",
+              "expr": "sum by (component_kind, component_id) (rate(vector_component_sent_event_bytes_total{component_id=~\"$component\"}[$__rate_interval])) > 0",
               "hide": false,
               "legendFormat": "OUT: {{component_kind}} / {{ component_id }}",
               "range": true,
@@ -762,7 +762,7 @@
             "h": 3,
             "w": 6,
             "x": 0,
-            "y": 35
+            "y": 20
           },
           "id": 25,
           "options": {
@@ -780,7 +780,7 @@
             "text": {},
             "textMode": "value"
           },
-          "pluginVersion": "8.5.2",
+          "pluginVersion": "8.5.9",
           "targets": [
             {
               "datasource": {
@@ -831,7 +831,7 @@
             "h": 3,
             "w": 6,
             "x": 6,
-            "y": 35
+            "y": 20
           },
           "id": 26,
           "options": {
@@ -849,7 +849,7 @@
             "text": {},
             "textMode": "value"
           },
-          "pluginVersion": "8.5.2",
+          "pluginVersion": "8.5.9",
           "targets": [
             {
               "datasource": {
@@ -900,7 +900,7 @@
             "h": 3,
             "w": 6,
             "x": 12,
-            "y": 35
+            "y": 20
           },
           "id": 23,
           "options": {
@@ -918,7 +918,7 @@
             "text": {},
             "textMode": "value"
           },
-          "pluginVersion": "8.5.2",
+          "pluginVersion": "8.5.9",
           "targets": [
             {
               "datasource": {
@@ -969,7 +969,7 @@
             "h": 3,
             "w": 6,
             "x": 18,
-            "y": 35
+            "y": 20
           },
           "id": 24,
           "options": {
@@ -987,7 +987,7 @@
             "text": {},
             "textMode": "value"
           },
-          "pluginVersion": "8.5.2",
+          "pluginVersion": "8.5.9",
           "targets": [
             {
               "datasource": {
