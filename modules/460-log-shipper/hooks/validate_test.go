@@ -31,8 +31,11 @@ func TestValidateConfigWithVector(t *testing.T) {
 
 	script := `
 	set -e
-	for file in $(find /deckhouse/modules/460-log-shipper/hooks/testdata/*); do
-	  vector validate --no-environment $file;
+
+	path="/deckhouse/modules/460-log-shipper/hooks/testdata"
+
+	for file in $(find ${path}/*); do
+	  vector validate --config-json $file --config-json "${path}/default-config.json";
 	done`
 
 	cmd := exec.Command(
@@ -41,7 +44,12 @@ func TestValidateConfigWithVector(t *testing.T) {
 		"-t",
 		"-v", "/deckhouse:/deckhouse",
 		"-e", "VECTOR_SELF_POD_NAME=test", // to avoid warnings, this variable is set in the container env section
+		"-e", "VECTOR_SELF_NODE_NAME=test",
 		"--entrypoint", "bash",
+		// Kubernetes in-cluster config values required for validation
+		"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/token",
+		"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/namespace",
+		"-v", "/dev/null:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 		dockerImage,
 		"-c", script,
 	)

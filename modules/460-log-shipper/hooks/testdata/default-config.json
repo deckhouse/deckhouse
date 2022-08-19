@@ -1,0 +1,28 @@
+{
+  "data_dir": "/deckhouse",
+  "api" : {
+    "address" : "127.0.0.1:8686",
+    "enabled" : true,
+    "playground" : false
+  },
+  "log_schema": {
+    "host_key": "host",
+    "message_key": "message",
+    "source_type_key": "source_type",
+    "timestamp_key": "timestamp"
+  },
+  "sources": {
+    "internal_metrics": {
+      "type": "internal_metrics"
+    }
+  },
+  "sinks": {
+    "prometheus_sink": {
+      "type": "prometheus",
+      "inputs": [
+        "internal_metrics"
+      ],
+      "address": "127.0.0.1:9090"
+    }
+  }
+}

@@ -183,7 +183,6 @@ spec:
 Сделать это можно следующим образом:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
@@ -204,7 +203,6 @@ spec:
 Только логи контейнера Nginx:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -222,7 +220,6 @@ spec:
 Не debug и не JSON-логи:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -238,7 +235,6 @@ spec:
 Только ошибки микросервисов бекэнда:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -257,3 +253,47 @@ spec:
 ```
 
 > NOTE: Если вам нужны только логи одного или малой группы pod'ов, постарайтесь использовать настройки kubernetesPods, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
+
+## Настройка сборки логов с продуктовых namespace'ов используя опцию namespace label selector
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: production-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchNames:
+          environment: production
+  destinationRefs:
+  - loki-storage
+```
+
+## Исключить pod'ы и namespace'ы используя label
+
+Существует преднастроенный label для исключения определенных pod'ов и namespace'ов: `log-shipper.deckhouse.io/exclude=true`.
+Он помогает остановить сбор логов с pod'ов и namespace'ов без изменения глобальной конфигурации.
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-namespace
+  labels:
+    log-shipper.deckhouse.io/exclude: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+spec:
+  ...
+  template:
+    metadata:
+      labels:
+        log-shipper.deckhouse.io/exclude: "true"
+```

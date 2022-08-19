@@ -45,7 +45,9 @@ type Kubernetes struct {
 	namespaces []string
 	fields     []string
 
-	labelSelector    string
+	labelSelector          string
+	namespaceLabelSelector string
+
 	annotationFields KubernetesAnnotationFields
 	globCooldownMs   int
 }
@@ -70,6 +72,7 @@ type rawKubernetesLogs struct {
 
 	Labels           string                     `json:"extra_label_selector,omitempty"`
 	Fields           string                     `json:"extra_field_selector,omitempty"`
+	NamespaceLabels  string                     `json:"extra_namespace_label_selector,omitempty"`
 	AnnotationFields KubernetesAnnotationFields `json:"annotation_fields,omitempty"`
 	GlobCooldownMs   int                        `json:"glob_minimum_cooldown_ms,omitempty"`
 }
@@ -79,13 +82,35 @@ func (k *rawKubernetesLogs) BuildSources() []apis.LogSource {
 }
 
 func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced bool) *Kubernetes {
+	// Add a built-in filter to exclude logs by a label similar to vectore.dev/exclude=true
+	// https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/#pod-exclusion
+	excludeSelector := metav1.LabelSelectorRequirement{
+		Key:      "log-shipper.deckhouse.io/exclude",
+		Operator: metav1.LabelSelectorOpNotIn,
+		Values:   []string{"true"},
+	}
+
+	spec.LabelSelector.MatchExpressions = append(
+		spec.LabelSelector.MatchExpressions, excludeSelector)
+	spec.NamespaceSelector.LabelSelector.MatchExpressions = append(
+		spec.NamespaceSelector.LabelSelector.MatchExpressions, excludeSelector)
+
 	labelsSelector, err := metav1.LabelSelectorAsSelector(&spec.LabelSelector)
 	if err != nil {
 		// LabelSelector validated by OpenApi. Error in this place is very strange. We should panic.
 		panic(err)
 	}
 
+	namespaceLabelsSelector, err := metav1.LabelSelectorAsSelector(&spec.NamespaceSelector.LabelSelector)
+	if err != nil {
+		// LabelSelector validated by OpenApi. Error in this place is very strange. We should panic.
+		panic(err)
+	}
+
+	// Do not collect self logs because in case of en error vector starts overloading itself
+	// by attempting to send error logs.
 	fields := []string{"metadata.name!=$VECTOR_SELF_POD_NAME"}
+
 	for _, ns := range spec.NamespaceSelector.ExcludeNames {
 		fields = append(fields, "metadata.namespace!="+ns)
 	}
@@ -100,7 +125,8 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 		namespaces: spec.NamespaceSelector.MatchNames,
 		fields:     fields,
 
-		labelSelector: labelsSelector.String(),
+		labelSelector:          labelsSelector.String(),
+		namespaceLabelSelector: namespaceLabelsSelector.String(),
 		annotationFields: KubernetesAnnotationFields{
 			PodName:        "pod",
 			PodLabels:      "pod_labels",
@@ -123,6 +149,7 @@ func (k *Kubernetes) newRawSource(name string, fields []string) *rawKubernetesLo
 		},
 		Fields:           strings.Join(fields, ","),
 		Labels:           k.labelSelector,
+		NamespaceLabels:  k.namespaceLabelSelector,
 		AnnotationFields: k.annotationFields,
 		GlobCooldownMs:   k.globCooldownMs,
 	}

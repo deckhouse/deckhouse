@@ -29,15 +29,9 @@ type Logstash struct {
 
 	Mode string `json:"mode"`
 
-	TLS LogstashTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls,omitempty"`
 
 	Keepalive LogstashKeepalive `json:"keepalive,omitempty"`
-}
-
-type LogstashTLS struct {
-	CommonTLS         `json:",inline"`
-	VerifyCertificate bool `json:"verify_certificate"`
-	Enabled           bool `json:"enabled"`
 }
 
 type LogstashEncoding struct {
@@ -61,9 +55,19 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 	//	Type: "disk",
 	// }
 
-	var enabledTLS bool
-	if spec.TLS.KeyFile != "" || spec.TLS.CertFile != "" || spec.TLS.CAFile != "" {
-		enabledTLS = true
+	tls := CommonTLS{
+		CAFile:            decodeB64(spec.TLS.CAFile),
+		CertFile:          decodeB64(spec.TLS.CertFile),
+		KeyFile:           decodeB64(spec.TLS.KeyFile),
+		KeyPass:           decodeB64(spec.TLS.KeyPass),
+		VerifyCertificate: true,
+		VerifyHostname:    true,
+	}
+	if spec.TLS.VerifyCertificate != nil {
+		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
+	}
+	if spec.TLS.VerifyHostname != nil {
+		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
 	return &Logstash{
@@ -75,17 +79,7 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 			Codec:           "json",
 			TimestampFormat: "rfc3339",
 		},
-		TLS: LogstashTLS{
-			CommonTLS: CommonTLS{
-				CAFile:         decodeB64(spec.TLS.CAFile),
-				CertFile:       decodeB64(spec.TLS.CertFile),
-				KeyFile:        decodeB64(spec.TLS.KeyFile),
-				KeyPass:        decodeB64(spec.TLS.KeyPass),
-				VerifyHostname: spec.TLS.VerifyHostname,
-			},
-			VerifyCertificate: spec.TLS.VerifyCertificate,
-			Enabled:           enabledTLS,
-		},
+		TLS:     tls,
 		Mode:    "tcp",
 		Address: spec.Endpoint,
 		Keepalive: LogstashKeepalive{

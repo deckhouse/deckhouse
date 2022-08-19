@@ -25,15 +25,9 @@ type Vector struct {
 
 	Address string `json:"address"`
 
-	TLS VectorTLS `json:"tls,omitempty"`
+	TLS CommonTLS `json:"tls,omitempty"`
 
 	Keepalive VectorKeepalive `json:"keepalive,omitempty"`
-}
-
-type VectorTLS struct {
-	CommonTLS         `json:",inline"`
-	VerifyCertificate bool `json:"verify_certificate"`
-	Enabled           bool `json:"enabled"`
 }
 
 type VectorKeepalive struct {
@@ -50,9 +44,19 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 	//	Type: "disk",
 	// }
 
-	var enabledTLS bool
-	if spec.TLS.KeyFile != "" || spec.TLS.CertFile != "" || spec.TLS.CAFile != "" {
-		enabledTLS = true
+	tls := CommonTLS{
+		CAFile:            decodeB64(spec.TLS.CAFile),
+		CertFile:          decodeB64(spec.TLS.CertFile),
+		KeyFile:           decodeB64(spec.TLS.KeyFile),
+		KeyPass:           decodeB64(spec.TLS.KeyPass),
+		VerifyCertificate: true,
+		VerifyHostname:    true,
+	}
+	if spec.TLS.VerifyCertificate != nil {
+		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
+	}
+	if spec.TLS.VerifyHostname != nil {
+		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
 	return &Vector{
@@ -60,17 +64,7 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 			Name: ComposeName(name),
 			Type: "vector",
 		},
-		TLS: VectorTLS{
-			CommonTLS: CommonTLS{
-				CAFile:         decodeB64(spec.TLS.CAFile),
-				CertFile:       decodeB64(spec.TLS.CertFile),
-				KeyFile:        decodeB64(spec.TLS.KeyFile),
-				KeyPass:        decodeB64(spec.TLS.KeyPass),
-				VerifyHostname: spec.TLS.VerifyHostname,
-			},
-			VerifyCertificate: spec.TLS.VerifyCertificate,
-			Enabled:           enabledTLS,
-		},
+		TLS:     tls,
 		Version: "2",
 		Address: spec.Endpoint,
 		// TODO(nabokikhms): Only available for vector the first version sink, consider different load balancing solution

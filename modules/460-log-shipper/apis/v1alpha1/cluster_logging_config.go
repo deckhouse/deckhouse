@@ -20,10 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // ClusterLoggingConfig specify target for logs collecting
 type ClusterLoggingConfig struct {
 	metav1.TypeMeta `json:",inline"`
@@ -74,6 +70,8 @@ type KubernetesPodsSpec struct {
 type NamespaceSelector struct {
 	MatchNames   []string `json:"matchNames"`
 	ExcludeNames []string `json:"excludeNames"`
+
+	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
 type FileSpec struct {

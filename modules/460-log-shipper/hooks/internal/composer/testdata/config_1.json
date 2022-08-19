@@ -2,8 +2,9 @@
   "sources": {
     "cluster_logging_config/testsource:baar": {
       "type": "kubernetes_logs",
-      "extra_label_selector": "aaaa=bbbb",
+      "extra_label_selector": "aaaa=bbbb,log-shipper.deckhouse.io/exclude notin (true)",
       "extra_field_selector": "metadata.namespace=baar,metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -18,8 +19,9 @@
     },
     "cluster_logging_config/testsource:foot": {
       "type": "kubernetes_logs",
-      "extra_label_selector": "aaaa=bbbb",
+      "extra_label_selector": "aaaa=bbbb,log-shipper.deckhouse.io/exclude notin (true)",
       "extra_field_selector": "metadata.namespace=foot,metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -51,6 +53,10 @@
         "timestamp_format": "rfc3339"
       },
       "endpoint": "http://testmeip:9000",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      },
       "labels": {
         "container": "{{ container }}",
         "image": "{{ image }}",

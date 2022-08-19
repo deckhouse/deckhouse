@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
@@ -115,7 +116,7 @@ func TestConfig(t *testing.T) {
 						Endpoint: "https://192.168.0.1:9200",
 						Index:    "{{ kubernetes.namespace }}-%F",
 						Pipeline: "test-pipe",
-						TLS:      v1alpha1.CommonTLSSpec{VerifyHostname: true},
+						TLS:      v1alpha1.CommonTLSSpec{VerifyHostname: pointer.Bool(true)},
 					},
 				}
 
@@ -132,7 +133,7 @@ func TestConfig(t *testing.T) {
 				spec := v1alpha1.ClusterLogDestinationSpec{
 					Vector: v1alpha1.VectorSpec{
 						Endpoint: "192.168.0.1:9200",
-						TLS:      v1alpha1.VectorTLSSpec{VerifyCertificate: false},
+						TLS:      v1alpha1.CommonTLSSpec{VerifyCertificate: pointer.Bool(false)},
 					},
 				}
 

@@ -34,11 +34,12 @@ type Healthcheck struct {
 }
 
 type CommonTLS struct {
-	CAFile         string `json:"ca_file,omitempty"`
-	CertFile       string `json:"crt_file,omitempty"`
-	KeyFile        string `json:"key_file,omitempty"`
-	KeyPass        string `json:"key_pass,omitempty"`
-	VerifyHostname bool   `json:"verify_hostname"`
+	CAFile            string `json:"ca_file,omitempty"`
+	CertFile          string `json:"crt_file,omitempty"`
+	KeyFile           string `json:"key_file,omitempty"`
+	KeyPass           string `json:"key_pass,omitempty"`
+	VerifyHostname    bool   `json:"verify_hostname"`
+	VerifyCertificate bool   `json:"verify_certificate"`
 }
 
 type Buffer struct {

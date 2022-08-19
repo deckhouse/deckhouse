@@ -2,8 +2,9 @@
   "sources": {
     "cluster_logging_config/tests-whispers_whispers-logs:tests-whispers": {
       "type": "kubernetes_logs",
-      "extra_label_selector": "app=test",
+      "extra_label_selector": "app=test,log-shipper.deckhouse.io/exclude notin (true)",
       "extra_field_selector": "metadata.namespace=tests-whispers,metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -19,15 +20,12 @@
   },
   "transforms": {
     "transform/destination/test-es-dest/00_elastic_dedot": {
-      "hooks": {
-        "process": "process"
-      },
+      "drop_on_abort": false,
       "inputs": [
-        "transform/source/tests-whispers_whispers-logs/06_log_filter"
+        "transform/source/tests-whispers_whispers-logs/07_log_filter"
       ],
-      "source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\temit(event)\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend",
-      "type": "lua",
-      "version": "2"
+      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
+      "type": "remap"
     },
     "transform/destination/test-es-dest/01_extra_fields": {
       "drop_on_abort": false,
@@ -53,45 +51,53 @@
       "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
       "type": "remap"
     },
-    "transform/source/tests-whispers_whispers-logs/01_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nexists(.parsed_data.foo)",
+    "transform/source/tests-whispers_whispers-logs/01_parse_json": {
+      "drop_on_abort": false,
       "inputs": [
         "transform/source/tests-whispers_whispers-logs/00_clean_up"
       ],
-      "type": "filter"
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
+      "type": "remap"
     },
     "transform/source/tests-whispers_whispers-logs/02_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n!exists(.parsed_data.foo)",
+      "condition": "exists(.parsed_data.foo)",
       "inputs": [
-        "transform/source/tests-whispers_whispers-logs/01_log_filter"
+        "transform/source/tests-whispers_whispers-logs/01_parse_json"
       ],
       "type": "filter"
     },
     "transform/source/tests-whispers_whispers-logs/03_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "!exists(.parsed_data.foo)",
       "inputs": [
         "transform/source/tests-whispers_whispers-logs/02_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/tests-whispers_whispers-logs/04_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "transform/source/tests-whispers_whispers-logs/03_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/tests-whispers_whispers-logs/05_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nmatch!(.parsed_data.foo, r'^wvrr$')",
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "transform/source/tests-whispers_whispers-logs/04_log_filter"
       ],
       "type": "filter"
     },
     "transform/source/tests-whispers_whispers-logs/06_log_filter": {
-      "condition": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
+      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
       "inputs": [
         "transform/source/tests-whispers_whispers-logs/05_log_filter"
+      ],
+      "type": "filter"
+    },
+    "transform/source/tests-whispers_whispers-logs/07_log_filter": {
+      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/06_log_filter"
       ],
       "type": "filter"
     }
@@ -100,7 +106,7 @@
     "destination/cluster/loki-storage": {
       "type": "loki",
       "inputs": [
-        "transform/source/tests-whispers_whispers-logs/06_log_filter"
+        "transform/source/tests-whispers_whispers-logs/07_log_filter"
       ],
       "healthcheck": {
         "enabled": false
@@ -113,6 +119,10 @@
         "timestamp_format": "rfc3339"
       },
       "endpoint": "http://loki.loki:3100",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      },
       "labels": {
         "container": "{{ container }}",
         "foo": "bar",
@@ -143,6 +153,10 @@
       "batch": {
         "max_bytes": 10485760,
         "timeout_secs": 1
+      },
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
       },
       "compression": "gzip",
       "bulk": {

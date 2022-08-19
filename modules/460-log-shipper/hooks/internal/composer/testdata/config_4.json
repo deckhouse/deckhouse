@@ -2,7 +2,9 @@
   "sources": {
     "cluster_logging_config/testsource": {
       "type": "kubernetes_logs",
+      "extra_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
       "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
       "annotation_fields": {
         "container_image": "image",
         "container_name": "container",
@@ -26,7 +28,11 @@
         "enabled": false
       },
       "version": "2",
-      "address": "192.168.0.1:9200"
+      "address": "192.168.0.1:9200",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": false
+      }
     }
   }
 }
