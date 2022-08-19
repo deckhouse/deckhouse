@@ -347,6 +347,7 @@ apiVersions:
         type: array
         items:
           type: string
+          pattern: '^(\w+):(\w+)$'
         minItems: 1
         description: List containing an additional policies for IAM roles.
     allOf:
