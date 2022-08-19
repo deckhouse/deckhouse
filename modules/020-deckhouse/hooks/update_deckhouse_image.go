@@ -869,11 +869,14 @@ func updateStatus(input *go_hook.HookInput, release *deckhouseRelease, msg, phas
 func getDeckhousePod(snap []go_hook.FilterResult) *deckhousePodInfo {
 	var deckhousePod deckhousePodInfo
 
-	if len(snap) == 0 {
+	switch len(snap) {
+	case 0:
 		return nil
-	} else if len(snap) == 1 {
+
+	case 1:
 		deckhousePod = snap[0].(deckhousePodInfo)
-	} else {
+
+	default:
 		for _, sn := range snap {
 			if sn == nil {
 				continue
