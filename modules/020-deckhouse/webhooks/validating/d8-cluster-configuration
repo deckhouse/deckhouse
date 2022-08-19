@@ -88,20 +88,16 @@ EOF
 
   # check CRI compatibility with k8s 1.24, docker CRI was deprecated there
   if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
-    k8sVersion="$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d | yq eval '.kubernetesVersion // "1.21"' -)"
-    echo "k8sVersion ${k8sVersion}"
+    k8sVersion="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d | yq eval '.kubernetesVersion // "1.21"' -)"
 
     if [ "$k8sVersion" == "1.24" ]; then
       defaultCRI="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d | yq eval '.defaultCRI // "Containerd"' -)"
-      echo "DefaultCRI ${defaultCRI}"
 
-      for i in $(context::jq -r '.snapshots.nodegroups | keys[]'); do
+      for i in $(context::jq -r '.snapshots.nodegroups // [] | keys[]'); do
         nodeGroup=$(context::get snapshots.nodegroups.${i}.filterResult)
         name=$(jq -rc '.name' <<<${nodeGroup})
-        criType=$(jq -rc '.criType' <<<${nodeGroup})
-        echo "NG ${name} with criType ${criType}"
+        criType=$(jq -rc '.criType // ""' <<<${nodeGroup})
         if [ -z ${criType} ]; then
-          echo "setting defaultCRI"
           criType=${defaultCRI}
         fi
 
@@ -113,15 +109,8 @@ EOF
           return 0
         fi
       done
-
-
     fi # end if k8sVersion
-
-    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"TMP"}
-EOF
-    return 0
-  fi
+  fi # end CRI check
 
   # allowed response
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
