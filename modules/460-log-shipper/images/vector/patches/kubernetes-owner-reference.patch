@@ -11,17 +11,18 @@ index 8ef6d774f..74a0a6271 100644
  pub use reflector::custom_reflector;
 diff --git a/src/kubernetes/owner_reference.rs b/src/kubernetes/owner_reference.rs
 new file mode 100644
-index 000000000..1e7b335e6
+index 000000000..285e30610
 --- /dev/null
 +++ b/src/kubernetes/owner_reference.rs
-@@ -0,0 +1,66 @@
-+use k8s_openapi::api::apps::v1::{ReplicaSet};
-+use k8s_openapi::api::batch::v1::{Job};
+@@ -0,0 +1,74 @@
++use k8s_openapi::api::apps::v1::ReplicaSet;
++use k8s_openapi::api::batch::v1::Job;
 +use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
 +use kube::{Api, Client};
 +
-+pub async fn enrich_owner_ref(client: &Client, metadata: &mut ObjectMeta) {
-+    info!("Start enrich_owner_ref");
++#[tokio::main]
++pub async fn enrich_owner_ref(client: &Client, metadata: &ObjectMeta) -> ObjectMeta {
++    info!("Start enrich_owner_ref for");
 +
 +    if let Some(or) = metadata.owner_references.to_owned() {
 +        let mut ns = String::from("default");
@@ -40,7 +41,10 @@ index 000000000..1e7b335e6
 +                info!("ReplicaSet owner references enriched");
 +
 +                if let Some(owner_ref) = owner_ref {
-+                    metadata.owner_references = Some(owner_ref);
++                    let mut new_metadata = metadata.clone();
++                    new_metadata.owner_references = Some(owner_ref);
++
++                    return new_metadata;
 +                }
 +            }
 +            "Job" => {
@@ -50,12 +54,16 @@ index 000000000..1e7b335e6
 +                info!("Job owner references enriched");
 +
 +                if let Some(owner_ref) = owner_ref {
-+                    metadata.owner_references = Some(owner_ref);
++                    let mut new_metadata = metadata.clone();
++                    new_metadata.owner_references = Some(owner_ref);
++
++                    return new_metadata;
 +                }
 +            }
 +            _ => {}
 +        }
 +    }
++    return metadata.clone();
 +}
 +
 +async fn replicaset_owner_ref(
@@ -82,7 +90,7 @@ index 000000000..1e7b335e6
 +    return None;
 +}
 diff --git a/src/sources/kubernetes_logs/mod.rs b/src/sources/kubernetes_logs/mod.rs
-index 44023790f..308c311ec 100644
+index 44023790f..2f756511d 100644
 --- a/src/sources/kubernetes_logs/mod.rs
 +++ b/src/sources/kubernetes_logs/mod.rs
 @@ -13,6 +13,7 @@ use file_source::{
@@ -106,9 +114,8 @@ index 44023790f..308c311ec 100644
  use self::node_metadata_annotator::NodeMetadataAnnotator;
  use self::parser::Parser;
  use self::pod_metadata_annotator::PodMetadataAnnotator;
--use futures::{future::FutureExt, stream::StreamExt};
 +use crate::kubernetes::owner_reference::enrich_owner_ref;
-+use futures::{executor::block_on, future::FutureExt, stream::StreamExt};
+ use futures::{future::FutureExt, stream::StreamExt};
 +
  use k8s_paths_provider::K8sPathsProvider;
  use lifecycle::Lifecycle;
@@ -147,14 +154,13 @@ index 44023790f..308c311ec 100644
          let node_watcher = watcher(
              nodes,
              ListParams {
-@@ -403,6 +388,32 @@ impl Source {
+@@ -403,6 +388,33 @@ impl Source {
              delay_deletion,
          )));
 
 +        // -----------------------------------------------------------------
 +
 +        let pods = Api::<Pod>::all(client.clone());
-+
 +        let pod_watcher = watcher(
 +            pods,
 +            ListParams {
@@ -164,8 +170,10 @@ index 44023790f..308c311ec 100644
 +            },
 +        )
 +        .map_ok(move |ev| {
++            // tokio::time::sleep(tokio::time::Duration::new(1, 0)).await;
 +            ev.modify(|pod| {
-+                block_on(enrich_owner_ref(&client.clone(), pod.meta_mut()));
++                pod.meta_mut().owner_references =
++                    enrich_owner_ref(&client.clone(), pod.meta()).owner_references;
 +            })
 +        });
 +        let pod_store_w = reflector::store::Writer::default();
