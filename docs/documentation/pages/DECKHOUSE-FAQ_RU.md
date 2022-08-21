@@ -203,12 +203,9 @@ chmod 700 d8-push.sh
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
 
 * Измените поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry;
-* Измените Secret `d8-system/deckhouse-registry` (все параметры хранятся в кодировке Base64):
-  * Исправьте `.dockerconfigjson` с учетом авторизации в новом registry.
-  * Исправьте `address` на адрес нового registry (например, `registry.example.com`).
-  * Исправьте `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/ee`).
-  * При необходимости измените `scheme` на `http` (если используется HTTP registry).
-  * Если registry использует самоподписные сертификаты, то измените или добавьте поле `ca`, куда внесите корневой сертификат соответствующего сертификата registry;
+* Скачайте скрипт [change-registry.sh](https://github.com/deckhouse/deckhouse/blob/main/tools/change-registry.sh) на мастер-узел и запустите его с параметрами нового registry.
+  * Пример запуска: ```./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password```.
+  * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` возле скрипта и добавьте к вызову опцию ```--ca-file ca.crt```.
 * Дождитесь перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
 * Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
 * Если необходимо отключить автоматическое обновление Deckhouse через сторонний registry, то удалите параметр `releaseChannel` из ConfigMap `d8-system/deckhouse`.

@@ -199,12 +199,9 @@ For example, you have to set `image` to `your.private.registry.com/deckhouse:v1.
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
 
 * Update the `image` field in the `d8-system/deckhouse` deployment to contain the address of the Deckhouse image in the third-party-registry;
-* Edit the `d8-system/deckhouse-registry` secret (note that all parameters are Base64-encoded):
-  * Insert third-party registry credentials into `.dockerconfigjson`.
-  * Replace `address` with the third-party registry's host address (e.g., `registry.example.com`).
-  * Change `path` to point to a repo in the third-party registry (e.g., `/deckhouse/ee`).
-  * If necessary, change `scheme` to `http` (if the third-party registry uses HTTP scheme).
-  * If necessary, change or add the `ca` field with the root CA certificate that validates the third-party registry's https certificate (if the third-party registry uses self-signed certificates).
+* Download script [change-registry.sh](https://github.com/deckhouse/deckhouse/blob/main/tools/change-registry.sh) to the master node and start them with third-party-registry parameters.
+  * Example: ```./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password```.
+  * If the third-party-registry uses self-signed certificate, put root CA certificate that validates the third-party registry's https certificate to file `ca.crt` near script and add option ```--ca-file ca.crt``` to the script run.
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * If you want to disable Deckhouse automatic updates, remove the `releaseChannel` parameter from the `d8-system/deckhouse` ConfigMap.
