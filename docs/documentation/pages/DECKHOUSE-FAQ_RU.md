@@ -206,9 +206,10 @@ chmod 700 d8-push.sh
 * Скачайте скрипт [change-registry.sh](https://github.com/deckhouse/deckhouse/blob/main/tools/change-registry.sh) на мастер-узел и запустите его с параметрами нового registry.
   * Пример запуска:
 
-    ```
+    ```shell
     ./change-registry.sh --registry-url https://my-new-registry/deckhouse --user my-user --password my-password
     ```
+
   * Если registry использует самоподписные сертификаты, то положите корневой сертификат соответствующего сертификата registry в файл `ca.crt` возле скрипта и добавьте к вызову опцию `--ca-file ca.crt`.
 * Дождитесь перехода Pod'а Deckhouse в статус `Ready`. Если Pod будет находиться в статусе `ImagePullBackoff`, то перезапустите его.
 * Дождитесь применения bashible новых настроек на master-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
