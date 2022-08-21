@@ -2,11 +2,13 @@
 {%- if page.lang == "ru" %}
 > Перед началом установки убедитесь в наличии квот облачного провайдера, необходимых для развертывания вашего кластера.
 {%- if page.platform_code == "gcp" %}
+>
 > Перед началом установки убедитесь, что у вас включен [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com).
 {%- endif %}
 {%- else %}
 > Before starting the installation, ensure you have the cloud provider quotas required to deploy your cluster.
 {%- if page.platform_code == "gcp" %}
+>
 > Before starting the installation, ensure you have [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com) enabled.
 {%- endif %}
 {%- endif %}
