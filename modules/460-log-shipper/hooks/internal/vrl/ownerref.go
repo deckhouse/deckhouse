@@ -26,24 +26,24 @@ package vrl
 // (to avoid executing job twice at the same time).
 const OwnerReferenceRule Rule = `
 if exists(.pod_owner) {
-    .pod_owner = string!(.pod_owner)
+    .pod_owner = string(.pod_owner)
 
     if starts_with(.pod_owner, "ReplicaSet/") {
         hash = "-"
         if exists(.pod_labels."pod-template-hash") {
-            hash = hash + string!(.pod_labels."pod-template-hash")
-		}
+            hash = hash + string(.pod_labels."pod-template-hash")
+        }
 
         if hash != "-" && ends_with(.pod_owner, hash) {
-            replace(.pod_owner, "ReplicaSet/", "Deployment/")
-            replace(.pod_owner, hash, "")
+            .pod_owner = replace(.pod_owner, "ReplicaSet/", "Deployment/")
+            .pod_owner = replace(.pod_owner, hash, "")
         }
     }
 
     if starts_with(.pod_owner, "Job/") {
-        if match(.pod_owner, r'^.+-[0-9]{8,11}$') {
-            replace(.pod_owner, "Job/", "CronJob/")
-            replace(.pod_owner, r'-[0-9]{8,11}$', "")
+        if match(.pod_owner, r'-[0-9]{8,11}$') {
+            .pod_owner = replace(.pod_owner, "Job/", "CronJob/")
+            .pod_owner = replace(.pod_owner, r'-[0-9]{8,11}$', "")
         }
     }
 }
