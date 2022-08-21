@@ -6,17 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"context"
-
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -108,8 +102,7 @@ metadata:
     istio.io/rev: v1x10x1
   name: ns-v1x10x1
 `
-			podsYAML := []string{
-				`---
+			podsYAML := `---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -125,8 +118,7 @@ spec:
   - name: aaa
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x13
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -142,8 +134,7 @@ spec:
   - name: aaa
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x15
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -157,8 +148,7 @@ spec:
   - name: aaa
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1xexotic
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -173,8 +163,7 @@ spec:
   - name: aaa
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x42
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -189,8 +178,7 @@ spec:
   - name: aaa
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x15
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -205,8 +193,7 @@ spec:
   - name: aaa
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x15
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -221,8 +208,7 @@ spec:
   - name: aaa
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x42
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -237,8 +223,7 @@ spec:
   - name: aaa
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x13
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -254,8 +239,7 @@ spec:
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x42
   - name: bbb
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -271,8 +255,7 @@ spec:
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x42-stale
   - name: bbb
-`,
-				`---
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -289,24 +272,9 @@ spec:
   - name: istio-proxy
     image: registry.deckhouse.io/deckhouse/ee:xxx-v1x10x1
   - name: bbb
-`,
-			}
+`
 
-			f.BindingContexts.Set(f.KubeStateSet(namespacesYAML))
-
-			for _, podYAML := range podsYAML {
-				var pod v1.Pod
-				var err error
-				err = yaml.Unmarshal([]byte(podYAML), &pod)
-				Expect(err).To(BeNil())
-
-				_, err = dependency.TestDC.MustGetK8sClient().
-					CoreV1().
-					Pods(pod.GetNamespace()).
-					Create(context.TODO(), &pod, metav1.CreateOptions{})
-				Expect(err).To(BeNil())
-			}
-
+			f.BindingContexts.Set(f.KubeStateSet(namespacesYAML + podsYAML))
 			f.RunHook()
 		})
 
@@ -315,22 +283,12 @@ spec:
 			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(16))
+			Expect(m).To(HaveLen(11))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "expire",
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_desired_revision_is_not_installed",
-				Group:  revisionsMonitoringMetricsGroup,
-				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
-				Labels: map[string]string{
-					"namespace":        "ns-exotic",
-					"desired_revision": "v1xexotic",
-				},
-			}))
-			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -342,7 +300,7 @@ spec:
 					"revision":         "v1x42",
 				},
 			}))
-			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -354,18 +312,7 @@ spec:
 					"dataplane_pod":    "pod-global-revision-not-actual",
 				},
 			}))
-			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_actual_data_plane_revision_ne_desired",
-				Group:  revisionsMonitoringMetricsGroup,
-				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
-				Labels: map[string]string{
-					"actual_revision":  "v1x15",
-					"namespace":        "ns-global",
-					"desired_revision": "v1x42",
-				},
-			}))
-			Expect(m[5]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -377,7 +324,7 @@ spec:
 					"dataplane_pod":    "pod-minor-version-is-actual",
 				},
 			}))
-			Expect(m[6]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -389,19 +336,7 @@ spec:
 					"dataplane_pod":    "pod-minor-version-mismatch",
 				},
 			}))
-			Expect(m[7]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_data_plane_patch_version_mismatch",
-				Group:  revisionsMonitoringMetricsGroup,
-				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
-				Labels: map[string]string{
-					"revision":                  "v1x42",
-					"actual_sidecar_image_tag":  "xxx-v1x42-stale",
-					"desired_sidecar_image_tag": "xxx-v1x42",
-					"namespace":                 "ns-global",
-				},
-			}))
-			Expect(m[8]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[5]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -413,7 +348,7 @@ spec:
 					"revision":         "v1x15",
 				},
 			}))
-			Expect(m[9]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[6]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -425,27 +360,19 @@ spec:
 					"revision":         "unknown",
 				},
 			}))
-			Expect(m[10]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_desired_revision_is_not_installed",
+			Expect(m[7]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
 				Value:  pointer.Float64Ptr(1.0),
 				Labels: map[string]string{
-					"desired_revision": "v1xexotic",
+					"dataplane_pod":    "pod-orphan",
+					"desired_revision": "unknown",
+					"revision":         "v1x15",
 					"namespace":        "ns-nodesired",
 				},
 			}))
-			Expect(m[11]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_data_plane_without_desired_revision",
-				Group:  revisionsMonitoringMetricsGroup,
-				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
-				Labels: map[string]string{
-					"actual_revision": "v1x15",
-					"namespace":       "ns-nodesired",
-				},
-			}))
-			Expect(m[12]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[8]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -457,7 +384,8 @@ spec:
 					"namespace":        "ns-rev1x15",
 				},
 			}))
-			Expect(m[13]).To(BeEquivalentTo(operation.MetricOperation{
+
+			Expect(m[9]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
@@ -469,18 +397,7 @@ spec:
 					"dataplane_pod":    "pod-definite-ns-revision-not-actual",
 				},
 			}))
-			Expect(m[14]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_istio_actual_data_plane_revision_ne_desired",
-				Group:  revisionsMonitoringMetricsGroup,
-				Action: "set",
-				Value:  pointer.Float64Ptr(1.0),
-				Labels: map[string]string{
-					"actual_revision":  "v1x42",
-					"desired_revision": "v1x15",
-					"namespace":        "ns-rev1x15",
-				},
-			}))
-			Expect(m[15]).To(BeEquivalentTo(operation.MetricOperation{
+			Expect(m[10]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_pod_revision",
 				Group:  revisionsMonitoringMetricsGroup,
 				Action: "set",
