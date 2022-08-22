@@ -24,7 +24,7 @@
       "inputs": [
         "transform/source/test-source/14_log_filter"
       ],
-      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
+      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
       "type": "remap"
     },
     "transform/destination/test-es-dest/01_extra_fields": {
@@ -48,7 +48,7 @@
       "inputs": [
         "transform/source/test-source/14_log_filter"
       ],
-      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
+      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
       "type": "remap"
     },
     "transform/destination/test-logstash-dest/01_extra_fields": {
@@ -72,7 +72,7 @@
       "inputs": [
         "cluster_logging_config/test-source:tests-whispers"
       ],
-      "source": "if exists(.pod_owner) {\n    .pod_owner = string!(.pod_owner)\n\n    if starts_with(.pod_owner, \"ReplicaSet/\") {\n        hash = \"-\"\n        if exists(.pod_labels.\"pod-template-hash\") {\n            hash = hash + string!(.pod_labels.\"pod-template-hash\")\n\t\t}\n\n        if hash != \"-\" \u0026\u0026 ends_with(.pod_owner, hash) {\n            replace(.pod_owner, \"ReplicaSet/\", \"Deployment/\")\n            replace(.pod_owner, hash, \"\")\n        }\n    }\n\n    if starts_with(.pod_owner, \"Job/\") {\n        if match(.pod_owner, r'^.+-[0-9]{8,11}$') {\n            replace(.pod_owner, \"Job/\", \"CronJob/\")\n            replace(.pod_owner, r'-[0-9]{8,11}$', \"\")\n        }\n    }\n}",
+      "source": "if exists(.pod_owner) {\n    .pod_owner = string(.pod_owner)\n\n    if starts_with(.pod_owner, \"ReplicaSet/\") {\n        hash = \"-\"\n        if exists(.pod_labels.\"pod-template-hash\") {\n            hash = hash + string(.pod_labels.\"pod-template-hash\")\n        }\n\n        if hash != \"-\" \u0026\u0026 ends_with(.pod_owner, hash) {\n            .pod_owner = replace(.pod_owner, \"ReplicaSet/\", \"Deployment/\")\n            .pod_owner = replace(.pod_owner, hash, \"\")\n        }\n    }\n\n    if starts_with(.pod_owner, \"Job/\") {\n        if match(.pod_owner, r'-[0-9]{8,11}$') {\n            .pod_owner = replace(.pod_owner, \"Job/\", \"CronJob/\")\n            .pod_owner = replace(.pod_owner, r'-[0-9]{8,11}$', \"\")\n        }\n    }\n}",
       "type": "remap"
     },
     "transform/source/test-source/01_clean_up": {
