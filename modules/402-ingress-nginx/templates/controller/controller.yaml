@@ -220,6 +220,9 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        {{- if $loadBalancer }}
+        - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
+        {{- end }}
         {{- if semverCompare ">=0.46" $controllerVersion }}
         # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
         - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
