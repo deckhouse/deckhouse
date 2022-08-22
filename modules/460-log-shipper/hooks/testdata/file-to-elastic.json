@@ -13,7 +13,7 @@
       "inputs": [
         "transform/source/test-source/01_parse_json"
       ],
-      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
+      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
       "type": "remap"
     },
     "transform/destination/test-es-dest/01_del_parsed_data": {

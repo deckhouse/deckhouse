@@ -26,12 +26,12 @@ package vrl
 // (to avoid executing job twice at the same time).
 const OwnerReferenceRule Rule = `
 if exists(.pod_owner) {
-    .pod_owner = string(.pod_owner)
+    .pod_owner = string!(.pod_owner)
 
     if starts_with(.pod_owner, "ReplicaSet/") {
         hash = "-"
         if exists(.pod_labels."pod-template-hash") {
-            hash = hash + string(.pod_labels."pod-template-hash")
+            hash = hash + string!(.pod_labels."pod-template-hash")
         }
 
         if hash != "-" && ends_with(.pod_owner, hash) {

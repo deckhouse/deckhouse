@@ -29,7 +29,7 @@ const StreamRule Rule = `
 // P.S. pod_labels is always an object type if it is present, so we can panic on error here.
 const DeDotRule Rule = `
 if exists(.pod_labels) {
-    .pod_labels = map_keys(object(.pod_labels), recursive: true) -> |key| { replace(key, ".", "_") }
+    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -> |key| { replace(key, ".", "_") }
 }
 `
 
