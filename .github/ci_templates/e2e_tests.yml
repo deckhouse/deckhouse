@@ -53,19 +53,21 @@
 run: |
   echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'docker run', using environment:
     INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+    DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+    INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
     PREFIX=${PREFIX}
-    TMP_DIR_PATH=${TMP_DIR_PATH}
-    DEV_BRANCH=${DEV_BRANCH}
     PROVIDER=${PROVIDER}
     CRI=${CRI}
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
+    TMP_DIR_PATH=${TMP_DIR_PATH}
   "
 
   docker run --rm \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
-    -e DEV_BRANCH=${DEV_BRANCH} \
+    -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+    -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
     -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
     -e CRI=${CRI} \
     -e PROVIDER=${PROVIDER:-not_provided} \
@@ -185,6 +187,7 @@ check_e2e_labels:
         CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
         CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         REF_FULL: ${{needs.git_info.outputs.ref_full}}
+        INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
         MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
       run: |
         # Calculate unique prefix for e2e test.
@@ -234,7 +237,13 @@ check_e2e_labels:
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
         fi
 
-        # Prepare image tag for deploy/deckhouse (DEV_BRANCH option in testing/cloud_layouts/script.sh).
+        # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+        INITIAL_IMAGE_TAG=
+        if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+          INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+        fi
+
+        # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
         # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -260,6 +269,8 @@ check_e2e_labels:
         echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
         echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
         echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+        echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
         echo '::echo::off'
 
     - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
@@ -273,8 +284,9 @@ check_e2e_labels:
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-        DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
-{!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test") | strings.Indent 6 }!}
+        DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
+  {!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test") | strings.Indent 6 }!}
 
     - name: Cleanup bootstrapped cluster
       if: always()
@@ -288,8 +300,9 @@ check_e2e_labels:
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
-        DEV_BRANCH: ${{ steps.setup.outputs.deckhouse-image-tag }}
-{!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
+        DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
+  {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
 
     - name: Save test results
       if: always()
