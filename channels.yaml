@@ -10,4 +10,4 @@ groups:
     - name: stable
       version: v1.34.14
     - name: rock-solid
-      version: v1.33.14
+      version: v1.34.14
