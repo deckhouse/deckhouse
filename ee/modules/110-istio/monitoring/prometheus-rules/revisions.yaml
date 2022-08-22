@@ -1,19 +1,9 @@
 - name: d8.istio.revisions
   rules:
   - alert: D8IstioDesiredRevisionIsNotInstalled
-    expr: max by (namespace, desired_revision) (d8_istio_desired_revision_is_not_installed == 1)
-    for: 5m
-    labels:
-      severity_level: "4"
-      tier: cluster
     annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      summary: Desired control-plane version isn't installed
       description: |
-        There is desired istio control plane revision `{{$labels.desired_revision}}` configured for pods in namespace `{{$labels.namespace}}`, but the revision isn't installed. Consider installing it or change the Namespace or Pod configuration.
+        There is desired istio control plane revision `{{$labels.revision}}` configured for pods in namespace `{{$labels.namespace}}`, but the revision isn't installed. Consider installing it or change the Namespace or Pod configuration.
         Impact — Pods won't be able to re-create in the `{{$labels.namespace}}` Namespace.
         Cheat sheet:
         ```
@@ -23,41 +13,84 @@
         kubectl get ns {{$labels.namespace}} --show-labels
 
         ### pod-wide configuration
-        kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
+        kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.revision}}
         ```
-  - alert: D8IstioDataPlaneWithoutDesiredRevision
-    expr: max by (namespace, actual_revision) (d8_istio_data_plane_without_desired_revision == 1)
-    for: 5m
-    labels:
-      severity_level: "6"
-      tier: cluster
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
       plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      summary: There are Pods with istio sidecars, but without istio-injection configured
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: Desired control-plane version isn't installed
+    expr: |
+      (
+        label_replace(kube_namespace_labels{label_istio_io_rev!=""}, "revision", "$1", "label_istio_io_rev", "(.+)")
+        or
+        label_replace(kube_pod_labels{label_istio_io_rev!="", label_sidecar_istio_io_inject!="false"}, "revision", "$1", "label_istio_io_rev", "(.+)")
+      )
+      unless on (revision)
+      (
+        istio_build{component="pilot"}
+        * on (pod,namespace) group_left(revision)
+          (
+            label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
+          )
+      )
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+  - alert: D8IstioDataPlaneWithoutDesiredRevision
+    annotations:
       description: |
         There are Pods in `{{$labels.namespace}}` Namespace with istio sidecars, but the istio-injection isn't configured.
         Impact — Pods will lose their istio sidecars after re-creation.
         Getting affected Pods:
         ```
-        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.actual_revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" | fromjson | .revision == $revision) | .metadata.name'
+        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" | fromjson | .revision == $revision) | .metadata.name'
         ```
-  - alert: D8IstioActualDataPlaneRevisionNeDesired
-    expr: max by (namespace, actual_revision, desired_revision) (d8_istio_actual_data_plane_revision_ne_desired == 1)
+      plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: There are Pods with istio sidecars, but without istio-injection configured
+    expr: |
+      (
+        kube_pod_labels{label_service_istio_io_canonical_name!="",label_sidecar_istio_io_inject!="false",label_istio_io_rev=""}
+        * on (pod, namespace) group_left (revision, desired_revision)
+          label_replace(d8_istio_pod_revision{}, "pod", "$1", "dataplane_pod", "(.+)")
+      )
+      * on (namespace) group_left ()
+        kube_namespace_labels{label_istio_io_rev="", label_istio_injection=~"($^|disabled)"}
     for: 5m
     labels:
       severity_level: "6"
       tier: cluster
+  - alert: D8IstioPodsWithoutIstioSidecar
     annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
+      description: |
+        There are Pods in `{{$labels.namespace}}` Namespace without istio sidecars, but the istio-injection is configured.
+        Getting affected Pods:
+        ```
+        kubectl -n {{$labels.namespace}} get pods -o json | jq -r '.metadata.name'
+        ```
       plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      summary: There are Pods with istio data-plane revision `{{$labels.actual_revision}}`, but desired revision is `{{$labels.desired_revision}}`
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: There are Pods without istio sidecars, but with istio-injection configured
+    expr: |
+      kube_pod_labels{label_service_istio_io_canonical_name=""}
+      * on (namespace) group_left()
+      (
+        kube_namespace_labels {label_istio_io_rev!=""} or kube_namespace_labels {label_istio_injection!=""}
+      )
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+  - alert: D8IstioActualDataPlaneRevisionNeDesired
+    annotations:
       description: |
-        There are Pods in Namespace `{{$labels.namespace}}` with istio data-plane revision `{{$labels.actual_revision}}`, but the desired one is `{{$labels.desired_revision}}`.
+        There are Pods in Namespace `{{$labels.namespace}}` with istio data-plane revision `{{$labels.revision}}`, but the desired one is `{{$labels.desired_revision}}`.
         Impact — revision is to change after Pod restarting.
         Cheat sheet:
         ```
@@ -69,7 +102,35 @@
         ### pod-wide configuration
         kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
         ```
+      plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary:
+        There are Pods with istio data-plane revision `{{$labels.revision}}`,
+        but desired revision is `{{$labels.desired_revision}}`
+    expr: |
+      d8_istio_pod_revision{desired_revision!="unknown"}
+      unless on (revision, dataplane_pod) label_replace(d8_istio_pod_revision{}, "revision", "$1", "desired_revision", "(.+)")
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
   - alert: D8IstioDataPlaneVersionMismatch
+    annotations:
+      description: |
+        There are Pods in `{{$labels.namespace}}` namespace with istio revision `{{$labels.revision}}` and data-plane version `{{$labels.tag}}` which differ from control-plane one `{{$labels.istiod_tag}}`.
+        Consider restarting affected Pods, use PromQL query to get the list:
+        ```
+        max by (namespace, pod) (istio_build{component="proxy", tag="{{$labels.tag}}"})
+        ```
+      plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary:
+        There are Pods with data-plane version different from control-plane
+        one.
     expr: |
       ( # join d8_istio_pod_revision and istio_build metrics to get every Pod's istio version
         max by (namespace, pod, revision, tag)
@@ -77,7 +138,7 @@
           label_replace(
             d8_istio_pod_revision, "pod", "$1", "dataplane_pod", "(.+)"
           )
-          + on (pod) group_left (tag) istio_build{component="proxy"}
+          + on (pod,namespace) group_left (tag) istio_build{component="proxy"}
         )
       )
       # enrich the metric above with control-plane istio version (will come in handy for the alert description)
@@ -88,7 +149,7 @@
           label_replace(
             istio_build{component="pilot"}, "istiod_tag", "$1", "tag", "(.+)"
           )
-          + on (pod) group_left(revision)
+          + on (pod,namespace) group_left(revision)
           (
             label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
           )
@@ -103,15 +164,3 @@
     labels:
       severity_level: "8"
       tier: cluster
-    annotations:
-      plk_markup_format: "markdown"
-      plk_protocol_version: "1"
-      plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      summary: There are Pods with data-plane version different from control-plane one.
-      description: |
-        There are Pods in `{{$labels.namespace}}` namespace with istio revision `{{$labels.revision}}` and data-plane version `{{$labels.tag}}` which differ from control-plane one `{{$labels.istiod_tag}}`.
-        Consider restarting affected Pods, use PromQL query to get the list:
-        ```
-        max by (namespace, pod) (istio_build{component="proxy", tag="{{$labels.tag}}"})
-        ```
