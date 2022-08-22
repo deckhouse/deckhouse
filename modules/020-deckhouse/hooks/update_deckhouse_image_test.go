@@ -112,6 +112,19 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
+	Context("Shutdown and evicted pods", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deckhouseDeployment + deckhousePodsWithShutdown + deckhouseReleases)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+		It("Should upgrade deckhouse deployment", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.26.0"))
+		})
+	})
+
 	Context("Patch out of update window", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "8:00", "to": "8:01"}]`))
@@ -812,5 +825,58 @@ spec:
     - testme
 status:
   phase: Pending
+`
+
+	deckhousePodsWithShutdown = `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: deckhouse-6f46df5bd7-nk4j1
+  namespace: d8-system
+  labels:
+    app: deckhouse
+spec:
+  containers:
+    - name: deckhouse
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:v1.2.3
+status:
+  message: 'The node was low on resource: memory. Container xxx was using 1014836Ki, which exceeds its request of 300Mi.'
+  phase: Failed
+  reason: Evicted
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: deckhouse-6f46df5bd7-nk4j2
+  namespace: d8-system
+  labels:
+    app: deckhouse
+spec:
+  containers:
+    - name: deckhouse
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:v1.2.3
+status:
+  phase: Running
+  containerStatuses:
+    - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
+      imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
+      ready: true
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: deckhouse-6f46df5bd7-nk4j3
+  namespace: d8-system
+  labels:
+    app: deckhouse
+spec:
+  containers:
+    - name: deckhouse
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss:v1.2.3
+status:
+  message: 'Node is shutting, evicting pods'
+  phase: Failed
+  reason: Shutdown
 `
 )
