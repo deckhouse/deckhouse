@@ -77,13 +77,13 @@ type IstioPodStatus struct {
 }
 
 type IstioPodInfo struct {
-	Name            string
-	Namespace       string
-	Revision        string
-	DesiredRevision string
+	Name             string
+	Namespace        string
+	Revision         string
+	SpecificRevision string
 }
 
-func getIstioPodRevision(p *v1.Pod) string {
+func getIstioPodSpecificRevision(p *v1.Pod) string {
 	var istioStatusJSON string
 	var istioPodStatus IstioPodStatus
 	var revision string
@@ -122,10 +122,10 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}
 
 	result := IstioPodInfo{
-		Name:            pod.Name,
-		Namespace:       pod.Namespace,
-		Revision:        getIstioPodRevision(pod),
-		DesiredRevision: getIstioPodDesiredRevision(pod),
+		Name:             pod.Name,
+		Namespace:        pod.Namespace,
+		Revision:         getIstioPodSpecificRevision(pod),
+		SpecificRevision: getIstioPodDesiredRevision(pod),
 	}
 
 	return result, nil
@@ -156,10 +156,12 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 	for _, pod := range input.Snapshots["istio_pod"] {
 		istioPodInfo := pod.(IstioPodInfo)
 
-		desiredRevision := istioPodInfo.DesiredRevision
-		// if ns revision set -> override pod revision
+		desiredRevision := "unknown"
 		if desiredRevisionNS, ok := namespaceRevisionMap[istioPodInfo.Namespace]; ok {
 			desiredRevision = desiredRevisionNS
+		} else {
+			// if ns revision set -> override pod revision
+			desiredRevision = istioPodInfo.SpecificRevision
 		}
 
 		labels := map[string]string{
