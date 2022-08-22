@@ -164,6 +164,8 @@ ephemeral-storage: 150Mi
 memory: 200Mi`))
 			Expect(testD.Field("spec.template.spec.containers.0.env").Array()).ToNot(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"120"}`)))
 			Expect(testD.Field("spec.template.spec.containers.0.args").AsStringSlice()).NotTo(ContainElement(ContainSubstring("--default-ssl-certificate=")))
+			// publish service for LB
+			Expect(testD.Field("spec.template.spec.containers.0.args").AsStringSlice()).To(ContainElement(ContainSubstring("--publish-service=d8-ingress-nginx/test-load-balancer")))
 
 			cm := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config")
 			Expect(cm.Exists()).To(BeTrue())
@@ -188,6 +190,8 @@ memory: 200Mi`))
 			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
 
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-lbwpp").Exists()).To(BeTrue())
+			// publish service for LB
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-lbwpp").Field("spec.template.spec.containers.0.args").AsStringSlice()).To(ContainElement(ContainSubstring("--publish-service=d8-ingress-nginx/test-lbwpp-load-balancer")))
 			Expect(hec.KubernetesResource("Deployment", "d8-ingress-nginx", "hpa-scaler-test-lbwpp").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("HorizontalPodAutoscaler", "d8-ingress-nginx", "hpa-scaler-test-lbwpp").Exists()).To(BeTrue())
 
@@ -218,6 +222,8 @@ memory: 200Mi`))
 			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`0.33`))
 			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/inlet`).String()).To(Equal(`HostPortWithProxyProtocol`))
 			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"60"}`)))
+			// should not have --publish-service, inlet: HostPort
+			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.args").AsStringSlice()).NotTo(ContainElement(ContainSubstring("--publish-service=")))
 
 			var testNextArgs []string
 			for _, result := range testNextDaemonSet.Field("spec.template.spec.containers.0.args").Array() {
