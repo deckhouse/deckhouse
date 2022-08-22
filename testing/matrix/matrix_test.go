@@ -21,10 +21,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/deckhouse/deckhouse/testing/matrix/linter"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMatrix(t *testing.T) {
@@ -50,4 +49,42 @@ func TestMatrix(t *testing.T) {
 			})
 		}
 	}
+}
+
+// changeSymlinks changes symlinks in module dir to proper place when modules in ee/fe not copied to main modules directory
+func changeSymlink(t *testing.T, symlinkPath string, newDestination string) {
+	_, err := os.Lstat(symlinkPath)
+	require.NoError(t, err)
+
+	err = os.Remove(symlinkPath)
+	require.NoError(t, err)
+
+	err = os.Symlink(newDestination, symlinkPath)
+	require.NoError(t, err)
+}
+
+func changeSymlinks(t *testing.T) {
+	changeSymlink(t, "/deckhouse/ee/modules/030-cloud-provider-openstack/candi", "/deckhouse/ee/candi/cloud-providers/openstack/")
+	changeSymlink(t, "/deckhouse/ee/modules/030-cloud-provider-vsphere/candi", "/deckhouse/ee/candi/cloud-providers/vsphere/")
+
+	_, err := os.Lstat("/deckhouse/modules/040-node-manager/images_tags.json")
+	require.NoError(t, err)
+	err = os.Remove("/deckhouse/modules/040-node-manager/images_tags.json")
+	require.NoError(t, err)
+	err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager/", "/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+	require.NoError(t, err)
+	err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager/", "/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+	require.NoError(t, err)
+}
+
+// restoreSymlinks restores symlinks in module dir to original place
+func restoreSymlinks(t *testing.T) {
+	changeSymlink(t, "/deckhouse/ee/modules/030-cloud-provider-openstack/candi", "/deckhouse/candi/cloud-providers/openstack/")
+	changeSymlink(t, "/deckhouse/ee/modules/030-cloud-provider-vsphere/candi", "/deckhouse/candi/cloud-providers/vsphere/")
+	err := os.Symlink("../images_tags.json", "/deckhouse/modules/040-node-manager/images_tags.json")
+	require.NoError(t, err)
+	err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+	require.NoError(t, err)
+	err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
+	require.NoError(t, err)
 }
