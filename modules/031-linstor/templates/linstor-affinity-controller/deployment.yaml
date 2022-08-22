@@ -37,7 +37,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
   name: linstor-affinity-controller
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-ha-controller" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "linstor-affinity-controller" )) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
@@ -148,6 +148,6 @@ spec:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-              {{- include "listor_affinity_controller_resources" . | nindent 14 }}
+              {{- include "linstor_affinity_controller_resources" . | nindent 14 }}
 {{- end }}
 

@@ -1,4 +1,9 @@
 # Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/ha-controller-deployment.yaml
+{{- define "linstor_ha_controller_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -14,6 +19,14 @@ spec:
     name: linstor-ha-controller
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: piraeus-ha-controller
+      minAllowed:
+        {{- include "linstor_ha_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -62,3 +75,6 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "linstor_ha_controller_resources" . | nindent 14 }}
+{{- end }}

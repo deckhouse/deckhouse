@@ -157,7 +157,7 @@ func parseVPAResourcePolicyContainers(scope *lintingScope, vpaObject storage.Sto
 		return containers, true
 	}
 
-	if len(v.Spec.ResourcePolicy.ContainerPolicies) == 0 {
+	if v.Spec.ResourcePolicy == nil || len(v.Spec.ResourcePolicy.ContainerPolicies) == 0 {
 		scope.AddError("VPA005", vpaObject.Identity(), false, "No VPA specs resourcePolicy.containerPolicies is found for object")
 		return containers, false
 	}
