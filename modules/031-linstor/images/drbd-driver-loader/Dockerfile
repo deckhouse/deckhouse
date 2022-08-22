@@ -26,7 +26,7 @@ RUN tar xvf /drbd.tar.gz --strip-components=2 --wildcards 'drbd-*/docker/entry.s
 FROM $BASE_DEBIAN_BULLSEYE
 
 RUN apt-get update \
- && apt-get install -y kmod gnupg wget make gcc patch curl \
+ && apt-get install -y kmod gnupg wget make gcc patch curl libelf-dev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
