@@ -162,10 +162,13 @@ resource "aws_iam_role_policy" "node" {
     "Statement": [
       {
         "Effect": "Allow",
-        "Action": ${concat(local.additional_role_policies, [
+        "Action": [
+          %{ for policy in local.additional_role_policies }
+          "${policy}",
+          %{ endfor }
           "ec2:DescribeTags",
           "ec2:DescribeInstances"
-        ])},
+        ],
         "Resource": [
           "*"
         ]
