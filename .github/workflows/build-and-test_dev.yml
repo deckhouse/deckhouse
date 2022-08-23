@@ -10,9 +10,6 @@ on:
       - opened
       - synchronize
       - reopened
-  push:
-    branches:
-      - 'make-tests-great-again'
 env:
 
   # <template: werf_envs>
