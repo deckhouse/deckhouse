@@ -66,6 +66,9 @@ shell:
     KUBE_GIT_TREE_STATE='archive'
     EOF
   - export KUBE_GIT_VERSION_FILE=.kube-version
-  - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - |
+    if [ -d "/patches/{{ $version }}" ]; then
+      for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+    fi
   - make all WHAT=cmd/kube-controller-manager
 {{- end }}
