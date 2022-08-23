@@ -17,7 +17,7 @@ All data is sent through a single entry point. The `connect.deckhouse.io` servic
 When sending data, each Deckhouse cluster submits a license key as a [Bearer Token](https://oauth.net/2/bearer-tokens/) for authorization. The Connect service checks whether the key is valid and redirects the request to the target internal Flant service.
 
 You must allow access to all IP addresses mapped to the following DNS names to send data from the cluster:
-- `сonnect.deckhouse.io`;
+- `connect.deckhouse.io`;
 - `madison-direct.deckhouse.io`.
 
 ### What data does Deckhouse send?
@@ -125,7 +125,7 @@ The module relies on metrics exported by the `terraform-exporter` component. The
   - `error` — processing error; see exporter log for details;
   - `destructively_changed` — `terraform plan` implies changing objects in the cloud and deleting some of them;
   - `abandoned` — there is an excess Node in the cluster;
-  - `absent` — в кластере не хватает Node;
+  - `absent` — there are not enough Nodes in the cluster;
   - `changed` — `terraform plan` implies changing objects in the cloud without deleting them;
   - `ok`;
 - `candi_converge_node_template_status` determines whether the `nodeTemplate` for the `master` matches the `terranode` NodeGroup:
