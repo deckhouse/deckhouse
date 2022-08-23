@@ -18,6 +18,7 @@ package copy_custom_certificate
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -89,9 +90,9 @@ func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookIn
 		}
 
 		httpsMode := module.GetHTTPSMode(moduleName, input)
-		input.LogEntry.Info("HTTPS_MODE: %s", httpsMode)
-		input.LogEntry.Info("VALUES: %s", input.Values)
-		input.LogEntry.Info("CONFIG_VALUES: %s", input.ConfigValues)
+		input.LogEntry.Infof("HTTPS_MODE: %s", httpsMode)
+		input.LogEntry.Infof("VALUES: %s", spew.Sdump(input.Values))
+		input.LogEntry.Infof("CONFIG_VALUES: %s", spew.Sdump(input.ConfigValues))
 
 		if httpsMode != "CustomCertificate" {
 			input.Values.Remove(fmt.Sprintf("%s.internal.customCertificateData", moduleName))
