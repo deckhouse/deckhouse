@@ -64,8 +64,8 @@ spec:
         - "--telemetry-host=127.0.0.1"
         - "--telemetry-port=8082"
         - "--resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,limitranges,namespaces,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,verticalpodautoscalers"
-        - "--metric-labels-allowlist=*=[*]" # export all labels because of compatibility reasons
-        - "--metric-denylist=^.*_annotations"
+        - "--metric-labels-allowlist=cronjobs=[*],daemonsets=[*],ingresses=[*],jobs=[*],namespaces=[*],nodes=[*],pods=[*],secrets=[*],services=[*],statefulsets=[*],storageclasses=[*]"
+        - "--metric-denylist=^.*_annotations" # reduce metrics quantity because we do not provide allowed annotations list
         - "--use-apiserver-cache"
         livenessProbe:
           httpGet:
