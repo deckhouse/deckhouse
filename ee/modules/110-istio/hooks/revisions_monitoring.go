@@ -71,6 +71,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, revisionsMonitoring)
 
+// Current istio revision is located in `sidecar.istio.io/status` annotation
 type IstioPodStatus struct {
 	Revision string `json:"revision"`
 	// ... we aren't interested in the other fields
@@ -83,7 +84,7 @@ type IstioPodInfo struct {
 	SpecificRevision string
 }
 
-func getIstioPodSpecificRevision(p *v1.Pod) string {
+func getIstioPodRevision(p *v1.Pod) string {
 	var istioStatusJSON string
 	var istioPodStatus IstioPodStatus
 	var revision string
@@ -105,7 +106,7 @@ func getIstioPodSpecificRevision(p *v1.Pod) string {
 	return revision
 }
 
-func getIstioPodDesiredRevision(p *v1.Pod) string {
+func getIstioPodSpecificRevision(p *v1.Pod) string {
 	var desiredRevision string
 	var ok bool
 	if desiredRevision, ok = p.Labels["istio.io/rev"]; ok {
@@ -124,8 +125,8 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	result := IstioPodInfo{
 		Name:             pod.Name,
 		Namespace:        pod.Namespace,
-		Revision:         getIstioPodSpecificRevision(pod),
-		SpecificRevision: getIstioPodDesiredRevision(pod),
+		Revision:         getIstioPodRevision(pod),
+		SpecificRevision: getIstioPodSpecificRevision(pod),
 	}
 
 	return result, nil
@@ -135,14 +136,11 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 	if !input.Values.Get("istio.internal.globalRevision").Exists() {
 		return nil
 	}
-	if !input.Values.Get("istio.internal.revisionsToInstall").Exists() {
-		return nil
-	}
 
 	input.MetricsCollector.Expire(revisionsMonitoringMetricsGroup)
 
 	var globalRevision = input.Values.Get("istio.internal.globalRevision").String()
-
+	
 	var namespaceRevisionMap = map[string]string{}
 	for _, ns := range append(input.Snapshots["namespaces_definite_revision"], input.Snapshots["namespaces_global_revision"]...) {
 		nsInfo := ns.(NamespaceInfo)
@@ -159,8 +157,8 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 		desiredRevision := "unknown"
 		if desiredRevisionNS, ok := namespaceRevisionMap[istioPodInfo.Namespace]; ok {
 			desiredRevision = desiredRevisionNS
-		} else {
-			// if ns revision set -> override pod revision
+		}
+		if istioPodInfo.SpecificRevision != "unknown" {
 			desiredRevision = istioPodInfo.SpecificRevision
 		}
 
