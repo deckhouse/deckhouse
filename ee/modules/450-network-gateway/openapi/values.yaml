@@ -3,10 +3,10 @@ x-extend:
 type: object
 properties:
   internal:
-  type: object
-  default: {}
-  properties:
-    effectiveStorageClass:
-      oneOf:
-        - type: string
-        - type: boolean
+    type: object
+    default: {}
+    properties:
+      effectiveStorageClass:
+        oneOf:
+          - type: string
+          - type: boolean
