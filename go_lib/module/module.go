@@ -56,7 +56,7 @@ func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
 		globalPath = "global.modules.https.mode"
 	)
 
-	v, ok := GetValuesFirstDefined(input, globalPath, modulePath)
+	v, ok := GetValuesFirstDefined(input, modulePath, globalPath)
 
 	if ok {
 		return v.String()
