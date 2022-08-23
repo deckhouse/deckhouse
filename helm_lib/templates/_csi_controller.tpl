@@ -62,23 +62,19 @@ memory: 50Mi
 
   {{- $provisionerImageName := join "" (list "csiExternalProvisioner" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $provisionerImageTag := index $context.Values.global.modulesImages.tags.common $provisionerImageName }}
-  {{- $provisionerImage := printf "%s:%s" $context.Values.global.modulesImages.registry $provisionerImageTag }}
+  {{- $provisionerImage := include "helm_lib_module_common_image" (list $context $provisionerImageName) }}
 
   {{- $attacherImageName := join "" (list "csiExternalAttacher" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $attacherImageTag := index $context.Values.global.modulesImages.tags.common $attacherImageName }}
-  {{- $attacherImage := printf "%s:%s" $context.Values.global.modulesImages.registry $attacherImageTag }}
+  {{- $attacherImage := include "helm_lib_module_common_image" (list $context $attacherImageName) }}
 
   {{- $resizerImageName := join "" (list "csiExternalResizer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $resizerImageTag := index $context.Values.global.modulesImages.tags.common $resizerImageName }}
-  {{- $resizerImage := printf "%s:%s" $context.Values.global.modulesImages.registry $resizerImageTag }}
+  {{- $resizerImage := include "helm_lib_module_common_image" (list $context $resizerImageName) }}
 
   {{- $snapshotterImageName := join "" (list "csiExternalSnapshotter" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $snapshotterImageTag := index $context.Values.global.modulesImages.tags.common $snapshotterImageName }}
-  {{- $snapshotterImage := printf "%s:%s" $context.Values.global.modulesImages.registry $snapshotterImageTag }}
+  {{- $snapshotterImage := include "helm_lib_module_common_image" (list $context $snapshotterImageName) }}
 
   {{- $livenessprobeImageName := join "" (list "csiLivenessprobe" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $livenessprobeImageTag := index $context.Values.global.modulesImages.tags.common $livenessprobeImageName }}
-  {{- $livenessprobeImage := printf "%s:%s" $context.Values.global.modulesImages.registry $livenessprobeImageTag }}
+  {{- $livenessprobeImage := include "helm_lib_module_common_image" (list $context $livenessprobeImageName) }}
 
   {{- if $provisionerImageTag }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

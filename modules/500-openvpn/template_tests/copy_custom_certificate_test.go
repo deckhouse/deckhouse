@@ -33,7 +33,7 @@ func Test(t *testing.T) {
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "openvpn"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:

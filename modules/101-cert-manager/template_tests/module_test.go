@@ -35,7 +35,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -64,7 +64,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -94,7 +94,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:
@@ -123,7 +123,7 @@ modules:
   placement: {}
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:

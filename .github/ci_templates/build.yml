@@ -8,7 +8,7 @@ steps:
 
   - name: Run go generate
     run: |
-      BASE_GOLANG_ALPINE="registry.deckhouse.io/base_images/golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
+      BASE_GOLANG_ALPINE={!{ printf "%s%s" (datasource "image_versions").REGISTRY_PATH (datasource "image_versions").BASE_GOLANG_ALPINE | quote }!}
       docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
       docker run -v $(pwd):/deckhouse -v ~/go-pkg-cache:/go/pkg -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
 

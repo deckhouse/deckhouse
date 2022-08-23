@@ -24,7 +24,7 @@
   subPath: credentials.json
 {{- end }}
 
-{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderGcp.pdCsiPlugin)}}
+{{- $csiControllerImage := include "helm_lib_module_common_image" (list . "pdCsiPlugin") }}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

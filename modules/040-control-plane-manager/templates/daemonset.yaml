@@ -197,7 +197,7 @@ spec:
       containers:
       - name: control-plane-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
-        image: "{{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.controlPlaneManager (printf "controlPlaneManager%s" $kubeImageTagSuffix) }}"
+        image: {{ include "helm_lib_module_image" (list . (printf "controlPlaneManager%s" $kubeImageTagSuffix)) }}
         volumeMounts:
         - mountPath: /var/lib/etcd
           name: etcd

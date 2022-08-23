@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
+
+const defaultRegistry = "registry.example.com/deckhouse"
 
 func skipObjectIfNeeded(o *storage.StoreObject) bool {
 	// Dynatrace module deprecated and will be removed
@@ -103,7 +106,7 @@ func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 
 	l.ErrorsList.Add(containerNameDuplicates(object, containers))
 	l.ErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
-	l.ErrorsList.Add(containerImageTagLatest(object, containers))
+	l.ErrorsList.Add(containerImageTagCheck(object, containers))
 	l.ErrorsList.Add(containersImagePullPolicy(object, containers))
 
 	if !skipObjectIfNeeded(&object) {
@@ -166,22 +169,51 @@ func containerEnvVariablesDuplicates(object storage.StoreObject, containers []v1
 	return errors.EmptyRuleError
 }
 
-func containerImageTagLatest(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+func shouldSkipModuleContainer(module string, container string) bool {
+	// okmeter module uses images from external repo - registry.okmeter.io/agent/okagent:stub
+	if module == "okmeter" && container == "okagent" {
+		return true
+	}
+	// control-plane-manager uses `$images` as dict to render static pod manifests,
+	// so we cannot use helm lib `helm_lib_module_image` helper because `$images`
+	// is also rendered in `dhctl` tool on cluster bootstrap.
+	if module == "d8-control-plane-manager" && strings.HasPrefix(container, "image-holder") {
+		return true
+	}
+	return false
+}
+
+func containerImageTagCheck(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
 	for _, c := range containers {
-		imageParts := strings.Split(c.Image, ":")
-		if len(imageParts) != 2 {
+		if shouldSkipModuleContainer(object.Unstructured.GetName(), c.Name) {
+			continue
+		}
+
+		t, err := name.NewTag(c.Image)
+		if err != nil {
 			return errors.NewLintRuleError(
 				"CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Can't parse an image for container",
+				"Can't parse an image for container: %v", err,
 			)
 		}
-		if imageParts[1] == "latest" {
+		registry := fmt.Sprintf("%s/%s", t.RegistryStr(), t.RepositoryStr())
+		tag := t.TagStr()
+
+		if registry != defaultRegistry {
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Image tag \"latest\" used",
+				"All images must be deployed from the same default registry - "+defaultRegistry,
+			)
+		}
+
+		if tag != "imageHash" {
+			return errors.NewLintRuleError("CONTAINER004",
+				object.Identity()+"; container = "+c.Name,
+				nil,
+				"Image tag should be `imageHash`",
 			)
 		}
 	}

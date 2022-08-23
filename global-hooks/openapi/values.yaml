@@ -194,7 +194,7 @@ properties:
           Deckhouse images repo.
           It uses in helm teplates for generating container image address.
           Almost always, concatinateds with tag from modulesImages.tag
-        x-examples: [ "registry.deckhouse.io/deckhouse/fe" ]
+        x-examples: [ "registry.example.com/deckhouse" ]
       tags:
         type: object
         default: {}

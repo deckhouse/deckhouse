@@ -380,6 +380,35 @@ Usage:
 {{- end }}
 ```
 
+### Container images
+
+In controller templates (daemonsets, statefulsets, deployments) for container images please use helm helper `helm_lib_module_image`.
+For common images like `kube-rbac-proxy` use `helm_lib_module_common_image`.
+
+Usage:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapshot-controller
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: snapshot-controller
+  template:
+    metadata:
+      labels:
+        app: snapshot-controller
+    spec:
+      containers:
+      - name: snapshot-controller
+        image: {{ include "helm_lib_module_image" (list . "snapshotController") }}
+      - name: kube-rbac-proxy
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+```
+
 ### Hooks
 
 For more information about hooks, their structure, and binding to events, see the [addon-operator documentation](https://github.com/flant/addon-operator/blob/main/HOOKS.md).

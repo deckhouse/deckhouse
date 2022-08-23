@@ -67,7 +67,7 @@ spec:
       containers:
       - name: metadata-exporter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataExporter }}"
+        image: {{ include "helm_lib_module_image" (list . "metadataExporter") }}
         imagePullPolicy: IfNotPresent
         env:
         - name: CLUSTER_UUID
@@ -119,7 +119,7 @@ spec:
           mountPath: /metadata/
       - name: metadata-discovery
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataDiscovery }}"
+        image: {{ include "helm_lib_module_image" (list . "metadataDiscovery") }}
         imagePullPolicy: IfNotPresent
         env:
         - name: DEBUG_UNIX_SOCKET

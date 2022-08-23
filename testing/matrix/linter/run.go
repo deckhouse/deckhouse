@@ -52,6 +52,11 @@ func Run(tmpDir string, m utils.Module) error {
 
 	var values []string
 	var err error
+
+	if err != nil {
+		return err
+	}
+
 	if isExist(m.Path, "openapi") && !isExist(m.Path, "values_matrix_test.yaml") {
 		values, err = ComposeValuesFromSchemas(m)
 		if err != nil {
@@ -72,5 +77,10 @@ func Run(tmpDir string, m utils.Module) error {
 		}
 	}
 
-	return NewModuleController(m, values).Run()
+	res := NewModuleController(m, values).Run()
+
+	if err != nil {
+		return err
+	}
+	return res
 }

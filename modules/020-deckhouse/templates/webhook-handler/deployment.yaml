@@ -58,7 +58,7 @@ spec:
       containers:
       - name: handler
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.deckhouse.webhookHandler }}"
+        image: {{ include "helm_lib_module_image" (list . "webhookHandler") }}
         env:
         - name: SHELL_OPERATOR_NAMESPACE
           valueFrom:

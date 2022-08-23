@@ -25,7 +25,7 @@ spec:
       containers:
         - name: test
           {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
-          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.linstorServer }}"
+          image: {{ include "helm_lib_module_image" (list . "linstorServer") }}
           imagePullPolicy: "IfNotPresent"
           command: [ "/bin/bash" ]
           args:

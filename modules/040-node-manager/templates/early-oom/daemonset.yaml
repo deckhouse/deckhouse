@@ -54,7 +54,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       containers:
       - name: oom-killer
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.alpine }}"
+        image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
         # based on https://gist.github.com/stewartpark/14a5690afbf717be04857d2cda1d8620
         args:
           - 'sh'

@@ -120,7 +120,7 @@ spec:
           echo $cert | jq .key -r > /certs/tls.key
           echo $cert | jq .cert -r > /certs/tls.crt
           echo $ca_cert > /certs/ca.crt
-        image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.userAuthn.cfssl }}"
+        image: {{ include "helm_lib_module_image" (list $context "cfssl") }}
         name: cfssl
         volumeMounts:
         - name: tls
@@ -132,7 +132,7 @@ spec:
       containers:
       - name: dex-authenticator
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticator }}"
+        image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
         - --client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
@@ -209,7 +209,7 @@ spec:
           protocol: TCP
       - name: redis
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticatorRedis }}"
+        image: {{ include "helm_lib_module_image" (list $context "dexAuthenticatorRedis") }}
         args:
           - "--save"
           - ""

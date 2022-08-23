@@ -27,7 +27,7 @@ var _ = Describe("Module :: dashboard :: helm template :: custom-certificate", f
 	const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "dashboard"]
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: Y2ZnCg==
   tags:
     common:

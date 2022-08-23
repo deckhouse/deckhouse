@@ -34,7 +34,7 @@ global:
   deckhouseVersion: "12345"
   modulesImages:
     registryDockercfg: eyJhdXRocyI6IHsicmVnaXN0cnkuZGVja2hvdXNlLmlvIjogeyJhdXRoIjogImRUcHdZWE56Q2c9PSJ9fX0=
-    registry: registry.deckhouse.io/sys/deckhouse-oss
+    registry: registry.deckhouse.io/deckhouse/fe
     tags:
       module_1:
         image_1: "image-1-latest"
@@ -45,7 +45,7 @@ global:
         imagesCopier: "image-copier-latest"
 deckhouse:
   internal:
-    currentReleaseImageName: "registry.deckhouse.io/sys/deckhouse-oss:rock-solid"
+    currentReleaseImageName: "registry.deckhouse.io/deckhouse/fe:rock-solid"
 `, `{}`)
 
 	const copierSecret = `
@@ -71,14 +71,14 @@ metadata:
   name: images-copier-config
   namespace: d8-system
 data:
+  # {"username":"abc","password":"xxxxxxxxx","insecure":true,"image":"my.repo.io/deckhouse:rock-solid-1.24.17"}
+  dest-repo.json: eyJ1c2VybmFtZSI6ImFiYyIsInBhc3N3b3JkIjoieHh4eHh4eHh4IiwiaW5zZWN1cmUiOnRydWUsImltYWdlIjoibXkucmVwby5pby9kZWNraG91c2U6cm9jay1zb2xpZC0xLjI0LjE3In0=
+
   # {"deckhouse":{"imagesCopier":"image-copier-latest"},"module_1":{"image_1":"image-1-latest","image_2":"image-2-v1.0"},"module_2":{"image_3":"image-3-latest"}}
   d8-images.json: eyJkZWNraG91c2UiOnsiaW1hZ2VzQ29waWVyIjoiaW1hZ2UtY29waWVyLWxhdGVzdCJ9LCJtb2R1bGVfMSI6eyJpbWFnZV8xIjoiaW1hZ2UtMS1sYXRlc3QiLCJpbWFnZV8yIjoiaW1hZ2UtMi12MS4wIn0sIm1vZHVsZV8yIjp7ImltYWdlXzMiOiJpbWFnZS0zLWxhdGVzdCJ9fQ==
 
-  # {"username":"u","password":"pass","insecure":false,"image":"registry.deckhouse.io/sys/deckhouse-oss:rock-solid"}
-  d8-repo.json: eyJ1c2VybmFtZSI6InUiLCJwYXNzd29yZCI6InBhc3MiLCJpbnNlY3VyZSI6ZmFsc2UsImltYWdlIjoicmVnaXN0cnkuZGVja2hvdXNlLmlvL3N5cy9kZWNraG91c2Utb3NzOnJvY2stc29saWQifQ==
-
-  # {"username":"abc","password":"xxxxxxxxx","insecure":true,"image":"my.repo.io/deckhouse:rock-solid-1.24.17"}
-  dest-repo.json: eyJ1c2VybmFtZSI6ImFiYyIsInBhc3N3b3JkIjoieHh4eHh4eHh4IiwiaW5zZWN1cmUiOnRydWUsImltYWdlIjoibXkucmVwby5pby9kZWNraG91c2U6cm9jay1zb2xpZC0xLjI0LjE3In0=
+  # {"username":"u","password":"pass","insecure":false,"image":"registry.deckhouse.io/deckhouse/fe:rock-solid"}
+  d8-repo.json: eyJ1c2VybmFtZSI6InUiLCJwYXNzd29yZCI6InBhc3MiLCJpbnNlY3VyZSI6ZmFsc2UsImltYWdlIjoicmVnaXN0cnkuZGVja2hvdXNlLmlvL2RlY2tob3VzZS9mZTpyb2NrLXNvbGlkIn0=
 `
 	const copierJob = `
 apiVersion: batch/v1
@@ -109,7 +109,7 @@ spec:
         - copy-images
         - -c
         - /config/
-        image: registry.deckhouse.io/sys/deckhouse-oss:image-copier-latest
+        image: registry.deckhouse.io/deckhouse/fe:image-copier-latest
         imagePullPolicy: Always
         name: image-copier
         resources: {}
@@ -152,7 +152,7 @@ status: {}
 
 		// set correct container image
 		copierImage := job.Field(`spec.template.spec.containers.0.image`).String()
-		Expect(copierImage).To(Equal("registry.deckhouse.io/sys/deckhouse-oss:image-copier-latest"))
+		Expect(copierImage).To(Equal("registry.deckhouse.io/deckhouse/fe:image-copier-latest"))
 
 		// mount image copier secret to pod
 		volume := job.Field(`spec.template.spec.volumes.0`)

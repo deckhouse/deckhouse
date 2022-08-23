@@ -61,7 +61,7 @@ spec:
       initContainers:
       {{- include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "data") | nindent 6 }}
       - name: migrator
-        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}"
+        image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
         command:
           - /migrate
           - -verbose
@@ -75,7 +75,7 @@ spec:
       containers:
         - name: agent
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}"
+          image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
           command:
             - /upmeter
             - agent
@@ -104,7 +104,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
           - name: UPMETER_SCHEDULER_PROBE_IMAGE
-            value: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.alpine }}"
+            value: {{ include "helm_lib_module_common_image" (list . "alpine") }}
           - name: UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS
             value: "deckhouse-registry"
           - name: UPMETER_TLS

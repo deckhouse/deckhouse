@@ -62,7 +62,7 @@ spec:
       initContainers:
       - name: api-proxy-check
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeProxy.initContainer }}"
+        image: {{ include "helm_lib_module_image" (list . "initContainer") }}
         command: ["/api-proxy-check.sh"]
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
@@ -70,7 +70,7 @@ spec:
         - mountPath: /var/lib/kube-proxy-cm
           name: kube-proxy-cm
       - name: nodeport-bind-address
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeProxy.initContainer }}"
+        image: {{ include "helm_lib_module_image" (list . "initContainer") }}
         command: ["/nodeport-bind-address.sh"]
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
@@ -83,7 +83,7 @@ spec:
       containers:
       - name: kube-proxy
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
-        image: "{{ .Values.global.modulesImages.registry }}:{{ index .Values.global.modulesImages.tags.kubeProxy (list "kubeProxy" $kubeVersion.Major $kubeVersion.Minor | join "") }}"
+        image: {{ include "helm_lib_module_image" (list . (list "kubeProxy" $kubeVersion.Major $kubeVersion.Minor | join "" | quote )) }}
         command:
         - /usr/local/bin/kube-proxy
         - --config=/var/lib/kube-proxy/config.conf
@@ -110,7 +110,7 @@ spec:
   {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
-        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}"
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9255"
           - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"

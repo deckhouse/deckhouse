@@ -9,7 +9,6 @@ on:
       - opened
       - synchronize
       - reopened
-
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 
@@ -100,8 +99,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "matrix" "build_deckhouse") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 
   dhctl_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

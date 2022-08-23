@@ -186,7 +186,6 @@ func lint(c *ModuleController, task *Task) error {
 	}
 
 	objectStore := storage.NewUnstructuredObjectStore()
-
 	err = c.RunRender(task.values, &objectStore)
 	if err != nil {
 		return testsError(task.index, err, task.values)

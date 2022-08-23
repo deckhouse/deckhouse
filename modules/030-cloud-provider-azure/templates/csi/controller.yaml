@@ -29,7 +29,7 @@
 - "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
-{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderAzure.azurediskCsi)}}
+{{- $csiControllerImage := include "helm_lib_module_image" (list . "azurediskCsi") }}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
