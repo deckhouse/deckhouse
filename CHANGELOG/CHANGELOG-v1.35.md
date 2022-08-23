@@ -5,6 +5,7 @@
 
  - All linstor components will be moved from master to system nodes.
  - Ingress controllers will restart.
+ - LB Ingress controllers will restart.
  - Prometheus Pods will be restarted.
  - Some system Pods will be restarted: `kube-dns`, `chrony`, Pods of cni-* modules and cloud-provider-* modules.
  - Webhook handler will restart. During the handler restart, Deckhouse controller could generate a few error messages when it will not be able to access the webhook. It should be resolved in the next 15 seconds.
@@ -12,6 +13,7 @@
 ## Features
 
 
+ - **[control-plane-manager]** Add an alert about the deprecated Kubernetes version. [#2251](https://github.com/deckhouse/deckhouse/pull/2251)
  - **[deckhouse]** Show release status message in a releases list view. [#2029](https://github.com/deckhouse/deckhouse/pull/2029)
  - **[deckhouse]** Added the ability to control disruptive releases manually. [#2025](https://github.com/deckhouse/deckhouse/pull/2025)
  - **[extended-monitoring]** Added events logging to stdout in `events_exporter`. [#2203](https://github.com/deckhouse/deckhouse/pull/2203)
@@ -35,14 +37,18 @@
  - **[candi]** Tolerate CA `DeletionCandidateOfClusterAutoscaler` taint for some system Pods. [#2125](https://github.com/deckhouse/deckhouse/pull/2125)
     Some system Pods will be restarted: `kube-dns`, `chrony`, Pods of cni-* modules and cloud-provider-* modules.
  - **[cloud-provider-yandex]** Fix defaults for `diskType` and `platformID`. [#2179](https://github.com/deckhouse/deckhouse/pull/2179)
+ - **[deckhouse]** Ignore evicted and shutdown Pods on the Deckhouse update process as they may block the update. [#2266](https://github.com/deckhouse/deckhouse/pull/2266)
  - **[deckhouse]** Fix webhook handler TLS certificate expiration time. [#2146](https://github.com/deckhouse/deckhouse/pull/2146)
     Webhook handler will restart. During the handler restart, Deckhouse controller could generate a few error messages when it will not be able to access the webhook. It should be resolved in the next 15 seconds.
  - **[dhctl]** Fixed `config render bashible-bundle` command and added `config render master-bootstrap-scripts` command. [#2212](https://github.com/deckhouse/deckhouse/pull/2212)
  - **[dhctl]** Fixed output `Request failed. Probably pod was restarted during installation` multiple times during the bootstrap cluster. [#2167](https://github.com/deckhouse/deckhouse/pull/2167)
+ - **[ingress-nginx]** Add publish-service for LB controllers to update Ingress status correctly. [#2276](https://github.com/deckhouse/deckhouse/pull/2276)
+    LB Ingress controllers will restart.
  - **[istio]** Don't export unready `ingressgateway` nodes via `metadata-exporter` for multiclusters and federations. [#2055](https://github.com/deckhouse/deckhouse/pull/2055)
  - **[prometheus]** Changes Grafana version in `patches/build_go.patch.tpl` automatically from docker arguments. [#2214](https://github.com/deckhouse/deckhouse/pull/2214)
  - **[prometheus]** Do not restart Trickster if Prometheus is unavailable. [#1972](https://github.com/deckhouse/deckhouse/pull/1972)
  - **[prometheus-metrics-adapter]** Use scrape interval x2 as a resync interval to fix missing metrics flapping and added more logs. [#1970](https://github.com/deckhouse/deckhouse/pull/1970)
+ - **[upmeter]** Fixed bug when cleaning old upmeter probe garbage resulting in errors stucks Deckhouse main queue. [#2264](https://github.com/deckhouse/deckhouse/pull/2264)
  - **[user-authn]** Fixed LDAP `insecureNoSSL` support. [#2065](https://github.com/deckhouse/deckhouse/pull/2065)
 
 ## Chore
