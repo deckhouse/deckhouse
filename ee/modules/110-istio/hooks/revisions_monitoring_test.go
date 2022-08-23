@@ -287,5 +287,10 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x77",
 				DesiredRevision: "absent",
 			}),
+		Entry("Pod without current and desired revisions",
+			[]string{
+				istioNsYAML(nsParams{}),
+				istioPodYAML(podParams{}),
+			}, nil),
 	)
 })

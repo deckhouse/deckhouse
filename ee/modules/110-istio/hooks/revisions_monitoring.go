@@ -183,6 +183,11 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 			desiredRevision = istioPodInfo.SpecificRevision
 		}
 
+		// we don't need metrics for pod without desired revision and without istio sidecar
+		if desiredRevision == "absent" && istioPodInfo.Revision == "absent" {
+			continue
+		}
+
 		labels := map[string]string{
 			"namespace":        istioPodInfo.Namespace,
 			"dataplane_pod":    istioPodInfo.Name,
