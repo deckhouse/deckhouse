@@ -6,7 +6,7 @@ properties:
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod. Pod'ы инстанса унаследуют это поле как есть.
   tolerations:
     description: |
-      Толерейшны для подов c DHCP и с настройщиками iptables.
+      Toleration'ы для Pod'ов c DHCP и с настройщиками iptables.
 
       Стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
   subnet:
