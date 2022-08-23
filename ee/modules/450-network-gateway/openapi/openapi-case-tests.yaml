@@ -2,8 +2,8 @@ positive:
   configValues:
     - nodeSelector:
         type: network-gateway
-      subnet: "192.168.42.0/24"
-      publicAddress: "10.220.203.240"
+      subnet: "192.168.43.0/24"
+      publicAddress: "10.220.243.240"
       dns:
         servers:
           - 8.8.8.8
@@ -11,7 +11,7 @@ positive:
           - office.example.com
   values:
     - internal:
-        effectiveStorageClass: test
+        effectiveStorageClass: 'test'
 negative:
   configValues:
     # no subnet is set
