@@ -41,9 +41,6 @@ func (s *TestMatrixSuite) TearDownTest() {
 }
 
 func (s *TestMatrixSuite) TestMatrix() {
-	discoveredModules, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
-	require.NoError(s.T(), err)
-
 	// Use environment variable to focus on specific module, e.g. D8_TEST_MATRIX_FOCUS=user-authn,user-authz
 	focus := os.Getenv("FOCUS")
 
@@ -56,7 +53,7 @@ func (s *TestMatrixSuite) TestMatrix() {
 	}
 
 	discoveredModules, err := modules.GetDeckhouseModulesWithValuesMatrixTests(focusNames)
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
 
 	for _, module := range discoveredModules {
 		_, ok := focusNames[module.Name]
