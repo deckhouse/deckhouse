@@ -128,7 +128,7 @@ On the selected node do the following:
 
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest after successful up etcd.
 1. Set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
-1. Remove master role label from nodes objects expect selected (recover in current time).
+1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
    kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
@@ -168,7 +168,7 @@ On the first recovered node do the following steps:
    ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-Add master role for each other master nodes:
+Add control-plane role for each other control-plane nodes:
 
 ```shell
 kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
@@ -194,7 +194,7 @@ Perform the following steps to restore the quorum in the etcd cluster:
 1. Wait for etcd to start.
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
 1. Set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
-1. Remove master role label from nodes objects expect selected (recover in current time).
+1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
    kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
@@ -255,7 +255,7 @@ To turn them into cluster members, do the following on those nodes:
    kubectl -n kube-system exec -ti ETCD_POD -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table'
    ```
 
-Ddd a master role for each lost nodes:
+Add a control-plane role for each lost nodes:
 
 ```shell
 kubectl label no LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
@@ -437,7 +437,7 @@ Do the following:
      --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s'
    ```
 
-1. Remove master role label from affected node.
+1. Remove control-plane role label from affected node.
 
    ```shell
    kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
@@ -457,7 +457,7 @@ On the affected node:
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Add master role to affected node.
+1. Add control-plane role to affected node.
 
    ```shell
    kubectl label no AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
@@ -577,7 +577,7 @@ On the selected node do the following:
    ```
 
 1. Set [HA-mode](https://deckhouse.io/en/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
-1. Remove master role label from nodes objects expect selected (recover in current time).
+1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
    kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
@@ -617,9 +617,9 @@ On the first recovered node do the following:
    ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-For each another master nodes:
+For each another control-plane nodes:
 
-1. Add master role.
+1. Add control-plane role.
 
    ```shell
    kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
