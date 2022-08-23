@@ -22,19 +22,14 @@ const (
 	podName = "pod"
 )
 
-const nsTemplate = `
-apiVersion: v1
+const nsTemplate = `apiVersion: v1
 kind: Namespace
 metadata:
- name: {{ .Name }}
- {{- if or .GlobalRevision .DefiniteRevision }}
- labels:
-   {{- if .GlobalRevision }}
-   istio-injection: enabled
-   {{- end -}}
-   {{ if .DefiniteRevision }}
-   istio.io/rev: "{{ .DefiniteRevision }}"
-   {{- end -}}
+  name: {{ .Name }}
+  {{- if or .GlobalRevision .DefiniteRevision }}
+  labels:
+    {{ if .GlobalRevision }}istio-injection: enabled{{ end }}
+    {{ if .DefiniteRevision }}istio.io/rev: "{{ .DefiniteRevision }}"{{ end }}
  {{- end -}}
 `
 
@@ -44,27 +39,31 @@ type nsParams struct {
 	Name             string
 }
 
-const podTemplate = `
-apiVersion: v1
+const podTemplate = `apiVersion: v1
 kind: Pod
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
     service.istio.io/canonical-name: {{ .Name }}
-    {{ if .DisableInjection -}}sidecar.istio.io/inject: false{{ end }}
+    {{ if .DisableInjectionLabel }}sidecar.istio.io/inject: "false"{{ end }}
     {{ if .DefiniteRevision }}istio.io/rev: {{ .DefiniteRevision }}{{ end }}
   annotations:
-    sidecar.istio.io/status: '{"a":"b"{{ if .CurrentRevision }}, "revision":"{{ .CurrentRevision}}"{{ end }} }'
+    some-annotation: some-value
+    {{ if .CurrentRevision }}
+    sidecar.istio.io/status: '{"a":"b", "revision":"{{ .CurrentRevision }}" }'
+    {{ end }}
+    {{ if .DisableInjectionAnnotation }}sidecar.istio.io/inject: "false"{{ end }}
 spec: {}
 `
 
 type podParams struct {
-	DisableInjection bool
-	DefiniteRevision string
-	CurrentRevision  string
-	Name             string
-	Namespace        string
+	DisableInjectionLabel      bool
+	DisableInjectionAnnotation bool
+	DefiniteRevision           string
+	CurrentRevision            string
+	Name                       string
+	Namespace                  string
 }
 
 type wantedMetric struct {
@@ -145,13 +144,22 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 
 	},
 		Entry("Empty cluster", []string{}, nil),
-		Entry("Pod to ignore",
+		Entry("Pod to ignore with inject=false label",
 			[]string{
 				istioNsYAML(nsParams{
 					GlobalRevision: true,
 				}),
 				istioPodYAML(podParams{
-					DisableInjection: true,
+					DisableInjectionLabel: true,
+				}),
+			}, nil),
+		Entry("Pod to ignore with inject=false annotation",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{
+					DisableInjectionAnnotation: true,
 				}),
 			}, nil),
 		Entry("NS global revision, pod revision is actual",
@@ -178,6 +186,16 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x77",
 				DesiredRevision: "v1x42",
 			}),
+		Entry("NS global revision, pod revision is absent (no sidecar)",
+			[]string{
+				istioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				istioPodYAML(podParams{}),
+			}, &wantedMetric{
+				Revision:        "absent",
+				DesiredRevision: "v1x42",
+			}),
 		Entry("Namespace with definite revision, pod revision is actual",
 			[]string{
 				istioNsYAML(nsParams{
@@ -200,6 +218,16 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				}),
 			}, &wantedMetric{
 				Revision:        "v1x77",
+				DesiredRevision: "v1x15",
+			}),
+		Entry("Namespace with definite revision, pod revision is absent (no sidecar)",
+			[]string{
+				istioNsYAML(nsParams{
+					DefiniteRevision: "v1x15",
+				}),
+				istioPodYAML(podParams{}),
+			}, &wantedMetric{
+				Revision:        "absent",
 				DesiredRevision: "v1x15",
 			}),
 		Entry("Namespace with definite revision and pod with definite revision is actual",
@@ -239,6 +267,16 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x77",
 				DesiredRevision: "v1x77",
 			}),
+		Entry("Namespace without labels and pod with definite revision but sidecar absent",
+			[]string{
+				istioNsYAML(nsParams{}),
+				istioPodYAML(podParams{
+					DefiniteRevision: "v1x77",
+				}),
+			}, &wantedMetric{
+				Revision:        "absent",
+				DesiredRevision: "v1x77",
+			}),
 		Entry("Pod orphan",
 			[]string{
 				istioNsYAML(nsParams{}),
@@ -247,27 +285,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				}),
 			}, &wantedMetric{
 				Revision:        "v1x77",
-				DesiredRevision: "unknown",
-			}),
-		Entry("Namespace with v1x10x1 revision and pod is actual",
-			[]string{
-				istioNsYAML(nsParams{
-					DefiniteRevision: "v1x10x1",
-				}),
-				istioPodYAML(podParams{}),
-			}, &wantedMetric{
-				Revision:        "v1x10x1",
-				DesiredRevision: "v1x10x1",
-			}),
-		Entry("Pod with v1x10x1 specific revision is actual",
-			[]string{
-				istioNsYAML(nsParams{}),
-				istioPodYAML(podParams{
-					DefiniteRevision: "v1x10x1",
-				}),
-			}, &wantedMetric{
-				Revision:        "v1x10x1",
-				DesiredRevision: "v1x10x1",
+				DesiredRevision: "absent",
 			}),
 	)
 })

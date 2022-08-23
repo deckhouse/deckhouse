@@ -57,8 +57,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      "service.istio.io/canonical-name",
-						Operator: "Exists",
+						Key:      "job-name",
+						Operator: "DoesNotExist",
+					},
+					{
+						Key:      "heritage",
+						Operator: "NotIn",
+						Values:   []string{"upmeter"},
 					},
 					{
 						Key:      "sidecar.istio.io/inject",
@@ -82,6 +87,7 @@ type IstioPodInfo struct {
 	Namespace        string
 	Revision         string
 	SpecificRevision string
+	NeedInject       bool
 }
 
 func getIstioPodRevision(p *v1.Pod) string {
@@ -96,23 +102,29 @@ func getIstioPodRevision(p *v1.Pod) string {
 		if istioPodStatus.Revision != "" {
 			revision = istioPodStatus.Revision
 		} else {
-			// migration — delete this "else" when v1x10x1 will be retired
-			revision = "v1x10x1"
+			revision = "absent"
 		}
 	} else {
-		revision = "unknown"
+		revision = "absent"
 	}
-
 	return revision
 }
 
-func getIstioPodSpecificRevision(p *v1.Pod) string {
-	var desiredRevision string
-	var ok bool
-	if desiredRevision, ok = p.Labels["istio.io/rev"]; ok {
-		return desiredRevision
+func needInject(p *v1.Pod) bool {
+	NeedInject := true
+	if inject, ok := p.Annotations["sidecar.istio.io/inject"]; ok {
+		if inject == "false" {
+			NeedInject = false
+		}
 	}
-	return "unknown"
+	return NeedInject
+}
+
+func getIstioPodSpecificRevision(p *v1.Pod) string {
+	if specificPodRevision, ok := p.Labels["istio.io/rev"]; ok {
+		return specificPodRevision
+	}
+	return ""
 }
 
 func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -127,6 +139,7 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		Namespace:        pod.Namespace,
 		Revision:         getIstioPodRevision(pod),
 		SpecificRevision: getIstioPodSpecificRevision(pod),
+		NeedInject:       needInject(pod),
 	}
 
 	return result, nil
@@ -140,7 +153,7 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(revisionsMonitoringMetricsGroup)
 
 	var globalRevision = input.Values.Get("istio.internal.globalRevision").String()
-	
+
 	var namespaceRevisionMap = map[string]string{}
 	for _, ns := range append(input.Snapshots["namespaces_definite_revision"], input.Snapshots["namespaces_global_revision"]...) {
 		nsInfo := ns.(NamespaceInfo)
@@ -154,11 +167,16 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 	for _, pod := range input.Snapshots["istio_pod"] {
 		istioPodInfo := pod.(IstioPodInfo)
 
-		desiredRevision := "unknown"
+		// sidecar.istio.io/inject=false annotation set -> ignore
+		if !istioPodInfo.NeedInject {
+			continue
+		}
+
+		desiredRevision := "absent"
 		if desiredRevisionNS, ok := namespaceRevisionMap[istioPodInfo.Namespace]; ok {
 			desiredRevision = desiredRevisionNS
 		}
-		if istioPodInfo.SpecificRevision != "unknown" {
+		if istioPodInfo.SpecificRevision != "" {
 			desiredRevision = istioPodInfo.SpecificRevision
 		}
 
