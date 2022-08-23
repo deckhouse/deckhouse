@@ -1,0 +1,40 @@
+ci:
+  fixes:
+    - summary: Improve backport comment format
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2237
+control-plane-manager:
+  features:
+    - summary: Add an alert about the deprecated Kubernetes version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2251
+deckhouse:
+  fixes:
+    - summary: >-
+        Ignore evicted and shutdown Pods on the Deckhouse update process as they may block the
+        update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2266
+flant-integration:
+  fixes:
+    - summary: Add for to D8PrometheusMadisonErrorSendingAlertsToBackend
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2272
+    - summary: Disable HTTP2 for madison-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2265
+ingress-nginx:
+  fixes:
+    - summary: Add publish-service for LB controllers to update Ingress status correctly.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2276
+      impact: LB Ingress controllers will restart.
+linstor:
+  fixes:
+    - summary: add missing libelf-dev to kernel-module-injector
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2269
+okmeter:
+  fixes:
+    - summary: fix docs for image field
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2258
+upmeter:
+  fixes:
+    - summary: >-
+        Fixed bug when cleaning old upmeter probe garbage resulting in errors stucks Deckhouse main
+        queue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2264
+
