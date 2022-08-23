@@ -89,6 +89,9 @@ func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookIn
 		}
 
 		httpsMode := module.GetHTTPSMode(moduleName, input)
+		input.LogEntry.Info("HTTPS_MODE: %s", httpsMode)
+		input.LogEntry.Info("VALUES: %s", input.Values)
+		input.LogEntry.Info("CONFIG_VALUES: %s", input.ConfigValues)
 
 		if httpsMode != "CustomCertificate" {
 			input.Values.Remove(fmt.Sprintf("%s.internal.customCertificateData", moduleName))
