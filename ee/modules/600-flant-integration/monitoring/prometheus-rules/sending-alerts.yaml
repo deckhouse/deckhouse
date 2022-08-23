@@ -7,7 +7,7 @@
           max by (pod_ip) (
               label_replace(
                 max by (pod, alertmanager) (
-                  (rate(prometheus_notifications_errors_total{pod="prometheus-main-0"}[5m]) / rate(prometheus_notifications_sent_total{pod="prometheus-main-0"}[5m])) * 100),
+                  (rate(prometheus_notifications_errors_total{pod="prometheus-main-0"}[5m]) / rate(prometheus_notifications_sent_total{pod="prometheus-main-0"}[5m])) * 100) > 0,
                 "pod_ip", "$1", "alertmanager", ".*://(.*):.*")
           )
           * on (pod_ip) group_right()
