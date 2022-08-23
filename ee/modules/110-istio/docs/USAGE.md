@@ -4,7 +4,9 @@ title: "The istio module: usage"
 
 ## Circuit Breaker
 
-The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) CR help to determine whether some endpoints do not behave as expected. Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
+The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected. Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
+
+Example:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -25,9 +27,11 @@ spec:
       baseEjectionTime: 15m   # Upon reaching the error limit, the endpoint will be excluded from balancing for 15 minutes.
 ```
 
-Additionally, the [VirtualService](istio-cr.html#virtualservice) resource is used to configure the HTTP timeouts. These timeouts are also taken into account when calculating error statistics for endpoints:
+Additionally, the [VirtualService](istio-cr.html#virtualservice) resource is used to configure the HTTP timeouts. These timeouts are also taken into account when calculating error statistics for endpoints.
 
-```
+Example:
+
+```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -49,7 +53,7 @@ spec:
 
 ## Locality Failover
 
-The main documentation is available here: https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/
+> Read [the main documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if you need.
 
 Istio allows you to configure a priority-based locality (geographic location) failover between endpoints. Istio uses node labels with the appropriate hierarchy to define the zone:
 
@@ -61,7 +65,9 @@ This comes in handy for inter-cluster failover when used together with a [multic
 
 **Caution!** The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
 
-```
+Example:
+
+```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
@@ -83,6 +89,8 @@ spec:
 You can use the [VirtualService](istio-cr.html#virtualservice) resource to configure Retry for requests.
 
 **Caution!** All requests (including POST ones) are retried three times by default.
+
+Example:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -112,6 +120,8 @@ You have to configure two custom resources:
 * A [DestinationRule](istio-cr.html#destinationrule) – defines how to identify different versions of your application (subsets);
 * A [VirtualService](istio-cr.html#virtualservice) – defines how to balance traffic between different versions of your application.
 
+Example:
+
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
@@ -130,7 +140,7 @@ spec:
 
 ### Cookie-based routing
 
-```
+```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -183,6 +193,8 @@ To use Ingress, you need to:
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the Ingress controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress controller's sidecar is only catching traffic directed to Service CIDR.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar can identify the application service that serves requests.
+
+Examples:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -421,6 +433,8 @@ spec:
 
 **Caution!** The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
 
+Example:
+
 ```yaml
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
@@ -451,6 +465,7 @@ spec:
 ## Setting up federation for two clusters using the IstioFederation CR
 
 сluster A:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -462,6 +477,7 @@ spec:
 ```
 
 сluster B:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -475,6 +491,7 @@ spec:
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 
 cluster A:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -485,6 +502,7 @@ spec:
 ```
 
 cluster B:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -511,7 +529,8 @@ spec:
   * Make sure, the old `istiod` Pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
-Find all pods with old Istio revision:
-```
+To find all Pods with old Istio revision, execute the following command:
+
+```shell
 kubectl get pods -A -o json | jq --arg revision "v1x12" '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
