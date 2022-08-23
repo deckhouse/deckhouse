@@ -35,7 +35,7 @@ metadata:
    {{ if .DefiniteRevision }}
    istio.io/rev: "{{ .DefiniteRevision }}"
    {{- end -}}
-{{- end -}}
+ {{- end -}}
 `
 
 type nsParams struct {
@@ -154,7 +154,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 					DisableInjection: true,
 				}),
 			}, nil),
-		Entry("Global revision is actual",
+		Entry("NS global revision, pod revision is actual",
 			[]string{
 				istioNsYAML(nsParams{
 					GlobalRevision: true,
@@ -166,7 +166,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x42",
 				DesiredRevision: "v1x42",
 			}),
-		Entry("Global revision is not actual",
+		Entry("NS global revision, pod revision is not actual",
 			[]string{
 				istioNsYAML(nsParams{
 					GlobalRevision: true,
@@ -178,7 +178,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x77",
 				DesiredRevision: "v1x42",
 			}),
-		Entry("Namespace with definite revision is actual",
+		Entry("Namespace with definite revision, pod revision is actual",
 			[]string{
 				istioNsYAML(nsParams{
 					DefiniteRevision: "v1x15",
@@ -190,7 +190,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x15",
 				DesiredRevision: "v1x15",
 			}),
-		Entry("Namespace with definite revision is not actual",
+		Entry("Namespace with definite revision, pod revision is not actual",
 			[]string{
 				istioNsYAML(nsParams{
 					DefiniteRevision: "v1x15",
@@ -259,7 +259,7 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				Revision:        "v1x10x1",
 				DesiredRevision: "v1x10x1",
 			}),
-		Entry("Pod with v1x10x1 revision is actual",
+		Entry("Pod with v1x10x1 specific revision is actual",
 			[]string{
 				istioNsYAML(nsParams{}),
 				istioPodYAML(podParams{
