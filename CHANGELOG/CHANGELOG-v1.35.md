@@ -42,6 +42,8 @@
     Webhook handler will restart. During the handler restart, Deckhouse controller could generate a few error messages when it will not be able to access the webhook. It should be resolved in the next 15 seconds.
  - **[dhctl]** Fixed `config render bashible-bundle` command and added `config render master-bootstrap-scripts` command. [#2212](https://github.com/deckhouse/deckhouse/pull/2212)
  - **[dhctl]** Fixed output `Request failed. Probably pod was restarted during installation` multiple times during the bootstrap cluster. [#2167](https://github.com/deckhouse/deckhouse/pull/2167)
+ - **[flant-integration]** Fix expression for `D8PrometheusMadisonErrorSendingAlertsToBackend`. [#2298](https://github.com/deckhouse/deckhouse/pull/2298)
+ - **[go_lib]** Fixed `copy_custom_certificate` value priority. [#2299](https://github.com/deckhouse/deckhouse/pull/2299)
  - **[ingress-nginx]** Add publish-service for LB controllers to update Ingress status correctly. [#2276](https://github.com/deckhouse/deckhouse/pull/2276)
     LB Ingress controllers will restart.
  - **[istio]** Don't export unready `ingressgateway` nodes via `metadata-exporter` for multiclusters and federations. [#2055](https://github.com/deckhouse/deckhouse/pull/2055)
