@@ -23,9 +23,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
-	"github.com/sirupsen/logrus"
 )
 
 // applyTags if ugly because values now are strongly untyped. We have to rewrite this after adding proper global schema

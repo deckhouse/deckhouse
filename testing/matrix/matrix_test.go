@@ -17,15 +17,15 @@ limitations under the License.
 package matrix
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/testing/matrix/linter"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/deckhouse/deckhouse/testing/matrix/linter"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 )
 
 type TestMatrixSuite struct {
@@ -74,7 +74,6 @@ func TestMatrix(t *testing.T) {
 
 // changeSymlinks changes symlinks in module dir to proper place when modules in ee/fe not copied to main modules directory
 func changeSymlink(t *testing.T, symlinkPath string, newDestination string) {
-	fmt.Println("Start change symlink")
 	err := os.Remove(symlinkPath)
 	require.NoError(t, err)
 
