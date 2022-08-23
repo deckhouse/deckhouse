@@ -130,7 +130,9 @@ metadata:
   name: productpage-canary
 spec:
   host: productpage
-  subsets: # subset-ы доступны только при обращении к хосту через через VirtualService из Pod'а под управлением Istio. Эти subset-ы должны быть указаны в маршрутах.
+  # subset-ы доступны только при обращении к хосту через через VirtualService из Pod'а под управлением Istio.
+  # Эти subset-ы должны быть указаны в маршрутах.
+  subsets:
   - name: v1
     labels:
       version: v1
@@ -533,5 +535,7 @@ spec:
 Чтобы найти все Pod'ы под управлением старой ревизии Istio, выполните:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x12" '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
+kubectl get pods -A -o json | jq --arg revision "v1x12" \
+  '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | 
+   .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
