@@ -972,7 +972,7 @@
           "refId": "K"
         },
         {
-          "expr": "sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n    *  \n    sum by (namespace, pod) (avg_over_time(kube_pod_spec_host_network{namespace=~\"$namespace\"}[$__range]))\n  )\n)\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
+          "expr": "sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n    *  \n    sum by (namespace, pod) (avg_over_time(kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"}[$__range]))\n  )\n)\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -980,7 +980,7 @@
           "refId": "L"
         },
         {
-          "expr": "sum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n    *  \n    sum by (namespace, pod) (avg_over_time(kube_pod_spec_host_network{namespace=~\"$namespace\"}[$__range]))\n  )\n)\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
+          "expr": "sum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n    *  \n    sum by (namespace, pod) (avg_over_time(kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"}[$__range]))\n  )\n)\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -2949,14 +2949,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n    *  \n    sum by (namespace, pod) (kube_pod_spec_host_network{namespace=~\"$namespace\"})\n  )\n)",
+          "expr": "sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n    *  \n    sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",
           "refId": "A"
         },
         {
-          "expr": "sum (\n  sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) \n  - \n  (\n    sum by (namespace) (\n      sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n      *  \n      sum by (namespace, pod) (kube_pod_spec_host_network{namespace=~\"$namespace\"})\n    )\n  )\n)",
+          "expr": "sum (\n  sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) \n  - \n  (\n    sum by (namespace) (\n      sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n      *  \n      sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n    )\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -3058,14 +3058,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n    *  \n    sum by (namespace, pod) (kube_pod_spec_host_network{namespace=~\"$namespace\"})\n  )\n)",
+          "expr": "sum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n    *  \n    sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",
           "refId": "A"
         },
         {
-          "expr": "sum (\n  sum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) \n  - \n  (\n    sum by (namespace) (\n      sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n      *  \n      sum by (namespace, pod) (kube_pod_spec_host_network{namespace=~\"$namespace\"})\n    )\n  )\n)",
+          "expr": "sum (\n  sum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) \n  - \n  (\n    sum by (namespace) (\n      sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))\n      *  \n      sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n    )\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",

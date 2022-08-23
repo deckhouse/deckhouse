@@ -1,16 +1,13 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_ALPINE
-FROM $BASE_GOLANG_ALPINE as artifact
-RUN mkdir -p /src/kube-state-metrics && \
-  wget https://github.com/kubernetes/kube-state-metrics/archive/v1.8.0.tar.gz -O - | tar -xz --strip-components=1 -C /src/kube-state-metrics
-WORKDIR /src/kube-state-metrics
-ADD kube-persistentvolume-is-local.patch .
-ADD kube-pod-spec-host-network.patch .
-ADD kube-pod-status-reason.patch .
+ARG BASE_GOLANG_17_ALPINE
+FROM $BASE_GOLANG_17_ALPINE as artifact
 RUN apk add --no-cache make git patch
-RUN patch -p1 < kube-persistentvolume-is-local.patch && \
-  patch -p1 < kube-pod-spec-host-network.patch && \
-  patch -p1 < kube-pod-status-reason.patch
+
+RUN mkdir -p /src/kube-state-metrics && \
+  wget https://github.com/kubernetes/kube-state-metrics/archive/v2.5.0.tar.gz -O - | tar -xz --strip-components=1 -C /src/kube-state-metrics
+WORKDIR /src/kube-state-metrics
+COPY patches/kube-persistentvolume-local.patch /
+RUN patch -p1 < /kube-persistentvolume-local.patch
 RUN make build-local
 
 FROM $BASE_ALPINE
