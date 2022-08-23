@@ -76,6 +76,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, revisionsMonitoring)
 
+// Needed to extend v1.Pod with our methods
+type IstioDrivenPod v1.Pod
+
 // Current istio revision is located in `sidecar.istio.io/status` annotation
 type IstioPodStatus struct {
 	Revision string `json:"revision"`
@@ -90,7 +93,7 @@ type IstioPodInfo struct {
 	NeedInject       bool
 }
 
-func getIstioPodRevision(p *v1.Pod) string {
+func (p *IstioDrivenPod) getIstioCurrentRevision() string {
 	var istioStatusJSON string
 	var istioPodStatus IstioPodStatus
 	var revision string
@@ -110,7 +113,7 @@ func getIstioPodRevision(p *v1.Pod) string {
 	return revision
 }
 
-func needInject(p *v1.Pod) bool {
+func (p *IstioDrivenPod) needInject() bool {
 	NeedInject := true
 	if inject, ok := p.Annotations["sidecar.istio.io/inject"]; ok {
 		if inject == "false" {
@@ -120,7 +123,7 @@ func needInject(p *v1.Pod) bool {
 	return NeedInject
 }
 
-func getIstioPodSpecificRevision(p *v1.Pod) string {
+func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 	if specificPodRevision, ok := p.Labels["istio.io/rev"]; ok {
 		return specificPodRevision
 	}
@@ -128,18 +131,18 @@ func getIstioPodSpecificRevision(p *v1.Pod) string {
 }
 
 func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	pod := &v1.Pod{}
-	err := sdk.FromUnstructured(obj, pod)
+	pod := v1.Pod{}
+	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert pod object to pod: %v", err)
 	}
-
+	istioPod := IstioDrivenPod(pod)
 	result := IstioPodInfo{
-		Name:             pod.Name,
-		Namespace:        pod.Namespace,
-		Revision:         getIstioPodRevision(pod),
-		SpecificRevision: getIstioPodSpecificRevision(pod),
-		NeedInject:       needInject(pod),
+		Name:             istioPod.Name,
+		Namespace:        istioPod.Namespace,
+		Revision:         istioPod.getIstioCurrentRevision(),
+		SpecificRevision: istioPod.getIstioSpecificRevision(),
+		NeedInject:       istioPod.needInject(),
 	}
 
 	return result, nil

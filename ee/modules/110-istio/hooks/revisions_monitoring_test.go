@@ -7,14 +7,16 @@ package hooks
 
 import (
 	"bytes"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"strings"
+	"text/template"
+
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
-	"strings"
-	"text/template"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 const (
@@ -74,7 +76,7 @@ type wantedMetric struct {
 func templateToYAML(tmpl string, params interface{}) string {
 	var output bytes.Buffer
 	t := template.Must(template.New("").Parse(tmpl))
-	t.Execute(&output, params)
+	_ = t.Execute(&output, params)
 	return output.String()
 }
 
@@ -140,8 +142,6 @@ var _ = Describe("Istio hooks :: revisions_monitoring ::", func() {
 				"revision":         want.Revision,
 			},
 		}))
-		return
-
 	},
 		Entry("Empty cluster", []string{}, nil),
 		Entry("Pod to ignore with inject=false label",

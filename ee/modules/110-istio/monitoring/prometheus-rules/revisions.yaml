@@ -67,7 +67,7 @@
   - alert: D8IstioPodsWithoutIstioSidecar
     annotations:
       description: |
-        There are Pods in `{{$labels.namespace}}` Namespace without istio sidecars, but the istio-injection is configured.
+        There are pods `{{$labels.dataplane_pod}}` in `{{$labels.namespace}}` Namespace without istio sidecars, but the istio-injection is configured.
         Getting affected Pods:
         ```
         kubectl -n {{$labels.namespace}} get pods -o json | jq -r '.metadata.name'
@@ -78,13 +78,7 @@
       plk_protocol_version: "1"
       summary: There are Pods without istio sidecars, but with istio-injection configured
     expr: |
-      kube_pod_labels{label_service_istio_io_canonical_name="",  label_sidecar_istio_io_inject!="true"	}
-      * on (namespace) group_left()
-      (
-        kube_namespace_labels {label_istio_io_rev!=""} or kube_namespace_labels {label_istio_injection!=""}
-      )
-      or
-      kube_pod_labels{label_service_istio_io_canonical_name="", label_sidecar_istio_io_inject="true"}
+      d8_istio_pod_revision{revision="absent", desired_revision!=""}
     for: 5m
     labels:
       severity_level: "6"
