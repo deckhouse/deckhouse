@@ -1,30 +1,36 @@
 properties:
   nodeSelector:
     description: |
-      селектор, который идентифицирует ноды, на которых будут настроены iptables-правила и на которых будет работать DHCP-сервер.
-      * Формат — [стандартный](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector) словарь лейблов и их значений. Поды инстанса унаследуют это поле как есть.
+      Cелектор, который идентифицирует узлы, на которых будут настроены правила iptables и на которых будет работать DHCP-сервер.
+
+      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod. Pod'ы инстанса унаследуют это поле как есть.
   tolerations:
     description: |
-      толерейшны для подов c DHCP и с настройщиками iptables.
-      * Формат — [стандартный](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) список толерейшнов. Поды инстанса унаследуют это поле как есть.
+      Толерейшны для подов c DHCP и с настройщиками iptables.
+
+      Стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
   subnet:
     description: |
-      адрес локальной подсети, которую должен обслуживать наш шлюз.
-      * На основе этого адреса будут сформированы DHCP-опции для выдачи клиентам:
-          * Пул адресов — номера с 50 по последний.
-            * Роутер — первый адрес в подсети.
+      Адрес локальной подсети, которую должен обслуживать шлюз.
+
+      На основе этого адреса будут сформированы DHCP-опции для выдачи клиентам:
+      * Пул адресов — номера с 50 по последний.
+      * Роутер — первый адрес в подсети.
   publicAddress:
-    description: src исходящих пакетов из локалки будет заменён на этот адрес.
+    description: Адрес, на который будет заменен src-адрес исходящих из локальной сети пакетов.
   disableDHCP:
-    description: параметр, отключающий DHCP-сервер
+    description: Отключает DHCP-сервер.
   dns:
-    description: опциональные настройки, которые будет переданы клиентам через DHCP
+    description: Настройки, которые будут переданы клиентам через DHCP.
     properties:
       servers:
-        description: массив DNS-серверов.
+        description: Список DNS-серверов.
       search:
-        description: массив search-доменов.
+        description: Список search-доменов.
   storageClass:
     description: |
-      имя storageClass'а, который использовать для хранения DHCP lease.
-      * Если не указано — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и они не указаны — данные сохраняются в emptyDir. Dnsmasq, на котором основан наш DHCP-сервер имеет свои механизмы защиты от дублирования IP-адресов в случае утери базы с lease-ами, но лучше её не терять.
+      Имя storageClass'а, который использовать для хранения DHCP lease.
+
+      Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
+
+      Dnsmasq, на котором основан наш DHCP-сервер имеет свои механизмы защиты от дублирования IP-адресов в случае утери базы с lease-ами, но лучше её не терять.
