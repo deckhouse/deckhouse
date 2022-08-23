@@ -1,3 +1,33 @@
+{{- define "attacher_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "provisioner_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "resizer_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "snapshotter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "livenessprobe_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "controller_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_csi_controller_manifests" (list . $config) }} */ -}}
 {{- define "helm_lib_csi_controller_manifests" }}
   {{- $context := index . 0 }}
@@ -66,6 +96,46 @@ spec:
     name: {{ $fullname }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "provisioner"
+      minAllowed:
+        {{- include "provisioner_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "attacher"
+      minAllowed:
+        {{- include "attacher_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "resizer"
+      minAllowed:
+        {{- include "resizer_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- if $snapshotterEnabled }}
+    - containerName: "snapshotter"
+      minAllowed:
+        {{- include "snapshotter_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- end }}
+    - containerName: "livenessprobe"
+      minAllowed:
+        {{- include "livenessprobe_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "controller"
+      minAllowed:
+        {{- include "controller_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 100Mi
     {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -155,6 +225,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "provisioner_resources" $context | nindent 12 }}
+  {{- end }}
       - name: attacher
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $attacherImage | quote }}
@@ -179,6 +252,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "attacher_resources" $context | nindent 12 }}
+  {{- end }}
       - name: resizer
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $resizerImage | quote }}
@@ -203,6 +279,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "resizer_resources" $context | nindent 12 }}
+  {{- end }}
             {{- if $snapshotterEnabled }}
       - name: snapshotter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -228,6 +307,9 @@ spec:
         resources:
           requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "snapshotter_resources" $context | nindent 12 }}
+  {{- end }}
             {{- end }}
       - name: livenessprobe
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -243,6 +325,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "livenessprobe_resources" $context | nindent 12 }}
+  {{- end }}
       - name: controller
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $controllerImage | quote }}
@@ -272,6 +357,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "controller_resources" $context | nindent 12 }}
+  {{- end }}
     {{- if $additionalContainers }}
       {{- $additionalContainers | toYaml | nindent 6 }}
     {{- end }}

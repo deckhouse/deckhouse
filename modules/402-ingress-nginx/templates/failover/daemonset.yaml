@@ -94,8 +94,15 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            memory: 500Mi
+            cpu: 350m
       - image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.proxyFailoverIptables }}"
         name: iptables-loop
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            memory: 20Mi
+            cpu: 10m
         securityContext:
           capabilities:
             add:
@@ -121,6 +128,8 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            memory: 20Mi
+            cpu: 10m
       - name: kube-rbac-proxy
         image: "{{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
         args:
@@ -153,6 +162,8 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            memory: 20Mi
+            cpu: 10m
       imagePullSecrets:
       - name: deckhouse-registry
   {{- end }}

@@ -1,4 +1,9 @@
 # Source: https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/operator-deployment.yaml
+{{- define "piraeus_operator_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -14,6 +19,20 @@ spec:
     name: piraeus-operator
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: piraeus-operator
+      minAllowed:
+        {{- include "piraeus_operator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: kube-rbac-proxy
+      minAllowed:
+        {{- include "drbd_prometheus_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 25Mi
 {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -87,6 +106,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "piraeus_operator_resources" . | nindent 12 }}
+{{- end }}
         volumeMounts:
         - name: backup-dir
           mountPath: /run/linstor-backups
@@ -122,6 +144,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: backup-dir
         emptyDir: {}

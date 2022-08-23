@@ -1,4 +1,9 @@
 # Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/operator-satelliteset.yaml
+{{- define "linstor_controller_resources" }}
+cpu: 30m
+memory: 300Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -14,6 +19,15 @@ spec:
     name: linstor-controller
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: linstor-controller
+      minAllowed:
+        {{- include "linstor_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 60m
+        memory: 800Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: piraeus.linbit.com/v1
@@ -61,6 +75,9 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- include "linstor_controller_resources" . | nindent 6 }}
+{{- end }}
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   additionalEnv: []
   additionalProperties:
@@ -101,4 +118,8 @@ spec:
                 name: linstor-controller
     resources:
       requests:
-        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
+{{- end }}
+

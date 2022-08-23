@@ -1,3 +1,8 @@
+{{- define "dhcp_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- if not .Values.networkGateway.disableDHCP }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -14,6 +19,14 @@ spec:
     name: dhcp
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: dhcp
+      minAllowed:
+        {{- include "dhcp_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
 {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -81,6 +94,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "dhcp_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: dhcp-config
         emptyDir: {}

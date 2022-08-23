@@ -20,12 +20,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/flant/addon-operator/sdk"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 // ControllerMustHaveVPA fills linting error regarding VPA
@@ -36,7 +39,7 @@ func ControllerMustHaveVPA(linter *rules.ObjectLinter) {
 
 	scope := newLintingScope(linter.ObjectStore, linter.ErrorsList)
 
-	vpaTargets, vpaTolerationGroups := parseTargetsAndTolerationGroups(scope)
+	vpaTargets, vpaTolerationGroups, vpaContainerNamesMap := parseTargetsAndTolerationGroups(scope)
 
 	for index, object := range scope.Objects() {
 		// Skip non-pod controllers and modules which control VPA themselves
@@ -49,6 +52,10 @@ func ControllerMustHaveVPA(linter *rules.ObjectLinter) {
 		}
 
 		if !ensureContainersWithoutRequests(scope, object) {
+			continue
+		}
+
+		if !ensureVPAContainersMatchControllerContainers(scope, object, index, vpaContainerNamesMap) {
 			continue
 		}
 
@@ -78,6 +85,10 @@ func shouldSkipModuleResource(moduleName string, r *storage.ResourceIndex) bool 
 	case "cni-cilium":
 		return r.Kind == "DaemonSet" && r.Namespace == "d8-cni-cilium" && r.Name == "agent"
 
+	// Linstor resources requests is configured by operator
+	case "linstor":
+		return r.Kind == "Deployment" && r.Namespace == "d8-linstor" && r.Name == "piraeus-operator"
+
 	// Network gateway snat daemonset tolerations is configured through module values
 	case "network-gateway":
 		return r.Kind == "DaemonSet" && r.Namespace == "d8-network-gateway" && r.Name == "snat"
@@ -92,9 +103,10 @@ func shouldSkipModuleResource(moduleName string, r *storage.ResourceIndex) bool 
 }
 
 // parseTargetsAndTolerationGroups resolves target resource indexes
-func parseTargetsAndTolerationGroups(scope *lintingScope) (map[storage.ResourceIndex]struct{}, map[storage.ResourceIndex]string) {
+func parseTargetsAndTolerationGroups(scope *lintingScope) (map[storage.ResourceIndex]struct{}, map[storage.ResourceIndex]string, map[storage.ResourceIndex]set.Set) {
 	vpaTargets := make(map[storage.ResourceIndex]struct{})
 	vpaTolerationGroups := make(map[storage.ResourceIndex]string)
+	vpaContainerNamesMap := make(map[storage.ResourceIndex]set.Set)
 
 	for _, object := range scope.Objects() {
 		kind := object.Unstructured.GetKind()
@@ -103,13 +115,13 @@ func parseTargetsAndTolerationGroups(scope *lintingScope) (map[storage.ResourceI
 			continue
 		}
 
-		fillVPAMaps(scope, vpaTargets, vpaTolerationGroups, object)
+		fillVPAMaps(scope, vpaTargets, vpaTolerationGroups, vpaContainerNamesMap, object)
 	}
 
-	return vpaTargets, vpaTolerationGroups
+	return vpaTargets, vpaTolerationGroups, vpaContainerNamesMap
 }
 
-func fillVPAMaps(scope *lintingScope, vpaTargets map[storage.ResourceIndex]struct{}, vpaTolerationGroups map[storage.ResourceIndex]string, vpa storage.StoreObject) {
+func fillVPAMaps(scope *lintingScope, vpaTargets map[storage.ResourceIndex]struct{}, vpaTolerationGroups map[storage.ResourceIndex]string, vpaContainerNamesMap map[storage.ResourceIndex]set.Set, vpa storage.StoreObject) {
 	target, ok := parseVPATargetIndex(scope, vpa)
 	if !ok {
 		return
@@ -121,6 +133,70 @@ func fillVPAMaps(scope *lintingScope, vpaTargets map[storage.ResourceIndex]struc
 	if label, ok := labels["workload-resource-policy.deckhouse.io"]; ok {
 		vpaTolerationGroups[target] = label
 	}
+
+	vnm, ok := parseVPAResourcePolicyContainers(scope, vpa)
+	if !ok {
+		return
+	}
+	vpaContainerNamesMap[target] = vnm
+}
+
+// parseVPAResourcePolicyContainers parses VPA containers names in ResourcePolicy and check if minAllowed and maxAllowed for container is set
+func parseVPAResourcePolicyContainers(scope *lintingScope, vpaObject storage.StoreObject) (set.Set, bool) {
+	containers := set.New()
+
+	v := &utils.VerticalPodAutoscaler{}
+	err := sdk.FromUnstructured(&vpaObject.Unstructured, v)
+
+	if err != nil {
+		scope.AddError("VPA005", vpaObject.Identity(), false, "Cannot unmarshal VPA object: %v", err)
+		return containers, false
+	}
+
+	if *v.Spec.UpdatePolicy.UpdateMode == utils.UpdateModeOff {
+		return containers, true
+	}
+
+	if v.Spec.ResourcePolicy == nil || len(v.Spec.ResourcePolicy.ContainerPolicies) == 0 {
+		scope.AddError("VPA005", vpaObject.Identity(), false, "No VPA specs resourcePolicy.containerPolicies is found for object")
+		return containers, false
+	}
+
+	for _, cp := range v.Spec.ResourcePolicy.ContainerPolicies {
+		if cp.MinAllowed.Cpu().IsZero() {
+			scope.AddError("VPA005", vpaObject.Identity(), false, "No VPA specs minAllowed.cpu is found for container %s", cp.ContainerName)
+			return containers, false
+		}
+
+		if cp.MinAllowed.Memory().IsZero() {
+			scope.AddError("VPA005", vpaObject.Identity(), false, "No VPA specs minAllowed.memory is found for container %s", cp.ContainerName)
+			return containers, false
+		}
+
+		if cp.MaxAllowed.Cpu().IsZero() {
+			scope.AddError("VPA005", vpaObject.Identity(), false, "No VPA specs maxAllowed.cpu is found for container %s", cp.ContainerName)
+			return containers, false
+		}
+
+		if cp.MaxAllowed.Memory().IsZero() {
+			scope.AddError("VPA005", vpaObject.Identity(), false, "No VPA specs maxAllowed.memory is found for container %s", cp.ContainerName)
+			return containers, false
+		}
+
+		if cp.MinAllowed.Cpu().Cmp(*cp.MaxAllowed.Cpu()) > 0 {
+			scope.AddError("VPA005", vpaObject.Identity(), false, "MinAllowed.cpu for container %s should be less than maxAllowed.cpu", cp.ContainerName)
+			return containers, false
+		}
+
+		if cp.MinAllowed.Memory().Cmp(*cp.MaxAllowed.Memory()) > 0 {
+			scope.AddError("VPA005", vpaObject.Identity(), false, "MinAllowed.memory for container %s should be less than maxAllowed.memory", cp.ContainerName)
+			return containers, false
+		}
+
+		containers.Add(cp.ContainerName)
+	}
+
+	return containers, true
 }
 
 // parseVPATargetIndex parses VPA target resource index, writes to the passed struct pointer
@@ -144,6 +220,61 @@ func parseVPATargetIndex(scope *lintingScope, vpaObject storage.StoreObject) (st
 	target.Kind = targetRef["kind"].(string)
 
 	return target, true
+}
+
+// ensureVPAContainersMatchControllerContainers verifies VPA container names in resourcePolicy match corresponding controller container names
+func ensureVPAContainersMatchControllerContainers(scope *lintingScope, object storage.StoreObject, index storage.ResourceIndex, vpaContainerNamesMap map[storage.ResourceIndex]set.Set) bool {
+	vpaContainerNames, ok := vpaContainerNamesMap[index]
+	if !ok {
+		scope.AddError(
+			"VPA005",
+			"",
+			false,
+			"Getting vpa containers name list for the object failed: %v",
+			index,
+		)
+		return false
+	}
+
+	containers, err := object.GetContainers()
+	if err != nil {
+		scope.AddError(
+			"VPA005",
+			object.Identity(),
+			false,
+			"Getting containers list for the object failed: %v",
+			err,
+		)
+		return false
+	}
+
+	containerNames := set.New()
+	for _, v := range containers {
+		containerNames.Add(v.Name)
+	}
+	for k := range containerNames {
+		if !vpaContainerNames.Has(k) {
+			scope.AddError(
+				"VPA005",
+				fmt.Sprintf("%s ; container = %s", object.Identity(), k),
+				false,
+				"The container should have corresponding VPA resourcePolicy entry",
+			)
+		}
+	}
+
+	for k := range vpaContainerNames {
+		if !containerNames.Has(k) {
+			scope.AddError(
+				"VPA005",
+				object.Identity(),
+				false,
+				"VPA has resourcePolicy for container %s, but the controller does not have corresponding container resource entry", k,
+			)
+		}
+	}
+
+	return true
 }
 
 // ensureContainersWithoutRequests verifies containers don't have their own requests, adds linting error otherwise

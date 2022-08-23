@@ -1,4 +1,14 @@
 # Source https://github.com/kvaps/linstor-scheduler-extender/blob/master/deploy/all.yaml
+{{- define "kube_scheduler_resources" }}
+cpu: 10m
+memory: 30Mi
+{{- end }}
+
+{{- define "linstor_scheduler_extender_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -15,6 +25,20 @@ spec:
     name: linstor-scheduler
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: kube-scheduler
+      minAllowed:
+        {{- include "kube_scheduler_resources" . | nindent 8 }}
+      maxAllowed:
+        memory: 60Mi
+        cpu: 20m
+    - containerName: linstor-scheduler-extender
+      minAllowed:
+        {{- include "linstor_scheduler_extender_resources" . | nindent 8 }}
+      maxAllowed:
+        memory: 40Mi
+        cpu: 20m
 {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -106,6 +130,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "kube_scheduler_resources" . | nindent 14 }}
+{{- end }}
         - name: linstor-scheduler-extender
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.linstor.linstorSchedulerExtender }}"
@@ -133,6 +160,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "linstor_scheduler_extender_resources" . | nindent 14 }}
+{{- end }}
       {{- if semverCompare ">= 1.22" .Values.global.discovery.kubernetesVersion }}
       volumes:
       - configMap:

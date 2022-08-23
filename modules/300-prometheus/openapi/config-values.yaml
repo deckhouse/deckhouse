@@ -169,7 +169,7 @@ properties:
   vpa:
     type: object
     x-examples:
-      - {updateMode: "Initial", longtermMaxCPU: "1", longtermMaxMemory: "2Mi", maxCPU: "1000m", maxMemory: "2Mi"}
+      - {updateMode: "Initial", longtermMaxCPU: "1", longtermMaxMemory: "1500Mi", maxCPU: "1000m", maxMemory: "1500Mi"}
       - {updateMode: "Off"}
     default: {updateMode: "Initial"}
     properties:

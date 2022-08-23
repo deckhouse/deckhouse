@@ -1,3 +1,8 @@
+{{- define "cluster_autoscaler_resources" }}
+cpu: 25m
+memory: 150Mi
+{{- end }}
+
 {{- define "cluster_autoscaler_nodes" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
     {{- if eq $ng.nodeType "CloudEphemeral" }}
@@ -29,6 +34,15 @@ spec:
     name: cluster-autoscaler
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "cluster-autoscaler"
+      minAllowed:
+        {{- include "cluster_autoscaler_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 250Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -107,6 +121,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "cluster_autoscaler_resources" . | nindent 12 }}
+    {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}"
@@ -149,5 +166,8 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+    {{- end }}
   {{- end }}
 {{- end }}

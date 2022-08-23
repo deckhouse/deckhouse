@@ -1,3 +1,13 @@
+{{- define "node_driver_registrar_resources" }}
+cpu: 12m
+memory: 25Mi
+{{- end }}
+
+{{- define "node_resources" }}
+cpu: 12m
+memory: 25Mi
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_csi_node_manifests" (list . $config) }} */ -}}
 {{- define "helm_lib_csi_node_manifests" }}
   {{- $context := index . 0 }}
@@ -35,6 +45,20 @@ spec:
     name: {{ $fullname }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "node-driver-registrar"
+      minAllowed:
+        {{- include "node_driver_registrar_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
+    - containerName: "node"
+      minAllowed:
+        {{- include "node_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
     {{- end }}
 ---
 kind: DaemonSet
@@ -77,7 +101,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: node-driver-registrar
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $context | nindent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
@@ -100,6 +124,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "node_driver_registrar_resources" $context | nindent 12 }}
+  {{- end }}
       - name: node
         securityContext:
           privileged: true
@@ -126,6 +153,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "node_resources" $context | nindent 12 }}
+  {{- end }}
       serviceAccount: {{ $serviceAccount | quote }}
       serviceAccountName: {{ $serviceAccount | quote }}
       volumes:

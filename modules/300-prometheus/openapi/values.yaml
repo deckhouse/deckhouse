@@ -10,24 +10,23 @@ properties:
         type: object
         default: {}
         x-examples:
-          - longtermMaxCPU: "220"
+          - longtermMaxCPU: "220m"
             longtermMaxMemory: "1650Mi"
             maxCPU: "6600m"
             maxMemory: "4950Mi"
-          - {}
         properties:
           maxCPU:
             oneOf:
               - type: string
                 pattern: "^[0-9]+m?$"
               - type: number
-            x-examples: ["100m"]
+            x-examples: ["1000m"]
           maxMemory:
             oneOf:
               - type: string
                 pattern: "^[0-9]+(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$"
               - type: number
-            x-examples: ["500Mi"]
+            x-examples: ["1500Mi"]
           longtermMaxCPU:
             oneOf:
               - type: string

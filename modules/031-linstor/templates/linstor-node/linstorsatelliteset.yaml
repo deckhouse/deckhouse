@@ -1,4 +1,14 @@
 # Source https://github.com/piraeusdatastore/piraeus-operator/blob/master/charts/piraeus/templates/operator-satelliteset.yaml
+{{- define "linstor_satellite_resources" }}
+cpu: 100m
+memory: 250Mi
+{{- end }}
+
+{{- define "drbd_prometheus_exporter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -14,6 +24,21 @@ spec:
     name: linstor-node
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: linstor-satellite
+      minAllowed:
+        {{- include "linstor_satellite_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 200m
+        memory: 700Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+    - containerName: drbd-prometheus-exporter
+      minAllowed:
+        {{- include "drbd_prometheus_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
 {{- end }}
 ---
 apiVersion: piraeus.linbit.com/v1
@@ -37,6 +62,9 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+      {{- include "linstor_satellite_resources" . | nindent 6 }}
+{{- end }}
   monitoringImage: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdReactor }}"
   monitoringBindAddress: 127.0.0.1
   kernelModuleInjectionImage: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.linstor.drbdDriverLoader }}"
@@ -85,4 +113,8 @@ spec:
                 name: linstor-node
     resources:
       requests:
-        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
+{{- end }}
+

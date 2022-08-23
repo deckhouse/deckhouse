@@ -1,3 +1,7 @@
+{{- define "recommender_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -15,9 +19,11 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: "recommender"
+      minAllowed:
+        {{- include "recommender_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 100m
-        memory: 300Mi
+        cpu: 50m
+        memory: 100Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -62,3 +68,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "recommender_resources" . | nindent 12 }}
+{{- end }}
+

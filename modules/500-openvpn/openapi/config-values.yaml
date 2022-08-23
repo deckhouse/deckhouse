@@ -212,9 +212,11 @@ properties:
   tcpEnabled:
     type: boolean
     default: true
+    x-examples: [true, false]
   udpEnabled:
     type: boolean
     default: false
+    x-examples: [true, false]
   storageClass:
     type: string
     description: |

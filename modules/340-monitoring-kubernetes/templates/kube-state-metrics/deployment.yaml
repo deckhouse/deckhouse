@@ -1,3 +1,8 @@
+{{- define "kube_state_metrics_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -16,9 +21,12 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: "kube-state-metrics"
+      minAllowed:
+        {{- include "kube_state_metrics_resources" . | nindent 8 }}
       maxAllowed:
         cpu: {{ .Values.monitoringKubernetes.vpa.kubeStateMetricsMaxCPU | default .Values.monitoringKubernetes.internal.vpa.kubeStateMetricsMaxCPU | quote }}
         memory: {{ .Values.monitoringKubernetes.vpa.kubeStateMetricsMaxMemory | default .Values.monitoringKubernetes.internal.vpa.kubeStateMetricsMaxMemory | quote }}
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -69,6 +77,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "kube_state_metrics_resources" . | nindent 12 }}
+{{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
@@ -109,7 +120,10 @@ spec:
                   resource: deployments
                   subresource: prometheus-self-metrics
                   name: kube-state-metrics
-
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+

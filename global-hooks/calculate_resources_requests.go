@@ -27,11 +27,11 @@ import (
 )
 
 const (
-	controlPlanePercent      = 50                     // %
-	hardLimitMilliCPU        = 4 * 1000               // 4 Cpu
-	hardLimitMemory          = 8 * 1024 * 1024 * 1024 // 8G ram
-	managedHardLimitMilliCPU = 1 * 1000               // 1 Cpu
-	managedHardLimitMemory   = 1 * 1024 * 1024 * 1024 // 1G ram
+	controlPlanePercent     = 50                     // %
+	configEveryNodeMilliCPU = 300                    // 0.3 Cpu
+	configEveryNodeMemory   = 512 * 1024 * 1024      // 512Mb
+	hardLimitMilliCPU       = 4 * 1000               // 4 Cpu
+	hardLimitMemory         = 8 * 1024 * 1024 * 1024 // 8G ram
 )
 
 type Node struct {
@@ -76,118 +76,69 @@ var (
 
 func calculateResourcesRequests(input *go_hook.HookInput) error {
 	var (
-		calculatedMasterNodeMilliCPU   int64
-		calculatedMasterNodeMemory     int64
+		calculatedMasterNodeMilliCPU int64
+		calculatedMasterNodeMemory   int64
+
 		calculatedControlPlaneMilliCPU int64
 		calculatedControlPlaneMemory   int64
 
 		discoveryMasterNodeMilliCPU int64
 		discoveryMasterNodeMemory   int64
-
-		configEveryNodeMilliCPU int64
-		configEveryNodeMemory   int64
-
-		isManagedCloud bool
 	)
 	snapshots := input.Snapshots["NodesResources"]
-	if len(snapshots) > 0 {
-		// Hardcoded maximum values for master node resources
-		discoveryMasterNodeMilliCPU = hardLimitMilliCPU
-		discoveryMasterNodeMemory = hardLimitMemory
-		for _, snapshot := range snapshots {
-			n := snapshot.(*Node)
-			if n.AllocatableMilliCPU < discoveryMasterNodeMilliCPU {
-				discoveryMasterNodeMilliCPU = n.AllocatableMilliCPU
-			}
-			if n.AllocatableMemory < discoveryMasterNodeMemory {
-				discoveryMasterNodeMemory = n.AllocatableMemory
-			}
+
+	// Managed cloud
+	if len(snapshots) == 0 {
+		return nil
+	}
+
+	// Hardcoded maximum values for master node resources
+	discoveryMasterNodeMilliCPU = hardLimitMilliCPU
+	discoveryMasterNodeMemory = hardLimitMemory
+	for _, snapshot := range snapshots {
+		n := snapshot.(*Node)
+		if n.AllocatableMilliCPU < discoveryMasterNodeMilliCPU {
+			discoveryMasterNodeMilliCPU = n.AllocatableMilliCPU
 		}
-	} else {
-		isManagedCloud = true
-		// Hardcoded maximum values for master nodes in managed clouds (GKE for example)
-		discoveryMasterNodeMilliCPU = managedHardLimitMilliCPU
-		discoveryMasterNodeMemory = managedHardLimitMemory
-	}
-
-	path := "global.modules.resourcesRequests.everyNode.cpu"
-	if !input.Values.Exists(path) {
-		return fmt.Errorf("%s must be set", path)
-	}
-	quantity, err := getAndParseResourceQuantity(input.Values.Get(path))
-	if err != nil {
-		return err
-	}
-	configEveryNodeMilliCPU = quantity.MilliValue()
-	if configEveryNodeMilliCPU <= 0 {
-		return fmt.Errorf("%s must be greater 0", path)
-	}
-
-	path = "global.modules.resourcesRequests.everyNode.memory"
-	if !input.Values.Exists(path) {
-		return fmt.Errorf("%s must be set", path)
-	}
-	quantity, err = getAndParseResourceQuantity(input.Values.Get(path))
-	if err != nil {
-		return err
-	}
-	configEveryNodeMemory = quantity.Value()
-	if configEveryNodeMemory <= 0 {
-		return fmt.Errorf("%s must be greater 0", path)
-	}
-
-	path = "global.modules.resourcesRequests.masterNode.cpu"
-	if input.Values.Exists(path) {
-		quantity, err := getAndParseResourceQuantity(input.Values.Get(path))
-		if err != nil {
-			return err
+		if n.AllocatableMemory < discoveryMasterNodeMemory {
+			discoveryMasterNodeMemory = n.AllocatableMemory
 		}
-		calculatedMasterNodeMilliCPU = quantity.MilliValue()
-	} else {
-		calculatedMasterNodeMilliCPU = discoveryMasterNodeMilliCPU - configEveryNodeMilliCPU
 	}
+
+	calculatedMasterNodeMilliCPU = discoveryMasterNodeMilliCPU - configEveryNodeMilliCPU
+	calculatedMasterNodeMemory = discoveryMasterNodeMemory - configEveryNodeMemory
 
 	if calculatedMasterNodeMilliCPU <= 0 {
-		return fmt.Errorf("cpu resources for allocating on master nodes must be greater than 0 (masterNode CPU must be greater than 0 or discovered minimal master node CPU must be greater than everyNode CPU)")
-	}
-
-	path = "global.modules.resourcesRequests.masterNode.memory"
-	if input.Values.Exists(path) {
-		quantity, err := getAndParseResourceQuantity(input.Values.Get(path))
-		if err != nil {
-			return err
-		}
-		calculatedMasterNodeMemory = quantity.Value()
-	} else {
-		calculatedMasterNodeMemory = discoveryMasterNodeMemory - configEveryNodeMemory
+		return fmt.Errorf("cpu resources for allocating on master nodes must be greater than %dm", configEveryNodeMilliCPU)
 	}
 
 	if calculatedMasterNodeMemory <= 0 {
-		return fmt.Errorf("memory resources for allocating on master nodes must be greater than 0 (masterNode memory must be greater than 0 or discovered minimal master node memory must be greater than everyNode memory)")
+		return fmt.Errorf("memory resources for allocating on master nodes must be greater than %dMi", configEveryNodeMemory/1024/1024)
 	}
 
-	if calculatedMasterNodeMilliCPU+configEveryNodeMilliCPU > discoveryMasterNodeMilliCPU {
-		return fmt.Errorf("everyNode CPU + masterNode CPU must be less than discovered minimal master node CPU")
+	calculatedControlPlaneMilliCPU = calculatedMasterNodeMilliCPU * controlPlanePercent / 100
+	calculatedControlPlaneMemory = calculatedMasterNodeMemory * controlPlanePercent / 100
+
+	path := "global.modules.resourcesRequests.controlPlane.cpu"
+	if input.Values.Exists(path) {
+		quantity, err := getAndParseResourceQuantity(input.Values.Get(path))
+		if err != nil {
+			return err
+		}
+		calculatedControlPlaneMilliCPU = quantity.MilliValue()
 	}
 
-	if calculatedMasterNodeMemory+configEveryNodeMemory > discoveryMasterNodeMemory {
-		return fmt.Errorf("everyNode memory + masterNode memory must be less than discovered minimal master node memory")
+	path = "global.modules.resourcesRequests.controlPlane.memory"
+	if input.Values.Exists(path) {
+		quantity, err := getAndParseResourceQuantity(input.Values.Get(path))
+		if err != nil {
+			return err
+		}
+		calculatedControlPlaneMemory = quantity.Value()
 	}
 
-	// if cloud isn't managed (GKE for example), extract some resources on master nodes for control-plane components
-	if !isManagedCloud {
-		calculatedControlPlaneMilliCPU = calculatedMasterNodeMilliCPU * controlPlanePercent / 100
-		calculatedControlPlaneMemory = calculatedMasterNodeMemory * controlPlanePercent / 100
-		calculatedMasterNodeMilliCPU = calculatedMasterNodeMilliCPU * (100 - controlPlanePercent) / 100
-		calculatedMasterNodeMemory = calculatedMasterNodeMemory * (100 - controlPlanePercent) / 100
-	}
-
-	input.Values.Set("global.internal.modules.resourcesRequests.milliCpuEveryNode", configEveryNodeMilliCPU)
-	input.Values.Set("global.internal.modules.resourcesRequests.memoryEveryNode", configEveryNodeMemory)
 	input.Values.Set("global.internal.modules.resourcesRequests.milliCpuControlPlane", calculatedControlPlaneMilliCPU)
 	input.Values.Set("global.internal.modules.resourcesRequests.memoryControlPlane", calculatedControlPlaneMemory)
-	input.Values.Set("global.internal.modules.resourcesRequests.milliCpuMaster", calculatedMasterNodeMilliCPU)
-	input.Values.Set("global.internal.modules.resourcesRequests.memoryMaster", calculatedMasterNodeMemory)
 
 	return nil
 }

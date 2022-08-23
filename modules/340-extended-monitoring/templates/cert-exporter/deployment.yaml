@@ -1,3 +1,8 @@
+{{- define "cert_exporter_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+
 {{- if .Values.extendedMonitoring.certificates.exporterEnabled }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -14,6 +19,15 @@ spec:
     name: cert-exporter
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: cert-exporter
+      minAllowed:
+        {{- include "cert_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -57,8 +71,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
-            cpu: "50m"
-            memory: "50Mi"
+            {{- include "cert_exporter_resources" . | nindent 12 }}
             {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -95,4 +108,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
 {{- end }}

@@ -71,12 +71,12 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: controller
-      maxAllowed:
-        cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
-        memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
       minAllowed:
         cpu: {{ $resourcesRequestsVPA_CPU.min | default "10m" | quote }}
         memory: {{ $resourcesRequestsVPA_Memory.min | default "50Mi" | quote }}
+      maxAllowed:
+        cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
+        memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
     {{- else }}
   updatePolicy:
     updateMode: "Off"

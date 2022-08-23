@@ -1,3 +1,8 @@
+{{- define "controller_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+
 {{- if include "machine_controller_manager_enabled" . }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
     {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -15,6 +20,15 @@ spec:
     name: machine-controller-manager
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "controller"
+      minAllowed:
+        {{- include "controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 70Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
 ---
 apiVersion: apps/v1
@@ -78,6 +92,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "controller_resources" . | nindent 14 }}
+    {{- end }}
           env:
           - name: LEADER_ELECTION_NAMESPACE
             valueFrom:
@@ -130,5 +147,8 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+    {{- end }}
   {{- end }}
 {{- end }}

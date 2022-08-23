@@ -1,3 +1,18 @@
+{{- define "frontend_resources" }}
+cpu: 10m
+memory: 20Mi
+{{- end }}
+
+{{- define "backend_resources" }}
+cpu: 10m
+memory: 20Mi
+{{- end }}
+
+{{- define "proxy_resources" }}
+cpu: 10m
+memory: 20Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +28,26 @@ spec:
     name: hubble-ui
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: frontend
+      minAllowed:
+        {{- include "frontend_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+    - containerName: backend
+      minAllowed:
+        {{- include "backend_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+    - containerName: proxy
+      minAllowed:
+        {{- include "proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
 {{- end }}
 ---
 kind: Deployment
@@ -44,13 +79,16 @@ spec:
       containers:
       - name: frontend
         {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiFrontend }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiFrontend }}"
         ports:
         - name: http
           containerPort: 8080
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "frontend_resources" . | nindent 12 }}
+{{- end }}
         volumeMounts:
           - mountPath: /tmp
             name: tmp
@@ -60,7 +98,7 @@ spec:
             name: run
       - name: backend
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiBackend }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiBackend }}"
         env:
         - name: EVENTS_SERVER_PORT
           value: "8090"
@@ -82,13 +120,16 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "backend_resources" . | nindent 12 }}
+{{- end }}
         volumeMounts:
         - name: hubble-ui-client-certs
           mountPath: /var/lib/hubble-ui/certs
           readOnly: true
       - name: proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiProxy }}
+        image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ciliumHubble.uiProxy }}"
         command: [envoy]
         args:
         - -c
@@ -101,6 +142,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "proxy_resources" . | nindent 12 }}
+  {{- end }}
         volumeMounts:
         - name: hubble-ui-envoy-yaml
           mountPath: /etc/envoy.yaml

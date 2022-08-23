@@ -1,3 +1,12 @@
+{{- define "coredns_resources" }}
+cpu: 25m
+memory: 40Mi
+{{- end }}
+{{- define "iptables_loop_resources" }}
+cpu: 10m
+memory: 15Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +22,21 @@ spec:
     name: node-local-dns
   updatePolicy:
     updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: coredns
+      minAllowed:
+        {{- include "coredns_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+    - containerName: iptables-loop
+      minAllowed:
+        {{- include "iptables_loop_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 15Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -94,10 +118,13 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "coredns_resources" . | nindent 12 }}
+{{- end }}
 {{- if not (.Values.global.enabledModules | has "cni-cilium" )}}
       - name: iptables-loop
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_BIND_SERVICE" "NET_ADMIN" "NET_RAW")) | nindent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nodeLocalDns.iptablesLoop }}
+        image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nodeLocalDns.iptablesLoop }}"
         env:
         - name: KUBE_DNS_SVC_IP
           value: {{ .Values.global.discovery.clusterDNSAddress | quote }}
@@ -110,6 +137,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "iptables_loop_resources" . | nindent 12 }}
+  {{- end }}
 {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
@@ -144,6 +174,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: xtables-lock
         hostPath:

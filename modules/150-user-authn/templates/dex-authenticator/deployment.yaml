@@ -1,3 +1,13 @@
+{{- define "dex_authenticator_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "redis_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- if $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd" }}
@@ -15,6 +25,20 @@ spec:
     name: {{ $crd.name }}-dex-authenticator
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "dex-authenticator"
+      minAllowed:
+        {{- include "dex_authenticator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "redis"
+      minAllowed:
+        {{- include "redis_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
   {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -177,6 +201,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "dex_authenticator_resources" . | nindent 12 }}
+  {{- end }}
         ports:
         - containerPort: 8443
           protocol: TCP
@@ -193,4 +220,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "redis_resources" . | nindent 12 }}
+  {{- end }}
 {{- end }}

@@ -1,3 +1,8 @@
+{{- define "agent_resources" }}
+cpu: 20m
+memory: 20Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +18,14 @@ spec:
     name: upmeter-agent
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: agent
+      minAllowed:
+        {{- include "agent_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 40m
+        memory: 40Mi
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -123,6 +136,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "agent_resources" . | nindent 14 }}
+{{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       enableServiceLinks: false

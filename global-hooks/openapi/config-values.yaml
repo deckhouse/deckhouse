@@ -128,6 +128,28 @@ properties:
         default: {}
         additionalProperties: false
         properties:
+          controlPlane:
+            type: object
+            default: {}
+            additionalProperties: false
+            description: |
+              The amount of resources (CPU and memory) allocated to control-plane components on each master node. Do not work in clouds with not-managed control-plane (GKE for example).
+            x-examples:
+              - cpu: 1000m
+                memory: 500M
+            properties:
+              cpu:
+                description: |
+                  The combined CPU requests for control-plane components on each master node.
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+              memory:
+                description: |
+                  The combined memory requests for control-plane components on each master node.
+                type: string
+                pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
           everyNode:
             type: object
             default: {}
@@ -137,6 +159,7 @@ properties:
             x-examples:
             - cpu: 100m
               memory: 150M
+            x-doc-deprecated: true
             properties:
               cpu:
                 description: |
@@ -162,6 +185,7 @@ properties:
             x-examples:
             - cpu: "1"
               memory: 150Mi
+            x-doc-deprecated: true
             properties:
               cpu:
                 description: |

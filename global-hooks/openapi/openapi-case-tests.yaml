@@ -15,21 +15,15 @@ positive:
             clusterIssuerName: letsencrypt
           mode: CertManager
         resourcesRequests:
-          everyNode:
-            cpu: "100m"
-            memory: "1G"
-          masterNode:
+          controlPlane:
             cpu: "1"
             memory: "1Gi"
     # decimal CPU
     - modules:
         resourcesRequests:
-          everyNode:
+          controlPlane:
             cpu: 1.25
             memory: "1G"
-          masterNode:
-            cpu: 1.25
-            memory: "1Gi"
     # modules.https.mode Disabled work properly
     - modules:
         https:
@@ -143,28 +137,28 @@ negative:
   # incorrect resource request: cpu for every node
   - modules:
       resourcesRequests:
-        everyNode:
+        controlPlane:
           cpu: "100incorrect"
   # incorrect resource request: cpu as memory
   - modules:
       resourcesRequests:
-        everyNode:
+        controlPlane:
           cpu: "1024M"
   # incorrect resource request: cpu as memory
   - modules:
       resourcesRequests:
-        everyNode:
+        controlPlane:
           cpu: "1000Mi"
   # incorrect resource request: memory for every node
   - modules:
       resourcesRequests:
-        everyNode:
+        controlPlane:
           memory: "gigabit"
 
   # incorrect resource request: cpu for every node
   - modules:
       resourcesRequests:
-        everyNode:
+        controlPlane:
           memory: "0ne"
 
   # incorrect resource request: cpu for master node

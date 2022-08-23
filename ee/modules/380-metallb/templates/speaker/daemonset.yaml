@@ -1,3 +1,8 @@
+{{- define "speaker_resources" }}
+cpu: 10m
+memory: 30Mi
+{{- end }}
+
 {{- if not .Values.metallb.speaker.nodeSelector }}
   {{ fail "`metallb.speaker.nodeSelector` parameter is mandatory" }}
 {{- end }}
@@ -17,6 +22,15 @@ spec:
     name: speaker
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: speaker
+      minAllowed:
+        {{- include "speaker_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 60Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -65,6 +79,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "speaker_resources" . | nindent 14 }}
+{{- end }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}"
@@ -96,6 +113,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+{{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: speaker

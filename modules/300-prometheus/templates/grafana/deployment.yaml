@@ -1,3 +1,13 @@
+{{- define "grafana_resources" }}
+cpu: 35m
+memory: 140Mi
+{{- end }}
+
+{{- define "dashboard_provisioner_resources" }}
+cpu: 10m
+memory: 60Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,6 +23,21 @@ spec:
     name: grafana
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: grafana
+      minAllowed:
+        {{- include "grafana_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 70m
+        memory: 280Mi
+    - containerName: dashboard-provisioner
+      minAllowed:
+        {{- include "dashboard_provisioner_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -130,6 +155,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "grafana_resources" . | nindent 12 }}
+{{- end }}
         readinessProbe:
           httpGet:
             path: /api/health
@@ -145,6 +173,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "dashboard_provisioner_resources" . | nindent 12 }}
+{{- end }}
+
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
@@ -210,6 +242,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: shared-dashboards-folder
         emptyDir: {}

@@ -69,6 +69,16 @@ properties:
 
           [Подробнее](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) про единицы измерения ресурсов.
         properties:
+          controlPlane:
+            description: |
+              Количество ресурсов (CPU и памяти), выделяемых для компонентов control-plane работающих на каждом мастер-узле кластера. Не работает для not-managed-облаков (например, GKE).
+            properties:
+              cpu:
+                description: |
+                  Количество CPU, выделяемое для компонентов control-plane работающих на каждом мастер-узле кластера.
+              memory:
+                description: |
+                  Объем памяти, выделяемое для компонентов control-plane работающих на каждом мастер-узле кластера.
           everyNode:
             description: |
               Количество ресурсов (CPU и памяти), выделяемых для компонентов Deckhouse работающих на каждом узле кластера.

@@ -1,3 +1,8 @@
+{{- define "web_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -13,9 +18,13 @@ spec:
     name: deckhouse-web
   updatePolicy:
     updateMode: "Initial"
+
   resourcePolicy:
     containerPolicies:
-    - containerName: web
+    - containerName: "web"
+      minAllowed:
+        {{- include "web_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 200m
+        memory: 100Mi
 {{- end }}

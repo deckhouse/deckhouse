@@ -1,3 +1,8 @@
+{{- define "vector_reloader_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if .Values.logShipper.internal.activated }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
     {{- if eq .Values.logShipper.resourcesRequests.mode "VPA" }}
@@ -18,12 +23,19 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: "vector"
-      maxAllowed:
-        cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.max | quote }}
-        memory: {{ .Values.logShipper.resourcesRequests.vpa.memory.max | quote }}
       minAllowed:
         cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.min | quote }}
         memory: {{ .Values.logShipper.resourcesRequests.vpa.memory.min | quote }}
+      maxAllowed:
+        cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.max | quote }}
+        memory: {{ .Values.logShipper.resourcesRequests.vpa.memory.max | quote }}
+    - containerName: "vector-reloader"
+      minAllowed:
+        {{- include "vector_reloader_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 25Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
   {{- end }}
 ---
@@ -98,6 +110,9 @@ spec:
               {{- if eq .Values.logShipper.resourcesRequests.mode "Static" }}
               cpu: {{ .Values.logShipper.resourcesRequests.static.cpu | quote }}
               memory: {{ .Values.logShipper.resourcesRequests.static.memory | quote }}
+              {{- else if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.min | quote }}
+              memory: {{ .Values.logShipper.resourcesRequests.vpa.cpu.min | quote }}
               {{- end }}
           volumeMounts:
           - name: var-log
@@ -114,6 +129,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "vector_reloader_resources" . | nindent 14 }}
+ {{- end }}
           env:
           {{- include "vectorEnv" . | nindent 10 }}
           volumeMounts:
@@ -189,6 +207,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+  {{- end }}
       terminationGracePeriodSeconds: 120
       volumes:
       - name: var-log
