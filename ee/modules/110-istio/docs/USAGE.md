@@ -4,8 +4,9 @@ title: "The istio module: usage"
 
 ## Circuit Breaker
 
-Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в CR [DestinationRule](istio-cr.html#destinationrule).
-Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
+The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected. Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
+
+Example:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -17,18 +18,20 @@ spec:
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпоинтов
+        maxConnections: 100 # The maximum number of connections to the host (cumulative for all endpoints)
       http:
-        maxRequestsPerConnection: 10 # Каждые 10 запросов коннект будет пересоздаваться
+        maxRequestsPerConnection: 10 # The connection will be re-established after every 10 requests
     outlierDetection:
-      consecutive5xxErrors: 7 # Допустимо 7 ошибок (включая пятисотые, TCP-таймауты и HTTP-таймауты)
-      interval: 5m            # В течение пяти минут
-      baseEjectionTime: 15m   # После которых эндпоинт будет исключён из балансировки на 15 минут.
+      consecutive5xxErrors: 7 # Seven consecutive errors are allowed (including 5XX, TCP and HTTP timeouts)
+      interval: 5m            # over 5 minutes.
+      baseEjectionTime: 15m   # Upon reaching the error limit, the endpoint will be excluded from balancing for 15 minutes.
 ```
 
-А также, для настройки HTTP-таймаутов используется ресурс [VirtualService](istio-cr.html#virtualservice). Эти таймауты также учитываются при подсчёте статистики ошибок на эндпоинтах:
+Additionally, the [VirtualService](istio-cr.html#virtualservice) resource is used to configure the HTTP timeouts. These timeouts are also taken into account when calculating error statistics for endpoints.
 
-```
+Example:
+
+```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -44,25 +47,27 @@ spec:
         host: productpage
 ```
 
-## Балансировка gRPC
+## gRPC balancing
 
-**Важно!** Для того, чтобы балансировка gRPC-сервисов заработала автоматически, присвойте name с префиксом или значением `grpc` для порта в соответствующем Service.
+**Caution!** Assign a name with the `grpc` prefix or value to the port in the corresponding Service to make gRPC service balancing start automatically.
 
 ## Locality Failover
 
-Основная документация: https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/
+> Read [the main documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if you need.
 
-Istio позволяет настроить приоритетный географический фейловер между эндпоинтами. Для определения зоны Istio использует лейблы нод с соответствующей иерархией:
+Istio allows you to configure a priority-based locality (geographic location) failover between endpoints. Istio uses node labels with the appropriate hierarchy to define the zone:
 
 * `topology.istio.io/subzone`
 * `topology.kubernetes.io/zone`
 * `topology.kubernetes.io/region`
 
-Это полезно для межкластерного фейловера при использовании совместно с [мультикластером](readme.html#multicluster).
+This comes in handy for inter-cluster failover when used together with a [multicluster](readme.html#multicluster).
 
-**Важно!** Для включения Locality Failover используется ресурс DestinationRule, в котором также необходимо настроить outlierDetection.\
+**Caution!** The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
 
-```
+Example:
+
+```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
@@ -72,8 +77,8 @@ spec:
   trafficPolicy:
     loadBalancer:
       localityLbSetting:
-        enabled: true # включили LF
-    outlierDetection: # outlierDetection включить обязательно
+        enabled: true # LF is enabled
+    outlierDetection: # outlierDetection must be enabled
       consecutive5xxErrors: 1
       interval: 1s
       baseEjectionTime: 1m
@@ -81,9 +86,11 @@ spec:
 
 ## Retry
 
-С помощью ресурса [VirtualService](istio-cr.html#virtualservice) можно настроить Retry для запросов.
+You can use the [VirtualService](istio-cr.html#virtualservice) resource to configure Retry for requests.
 
-**Внимание!** По умолчанию все запросы включая POST ретраятся по три раза.
+**Caution!** All requests (including POST ones) are retried three times by default.
+
+Example:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -105,13 +112,15 @@ spec:
 
 ## Canary
 
-**Важно!** Istio отвечает лишь за гибкую маршрутизацию запросов, которая опирается на спец-заголовки запросов (например, куки) или просто на случайность. За настройку этой маршрутизации и "переключение" между канареечными версиями отвечает CI/CD система.
+**Caution!** Istio is only responsible for flexible request routing that relies on special request headers (such as cookies) or simply randomness. The CI/CD system is responsible for customizing this routing and "switching" between canary versions.
 
-Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У Pod'ов разных версий разные лейблы (`version: v1` и `version: v2`).
+The idea is that two Deployments with different versions of the application are deployed in the same namespace. The Pods of different versions have different labels (`version: v1` and `version: v2`).
 
-Требуется настроить два custom resource:
-* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения (subset-ы).
-* [VirtualService](istio-cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
+You have to configure two custom resources:
+* A [DestinationRule](istio-cr.html#destinationrule) – defines how to identify different versions of your application (subsets);
+* A [VirtualService](istio-cr.html#virtualservice) – defines how to balance traffic between different versions of your application.
+
+Example:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -120,7 +129,9 @@ metadata:
   name: productpage-canary
 spec:
   host: productpage
-  subsets: # subset-ы доступны только при обращении к хосту через через VirtualService из пода под управлением Istio. Эти subset-ы должны быть указаны в маршрутах.
+  # subsets are only available when accessing the host via the VirtualService from a Pod managed by Istio.
+  # These subsets must be defined in the routes.
+  subsets:
   - name: v1
     labels:
       version: v1
@@ -129,9 +140,9 @@ spec:
       version: v2
 ```
 
-### Распределение по наличию cookie
+### Cookie-based routing
 
-```
+```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -147,14 +158,14 @@ spec:
     route:
     - destination:
         host: productpage
-        subset: v2 # Ссылка на subset из DestinationRule.
+        subset: v2 # The reference to the subset from the DestinationRule.
   - route:
     - destination:
         host: productpage
         subset: v1
 ```
 
-### Распределение по вероятности
+### Probability-based routing
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -168,8 +179,8 @@ spec:
   - route:
     - destination:
         host: productpage
-        subset: v1 # Ссылка на subset из DestinationRule.
-      weight: 90 # Процент трафика, который получат Pod'ы с лейблом version: v1.
+        subset: v1 # The reference to the subset from the DestinationRule.
+      weight: 90 # Percentage of traffic that the Pods with the version: v1 label will be getting.
   - route:
     - destination:
         host: productpage
@@ -184,6 +195,8 @@ To use Ingress, you need to:
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the Ingress controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress controller's sidecar is only catching traffic directed to Service CIDR.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar can identify the application service that serves requests.
+
+Examples:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -422,6 +435,8 @@ spec:
 
 **Caution!** The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
 
+Example:
+
 ```yaml
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
@@ -449,9 +464,10 @@ spec:
  rules: [{}]
 ```
 
-## Устройство федерации из двух кластеров с помощью CR IstioFederation
+## Setting up federation for two clusters using the IstioFederation CR
 
 сluster A:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -463,6 +479,7 @@ spec:
 ```
 
 сluster B:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -473,9 +490,10 @@ spec:
   trustDomain: cluster-a.local
 ```
 
-## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
+## Setting up multicluster for two clusters using the IstioMulticluster CR
 
 cluster A:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -486,6 +504,7 @@ spec:
 ```
 
 cluster B:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -512,7 +531,10 @@ spec:
   * Make sure, the old `istiod` Pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
-Find all pods with old Istio revision:
-```
-kubectl get pods -A -o json | jq --arg revision "v1x12" '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
+To find all Pods with old Istio revision, execute the following command:
+
+```shell
+kubectl get pods -A -o json | jq --arg revision "v1x12" \
+  '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | 
+   .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
