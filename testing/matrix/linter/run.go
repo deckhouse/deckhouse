@@ -40,6 +40,7 @@ func isExist(baseDir, filename string) bool {
 }
 
 func Run(tmpDir string, m utils.Module) error {
+	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("panic on linter run occurred: %v\n", r)
@@ -51,8 +52,6 @@ func Run(tmpDir string, m utils.Module) error {
 	logrus.SetLevel(logrus.PanicLevel) // shell-operator
 
 	var values []string
-	var err error
-
 	if err != nil {
 		return err
 	}
@@ -77,10 +76,5 @@ func Run(tmpDir string, m utils.Module) error {
 		}
 	}
 
-	res := NewModuleController(m, values).Run()
-
-	if err != nil {
-		return err
-	}
-	return res
+	return NewModuleController(m, values).Run()
 }

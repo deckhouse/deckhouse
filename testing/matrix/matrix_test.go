@@ -21,7 +21,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter"
@@ -32,12 +31,16 @@ type TestMatrixSuite struct {
 	suite.Suite
 }
 
-func (s *TestMatrixSuite) SetupTest() {
-	changeSymlinks(s.T())
+func TestMatrix(t *testing.T) {
+	suite.Run(t, new(TestMatrixSuite))
 }
 
-func (s *TestMatrixSuite) TearDownTest() {
-	restoreSymlinks(s.T())
+func (s *TestMatrixSuite) SetupSuite() {
+	s.changeSymlinks()
+}
+
+func (s *TestMatrixSuite) TearDownSuite() {
+	s.restoreSymlinks()
 }
 
 func (s *TestMatrixSuite) TestMatrix() {
@@ -53,57 +56,72 @@ func (s *TestMatrixSuite) TestMatrix() {
 	}
 
 	discoveredModules, err := modules.GetDeckhouseModulesWithValuesMatrixTests(focusNames)
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	for _, module := range discoveredModules {
 		_, ok := focusNames[module.Name]
 		if len(focusNames) == 0 || ok {
 			s.Run(module.Name, func() {
-				require.NoError(s.T(), linter.Run("", module))
+				s.Assert().NoError(linter.Run("", module))
 			})
 		}
 	}
 }
 
-func TestMatrix(t *testing.T) {
-	suite.Run(t, new(TestMatrixSuite))
-}
-
 // changeSymlinks changes symlinks in module dir to proper place when modules in ee/fe not copied to main modules directory
-func changeSymlink(t *testing.T, symlinkPath string, newDestination string) {
+func (s *TestMatrixSuite) changeSymlink(symlinkPath string, newDestination string) {
 	err := os.Remove(symlinkPath)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	err = os.Symlink(newDestination, symlinkPath)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 }
 
-func changeSymlinks(t *testing.T) {
-	changeSymlink(t, "/deckhouse/ee/modules/030-cloud-provider-openstack/candi",
+func (s *TestMatrixSuite) symlink(oldName, newName string) {
+	if err := os.Symlink(oldName, newName); !os.IsExist(err) {
+		s.Require().NoError(err)
+	}
+}
+
+func (s *TestMatrixSuite) delSymlink(name string) {
+	if err := os.Remove(name); !os.IsNotExist(err) {
+		s.Require().NoError(err)
+	}
+}
+
+func (s *TestMatrixSuite) changeSymlinks() {
+	s.changeSymlink(
+		"/deckhouse/ee/modules/030-cloud-provider-openstack/candi",
 		"/deckhouse/ee/candi/cloud-providers/openstack/")
-	changeSymlink(t, "/deckhouse/ee/modules/030-cloud-provider-vsphere/candi",
+	s.changeSymlink(
+		"/deckhouse/ee/modules/030-cloud-provider-vsphere/candi",
 		"/deckhouse/ee/candi/cloud-providers/vsphere/")
 
-	err := os.Remove("/deckhouse/modules/040-node-manager/images_tags.json")
-	require.NoError(t, err)
-	err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager/",
-		"/deckhouse/modules/040-node-manager/cloud-providers/openstack")
-	require.NoError(t, err)
-	err = os.Symlink("/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager/",
-		"/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
-	require.NoError(t, err)
+	s.delSymlink("/deckhouse/modules/040-node-manager/images_tags.json")
+	s.symlink(
+		"/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager/",
+		"/deckhouse/modules/040-node-manager/cloud-providers/openstack",
+	)
+	s.symlink(
+		"/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager/",
+		"/deckhouse/modules/040-node-manager/cloud-providers/vsphere",
+	)
 }
 
 // restoreSymlinks restores symlinks in module dir to original place
-func restoreSymlinks(t *testing.T) {
-	changeSymlink(t, "/deckhouse/ee/modules/030-cloud-provider-openstack/candi",
+func (s *TestMatrixSuite) restoreSymlinks() {
+	s.changeSymlink(
+		"/deckhouse/ee/modules/030-cloud-provider-openstack/candi",
 		"/deckhouse/candi/cloud-providers/openstack/")
-	changeSymlink(t, "/deckhouse/ee/modules/030-cloud-provider-vsphere/candi",
+	s.changeSymlink(
+		"/deckhouse/ee/modules/030-cloud-provider-vsphere/candi",
 		"/deckhouse/candi/cloud-providers/vsphere/")
-	err := os.Symlink("../images_tags.json", "/deckhouse/modules/040-node-manager/images_tags.json")
-	require.NoError(t, err)
-	err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
-	require.NoError(t, err)
-	err = os.Remove("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
-	require.NoError(t, err)
+
+	s.symlink(
+		"../images_tags.json",
+		"/deckhouse/modules/040-node-manager/images_tags.json",
+	)
+
+	s.delSymlink("/deckhouse/modules/040-node-manager/cloud-providers/openstack")
+	s.delSymlink("/deckhouse/modules/040-node-manager/cloud-providers/vsphere")
 }
