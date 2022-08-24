@@ -71,6 +71,9 @@ kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-defa
 
 ## Как добавить существующий LVM или LVMThin-пул?
 
+> Основной метод описан на странице [конфигурация хранилища LINSTOR](configuration.html#конфигурация-хранилища-linstor).
+> В отличие от команд перечисленных ниже, он также автоматически настроит StorageClasses.
+
 Пример добавления LVM-пула:
 
 ```shell

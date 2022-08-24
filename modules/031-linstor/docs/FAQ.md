@@ -71,6 +71,9 @@ kubectl annotate storageclass linstor-data-r2 storageclass.kubernetes.io/is-defa
 
 ## How to add existing LVM or LVMThin pool?
 
+> The general method is described in`[LINSTOR storage configuration](configuration.html#linstor-storage-configuration) page.
+> Unlike commands listed below it will automatically configure the StorageClasses as well.
+
 Example of adding an existing LVM pool:
 
 ```shell
