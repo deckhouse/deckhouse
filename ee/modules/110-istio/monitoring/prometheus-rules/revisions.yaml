@@ -1,5 +1,35 @@
 - name: d8.istio.revisions
   rules:
+  - alert: D8IstioActualRevisionIsNotInstalled
+    annotations:
+      description: |
+        There are pods with injected sidecar of revision `{{$labels.revision}}` in namespace `{{$labels.namespace}}`, but the control-plane revision isn't installed. Consider installing it or change the Namespace or Pod configuration.
+        Impact — Pods have lost their sync with k8s state.
+        Getting orphaned pods:
+        ```
+        kubectl -n {{ $labels.namespace }} get pods -l 'service.istio.io/canonical-name' -o json | jq --arg revision {{ $labels.revision }} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
+        ```
+      plk_create_group_if_not_exists__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_revisions_misconfigurations: D8IstioRevisionsMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: Desired control-plane version isn't installed
+    expr: |
+      (
+        d8_istio_pod_revision{revision!="absent"}
+      )
+      unless on (revision)
+      (
+        istio_build{component="pilot"}
+        * on (pod,namespace) group_left(revision)
+          (
+            label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
+          )
+      )
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
   - alert: D8IstioDesiredRevisionIsNotInstalled
     annotations:
       description: |
@@ -102,7 +132,7 @@
       unless on (revision, dataplane_pod, namespace) label_replace(d8_istio_pod_revision{}, "revision", "$1", "desired_revision", "(.+)")
     for: 5m
     labels:
-      severity_level: "6"
+      severity_level: "8"
       tier: cluster
   - alert: D8IstioDataPlaneVersionMismatch
     annotations:
