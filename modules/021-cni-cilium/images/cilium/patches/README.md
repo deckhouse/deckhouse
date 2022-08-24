@@ -20,4 +20,6 @@ Fixes errors in metrics from Bandwidth controller. Also adds proper logging for 
 
 ## 004-health-check-terminating.patch
 
-TODO
+Previously cilium-agent did not switch off the health check server if only Terminating Endpoints are present on a Node with `externalTrafficPolicy: Local` Service.
+
+<https://github.com/cilium/cilium/pull/21062>
