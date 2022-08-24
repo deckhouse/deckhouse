@@ -9,12 +9,17 @@ data:
   linstorEnabled: "true"
 ```
 
-> Module requires kernel-headers be installed on all your nodes:
+> **Caution!** Module requires kernel-headers to be installed. Run the following command on all your nodes.
 >
-> ```bash
-> # ubuntu/debian
+> For Ubuntu/Debian:
+>
+> ```shell
 > apt install linux-headers-$uname -r()"
-> # centos
+> ```
+>
+> For CentOS:
+>
+> ```shell
 > yum install kernel-devel-$(uname -r)
 > ```
 

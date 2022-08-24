@@ -9,12 +9,17 @@ data:
   linstorEnabled: "true"
 ```
 
-> Модуль требует установленных заголовочных файлов для вашего ядра:
+> **Внимание!** Модуль требует установленных заголовочных файлов для вашего ядра. Выполните следующую команду на всех узлах кластера
 >
-> ```bash
-> # ubuntu/debian
+> Для Ubuntu/Debian:
+>
+> ```shell
 > apt install linux-headers-$uname -r()"
-> # centos
+> ```
+>
+> Для CentOS:
+>
+> ```shell
 > yum install kernel-devel-$(uname -r)
 > ```
 
