@@ -213,7 +213,7 @@ local function fill_buffer()
   local var_server_name = ngx.var.server_name:gsub("^*", ""):gsub("~^%(%?<subdomain>%[\\w%-]%+%)", ""):gsub("$$", ""):gsub("\\", "")
 
   if var_server_name == "_" then
-    _increment("c22", "", 22)
+    _increment("c22", {}, 22)
     return
   end
 
