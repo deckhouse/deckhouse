@@ -9,6 +9,20 @@ data:
   linstorEnabled: "true"
 ```
 
+> **Caution!** Module requires kernel-headers to be installed. Run the following command on all your nodes.
+>
+> For Ubuntu/Debian:
+>
+> ```shell
+> apt install linux-headers-$uname -r()"
+> ```
+>
+> For CentOS:
+>
+> ```shell
+> yum install kernel-devel-$(uname -r)
+> ```
+
 After enabling the module, the cluster is automatically configured to use LINSTOR, and all that remains is to configure the storage.
 
 The module requires no configuration and has no parameters. However, some functions may require a master passphrase.  
