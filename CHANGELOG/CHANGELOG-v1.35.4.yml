@@ -1,0 +1,16 @@
+ingress-nginx:
+  fixes:
+    - summary: Fix pbmetrics collector.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2318
+      impact: Ingress Nginx controller will restart.
+istio:
+  fixes:
+    - summary: Don't exclude d8-namespaces from istiod discovery.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2315
+    - summary: Istio usage documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2292
+namespace-configurator:
+  fixes:
+    - summary: React to module values changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2277
+
