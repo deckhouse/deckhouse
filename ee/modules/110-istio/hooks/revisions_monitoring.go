@@ -19,6 +19,8 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
+const istioRevsionAbsent = "absent"
+
 var (
 	revisionsMonitoringMetricsGroup = "revisions"
 )
@@ -90,7 +92,7 @@ type IstioPodInfo struct {
 	Namespace        string
 	Revision         string
 	SpecificRevision string
-	NeedInject       bool
+	InjectAnnotation bool
 }
 
 func (p *IstioDrivenPod) getIstioCurrentRevision() string {
@@ -105,15 +107,15 @@ func (p *IstioDrivenPod) getIstioCurrentRevision() string {
 		if istioPodStatus.Revision != "" {
 			revision = istioPodStatus.Revision
 		} else {
-			revision = "absent"
+			revision = istioRevsionAbsent
 		}
 	} else {
-		revision = "absent"
+		revision = istioRevsionAbsent
 	}
 	return revision
 }
 
-func (p *IstioDrivenPod) needInject() bool {
+func (p *IstioDrivenPod) injectAnnotation() bool {
 	NeedInject := true
 	if inject, ok := p.Annotations["sidecar.istio.io/inject"]; ok {
 		if inject == "false" {
@@ -142,7 +144,7 @@ func applyIstioPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		Namespace:        istioPod.Namespace,
 		Revision:         istioPod.getIstioCurrentRevision(),
 		SpecificRevision: istioPod.getIstioSpecificRevision(),
-		NeedInject:       istioPod.needInject(),
+		InjectAnnotation: istioPod.injectAnnotation(),
 	}
 
 	return result, nil
@@ -171,11 +173,11 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 		istioPodInfo := pod.(IstioPodInfo)
 
 		// sidecar.istio.io/inject=false annotation set -> ignore
-		if !istioPodInfo.NeedInject {
+		if !istioPodInfo.InjectAnnotation {
 			continue
 		}
 
-		desiredRevision := "absent"
+		desiredRevision := istioRevsionAbsent
 		if desiredRevisionNS, ok := namespaceRevisionMap[istioPodInfo.Namespace]; ok {
 			desiredRevision = desiredRevisionNS
 		}
@@ -184,7 +186,7 @@ func revisionsMonitoring(input *go_hook.HookInput) error {
 		}
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
-		if desiredRevision == "absent" && istioPodInfo.Revision == "absent" {
+		if desiredRevision == istioRevsionAbsent && istioPodInfo.Revision == istioRevsionAbsent {
 			continue
 		}
 
