@@ -15,10 +15,12 @@
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"strings"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"strings"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
