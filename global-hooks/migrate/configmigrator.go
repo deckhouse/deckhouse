@@ -56,6 +56,8 @@ func (m *moduleConfigMigrator) getConfig(cmKey string) (map[string]interface{}, 
 		return nil, fmt.Errorf("cannot get ConfigMap/d8-system/deckhouse: %v", err)
 	}
 
+	m.cm = cm // store for update
+
 	configYaml, ok := cm.Data[cmKey]
 	if !ok {
 		m.logger.Warnf("key %q not found in ConfigMap/d8-system/deckhouse", cmKey)
@@ -68,21 +70,22 @@ func (m *moduleConfigMigrator) getConfig(cmKey string) (map[string]interface{}, 
 		return nil, fmt.Errorf("cannot unmarshal %s config: %v", cmKey, err)
 	}
 
-	m.cm = cm // store for update
-
 	return config, nil
 }
 
 func (m *moduleConfigMigrator) setConfig(cmKey string, config map[string]interface{}) error {
-	newConfigYaml, err := yaml.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("cannot marshal %s config: %v", cmKey, err)
+	if len(config) == 0 {
+		delete(m.cm.Data, cmKey)
+	} else {
+		newConfigYaml, err := yaml.Marshal(config)
+		if err != nil {
+			return fmt.Errorf("cannot marshal %s config: %v", cmKey, err)
+		}
+		m.cm.Data[cmKey] = string(newConfigYaml)
 	}
 
-	m.cm.Data[cmKey] = string(newConfigYaml)
-
 	// Do not retry on conflict, fail and start the hook one more time instead
-	_, err = m.klient.CoreV1().
+	_, err := m.klient.CoreV1().
 		ConfigMaps("d8-system").
 		Update(context.TODO(), m.cm, metav1.UpdateOptions{})
 	if err != nil {

@@ -11,19 +11,18 @@ properties:
       Clean all persistent state.
 
       Must be reverted ASAP once all components are started with fresh state.
-  createNodeRoutes:
-    type: boolean
-    description: |
-      Create routes to Pods on other Nodes.
-
-      All Nodes must be located in the same L2 domain.
-      Works only in `tunnelMode: Disabled`.
-  tunnelMode:
+  mode:
     type: string
-    enum: ["Disabled", "VXLAN"]
-    default: "Disabled"
+    enum: ["Direct", "DirectWithNodeRoutes", "VXLAN"]
+    default: "Direct"
     description: |
-      Tunnel mode.
+      Cilium work mode.
+
+      * - `Direct` - without any packet encapsulation, routes on external router.
+      * - `DirectWithNodeRoutes` - without any packet encapsulation,
+           create routes to Pods on other Nodes.
+           All Nodes must be located in the same L2 domain.
+      * - `VXLAN` - VxLAN encapsulation.
   svcSourceRangeCheck:
     type: boolean
     default: false
