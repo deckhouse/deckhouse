@@ -38,7 +38,7 @@
     labels:
       severity_level: "4"
       tier: cluster
-  - alert: D8IstioDataPlaneWithoutDesiredRevision
+  - alert: D8IstioDataPlaneWithoutIstioInjectionConfigured
     annotations:
       description: |
         There are Pods in `{{$labels.namespace}}` Namespace with istio sidecars, but the istio-injection isn't configured.
@@ -53,13 +53,7 @@
       plk_protocol_version: "1"
       summary: There are Pods with istio sidecars, but without istio-injection configured
     expr: |
-      (
-        kube_pod_labels{label_service_istio_io_canonical_name!="",label_sidecar_istio_io_inject!="false",label_istio_io_rev=""}
-        * on (pod, namespace) group_left (revision, desired_revision)
-          label_replace(d8_istio_pod_revision{}, "pod", "$1", "dataplane_pod", "(.+)")
-      )
-      * on (namespace) group_left ()
-        kube_namespace_labels{label_istio_io_rev="", label_istio_injection=~"($^|disabled)"}
+      d8_istio_pod_revision{revision!="absent", desired_revision="absent"}
     for: 5m
     labels:
       severity_level: "6"
@@ -107,7 +101,7 @@
         but desired revision is `{{$labels.desired_revision}}`
     expr: |
       d8_istio_pod_revision{desired_revision!="absent"}
-      unless on (revision, dataplane_pod) label_replace(d8_istio_pod_revision{}, "revision", "$1", "desired_revision", "(.+)")
+      unless on (revision, dataplane_pod, namespace) label_replace(d8_istio_pod_revision{}, "revision", "$1", "desired_revision", "(.+)")
     for: 5m
     labels:
       severity_level: "6"
