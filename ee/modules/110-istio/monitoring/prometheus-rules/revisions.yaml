@@ -22,9 +22,7 @@
       summary: Desired control-plane version isn't installed
     expr: |
       (
-        label_replace(kube_namespace_labels{label_istio_io_rev!=""}, "revision", "$1", "label_istio_io_rev", "(.+)")
-        or
-        label_replace(kube_pod_labels{label_istio_io_rev!="", label_sidecar_istio_io_inject!="false"}, "revision", "$1", "label_istio_io_rev", "(.+)")
+        label_replace(d8_istio_pod_revision{desired_revision!="absent"}, "revision", "$1", "desired_revision", "(.+)")
       )
       unless on (revision)
       (
