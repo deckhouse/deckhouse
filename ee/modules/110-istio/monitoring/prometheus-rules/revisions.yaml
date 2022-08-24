@@ -34,7 +34,7 @@
       )
     for: 5m
     labels:
-      severity_level: "4"
+      severity_level: "6"
       tier: cluster
   - alert: D8IstioDataPlaneWithoutIstioInjectionConfigured
     annotations:
@@ -54,7 +54,7 @@
       d8_istio_pod_revision{revision!="absent", desired_revision="absent"}
     for: 5m
     labels:
-      severity_level: "6"
+      severity_level: "4"
       tier: cluster
   - alert: D8IstioPodsWithoutIstioSidecar
     annotations:
@@ -73,7 +73,7 @@
       d8_istio_pod_revision{revision="absent", desired_revision!=""}
     for: 5m
     labels:
-      severity_level: "6"
+      severity_level: "4"
       tier: cluster
   - alert: D8IstioActualDataPlaneRevisionNeDesired
     annotations:
