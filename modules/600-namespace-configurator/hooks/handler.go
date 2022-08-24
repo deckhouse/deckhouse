@@ -27,7 +27,8 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/namespace-configurator/namespaces_discovery",
+	Queue:        "/modules/namespace-configurator/namespaces_discovery",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "namespaces",
