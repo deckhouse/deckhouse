@@ -37,5 +37,5 @@ This module is responsible for providing a network between multiple nodes in a c
         - kube-apiserver
       nodeSelector:
         matchLabels:
-          node-role.kubernetes.io/master: ""
+          node-role.kubernetes.io/control-plane: ""
     ```

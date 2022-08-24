@@ -135,7 +135,9 @@ controllerManager:
     feature-gates: {{ $featureGates | quote }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     bind-address: "127.0.0.1"
+{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
     port: "0"
+{{- end }}
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     cloud-provider: external
 {{- end }}
@@ -166,7 +168,9 @@ scheduler:
     feature-gates: {{ $featureGates | quote }}
 {{- end }}
     bind-address: "127.0.0.1"
+{{- if semverCompare "< 1.24" .clusterConfiguration.kubernetesVersion }}
     port: "0"
+{{- end }}
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}
     {{- if .etcd.existingCluster }}

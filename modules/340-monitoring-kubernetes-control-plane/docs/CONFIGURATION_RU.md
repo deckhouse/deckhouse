@@ -66,7 +66,7 @@ title: "Мониторинг control plane: настройки"
   * `throughNode` — дополнительные параметры для accessType `ThroughNode`.
     * `nodeSelector` — селектор узлов, где работает kube-controller-manager.
       * Формат — словарь лейблов.
-      * По умолчанию — `node-role.kubernetes.io/master: ""`
+      * По умолчанию — `node-role.kubernetes.io/control-plane: ""`
     * `localPort` — локальный порт kube-controller-manager.
       * По умолчанию — `10252`.
     * `scheme` — HTTP-схема, по которой работает локальный порт.
@@ -107,7 +107,7 @@ title: "Мониторинг control plane: настройки"
   * `throughNode` — дополнительные параметры для accessType `ThroughNode`.
     * `nodeSelector` — селектор узлов, где работает kube-scheduler.
       * Формат — словарь лейблов.
-      * По умолчанию — `node-role.kubernetes.io/master: ""`.
+      * По умолчанию — `node-role.kubernetes.io/control-plane: ""`.
     * `localPort` — локальный порт kube-scheduler.
       * По умолчанию — `10251`.
     * `scheme` — HTTP-схема, по которой работает локальный порт.

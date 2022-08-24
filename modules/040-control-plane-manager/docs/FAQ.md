@@ -91,7 +91,7 @@ All the other actions are performed automatically. Wait until the master nodes a
 
 ## How do I dismiss the master role while keeping the node?
 
-1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/master: ""` labels, then wait for the etcd member to be automatically deleted.
+1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/control-plane: ""` labels, then wait for the etcd member to be automatically deleted.
 2. Exec to the node and run the following commands:
 
    ```shell

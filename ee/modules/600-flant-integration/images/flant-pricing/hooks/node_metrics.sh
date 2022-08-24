@@ -23,7 +23,7 @@ function __config__() {
         - key: "node.deckhouse.io/group"
           operator: Exists
       jqFilter: |
-        select((.metadata.labels."node.deckhouse.io/group" == "master" and (.spec.taints == null or .spec.taints[].key != "node-role.kubernetes.io/master")) or .metadata.labels."node.deckhouse.io/group" != "master") |
+        select((.metadata.labels."node.deckhouse.io/group" == "master" and (.spec.taints == null or .spec.taints[].key != "node-role.kubernetes.io/control-plane")) or .metadata.labels."node.deckhouse.io/group" != "master") |
         {
           "nodeGroup": .metadata.labels."node.deckhouse.io/group",
           "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType" // "unknown"),

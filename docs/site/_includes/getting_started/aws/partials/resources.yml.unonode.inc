@@ -26,7 +26,7 @@ spec:
   # [<en>] describes on which nodes the component will be located
   # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

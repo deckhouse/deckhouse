@@ -110,7 +110,7 @@ metadata:
   annotations:
     %s
   labels:
-      node-role.kubernetes.io/master: ""
+      node-role.kubernetes.io/control-plane: ""
 status:
   conditions:
   - type: Ready
@@ -123,7 +123,7 @@ metadata:
   annotations:
     control-plane-manger.deckhouse.io/waiting-for-approval: ""
   labels:
-      node-role.kubernetes.io/master: ""
+      node-role.kubernetes.io/control-plane: ""
 status:
   conditions:
   - type: Ready
@@ -136,7 +136,7 @@ metadata:
   annotations:
     control-plane-manger.deckhouse.io/waiting-for-approval: ""
   labels:
-      node-role.kubernetes.io/master: ""
+      node-role.kubernetes.io/control-plane: ""
 status:
   conditions:
   - type: Ready

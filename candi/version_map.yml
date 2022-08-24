@@ -312,3 +312,29 @@ k8s:
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
       kubeScheduler: sha256:73472cea77500bbbcc6307d59525868e21ea16bcb853a556cbf4bb7434d125f3
       kubeProxy: sha256:ec165529c811ffe51da4f85fcc76e83ddd8a70716bed464c1aae6d85f9b4915a
+  '1.24':
+    status: available
+    patch: 3
+    cniVersion: 0.8.7 # What about 0.9.1? But I cant find it into the deb repo
+    bashible: *bashible_k8s_ge_1_19
+    ccm:
+      openstack: v1.24.2
+      yandex: v0.24.0
+      aws: v1.24.1
+      vsphere: v1.24.0
+      azure: v1.24.4
+      gcp: eda9a5a3dd73ef923df7b16cf067af1b0ccbb929
+    csi:
+      openstack: v1.24.2
+      provisioner: v3.2.1@sha256:4ad5fcdbe7e9147b541a863d74e4d1d519bf435ecda4c7bde5abe237a43f7029
+      attacher: v3.5.0@sha256:dd245051317e957423bc3e2aecddf56c745bd6714920f0dc108e505f5afb3472
+      resizer: v1.5.0@sha256:8f7520bd957e7151fda9886eb5090739439811aeec5ddffb50ad7c8191548d97
+      registrar: v2.5.1@sha256:0103eee7c35e3e0b5cd8cdca9850dc71c793cdeb6669d8be7a89440da2d06ae4
+      snapshotter: v6.0.1@sha256:ad16874e2140256a809cada2b4ac3d931d5b73b0bee23ed0f8d60bdd778cfec2
+      livenessprobe: v2.7.0@sha256:933940f13b3ea0abc62e656c1aa5c5b47c04b15d71250413a6b821bd0c58b94e
+    controlPlane:
+      # etcd: sha256 digest isn't needed because this component is compiled from source
+      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
+      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
+      kubeScheduler: sha256:e199523298224cd9f2a9a43c7c2c37fa57aff87648ed1e1de9984eba6f6005f0
+      kubeProxy: sha256:c1b135231b5b1a6799346cd701da4b59e5b7ef8e694ec7b04fb23b8dbe144137

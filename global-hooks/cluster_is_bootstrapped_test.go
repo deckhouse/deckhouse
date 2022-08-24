@@ -44,7 +44,7 @@ metadata:
 spec:
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 status:
   conditions:
   - status: "True"
@@ -58,7 +58,7 @@ metadata:
 spec:
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 status:
   conditions:
   - status: "True"
@@ -86,7 +86,7 @@ metadata:
 spec:
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 status:
   conditions:
   - status: "True"
@@ -115,7 +115,7 @@ metadata:
 spec:
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 status:
   conditions:
   - status: "True"

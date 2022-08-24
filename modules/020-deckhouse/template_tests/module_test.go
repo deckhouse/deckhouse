@@ -114,7 +114,7 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			dp := f.KubernetesResource("Deployment", nsName, chartName)
 			Expect(sa.Exists()).To(BeTrue())
 			Expect(dp.Exists()).To(BeTrue())
-			Expect(dp.Field("spec.template.spec.nodeSelector").String()).To(MatchYAML(`node-role.kubernetes.io/master: ""`))
+			Expect(dp.Field("spec.template.spec.nodeSelector").String()).To(MatchYAML(`node-role.kubernetes.io/control-plane: ""`))
 			Expect(dp.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
   - operator: Exists
 `))

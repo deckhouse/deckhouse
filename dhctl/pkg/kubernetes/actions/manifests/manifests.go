@@ -111,7 +111,7 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 	}
 
 	if params.MasterNodeSelector {
-		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/master": ""}
+		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/control-plane": ""}
 	}
 
 	if params.IsSecureRegistry {

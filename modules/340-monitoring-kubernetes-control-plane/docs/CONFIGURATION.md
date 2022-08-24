@@ -66,7 +66,7 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
   * `throughNode` — additional parameters for the `ThroughNode` accessType;
     * `nodeSelector` — selects nodes on which kube-controller-manager is running;
       * Format — a label dictionary;
-      * The default label is `node-role.kubernetes.io/master: ""`;
+      * The default label is `node-role.kubernetes.io/control-plane: ""`;
     * `localPort` — the local kube-controller-manager port;
       * The default port is `10252`;
     * `scheme` — the HTTP scheme the local port uses;
@@ -107,7 +107,7 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
   * `throughNode` — additional parameters for the `ThroughNode`.
     * `nodeSelector` — selects nodes on which kube-scheduler is running;
       * Format — a label dictionary;
-      * The default label is `node-role.kubernetes.io/master: ""`;
+      * The default label is `node-role.kubernetes.io/control-plane: ""`;
     * `localPort` — the local kube-scheduler port;
       * The default port is `10251`;
     * `scheme` — the HTTP scheme the local port uses;

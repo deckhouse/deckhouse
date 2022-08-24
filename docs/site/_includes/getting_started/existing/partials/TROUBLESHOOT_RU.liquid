@@ -10,7 +10,7 @@
   │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
   ```
 
-  Возможная причина — в кластере нет узла с label `node-role.kubernetes.io/master: ""`, который первоначально используется в `nodeSelector` манифеста deployment `deckhouse`.
+  Возможная причина — в кластере нет узла с label `node-role.kubernetes.io/control-plane: ""`, который первоначально используется в `nodeSelector` манифеста deployment `deckhouse`.
 
   Варианты решения:
   - Отредактировать deployment `deckhouse` и указать нужный `nodeSelector`:

@@ -59,7 +59,7 @@ kind: Node
 metadata:
   name: master-%d
   labels:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
 `, i)
 		}
 		return result

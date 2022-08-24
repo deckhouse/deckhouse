@@ -46,6 +46,7 @@ shell:
   - wget https://github.com/kubernetes/cloud-provider-openstack/archive/{{ $value.ccm.openstack }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
   - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - export VERSION={{ $value.ccm.openstack }}
   - make openstack-cloud-controller-manager
   {{- end }}
 {{- end }}

@@ -325,7 +325,7 @@ func ensureTolerations(scope *lintingScope, vpaTolerationGroups map[storage.Reso
 
 	isTolerationFound := false
 	for _, toleration := range tolerations {
-		if toleration.Key == "node-role.kubernetes.io/master" || (toleration.Key == "" && toleration.Operator == "Exists") {
+		if toleration.Key == "node-role.kubernetes.io/master" || toleration.Key == "node-role.kubernetes.io/control-plane" || (toleration.Key == "" && toleration.Operator == "Exists") {
 			isTolerationFound = true
 			break
 		}

@@ -5,7 +5,7 @@ metadata:
   name: master-gateway
 spec:
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
   - operator: Exists
   vrrpInstances:

@@ -51,12 +51,12 @@ func ApplyPricingNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		n.Type = t
 	}
 
-	if _, ok := node.ObjectMeta.Labels["node-role.kubernetes.io/master"]; !ok {
+	if _, ok := node.ObjectMeta.Labels["node-role.kubernetes.io/control-plane"]; !ok {
 		return n, err
 	}
 
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == "node-role.kubernetes.io/master" {
+		if taint.Key == "node-role.kubernetes.io/control-plane" {
 			n.MasterNodeInfo.IsDedicated = true
 			break
 		}

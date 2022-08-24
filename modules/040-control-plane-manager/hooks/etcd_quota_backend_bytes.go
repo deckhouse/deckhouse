@@ -37,7 +37,7 @@ type etcdNode struct {
 	Memory int64
 	// isDedicated - indicate that node has taint
 	//   - effect: NoSchedule
-	//    key: node-role.kubernetes.io/master
+	//    key: node-role.kubernetes.io/control-plane
 	// it means that on node can be scheduled only control-plane components
 	IsDedicated bool
 }
@@ -60,7 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					"node-role.kubernetes.io/master": "",
+					"node-role.kubernetes.io/control-plane": "",
 				},
 			},
 			FilterFunc: etcdQuotaFilterNode,
@@ -106,7 +106,7 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	isDedicated := false
 	for _, taint := range node.Spec.Taints {
-		if taint.Key == "node-role.kubernetes.io/master" && taint.Effect == corev1.TaintEffectNoSchedule {
+		if taint.Key == "node-role.kubernetes.io/control-plane" && taint.Effect == corev1.TaintEffectNoSchedule {
 			isDedicated = true
 			break
 		}

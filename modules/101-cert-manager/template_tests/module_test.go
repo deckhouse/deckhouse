@@ -184,9 +184,10 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -237,9 +238,10 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -313,9 +315,10 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -366,9 +369,10 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/control-plane\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
