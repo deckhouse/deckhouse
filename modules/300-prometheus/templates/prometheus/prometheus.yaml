@@ -144,9 +144,9 @@ spec:
       threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
       threshold.extended-monitoring.flant.com/disk-bytes-critical: "99"
       checksum/scraper: {{ include (print $.Template.BasePath "/prometheus-scraper-tls.yaml") . | sha256sum }}
-      {{- if hasKey .Values.prometheus.internal "prometheusScraperIstioMTLS" }}
-      checksum/scraperIstioMTLS: {{ include (print $.Template.BasePath "/prometheus-scraper-istio-mtls.yaml") . | sha256sum }}
-      {{- end }}
+{{- if hasKey .Values.prometheus.internal.prometheusScraperIstioMTLS "certificate" }}
+      checksum/scraper-istio-mtls: {{ include (print $.Template.BasePath "/prometheus-scraper-istio-mtls.yaml") . | sha256sum }}
+{{- end }}
   serviceMonitorSelector:
     matchLabels:
       prometheus: main
@@ -159,9 +159,9 @@ spec:
   secrets:
   - prometheus-scraper-tls
   - alertmanagers-tls-config
-  {{- if hasKey .Values.prometheus.internal "prometheusScraperIstioMTLS" }}
+{{- if hasKey .Values.prometheus.internal.prometheusScraperIstioMTLS "certificate" }}
   - prometheus-scraper-istio-mtls
-  {{- end }}
+{{- end }}
   rules:
     alert:
       resendDelay: 29s

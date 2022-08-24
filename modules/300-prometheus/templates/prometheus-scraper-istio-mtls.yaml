@@ -1,4 +1,4 @@
-{{- if hasKey .Values.prometheus.internal "prometheusScraperIstioMTLS" }}
+{{- if hasKey .Values.prometheus.internal.prometheusScraperIstioMTLS "certificate" -}}
 ---
 apiVersion: v1
 kind: Secret
@@ -10,4 +10,4 @@ type: kubernetes.io/tls
 data:
   tls.crt: {{ .Values.prometheus.internal.prometheusScraperIstioMTLS.certificate | b64enc }}
   tls.key: {{ .Values.prometheus.internal.prometheusScraperIstioMTLS.key | b64enc }}
-{{ end }}
+{{- end }}
