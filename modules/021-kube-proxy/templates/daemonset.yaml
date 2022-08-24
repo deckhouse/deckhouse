@@ -83,7 +83,7 @@ spec:
       containers:
       - name: kube-proxy
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . (list "kubeProxy" $kubeVersion.Major $kubeVersion.Minor | join "" | quote )) }}
+        image: {{ include "helm_lib_module_image" (list . (list "kubeProxy" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
         command:
         - /usr/local/bin/kube-proxy
         - --config=/var/lib/kube-proxy/config.conf
