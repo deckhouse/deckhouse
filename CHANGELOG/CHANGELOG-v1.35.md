@@ -44,9 +44,13 @@
  - **[dhctl]** Fixed output `Request failed. Probably pod was restarted during installation` multiple times during the bootstrap cluster. [#2167](https://github.com/deckhouse/deckhouse/pull/2167)
  - **[flant-integration]** Fix expression for `D8PrometheusMadisonErrorSendingAlertsToBackend`. [#2298](https://github.com/deckhouse/deckhouse/pull/2298)
  - **[go_lib]** Fixed `copy_custom_certificate` value priority. [#2299](https://github.com/deckhouse/deckhouse/pull/2299)
+ - **[ingress-nginx]** Fix pbmetrics collector. [#2318](https://github.com/deckhouse/deckhouse/pull/2318)
+    Ingress Nginx controller will restart.
  - **[ingress-nginx]** Add publish-service for LB controllers to update Ingress status correctly. [#2276](https://github.com/deckhouse/deckhouse/pull/2276)
     LB Ingress controllers will restart.
+ - **[istio]** Don't exclude d8-namespaces from istiod discovery. [#2315](https://github.com/deckhouse/deckhouse/pull/2315)
  - **[istio]** Don't export unready `ingressgateway` nodes via `metadata-exporter` for multiclusters and federations. [#2055](https://github.com/deckhouse/deckhouse/pull/2055)
+ - **[namespace-configurator]** React to module values changes. [#2277](https://github.com/deckhouse/deckhouse/pull/2277)
  - **[prometheus]** Changes Grafana version in `patches/build_go.patch.tpl` automatically from docker arguments. [#2214](https://github.com/deckhouse/deckhouse/pull/2214)
  - **[prometheus]** Do not restart Trickster if Prometheus is unavailable. [#1972](https://github.com/deckhouse/deckhouse/pull/1972)
  - **[prometheus-metrics-adapter]** Use scrape interval x2 as a resync interval to fix missing metrics flapping and added more logs. [#1970](https://github.com/deckhouse/deckhouse/pull/1970)
