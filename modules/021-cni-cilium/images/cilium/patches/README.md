@@ -17,3 +17,7 @@ Fixes host connection reset when host policies are enabled and created.
 Fixes errors in metrics from Bandwidth controller. Also adds proper logging for a couple of controllers.
 
 <https://github.com/cilium/cilium/pull/20611>
+
+## 004-health-check-terminating.patch
+
+TODO
