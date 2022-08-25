@@ -272,10 +272,10 @@ spec:
   - loki-storage
 ```
 
-## Исключить pod'ы и namespace'ы используя label
+## Исключить Pod'ы и namespace'ы используя label
 
-Существует преднастроенный label для исключения определенных pod'ов и namespace'ов: `log-shipper.deckhouse.io/exclude=true`.
-Он помогает остановить сбор логов с pod'ов и namespace'ов без изменения глобальной конфигурации.
+Существует преднастроенный label для исключения определенных Pod'ов и namespace'ов: `log-shipper.deckhouse.io/exclude=true`.
+Он помогает остановить сбор логов с Pod'ов и namespace'ов без изменения глобальной конфигурации.
 
 ```yaml
 ---
