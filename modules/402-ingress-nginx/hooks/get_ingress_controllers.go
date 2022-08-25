@@ -107,7 +107,6 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	if err != nil {
 		return nil, fmt.Errorf("cannot set resourcesRequests from ingress controller spec: %v", err)
 	}
-
 	return Controller{Name: name, Spec: spec}, nil
 }
 
@@ -139,19 +138,17 @@ func setInternalValues(input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("cannot get controllerVersion from ingress controller spec: %v", err)
 		}
-		resultVersion := version
 		if len(version) == 0 || !found {
-			err := unstructured.SetNestedField(controller.Spec, defaultControllerVersion, "controllerVersion")
-			if err != nil {
-				return fmt.Errorf("cannot set controllerVersion for ingress controller spec: %v", err)
-			}
-			resultVersion = defaultControllerVersion
+			// we shouldn't inject default version to spec, because all templates are following the next logic:
+			// {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
+			// controllerVersion should be absent if not specified explicitly
+			version = defaultControllerVersion // it's used only for metrics
 		}
 		controllers = append(controllers, controller)
 
 		input.MetricsCollector.Set("d8_ingress_nginx_controller", 1, map[string]string{
 			"controller_name":    controller.Name,
-			"controller_version": resultVersion,
+			"controller_version": version,
 		})
 	}
 
