@@ -9,7 +9,12 @@ data:
   linstorEnabled: "true"
 ```
 
-> **Caution!** Module requires kernel-headers to be installed. Run the following command on all your nodes.
+> **Caution!**
+>
+> The functionality of the module is guaranteed only for stock kernels for distributions listed in the [list of supported OS](../../supported_versions.html#linux).
+> The functionality of the module with other kernels is possible but not guaranteed.
+>
+> Module requires kernel-headers to be installed. Run the following command on all your nodes.
 >
 > For Ubuntu/Debian:
 >
