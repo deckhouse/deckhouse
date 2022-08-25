@@ -106,6 +106,8 @@ All the other actions are performed automatically. Wait until the master nodes a
 
 ## How do I view the list of etcd members?
 
+### Option 1
+
 1. Exec to the etcd Pod:
 
    ```shell
@@ -115,8 +117,22 @@ All the other actions are performed automatically. Wait until the master nodes a
 2. Execute the command:
 
    ```shell
-   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list
    ```
+
+### Option 2
+
+Use the `etcdctl endpoint status` command. The fith parameter in the output table will be `true` for the leader.
+
+Example:
+
+```shell
+$ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \  
+  --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status
+https://10.2.1.101:2379, ade526d28b1f92f7, 3.5.3, 177 MB, false, false, 42007, 406566258, 406566258,
+https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 406566258, 406566258,
+```
 
 ## What if something went wrong?
 
