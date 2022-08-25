@@ -9,6 +9,9 @@ data:
   linstorEnabled: "true"
 ```
 
+> The functionality of this module is guaranteed only for stock kernels for distributions listed in the [list of supported OS](../../supported_versions.html#linux).
+> The functionality with other kernels is possible, but was not properly tested.
+
 > **Caution!** Module requires kernel-headers to be installed. Run the following command on all your nodes.
 >
 > For Ubuntu/Debian:
