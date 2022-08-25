@@ -93,6 +93,14 @@ properties:
                   - Fri
                   - Sat
                   - Sun
+      notification:
+        type: object
+        description: "Release notification settings"
+        properties:
+          webhook:
+            type: string
+            pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
+            description: "URL for external webhook handler"
   nodeSelector:
     type: object
     additionalProperties:

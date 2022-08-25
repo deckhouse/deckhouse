@@ -19,9 +19,11 @@ package hooks
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"path"
 	"sort"
 	"strings"
@@ -218,7 +220,47 @@ releaseLoop:
 
 	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())
 
+	if v, ok := input.Values.GetOk("deckhouse.update.notification.webhook"); ok {
+		webhookURL := v.String()
+		data := webhookData{
+			Version:       release.Spec.Version,
+			Requirements:  release.Spec.Requirements,
+			Changelog:     release.Spec.Changelog,
+			ChangelogLink: release.Spec.ChangelogLink,
+			Message:       "New Deckhouse release available",
+		}
+
+		go sendWebhookNotification(input.LogEntry, webhookURL, data)
+	}
+
 	return nil
+}
+
+type webhookData struct {
+	Version       string                 `json:"version"`
+	Requirements  map[string]string      `json:"requirements"`
+	Changelog     map[string]interface{} `json:"changelog"`
+	ChangelogLink string                 `json:"changelogLink"`
+
+	Message string `json:"message"`
+}
+
+func sendWebhookNotification(logger *logrus.Entry, webhookURL string, data webhookData) {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   10 * time.Second,
+	}
+
+	buf := bytes.NewBuffer(nil)
+	_ = json.NewEncoder(buf).Encode(data)
+
+	_, err := client.Post(webhookURL, "application/json", buf)
+	if err != nil {
+		logger.Errorf("webhook request error: %s", err)
+	}
 }
 
 var globalModules = []string{"candi", "deckhouse-controller", "global"}

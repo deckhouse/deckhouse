@@ -47,6 +47,12 @@ properties:
                 Должно быть больше времени начала окна обновления.
             days:
               description: Дни недели, в которые применяется окно обновлений.
+      notification:
+        type: object
+        description: "Настройки оповещений о релизах"
+        properties:
+          webhook:
+            description: 'URL внешнего webhook.'
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
