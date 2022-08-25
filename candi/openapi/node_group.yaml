@@ -388,7 +388,7 @@ spec:
                     Chaos monkey settings.
                   x-doc-example: |
                     ```yaml
-                    mode: DrainAndReboot
+                    mode: DrainAndDelete
                     period: 24h
                     ```
                   type: object
