@@ -29,7 +29,6 @@ import (
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/kyokomi/emoji"
 	"gopkg.in/yaml.v3"
-	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 
 	"github.com/deckhouse/deckhouse/testing/library/helm"
@@ -45,17 +44,11 @@ var (
 type ModuleController struct {
 	Module          utils.Module
 	Values          []string
-	Chart           *chart.Chart
 	ValuesValidator *validation.ValuesValidator
 }
 
 func NewModuleController(m utils.Module, values []string) *ModuleController {
 	// Check chart requirements to make sure all dependencies are present in /charts
-	hc, err := loader.Load(m.Path)
-	if err != nil {
-		panic(fmt.Errorf("chart load: %v", err))
-	}
-
 	validator := validation.NewValuesValidator()
 	if err := values_validation.LoadOpenAPISchemas(validator, m.Name, m.Path); err != nil {
 		panic(fmt.Errorf("schemas load: %v", err))
@@ -64,7 +57,6 @@ func NewModuleController(m utils.Module, values []string) *ModuleController {
 	return &ModuleController{
 		Module:          m,
 		Values:          values,
-		Chart:           hc,
 		ValuesValidator: validator,
 	}
 }
@@ -140,11 +132,17 @@ func (c *ModuleController) Run() error {
 
 func (c *ModuleController) RunRender(values string, objectStore *storage.UnstructuredObjectStore) (lintError error) {
 	var renderer helm.Renderer
+
 	renderer.Name = c.Module.Name
 	renderer.Namespace = c.Module.Namespace
 	renderer.LintMode = true
 
-	files, err := renderer.RenderChart(c.Chart, values)
+	hc, err := loader.Load(c.Module.Path)
+	if err != nil {
+		panic(fmt.Errorf("chart load: %v", err))
+	}
+
+	files, err := renderer.RenderChart(hc, values)
 	if err != nil {
 		lintError = fmt.Errorf("helm chart render: %v", err)
 		return
