@@ -24,7 +24,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 1},
+	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(ciliumModeMigration))
 
 func ciliumModeMigration(input *go_hook.HookInput, dc dependency.Container) error {
