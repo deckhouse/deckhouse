@@ -15,7 +15,6 @@
 package hooks
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -80,12 +79,16 @@ func ciliumModeMigration(input *go_hook.HookInput, dc dependency.Container) erro
 
 func isNodeRoutesNeeded(input *go_hook.HookInput) bool {
 	providerRaw, ok := input.Values.GetOk("global.clusterConfiguration.cloud.provider")
-	fmt.Println(providerRaw)
 	if ok {
+		input.LogEntry.Infof("cloud-provider %s detected", providerRaw.String())
 		switch strings.ToLower(providerRaw.String()) {
 		case "openstack", "vsphere":
 			return true
 		}
+		// Another cloud-provider
+		return false
 	}
-	return false
+	// global.clusterConfiguration.cloud.provider absent, this is bare-metal
+	input.LogEntry.Info("bare-metal setup detected")
+	return true
 }

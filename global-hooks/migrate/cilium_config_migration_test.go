@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,18 +28,15 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// THIS IS AN EXAMPLE MIGRATION TEST SUITE, NOT USEFUL BY ITSELF
-var _ = Describe("Global hooks :: migrate/cilium_config ::", func() {
-	const (
-		initValuesString                  = `{}`
-		initValuesStringWithCloudProvider = `
+func createValuesForCloudProvider(providerName string) string {
+	const initValuesStringWithCloudProvider = `
 {
   "global": {
     "clusterConfiguration": {
       "apiVersion": "deckhouse.io/v1",
       "cloud": {
         "prefix": "dev",
-        "provider": "OpenStack"
+        "provider": "%s"
       },
       "clusterDomain": "cluster.local",
       "clusterType": "Cloud",
@@ -51,10 +49,16 @@ var _ = Describe("Global hooks :: migrate/cilium_config ::", func() {
     }
   }
 }`
+	return fmt.Sprintf(initValuesStringWithCloudProvider, providerName)
+}
+
+var _ = Describe("Global hooks :: migrate/cilium_config ::", func() {
+	const (
+		initValuesString       = `{}`
 		initConfigValuesString = `{}`
 	)
 
-	Context("No config", func() {
+	Context("No config, bare-metal", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -91,17 +95,18 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("Hook does not add settings", func() {
+		It("Hook does set mode = DirectWithNodeRoutes ", func() {
 			resCm, err := dependency.TestDC.K8sClient.CoreV1().
 				ConfigMaps("d8-system").
 				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
 			Expect(err).To(BeNil())
-			_, exists := resCm.Data["cniCilium"]
-			Expect(exists).To(BeFalse())
+			Expect(resCm.Data["cniCilium"]).To(MatchYAML(`
+mode: DirectWithNodeRoutes
+`))
 		})
 	})
 
-	Context("With tunnelMode VXLAN", func() {
+	Context("With tunnelMode VXLAN, bare-metal", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -140,7 +145,7 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("Hook does set type = VXLAN", func() {
+		It("Hook does set mode = VXLAN", func() {
 			resCm, err := dependency.TestDC.K8sClient.CoreV1().
 				ConfigMaps("d8-system").
 				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
@@ -152,7 +157,7 @@ mode: VXLAN
 		})
 	})
 
-	Context("No config, but with cloud provider, which needs direct node routes mode", func() {
+	Context("No config, but with cloud provider, which needs direct node routes mode (OpenStack)", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -170,7 +175,7 @@ data:
 		var cm v1.ConfigMap
 		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
 
-		f := HookExecutionConfigInit(initValuesStringWithCloudProvider, initConfigValuesString)
+		f := HookExecutionConfigInit(createValuesForCloudProvider("OpenStack"), initConfigValuesString)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -201,6 +206,103 @@ mode: DirectWithNodeRoutes
 		})
 	})
 
+	Context("No config, but with cloud provider, which needs direct node routes mode (vSphere)", func() {
+		const (
+			cmDeckhouse = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deckhouse
+  namespace: d8-system
+data:
+  anotherModule: |
+    yes: no
+`
+		)
+
+		var cm v1.ConfigMap
+		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
+
+		f := HookExecutionConfigInit(createValuesForCloudProvider("vSphere"), initConfigValuesString)
+
+		BeforeEach(func() {
+			f.KubeStateSet("")
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				ConfigMaps("d8-system").
+				Create(context.TODO(), &cm, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("Hook does not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook should add settings", func() {
+			resCm, err := dependency.TestDC.K8sClient.CoreV1().
+				ConfigMaps("d8-system").
+				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+
+			Expect(err).To(BeNil())
+			Expect(resCm.Data["cniCilium"]).To(MatchYAML(`
+mode: DirectWithNodeRoutes
+`))
+		})
+	})
+
+	Context("No config, but with cloud provider, which do not need direct node routes mode (Yandex)", func() {
+		const (
+			cmDeckhouse = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deckhouse
+  namespace: d8-system
+data:
+  anotherModule: |
+    yes: no
+`
+		)
+
+		var cm v1.ConfigMap
+		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
+
+		f := HookExecutionConfigInit(createValuesForCloudProvider("Yandex"), initConfigValuesString)
+
+		BeforeEach(func() {
+			f.KubeStateSet("")
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				ConfigMaps("d8-system").
+				Create(context.TODO(), &cm, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("Hook does not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Hook should add settings", func() {
+			resCm, err := dependency.TestDC.K8sClient.CoreV1().
+				ConfigMaps("d8-system").
+				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+
+			Expect(err).To(BeNil())
+			_, exists := resCm.Data["cniCilium"]
+			Expect(exists).To(BeFalse())
+		})
+	})
+
 	Context("With cloud provider, which needs direct node routes mode, but tunnelMode is VXLAN", func() {
 		const (
 			cmDeckhouse = `
@@ -221,7 +323,7 @@ data:
 		var cm v1.ConfigMap
 		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
 
-		f := HookExecutionConfigInit(initValuesStringWithCloudProvider, initConfigValuesString)
+		f := HookExecutionConfigInit(createValuesForCloudProvider("OpenStack"), initConfigValuesString)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -272,7 +374,7 @@ data:
 		var cm v1.ConfigMap
 		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
 
-		f := HookExecutionConfigInit(initValuesStringWithCloudProvider, initConfigValuesString)
+		f := HookExecutionConfigInit(createValuesForCloudProvider("OpenStack"), initConfigValuesString)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
