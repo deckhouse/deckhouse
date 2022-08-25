@@ -37,6 +37,7 @@ if bb-yum-package? docker-ce; then
   systemctl stop docker.service
   systemctl stop containerd.service
   # Kill running containerd-shim processes
+  kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
   kill -9 $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
   # Remove mounts
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
