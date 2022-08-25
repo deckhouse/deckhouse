@@ -9,8 +9,8 @@ data:
   linstorEnabled: "true"
 ```
 
-> The functionality of this module is guaranteed only for stock kernels for distributions listed in the [list of supported OS](../../supported_versions.html#linux).
-> The functionality with other kernels is possible, but was not properly tested.
+> The functionality of the module is guaranteed only for stock kernels for distributions listed in the [list of supported OS](../../supported_versions.html#linux).
+> The functionality of the module with other kernels is possible but not guaranteed.
 
 After enabling the module, the cluster is automatically configured to use LINSTOR, and all that remains is to configure the storage.
 
