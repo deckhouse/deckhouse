@@ -15,11 +15,15 @@
 package hooks
 
 import (
+	"context"
+	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -47,7 +51,10 @@ func ciliumModeMigration(input *go_hook.HookInput, dc dependency.Container) erro
 	}
 
 	// Get cloud-provider node-routes
-	nodeRoutes := isNodeRoutesNeeded(input)
+	nodeRoutes, err := isNodeRoutesNeeded(input, dc)
+	if err != nil {
+		return err
+	}
 
 	// Get createNodeRoutes from cm and if it set, override nodeRoutes
 	if nr, ok := config["createNodeRoutes"]; ok {
@@ -77,18 +84,39 @@ func ciliumModeMigration(input *go_hook.HookInput, dc dependency.Container) erro
 	return configMigrator.setConfig(cmKey, config)
 }
 
-func isNodeRoutesNeeded(input *go_hook.HookInput) bool {
-	providerRaw, ok := input.Values.GetOk("global.clusterConfiguration.cloud.provider")
-	if ok {
-		input.LogEntry.Infof("cloud-provider %s detected", providerRaw.String())
-		switch strings.ToLower(providerRaw.String()) {
-		case "openstack", "vsphere":
-			return true
-		}
-		// Another cloud-provider
-		return false
+func isNodeRoutesNeeded(input *go_hook.HookInput, dc dependency.Container) (bool, error) {
+	kubeCl, err := dc.GetK8sClient()
+	if err != nil {
+		return false, fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
-	// global.clusterConfiguration.cloud.provider absent, this is bare-metal
-	input.LogEntry.Info("bare-metal setup detected")
-	return true
+	secret, err := kubeCl.CoreV1().
+		Secrets("kube-system").
+		Get(context.TODO(), "d8-cluster-configuration", metav1.GetOptions{})
+
+	if err != nil {
+		return false, fmt.Errorf("cannot get Secret/kube-system/d8-cluster-configuration: %v", err)
+	}
+
+	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
+	if !ok {
+		return false, fmt.Errorf("cannot get `cluster-configuration.yaml field from secret`")
+	}
+
+	metaConfig, err := config.ParseConfigFromData(string(ccYaml))
+	if err != nil {
+		return false, err
+	}
+
+	if metaConfig.ClusterType == config.StaticClusterType {
+		input.LogEntry.Info("static cluster detected")
+		return true, nil
+	}
+
+	input.LogEntry.Infof("cloud-provider %s detected", metaConfig.ProviderName)
+	switch strings.ToLower(metaConfig.ProviderName) {
+	case "openstack", "vsphere":
+		return true, nil
+	}
+	// Another cloud-provider
+	return false, nil
 }

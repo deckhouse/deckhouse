@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -28,28 +29,72 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func createValuesForCloudProvider(providerName string) string {
-	const initValuesStringWithCloudProvider = `
-{
-  "global": {
-    "clusterConfiguration": {
-      "apiVersion": "deckhouse.io/v1",
-      "cloud": {
-        "prefix": "dev",
-        "provider": "%s"
-      },
-      "clusterDomain": "cluster.local",
-      "clusterType": "Cloud",
-      "defaultCRI": "Containerd",
-      "kind": "ClusterConfiguration",
-      "kubernetesVersion": "1.20",
-      "podSubnetCIDR": "10.111.0.0/16",
-      "podSubnetNodeCIDRPrefix": "24",
-      "serviceSubnetCIDR": "10.222.0.0/16",
-    }
-  }
-}`
-	return fmt.Sprintf(initValuesStringWithCloudProvider, providerName)
+func createDeckhouseConfigMap(cmDeckhouse string) error {
+	var cm v1.ConfigMap
+	_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
+	_, err := dependency.TestDC.MustGetK8sClient().
+		CoreV1().
+		ConfigMaps("d8-system").
+		Create(context.TODO(), &cm, metav1.CreateOptions{})
+	return err
+
+}
+
+func createClusterConfigurationSecret(providerName string, isStatic bool) error {
+	const (
+		secret = `
+apiVersion: v1
+data:
+  cluster-configuration.yaml: %s
+  maxUsedControlPlaneKubernetesVersion: MS4yMA==
+kind: Secret
+metadata:
+  labels:
+    heritage: deckhouse
+    name: d8-cluster-configuration
+  name: d8-cluster-configuration
+  namespace: kube-system
+type: Opaque`
+
+		cloudConfig = `
+apiVersion: deckhouse.io/v1
+cloud:
+  prefix: dev
+  provider: %s
+clusterDomain: cluster.local
+clusterType: Cloud
+defaultCRI: Containerd
+kind: ClusterConfiguration
+kubernetesVersion: "1.20"
+podSubnetCIDR: 10.111.0.0/16
+podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 10.222.0.0/16`
+
+		staticConfig = `
+apiVersion: deckhouse.io/v1
+clusterDomain: cluster.local
+clusterType: Static
+defaultCRI: Containerd
+kind: ClusterConfiguration
+kubernetesVersion: "1.21"
+podSubnetCIDR: 10.234.0.0/16
+podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 10.233.0.0/16
+`
+	)
+	var secretYaml string
+	if isStatic {
+		secretYaml = fmt.Sprintf(secret, base64.StdEncoding.EncodeToString([]byte(staticConfig)))
+	} else {
+		secretYaml = fmt.Sprintf(secret, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(cloudConfig, providerName))))
+	}
+	var s v1.Secret
+	_ = yaml.Unmarshal([]byte(secretYaml), &s)
+	_, err := dependency.TestDC.MustGetK8sClient().
+		CoreV1().
+		Secrets("kube-system").
+		Create(context.TODO(), &s, metav1.CreateOptions{})
+	return err
 }
 
 var _ = Describe("Global hooks :: migrate/cilium_config ::", func() {
@@ -58,7 +103,7 @@ var _ = Describe("Global hooks :: migrate/cilium_config ::", func() {
 		initConfigValuesString = `{}`
 	)
 
-	Context("No config, bare-metal", func() {
+	FContext("No config, no cluster-configuration secret", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -73,40 +118,24 @@ data:
 `
 		)
 
-		var cm v1.ConfigMap
-		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
-
 		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
 
-			_, err := dependency.TestDC.MustGetK8sClient().
-				CoreV1().
-				ConfigMaps("d8-system").
-				Create(context.TODO(), &cm, metav1.CreateOptions{})
+			err := createDeckhouseConfigMap(cmDeckhouse)
 			Expect(err).To(BeNil())
 
 			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			f.RunHook()
 		})
 
-		It("Hook does not fail", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("Hook does set mode = DirectWithNodeRoutes ", func() {
-			resCm, err := dependency.TestDC.K8sClient.CoreV1().
-				ConfigMaps("d8-system").
-				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
-			Expect(err).To(BeNil())
-			Expect(resCm.Data["cniCilium"]).To(MatchYAML(`
-mode: DirectWithNodeRoutes
-`))
+		It("Hook should fail", func() {
+			Expect(f).ToNot(ExecuteSuccessfully())
 		})
 	})
 
-	Context("With tunnelMode VXLAN, bare-metal", func() {
+	Context("With tunnelMode VXLAN", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -157,7 +186,7 @@ mode: VXLAN
 		})
 	})
 
-	Context("No config, but with cloud provider, which needs direct node routes mode (OpenStack)", func() {
+	Context("No config, but with cloud provider, which needs direct node routes mode", func() {
 		const (
 			cmDeckhouse = `
 ---
@@ -175,7 +204,7 @@ data:
 		var cm v1.ConfigMap
 		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
 
-		f := HookExecutionConfigInit(createValuesForCloudProvider("OpenStack"), initConfigValuesString)
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -203,103 +232,6 @@ data:
 			Expect(resCm.Data["cniCilium"]).To(MatchYAML(`
 mode: DirectWithNodeRoutes
 `))
-		})
-	})
-
-	Context("No config, but with cloud provider, which needs direct node routes mode (vSphere)", func() {
-		const (
-			cmDeckhouse = `
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: deckhouse
-  namespace: d8-system
-data:
-  anotherModule: |
-    yes: no
-`
-		)
-
-		var cm v1.ConfigMap
-		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
-
-		f := HookExecutionConfigInit(createValuesForCloudProvider("vSphere"), initConfigValuesString)
-
-		BeforeEach(func() {
-			f.KubeStateSet("")
-
-			_, err := dependency.TestDC.MustGetK8sClient().
-				CoreV1().
-				ConfigMaps("d8-system").
-				Create(context.TODO(), &cm, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-
-			f.BindingContexts.Set(f.GenerateOnStartupContext())
-			f.RunHook()
-		})
-
-		It("Hook does not fail", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("Hook should add settings", func() {
-			resCm, err := dependency.TestDC.K8sClient.CoreV1().
-				ConfigMaps("d8-system").
-				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
-
-			Expect(err).To(BeNil())
-			Expect(resCm.Data["cniCilium"]).To(MatchYAML(`
-mode: DirectWithNodeRoutes
-`))
-		})
-	})
-
-	Context("No config, but with cloud provider, which do not need direct node routes mode (Yandex)", func() {
-		const (
-			cmDeckhouse = `
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: deckhouse
-  namespace: d8-system
-data:
-  anotherModule: |
-    yes: no
-`
-		)
-
-		var cm v1.ConfigMap
-		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
-
-		f := HookExecutionConfigInit(createValuesForCloudProvider("Yandex"), initConfigValuesString)
-
-		BeforeEach(func() {
-			f.KubeStateSet("")
-
-			_, err := dependency.TestDC.MustGetK8sClient().
-				CoreV1().
-				ConfigMaps("d8-system").
-				Create(context.TODO(), &cm, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
-
-			f.BindingContexts.Set(f.GenerateOnStartupContext())
-			f.RunHook()
-		})
-
-		It("Hook does not fail", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("Hook should add settings", func() {
-			resCm, err := dependency.TestDC.K8sClient.CoreV1().
-				ConfigMaps("d8-system").
-				Get(context.TODO(), "deckhouse", metav1.GetOptions{})
-
-			Expect(err).To(BeNil())
-			_, exists := resCm.Data["cniCilium"]
-			Expect(exists).To(BeFalse())
 		})
 	})
 
@@ -323,7 +255,7 @@ data:
 		var cm v1.ConfigMap
 		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
 
-		f := HookExecutionConfigInit(createValuesForCloudProvider("OpenStack"), initConfigValuesString)
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -374,7 +306,7 @@ data:
 		var cm v1.ConfigMap
 		_ = yaml.Unmarshal([]byte(cmDeckhouse), &cm)
 
-		f := HookExecutionConfigInit(createValuesForCloudProvider("OpenStack"), initConfigValuesString)
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 		BeforeEach(func() {
 			f.KubeStateSet("")
