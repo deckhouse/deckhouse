@@ -274,7 +274,7 @@ function prepare_environment() {
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
 
-    ssh_user="ubuntu"
+    ssh_user="astra"
     ;;
   esac
 

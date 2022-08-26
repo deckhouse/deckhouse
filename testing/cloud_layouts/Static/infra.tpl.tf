@@ -74,7 +74,7 @@ resource "openstack_compute_keypair_v2" "ssh" {
 
 resource "openstack_compute_instance_v2" "master" {
   name = "candi-${PREFIX}-master-0"
-  image_name = "ubuntu-18-04-cloud-amd64"
+  image_name = "orel-vanilla-2.12.43-cloud-mg6.5.0"
   flavor_name = "m1.large"
   key_pair = "candi-${PREFIX}-key"
   availability_zone = "nova"
