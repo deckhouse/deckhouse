@@ -2,10 +2,10 @@
 	import { Col } from "sveltestrap";
 	import StatusText from "./StatusText.svelte";
 
-	export let name: string = "Unknown";
-	export let description: string = "Waiting to be filled...";
-	export let status: string = "Operational";
-	export let mute: boolean = false;
+	export let name = "Unknown";
+	export let description = "Waiting to be filled...";
+	export let status = "Operational";
+	export let mute = false;
 </script>
 
 <Col class="col-9">

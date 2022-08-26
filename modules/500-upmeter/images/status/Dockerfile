@@ -10,6 +10,6 @@ COPY . /app
 RUN npm run build
 
 FROM $BASE_NGINX_ALPINE
-COPY --from=artifact /app/public /usr/share/nginx/html
+COPY --from=artifact /app/dist /usr/share/nginx/html
 RUN chown nginx.nginx /usr/share/nginx/html/ -R
 ENTRYPOINT ["nginx", "-g", "daemon off;"]

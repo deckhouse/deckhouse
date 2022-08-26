@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { Col, Container, Row } from "sveltestrap/src";
-	import Group from "./Group.svelte";
-	import StatusText from "./StatusText.svelte";
-
+	import { Col, Container, Row } from "sveltestrap";
+	import Group from "./lib/Group.svelte";
+	import StatusText from "./lib/StatusText.svelte";
 	import { getGroupData } from "./en";
 
 	async function fetchStatusJSON() {
-		const r = await fetch("/public/api/status", { headers: { accept: "application/json" } });
+		const r = await fetch("/public/api/status", {
+			headers: { accept: "application/json" },
+		});
 		return await r.json();
 	}
 
