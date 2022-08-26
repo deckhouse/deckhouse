@@ -101,7 +101,7 @@
 
   - alert: KubernetesDaemonSetNotUpToDate
     expr: |
-      max by (namespace, daemonset) (kube_daemonset_status_desired_number_scheduled - kube_daemonset_updated_number_scheduled) > 0
+      max by (namespace, daemonset) (kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_updated_number_scheduled) > 0
     for: 15m
     labels:
       severity_level: "9"

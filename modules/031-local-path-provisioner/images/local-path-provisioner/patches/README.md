@@ -1,6 +1,6 @@
 ## Patches
 
-## Fix DirectoryOrCreate
+### Fix DirectoryOrCreate
 
 Use `type: Directory` instead of `type: DirectoryOrCreate` for created PVs
 to avoid the situations when initial storage is broken and unmounted.

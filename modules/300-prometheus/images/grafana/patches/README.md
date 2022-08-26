@@ -1,7 +1,3 @@
-# Grafana
-
-Image with patched Grafana v7.4.2.
-
 ## Patches
 
 ### Extra variables for Prometheus datasource

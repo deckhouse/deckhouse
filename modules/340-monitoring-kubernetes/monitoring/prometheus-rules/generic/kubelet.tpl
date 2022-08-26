@@ -45,9 +45,9 @@
       summary: Many kubelets cannot be scraped
   - alert: K8SKubeletTooManyPods
 {{- if semverCompare "<1.19" .Values.global.discovery.kubernetesVersion }}
-    expr: kubelet_running_pod_count > on(node) kube_node_status_capacity_pods * 0.9
+    expr: kubelet_running_pod_count > on(node) (kube_node_status_capacity{resource="pods",unit="integer"}) * 0.9
 {{- else }}
-    expr: kubelet_running_pods > on(node) kube_node_status_capacity_pods * 0.9
+    expr: kubelet_running_pods > on(node) (kube_node_status_capacity{resource="pods",unit="integer"}) * 0.9
 {{- end }}
     for: 10m
     labels:
@@ -55,5 +55,5 @@
     annotations:
       plk_protocol_version: "1"
       description: Kubelet {{ `{{ $labels.node }}` }} is running {{ `{{ $value }}` }} pods, close
-        to the limit of {{ `{{ print "kube_node_status_capacity_pods{node='" $labels.node "'}" | query | first | value }}` }}
+        to the limit of {{ `{{ print "kube_node_status_capacity{resource='"pods"',unit='"integer"',node='" $labels.node "'}" | query | first | value }}` }}
       summary: Kubelet is close to pod limit

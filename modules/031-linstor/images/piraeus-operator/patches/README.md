@@ -1,6 +1,6 @@
 ## Patches
 
-## Disable finalizers
+### Disable finalizers
 
 This is our internal patch to disable finalizers logic for piraeus-operator custom resources.
 It was the simpliest way to avoid dependency problem while deleting operator and custom resources at one time.
