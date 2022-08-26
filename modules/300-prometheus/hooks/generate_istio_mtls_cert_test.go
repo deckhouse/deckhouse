@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -137,8 +138,9 @@ type: kubernetes.io/tls
 		Expect(ok).To(BeTrue())
 
 		opts := x509.VerifyOptions{
-			Roots:     certPool,
-			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+			Roots:       certPool,
+			KeyUsages:   []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+			CurrentTime: time.Now().Add(time.Hour * 8030), // ~ 11 month
 		}
 		_, err = cert.Verify(opts)
 		Expect(err).ShouldNot(HaveOccurred())
