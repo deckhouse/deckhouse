@@ -33,7 +33,7 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     machineSize: Standard_F4
-    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140
+    urn: OpenLogic:CentOS:8.3:latest
     enableExternalIP: true
 provider:
   subscriptionId: '${SUBSCRIPTION_ID}'

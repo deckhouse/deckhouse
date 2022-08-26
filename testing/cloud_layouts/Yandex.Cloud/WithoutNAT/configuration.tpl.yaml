@@ -33,7 +33,7 @@ masterNodeGroup:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: fd8vqk0bcfhn31stn2ts
+    imageID: fd8q0kjl4l1iovds9f29 # RedOS 7.3 Certified
     diskSizeGB: 50
     externalIPAddresses:
     - Auto
