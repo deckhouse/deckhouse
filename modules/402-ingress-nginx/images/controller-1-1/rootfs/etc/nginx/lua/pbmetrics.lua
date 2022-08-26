@@ -32,7 +32,6 @@ local get_env = os.getenv
 
 local new_tab = require "table.new"
 local clear_tab = require "table.clear"
-local clone_tab = require "table.clone"
 local nkeys = require "table.nkeys"
 local remove = table.remove
 local insert_tab = table.insert
@@ -126,6 +125,7 @@ end
 local function _add(metrichash, annotations, mapping, value)
   local metric_data = buffer[metrichash] or { MappingIndex = mapping, Value = 0, Labels = _extract_labels(metrichash), Annotations = annotations }
   metric_data["Value"] = metric_data["Value"] + value
+  log(ngx.INFO, "write to buffer")
   buffer[metrichash] = metric_data
 end
 
@@ -150,6 +150,7 @@ local function _observe(buckets, metrichash, annotations, mapping, value)
       break
     end
   end
+  log(ngx.INFO, "write to buffer")
   buffer[metrichash] = metric_data
 end
 
@@ -389,11 +390,10 @@ local function send(premature)
 
   local start_time = now()
 
-  local current_buffer = clone_tab(buffer)
-  clear_tab(buffer)
-
+  local count = nkeys(buffer)
+  log(ngx.INFO, format("copy to pb: %s", tostring(count)))
   local pbbuff = pbuff.new()
-  for k, v in pairs(current_buffer) do
+  for k, v in pairs(buffer) do
     local metric_type = k:sub(1, 1)
     if metric_type == "g" then
       protogauge(pbbuff, v)
@@ -403,6 +403,9 @@ local function send(premature)
       protohist(pbbuff, v)
     end
   end
+  log(ngx.INFO, "clear buffer")
+  clear_tab(buffer)
+  log(ngx.INFO, "buffer cleared")
 
   local sock = socket()
   local ok, err = sock:connect("127.0.0.1", "9090")
