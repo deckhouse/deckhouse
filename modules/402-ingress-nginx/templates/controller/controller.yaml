@@ -100,7 +100,7 @@ metadata:
     ingress-nginx-manual-update: "true"
   {{- end }}
   annotations:
-    ingress-nginx-controller.deckhouse.io/controller-version: {{ $crd.spec.controllerVersion | quote }}
+    ingress-nginx-controller.deckhouse.io/controller-version: {{ $controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
@@ -171,7 +171,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($crd.spec.controllerVersion | replace "." ""))) }}
+      - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
         env:
         - name: POD_NAME
