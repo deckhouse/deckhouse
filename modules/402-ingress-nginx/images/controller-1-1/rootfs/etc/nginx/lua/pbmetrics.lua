@@ -378,10 +378,6 @@ end
 
 -- send() sends buffer data to protobuf exporter via tcp socket
 local function send(premature)
-  if premature then
-    return
-  end
-
   if nkeys(buffer) == 0 then
     return
   end
