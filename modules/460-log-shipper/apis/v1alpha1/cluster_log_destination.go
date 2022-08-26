@@ -20,10 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // ClusterLogDestination specify output for logs stream
 type ClusterLogDestination struct {
 	metav1.TypeMeta `json:",inline"`
@@ -88,31 +84,17 @@ type ElasticsearchAuthSpec struct {
 	AwsRegion     string `json:"awsRegion,omitempty"`
 }
 
-// CommonTLSClientCert is a TLS configuration. Client certificate
 type CommonTLSClientCert struct {
 	CertFile string `json:"crtFile,omitempty"`
 	KeyFile  string `json:"keyFile,omitempty"`
 	KeyPass  string `json:"keyPass,omitempty"`
 }
 
-// CommonTLSSpec is a TLS configuration. Can be set for loki and ES
 type CommonTLSSpec struct {
 	CommonTLSClientCert `json:"clientCrt,omitempty"`
 	CAFile              string `json:"caFile,omitempty"`
-	VerifyHostname      bool   `json:"verifyHostname,omitempty"`
-}
-
-// LogstashTLSSpec is a TLS configuration. Can be setstrings.ToLower( for loki and ES
-type LogstashTLSSpec struct {
-	CommonTLSSpec     `json:",inline"`
-	VerifyCertificate bool `json:"verifyCertificate,omitempty"`
-	Enabled           bool `json:"enabled,omitempty"`
-}
-
-type VectorTLSSpec struct {
-	CommonTLSSpec     `json:",inline"`
-	VerifyCertificate bool `json:"verifyCertificate,omitempty"`
-	Enabled           bool `json:"enabled,omitempty"`
+	VerifyHostname      *bool  `json:"verifyHostname,omitempty"`
+	VerifyCertificate   *bool  `json:"verifyCertificate,omitempty"`
 }
 
 type LokiSpec struct {
@@ -140,11 +122,11 @@ type ElasticsearchSpec struct {
 type LogstashSpec struct {
 	Endpoint string `json:"endpoint,omitempty"`
 
-	TLS LogstashTLSSpec `json:"tls,omitempty"`
+	TLS CommonTLSSpec `json:"tls,omitempty"`
 }
 
 type VectorSpec struct {
 	Endpoint string `json:"endpoint,omitempty"`
 
-	TLS VectorTLSSpec `json:"tls,omitempty"`
+	TLS CommonTLSSpec `json:"tls,omitempty"`
 }

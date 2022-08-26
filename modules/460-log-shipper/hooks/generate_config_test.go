@@ -715,6 +715,13 @@ spec:
   type: KubernetesPods
   destinationRefs:
     - test-es-dest
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchExpressions:
+        - key: environment
+          operator: In
+          values: ["prod", "test"]
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -790,6 +797,8 @@ spec:
     index: "logs-%F"
     pipeline: "testpipe"
     endpoint: "http://192.168.1.1:9200"
+    tls:
+      verifyCertificate: false
 ---
 `))
 			f.RunHook()

@@ -24,15 +24,31 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
+func CreateParseDataTransforms() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name: "parse_json",
+			Type: "remap",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.ParseJSONRule.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
+
 type mutateFilter func(*v1alpha1.Filter, *vrl.Rule)
 
 func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {
-	return createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter, rule *vrl.Rule) {
+	transforms, err := createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter, rule *vrl.Rule) {
 		// parsed_data is a key for parsed json data from a message, we use it to quickly filter inputs
 		// "filter_field" -> "parsed_data.filter_field", "" -> "parsed_data"
 		filter.Field = strings.Join([]string{"parsed_data", filter.Field}, ".")
-		*rule = vrl.Combine(vrl.ParseJSONRule, *rule)
 	})
+	if err != nil {
+		return nil, err
+	}
+	return append([]apis.LogTransform{CreateParseDataTransforms()}, transforms...), nil
 }
 
 func CreateLabelFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {

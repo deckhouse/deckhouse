@@ -20,50 +20,15 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-// DeDotTransform is the only Lua transform rule.
-// We are going to replace it with corresponding VRL transform once the iteration feature will be implemented for VRL.
-// Related issue https://github.com/timberio/vector/issues/3588
 func DeDotTransform() *DynamicTransform {
-	const deDotSnippet = `
-function process(event, emit)
-	if event.log.pod_labels == nil then
-		emit(event)
-		return
-	end
-	dedot(event.log.pod_labels)
-	emit(event)
-end
-function dedot(map)
-	if map == nil then
-		return
-	end
-	local new_map = {}
-	local changed_keys = {}
-	for k, v in pairs(map) do
-		local dedotted = string.gsub(k, "%.", "_")
-		if dedotted ~= k then
-			new_map[dedotted] = v
-			changed_keys[k] = true
-		end
-	end
-	for k in pairs(changed_keys) do
-		map[k] = nil
-	end
-	for k, v in pairs(new_map) do
-		map[k] = v
-	end
-end`
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name: "elastic_dedot",
-			Type: "lua",
+			Type: "remap",
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"version": "2",
-			"hooks": map[string]interface{}{
-				"process": "process",
-			},
-			"source": deDotSnippet,
+			"source":        vrl.DeDotRule.String(),
+			"drop_on_abort": false,
 		},
 	}
 }
@@ -71,7 +36,7 @@ end`
 func DataStreamTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name: "elastic-stream",
+			Name: "elastic_stream",
 			Type: "remap",
 		},
 		DynamicArgsMap: map[string]interface{}{

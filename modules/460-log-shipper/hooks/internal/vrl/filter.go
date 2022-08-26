@@ -35,6 +35,8 @@ if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
     } else {
         includes({{ $.filter.Values | toJson }}, data);
     };
+} else if .{{ $.filter.Field }} == null {
+    "null";
 } else {
     includes({{ $.filter.Values | toJson }}, .{{ $.filter.Field }});
 }
@@ -49,6 +51,8 @@ if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
     } else {
         !includes({{ $.filter.Values | toJson }}, data);
     };
+} else if .{{ $.filter.Field }} == null {
+    "null";
 } else {
     !includes({{ $.filter.Values | toJson }}, .{{ $.filter.Field }});
 }

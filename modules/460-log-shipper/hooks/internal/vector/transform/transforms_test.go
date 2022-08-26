@@ -87,7 +87,7 @@ func TestTransformSnippet(t *testing.T) {
 		tr, err := BuildFromMapSlice("prefix", "testit", transforms)
 		require.NoError(t, err)
 
-		assert.Len(t, tr, 4)
+		assert.Len(t, tr, 5)
 		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
 
 		data, err := json.MarshalIndent(tr, "", "\t")

@@ -26,6 +26,16 @@ spec:
                           description: Собирать логи только с указанных Namespace.
                         excludeNames:
                           description: Собирать логи со всех Namespace кроме указанных в списке.
+                        labelSelector:
+                          description: |
+                            Настройка `labelSelector` позволяет задать фильтр по namespace labels.
+
+                            Подробнее про выражения можно узнать в [документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                          properties:
+                            matchLabels:
+                              description: Список label, которые должен иметь namespace.
+                            matchExpressions:
+                              description: Список выражений для label, которые должен иметь namespace.
                     labelSelector:
                       description: |
                         Настройка `labelSelector` позволяет задать фильтр по Pod Labels.

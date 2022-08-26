@@ -24,6 +24,19 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
+func OwnerReferenceSourceTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name: "owner_ref",
+			Type: "remap",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.OwnerReferenceRule.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
+
 func CleanUpAfterSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
@@ -47,7 +60,13 @@ type LogSourceConfig struct {
 }
 
 func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTransform, error) {
-	transforms := []apis.LogTransform{CleanUpAfterSourceTransform()}
+	var transforms []apis.LogTransform
+
+	if cfg.SourceType == v1alpha1.SourceKubernetesPods {
+		transforms = append(transforms, OwnerReferenceSourceTransform())
+	}
+
+	transforms = append(transforms, CleanUpAfterSourceTransform())
 
 	transforms = append(transforms, CreateMultiLineTransforms(cfg.MultilineType)...)
 

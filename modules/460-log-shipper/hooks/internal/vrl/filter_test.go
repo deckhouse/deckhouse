@@ -40,6 +40,8 @@ if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     } else {
         includes(["test-1"], data);
     };
+} else if .parsed_data.test == null {
+    "null";
 } else {
     includes(["test-1"], .parsed_data.test);
 }
@@ -56,6 +58,8 @@ if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     } else {
         includes(["test-1","test-2"], data);
     };
+} else if .parsed_data.test == null {
+    "null";
 } else {
     includes(["test-1","test-2"], .parsed_data.test);
 }
@@ -89,6 +93,8 @@ if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     } else {
         !includes(["test-1"], data);
     };
+} else if .parsed_data.test == null {
+    "null";
 } else {
     !includes(["test-1"], .parsed_data.test);
 }
@@ -105,6 +111,8 @@ if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     } else {
         !includes(["test-1","test-2"], data);
     };
+} else if .parsed_data.test == null {
+    "null";
 } else {
     !includes(["test-1","test-2"], .parsed_data.test);
 }

@@ -29,7 +29,8 @@
         "timeout_secs": 1
       },
       "tls": {
-        "verify_hostname": true
+        "verify_hostname": true,
+        "verify_certificate": true
       },
       "compression": "gzip",
       "bulk": {

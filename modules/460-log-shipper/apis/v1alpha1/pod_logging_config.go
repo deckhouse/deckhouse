@@ -20,10 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // PodLoggingConfig specify target for kubernetes pods logs collecting in specified namespace
 type PodLoggingConfig struct {
 	metav1.TypeMeta `json:",inline"`

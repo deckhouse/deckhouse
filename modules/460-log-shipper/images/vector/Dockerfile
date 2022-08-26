@@ -8,11 +8,10 @@ RUN apt-get update \
       ca-certificates make bash cmake libclang1-9 llvm-9 libsasl2-dev librdkafka-dev
 
 WORKDIR /vector
-COPY patches/loki-labels.patch patches/kubernetes-owner-reference.patch /
-RUN git clone --depth 1 --branch v0.20.0 https://github.com/vectordotdev/vector.git \
+COPY patches/remove-high-cardinality-labels.patch /
+RUN git clone --depth 1 --branch v0.23.3 https://github.com/vectordotdev/vector.git \
     && cd vector \
-    && git apply /kubernetes-owner-reference.patch \
-    && git apply /loki-labels.patch
+    && git apply /remove-high-cardinality-labels.patch
 
 # Download and cache dependencies
 WORKDIR /vector/vector
@@ -23,7 +22,7 @@ RUN cargo build \
     -j $(($(nproc) /2)) \
     --offline \
     --no-default-features \
-    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,unix,vendor-all,vrl-cli" \
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,unix,rdkafka?/gssapi-vendored,vrl-cli" \
     && strip target/release/vector
 
 FROM $BASE_DEBIAN_BULLSEYE

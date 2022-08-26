@@ -32,10 +32,3 @@ if exists(.file) {
     del(.file)
 }
 `
-
-// ParsedDataCleanUpRule cleans up the temporary parsed data object.
-const ParsedDataCleanUpRule Rule = `
-if exists(.parsed_data) {
-    del(.parsed_data)
-}
-`
