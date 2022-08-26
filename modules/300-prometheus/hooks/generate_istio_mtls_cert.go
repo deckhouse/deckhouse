@@ -36,35 +36,37 @@ const (
 	mTLSKeyPath = "prometheus.internal.prometheusScraperIstioMTLS.key"
 )
 
+// Add queue
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnAfterAll: &go_hook.OrderedConfig{Order: 10},
+	Queue: "/modules/prometheus/generate_istio_mtls_cert",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "istio_secret_ca",
 			ApiVersion: "v1",
 			Kind:       "Secret",
-			FilterFunc: applySecertCertFilter,
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"cacerts"},
-			},
+			FilterFunc: applySecertIstioCAFilter,
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-istio"},
 				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"cacerts"},
 			},
 		},
 		{
 			Name:       "prometheus_secret_mtls",
 			ApiVersion: "v1",
 			Kind:       "Secret",
-			FilterFunc: applySecertCertFilter,
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"prometheus-scraper-istio-mtls"},
-			},
+			FilterFunc: applySecertMTLSFilter,
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-monitoring"},
 				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"prometheus-scraper-istio-mtls"},
 			},
 		},
 	},
@@ -73,30 +75,52 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateMTLSCertHook)
 
-func applySecertCertFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applySecertMTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
+
 	if err != nil {
 		return nil, fmt.Errorf("can't convert ca secret to secret struct: %v", err)
 	}
 
 	var cert certificate.Certificate
-	var crt, key []byte
+	var certBytes, keyBytes []byte
 	var ok bool
-	if crt, ok = secret.Data["tls.crt"]; ok { // for mTLS secret
-		cert.Cert = string(crt)
-	} else if crt, ok := secret.Data["ca-cert.pem"]; ok { // For istio CA secret.
-		cert.Cert = string(crt)
+	if certBytes, ok = secret.Data["tls.crt"]; ok {
+		cert.Cert = string(certBytes)
 	} else {
-		return nil, fmt.Errorf("can't parse certificate")
+		return nil, fmt.Errorf("can't get certificate from secert %v", secret.Name)
 	}
 
-	if key, ok = secret.Data["tls.key"]; ok { // for mTLS secret
-		cert.Key = string(key)
-	} else if key, ok = secret.Data["ca-key.pem"]; ok { // For istio CA secret.
-		cert.Key = string(key)
+	if keyBytes, ok = secret.Data["tls.key"]; ok {
+		cert.Key = string(keyBytes)
 	} else {
-		return nil, fmt.Errorf("can't parse key")
+		return nil, fmt.Errorf("can't get key from secert %v", secret.Name)
+	}
+	return cert, nil
+}
+
+func applySecertIstioCAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+
+	if err != nil {
+		return nil, fmt.Errorf("can't convert ca secret to secret struct: %v", err)
+	}
+
+	var cert certificate.Authority
+	var certBytes, keyBytes []byte
+	var ok bool
+	if certBytes, ok = secret.Data["ca-cert.pem"]; ok {
+		cert.Cert = string(certBytes)
+	} else {
+		return nil, fmt.Errorf("can't get certificate from secert %v", secret.Name)
+	}
+
+	if keyBytes, ok = secret.Data["ca-key.pem"]; ok {
+		cert.Key = string(keyBytes)
+	} else {
+		return nil, fmt.Errorf("can't get key from secert %v", secret.Name)
 	}
 	return cert, nil
 }
@@ -106,7 +130,7 @@ func isCertValid(cert certificate.Certificate, ca certificate.Authority) (bool, 
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM([]byte(ca.Cert))
 	if !ok {
-		return false, fmt.Errorf("can't add CA certificate to pool")
+		return false, fmt.Errorf("certificate validation check: can't add CA certificate to pool")
 	}
 	opts := x509.VerifyOptions{
 		Roots:       certPool,
@@ -138,32 +162,27 @@ func generateMTLSCertHook(input *go_hook.HookInput) error {
 
 	// Get istio CA keypair.
 	istioCASnap := input.Snapshots["istio_secret_ca"]
-	if len(istioCASnap) == 1 {
-		istioCACert, ok := istioCASnap[0].(certificate.Certificate)
-		if !ok {
-			return fmt.Errorf("can't convert certificate to certificate struct")
-		}
-		istioCA.Cert = istioCACert.Cert
-		istioCA.Key = istioCACert.Key
-	} else {
+	if len(istioCASnap) == 0 {
 		input.Values.Remove(mTLSCrtPath)
 		input.Values.Remove(mTLSKeyPath)
 		return nil
 	}
 
+	istioCA, ok = istioCASnap[0].(certificate.Authority)
+	if !ok {
+		return fmt.Errorf("can't convert certificate to certificate struct")
+	}
+
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 	mTLSCertSAN := fmt.Sprintf("spiffe://%s/ns/d8-monitoring/sa/prometheus", clusterDomain)
 
-	// Get prometheus scrape mTLS keypair.
+	// Get prometheus scraper mTLS keypair.
 	mTLSCertSnap := input.Snapshots["prometheus_secret_mtls"]
 	if len(mTLSCertSnap) == 1 {
 		mTLSCert, ok = mTLSCertSnap[0].(certificate.Certificate)
 		if !ok {
 			return fmt.Errorf("can't convert certificate to certificate struct")
 		}
-	} else if input.Values.Exists(mTLSCrtPath) && input.Values.Exists(mTLSKeyPath) {
-		mTLSCert.Cert = input.Values.Get(mTLSCrtPath).String()
-		mTLSCert.Key = input.Values.Get(mTLSKeyPath).String()
 	}
 
 	ok, err = isCertValid(mTLSCert, istioCA)

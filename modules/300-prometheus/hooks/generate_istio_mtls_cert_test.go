@@ -108,7 +108,7 @@ metadata:
   name: prometheus-scraper-istio-mtls
   namespace: d8-monitoring
 type: kubernetes.io/tls
-`
+	`
 
 	DescribeTable("Istio CA secret exists", func(objectsYAMLs string) {
 		f.BindingContexts.Set(f.KubeStateSet(objectsYAMLs))
