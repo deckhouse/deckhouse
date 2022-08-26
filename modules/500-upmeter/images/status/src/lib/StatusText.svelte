@@ -24,4 +24,4 @@
 	}
 </script>
 
-<p class={mutedOrStatusTextClassName(mute, status)}>{text}</p>
+<p class={mutedOrStatusTextClassName(mute, status) + " fw-light m-0"}>{text}</p>

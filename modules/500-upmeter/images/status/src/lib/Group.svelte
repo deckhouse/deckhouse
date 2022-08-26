@@ -12,7 +12,7 @@
 	<h4 class="font-weight-normal">{name}</h4>
 	<p class="text-muted">{description}</p>
 </Col>
-<Col class="col-3 text-right">
+<Col class="col-3 text-end">
 	<h4 class="font-weight-light">
 		<StatusText {status} text={status} {mute} />
 	</h4>
