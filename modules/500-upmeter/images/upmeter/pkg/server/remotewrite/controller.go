@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/kube"
+	kube "github.com/flant/kube-client/client"
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
@@ -39,7 +39,7 @@ type ControllerConfig struct {
 	Period time.Duration
 
 	// monitoring config objects in kubernetes
-	Kubernetes kube.KubernetesClient
+	Kubernetes kube.Client
 
 	// read metrics and track exporter state in the DB
 	DbCtx        *dbcontext.DbContext

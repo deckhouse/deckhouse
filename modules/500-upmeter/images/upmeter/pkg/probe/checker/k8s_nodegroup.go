@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -140,7 +141,7 @@ var nodeGroupGVR = schema.GroupVersionResource{
 func (f *nodeGroupFetcher) Get(name string) (nodeGroupProps, error) {
 	var props nodeGroupProps
 
-	rawNG, err := f.access.Kubernetes().Dynamic().Resource(nodeGroupGVR).Get(name, metav1.GetOptions{})
+	rawNG, err := f.access.Kubernetes().Dynamic().Resource(nodeGroupGVR).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return props, err
 	}

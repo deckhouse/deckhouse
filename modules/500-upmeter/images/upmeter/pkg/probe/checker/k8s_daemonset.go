@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -253,16 +254,18 @@ type daemonsetRepo struct {
 }
 
 func (r *daemonsetRepo) Get() (*appsv1.DaemonSet, error) {
-	return r.access.Kubernetes().AppsV1().DaemonSets(r.namespace).Get(r.name, metav1.GetOptions{})
+	return r.access.Kubernetes().AppsV1().DaemonSets(r.namespace).Get(context.TODO(), r.name, metav1.GetOptions{})
 }
 
 func (r *daemonsetRepo) Pods() ([]v1.Pod, error) {
 	timeout := int64(r.timeout.Seconds())
 
-	podList, err := r.access.Kubernetes().CoreV1().Pods(r.namespace).List(metav1.ListOptions{
-		LabelSelector:  "app=" + r.name,
-		TimeoutSeconds: &timeout,
-	})
+	podList, err := r.access.Kubernetes().CoreV1().Pods(r.namespace).List(
+		context.TODO(),
+		metav1.ListOptions{
+			LabelSelector:  "app=" + r.name,
+			TimeoutSeconds: &timeout,
+		})
 	if err != nil {
 		return nil, err
 	}

@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/kube"
+	kube "github.com/flant/kube-client/client"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
@@ -126,7 +126,7 @@ func Test_smokeMiniAvailable(t *testing.T) {
 			checker := &smokeMiniChecker{
 				path:        "/",
 				httpTimeout: timeout,
-				access:      NewFake(kube.NewFakeKubernetesClient()),
+				access:      NewFake(kube.NewFake(nil)),
 				lookuper: &dummyLookuper{
 					servers:  tt.servers,
 					addBogus: tt.cancel,
@@ -187,15 +187,15 @@ func respondSlowlyWith(timeout time.Duration, status int) *httptest.Server {
 	}))
 }
 
-func NewFake(client kube.KubernetesClient) *FakeAccess {
+func NewFake(client kube.Client) *FakeAccess {
 	return &FakeAccess{client: client}
 }
 
 type FakeAccess struct {
-	client kube.KubernetesClient
+	client kube.Client
 }
 
-func (a *FakeAccess) Kubernetes() kube.KubernetesClient {
+func (a *FakeAccess) Kubernetes() kube.Client {
 	return a.client
 }
 

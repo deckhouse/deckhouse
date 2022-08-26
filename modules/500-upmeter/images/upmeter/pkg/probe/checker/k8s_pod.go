@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -37,7 +38,7 @@ type pendingPodChecker struct {
 func (c *pendingPodChecker) Check() check.Error {
 	client := c.access.Kubernetes()
 
-	podList, err := client.CoreV1().Pods(c.namespace).List(*c.listOpts)
+	podList, err := client.CoreV1().Pods(c.namespace).List(context.TODO(), *c.listOpts)
 	if err != nil {
 		return check.ErrUnknown("listing pods %s/%s: %v", c.namespace, c.listOpts, err)
 	}
@@ -82,7 +83,7 @@ type podReadinessChecker struct {
 }
 
 func (c *podReadinessChecker) Check() check.Error {
-	podList, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).List(metav1.ListOptions{LabelSelector: c.labelSelector})
+	podList, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: c.labelSelector})
 	if err != nil {
 		return check.ErrUnknown("cannot get pods %s,%s: %v", c.namespace, c.labelSelector, err)
 	}
@@ -109,7 +110,7 @@ type podRunningOrReadyChecker struct {
 }
 
 func (c *podRunningOrReadyChecker) Check() check.Error {
-	podList, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).List(metav1.ListOptions{LabelSelector: c.labelSelector})
+	podList, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: c.labelSelector})
 	if err != nil {
 		return check.ErrUnknown("cannot get pods %s,%s: %v", c.namespace, c.labelSelector, err)
 	}

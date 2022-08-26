@@ -106,7 +106,7 @@ func (c *certificateCreator) Do(ctx context.Context) error {
 	_, err := c.access.Kubernetes().Dynamic().
 		Resource(certificateGVR).
 		Namespace(c.namespace).
-		Create(obj, metav1.CreateOptions{})
+		Create(ctx, obj, metav1.CreateOptions{})
 
 	return err
 }
@@ -121,7 +121,7 @@ func (c *certificateDeleter) Do(ctx context.Context) error {
 	return c.access.Kubernetes().Dynamic().
 		Resource(certificateGVR).
 		Namespace(c.namespace).
-		Delete(c.name, &metav1.DeleteOptions{})
+		Delete(ctx, c.name, metav1.DeleteOptions{})
 }
 
 type certificateGetter struct {
@@ -134,7 +134,7 @@ func (c *certificateGetter) Do(ctx context.Context) error {
 	_, err := c.access.Kubernetes().Dynamic().
 		Resource(certificateGVR).
 		Namespace(c.namespace).
-		Get(c.name, metav1.GetOptions{})
+		Get(ctx, c.name, metav1.GetOptions{})
 	return err
 }
 
@@ -144,8 +144,8 @@ type secretGetter struct {
 	namespace string
 }
 
-func (c *secretGetter) Do(_ context.Context) error {
-	_, err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Get(c.name, metav1.GetOptions{})
+func (c *secretGetter) Do(ctx context.Context) error {
+	_, err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Get(ctx, c.name, metav1.GetOptions{})
 	return err
 }
 
@@ -155,8 +155,8 @@ type secretDeleter struct {
 	namespace string
 }
 
-func (c *secretDeleter) Do(_ context.Context) error {
-	err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
+func (c *secretDeleter) Do(ctx context.Context) error {
+	err := c.access.Kubernetes().CoreV1().Secrets(c.namespace).Delete(ctx, c.name, metav1.DeleteOptions{})
 	return err
 }
 

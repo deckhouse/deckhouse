@@ -192,7 +192,7 @@ type setInitedValueChecker struct {
 func (c *setInitedValueChecker) Check() check.Error {
 	newValue := string(uuid.NewUUID())
 
-	obj, err := c.dynamicClient.Get(c.name, metav1.GetOptions{})
+	obj, err := c.dynamicClient.Get(context.TODO(), c.name, metav1.GetOptions{})
 	if err != nil || obj == nil {
 		c.logger.Debugf("creating object with value %s", newValue)
 
@@ -210,7 +210,7 @@ func (c *setInitedValueChecker) update(obj *unstructured.Unstructured, value str
 	}
 
 	opts := metav1.UpdateOptions{FieldManager: c.fieldManager}
-	if _, err := c.dynamicClient.Update(obj, opts); err != nil {
+	if _, err := c.dynamicClient.Update(context.TODO(), obj, opts); err != nil {
 		return check.ErrFail("cannot update UpmeterHookProbe object %q with new inited value: %v", c.name, err)
 	}
 
@@ -229,7 +229,7 @@ func (c *setInitedValueChecker) create(value string) check.Error {
 	}
 
 	opts := metav1.CreateOptions{FieldManager: c.fieldManager}
-	if _, err := c.dynamicClient.Create(obj, opts); err != nil {
+	if _, err := c.dynamicClient.Create(context.TODO(), obj, opts); err != nil {
 		return check.ErrFail("cannot create UpmeterHookProbe object in cluster: %v", err)
 	}
 
