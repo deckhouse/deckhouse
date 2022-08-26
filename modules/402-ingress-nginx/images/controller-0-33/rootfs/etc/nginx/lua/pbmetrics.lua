@@ -32,7 +32,6 @@ local get_env = os.getenv
 
 local new_tab = require "table.new"
 local clear_tab = require "table.clear"
-local clone_tab = require "table.clone"
 local nkeys = require "table.nkeys"
 local remove = table.remove
 local insert_tab = table.insert
@@ -389,11 +388,8 @@ local function send(premature)
 
   local start_time = now()
 
-  local current_buffer = clone_tab(buffer)
-  clear_tab(buffer)
-
   local pbbuff = pbuff.new()
-  for k, v in pairs(current_buffer) do
+  for k, v in pairs(buffer) do
     local metric_type = k:sub(1, 1)
     if metric_type == "g" then
       protogauge(pbbuff, v)
@@ -403,6 +399,7 @@ local function send(premature)
       protohist(pbbuff, v)
     end
   end
+  clear_tab(buffer)
 
   local sock = socket()
   local ok, err = sock:connect("127.0.0.1", "9090")
