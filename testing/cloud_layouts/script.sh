@@ -209,7 +209,7 @@ function prepare_environment() {
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="cloud-user"
-    ;;
+    ;;f
 
   "GCP")
     # shellcheck disable=SC2016
@@ -218,7 +218,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="user"
+    ssh_user="cloud-user"
     ;;
 
   "AWS")
