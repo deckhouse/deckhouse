@@ -209,7 +209,7 @@ function prepare_environment() {
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="cloud-user"
-    ;;f
+    ;;
 
   "GCP")
     # shellcheck disable=SC2016
