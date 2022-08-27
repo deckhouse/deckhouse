@@ -17,7 +17,7 @@ provider "openstack" {
 }
 
 data "openstack_networking_network_v2" "external" {
-  name = "external"
+  name = "public"
 }
 
 resource "openstack_networking_network_v2" "internal" {
