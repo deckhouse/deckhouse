@@ -17,7 +17,7 @@ spec:
   path: "/opt/local-path-provisioner"
 ```
 
-- `spec.nodeGroups` должен совпадать с нодгруппой prometheus'ов.
+- `spec.nodeGroups` должен совпадать с NodeGroup prometheus'ов.
 - `spec.path` - путь на узле где будут лежать данные.
 
 Добавить в конфигурацию Deckhouse (configMap `d8-system/deckhouse`):

@@ -134,7 +134,7 @@ kubectl logs -n d8-linstor linstor-node-xxwf9 -c kernel-module-injector
 Для этого достаточно выполнить команду:
 
 ```bash
-linstor node evacuate <имя_ноды>
+linstor node evacuate <имя_узла>
 ```
 
 Все ресурсы переедут на другие свободные узлы и будут реплицированы.

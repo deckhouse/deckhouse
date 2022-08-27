@@ -13,12 +13,12 @@ search: making Grafana graphs
 4. You do not need to edit Dashboard files directly (unless you want to do a minor quick fix). Instead:
    * Open the Dashboard in Grafana:
      * if the Dashboard already exists, open it and click the ["Make editable" button](/docs/documentation/images/300-prometheus/grafana_make_editable.jpg);
-     * if the Dashboard is a new one, then create it (in any Folder - it will be moved to the folder that corresponds to the repository directory);
+     * if the Dashboard is a new one, then create it (in any Folder — it will be moved to the folder that corresponds to the repository directory);
      * if the Dashboard is a third-party one, import it to Grafana (via the "Import" button).
    * Now you can edit your Dashboard until you are happy with it. Do not forget to click the "Save" button in Grafana periodically to keep your changes (just in case).
    * [Export the Dashboard to JSON](/docs/documentation/images/300-prometheus/grafana_export.jpg) and save it to a file (the new or existing one).
 5. You can rename the Dashboard, rename the file, move the file from one Folder to another — everything will be configured automatically.
-6. Note that system Dashboards must be stored in `d8`-prefixed GrafanaDashboardDefinition custom resources.
+6. Note that system Dashboards must be stored in `d8`-prefixed `GrafanaDashboardDefinition` custom resources.
 
 ## How do I quickly optimize a third-party Dashboard?
 
