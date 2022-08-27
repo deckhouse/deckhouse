@@ -54,7 +54,7 @@ spec:
   nodeType: Static
 ```
 
-## Пример описания статичной `NodeGroup` для системных нод
+## Пример описания статичной `NodeGroup` для системных узлов
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -72,7 +72,7 @@ spec:
   nodeType: Static
 ```
 
-## Пример установки плагина cert-manager для kubectl на мастер нодах
+## Пример установки плагина cert-manager для kubectl на мастер узлах
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
