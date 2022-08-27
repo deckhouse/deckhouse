@@ -14,7 +14,7 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 
 Ограничения VPA:
 - Обновление ресурсов запущенных Pod'ов — это экспериментальная возможность VPA. Каждый раз, когда VPA обновляет `resource requests` Pod'а, Pod пересоздается. Соответственно, Pod может быть создан на другом узле.
-- VPA **не должен использоваться с [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) по cpu и memory** в данный момент. Однако VPA можно использовать с HPA на custom/external metrics.
+- VPA **не должен использоваться с [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) по CPU и memory** в данный момент. Однако VPA можно использовать с HPA на custom/external metrics.
 - VPA реагирует почти на все `out-of-memory` events, но не гарантирует реакцию (почему так — выяснить из документации не удалось).
 - Производительность VPA не тестировалась на огромных кластерах.
 - Рекомендации VPA могут превышать доступные ресурсы в кластере, что **может приводить к Pod'ам в состоянии Pending**.

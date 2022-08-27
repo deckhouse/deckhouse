@@ -110,7 +110,7 @@ externalNetworkNames:
 # [<en>] name of Internal Network that will be used for traffic between nodes
 # [<en>] ip addresses from Internal Network sets as InternalIP of Node object
 # [<en>] optional parameter
-# [<ru>] имя Internal Network, которая будет использоваться для трафика между нодами, в данном примере идентично externalNetworkNames
+# [<ru>] имя Internal Network, которая будет использоваться для трафика между узлами, в данном примере идентично externalNetworkNames
 # [<ru>] ip адреса из Internal Network проставляются как InternalIP объекта Node
 # [<ru>] опциональный параметр
 internalNetworkNames:
