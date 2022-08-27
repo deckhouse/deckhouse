@@ -16,8 +16,8 @@ provider "openstack" {
   region = "HetznerFinland"
 }
 
-data "openstack_networking_network_v2" "shared" {
-  name = "shared"
+data "openstack_networking_network_v2" "external" {
+  name = local.external_network_name
 }
 
 resource "openstack_networking_network_v2" "internal" {
@@ -59,7 +59,7 @@ resource "openstack_networking_port_v2" "system_internal_without_security" {
 resource "openstack_networking_router_v2" "router" {
   name = "candi-${PREFIX}"
   admin_state_up = "true"
-  external_network_id = data.openstack_networking_network_v2.shared.id
+  external_network_id = data.openstack_networking_network_v2.external.id
 }
 
 resource "openstack_networking_router_interface_v2" "router" {
@@ -99,11 +99,11 @@ resource "openstack_compute_instance_v2" "system" {
 }
 
 resource "openstack_compute_floatingip_v2" "master" {
-  pool = data.openstack_networking_network_v2.shared.name
+  pool = data.openstack_networking_network_v2.external.name
 }
 
 resource "openstack_compute_floatingip_v2" "system" {
-  pool = data.openstack_networking_network_v2.shared.name
+  pool = data.openstack_networking_network_v2.external.name
 }
 
 resource "openstack_compute_floatingip_associate_v2" "master" {
