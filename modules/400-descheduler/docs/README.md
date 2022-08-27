@@ -29,7 +29,7 @@ This strategy finds nodes that are under utilized and evicts Pods in the hope th
 
 The thresholds for identifying underutilized nodes are currently preset and cannot be changed:
 * Criteria to identify underutilized nodes:
-  * cpu — 50%
+  * CPU — 50%
   * memory — 50%
 
 ### LowNodeUtilization
@@ -38,11 +38,11 @@ The descheduler finds underutilized or overutilized nodes using cpu/memory/Pods 
 
 The thresholds for identifying underutilized or overutilized nodes are currently preset and cannot be changed:
 * Criteria to identify underutilized nodes:
-  * cpu — 40%
+  * CPU — 40%
   * memory — 50%
   * Pods — 40%
 * Criteria to identify overutilized nodes:
-  * cpu — 80%
+  * CPU — 80%
   * memory — 90%
   * Pods — 80%
 

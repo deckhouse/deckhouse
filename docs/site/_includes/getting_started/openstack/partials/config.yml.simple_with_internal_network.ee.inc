@@ -79,7 +79,7 @@ simpleWithInternalNetwork:
   internalSubnetName: *!CHANGE_INTERNAL_NET*
   # [<en>] defines the way traffic is organized on the network that is used for communication between Pods
   # [<en>] direct routing works between nodes, SecurityGroups are disabled in this mode.
-  # [<ru>] определяет способ организации трафика в той сети, которая используется для коммуникации между подами
+  # [<ru>] определяет способ организации трафика в той сети, которая используется для коммуникации между Pod'ами
   # [<ru>] между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.
   podNetworkMode: DirectRoutingWithPortSecurityEnabled
   # [<en>] network name for external communication

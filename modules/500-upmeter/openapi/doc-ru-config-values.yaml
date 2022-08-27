@@ -104,7 +104,7 @@ properties:
           * Если указать `false` — будет форсироваться использование emptyDir'а.
       ingressClass:
         description: |
-          Класс ingress-контроллера, который используется для smoke-mini.
+          Класс Ingress-контроллера, который используется для smoke-mini.
 
           Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`
       https:

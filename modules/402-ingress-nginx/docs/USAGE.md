@@ -31,11 +31,11 @@ spec:
 
 When creating a balancer, all zones available in the cluster will be used.
 
-In each zone, the balancer receives a public IP. If there is an instance with an ingress controller in the zone, an A-record with the balancer's IP address from this zone is automatically added to the balancer's domain name.
+In each zone, the balancer receives a public IP. If there is an instance with an Ingress controller in the zone, an A-record with the balancer's IP address from this zone is automatically added to the balancer's domain name.
 
-When there are no instances with an ingress controller in the zone, then the IP is automatically removed from the DNS.
+When there are no instances with an Ingress controller in the zone, then the IP is automatically removed from the DNS.
 
-If there is only one instance with an ingress controller in a zone, when the pod is restarted, the IP address of the balancer of this zone will be temporarily excluded from DNS.
+If there is only one instance with an Ingress controller in a zone, when the pod is restarted, the IP address of the balancer of this zone will be temporarily excluded from DNS.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -114,7 +114,7 @@ spec:
     value: frontend
 ```
 
-In the case of using MetalLB, its speaker Pods must be run on the same Nodes as the ingress–controller Pods.
+In the case of using MetalLB, its speaker Pods must be run on the same Nodes as the Ingress controller Pods.
 
 The controller must receive real IP addresses of clients — therefore its Service is created with the parameter `externalTrafficPolicy: Local` (disabling cross–node SNAT), and to satisfy this parameter the MetalLB speaker announce this Service only from those Nodes where the target Pods are running.
 
