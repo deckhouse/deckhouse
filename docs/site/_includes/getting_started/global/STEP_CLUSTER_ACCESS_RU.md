@@ -61,7 +61,8 @@ echo "$BALANCER_IP"
         то добавьте А или CNAME-записи со значением IP-адреса {% if page.platform_code == 'vsphere' %}master-узла, который вы получили выше (если настроены выделенные frontend-узлы, то используйте их IP-адреса вместо IP-адреса master-узла){% else %}балансировщика (<code>BALANCER_IP</code>), который вы получили выше{% endif %}, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">
 <pre class="highlight">
-<code example-hosts>dashboard.example.com
+<code example-hosts>api.example.com
+dashboard.example.com
 deckhouse.example.com
 dex.example.com
 grafana.example.com
@@ -110,6 +111,7 @@ export BALANCER_IP="<MASTER_OR_FRONT_IP>"
 {% snippetcut selector="example-hosts" %}
 ```bash
 sudo -E bash -c "cat <<EOF >> /etc/hosts
+$BALANCER_IP api.example.com
 $BALANCER_IP dashboard.example.com
 $BALANCER_IP deckhouse.example.com
 $BALANCER_IP dex.example.com

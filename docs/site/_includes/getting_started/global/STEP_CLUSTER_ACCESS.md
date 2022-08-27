@@ -63,7 +63,8 @@ Point a DNS domain you specified in the "[Cluster Installation](./step3.html)" s
         previously{% endif %}, for the following Deckhouse service DNS names:
         <div class="highlight">
 <pre class="highlight">
-<code example-hosts>dashboard.example.com
+<code example-hosts>api.example.com
+dashboard.example.com
 deckhouse.example.com
 dex.example.com
 grafana.example.com
@@ -112,6 +113,7 @@ export BALANCER_IP="<MASTER_OR_FRONT_IP>"
 {% snippetcut selector="example-hosts" %}
 ```bash
 sudo -E bash -c "cat <<EOF >> /etc/hosts
+$BALANCER_IP api.example.com
 $BALANCER_IP dashboard.example.com
 $BALANCER_IP deckhouse.example.com
 $BALANCER_IP dex.example.com
