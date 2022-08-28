@@ -55,5 +55,5 @@
     annotations:
       plk_protocol_version: "1"
       description: Kubelet {{ `{{ $labels.node }}` }} is running {{ `{{ $value }}` }} pods, close
-        to the limit of {{ `{{ print "kube_node_status_capacity{resource='"pods"',unit='"integer"',node='" $labels.node "'}" | query | first | value }}` }}
+        to the limit of {{ `{{ print "kube_node_status_capacity{resource=\"pods\",unit=\"integer\",node=\"$labels.node\"}" | query | first | value }}` }}
       summary: Kubelet is close to pod limit
