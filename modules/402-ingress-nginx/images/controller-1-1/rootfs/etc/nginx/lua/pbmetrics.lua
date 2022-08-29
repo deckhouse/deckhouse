@@ -376,9 +376,10 @@ local function fill_buffer()
   end
 end
 
-local sock = socket()
+local sock
 
 local function connect()
+  sock = socket()
   sock:settimeout(0)
   local ok, err = sock:connect("127.0.0.1", "9090")
   if not ok then
