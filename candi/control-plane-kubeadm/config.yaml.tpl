@@ -182,6 +182,7 @@ etcd:
       experimental-initial-corrupt-check: "true"
       {{- if hasKey .etcd "quotaBackendBytes" }}
       quota-backend-bytes: {{ .etcd.quotaBackendBytes | quote }}
+      metrics: extensive
       {{- end }}
     {{- end }}
   {{- end }}
