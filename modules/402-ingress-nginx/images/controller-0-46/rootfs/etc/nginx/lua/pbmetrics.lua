@@ -409,7 +409,10 @@ local function send(premature)
   if not ok then
     log(ERROR, format("error while sending data via tcp socket: %s", tostring(err)))
   end
-  sock:close()
+
+  if premature then
+    sock:close()
+  end
 
   if debug_enabled then
     update_time()
