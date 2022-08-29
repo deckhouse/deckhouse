@@ -107,7 +107,7 @@ tlsConfig:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_istio_mtls
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
   - {{ $label }}
-  regex: "^true;;(.*)|;true;(.*)|;;https-metrics$"
+  regex: "^true;;true;(.*)|true;true;;(.*)|;;;https-metrics$"
   action: keep
   {{ end }}
 
