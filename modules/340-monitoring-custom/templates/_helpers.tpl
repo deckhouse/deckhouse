@@ -61,18 +61,21 @@
 {{- end }}
 
 {{- define "tls_config" }}
+{{- $tls_secret_name := . }}
 bearerTokenSecret:
   name: "prometheus-token"
   key: "token"
 tlsConfig:
   insecureSkipVerify: true
+  {{- if $tls_secret_name }}
   cert:
     secret:
-      name: prometheus-scraper-istio-mtls
+      name: {{ $tls_secret_name }}
       key: tls.crt
   keySecret:
-    name: prometheus-scraper-istio-mtls
+    name: {{ $tls_secret_name }}
     key: tls.key
+  {{- end }}
 {{- end }}
 
 {{- define "keep_targets_for_schema" }}
@@ -97,6 +100,19 @@ tlsConfig:
   regex: "^true;;;(.*)|;;;http-metrics$"
   action: keep
 
+  {{ else if eq $schema "https-istio" }}
+- sourceLabels: [{{ $label }}]
+  regex: "http-metrics"
+  action: drop
+
+- sourceLabels:
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_istio_mtls
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
+  - {{ $label }}
+  regex: "^true;true;;(.*)|;true;;https-metrics$"
+  action: keep
+
   {{ else }}
 - sourceLabels: [{{ $label }}]
   regex: "http-metrics"
@@ -107,7 +123,7 @@ tlsConfig:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_istio_mtls
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
   - {{ $label }}
-  regex: "^true;;true;(.*)|true;true;;(.*)|;;;https-metrics$"
+  regex: "^true;;true;(.*)|;;;https-metrics$"
   action: keep
   {{ end }}
 
