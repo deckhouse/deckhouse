@@ -416,11 +416,6 @@ local function send(premature)
   end
   sock:setkeepalive(0)
 
-  if premature then
-    -- sock:connect is checking connection pool for active sockets, so we are closing socket only on a worker shutdown
-    sock:close()
-  end
-
   if debug_enabled then
     update_time()
     log(WARNING, format("lua send seconds: %s", tostring(now() - start_time)))
