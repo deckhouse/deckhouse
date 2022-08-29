@@ -419,6 +419,7 @@ local function send(premature)
   if premature then
     -- sock:connect is checking connection pool for active sockets, so we are closing socket only on a worker shutdown
     sock:close()
+    return
   end
 
   if debug_enabled then
