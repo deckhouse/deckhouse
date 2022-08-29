@@ -25,11 +25,18 @@ jobs:
       - git_info
 {!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 
+  workflow_render:
+    name: Render workflow
+    needs:
+      - git_info
+{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+
   build_deckhouse:
     name: Build Deckhouse FE
     needs:
       - git_info
       - go_generate
+      - workflow_render
     env:
       WERF_ENV: "FE"
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}

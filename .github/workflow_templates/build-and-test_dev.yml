@@ -58,12 +58,20 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 
+  workflow_render:
+    name: Render workflow
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+
   build_deckhouse:
     name: Build Deckhouse
     needs:
       - git_info
       - pull_request_info
       - go_generate
+      - workflow_render
     env:
       WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
