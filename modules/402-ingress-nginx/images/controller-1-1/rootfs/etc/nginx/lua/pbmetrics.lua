@@ -386,6 +386,8 @@ local function send(premature)
 
   local pbbuff = pbuff.new()
   for k, v in pairs(buffer) do
+    log(ERROR, format("PAIR '%s': '%s'", tostring(k), tostring(v)))
+
     local metric_type = k:sub(1, 1)
     if metric_type == "g" then
       protogauge(pbbuff, v)
