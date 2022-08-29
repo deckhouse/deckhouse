@@ -2,7 +2,7 @@ ARG BASE_DEBIAN_BULLSEYE
 
 FROM $BASE_DEBIAN_BULLSEYE as builder
 ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
-ARG DRBD_VERSION=9.1.8
+ARG DRBD_VERSION=9.1.9
 
 RUN apt-get update \
  && apt-get install -y make git \

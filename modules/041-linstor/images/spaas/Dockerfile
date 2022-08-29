@@ -5,7 +5,7 @@ FROM $BASE_GOLANG_18_BULLSEYE as builder
 ARG SPAAS_GITREPO=https://github.com/LINBIT/saas
 ARG SPAAS_COMMIT_REF=0824aafa1e1abaedee19c70a98048cea0dedb8ab
 ARG DRBD_GITREPO=https://github.com/LINBIT/drbd
-ARG DRBD_VERSION=9.1.8
+ARG DRBD_VERSION=9.1.9
 
 RUN git clone ${SPAAS_GITREPO} /usr/local/go/spaas \
  && cd /usr/local/go/spaas \
