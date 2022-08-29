@@ -397,18 +397,24 @@ local function send(premature)
   end
   clear_tab(buffer)
 
+
   local sock = socket()
+  sock:settimeout(10000)
   local ok, err = sock:connect("127.0.0.1", "9090")
   if not ok then
     log(ERROR, format("failed to connect to the tcp socket, metrcis buffer will be lost: %s", tostring(err)))
     return
   end
-  sock:settimeout(60000) -- 1 min timeout
+  local ok, err = sock:setoption("keepalive", true)
+  if not ok then
+    log(ERROR, format("setoption keepalive failed: %s", tostring(err)))
+  end
 
   ok, err = sock:send(pbbuff:result())
   if not ok then
     log(ERROR, format("error while sending data via tcp socket: %s", tostring(err)))
   end
+  sock:setkeepalive(0)
 
   if premature then
     -- sock:connect is checking connection pool for active sockets, so we are closing socket only on a worker shutdown

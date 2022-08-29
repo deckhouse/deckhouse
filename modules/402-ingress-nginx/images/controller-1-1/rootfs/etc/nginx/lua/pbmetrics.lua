@@ -408,7 +408,6 @@ local function send(premature)
   local ok, err = sock:setoption("keepalive", true)
   if not ok then
     log(ERROR, format("setoption keepalive failed: %s", tostring(err)))
-    return
   end
 
   ok, err = sock:send(pbbuff:result())
