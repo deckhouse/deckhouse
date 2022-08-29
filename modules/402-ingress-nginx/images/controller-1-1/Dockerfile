@@ -19,7 +19,7 @@ FROM quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.1@sha25
 USER root
 RUN apt-get update \
   && apt-get install -y --no-install-recommends patch gcc build-essential \
-  && luarocks install lua-protobuf 0.3.4-0 \
+  && luarocks install lua-protobuf 0.3.4-1 \
   && luarocks install lua-iconv 7-3
 
 # IngressNginxController docker image
