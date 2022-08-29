@@ -398,12 +398,17 @@ local function send(premature)
   clear_tab(buffer)
 
   local sock = socket()
-  local ok, err = sock:connect("127.0.0.1", "9090")
+  sock:settimeout(60000) -- 1 min timeout
+  local ok, err = sock:connect("127.0.0.1", "9090", {pool_size = 3, backlog = 5})
   if not ok then
     log(ERROR, format("failed to connect to the tcp socket, metrcis buffer will be lost: %s", tostring(err)))
     return
   end
-  sock:settimeout(60000) -- 1 min timeout
+  local ok, err = sock:setoption("keepalive", true)
+  if not ok then
+    log(ERROR, format("setoption keepalive failed: %s", tostring(err)))
+  end
+  sock:setkeepalive(300000)
 
   ok, err = sock:send(pbbuff:result())
   if not ok then
