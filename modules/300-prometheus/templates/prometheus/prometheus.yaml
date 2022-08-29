@@ -161,11 +161,6 @@ spec:
   secrets:
   - prometheus-scraper-tls
   - alertmanagers-tls-config
-{{- if .Values.prometheus.internal.prometheusScraperIstioMTLS }}
-  {{- if hasKey .Values.prometheus.internal.prometheusScraperIstioMTLS "certificate" }}
-  - prometheus-scraper-istio-mtls
-  {{- end }}
-{{- end }}
   rules:
     alert:
       resendDelay: 29s
