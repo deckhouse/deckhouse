@@ -10,6 +10,11 @@ lang: ru
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 <script type="text/javascript" src='{{ assets["release-info.js"].digest_path | true_relative_url }}'></script>
 
+{%- unless site.mode == "local" %}
+<h2 class="releases-page__table--title">Текущие версии Deckhouse</h2>
+<div class="releases-page__table--wrap"></div>
+{%- endunless %}
+
 <div class="page__container page_releases">
 
 <div class="releases__info">
@@ -45,8 +50,3 @@ lang: ru
 {::options parse_block_html="true" /}
 
 Deckhouse может «мягко» переключаться между каналами обновлений с помощью модуля [deckhouse](modules/002-deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel).
-
-{%- unless site.mode == "local" %}
-<h2 class="releases-page__table--title">Релизы</h2>
-<div class="releases-page__table--wrap"></div>
-{%- endunless %}
