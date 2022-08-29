@@ -376,6 +376,22 @@ local function fill_buffer()
   end
 end
 
+local sock = socket()
+
+local function connect()
+  sock:settimeout(0)
+  local ok, err = sock:connect("127.0.0.1", "9090", {pool_size = 3, backlog = 5})
+  if not ok then
+    log(ERROR, format("failed to connect to the tcp socket, metrcis buffer will be lost: %s", tostring(err)))
+    return
+  end
+  local ok, err = sock:setoption("keepalive", true)
+  if not ok then
+    log(ERROR, format("setoption keepalive failed: %s", tostring(err)))
+    return
+  end
+end
+
 -- send() sends buffer data to protobuf exporter via tcp socket
 local function send(premature)
   if nkeys(buffer) == 0 then
@@ -397,19 +413,6 @@ local function send(premature)
   end
   clear_tab(buffer)
 
-  local sock = socket()
-  sock:settimeout(60000) -- 1 min timeout
-  local ok, err = sock:connect("127.0.0.1", "9090", {pool_size = 3, backlog = 5})
-  if not ok then
-    log(ERROR, format("failed to connect to the tcp socket, metrcis buffer will be lost: %s", tostring(err)))
-    return
-  end
-  local ok, err = sock:setoption("keepalive", true)
-  if not ok then
-    log(ERROR, format("setoption keepalive failed: %s", tostring(err)))
-  end
-  sock:setkeepalive(300000)
-
   ok, err = sock:send(pbbuff:result())
   if not ok then
     log(ERROR, format("error while sending data via tcp socket: %s", tostring(err)))
@@ -430,6 +433,7 @@ local _M = {}
 
 -- init_worker() used at init_worker_by_lua_block stage to send buffer data to protobuf-exporter
 function _M.init_worker()
+  connect()
   local _, err = timer_every(1, send)
   if err then
     log(ERROR, format("error while sending data: %s", tostring(err)))
