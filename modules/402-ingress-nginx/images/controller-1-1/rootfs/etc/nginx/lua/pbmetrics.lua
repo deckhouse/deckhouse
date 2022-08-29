@@ -48,7 +48,7 @@ local GeoHash = require "geohash"
 GeoHash.precision(2)
 local geohash_encode = GeoHash.encode
 
-local buffer = new_tab(200000, 0)
+local buffer = new_tab(0, 100000)
 local debug_enabled = get_env("LUA_DEBUG")
 local use_geoip2 = get_env("LUA_USE_GEOIP2")
 
@@ -383,6 +383,12 @@ local function send(premature)
   end
 
   local start_time = now()
+
+  log(ERROR, format("Ipairs"))
+  for k, v in ipairs(buffer) do
+    log(ERROR, format("IPAIR '%s': '%s'", tostring(k), tostring(v)))
+  end
+
 
   local pbbuff = pbuff.new()
   for k, v in pairs(buffer) do
