@@ -1,6 +1,6 @@
 {{- define "early_oom_resources" }}
 cpu: 25m
-memory: 1Mi
+memory: 25Mi
 {{- end }}
 
 {{- if .Values.nodeManager.earlyOomEnabled }}
