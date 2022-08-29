@@ -380,7 +380,7 @@ local sock = socket()
 
 local function connect()
   sock:settimeout(0)
-  local ok, err = sock:connect("127.0.0.1", "9090", {pool_size = 3, backlog = 5})
+  local ok, err = sock:connect("127.0.0.1", "9090")
   if not ok then
     log(ERROR, format("failed to connect to the tcp socket, metrcis buffer will be lost: %s", tostring(err)))
     return
