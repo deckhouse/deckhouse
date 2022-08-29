@@ -66,6 +66,8 @@ bearerTokenSecret:
   key: "token"
 tlsConfig:
   insecureSkipVerify: true
+  certFile: /etc/prometheus/secrets/prometheus-scraper-istio-mtls/tls.crt
+  keyFile: /etc/prometheus/secrets/prometheus-scraper-istio-mtls/tls.key
 {{- end }}
 
 {{- define "keep_targets_for_schema" }}
