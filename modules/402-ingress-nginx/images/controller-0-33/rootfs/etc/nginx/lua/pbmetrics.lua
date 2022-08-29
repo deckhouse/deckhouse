@@ -48,7 +48,7 @@ local GeoHash = require "geohash"
 GeoHash.precision(2)
 local geohash_encode = GeoHash.encode
 
-local buffer = new_tab(200000, 0)
+local buffer = new_tab(0, 100000)
 local debug_enabled = get_env("LUA_DEBUG")
 local use_geoip2 = get_env("LUA_USE_GEOIP2")
 
@@ -411,6 +411,7 @@ local function send(premature)
   end
 
   if premature then
+    -- sock:connect is checking connection pool for active sockets, so we are closing socket only on a worker shutdown
     sock:close()
   end
 

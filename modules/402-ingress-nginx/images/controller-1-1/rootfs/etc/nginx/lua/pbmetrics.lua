@@ -384,16 +384,8 @@ local function send(premature)
 
   local start_time = now()
 
-  log(ERROR, format("Ipairs"))
-  for k, v in ipairs(buffer) do
-    log(ERROR, format("IPAIR '%s': '%s'", tostring(k), tostring(v)))
-  end
-
-
   local pbbuff = pbuff.new()
   for k, v in pairs(buffer) do
-    log(ERROR, format("PAIR '%s': '%s'", tostring(k), tostring(v)))
-
     local metric_type = k:sub(1, 1)
     if metric_type == "g" then
       protogauge(pbbuff, v)
@@ -419,6 +411,7 @@ local function send(premature)
   end
 
   if premature then
+    -- sock:connect is checking connection pool for active sockets, so we are closing socket only on a worker shutdown
     sock:close()
   end
 
