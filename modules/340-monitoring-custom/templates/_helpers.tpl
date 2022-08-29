@@ -86,9 +86,10 @@ tlsConfig:
 
 - sourceLabels:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_istio_mtls
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
   - {{ $label }}
-  regex: "^true;;(.*)|;;http-metrics$"
+  regex: "^true;;;(.*)|;;;http-metrics$"
   action: keep
 
   {{ else }}
@@ -98,9 +99,10 @@ tlsConfig:
 
 - sourceLabels:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
+  - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_istio_mtls
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
   - {{ $label }}
-  regex: "^true;true;(.*)|;;https-metrics$"
+  regex: "^true;;(.*)|;true;(.*)|;;https-metrics$"
   action: keep
   {{ end }}
 
