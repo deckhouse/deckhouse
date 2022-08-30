@@ -1,7 +1,7 @@
 <script lang="ts">
-	export let text: string = "";
-	export let status: string = "";
-	export let mute: boolean = false;
+	export let text = "";
+	export let status = "";
+	export let mute = false;
 
 	function mutedOrStatusTextClassName(mute, status) {
 		if (mute) {
@@ -24,4 +24,4 @@
 	}
 </script>
 
-<p class={mutedOrStatusTextClassName(mute, status)}>{text}</p>
+<p class={mutedOrStatusTextClassName(mute, status) + " fw-light m-0"}>{text}</p>

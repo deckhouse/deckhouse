@@ -16,7 +16,7 @@ $ npm i
 $ npm run dev
 ```
 
-Rollup is configured to proxy API calls `/public/api/*` to localhost:8091. So, one can port-forward via SSH to the
+Vite is configured to proxy API calls `/public/api/*` to localhost:8091. So, one can port-forward via SSH to the
 cluster of choice. For example,
 
 ```shell

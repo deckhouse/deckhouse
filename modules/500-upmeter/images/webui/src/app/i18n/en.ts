@@ -168,7 +168,7 @@ const langPack: LangPack = {
         description: "Every 1 minute a Deployment is created and deleted",
         reasonUp:
           "deployment successfully created, and its Pod became <code>Pending</code>. Afterwards, the deployment successfully deleted",
-        reasonDown: "created Pod is not become <code>Pending</code> after 10 seconds",
+        reasonDown: "created Pod has not become <code>Pending</code> after 10 seconds",
         reasonUnknown:
           "error occurred during creation or deletion, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
         reasonNodata: REASON_AGENTS_STOPPED,
