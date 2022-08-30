@@ -36,8 +36,6 @@ const (
 	mTLSKeyPath = "prometheus.internal.prometheusScraperIstioMTLS.key"
 )
 
-// Add queue
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/prometheus/generate_istio_mtls_cert",
 	Kubernetes: []go_hook.KubernetesConfig{
